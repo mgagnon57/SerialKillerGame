@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  ASHCOMBE
 #
 #  170 x 120 tiles, one tile = one metre.
@@ -18,20 +18,20 @@
 # ============================================================================
 
 village Ashcombe
-size 170 120
+size 210 120
 
 # ---- terrain -------------------------------------------------------------
-terrain field      0,0    170x26      # farmland, north
+terrain field      0,0    210x26      # farmland, north
 terrain wood       0,74    22x40      # the spinney, west
 terrain field    150,72    20x34      # east field
-terrain water      0,112  170x8       # the Ash, along the south
+terrain water      0,112  210x8       # the Ash, along the south
 terrain field     26,100   60x11      # water meadow
 
 # ---- roads ---------------------------------------------------------------
 # Ashcombe Street reaches both edges on purpose. VillageMesh carries the lane on
 # out past the map from wherever it leaves, so the village reads as being on the
 # way to somewhere instead of as an island in a field.
-road  main    5   0,58  169,58        # Ashcombe Street, edge to edge
+road  main    5   0,58  209,58        # Ashcombe Street, edge to edge
 road  church  3   24,58  24,22        # Church Lane
 road  school  3   90,58  90,32        # School Lane
 road  mill    3  148,58 148,100       # Mill Lane
@@ -252,3 +252,47 @@ place cottage 88,98 24x12 "Mill Buildings"
   units 4
 place cottage 118,30 12x11 "The Old Rectory"
   door 123,40
+
+# ============================================================================
+#  THE NEW BUILDING, 1972-4
+#
+#  Ashcombe grew east when the mill took on a second shift. The old parish
+#  stops at Mill Lane; everything past it went up in three years and looks it -
+#  straight lanes, repeated terraces, no building older than the people in it.
+#
+#  This is also where the map had to get bigger. The old 170x120 was FULL. Four
+#  terraces were tried inside it first and the layout checker refused every one:
+#  the only gaps left were the green, the playground and the allotments, and a
+#  village that concretes its own open ground to house people has not grown, it
+#  has got worse. So the map went 170 -> 210 wide and the new quarter went on
+#  clean ground east of Mill Lane.
+# ============================================================================
+
+terrain field    172,26   38x30
+terrain field    172,96   38x16
+
+road  east     4  170,26  170,100        # the estate spine, off Ashcombe Street
+road  newmid   3  170,42  206,42
+road  newback  3  170,89  206,89
+
+# All five match Mill Buildings - 24x12, four homes off one frontage. That
+# shape is the one the interior generator is known to handle: the first pass
+# here tried 24x10 and 24x9 with five and six homes, and the layout tests
+# refused Jubilee Terrace outright because a house that shallow has nowhere to
+# sleep. Six metres of frontage is a terraced house; four and a half is a
+# caravan.
+place cottage 174,30 24x12 "Glebe Terrace"
+  door 186,41
+  units 4
+place cottage 174,44 24x12 "Coronation Row"
+  door 186,44
+  units 4
+place cottage 174,62 24x12 "Jubilee Terrace"
+  door 186,62
+  units 4
+place cottage 174,76 24x12 "Mill View Terrace"
+  door 186,87
+  units 4
+place cottage 174,92 24x12 "Meadow Row"
+  door 186,92
+  units 4

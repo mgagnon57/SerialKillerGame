@@ -43,6 +43,25 @@ namespace Noir.Editor
         private static string OutputDir =>
             Path.Combine(Directory.GetParent(Application.dataPath).FullName, "docs", "film");
 
+        private static bool _xray;
+
+        /// <summary>
+        /// The same morning with the buildings taken away.
+        ///
+        /// The ordinary film shows the LIGHT, because at 112 people over a 170x120 map any
+        /// framing close enough to see a person covers too little ground to contain one. X-ray is
+        /// the one view where that stops being true: nobody is hidden, so all 112 are on screen
+        /// at once and the morning reads as a hundred people leaving their houses rather than as
+        /// a sunrise.
+        /// </summary>
+        [MenuItem("Noir/Render Film (X-Ray)")]
+        public static void RenderXRay()
+        {
+            _xray = true;
+            try { Render(); }
+            finally { _xray = false; }
+        }
+
         [MenuItem("Noir/Render Film")]
         public static void Render()
         {
@@ -74,7 +93,8 @@ namespace Noir.Editor
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
 
                 root = new GameObject("FilmVillage");
-                VillageMesh.Build(world, root.transform);
+                var village = VillageMesh.Build(world, root.transform);
+                if (_xray) XRay.Create(world, village).Set(true);
 
                 var fixtures = SunRig.BuildFixtures(world, root.transform);
                 var paneBlock = new MaterialPropertyBlock();
@@ -113,8 +133,26 @@ namespace Noir.Editor
                 // headless density table says where to point a camera at this hour - 08:35 is
                 // the peak of the whole day, with the school gate at 80,43 taking twenty-seven
                 // children and their parents walking back.
-                var target = new Vector3(78f, 0f, -52f);
-                PlaceCamera(camGo.transform, target, 52f, 24f, 22f);
+                // The `school-run` framing exactly, because it is the one shot in the set that
+                // was chosen by measurement rather than by eye: the density table says 08:35 is
+                // the busiest minute of the whole day, the gate at 80,43 is the south face of
+                // Ashcombe Primary, and it is watched from further south looking back at it.
+                //
+                // Two wider framings were tried first and both failed the same way. At 95 m a
+                // person is two pixels; at 52 m and 24 degrees you are looking down onto roofs
+                // and the streets disappear underneath them. The pitch has to stay well up - at
+                // a shallow angle the camera ends up behind a garden wall - but the distance has
+                // to come right in, and 34 m is where those two meet.
+                // X-ray wants the opposite framing to the lit film. With the buildings gone
+                // nobody is hidden, so the shot should be as wide as the map allows and pitched
+                // well down onto it - the subject is a hundred and twelve dots moving at once,
+                // and any one of them individually is not the point.
+                // Centred on the middle of the map rather than on the old parish. When the east
+                // quarter was authored the map went 170 -> 210 wide, and a camera still framed
+                // on the old village simply left the new half out of shot.
+                var target = _xray ? new Vector3(104f, 0f, -58f) : new Vector3(80f, 0f, -46f);
+                if (_xray) PlaceCamera(camGo.transform, target, 165f, 48f, 25f);
+                else       PlaceCamera(camGo.transform, target, 34f, 34f, 0f);
 
                 int frame = 0;
                 for (float hour = FromHour; hour <= ToHour + 1e-4f; hour += StepHours)

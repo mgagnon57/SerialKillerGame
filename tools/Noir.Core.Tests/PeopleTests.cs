@@ -53,8 +53,12 @@ namespace Noir.Core.Tests
         [Test]
         public void VillageSizedPopulation()
         {
-            Assert.That(Village.People.Count, Is.InRange(85, 125),
-                "the village should hold roughly a hundred people");
+            // Widened from (85,125) when the east quarter was authored and Ashcombe went
+            // from 112 people to 158. The bound is a sanity check on the generator - that
+            // dwellings turn into a plausible number of residents - not a pin on one village,
+            // and the plan of record takes this town to 600.
+            Assert.That(Village.People.Count, Is.InRange(85, 700),
+                "the population should follow from the authored dwellings");
         }
 
         [Test]
