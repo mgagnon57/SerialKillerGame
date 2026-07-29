@@ -1,6 +1,90 @@
 # Where we are
 
-## STOP HERE — 2026-07-28, latest. The dinner hour is in. Read this first.
+## STOP HERE — 2026-07-28. Buildings have shapes now. On branch `massing`, NOT merged.
+
+Every roofed building used to get the identical `AddHipRoof`, at the identical 2.2 pitch, on
+identical 3.0 walls. St Anne's, Ashcombe Mill, the school and a two-up-two-down were the same box
+differing only in footprint and a sign by the door. `Frontage.cs` was doing good work and all of
+it was AT THE FRONT DOOR; none of it was in the silhouette, which is the only signal that carries
+to the overview camera — the default view.
+
+**`Massing` replaces the two globals.** One grammar per kind behind `IMassingGrammar`, selected by
+a new optional `massing` column in `kinds.txt` defaulting to `cottage`. Never a `switch` on
+`PlaceKind` — that would have closed the open-kind property Stage 4 bought, and a new amenity
+would cost C# again.
+
+| kind | eaves | roof | extra |
+|---|---|---|---|
+| dwelling, farm | 3.0 | hip | — *(unchanged to the decimal, on purpose)* |
+| shop, postoffice | 3.6 | hip | |
+| surgery | 3.4 | hip | |
+| pub | 3.4 | gable | |
+| school | 4.0 | gable | bell-cote |
+| villagehall | 4.2 | gable | |
+| church | 5.5 | gable, 3.0 | **west tower + spire** |
+| mill | 6.5 | gable, 1.6 | **lucam** |
+| garage | 3.4 | **flat** | the only unpitched roof in the village |
+
+### Verified
+
+```
+134 tests, 131 pass, 3 fail   the same three 2:1 gates, by design
+smoke                          55 buildings shaped, PASSED
+determinism    12 of 12 snapshots byte-identical across two Unity processes
+renderers      1104, unchanged;  roofs 3,186 -> 3,294 verts
+```
+
+Determinism is the one that mattered. `BuildWalls` merged wall tiles into runs purely
+geometrically and never asked which `Place` they belonged to — fine while everything was 3 m
+tall. It now paints an owner per tile and **breaks ties to the lowest place id**, deliberately,
+because letting iteration order decide a wall's height would not have failed as a wrong-looking
+wall. It would have failed as twelve byte-identical snapshots quietly ceasing to mean anything.
+
+### `elevations` — a new instrument
+
+`dotnet`-free; run `Noir.Editor.Elevations.Render`. One straight-on render per building kind into
+`docs/elevations/`, with **no sign, no frontage, no props and no label**. You name each one; what
+you cannot name has failed to read. The signs come off precisely because `Frontage` is good at its
+job — a picture with a pub sign in it tests whether you can read, not whether the pub reads as a
+pub. It grades the village rather than proving the code runs, so it sits with `ratio` and `street`
+and never fails a build.
+
+### Four defects it caught that nothing else could
+
+1. **Flat, lean-to and box faces were wound inside-out** and backface-culled. The garage had no
+   roof at all — you saw its interior from above — and every tower and bell-cote was inverted.
+   The same fault the ground had once. The hip roof is the reference: `cross(v1-v0, v2-v0)` out.
+2. **The flat roof sat level with the wall caps**, so the depth buffer picked per pixel and the
+   wall tops flickered through. Lifted 0.2, about what a parapet stands anyway.
+3. **The church was a cathedral.** A tower at 0.55 of the short side is 7.7 m square on St Anne's
+   carrying a 17 m spire, and a 4.5 pitch across a near-square 16 m span put a marquee on it.
+   **A village tower is about four metres square whatever the church is — it is the HEIGHT that
+   varies, not the footprint.** Capped at 5 m, spire 1.8x, pitch 3.0.
+4. **Gable ends were tiled.** A hip end is roof; a gable end is the building's masonry carried up
+   to the ridge, and roofing it puts roof tiles on a vertical wall.
+
+Only the first was a bug. Two and three were taste being wrong, which is the argument for looking.
+
+### Known warts, not fixed
+
+- **The gable end is chimney brick, not wall stone.** Masonry was already in the roof material
+  array so it cost no new submesh, but it is the wrong masonry — brown brick against pale walls.
+  Doing it properly means giving the roof mesh the wall material.
+- **The church tower reads as detached.** It is placed at the bounds edge furthest from the door
+  and clamped inside, but against a 14x16 nave it stands clear of the roof and looks like a
+  separate campanile rather than a west tower.
+- **The tower claims no interior floor space.** Deliberate, recorded in the spec: the interior
+  grammar has already laid rooms across the whole footprint.
+- **`Noir.Bench` does not measure this.** It grades the simulation — build times, memory, paths.
+  Massing is geometry, so its cost shows up in the smoke test's renderer and vertex counts
+  instead, and those are flat.
+
+Spec: `docs/superpowers/specs/2026-07-28-building-massing-design.md`.
+Plan: `docs/superpowers/plans/2026-07-28-building-massing.md`.
+
+---
+
+## Earlier the same day — the dinner hour is in.
 
 `DayPlanner` now cuts a **45-minute dinner break** out of any shift or school day that straddles
 midday, and it is spent OUT — the green, the churchyard, the playground, the pub. Measured by

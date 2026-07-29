@@ -370,21 +370,36 @@ namespace Noir.Unity
                 tris.Add(baseIndex + i); tris.Add(baseIndex + j); tris.Add(baseIndex + k);
             }
 
+            // A HIP end is roof and gets tiled. A GABLE end is WALL - it is the masonry of the
+            // building carried up to the ridge - and tiling it puts roof tiles on a vertical
+            // surface. That was the single worst thing in the church's first elevation: a big
+            // red triangular slab where its west wall should be, which read as a marquee rather
+            // than as a building.
+            //
+            // Masonry is already in the roof material array as the chimney covering, so this
+            // costs no new material and no new submesh.
+            var endTris = gable ? into.Tris[Materials3D.ChimneyIndex] : tris;
+
+            void End(int i, int j, int k)
+            {
+                endTris.Add(baseIndex + i); endTris.Add(baseIndex + j); endTris.Add(baseIndex + k);
+            }
+
             if (alongX)
             {
                 // ridge runs east-west
                 Tri(0, 5, 4); Tri(0, 1, 5);   // front slope  a-b-r1-r0
                 Tri(2, 4, 5); Tri(2, 3, 4);   // back slope   c-e-r0-r1
-                Tri(3, 0, 4);                 // west end - a hip, or a gable wall
-                Tri(1, 2, 5);                 // east end
+                End(3, 0, 4);                 // west end - a hip, or a gable wall
+                End(1, 2, 5);                 // east end
             }
             else
             {
                 // ridge runs north-south
                 Tri(0, 4, 3); Tri(3, 4, 5);   // west slope
                 Tri(1, 2, 5); Tri(1, 5, 4);   // east slope
-                Tri(0, 1, 4);                 // north end
-                Tri(2, 3, 5);                 // south end
+                End(0, 1, 4);                 // north end
+                End(2, 3, 5);                 // south end
             }
         }
 
