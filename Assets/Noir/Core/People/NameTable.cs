@@ -81,7 +81,15 @@ namespace Noir.Core.People
         None = 0,
         Carries = 1 << 0,      // never goes out empty-handed - a bag, a stick, a dog lead
         Lingers = 1 << 1,      // takes longer over the same journey than anybody else does
-        RoundAbout = 1 << 2,   // does not take the direct way, and never has
+
+        // There was a third, RoundAbout — "does not take the direct way, and never has". It is
+        // gone, and the reason is worth keeping. It could only ever have shown up as
+        // ObservedManner.SomewhereNew, and the act-by-manner table reads 158 of 158 on both
+        // "came out" and "walked past": every villager already earns that manner in the first
+        // days of any watch. Texture is a SET of distinct (act, manner) keys, so a manner
+        // everybody already has cannot become a new proposition for anybody. It was also the
+        // only beat needing a routing change, which would have put the determinism guarantee at
+        // risk to buy nothing. Do not reintroduce it without a manner that is actually scarce.
     }
 
     /// <summary>The useless human details. See Content/particulars.txt for why they matter.</summary>
@@ -131,7 +139,6 @@ namespace Noir.Core.People
             var beat = Beat.None;
             if (tags.IndexOf("carries", StringComparison.OrdinalIgnoreCase) >= 0) beat |= Beat.Carries;
             if (tags.IndexOf("lingers", StringComparison.OrdinalIgnoreCase) >= 0) beat |= Beat.Lingers;
-            if (tags.IndexOf("roundabout", StringComparison.OrdinalIgnoreCase) >= 0) beat |= Beat.RoundAbout;
             return beat;
         }
 
