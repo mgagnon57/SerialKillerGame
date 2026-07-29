@@ -58,14 +58,19 @@ namespace Noir.Unity
                 // The covering is still chosen from the building's own corner, so which roof a
                 // house has is a property of where it stands and not of how the map happens to
                 // be divided up. Chunking must not be visible in the picture at all.
-                AddHipRoof(place.Bounds, into, Materials3D.RoofingFor(place.Bounds.X, place.Bounds.Y));
+                var massing = MassingGrammars.Of(place);
+                AddRoof(place.Bounds, massing, into,
+                        Materials3D.RoofingFor(place.Bounds.X, place.Bounds.Y));
 
                 // A chimney per home. On a terrace that means one per unit, which is exactly
                 // what tells you from the street how many families live in the building -
                 // and it is the detail that makes a roofline read as inhabited rather than
                 // as a shape.
                 int stacks = place.Kind == PlaceKind.Dwelling ? place.Units : 1;
-                AddChimneys(place.Bounds, stacks, into, Materials3D.ChimneyIndex);
+                AddChimneys(place.Bounds, stacks, massing, into, Materials3D.ChimneyIndex);
+
+                // Whatever this kind and no other gets: a tower, a bell-cote, a hoist.
+                MassingGrammars.For(place).Extras(place, into);
 
                 count++;
             }
@@ -150,12 +155,13 @@ namespace Noir.Unity
         }
 
         /// <summary>Chimney stacks, spaced along the ridge - one per home in the building.</summary>
-        private static void AddChimneys(TileRect bounds, int stacks, MeshChunk into, int submesh)
+        private static void AddChimneys(TileRect bounds, int stacks, Massing m, MeshChunk into,
+                                        int submesh)
         {
             if (stacks < 1) stacks = 1;
 
-            bool ridgeAlongX = bounds.W >= bounds.H;
-            float ridgeY = Space3D.WallHeight + Pitch;
+            bool ridgeAlongX = m.RidgeAcross ? bounds.H > bounds.W : bounds.W >= bounds.H;
+            float ridgeY = m.Eaves + m.Pitch;
 
             // Along the RIDGE, not along the building.
             //
@@ -276,13 +282,44 @@ namespace Noir.Unity
         /// triangle. The ridge runs along the building's longer axis, which is what a real
         /// roof does and what stops a row of cottages looking like it was extruded.
         /// </summary>
-        private static void AddHipRoof(TileRect bounds, MeshChunk into, int submesh)
+        /// <summary>
+        /// The roof, in whichever form this kind of building wears.
+        ///
+        /// NOTE WHAT THIS SWITCHES ON. RoofForm is a CLOSED set of four shapes; PlaceKind is an
+        /// OPEN set that a content row can extend. Switching on the shape is fine and switching
+        /// on the kind would put PlaceKind back into geometry code and make a new amenity cost
+        /// C# again, which is exactly what the kind table was built to stop. The mapping from
+        /// kind to shape lives in the massing grammars, one indirection away.
+        /// </summary>
+        private static void AddRoof(TileRect bounds, Massing m, MeshChunk into, int submesh)
+        {
+            switch (m.Roof)
+            {
+                case RoofForm.Flat:   AddFlatRoof(bounds, m, into, submesh); break;
+                case RoofForm.LeanTo: AddLeanToRoof(bounds, m, into, submesh); break;
+                case RoofForm.Gable:  AddPitchedRoof(bounds, m, into, submesh, gable: true); break;
+                default:              AddPitchedRoof(bounds, m, into, submesh, gable: false); break;
+            }
+        }
+
+        /// <summary>
+        /// A hip or a gable roof: two slopes meeting at a ridge, closed at each end.
+        ///
+        /// The two forms are the SAME SIX VERTICES and the same triangle list, differing only in
+        /// how far the ridge is inset from the ends. A hip insets it by half the building's
+        /// depth, which tips the end triangles over into sloping hips; a gable runs it out to the
+        /// building's own ends, which stands those same triangles up vertical and turns them into
+        /// gable walls. Writing gable as a separate mesh would have been two functions that must
+        /// agree about winding and UVs forever.
+        /// </summary>
+        private static void AddPitchedRoof(TileRect bounds, Massing m, MeshChunk into, int submesh,
+                                           bool gable)
         {
             var verts = into.Verts;
             var uvs = into.Uvs;
             var tris = into.Tris[submesh];
 
-            float y = Space3D.WallHeight;
+            float y = m.Eaves;
 
             float x0 = bounds.X - Overhang;
             float x1 = bounds.X + bounds.W + Overhang;
@@ -291,7 +328,10 @@ namespace Noir.Unity
 
             float w = x1 - x0;
             float d = z0 - z1;              // z1 is more negative, so this is positive
-            float ridgeY = y + Pitch;
+            float ridgeY = y + m.Pitch;
+
+            // The ridge follows the long axis unless the grammar asks for the other one.
+            bool alongX = m.RidgeAcross ? d > w : w >= d;
 
             int baseIndex = verts.Count;
 
@@ -301,17 +341,19 @@ namespace Noir.Unity
             var e = new Vector3(x0, y, z1);
 
             Vector3 r0, r1;
-            if (w >= d)
+            if (alongX)
             {
                 float zc = (z0 + z1) * 0.5f;
-                r0 = new Vector3(x0 + d * 0.5f, ridgeY, zc);
-                r1 = new Vector3(x1 - d * 0.5f, ridgeY, zc);
+                float inset = gable ? 0f : d * 0.5f;
+                r0 = new Vector3(x0 + inset, ridgeY, zc);
+                r1 = new Vector3(x1 - inset, ridgeY, zc);
             }
             else
             {
                 float xc = (x0 + x1) * 0.5f;
-                r0 = new Vector3(xc, ridgeY, z0 - w * 0.5f);
-                r1 = new Vector3(xc, ridgeY, z1 + w * 0.5f);
+                float inset = gable ? 0f : w * 0.5f;
+                r0 = new Vector3(xc, ridgeY, z0 - inset);
+                r1 = new Vector3(xc, ridgeY, z1 + inset);
             }
 
             verts.Add(a); verts.Add(b); verts.Add(c); verts.Add(e);   // 0..3 eaves
@@ -328,22 +370,84 @@ namespace Noir.Unity
                 tris.Add(baseIndex + i); tris.Add(baseIndex + j); tris.Add(baseIndex + k);
             }
 
-            if (w >= d)
+            if (alongX)
             {
                 // ridge runs east-west
                 Tri(0, 5, 4); Tri(0, 1, 5);   // front slope  a-b-r1-r0
                 Tri(2, 4, 5); Tri(2, 3, 4);   // back slope   c-e-r0-r1
-                Tri(3, 0, 4);                 // west hip
-                Tri(1, 2, 5);                 // east hip
+                Tri(3, 0, 4);                 // west end - a hip, or a gable wall
+                Tri(1, 2, 5);                 // east end
             }
             else
             {
                 // ridge runs north-south
                 Tri(0, 4, 3); Tri(3, 4, 5);   // west slope
                 Tri(1, 2, 5); Tri(1, 5, 4);   // east slope
-                Tri(0, 1, 4);                 // north hip
-                Tri(2, 3, 5);                 // south hip
+                Tri(0, 1, 4);                 // north end
+                Tri(2, 3, 5);                 // south end
             }
+        }
+
+        /// <summary>
+        /// One slope, low at the front and high at the back. A workshop or an outbuilding.
+        /// </summary>
+        private static void AddLeanToRoof(TileRect bounds, Massing m, MeshChunk into, int submesh)
+        {
+            var verts = into.Verts;
+            var uvs = into.Uvs;
+            var tris = into.Tris[submesh];
+
+            float lo = m.Eaves, hi = m.Eaves + m.Pitch;
+
+            float x0 = bounds.X - Overhang;
+            float x1 = bounds.X + bounds.W + Overhang;
+            float z0 = -(bounds.Y - Overhang);
+            float z1 = -(bounds.Y + bounds.H + Overhang);
+
+            int baseIndex = verts.Count;
+
+            // Rises towards the back (more negative z), so the tall side faces away from the road.
+            verts.Add(new Vector3(x0, lo, z0));
+            verts.Add(new Vector3(x1, lo, z0));
+            verts.Add(new Vector3(x1, hi, z1));
+            verts.Add(new Vector3(x0, hi, z1));
+
+            for (int i = baseIndex; i < verts.Count; i++)
+                uvs.Add(new Vector2(verts[i].x, -verts[i].z));
+
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 3); tris.Add(baseIndex + 2);
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 2); tris.Add(baseIndex + 1);
+        }
+
+        /// <summary>
+        /// No slope at all. A garage reads as a garage partly because it does not have a roof
+        /// like a house's - a flat top over a wide opening is the whole silhouette.
+        /// </summary>
+        private static void AddFlatRoof(TileRect bounds, Massing m, MeshChunk into, int submesh)
+        {
+            var verts = into.Verts;
+            var uvs = into.Uvs;
+            var tris = into.Tris[submesh];
+
+            float y = m.Eaves;
+
+            float x0 = bounds.X - Overhang;
+            float x1 = bounds.X + bounds.W + Overhang;
+            float z0 = -(bounds.Y - Overhang);
+            float z1 = -(bounds.Y + bounds.H + Overhang);
+
+            int baseIndex = verts.Count;
+
+            verts.Add(new Vector3(x0, y, z0));
+            verts.Add(new Vector3(x1, y, z0));
+            verts.Add(new Vector3(x1, y, z1));
+            verts.Add(new Vector3(x0, y, z1));
+
+            for (int i = baseIndex; i < verts.Count; i++)
+                uvs.Add(new Vector2(verts[i].x, -verts[i].z));
+
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 3); tris.Add(baseIndex + 2);
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 2); tris.Add(baseIndex + 1);
         }
     }
 }
