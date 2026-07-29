@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.Contracts;
@@ -332,45 +332,58 @@ namespace Noir.Unity
         /// has its name cut into stone, and the surgery has a small plate by the door and would
         /// be embarrassed by anything larger.
         /// </summary>
+        /// <summary>
+        /// Which shopfront a building wears, keyed on the AUTHORED `frontage` column rather than
+        /// on PlaceKind.
+        ///
+        /// This mattered the moment a kind was authored purely in content. `factory` says
+        /// `frontage mill` in kinds.txt and got a plain nameboard anyway, because the enum has
+        /// never heard of PlaceKind.Factory and the switch fell through to its default - the
+        /// column was authored, correct, and ignored.
+        ///
+        /// Switching on the frontage STYLE is safe in a way switching on the kind is not: styles
+        /// are a closed set this file defines, kinds are an open set content can extend. Same
+        /// distinction as RoofForm against PlaceKind in RoofBuilder.
+        /// </summary>
         private static int Sign(Transform parent, Place place, Front f)
         {
             var board = BoardPaint(place);
 
-            switch (place.Kind)
+            switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
             {
-                case PlaceKind.Pub:
+                case "pub":
                     return Hanging(parent, f, "sign:pub", 1.45f, 0.95f, 1.00f, 2.25f, board);
 
-                case PlaceKind.Shop:
+                case "shop":
                     return Fascia(parent, f, "fascia:shop", 5.0f, 0.55f, 2.35f, board)
                          + Hanging(parent, f, "sign:shop", 0.95f, 0.70f, 0.70f, 1.85f, board);
 
-                case PlaceKind.PostOffice:
+                case "post":
                     return Fascia(parent, f, "fascia:post", 3.4f, 0.50f, 2.35f, board)
                          + Plate(parent, f, "plate:post", 0.55f, 0.40f, 1.55f, Brass);
 
-                case PlaceKind.Church:
+                case "church":
                     return Notice(parent, f, "noticeboard:church", board);
 
-                case PlaceKind.School:
+                case "school":
                     return Fascia(parent, f, "nameboard:school", 3.0f, 0.60f, 2.30f, Materials3D.Stone);
 
-                case PlaceKind.Surgery:
+                case "surgery":
                     return Fascia(parent, f, "fascia:surgery", 2.6f, 0.42f, 2.35f, board)
                          + Plate(parent, f, "plate:surgery", 0.62f, 0.45f, 1.55f, Brass);
 
-                case PlaceKind.Garage:
+                case "garage":
                     return Fascia(parent, f, "fascia:garage", 3.6f, 0.60f, 2.30f, board)
                          + Hanging(parent, f, "sign:garage", 1.60f, 1.35f, 1.30f, 2.05f, board);
 
-                case PlaceKind.VillageHall:
+                case "hall":
                     return Fascia(parent, f, "fascia:hall", 3.2f, 0.50f, 2.35f, board)
                          + Notice(parent, f, "noticeboard:hall", board);
 
-                case PlaceKind.Mill:
+                case "mill":
                     return Fascia(parent, f, "nameboard:mill", 6.0f, 0.80f, 2.10f, board);
 
-                case PlaceKind.Farm:
+                case "farm":
                     return Fascia(parent, f, "nameboard:farm", 2.4f, 0.50f, 2.35f, board);
 
                 default:
@@ -444,31 +457,31 @@ namespace Noir.Unity
         /// </summary>
         private static Material BoardPaint(Place place)
         {
-            switch (place.Kind)
+            switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
             {
-                case PlaceKind.Pub:
+                case "pub":
                     return Materials3D.Scatter(place.Bounds.X, place.Bounds.Y, 4111) % 2 == 0
                         ? Paint("SignPubGreen", new Color32(0x1F, 0x3A, 0x2A, 0xFF), 0.22f)
                         : Paint("SignPubRed", new Color32(0x5E, 0x23, 0x20, 0xFF), 0.22f);
 
-                case PlaceKind.Shop:
+                case "shop":
                     return Paint("SignShop", new Color32(0x21, 0x40, 0x2F, 0xFF), 0.22f);
 
                 // The post office wears the same red as the pillar box outside it, which is not
                 // a coincidence anywhere in England.
-                case PlaceKind.PostOffice: return Materials3D.Postbox;
+                case "post": return Materials3D.Postbox;
 
-                case PlaceKind.Surgery:
+                case "surgery":
                     return Paint("SignSurgery", new Color32(0xE4, 0xE2, 0xD8, 0xFF), 0.30f);
 
-                case PlaceKind.Garage:
+                case "garage":
                     return Paint("SignGarage", new Color32(0x1E, 0x47, 0x63, 0xFF), 0.35f);
 
-                case PlaceKind.Farm:
+                case "farm":
                     return Paint("SignFarm", new Color32(0xD6, 0xCD, 0xBA, 0xFF), 0.20f);
 
-                case PlaceKind.School: return Materials3D.Stone;
-                case PlaceKind.Mill: return Materials3D.Bark;
+                case "school": return Materials3D.Stone;
+                case "mill": return Materials3D.Bark;
 
                 default:
                     return Paint("SignBoard", new Color32(0x2B, 0x2F, 0x2A, 0xFF), 0.20f);

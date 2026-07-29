@@ -134,25 +134,21 @@ namespace Noir.Unity
         /// which have walls, so SunRig asks this rather than keeping its own list of the
         /// buildings that deserve windows. Two hand-written lists is one too many.
         /// </summary>
-        public static bool IsRoofed(PlaceKind kind)
-        {
-            switch (kind)
-            {
-                case PlaceKind.Green:
-                case PlaceKind.Playground:
-                case PlaceKind.Churchyard:
-                case PlaceKind.BusStop:
-                case PlaceKind.Allotments:
-                // A phone box is not a building: VillageLayout.IsBuilding excludes it, so it
-                // gets no walls and no floor. This list had drifted out of step with that one
-                // and left a 1.7 m pyramid with a chimney on it hanging three metres above
-                // bare grass beside Ashcombe Street.
-                case PlaceKind.PhoneBox:
-                    return false;
-                default:
-                    return true;
-            }
-        }
+        /// <summary>
+        /// Whether this kind has a roof, asked of the kind table rather than of a switch.
+        ///
+        /// This WAS a switch listing the five or six open-ground kinds by hand, with a
+        /// `default: return true` underneath. Two things were wrong with that. It had already
+        /// drifted out of step with VillageLayout.IsBuilding once, and left a 1.7 m pyramid with
+        /// a chimney on it hanging three metres above bare grass beside Ashcombe Street. And the
+        /// `default` meant any kind authored purely in content got a roof whether or not its row
+        /// said `roof no` - so the open-kind property Stage 4 bought was quietly broken for
+        /// anything that was not a building.
+        ///
+        /// The column has existed and been authored since Stage 4. It was simply never read.
+        /// </summary>
+        public static bool IsRoofed(PlaceKind kind) =>
+            PlaceKindTable.Current.Row(kind).Roofed;
 
         /// <summary>Chimney stacks, spaced along the ridge - one per home in the building.</summary>
         private static void AddChimneys(TileRect bounds, int stacks, Massing m, MeshChunk into,
