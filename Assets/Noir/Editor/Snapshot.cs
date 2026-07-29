@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -281,7 +281,7 @@ namespace Noir.Editor
         /// which of them gets one of the pool's real lights depends on where the camera ends up,
         /// so that is settled back in Render once the camera has been placed.
         /// </summary>
-        private static void LightUp(WorldModel world, SunRig.Fixtures fixtures,
+        internal static void LightUp(WorldModel world, SunRig.Fixtures fixtures,
                                     MaterialPropertyBlock paneBlock, float hour, float sunIntensity)
         {
             float level = SunRig.NightLevel(sunIntensity);
@@ -340,7 +340,7 @@ namespace Noir.Editor
             return lit;
         }
 
-        private static Material MakeSky()
+        internal static Material MakeSky()
         {
             var shader = Shader.Find("Skybox/Procedural");
             if (shader == null) return null;
