@@ -13,7 +13,14 @@ namespace Noir.Unity
         private static readonly Dictionary<string, IMassingGrammar> Registry =
             new Dictionary<string, IMassingGrammar>
             {
-                { "cottage", Fallback },
+                { "cottage",   Fallback },
+                { "shopfront", new ShopfrontMassing() },
+                { "pub",       new PubMassing() },
+                { "hall",      new HallMassing() },
+                { "school",    new SchoolMassing() },
+                { "church",    new ChurchMassing() },
+                { "mill",      new MillMassing() },
+                { "garage",    new GarageMassing() },
             };
 
         /// <summary>
