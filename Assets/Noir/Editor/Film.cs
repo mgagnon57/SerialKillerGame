@@ -150,8 +150,13 @@ namespace Noir.Editor
                 // Centred on the middle of the map rather than on the old parish. When the east
                 // quarter was authored the map went 170 -> 210 wide, and a camera still framed
                 // on the old village simply left the new half out of shot.
-                var target = _xray ? new Vector3(104f, 0f, -58f) : new Vector3(80f, 0f, -46f);
-                if (_xray) PlaceCamera(camGo.transform, target, 165f, 48f, 25f);
+                // Far enough back to hold the WHOLE map, which is the only framing that shows the
+                // village growing. 165 m covered about 170 of the 210 metres and quietly cropped
+                // the east quarter and the works off the right-hand edge - the two things the
+                // shot existed to show. Sized against the map rather than against the old
+                // village, so it survives the town being authored out further.
+                var target = _xray ? new Vector3(105f, 0f, -60f) : new Vector3(80f, 0f, -46f);
+                if (_xray) PlaceCamera(camGo.transform, target, 235f, 44f, 18f);
                 else       PlaceCamera(camGo.transform, target, 34f, 34f, 0f);
 
                 int frame = 0;
