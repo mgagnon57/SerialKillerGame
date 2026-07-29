@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using Noir.Core.Contracts;
@@ -26,7 +26,7 @@ namespace Noir.Sim
                     var c = ctx.People.Get(id);
                     string job = c.Job == Occupation.None
                         ? (c.IsChild ? "at school" : c.Stage == LifeStage.Elder ? "retired" : "—")
-                        : c.Job.ToString();
+                        : Occupations.NameOf(c.Job);
                     string work = c.Work.IsValid ? ctx.World.GetPlace(c.Work).Name : "";
                     sb.AppendLine($"    {c.FullName,-26} {c.Age,3}  {job,-12} {work}");
                 }
@@ -190,7 +190,7 @@ namespace Noir.Sim
             sb.AppendLine("occupations");
             foreach (var kv in byJob)
                 if (kv.Key != Occupation.None)
-                    sb.AppendLine($"  {kv.Key,-14} {kv.Value}");
+                    sb.AppendLine($"  {Occupations.NameOf(kv.Key),-14} {kv.Value}");
 
             var shapes = new Dictionary<HouseholdShape, int>();
             foreach (var h in p.Households)
@@ -218,7 +218,7 @@ namespace Noir.Sim
             sb.AppendLine($"{c.FullName}, {c.Age}");
             sb.AppendLine($"  {household}, at {ctx.World.GetPlace(c.Home).Name}");
             if (c.Works)
-                sb.AppendLine($"  {c.Job} at {ctx.World.GetPlace(c.Work).Name}"
+                sb.AppendLine($"  {Occupations.NameOf(c.Job)} at {ctx.World.GetPlace(c.Work).Name}"
                             + (c.Shift > 0 ? "  (late shift)" : ""));
             else if (c.IsChild) sb.AppendLine("  at school");
             else if (c.Stage == LifeStage.Elder) sb.AppendLine("  retired");

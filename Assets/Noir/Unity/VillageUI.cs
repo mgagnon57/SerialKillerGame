@@ -369,7 +369,20 @@ namespace Noir.Unity
                 case Occupation.Nurse: return "a nurse";
                 case Occupation.Verger: return "the verger";
                 case Occupation.Caretaker: return "the caretaker";
-                default: return "—";
+
+                // A trade the enum has never heard of is one kinds.txt minted, and the authored
+                // word is exactly the right thing to show. This used to return an em-dash, so
+                // the works opened and its thirty-three machinists were each described to the
+                // player as nothing at all - the largest employer in the village, invisible.
+                //
+                // The cases above stay because they carry the article and the wording a switch
+                // can give and a table cannot: "the postmaster" and "the doctor" are definite
+                // because a village has one, and that is a judgement about the place.
+                default:
+                    string name = Occupations.NameOf(o);
+                    if (string.IsNullOrEmpty(name) || name == nameof(Occupation.None)) return "—";
+                    name = name.ToLowerInvariant();
+                    return ("aeiou".IndexOf(name[0]) >= 0 ? "an " : "a ") + name;
             }
         }
 
