@@ -271,7 +271,7 @@ place cottage 118,30 12x11 "The Old Rectory"
 terrain field    172,26   38x30
 terrain field    172,96   38x16
 
-road  east     4  170,26  170,100        # the estate spine, off Ashcombe Street
+road  east     4  170,6   170,100        # the estate spine, off Ashcombe Street
 road  newmid   3  170,42  206,42
 road  newback  3  170,89  206,89
 
@@ -296,3 +296,10 @@ place cottage 174,76 24x12 "Mill View Terrace"
 place cottage 174,92 24x12 "Meadow Row"
   door 186,92
   units 4
+
+# The works. Put up in 1971 on the field behind the farm, and the reason the
+# estate below it exists at all - the mill could not take on a hundred people
+# and the parish had nothing else to offer anybody who did not want to milk.
+place factory 174,6 32x14 "Calloway & Sons"
+  door 174,12
+  human You can set your watch by the hooter, and half the estate does.

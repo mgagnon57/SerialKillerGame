@@ -91,6 +91,26 @@ namespace Noir.Unity
     }
 
     /// <summary>
+    /// A light-industrial works. One long single-pitch roof over a tall shed.
+    ///
+    /// The lean-to is doing the whole job. It was the one roof form nothing in the village used,
+    /// and it is the correct one here: a single slope running the length of a building is what
+    /// separates a 1971 factory from the seventeenth-century mill half a mile away, which is
+    /// steep, gabled and has a hoist sticking out of it. Two industrial buildings that read as
+    /// the same building would be worse than either.
+    ///
+    /// Note this grammar is the ONLY C# the factory cost. The kind itself is one row in
+    /// kinds.txt - name, hours, thirty-four jobs, two trades - and the enum has never heard of
+    /// it. That was the whole point of Stage 4 and this is the first time anything has tested it
+    /// with a kind that employs people.
+    /// </summary>
+    public sealed class WorksMassing : IMassingGrammar
+    {
+        public Massing Profile(Place place) => new Massing(5.5f, RoofForm.LeanTo, 1.6f);
+        public void Extras(Place place, MeshChunk into) { }
+    }
+
+    /// <summary>
     /// A garage. A flat top over a wide opening, and no domestic roof at all.
     ///
     /// The absence is the signal. Everything else in the village has a pitched roof; the one

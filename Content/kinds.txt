@@ -216,6 +216,23 @@ kind mill
   catchment no
   describe  yes
 
+kind factory
+  words     factory works
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  mill
+  massing   works
+  props     none
+  counter   no
+  hours     07:00-15:00@mon-fri 15:00-23:00@mon-fri
+  jobs      34
+  roles     foreman machinist
+  shifts    split
+  catchment no
+  describe  yes
+
 kind farm
   words     farm
   form      building

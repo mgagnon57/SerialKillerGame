@@ -21,6 +21,7 @@ namespace Noir.Unity
                 { "church",    new ChurchMassing() },
                 { "mill",      new MillMassing() },
                 { "garage",    new GarageMassing() },
+                { "works",     new WorksMassing() },
             };
 
         /// <summary>

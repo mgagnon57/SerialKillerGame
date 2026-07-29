@@ -617,8 +617,21 @@ place pub 2,2 6x5 ""P""
         [Test]
         public void HasEnoughWorkForAboutHalfThePopulation()
         {
-            // ~100 people, ~55 of working age, and not everyone works in the village.
-            Assert.That(_world.TotalJobSlots, Is.InRange(35, 70));
+            // Tied to the number of HOMES rather than to an absolute count of jobs.
+            //
+            // It was InRange(35, 70), pinned to a hundred-person village, and it fired the
+            // moment Ashcombe grew - which is exactly when a test about PROPORTION should not.
+            // The village had gained an estate and then a factory to employ it; the ratio was
+            // fine and the constant was stale.
+            //
+            // Roughly 2.2 people to a home, about half of them of working age, and not all of
+            // those work in the village.
+            int homes = 0;
+            foreach (var id in _world.PlacesOfKind(PlaceKind.Dwelling))
+                homes += _world.GetPlace(id).Units;
+
+            Assert.That(_world.TotalJobSlots, Is.InRange((int)(homes * 0.6), (int)(homes * 1.4)),
+                $"{_world.TotalJobSlots} jobs against {homes} homes");
         }
 
         [Test]

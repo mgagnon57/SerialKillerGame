@@ -1,4 +1,65 @@
-# Where we are
+﻿# Where we are
+
+## STOP HERE — 2026-07-28. A factory, and G3 goes green for the first time.
+
+**`dotnet test` is now 132 pass, 2 fail.** The two are the headline 2:1 gates, which fail by
+design. It has been three red all day; **G3 — "distinct texture, minimum >= 8" — now PASSES on all
+three seeds**, and it has failed since the instrument was built.
+
+### What landed, in order
+
+1. **The east quarter.** The 170x120 map was FULL — four terraces were tried inside it and the
+   layout checker refused every one, because the only gaps left were the green, the playground and
+   the allotments. So the map went **170 -> 210 wide** and five terraces went up east of Mill Lane.
+   **112 -> 158 people.**
+2. **Calloway & Sons**, a factory employing **34 on two shifts**. The estate had arrived with no
+   work attached: 59% of working-age adults had nowhere to be. That is now **23.4%**.
+
+### The floors, all five raised
+
+```
+                worst of 3 seeds
+ratio.median     1.04 -> 1.21
+ratio.p10        0.37 -> 0.52
+texture.median     23 ->   24
+texture.min         6 ->    8      <- G3 passes
+sight.median    0.052 -> 0.053
+```
+
+**Why texture.min moved is the interesting part, and it was not the obvious cause.** More people
+does not by itself give any individual a more various life. What did it was the **work**: a second
+large employer on split shifts means a neighbour who leaves at seven and one who leaves at three,
+lights on in the same terrace at different hours, somebody walking home past you when the street
+used to be empty. **Employment is texture.**
+
+### The factory cost one content row
+
+`kind factory` in `kinds.txt` — name, hours, 34 jobs, two trades — and `PlaceKind` has never heard
+of it. That is what Stage 4 was for, and this is the first time it has been tested with a kind that
+*employs people*. The only C# was one massing grammar (`works`, a single-pitch shed) so it does not
+read as a second watermill — and that was a choice about looks, not a requirement.
+
+`RoofForm.LeanTo` was the one roof form nothing used. It does now.
+
+### Two tests were pinned to the old village and are now proportional
+
+- `HasEnoughWorkForAboutHalfThePopulation` asserted `InRange(35, 70)` jobs. It now measures jobs
+  against **homes**, so it tracks the village instead of firing whenever it grows.
+- `AKindTheEnumHasNeverHeardOfGetsAValueOfItsOwn` asserted a content-only kind takes exactly the
+  next enum value. `factory` is now a content-only kind in the authored table, so the test's own
+  `shed` takes the one after. Changed to `>=`, which is the invariant the message always stated.
+
+### Still true, still the work
+
+Median 1.21 against a rule of 2.00, and a tenth percentile of 0.52 against 1.00. The instrument's
+verdict has not changed all day: **enact the particulars.** Nine hundred clauses read by two
+inspectors and by no line of simulation code.
+
+Also open: the **dinner hour is lockstep** — everyone breaks within fifteen minutes, so the green
+floods at noon and empties by one. Left deliberately for a human to judge.
+
+---
+
 
 ## STOP HERE — 2026-07-28. Buildings have shapes now. On branch `massing`, NOT merged.
 

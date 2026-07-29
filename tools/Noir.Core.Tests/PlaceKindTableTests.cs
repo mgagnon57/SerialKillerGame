@@ -106,7 +106,12 @@ kind shed
             var table = PlaceKindTable.Parse(WithEveryEnumKind(Complete));
 
             Assert.That(table.TryKindOf("shed", out var shed), Is.True);
-            Assert.That((int)shed, Is.EqualTo(Enum.GetValues(typeof(PlaceKind)).Length),
+            // At or past the end of the enum, not exactly at it. Equality held only while
+            // kinds.txt named nothing the enum did not; `factory` is now a content-only kind in
+            // the authored table, so it takes the first free value and this test's `shed` takes
+            // the next. The invariant the message states - numbered AFTER every enum member -
+            // is what actually matters, because it is what keeps the compiled switches valid.
+            Assert.That((int)shed, Is.GreaterThanOrEqualTo(Enum.GetValues(typeof(PlaceKind)).Length),
                         "a kind only content names should be numbered after every enum member");
             Assert.That(table.Row(shed).Name, Is.EqualTo("shed"));
 

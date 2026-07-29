@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  THE FLOOR — what the village has already managed, and may not lose.
 #
 #  Read by tools/Noir.Sim/Ratio.cs and asserted by tools/Noir.Core.Tests/
@@ -137,8 +137,48 @@
 #  by two inspectors and by no line of simulation code.
 # ============================================================================
 
-ratio.median      1.04
-ratio.p10         0.37
-texture.median      23
-texture.min          6
-sight.median     0.052
+#  ---- 2026-07-28, later still: THE EAST QUARTER AND THE WORKS ---------------
+#
+#  Two content changes, no instrument change, so these floors are comparable
+#  with the ones above rather than void.
+#
+#  1. The map went 170 -> 210 wide and five terraces went up east of Mill Lane.
+#     112 people -> 158. The old map was FULL: four terraces were tried inside
+#     it first and the layout checker refused every one, because the only gaps
+#     left were the green, the playground and the allotments.
+#
+#  2. Calloway & Sons, a factory employing 34 on two shifts. The estate had
+#     arrived with no work attached to it and 59% of working-age adults had
+#     nowhere to be; that is now 23.4%.
+#
+#  EVERY LINE IMPROVED. Worst of three seeds, old -> new:
+#
+#      ratio.median     1.04 -> 1.21
+#      ratio.p10        0.37 -> 0.52
+#      texture.median     23 ->   24
+#      texture.min         6 ->    8
+#      sight.median    0.052 -> 0.053
+#
+#  texture.min crossing 8 means G3 - "distinct texture, minimum >= 8" - now
+#  PASSES on all three seeds. It has failed since the instrument was built. The
+#  village has stopped containing anybody who yields fewer than eight kinds of
+#  moment in a fortnight.
+#
+#  Worth recording WHY, because it was not the obvious cause. The population
+#  going up does not by itself give any individual a more various life. What
+#  did it was the WORK: a second large employer on split shifts means a
+#  neighbour who leaves at seven and one who leaves at three, lights on in the
+#  same terrace at different hours, and somebody walking home past you at an
+#  hour when the street used to be empty. Employment is texture.
+#
+#  Still failing, and still the two that matter: median 1.21 against a rule of
+#  2.00, and a tenth percentile of 0.52 against 1.00. The instrument's verdict
+#  has not changed - the fix is MORE KINDS OF MOMENT, and the particulars are
+#  still not enacted.
+# ============================================================================
+
+ratio.median      1.21
+ratio.p10         0.52
+texture.median      24
+texture.min          8
+sight.median     0.053
