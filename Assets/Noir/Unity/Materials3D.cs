@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 using Terrain = Noir.Core.World.Terrain;
@@ -130,6 +130,7 @@ namespace Noir.Unity
                     Roofing("RoofWorn", "roof_worn"),
                     Roofing("RoofThatch", "roof_thatch"),
                     Roofing("Brick", "brick"),      // chimneys - see ChimneyIndex
+                    Wall,                           // gable ends, towers - see WallIndex
                 };
                 return _roofs;
             }
@@ -141,6 +142,20 @@ namespace Noir.Unity
         /// has ever been made of.
         /// </summary>
         public static int ChimneyIndex => 4;
+
+        /// <summary>
+        /// The building's own walling, carried in the roof mesh.
+        ///
+        /// A GABLE END is not roofing. It is the masonry of the building continued up to the
+        /// ridge, and it was being drawn in roof tile - clay tiles on a vertical wall - and then
+        /// in chimney brick, which is better and still wrong: brown brick against pale render.
+        /// Church towers and bell-cotes are the same argument. They are walls that happen to be
+        /// built by the roof pass.
+        /// </summary>
+        public static int WallIndex => 5;
+
+        /// <summary>A spire is lead or slate, never brick.</summary>
+        public static int SpireIndex => 0;
 
         private static Material Roofing(string name, string texture)
         {

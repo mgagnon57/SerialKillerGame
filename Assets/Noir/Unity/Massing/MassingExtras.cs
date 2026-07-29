@@ -133,13 +133,21 @@ namespace Noir.Unity
 
             float x = b.X + b.W * 0.5f;
             float y = b.Y + b.H * 0.5f;
-            float top = m.Eaves + m.Pitch * 0.5f;
 
-            // Projecting from the long wall, which is the one a cart can pull up to.
-            if (alongX) y = b.Y + 0.4f;
-            else        x = b.X + 0.4f;
+            // AT THE EAVES, PROJECTING OUT - not up near the ridge.
+            //
+            // The first version put it at eaves + half the pitch and only 0.4 into the building,
+            // which left a small box perched near the ridge line reading as a second chimney. A
+            // lucam is the thing the sack hoist runs out of: it overhangs the wall so a rope can
+            // drop clear of it to a cart standing below, and it is the one feature you can name a
+            // mill by from a field away. It has to break the WALL line, not the roof line.
+            float top = m.Eaves + 0.5f;
+            float depth = 2.2f;
 
-            var size = alongX ? new Vector3(2.0f, 1.6f, 1.4f) : new Vector3(1.4f, 1.6f, 2.0f);
+            if (alongX) y = b.Y - depth * 0.25f;      // out over the long wall
+            else        x = b.X - depth * 0.25f;
+
+            var size = alongX ? new Vector3(2.6f, 2.4f, depth) : new Vector3(depth, 2.4f, 2.6f);
             Box(into, new Vector3(x, top, -y), size, submesh);
         }
 

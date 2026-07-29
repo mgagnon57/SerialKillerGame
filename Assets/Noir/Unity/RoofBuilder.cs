@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.World;
@@ -130,12 +130,9 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// Which kinds of place have a roof over them at all - which is the same question as
-        /// which have walls, so SunRig asks this rather than keeping its own list of the
-        /// buildings that deserve windows. Two hand-written lists is one too many.
-        /// </summary>
-        /// <summary>
-        /// Whether this kind has a roof, asked of the kind table rather than of a switch.
+        /// Whether this kind has a roof at all - the same question as which have walls, so SunRig
+        /// asks this rather than keeping its own list of the buildings that deserve windows. Two
+        /// hand-written lists is one too many, which is the argument that ends in the table.
         ///
         /// This WAS a switch listing the five or six open-ground kinds by hand, with a
         /// `default: return true` underneath. Two things were wrong with that. It had already
@@ -372,9 +369,9 @@ namespace Noir.Unity
             // red triangular slab where its west wall should be, which read as a marquee rather
             // than as a building.
             //
-            // Masonry is already in the roof material array as the chimney covering, so this
-            // costs no new material and no new submesh.
-            var endTris = gable ? into.Tris[Materials3D.ChimneyIndex] : tris;
+            // The walling is now carried in the roof material array too, so a gable end is drawn
+            // in the same stuff as the wall below it rather than in chimney brick.
+            var endTris = gable ? into.Tris[Materials3D.WallIndex] : tris;
 
             void End(int i, int j, int k)
             {

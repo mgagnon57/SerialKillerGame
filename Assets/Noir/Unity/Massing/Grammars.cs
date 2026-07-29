@@ -1,4 +1,4 @@
-using Noir.Core.World;
+﻿using Noir.Core.World;
 
 namespace Noir.Unity
 {
@@ -47,7 +47,7 @@ namespace Noir.Unity
         public Massing Profile(Place place) => new Massing(4.0f, RoofForm.Gable, 2.6f);
 
         public void Extras(Place place, MeshChunk into) =>
-            MassingExtras.BellCote(place, Profile(place), into, Materials3D.ChimneyIndex);
+            MassingExtras.BellCote(place, Profile(place), into, Materials3D.WallIndex);
     }
 
     /// <summary>
@@ -69,8 +69,8 @@ namespace Noir.Unity
 
         public void Extras(Place place, MeshChunk into)
         {
-            var tower = MassingExtras.Tower(place, Profile(place), into, Materials3D.ChimneyIndex);
-            MassingExtras.Spire(tower, into, Materials3D.ChimneyIndex);
+            var tower = MassingExtras.Tower(place, Profile(place), into, Materials3D.WallIndex);
+            MassingExtras.Spire(tower, into, Materials3D.SpireIndex);
         }
     }
 
