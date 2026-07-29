@@ -10,7 +10,7 @@
 road could see. The bridge is built. Almost nothing crosses it.
 
 ```
-Content/particulars.txt          1,076 clauses authored
+Content/particulars.txt            914 clauses authored
 Beat                             3 values — Carries, Lingers, RoundAbout
 clauses tagged `carries`         5
 clauses tagged `lingers`         0
@@ -20,7 +20,7 @@ reads of Citizen.Beats           1 — Simulation.cs:664, testing one flag
 
 The five tagged clauses all begin with the literal word "carries", so the tagging was a keyword
 match rather than an editorial pass. At 2.4 clauses drawn per citizen over 158 people, five
-clauses reach `158 x 2.4 x 5 / 1076` — about **1.8 people**. The instrument agrees: in the
+clauses reach `158 x 2.4 x 5 / 914` — about **2.1 people**. The instrument agrees: in the
 act-by-manner table, "came out" with `carry` reads **2**.
 
 **Two of 158 villagers is the entire extent to which the particulars are enacted.**
@@ -109,10 +109,10 @@ file's own rule is the test: *observable, or nearly so*.
 
 ## What this does not do
 
-**It will not move `texture.median` or `texture.min`, and it is not meant to.** At 0.35 holders
+**It will not move `texture.median` or `texture.min`, and it is not meant to.** At 0.42 holders
 per tagged clause, ~70 clauses reaches ~25 people; the median villager still holds no tagged
 clause, and the minimum villager — which is what G3 grades — almost certainly does not either.
-Ninety-percent coverage by chance would need ~667 of 1,076 clauses tagged, which would mean
+Ninety-percent coverage by chance would need ~566 of 914 clauses tagged, which would mean
 tagging clauses that do not honestly imply the habit.
 
 **It will not fix the inverted sign, and may widen it slightly.** Beats are distributed

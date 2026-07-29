@@ -399,7 +399,7 @@ Work the whole file top to bottom applying the Step 1 rule. The lists above are 
 - [ ] **Step 5: Verify the clause count did not change**
 
 Run: `grep -vcE '^\s*$|^\s*#' Content/particulars.txt`
-Expected: **1076**, exactly as before. If this moved, a line was added, removed or split — the RNG stream has shifted and the whole village has changed. Undo and retag.
+Expected: **914**, exactly as before. (An earlier draft of this plan said 1076; that came from a grep using `//` as the comment marker when this file comments with `#`, so it counted 162 header lines as clauses. The file header states 913.) If this moved, a line was added, removed or split — the RNG stream has shifted and the whole village has changed. Undo and retag.
 
 - [ ] **Step 6: Run the suite**
 
