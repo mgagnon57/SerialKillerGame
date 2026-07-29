@@ -3,7 +3,6 @@ using Noir.Core.People;
 using Noir.Core.Contracts;
 using Noir.Core.Observation;
 using Noir.Core.Sim;
-using Noir.Core.World;
 using Noir.Sim;
 
 namespace Noir.Core.Tests
@@ -58,9 +57,10 @@ namespace Noir.Core.Tests
         private const int Minutes = 240;
         private const int Lingerer = 1;
 
-        // 6 + [0,6) base, plus 400 + [0,400) for the beat.
+        // 6 + [0,6) base (max 5, since Rolls.Int's upper bound is exclusive), plus
+        // 400 + [0,400) for the beat (max 399, exclusive again): 11 + 400 + 399 = 810.
         private const int PlainShortest = 6, PlainLongest = 11;
-        private const int LingerShortest = 406, LingerLongest = 811;
+        private const int LingerShortest = 406, LingerLongest = 810;
 
         [Test]
         public void ALingererStandsAtTheDoorLongEnoughToBeSeen()
@@ -103,6 +103,36 @@ namespace Noir.Core.Tests
 
             Assert.That(lingererPauses, Is.GreaterThan(0), "the lingerer never crossed a threshold");
             Assert.That(plainPauses, Is.GreaterThan(0), "nobody else crossed one either");
+        }
+
+        /// <summary>
+        /// The extra 20-40s per threshold defers arrival; it must not leave the lingerer stuck
+        /// on a doorstep for the rest of the run. Mirrors
+        /// <see cref="DoorwayTests.APauseNeverStrandsAnybodyMidJourney"/>, which pins this same
+        /// invariant for a village with no beats in it at all.
+        /// </summary>
+        [Test]
+        public void ALingererStillGetsEverywhere()
+        {
+            var world = Queueham.World;
+            var people = Queueham.PeopleWith(i => i == Lingerer ? Beat.Lingers : Beat.None);
+            var sim = new Simulation(world, people, Queueham.Seed, StartHour * 60);
+
+            sim.Tick(GameClock.TicksPerMinute * Minutes);
+
+            var lingerer = sim.GetAgent(Lingerer);
+
+            Assert.That(lingerer.DoorPauseTicks, Is.LessThanOrEqualTo(LingerLongest),
+                $"the lingerer has been on a threshold for {lingerer.DoorPauseTicks} ticks — " +
+                "stranded, not merely slow");
+
+            int travelling = 0;
+            for (int i = 0; i < sim.AgentCount; i++)
+                if (sim.GetAgent(i).Travelling) travelling++;
+
+            Assert.That(travelling, Is.LessThan(sim.AgentCount / 3),
+                $"{travelling} of {sim.AgentCount} still walking after four hours — the extra " +
+                "pause is stranding somebody, not just delaying them");
         }
     }
 
@@ -177,6 +207,55 @@ namespace Noir.Core.Tests
 
             Assert.That(carriers, Is.GreaterThan(0),
                 "nobody in the village drew a clause tagged `# carries`");
+        }
+
+        /// <summary>
+        /// The other half of the same claim as
+        /// <see cref="SomebodyWhoseParticularsSayTheyLingerIsSeenLingering"/>: it is not enough
+        /// for a citizen to hold <see cref="Beat.Carries"/>, a watcher must actually record
+        /// <see cref="ObservedManner.Carrying"/> against them. 16 carriers in the village, so a
+        /// majority-seen bar (like the lingering test's) is the right shape, not a bare
+        /// greater-than-zero.
+        ///
+        /// Scoped to <see cref="ObservedAct.CameOut"/> specifically, not to any entry bearing
+        /// Manner.Carrying: leaving Shopping or OnTheAllotment also sets
+        /// <c>AgentState.Carrying</c> (Simulation.cs:677), so a citizen could be seen carrying on
+        /// the way home from an errand whether or not `Beat.Carries` wired anything at all. Coming
+        /// out of your OWN front door cannot follow either of those activities, so "carrying" on
+        /// `CameOut` is reachable only through the beat — which is exactly what makes this
+        /// discriminate rather than pass by coincidence.
+        /// </summary>
+        [Test]
+        public void SomebodyWhoseParticularsSayTheyCarryIsSeenCarrying()
+        {
+            var ctx = VillageContext.Load();
+            var logs = Eyewitness.WatchAll(ctx, 2);
+
+            int carriers = 0, seenCarrying = 0;
+
+            for (int i = 0; i < logs.Length; i++)
+            {
+                var who = ctx.People.Get(new CitizenId(i));
+                if (who == null || (who.Beats & Beat.Carries) == 0) continue;
+
+                carriers++;
+                foreach (Observed o in logs[i].Entries)
+                {
+                    if (o.Act != ObservedAct.CameOut) continue;
+                    if ((o.Manner & ObservedManner.Carrying) == 0) continue;
+                    seenCarrying++;
+                    break;
+                }
+            }
+
+            Assert.That(carriers, Is.GreaterThan(0),
+                "no villager drew a clause tagged `# carries` — the editorial pass has not "
+              + "reached anybody, so this proves nothing either way");
+
+            Assert.That(seenCarrying * 2, Is.GreaterThanOrEqualTo(carriers),
+                $"only {seenCarrying} of {carriers} carriers were ever seen carrying while "
+              + "coming out of their own door in two days — the flag is set but nothing "
+              + "observable follows from it");
         }
     }
 }

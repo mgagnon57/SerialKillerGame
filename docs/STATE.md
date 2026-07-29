@@ -6,7 +6,7 @@
 taken in Release on the same unpatched i9-13900K (microcode `0x10E`, BIOS 0809, 2023-01-05) and is
 **PROVISIONAL** until the BIOS update lands. Do not spend these numbers as evidence before then.
 
-### What landed (five tasks, branch `massing`, commit `22283fe`)
+### What landed (five tasks, branch `beats`, commit `af5e132`)
 
 1. **`Beat.RoundAbout` deleted.** It could only ever produce `ObservedManner.SomewhereNew`, and the
    act-by-manner table already read 158 of 158 on both "came out" and "walked past" for that manner
@@ -14,11 +14,19 @@ taken in Release on the same unpatched i9-13900K (microcode `0x10E`, BIOS 0809, 
    a routing change, risking the determinism guarantee for a beat that could add nothing.
 2. **`Beat.Lingers` wired into `BeginDoorPause`** (`Assets/Noir/Core/Sim/Simulation.cs`), on its own
    `Rolls.Purpose("lingering")` stream so every non-lingerer's door pause stays byte-identical.
-   `LingerBase = 400`, `LingerSpread = 400` — a lingerer pauses 406-811 ticks (20-40s) against the
+   `LingerBase = 400`, `LingerSpread = 400` — a lingerer pauses 406-810 ticks (20-40s) against the
    usual 6-11 (0.3-0.55s), sized against an observer that samples once a simulated minute.
-3. **Editorial tagging pass on `Content/particulars.txt`**: 42 `# carries` and 21 `# lingers`
-   clauses out of 914. Four over-tags caught in review and reverted (pocketed items never produced
-   are not visible from across a road).
+3. **Editorial tagging pass on `Content/particulars.txt`**: 43 `# carries` and 22 `# lingers`
+   clauses out of 914 (913 as the parser counts them: a UTF-8 BOM on the file's first byte stops
+   `^\s*#` from matching the first comment line, so `grep -vcE '^\s*$|^\s*#'` over-counts by one
+   — the file's own header already states 913). A naive `grep -c '# carries'` reads 42 and
+   `grep -c '# lingers'` reads 21: each misses one
+   combined-tag line — `# works carries` at :766 and `# works lingers` at :786 — where the tag text
+   doesn't start immediately after `#`. `BeatIn` substring-matches anywhere after `#`; a literal
+   grep on the `# carries`/`# lingers` prefix does not. Same class of blind spot as the "914, not
+   1076" clause-count correction in the implementation plan (Task 3 Step 5) — worth writing down
+   twice so it isn't hit a third time. Four over-tags caught in review and reverted (pocketed items
+   never produced are not visible from across a road).
 4. **End-to-end tests added.** The village has 9 lingerers and 16 carriers; all 9 lingerers were
    seen lingering within 2 observed days. A falsification check (pause shortened back to 0-6 ticks)
    dropped that to 1 of 9 — the test genuinely discriminates on the wiring, not on the sampling.
@@ -36,7 +44,7 @@ taken in Release on the same unpatched i9-13900K (microcode `0x10E`, BIOS 0809, 
 ### The `ratio` instrument, before vs. after (seed 1979, same 158-person village) — PROVISIONAL
 
 Before = commit `905dca8`, checked out into a disposable worktree for a clean comparison, never
-touching the working tree on `massing`.
+touching the working tree on `beats`.
 
 ```
                         before    after     delta

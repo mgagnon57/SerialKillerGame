@@ -905,7 +905,10 @@ namespace Noir.Core.Sim
         }
 
         /// <summary>
-        /// Six to eleven ticks — three to five and a half tenths of a second.
+        /// Six to eleven ticks — three to five and a half tenths of a second — for everybody,
+        /// plus a second, separately-purposed draw for a citizen holding <see cref="Beat.Lingers"/>
+        /// (see the <see cref="LingerPurpose"/>/<see cref="LingerBase"/>/<see cref="LingerSpread"/>
+        /// block above, where the full rationale lives).
         ///
         /// Jittered rather than fixed because a family filing through their own front door in
         /// perfect lockstep reads as a stutter in the simulation. Varied, it reads as four
