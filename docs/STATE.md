@@ -1,6 +1,6 @@
 ﻿# Where we are
 
-## STOP HERE — 2026-07-29, later. Beats are enacted. Numbers moved exactly as predicted, and the machine is still not to be trusted.
+## STOP HERE — 2026-07-29, later. Beats are enacted. The predicted numbers held; one nobody predicted jumped 8x. The machine is still not to be trusted.
 
 **Still the faulty machine below — nothing here changes that.** Every figure in this section was
 taken in Release on the same unpatched i9-13900K (microcode `0x10E`, BIOS 0809, 2023-01-05) and is
@@ -72,8 +72,10 @@ to 16 of 158, an 8x jump, because task 3's editorial pass added 42 `# carries` c
 carry-tagging that was already routed before this batch of work. Not a bug — the carry vocabulary
 genuinely grew — but worth flagging since only `linger` was named as expected to move.
 
-**Nothing here moved by more than a fraction of a point.** No number is treated as a green light;
-all of it is provisional pending the BIOS fix.
+**Of the four metrics the design made a prediction about — median, texture_median, texture_min,
+and the sign gap — none moved by more than a fraction of a point.** That scoping does not extend
+to the count columns: `carry` on "came out" moved 8x, as detailed above. No number is treated as a
+green light; all of it is provisional pending the BIOS fix.
 
 ### Snapshots — deliberately NOT re-rendered
 
