@@ -1,0 +1,26 @@
+{
+    "name": "Noir.Editor",
+    "rootNamespace": "Noir.Editor",
+    "references": [
+        "Noir.Unity",
+        "Noir.Core.Contracts",
+        "Noir.Core.World",
+        "Noir.Core.People",
+        "Noir.Core.Sim",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.Editor",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Core.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

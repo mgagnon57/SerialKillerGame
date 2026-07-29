@@ -1,0 +1,18 @@
+{
+    "name": "Noir.Core.Sim",
+    "rootNamespace": "Noir.Core.Sim",
+    "references": [
+        "Noir.Core.Contracts",
+        "Noir.Core.World",
+        "Noir.Core.People"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

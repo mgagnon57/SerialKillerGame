@@ -1,0 +1,17 @@
+{
+    "name": "Noir.Core.People",
+    "rootNamespace": "Noir.Core.People",
+    "references": [
+        "Noir.Core.Contracts",
+        "Noir.Core.World"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

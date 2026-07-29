@@ -1,0 +1,23 @@
+{
+    "name": "Noir.Unity",
+    "rootNamespace": "Noir.Unity",
+    "references": [
+        "Noir.Core.Contracts",
+        "Noir.Core.World",
+        "Noir.Core.People",
+        "Noir.Core.Sim",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.2D.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

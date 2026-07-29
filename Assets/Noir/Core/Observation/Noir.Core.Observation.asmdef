@@ -1,0 +1,16 @@
+{
+    "name": "Noir.Core.Observation",
+    "rootNamespace": "Noir.Core.Observation",
+    "references": [
+        "Noir.Core.Contracts"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The benchmark harness. Measures the simulation against the budget it has to hit
+    (6000 ticks per real second = 20 Hz at 300x) so that scaling decisions are made on
+    numbers instead of estimates.
+
+    The GC and JIT settings below are not performance tuning — they are repeatability
+    tuning. Workstation, non-concurrent GC keeps collections on the measuring thread where
+    they show up in the numbers rather than stealing time from another core, and disabling
+    tiered PGO removes the largest source of run-to-run drift: whether the profile-guided
+    recompile happened to kick in before the timed section this time.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Noir.Bench</AssemblyName>
+    <RootNamespace>Noir.Bench</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Optimize>true</Optimize>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Noir.Core is forced to Release whatever this project is built as.
+
+      `dotnet run` defaults to Debug, and a Debug Noir.Core is an unoptimised Noir.Core — the
+      thing being measured, compiled with the JIT optimiser switched off. That does not
+      produce a slightly pessimistic number, it produces a meaningless one. The preamble
+      reports what it actually loaded, so this can never quietly stop working.
+    -->
+    <ProjectReference Include="..\Noir.Core\Noir.Core.csproj" SetConfiguration="Configuration=Release" />
+  </ItemGroup>
+
+</Project>

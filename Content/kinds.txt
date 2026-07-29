@@ -1,0 +1,340 @@
+﻿# ============================================================================
+#  WHAT KINDS OF PLACE THERE ARE
+#
+#  One row per kind. Adding an amenity to the village is a row here and a few
+#  lines in village.txt - it is not thirteen switch statements in eleven files,
+#  which is what it used to be, and eleven chances to forget one.
+#
+#  A row is complete or the load fails. There is deliberately no default for
+#  anything: a kind that forgets to say whether it has rooms was, before this
+#  file existed, a building that quietly had none, and the first sign of it was
+#  an empty box on the screen with nobody working in it.
+#
+#  A kind whose name matches a PlaceKind member keeps that member's number, so
+#  the order of this file does not matter and cannot move anything. A kind the
+#  enum has never heard of is numbered after them, and works everywhere in Core
+#  without a line of C#. A barber, tried as one row here and four lines in
+#  village.txt, came out walled, roofed, laid out inside, open Tuesday to
+#  Saturday and with somebody behind the chair who had a trade of her own.
+#  What such a kind does NOT get is anything the renderer still decides by
+#  switch - its shopfront is the generic board - and nobody walks to it for a
+#  haircut, because errands are still a weighted list in DayPlanner.
+#
+#  ---- the columns ------------------------------------------------------------
+#
+#  words      what village.txt may call it. The first is the canonical name.
+#  form       building (walls, floor, a door) or open (bounded ground).
+#  ground     what open ground is made of. Only for `form open`.
+#  rooms      none, or auto - however many the grammar thinks a building of
+#             this sort needs. A stated range is refused until a grammar takes
+#             one, rather than accepted and then ignored.
+#  grammar    which interior grammar lays it out, by name. Only when it has
+#             rooms, and it must be a name InteriorGenerator answers to.
+#  roof       whether it has a roof, and therefore whether its windows light.
+#  frontage   which shopfront the renderer hangs on it.
+#  props      outdoor furniture belonging to the place: benches, postbox, trough.
+#  counter    whether you are served one at a time, and therefore queue.
+#  service    minutes at the counter: this many, plus a draw under the spread.
+#             Only where there is a counter.
+#  hours      when it is open, WHEN THE PLACE DOES NOT SAY FOR ITSELF. Every
+#             place in Ashcombe states its own, so these are what a second shop
+#             or a new surgery would open for if nobody wrote it down.
+#  jobs       how many work there, again only when the place does not say.
+#  roles      what those people are called, in slot order. The last name covers
+#             every slot after it: "farmer farmhand" is one farmer and the rest
+#             hands. A kind that names roles must employ somebody, and a kind
+#             that employs somebody must name what they are - either on its own
+#             is an amenity whose windows never light from anyone being in it.
+#  shifts     one, or split when several opening windows are genuinely separate
+#             shifts rather than a lunch break. Only the mill.
+#  catchment  whether a household belongs to a particular one of these.
+#  describe   whether it is expected to carry its own `human` sentence. A
+#             dwelling is not: its character comes from who lives in it.
+# ============================================================================
+
+# ---- homes ----------------------------------------------------------------
+kind dwelling
+  words     dwelling house cottage
+  form      building
+  rooms     auto
+  grammar   domestic
+  roof      yes
+  frontage  dwelling
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  no
+
+# ---- the places people go -------------------------------------------------
+kind pub
+  words     pub
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  pub
+  props     none
+  counter   no
+  hours     11:00-14:30 17:30-23:00
+  jobs      3
+  roles     publican
+  shifts    one
+  catchment no
+  describe  yes
+
+kind shop
+  words     shop
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  shop
+  props     none
+  counter   yes
+  service   5 7
+  hours     07:00-13:00@mon-sat 14:00-17:30@mon-fri
+  jobs      2
+  roles     shopkeeper
+  shifts    one
+  catchment no
+  describe  yes
+
+kind postoffice
+  words     postoffice post
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  post
+  props     postbox
+  counter   yes
+  service   4 7
+  hours     09:00-13:00@mon-fri 09:00-12:00@sat
+  jobs      1
+  roles     postmaster
+  shifts    one
+  catchment no
+  describe  yes
+
+# The church has no interior worth generating: one room the size of the
+# building is nearer the truth than a nave subdivided into bedrooms.
+kind church
+  words     church
+  form      building
+  rooms     auto
+  grammar   hall
+  roof      yes
+  frontage  church
+  props     none
+  counter   no
+  hours     08:00-18:00 09:00-12:00@sun
+  jobs      1
+  roles     verger
+  shifts    one
+  catchment yes
+  describe  yes
+
+kind school
+  words     school
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  school
+  props     none
+  counter   no
+  hours     08:30-15:30@mon-fri
+  jobs      4
+  roles     teacher
+  shifts    one
+  catchment yes
+  describe  yes
+
+# Longer at the counter than anywhere else, and it is the whole reason a
+# waiting room fills: six minutes and up, against four at the post office.
+kind surgery
+  words     surgery
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  surgery
+  props     none
+  counter   yes
+  service   6 9
+  hours     08:30-11:30@mon-fri 16:00-18:00@mon,tue,thu,fri
+  jobs      2
+  roles     doctor nurse
+  shifts    one
+  catchment yes
+  describe  yes
+
+kind garage
+  words     garage
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  garage
+  props     none
+  counter   no
+  hours     08:00-18:00@mon-fri 08:00-13:00@sat
+  jobs      3
+  roles     mechanic
+  shifts    one
+  catchment no
+  describe  yes
+
+# The only place in the village where two opening windows mean two shifts
+# rather than a lunch break, so half its hands are on nights.
+kind mill
+  words     mill
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  mill
+  props     none
+  counter   no
+  hours     06:00-14:00@mon-fri 14:00-22:00@mon-fri
+  jobs      22
+  roles     millhand
+  shifts    split
+  catchment no
+  describe  yes
+
+kind farm
+  words     farm
+  form      building
+  rooms     auto
+  grammar   domestic
+  roof      yes
+  frontage  farm
+  props     trough
+  counter   no
+  hours     05:30-19:00
+  jobs      5
+  roles     farmer farmhand
+  shifts    one
+  catchment no
+  describe  yes
+
+kind villagehall
+  words     villagehall hall
+  form      building
+  rooms     auto
+  grammar   hall
+  roof      yes
+  frontage  hall
+  props     none
+  counter   no
+  hours     09:00-22:00
+  jobs      1
+  roles     caretaker
+  shifts    one
+  catchment no
+  describe  yes
+
+# ---- open ground ----------------------------------------------------------
+# None of these is a building, so none is walled, roofed or given an interior.
+# A phone box counts as street furniture: it is one tile, and walling it would
+# leave nowhere to stand in it.
+kind playground
+  words     playground
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     benches
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind busstop
+  words     busstop
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind phonebox
+  words     phonebox
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind green
+  words     green
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     benches
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind churchyard
+  words     churchyard
+  form      open
+  ground    churchyard
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind allotments
+  words     allotments
+  form      open
+  ground    field
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes

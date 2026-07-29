@@ -1,0 +1,688 @@
+using System;
+using System.Collections.Generic;
+using Noir.Core.Contracts;
+using Noir.Core.World;
+
+namespace Noir.Core.People
+{
+    public enum Activity : byte
+    {
+        Asleep = 0,
+        AtHome,
+        TravellingTo,
+        AtWork,
+        AtSchool,
+        Shopping,
+        AtThePub,
+        AtChurch,
+        Visiting,
+        Walking,
+        AtThePlayground,
+        OnTheAllotment,
+        WaitingForTheBus,
+
+        /// <summary>
+        /// Stopped in the street, talking to somebody.
+        ///
+        /// Not a planned activity - it happens to people on the way to somewhere else, which
+        /// is exactly why it makes a village feel inhabited. Two figures standing still and
+        /// facing each other reads as conversation with no dialogue written at all.
+        /// </summary>
+        Talking,
+    }
+
+    /// <summary>One stretch of a person's day: be at this place, from this minute to that one.</summary>
+    public readonly struct Block
+    {
+        public readonly short StartMinute;
+        public readonly short EndMinute;
+        public readonly PlaceId Where;
+        public readonly Activity What;
+
+        public Block(int start, int end, PlaceId where, Activity what)
+        {
+            // A block that runs past midnight, or backwards, is always a planner bug. Failing
+            // here is far better than the alternative: DayPlan.At returns the FIRST covering
+            // block, so an overlap silently makes the later one unreachable and the person
+            // simply never does that thing. That is invisible in the game and maddening to
+            // track down.
+            if (end <= start || start < 0 || end > 1440)
+                throw new ArgumentOutOfRangeException(nameof(start),
+                    $"block {start}..{end} ({what}) is not inside a single day");
+
+            StartMinute = (short)start;
+            EndMinute = (short)end;
+            Where = where;
+            What = what;
+        }
+
+        public bool Covers(int minuteOfDay) => minuteOfDay >= StartMinute && minuteOfDay < EndMinute;
+        public int Length => EndMinute - StartMinute;
+
+        public override string ToString() =>
+            $"{StartMinute / 60:00}:{StartMinute % 60:00}-{EndMinute / 60:00}:{EndMinute % 60:00} {What}";
+    }
+
+    /// <summary>
+    /// A person's day, as a list of blocks.
+    ///
+    /// THE KEY DESIGN DECISION: this is a PURE FUNCTION of (seed, citizen, dayIndex). Nothing is
+    /// stepped, accumulated or stored. That buys four things at once —
+    ///   * no day-boundary hitch where a hundred schedules regenerate on one tick;
+    ///   * the same day always replays identically, so "why was he there" has an answer;
+    ///   * we can ask what anyone will be doing next Tuesday, or was doing last Friday,
+    ///     without having simulated it;
+    ///   * memory is a small cache rather than a hundred stored timetables.
+    ///
+    /// Structure is a hard skeleton of obligations (sleep, work, school) with discretionary time
+    /// filled by weighted choice. Pure schedules feel robotic; pure utility feels random. The
+    /// skeleton is what makes someone learnable, and the discretion is what stops them being a
+    /// metronome.
+    /// </summary>
+    public sealed class DayPlan
+    {
+        public readonly CitizenId Who;
+        public readonly int Day;
+        private readonly Block[] _blocks;
+
+        public DayPlan(CitizenId who, int day, Block[] blocks)
+        {
+            Who = who;
+            Day = day;
+            _blocks = blocks;
+        }
+
+        public IReadOnlyList<Block> Blocks => _blocks;
+
+        public Block At(int minuteOfDay)
+        {
+            for (int i = 0; i < _blocks.Length; i++)
+                if (_blocks[i].Covers(minuteOfDay)) return _blocks[i];
+            return _blocks.Length > 0 ? _blocks[_blocks.Length - 1] : default;
+        }
+
+        public Block? Next(int minuteOfDay)
+        {
+            for (int i = 0; i < _blocks.Length; i++)
+                if (_blocks[i].StartMinute > minuteOfDay) return _blocks[i];
+            return null;
+        }
+    }
+
+    public static class DayPlanner
+    {
+        /// <summary>
+        /// Build one person's day. Deterministic in (seed, citizen, day) — no hidden state.
+        /// </summary>
+        public static DayPlan Plan(WorldModel world, Population population, Citizen who,
+                                   int day, ulong seed)
+        {
+            // A stream unique to this person AND this day, so yesterday does not shift today.
+            var rng = new Xoshiro256ss(Mix(seed, (ulong)who.Id.Value, (ulong)day));
+            int dayOfWeek = day % 7;
+            bool weekend = dayOfWeek >= 5;
+            bool sunday = dayOfWeek == 6;
+
+            var blocks = new List<Block>();
+            int jitter = who.Punctuality;
+
+            // ---- sleep: everyone starts the day in bed ----
+            int wake = WakeTime(who, weekend) + jitter;
+            int bed = BedTime(who, weekend) + jitter / 2;
+            blocks.Add(new Block(0, wake, who.Home, Activity.Asleep));
+
+            int cursor = wake;
+
+            // ---- the school run ----
+            //
+            // An adult in a house with a small child walks them to the school gate and comes
+            // back. It departs at exactly the same minute as the child's own school block, so
+            // the two of them leave the house together and the simulation pairs them up on the
+            // way - which is the whole point. A parent arriving separately is just two people
+            // who happened to go to the same place.
+            //
+            // This is also the first thing that uses the `population` argument, which the
+            // signature has always taken and the body never touched.
+            if (!weekend && !who.IsChild && HasInfant(population, who))
+            {
+                var school = Catchment(world, population, who, PlaceKind.School);
+                if (school.IsValid)
+                {
+                    var sp = world.GetPlace(school);
+                    int bell = OpeningOf(sp, dayOfWeek, 8 * 60 + 30);
+                    int back = bell + 14;
+
+                    // Only if it does not collide with their own shift.
+                    bool clashesWithWork = who.Works && WorkStartsBefore(world, who, dayOfWeek, back + 10);
+
+                    if (!clashesWithWork && bell >= cursor && back < bed)
+                    {
+                        if (bell > cursor) blocks.Add(new Block(cursor, bell, who.Home, Activity.AtHome));
+                        blocks.Add(new Block(bell, back, school, Activity.Visiting));
+                        cursor = back;
+                    }
+                }
+            }
+
+            // ---- the obligation: work or school ----
+            if (who.IsChild && !weekend)
+            {
+                var school = Catchment(world, population, who, PlaceKind.School);
+                if (school.IsValid)
+                {
+                    var p = world.GetPlace(school);
+                    int start = OpeningOf(p, dayOfWeek, 8 * 60 + 30);
+                    int end = ClosingOf(p, dayOfWeek, 15 * 60 + 30);
+                    if (start > cursor) blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
+
+                    int in_ = Math.Max(cursor, start);
+                    AddObligation(blocks, world, who, school, Activity.AtSchool,
+                                  in_, end, jitter, dayOfWeek, rng);
+                    cursor = end;
+                }
+            }
+            else if (who.Works)
+            {
+                var p = world.GetPlace(who.Work);
+                if (p != null && WorksToday(p, dayOfWeek))
+                {
+                    var (start, end) = ShiftFor(p, dayOfWeek, who.Shift);
+                    start += jitter;
+                    if (start > cursor) blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
+                    if (end > start)
+                    {
+                        AddObligation(blocks, world, who, who.Work, Activity.AtWork,
+                                      Math.Max(cursor, start), end, jitter, dayOfWeek, rng);
+                        cursor = end;
+                    }
+                }
+            }
+
+            // ---- church, on a Sunday morning ----
+            if (sunday)
+            {
+                var church = Catchment(world, population, who, PlaceKind.Church);
+
+                // The draw happens unconditionally, before any test that could skip it, so that
+                // adding or changing conditions here never shifts the RNG stream for everything
+                // downstream. Cheap discipline; it is what keeps a seed reproducible.
+                bool attends = rng.Chance(ChurchChance(who));
+
+                if (church.IsValid && attends)
+                {
+                    var cp = world.GetPlace(church);
+                    int svcStart = OpeningOf(cp, dayOfWeek, 9 * 60 + 30);
+                    int svcEnd = ClosingOf(cp, dayOfWeek, 12 * 60);
+
+                    int start = Math.Max(cursor, svcStart);
+
+                    // Someone still on shift when the service ends simply misses it. Previously
+                    // start was only clamped UPWARD to cursor, so a publican clocking off at
+                    // 23:00 went to a locked church and stood in it until ten past midnight.
+                    if (start + 70 <= Math.Min(svcEnd, bed))
+                    {
+                        if (start > cursor) blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
+                        blocks.Add(new Block(start, start + 70, church, Activity.AtChurch));
+                        cursor = start + 70;
+                    }
+                }
+            }
+
+            // ---- discretionary time, until bed ----
+            int errands = ErrandCount(who, weekend, rng);
+            for (int e = 0; e < errands && cursor < bed - 40; e++)
+            {
+                // The gap is drawn BEFORE choosing where to go, so the place can be tested
+                // against the hour they will actually arrive. Previously it was tested at a
+                // fixed cursor+30 while the real start landed anywhere from +15 to +104, so
+                // the tested instant matched the real one about one draw in ninety - people
+                // walked to shops that had shut an hour earlier.
+                int gap = 15 + rng.NextInt(90);
+                int start = cursor + gap;
+                if (start > bed - 40) break;
+
+                var chosen = ChooseErrand(world, who, dayOfWeek, start, bed, rng);
+                if (!chosen.HasValue) break;
+
+                var (place, activity, duration) = chosen.Value;
+                int end = start + duration;
+                if (end > bed - 20) break;
+
+                blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
+                blocks.Add(new Block(start, end, place, activity));
+                cursor = end;
+            }
+
+            // ---- home, then bed ----
+            // A late shift can run past the nominal bedtime; without this clamp the Asleep
+            // block starts before the work block ends and the two overlap. At() returns the
+            // FIRST covering block, so the later one becomes silently unreachable - the person
+            // never goes to bed at all.
+            if (bed < cursor) bed = cursor;
+
+            if (cursor < bed) blocks.Add(new Block(cursor, bed, who.Home, Activity.AtHome));
+            if (bed < 1440) blocks.Add(new Block(bed, 1440, who.Home, Activity.Asleep));
+
+            return new DayPlan(who.Id, day, blocks.ToArray());
+        }
+
+        // ---- the dinner hour ----
+
+        /// <summary>
+        /// The middle of the day. 12:00, shifted by the same punctuality that moves somebody's
+        /// shift, so a person who is habitually ten minutes late is habitually ten minutes late
+        /// to their dinner too and the village does not empty onto the street in lockstep.
+        /// </summary>
+        private const int DinnerStart = 12 * 60;
+
+        private const int DinnerLength = 45;
+
+        /// <summary>
+        /// A block of work or school, with the dinner hour cut out of the middle of it.
+        ///
+        /// WHY THIS EXISTS. A shift used to be one unbroken block — 09:00 to 17:00, or 08:30 to
+        /// 15:30 for a child — so for the whole of the best light in the day, thirty-seven adults
+        /// and twenty children were sealed inside buildings. The `street` instrument measured the
+        /// result: 0.2 of 112 people visible at half past twelve, against 13.6 at half past
+        /// eight. The village was not still, it was empty at the hours anyone actually looked at
+        /// it, and the default clock is noon.
+        ///
+        /// The break is spent OUT, deliberately — on the green, in the churchyard, at the
+        /// playground, or at the pub. Sending people home for their dinner would satisfy any
+        /// reasonable description of a lunch break and buy almost nothing you can see, because
+        /// home is another roof. The pub's 11:00-14:30 opening was already authored in
+        /// village.txt and had no trade in it at all; a dinner hour is what that window was
+        /// always for.
+        ///
+        /// If nothing suitable is open and near, there is no break and the block stays whole.
+        /// A farm hand at the far end of the fields genuinely does eat where he is standing.
+        /// </summary>
+        private static void AddObligation(List<Block> blocks, WorldModel world, Citizen who,
+                                          PlaceId where, Activity what,
+                                          int from, int until, int jitter, int dayOfWeek, IRng rng)
+        {
+            // One draw, unconditionally, before any test that could skip it — the same discipline
+            // as the church draw and ChooseNearby's roll. A filter that sometimes skips the roll
+            // would shift every decision later in the day.
+            float roll = rng.NextFloat();
+
+            int start = DinnerStart + jitter;
+            int end = start + DinnerLength;
+
+            // Work either side of it, or it is not a break in a shift — it is a short shift.
+            bool straddles = from <= start - 15 && until >= end + 15;
+
+            if (straddles)
+            {
+                var (place, activity) = DinnerPlace(world, who, where, dayOfWeek, start, roll);
+                if (place.IsValid)
+                {
+                    blocks.Add(new Block(from, start, where, what));
+                    blocks.Add(new Block(start, end, place, activity));
+                    blocks.Add(new Block(end, until, where, what));
+                    return;
+                }
+            }
+
+            blocks.Add(new Block(from, until, where, what));
+        }
+
+        /// <summary>
+        /// Where the dinner hour is spent. Measured from the workplace door, not the house —
+        /// you go out from where you already are.
+        /// </summary>
+        private static (PlaceId, Activity) DinnerPlace(WorldModel world, Citizen who, PlaceId workplace,
+                                                       int dayOfWeek, int from, float roll)
+        {
+            var door = Locality.AnchorOf(world.GetPlace(workplace));
+            var candidates = new List<PlaceId>();
+
+            // Never the building they are trying to get out of. The Wheatsheaf is the obvious
+            // candidate for a dinner hour and it is also where three publicans work, so without
+            // this a publican's break is a shift.
+            void Offer(PlaceKind kind)
+            {
+                var ids = world.PlacesOfKind(kind);
+                for (int i = 0; i < ids.Count; i++)
+                    if (ids[i] != workplace) candidates.Add(ids[i]);
+            }
+
+            Offer(PlaceKind.Green);
+            Offer(PlaceKind.Churchyard);
+
+            if (who.IsChild)
+            {
+                Offer(PlaceKind.Playground);
+            }
+            else
+            {
+                Offer(PlaceKind.Playground);
+                Offer(PlaceKind.Allotments);
+                Offer(PlaceKind.Pub);
+            }
+
+            var chosen = Locality.ChooseNearby(world, door, candidates, dayOfWeek, from,
+                                               DinnerLength, NearbyChoices, roll);
+            if (!chosen.IsValid) return (PlaceId.None, Activity.AtHome);
+
+            switch (world.GetPlace(chosen).Kind)
+            {
+                case PlaceKind.Pub: return (chosen, Activity.AtThePub);
+                case PlaceKind.Playground: return (chosen, Activity.AtThePlayground);
+                case PlaceKind.Allotments: return (chosen, Activity.OnTheAllotment);
+                default: return (chosen, Activity.Walking);
+            }
+        }
+
+        // ---- the shape of a day ----
+
+        private static int WakeTime(Citizen who, bool weekend)
+        {
+            switch (who.Job)
+            {
+                case Occupation.Farmer:
+                case Occupation.FarmHand: return 5 * 60;                      // milking
+                case Occupation.MillHand: return who.Shift == 0 ? 5 * 60 + 15 : 8 * 60;
+                default:
+                    if (who.Stage == LifeStage.Elder) return 6 * 60 + 30;
+                    return weekend ? 8 * 60 : 7 * 60;
+            }
+        }
+
+        private static int BedTime(Citizen who, bool weekend)
+        {
+            if (who.IsChild) return 20 * 60 + 30;
+            if (who.Stage == LifeStage.Elder) return 22 * 60;
+            if (who.Job == Occupation.MillHand && who.Shift == 1) return 23 * 60 + 30;
+            return weekend ? 23 * 60 + 30 : 22 * 60 + 45;
+        }
+
+        private static float ChurchChance(Citizen who) =>
+            who.Stage == LifeStage.Elder ? 0.7f : who.IsChild ? 0.35f : 0.3f;
+
+        private static int ErrandCount(Citizen who, bool weekend, IRng rng)
+        {
+            float social = who.Sociability / 255f;
+            int n = rng.Chance(0.35f + social * 0.4f) ? 2 : 1;
+            if (weekend && rng.Chance(0.4f)) n++;
+            if (who.IsChild) n = rng.Chance(0.7f) ? 1 : 0;
+            return n;
+        }
+
+        /// <summary>
+        /// How many of the nearest candidates of a kind are worth considering.
+        ///
+        /// Six is enough that a village with three shops still has a choice and a town with
+        /// thirty is not choosing between all thirty. It is a shortlist, not a decision — what
+        /// happens to the six is in <see cref="Locality.ChooseNearby"/>.
+        /// </summary>
+        private const int NearbyChoices = 6;
+
+        /// <summary>
+        /// Weighted pick over what is actually open and plausible for this person.
+        /// <paramref name="from"/> is the real arrival minute, not an estimate.
+        /// </summary>
+        private static (PlaceId, Activity, int)? ChooseErrand(WorldModel world, Citizen who,
+                                                              int dayOfWeek, int from, int until, IRng rng)
+        {
+            var options = new List<(PlaceId place, Activity act, int minutes, int weight)>();
+            int evening = 18 * 60;
+
+            // Errands start from the front door: the planner always puts an at-home block in
+            // front of one.
+            var doorstep = Locality.AnchorOf(world.GetPlace(who.Home));
+
+            void Consider(PlaceKind kind, Activity act, int minutes, int weight) =>
+                ConsiderThese(world.PlacesOfKind(kind), act, minutes, weight);
+
+            void ConsiderThese(IReadOnlyList<PlaceId> ids, Activity act, int minutes, int weight)
+            {
+                if (ids.Count == 0 || weight <= 0) return;
+
+                // One draw whatever happens below, for the same reason the church draw is
+                // unconditional: a filter that sometimes skips the roll would shift every
+                // decision left in the day.
+                float roll = rng.NextFloat();
+
+                if (from + minutes > until) return;
+
+                // Which of the several shops, and it is not the one the dice land on: it used
+                // to be `ids[rng.NextInt(ids.Count)]`, an index into a positional list, so a
+                // person's errand depended on the order places happen to appear in village.txt
+                // and half of them were a walk across the whole map.
+                var id = Locality.ChooseNearby(world, doorstep, ids, dayOfWeek, from, minutes,
+                                               NearbyChoices, roll);
+                if (!id.IsValid) return;
+
+                options.Add((id, act, minutes, weight));
+            }
+
+            float social = who.Sociability / 255f;
+
+            if (who.IsChild)
+            {
+                Consider(PlaceKind.Playground, Activity.AtThePlayground, 60, 60);
+                Consider(PlaceKind.Green, Activity.Walking, 45, 30);
+                Consider(PlaceKind.Shop, Activity.Shopping, 15, 10);
+            }
+            else
+            {
+                Consider(PlaceKind.Shop, Activity.Shopping, 25, 45);
+                Consider(PlaceKind.PostOffice, Activity.Shopping, 20, 18);
+                Consider(PlaceKind.Green, Activity.Walking, 40, 20);
+                Consider(PlaceKind.Allotments, Activity.OnTheAllotment, 90,
+                         who.Stage == LifeStage.Elder ? 45 : 22);
+                Consider(PlaceKind.VillageHall, Activity.Visiting, 100, (int)(18 * social));
+
+                if (from >= evening - 120)
+                    Consider(PlaceKind.Pub, Activity.AtThePub, 90 + rng.NextInt(60),
+                             (int)(20 + 70 * social));
+
+                if (who.Stage == LifeStage.Elder)
+                    Consider(PlaceKind.Churchyard, Activity.Visiting, 30, 20);
+            }
+
+            // Calling on somebody.
+            //
+            // Last in the list on purpose: every Consider draws once, so anything inserted above
+            // shifts the draws of everything below it. Added here, the existing errands keep the
+            // rolls they have always had.
+            //
+            // This was missing entirely, and it was the largest single hole in the village. The
+            // 2:1 instrument watched a hundred and twelve people for a fortnight and recorded
+            // ZERO visits in 1,568 household-days: nobody in Ashcombe had ever once knocked on
+            // anybody's door, because the errand list was a list of AMENITIES and a neighbour is
+            // not an amenity. It matters past the ratio, too - "who would notice her gone, and
+            // how fast" is the question the whole eventual game turns on, and it has no answer
+            // in a village where nobody calls.
+            // Weighted below shopping on purpose. The first pass had it at 10 + 45*social, which
+            // peaks at 55 against the shop's 45 - so the most sociable half of the village called
+            // on neighbours more often than it bought food, and a test whose whole job was to put
+            // three people at a counter at once stopped being able to.
+            // Half an hour to an hour: calling round is a cup of tea. The first pass allowed up
+            // to an hour and a half, which is a different social occasion - and it showed up in
+            // the instrument as the village going quiet, because a visit trades forty minutes on
+            // the green for an hour indoors where nobody can see you.
+            ConsiderThese(NeighboursOf(world, who), Activity.Visiting,
+                          25 + rng.NextInt(35),
+                          who.IsChild ? (int)(3 + 9 * social)
+                                      : (int)(3 + 12 * social) + (who.Stage == LifeStage.Elder ? 6 : 0));
+
+            if (options.Count == 0) return null;
+
+            int total = 0;
+            foreach (var o in options) total += o.weight;
+            if (total <= 0) return null;
+
+            int roll = rng.NextInt(total);
+            foreach (var o in options)
+            {
+                roll -= o.weight;
+                if (roll < 0) return (o.place, o.act, o.minutes);
+            }
+            return (options[0].place, options[0].act, options[0].minutes);
+        }
+
+        // ---- helpers ----
+
+        /// <summary>
+        /// The houses somebody might call at: every dwelling but their own.
+        ///
+        /// Deliberately not "their friends". There is no acquaintance graph in the world model
+        /// and inventing one here would be a second, quieter population generator - the nearness
+        /// weighting in ChooseNearby already produces the right shape, because who you drop in on
+        /// is mostly a question of who is on your way home. The people you visit repeatedly fall
+        /// out of that rather than being written down anywhere, which is the same trick the
+        /// errand picker uses for shops.
+        ///
+        /// Allocates a list per call. ChooseErrand already allocates one, and Plan is memoised
+        /// per citizen per day, so this costs a few dozen small lists a day and nothing per tick.
+        /// </summary>
+        private static IReadOnlyList<PlaceId> NeighboursOf(WorldModel world, Citizen who)
+        {
+            var all = world.PlacesOfKind(PlaceKind.Dwelling);
+            var others = new List<PlaceId>(all.Count);
+            foreach (var id in all)
+                if (id.Value != who.Home.Value) others.Add(id);
+            return others;
+        }
+
+        private static bool WorksToday(Place p, int dayOfWeek) =>
+            p.MinutesUntilOpen(0, dayOfWeek) == 0 || OpeningToday(p, dayOfWeek) >= 0;
+
+        private static int OpeningToday(Place p, int dayOfWeek)
+        {
+            int best = -1;
+            foreach (var w in p.Hours)
+                if ((w.DaysMask & (1 << dayOfWeek)) != 0)
+                    if (best < 0 || w.StartMinute < best) best = w.StartMinute;
+            return best;
+        }
+
+        /// <summary>
+        /// The working day at a place.
+        ///
+        /// Two windows usually means a lunch break (the shop shuts 13:00–14:00), not two shifts —
+        /// so most people work from first opening to last closing and the place stays staffed.
+        /// The mill is the exception: it genuinely runs an early and a late shift, and half its
+        /// hands are on each. Getting this wrong left the shop unmanned every afternoon.
+        ///
+        /// Which places are the exception is the `shifts` column of kinds.txt rather than the
+        /// mill by name, so the next thing that runs nights does not need this method edited.
+        /// </summary>
+        private static (int, int) ShiftFor(Place p, int dayOfWeek, byte shift)
+        {
+            var todays = new List<OpenWindow>();
+            foreach (var w in p.Hours)
+                if ((w.DaysMask & (1 << dayOfWeek)) != 0) todays.Add(w);
+
+            if (todays.Count == 0) return (0, 0);
+
+            if (PlaceKindTable.Current.Row(p.Kind).SplitShifts && todays.Count > 1)
+            {
+                var chosen = todays[Math.Min(shift, todays.Count - 1)];
+                return (chosen.StartMinute, chosen.EndMinute);
+            }
+
+            int open = int.MaxValue, close = int.MinValue;
+            foreach (var w in todays)
+            {
+                if (w.StartMinute < open) open = w.StartMinute;
+                if (w.EndMinute > close) close = w.EndMinute;
+            }
+            return (open, close);
+        }
+
+        private static int OpeningOf(Place p, int dayOfWeek, int fallback)
+        {
+            int o = OpeningToday(p, dayOfWeek);
+            return o >= 0 ? o : fallback;
+        }
+
+        private static int ClosingOf(Place p, int dayOfWeek, int fallback)
+        {
+            int best = -1;
+            foreach (var w in p.Hours)
+                if ((w.DaysMask & (1 << dayOfWeek)) != 0 && w.EndMinute > best) best = w.EndMinute;
+            return best >= 0 ? best : fallback;
+        }
+
+        /// <summary>
+        /// Is this the person who takes the children to school?
+        ///
+        /// One adult per household, not both. An earlier version had every adult in the house
+        /// walking to the school gate, so the Dallimores turned out en masse every weekday
+        /// morning. The escort is simply the first adult in the household - deterministic, and
+        /// it means the same parent does it every day, which is also what happens.
+        /// </summary>
+        private static bool HasInfant(Population population, Citizen who)
+        {
+            if (population == null) return false;
+
+            var household = population.HouseholdMembers(who);
+            bool anyInfant = false;
+            var escort = CitizenId.None;
+
+            for (int i = 0; i < household.Count; i++)
+            {
+                var member = population.Get(household[i]);
+                if (member == null) continue;
+
+                if (member.IsChild)
+                {
+                    if (member.Age <= 9) anyInfant = true;
+                    continue;
+                }
+                if (!escort.IsValid) escort = member.Id;
+            }
+
+            return anyInfant && escort == who.Id;
+        }
+
+        private static bool WorkStartsBefore(WorldModel world, Citizen who, int dayOfWeek, int minute)
+        {
+            var place = world.GetPlace(who.Work);
+            if (place == null) return false;
+            var (start, _) = ShiftFor(place, dayOfWeek, who.Shift);
+            return start > 0 && start < minute;
+        }
+
+        /// <summary>
+        /// Which school, which church, which surgery this person belongs to.
+        ///
+        /// Read off the household, where the generator settled it once from where the house is.
+        /// It used to be the world's first place of that kind, so every child in the parish
+        /// walked to the same gate however far away it was — which does not even show up at
+        /// village scale, because there is only one school.
+        ///
+        /// Reading it rather than deciding it here is what keeps Plan a pure function of what
+        /// it was handed. <see cref="FirstOfKind"/> remains as the fallback for a household
+        /// built without a catchment.
+        /// </summary>
+        private static PlaceId Catchment(WorldModel world, Population population, Citizen who,
+                                         PlaceKind kind)
+        {
+            var household = population?.HouseholdOf(who);
+            if (household != null)
+            {
+                var chosen = household.Catchment(kind);
+                if (chosen.IsValid) return chosen;
+            }
+            return FirstOfKind(world, kind);
+        }
+
+        private static PlaceId FirstOfKind(WorldModel world, PlaceKind kind)
+        {
+            var ids = world.PlacesOfKind(kind);
+            return ids.Count > 0 ? ids[0] : PlaceId.None;
+        }
+
+        private static ulong Mix(ulong seed, ulong a, ulong b)
+        {
+            ulong h = seed ^ 0x9E3779B97F4A7C15UL;
+            h = (h ^ a) * 0xBF58476D1CE4E5B9UL;
+            h = (h ^ (h >> 27) ^ b) * 0x94D049BB133111EBUL;
+            return h ^ (h >> 31);
+        }
+    }
+}

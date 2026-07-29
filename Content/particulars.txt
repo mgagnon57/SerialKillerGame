@@ -1,0 +1,1109 @@
+﻿# PARTICULARS â€” the true, useless, human details.
+#
+# Each line is a clause. The renderer prefixes a name: "Ivy Pethick whistles badly, and
+# constantly." Two or three are drawn per citizen at generation (mean 2.4).
+#
+# These exist to fail the test of usefulness. Nothing here helps anyone do anything. That is
+# the entire point: a person you have only learned useful things about is a lock, not a person.
+# When we measure whether watching someone yields more useless information than useful, THIS
+# is the numerator.
+#
+# Rules for adding more:
+#   - specific, not characterful. "keeps a jar of buttons" beats "is eccentric".
+#   - ordinary. No secrets, no tragedies, no foreshadowing.
+#   - observable, or nearly so. Someone watching for a week could plausibly learn it.
+#   - 1979, rural England. The wireless, the immersion, the pools, four-star, the fish van.
+#   - never a demographic label and never an assessment. A particular is the texture of a
+#     life, not a judgement on one.
+#   - never a checklist of who is unprotected. No keys, no unlocked doors, no empty houses,
+#     no "nobody ever calls". There is exactly one lock clause in this file and it is enough.
+#   - PRONOUN-FREE, and sex-free. The renderer prefixes a name without consulting who owns it,
+#     so "cuts his own hair" becomes "Ruth Hocking cuts his own hair, badly". Write the clause
+#     so it fits anybody. Check every line you add.
+#
+# ---------------------------------------------------------------------------------------
+# SIZING. Read this before adding or cutting.
+#
+# The table has a silent population ceiling and crossing it throws nothing. Expected number of
+# people sharing any one clause is  N x 2.4 / C  where N is the town and C is the clause count.
+#
+#     109 people, 302 clauses  ->  0.87    the village this was authored for
+#     600 people, 302 clauses  ->  4.77    five people with the same habit; reads as a table
+#     600 people, 913 clauses  ->  1.58    where it stands now
+#
+# Restoring 0.87 at 600 would need 1655 clauses, and buys less than it looks: the worst-case
+# repeat only falls from about seven holders to about five, because sampling with replacement
+# has a long tail whatever C is. The tail is the generator's to fix, not the author's â€” see the
+# note on dealing rather than sampling in PopulationGenerator. Author for breadth of register;
+# do not chase the last of the arithmetic here.
+#
+# ---------------------------------------------------------------------------------------
+# TAGS. A trailing "#" comment is stripped by ParticularsTable.Parse, so tags are free and
+# inert today. They mark clauses that cannot be true of everybody:
+#
+#     # elder   needs to have been an adult before about 1955
+#     # m       reads as male and mis-renders on a woman
+#     # f       reads as female and mis-renders on a man
+#
+# Untagged means "any adult or elder". NOTHING in the live table is safe for a child â€” see the
+# staged section at the foot of the file, which is commented out on purpose.
+#
+# The sections below are for the author's benefit only â€” the parser strips comments and reads
+# one clause per line. They exist so that no single register floods the table. Keep them
+# roughly level when adding.
+
+# ---- habits and routine ---------------------------------------------------
+whistles badly, and constantly
+reads the last page of a book first
+takes the long way past the river even in rain
+hums the same four bars, and only those four
+carries a screwdriver in a jacket pocket for no stated reason
+polishes shoes on a Sunday night, everyone's
+counts the steps up to the door
+opens the curtains at the same minute every morning
+picks the labels off bottles
+walks the long field boundary on the first of the month
+straightens pictures in other people's houses
+sits on the wall by the bridge for exactly as long as a cigarette
+goes the long way round past the school and has never said why
+winds the mantel clock every Sunday whether it wants it or not
+reads the paper back to front, sport first
+arrives eleven minutes early for everything and waits outside
+washes the front step on a Friday, kneeling
+puts the kettle on before taking a coat off
+cannot pass a dropped glove without setting it on a wall
+shakes the tablecloth out of the same window every time
+walks to the end of the lane last thing at night and comes straight back
+turns the mattress on the first Saturday of the month
+sets an alarm and is awake ten minutes before it, every day of the year
+turns the calendar over on the last day of the month and not the first
+folds the paper into quarters before starting on it
+says the time aloud on looking at a clock, to nobody in particular
+crosses to the sunny side of the street and crosses back further along
+carries the whole week's shopping in one trip however many trips it wants   # carries
+begins every job by making tea and lets the tea go cold
+stops at the top of Church Lane every time and has never said it is for breath
+does up a coat from the bottom button upward and is unaware of doing it
+wipes the letterbox flap in passing, on any house
+takes a cup of tea outdoors to drink it, in whatever month
+will not leave a room without squaring the chair to the table
+
+# ---- the house ------------------------------------------------------------
+keeps a jar of buttons on the windowsill and has never used one
+saves string
+keeps the good chair for a visitor who does not come
+collects the free newspapers and does not read them
+brings the milk in before the kettle, always in that order
+leaves a light on in the hall
+is the only person who locks the door
+keeps a torch by the bed and one in the shed
+never uses the front door
+will not have the immersion on for more than twenty minutes
+washes the milk bottles before putting them out, which nobody else does
+keeps the front room for Christmas and funerals
+lays a fire in the grate in July, in case
+irons the tea towels
+hoards keys that fit nothing and throws none of them away
+gets the same feed merchant's calendar every year and would be lost without it
+puts newspaper down before doing anything at all
+sweeps the path before it wants it and again afterwards
+has never got round to painting the back door and mentions it first
+writes the date on the underside of anything mended
+keeps a second teapot that is never used and is never put away either
+has the chair at exactly the angle to the fire and moves it back if it is shifted
+runs the cold tap a while before filling anything, and cannot say why
+keeps the good scissors somewhere separate and produces them like a document
+has a barometer, a thermometer and a clock in one row and lines them up
+puts the coal on at the same hour whatever the fire is doing
+counts the stair rods on the way up when carrying nothing
+keeps every instruction booklet for every appliance ever owned, in one drawer
+turns the pictures in the hall a quarter-inch and looks back at them from the door
+airs the spare room on the first Monday of the month, every month
+has an armchair with a cushion nobody else is invited to move
+keeps the good crockery on the top shelf and gets it down with a chair
+buys a new dishcloth long before the old one has finished
+will not have the light on in a room that has a fire in it
+
+# ---- food and the table ---------------------------------------------------
+buys two coffees and drinks both
+puts sugar in tea that has already been sweetened
+will only buy bread on the day it is baked
+buys one chop at a time, four days a week
+saves a tin of salmon for best and has saved it two years
+puts condensed milk in tea and will not be argued with
+makes far more chutney every autumn than anybody could eat
+drinks a flask of tea at eleven, wherever that happens to be
+boils an egg by the clock and not by feel
+eats on a Tuesday exactly what was eaten last Tuesday
+drinks Camp coffee and says it is better than the real thing
+will not sit down to a meal without a slice of bread beside it
+makes parsnip wine that nobody finishes
+swears by dripping and thinks people soft who throw it out
+warms the plates in an oven that has been off an hour
+will not have anything on a plate touch anything else on the plate
+keeps a bottle of sherry for visitors and measures it out level
+puts the salt on before tasting, every time, and has been told
+makes toast under the grill and refuses a toaster as a passing fashion
+takes the crusts off and eats them separately afterwards
+bottles fruit in Kilner jars and labels them by the week they were picked
+buys a quarter of the same sweets on the same day and makes it last
+will not eat a tomato that has been in a fridge
+has a set of egg cups and uses one of them
+puts the marmalade on the table at every meal, whatever the meal
+grates cheese onto everything and calls it a topping
+stews tea until it is dark and says the first cup is wasted
+keeps a Christmas cake from one year into the next and feeds it brandy
+carves standing up and will not let anybody else near the joint
+peels an apple in one piece and is put out when it breaks
+counts the biscuits out of the tin onto a plate and puts the tin away first
+drinks the last of the milk from the bottle at the door and rinses it
+pickles onions in a jar so old the label has come away from it entirely
+
+# ---- shops, money and the post --------------------------------------------
+never posts a letter without checking the box twice
+writes the shopping list on the back of envelopes
+stands outside the phone box while someone else is in it
+does the pools every week and has never checked the results
+saves Green Shield stamps with nothing in mind
+still says prices in old money and converts them out loud
+knows the Co-op divi number by heart and nobody else's
+counts out the exact coins before reaching the counter
+is in the Post Office every Thursday and buys one stamp
+keeps a Christmas club going all year and will not say how much
+waits for the fish van on a Friday and buys the same fish
+writes to a cousin in Canada and has never met the cousin
+still presses Button B in the phone box, out of habit
+buys a postal order rather than put money in an envelope
+will not use the mobile shop on principle, and does not explain the principle
+keeps the change from the milk in a tin on the shelf and counts it on Sundays
+buys the same three things at Pethick's and asks the price of each
+puts sixpences aside for the gas and has never once run out
+will not have a chequebook and has explained why at length
+keeps every receipt in a shoebox in date order and has never looked one up
+has a savings book with one shilling in it, opened in 1949
+buys a paper from the shop and a second paper from the van, both dailies
+will not be served out of turn and steps back to make sure of it
+tips the coalman the same amount every delivery and has since decimalisation
+sends a postal order to a football club every August and gets a badge
+buys a birthday card in January to be ready and cannot find it in June
+brings the same string bag to the shop and has mended the handle twice
+gets stamps a book at a time and uses four a year
+puts the pension straight into an envelope and the envelope into a clock
+will only be measured for anything by one particular counter in Marlbury
+asks after the shopkeeper's family by name and in order of age
+keeps a rent book made up to the penny though the rent has not changed
+
+# ---- the pub --------------------------------------------------------------
+has lived next door to the pub for nine years and has never been in
+drinks a half slower than anybody has ever drunk a half
+plays dominoes and will not talk while doing it
+buys the round first so that it is done with
+writes the darts averages in a notebook nobody asked for
+drinks from a tankard behind the bar with somebody else's initials on it
+comes in at the same minute, has the one, and goes
+will only sit at the end of the bench nearest the door
+says the beer has not been right since the brewery changed hands
+keeps the cribbage board and lets nobody else keep it
+sits outside with a lemonade while the rest are in
+has never in nine years been the one to call time on a conversation
+buys crisps and hands them round without eating any
+has a stool at the corner of the bar and drinks standing if it is taken
+counts the change on the bar top before putting it away, every round
+puts the same tune on the jukebox and is teased for it every week
+brings a dog that sleeps under the table and is better known than the owner
+will not drink from a glass with a handle, and says so
+runs the raffle and has never won it, which is remarked upon
+comes in on a Sunday for one and stays for the argument
+knows the exact date the ceiling was painted and brings it up
+drinks shandy and has drunk shandy for thirty years
+plays the fruit machine with the change from the round and no more
+brings the darts in a tin and will not use the house set
+sits with a paper open at the same page all evening
+stands the empty glasses in a row and squares them off before leaving
+keeps score for other people's games and is trusted to
+has not bought a drink for anybody who bought one first, and never fails to
+leaves at the same minute whatever is being said
+will drink only from the left-hand pump and can taste the difference
+
+# ---- church, hall and parish ----------------------------------------------
+sits in the same seat at the back of the church
+has an opinion about the church clock
+is on the flower rota and swaps with nobody
+sings the descant whether it is wanted or not
+polishes the brass on a Wednesday and checks it again on Friday
+knows the hymn numbers before they go up on the board
+goes to evensong and not to matins, and has a reason
+runs the whist drive and takes the pencils home afterwards
+reads the parish magazine cover to cover, adverts included
+puts the same amount in the collection every week, folded small
+takes the jumble in early to have first look at it
+can name every vicar since the war, in order
+stacks the chairs in the hall after everybody else has gone home
+counts the congregation every Sunday and remembers the number
+brings the same cake to every sale and it is always gone first
+has a hassock with initials worked into it and will not use another
+opens the hymn book at the right page before it is announced, and is right
+puts the heating on in the hall an hour early and denies doing it
+sweeps the porch on a Saturday and will not be thanked
+tunes the piano in the hall by ear, badly, and nobody has stopped it
+has been on the parochial church council since 1961 and says nothing at it
+brings flowers from the garden rather than buy them, and is proud of that
+turns the hymn board round the wrong way once a year, always the same Sunday
+sits through the sermon with the eyes closed and can quote it after
+stacks the hall crockery in a particular order and rewashes it if anybody helps
+sells raffle tickets at the door and refuses to sell to the same person twice
+knows which of the bells is which by sound alone
+writes down the number of the hymn in the margin of the magazine
+puts the kettle on in the hall before the meeting starts and misses the start
+argues the date of the fete every year and loses every year
+
+# ---- garden and allotment -------------------------------------------------
+grows dahlias nobody is allowed to pick
+plants the same row of beans in the same place every year
+has won the leek class twice and mentions it from March onwards
+forces rhubarb under an old bucket and guards the bucket
+talks to the runner beans and denies it
+is genuinely proud of the compost heap and says so
+burns garden rubbish on a Sunday, which annoys the whole lane
+grows more marrows than anybody wants and leaves them on doorsteps
+put a chair in the allotment shed and spends longer sitting than digging
+writes the variety on a lolly stick for every row
+measures the onions and writes the measurements down
+has an allotment and has never grown a flower on it
+takes cuttings from other people's gardens and admits it
+saves seed in labelled envelopes and gives it away by the pinch
+mows in stripes and goes back over any that are crooked
+has a greenhouse with one pane replaced in perspex since 1970
+puts the first early potatoes in on Good Friday whatever the ground is like
+keeps a bonfire smouldering for four days and turns it every evening
+grows sweet peas up a wigwam of hazel cut from the spinney
+waters at nine at night and says any other hour is wasted
+has never thinned a row in a life and gets small carrots and expects to
+buys one plant a year from the market and calls it the extravagance
+edges the lawn with a bread knife kept for the purpose
+sends a marrow to the harvest festival and takes it home afterwards
+argues for the old varieties and has a list of what has been lost
+has a wheelbarrow with a wooden handle spliced twice
+keeps the grass off two graves that are nothing to do with anybody living
+plants out to a string line and re-pegs it if a wind gets up
+turns the heap on the last Sunday of the month and reports on its heat
+picks the beans at first light and leaves them in a bag on somebody's step
+
+# ---- animals --------------------------------------------------------------
+feeds a cat that belongs to somebody else
+leaves the radio on for the dog
+knows every dog in the village by name and no children
+puts out a saucer of milk and denies it
+keeps racing pigeons and is beaten every year by the same man
+has a budgerigar that says one word, badly
+talks to the horses in the top field on the way past
+runs bantams that lay wherever they like
+has a tortoise that has outlived two dogs
+carries stale bread for the ducks in a coat pocket all week   # carries
+has never got a name to stick on the cat and calls it You
+still has a goldfish won at a fair eleven years ago
+puts the bird table out in October and takes it back in come April
+will stop the car for a hedgehog, and has
+knows which cow is which at fifty yards
+keeps bees and has been stung twice and tells the story of the first
+puts a coat on the dog in October, which the dog resents
+counts the swifts back every May and writes the date on the door frame
+has a cat that goes to the pub and comes home separately
+keeps a jackdaw that turned up injured and stayed on, and it steals spoons
+knows the sound of every dog on Back Lane through a closed window
+saves bacon rind for the birds and hangs it on a particular branch
+has a lurcher that walks precisely to heel and has never been taught to
+keeps the same tin for the dog biscuits and rattles it out of habit
+takes a bucket of scraps to a neighbour's pig on a Wednesday
+names all the hens after film stars and gets them wrong
+has a dog that will not pass one particular gate and never explains it
+keeps ferrets and talks about them to people who have not asked
+whistles for a cat that has never once come when whistled for
+puts a saucer of water out in August for whatever wants it
+
+# ---- the wireless and the television --------------------------------------
+calls the wireless "the wireless" and is teased for it
+talks to the wireless when the news is on
+keeps the wireless on the shipping forecast, having never seen the sea
+argues with the cricket on the radio
+watches the television with the sound down and the wireless on as well
+will not miss The Archers and will not admit to following it
+rents the set and has had the man out four times about the picture
+stands up for the anthem at closedown
+watches the test card while waiting for the programmes to start
+unplugs the television every night in case of lightning
+has never got the aerial straight and puts up with the snow
+rings the week's viewing in the Radio Times on a Saturday
+listens to Two-Way Family Favourites and knows where every town is
+watches Songs of Praise for the churches and not the singing
+listens to one transistor in the shed and another in the kitchen
+turns the television off at the news and back on after it
+keeps the Radio Times from Christmas week and no other week
+has the set in the corner facing away from the window on principle
+will watch anything at all with a horse in it
+tunes the wireless to a foreign station on a Sunday and does not understand a word
+says the colour is too bright on everybody's set and adjusts it uninvited
+listens to the weather forecast standing up, as though it were an announcement
+has a valve set that takes two minutes to warm and will not be hurried
+watches the racing standing up and sits down again the moment it is over
+puts a cloth over the television when it is not in use
+turns it off the moment the credits start, mid-word
+keeps the set on all evening for the company of it and does not look at it
+knows the schedule off by heart and announces what is coming next
+has a radio in the shed permanently on the Home Service by old habit  # elder
+takes the batteries out of the transistor every night and puts them back at six
+
+# ---- weather --------------------------------------------------------------
+keeps a diary of the weather and nothing else
+taps the barometer twice each morning and reports the result to whoever is near
+hangs a piece of seaweed by the back door and consults it
+says we shall pay for this whenever the sun comes out
+can tell rain by the way the poplars turn
+has not believed a forecast since the one that got the hay wet
+puts the washing out in weather nobody else would risk, and is usually right
+gives the depth of the 1963 snow in inches, exactly  # elder
+says it is drawing up for rain, and it generally is
+will not carry an umbrella on principle and gets wet
+knows the wind by the mill and by nothing else
+empties the rain gauge at the same hour every day of the year
+opens a window at the first warm morning of the year and marks the date
+says the swallows are early or the swallows are late and is never satisfied
+counts the seconds between the flash and the thunder and announces the miles
+takes a coat off at a temperature everybody else takes one on at
+predicts the winter from the berries in October and is wrong most years
+will not have the fire lit before the first of November whatever the weather
+says a green Christmas makes a fat churchyard, and says it every December
+watches the river level from the bridge and reports it as a number
+has one particular cloud shape that means something and will explain it
+sweeps snow from a stretch of pavement that is not the right stretch
+knows the date of every hard frost since 1955 and can be checked  # elder
+says there is snow in that wind, in April, and is occasionally right
+notes the first cuckoo in the parish magazine and disputes anybody else's
+puts a stone out to tell the weather by whether it is wet, as a joke that has stopped being one
+keeps a coat in the shed for rain and another in the car for the same rain
+
+# ---- cars, bicycles and the bus -------------------------------------------
+waits for the bus when walking would be quicker
+has a bicycle that has not been ridden in eleven years
+knows the bus timetable by heart and does not take the bus
+takes the same seat on the bus and stands rather than sit in another
+washes the Cortina every Sunday and drives it twice a week
+carries a starting handle for a Morris Minor that does not need one
+will not go above forty in anything
+rides a Raleigh with a dynamo lamp and no bell
+mends a puncture faster than anybody in the village, and offers
+takes three attempts to reverse into the same space every time
+keeps the MOT certificate in the glovebox with eleven older ones
+checks the oil on a car not driven since Easter
+walks to Marlbury rather than pay the fare
+pumps the tyres up on a Saturday whether they are down or not
+drives a van with the last owner's trade still painted on the side
+keeps a rug on the back seat that has been there since the car was bought
+signals every turn by hand as well, out of an older habit
+will not park facing downhill and will circle a car park to avoid it
+buys four-star for a car that would run perfectly on two
+has a spare wheel that has never been on the road and is proud of it
+counts the miles to Marlbury out loud on every trip and gets the same figure
+keeps a tin of boiled sweets in the door pocket that nobody is offered
+polishes the chrome and lets the paintwork go
+will only fill up at Ivey's and would run dry rather than not
+has a bicycle clip in every coat pocket and one bicycle
+lets the engine warm for four minutes before moving, whatever the season
+knows the sound of every vehicle in the lane and names them without looking
+keeps the log book in a plastic wallet and produces it at the least excuse
+gets the bus into Marlbury on market day and comes back with nothing
+starts the car once a week in winter and lets it run, and never goes anywhere
+carries a length of rope in the boot that has been used once, for somebody else
+has never learned to reverse a trailer and will not be taught
+
+# ---- clothes and appearance -----------------------------------------------
+has an umbrella in every coat
+keeps hair in curlers until four in the afternoon  # f
+cuts hair at home, badly, in the kitchen window
+has never once been seen without a hat
+wears a tie to the surgery  # m
+keeps a good coat for funerals and it is thirty years old
+wears one pinny for the house and another for the yard, and never confuses them  # f
+ties a headscarf the same way every time and it never blows off  # f
+polishes boots to a shine nobody will ever see under the mud
+has worn the same brooch every day since it was given  # f
+owns one pair of shoes called the good ones and has never worn them out
+turns a collar rather than buy a new shirt
+wears wellingtons to the shop and changes at the door
+wears glasses on a bit of string
+carries a clean handkerchief and a working one
+has a coat for rain, a coat for cold, and a coat for both, and will explain the difference
+darns socks rather than replace them and the darns are a different colour on purpose
+keeps a comb in a top pocket and has not used it in years
+wears the same cardigan every day and has four identical ones
+buys shoes a size too large and has done since a bad pair
+puts a coat on to go to the end of the path and takes it off at the gate
+has a watch that runs four minutes fast and has never had it seen to
+wears a poppy from the last week of October and keeps it in a tin all year
+irons a crease into things that were not sold with one
+keeps a hat on a peg by the door and never wears it outdoors
+has a raincoat that folds into its own pocket and demonstrates it
+will not wear anything green, and gives a reason that changes
+has the same haircut every six weeks and books the next one on leaving
+buys clothes to last and mentions how long the last lot lasted
+wears boots in the house, laced, from six in the morning
+keeps a good handkerchief pressed and unused in a top pocket for show
+
+# ---- hobbies and collections ----------------------------------------------
+is learning the guitar, slowly and only on Sundays
+is halfway through the same crossword since March
+buys a paper for the crossword and burns the rest
+has built the same Airfix kit three times to get it right
+does brass rubbings in churches that have to be driven to
+gave up on the stamp album in 1958 and has never thrown it out
+is knitting something that has been a different thing twice
+makes ships in bottles and gives them away at once
+fishes the Ash and has never kept anything caught in it
+is copying the names off every stone in the churchyard
+plays the accordion in the shed so as not to be heard
+does jigsaws that are always one piece short and finishes them anyway
+carves walking sticks faster than there are people to give them to
+writes down every bird seen from the kitchen window
+collects matchboxes and has them in a drawer sorted by colour
+keeps a scrapbook of every local wedding in the paper, none of them relations
+paints the same view of the mill in every season and has never sold one
+makes rag rugs from old coats and can say whose coat each strip was
+presses wildflowers into a ledger and dates them
+builds a model railway that has been six feet from finished since 1971
+takes photographs and has never once been in one
+collects cigarette cards and is nine short of a set started in childhood  # elder
+does the same walk with a flask and a folding stool and sits in the same field
+makes wine out of anything and labels the bottles with the year and the weather
+keeps a list of every book borrowed from the mobile library since it started
+carves initials into the handle of every tool owned
+enters the vegetable show and the handwriting class and only wins the handwriting
+tapes the chart off the wireless every Sunday and talks over the ends
+has a metal detector and finds nothing and goes out again
+sorts a tin of assorted screws by size on a winter evening, repeatedly
+learns one new bird call a year and practises it on the way to work
+keeps a rain-warped notebook of every tractor seen on the Marlbury road
+
+# ---- ailments and remedies ------------------------------------------------
+has a knee that knows about rain before the wireless does
+rubs embrocation on everything, and the smell arrives first
+takes Andrews every morning and recommends it to strangers
+wears a hearing aid that whistles, and does not know
+uses the same bottle of Vick for four unrelated complaints
+gets chilblains every winter and blames the wrong thing
+goes to the surgery for other people and never on own account
+carries a stick and does not lean on it   # carries
+swears by a hot brick in the bed and has never been talked out of it
+counts the tablets into a saucer the night before
+puts the same back out every hay time and is surprised each year
+gargles with salt water at the first sign of anything and swears by it
+has a bottle of medicine from 1968 in the cupboard and will not part with it
+sits in the surgery waiting room a full half hour early and reads every notice
+takes a spoonful of malt every morning and has since it was thought necessary
+will not take anything the doctor gives without asking what is in it
+has one tooth that aches in cold weather and reports on it
+wears a copper bracelet and is quite clear about what it is for
+buys the same brand of plasters and keeps the tin in the same drawer
+never has a cold and lets everybody know it every winter
+has a cure for hiccups involving a spoon and administers it to anybody
+takes the tablets with tea against instructions and has been told twice
+puts a poultice on things that do not want one
+keeps a bottle of TCP that scents the whole hall
+will not sit in a draught and moves chairs in other people's houses to avoid one
+walks a mile a day for the good of it and counts it out to the gate
+has an eyebath that is used once a year, ceremonially
+keeps a tin of glucose tablets in a coat pocket and offers them to walkers
+
+# ---- superstitions --------------------------------------------------------
+will not walk under the yew by the lychgate
+will not have new shoes put on a table
+turns the money in a pocket at a new moon
+keeps may blossom out of the house, whoever brings it
+salutes a single magpie and says good morning to it
+starts nothing new on a Friday, and no argument shifts it
+keeps the horseshoe over the door the right way up and checks it
+stops anybody opening an umbrella indoors, and means it
+touches the gatepost going out and coming back
+will not sit down thirteen to a table and has left a room over it
+throws spilt salt over the left shoulder and apologises for doing it
+cuts nails on any day but a Sunday
+will not pass anybody on a staircase and waits at the bottom
+turns the bed round if the year has been a poor one
+will not have peacock feathers in the house and has said why once
+puts the left glove on first and starts again if it is the right
+crosses the fingers when the ambulance goes through and does it in company
+will not bring a bunch of red and white flowers into a house together
+touches wood on a table, a gate or a hat brim, and always finds something
+will not take the last of anything from a plate, and it stays there
+counts the chimes and will not speak until they have finished
+throws the first drop of tea from the pot away and cannot say why
+will not lend anything on a Monday and rearranges the week around it
+keeps a lucky sixpence that has been carried so long it is smooth
+turns round if a hare crosses the lane, and takes the long way
+will not whistle indoors and stops other people doing it
+holds the collar of a coat when a black cat goes by
+puts new bread on the table crust upward and turns it if anybody gets it wrong
+
+# ---- small vanities -------------------------------------------------------
+mentions the county side, though it was the second eleven
+can still get into the wedding coat, and shows people
+corrects other people's grammar and is wrong half the time
+signs a name with a flourish that takes longer than the name
+displays a photograph taken at twenty-two and no later one
+will not wear glasses in the street
+lets it be known that the onions took second at Marlbury
+uses the house name in full on every envelope
+tells people the barometer is a good one, and it is
+claims to have read a book that has only been opened
+says compliments are not wanted, and repeats them
+mentions a distant relation who was somebody, and adjusts how distant
+pronounces one French word correctly and finds occasions for it
+had a letter printed in the county paper in 1974 and has the cutting
+will not be photographed from the left
+mentions the make of the watch when asked the time
+has a certificate framed in the hall for a course of six evenings
+tells people the house is older than it is by about forty years
+gives the Latin for a plant and gets the emphasis wrong with confidence
+mentions having been to London, which was twice
+can name the tune within three notes and makes sure of being first
+says it was nothing, at length
+keeps a letter of thanks from the county council and brings it out unprompted
+holds the door and waits to be thanked, and comments if not
+says the family have been in this parish four hundred years, on no evidence
+tells the same joke to each new arrival and watches for the moment
+was asked once to read the lesson and mentions it at every service since
+claims never to have had a day's illness and is careful to be seen well
+
+# ---- grudges and standing disagreements -----------------------------------
+has not spoken to a neighbour since a raffle in 1971 and neither remembers why
+disputes six inches of hedge and has the deeds out to prove it
+goes to Marlbury rather than buy from one particular counter
+was passed over for the flower rota once and mentions it every year
+objects to the state of the bus stop at every meeting, on the same grounds
+crosses the road rather than pass a certain gate
+believes a fence panel was moved in 1968
+will not lend a ladder, to anybody, ever
+fell out with a brother over a clock and neither will name it
+says the wrong man won the marrow class, and has said so for three years
+returns borrowed things cleaned, pointedly
+takes a different pew since a disagreement about a hymn
+has written three letters to the council about one drain and kept the carbons
+will not have the name of a certain builder said in the house
+disputes the boundary of a grave plot and has been to the diocese about it
+was overcharged sixpence in 1966 and has not been back
+holds it against the school that a gate was moved
+will not sit downwind of one particular bonfire and makes the point of moving
+believes the bus was rerouted out of spite and can say by whom
+has refused the same invitation eleven years running, always politely
+maintains a dispute about a right of way that neither party now uses
+will not accept a lift from one household and walks past the car
+says the church clock was fast on a particular day in 1972 and it mattered
+had a dog put in the wrong class at a show and mentions it at every show
+will not shop on a Wednesday because of something that happened on a Wednesday
+keeps a tally of who has and has not returned a dish
+walked out of a meeting in 1969 and has attended every one since without speaking
+disputes the spelling of the family name as it appears on a plaque
+
+# ---- memory and the years before ------------------------------------------
+keeps a photograph in a wallet that has gone white at the folds
+tells the same story about a horse
+keeps the tools handed down in the family oiled and unused
+gives directions by what used to be there
+was in the Home Guard and will tell you which post  # elder m
+hangs on to a demob suit not tried on in thirty years  # elder m
+lays a wreath every November and is finished before anybody arrives
+can still say the service number, and does, unprompted  # elder
+remembers the evacuees' names and none of their faces  # elder
+kept the ration books and cannot say why  # elder
+watched the Coronation on a borrowed set and describes the set  # elder
+talks about the standpipe in seventy-six as though it were last week
+was in the Land Army and can still stook a sheaf  # elder f
+goes to the Legion on the same night and drinks the same thing
+knows every name on the memorial and which house it lived in
+still calls the surgery by the name of the doctor before this one
+can say what was on this land before the mill was extended  # elder
+remembers the last day the branch line ran and what the weather was  # elder
+keeps a wartime tin of sewing things and has used everything in it twice  # elder
+uses the old field names, which are on no map anybody can produce
+remembers a hard winter by what was eaten in it and not by the year
+can say which cottages in the row had gas laid on first, and in what order  # elder
+has a set of pre-decimal coins in a bag and counts them out to explain a price
+kept every school report and can quote a line from one
+still refers to Marlbury market by the day it used to be held on
+says the tree at the corner was planted for something and cannot recall what
+keeps a photograph of a football team and names every man in it  # elder
+tells the story of the flood in the same words, and the words are good ones
+has a christening gown in tissue that three generations have worn
+remembers the last thatcher in the parish by name and what was charged
+
+# ---- family and neighbours ------------------------------------------------
+buys sweets for children who are no longer children
+still sets two places
+carries boiled sweets for other people's children
+writes to a son in Australia on the same day each month
+takes a plate of something round to next door but one, every Sunday
+left a grandchild's drawing on the kitchen wall nine years ago and it is there yet
+calls a nephew by the wrong brother's name and is corrected every time
+keeps the family bible up to date and will show you on any excuse
+remembers everybody's birthday and sends nothing
+has a daughter in Marlbury and pretends the bus is difficult
+takes the neighbours' bins in without mentioning it
+was at school with half the street and uses their school names
+gives lifts to people who could easily walk
+signs the card from both of them, in one hand
+puts a shilling in a tin for each grandchild and has never said so
+sends the same postcard from the same place every year to the same six people
+keeps a chair at the table for a relation who visits twice a year
+addresses letters to a married daughter by the maiden name, still
+telephones a sister on the same evening and talks for exactly nine minutes
+knows every family in the lane by which house they had before this one
+takes the dog out at the hour the mill hooter goes and needs no other clock
+makes two of everything baked and the second one goes over the wall
+writes the Christmas cards in October and posts them in the second week of December
+speaks of a grown nephew as though the nephew were still fourteen
+counts the cousins on both sides and gets a different total each time
+brings a paper in for next door and has done for six years without being asked
+sends flowers to a funeral in another county every year for the same person
+gives every new baby in the parish the same knitted thing
+is godparent to four people and remembers all four birthdays
+had the same neighbour for thirty years and still knocks before going round
+carries a photograph of a grandchild and produces it on very slight encouragement
+keeps a visitors' book in the hall that has eleven signatures in it
+
+# ---- minor competence -----------------------------------------------------
+mends things that were not broken
+can lay a fire that lights first time, every time
+sharpens everybody's shears and will not take anything for it
+can back a trailer through a gate nobody else attempts
+does the church accounts to the penny and has never been out
+carries three cups and the milk jug without a tray
+splices rope the old way and has taught nobody
+can tell whose hedge is whose by the cut of it
+knows the weight of a sack by looking at it
+can name every flower on the river path, in Latin if pushed
+is asked to wire every plug in the village, and does
+writes a beautiful hand and does everybody's labels
+can gut and fillet on a plank at the back door in under a minute
+tells the time to the minute without a watch and is checked and is right
+can carry a full bucket in each hand and not spill either
+puts a new washer on a tap in the time it takes the kettle to boil
+knows which chimney in the row draws badly and why, and has told everybody twice
+can pick out any tune on a piano and cannot read a note
+cuts everybody's hair in the back kitchen and takes nothing for it
+can find water with a hazel fork and has been proved right twice
+adds up a column of figures faster than the shop's till
+remembers a telephone number after hearing it once, and every one since
+makes a barrow load of kindling last a fortnight
+mends a chair so it never comes apart again and refuses payment
+can drive a tractor, a van and a milk float, and does all three when asked
+knows the up train times without looking and has not been to the station in years
+strips and reassembles a lawnmower on a groundsheet in an afternoon
+plaits onions into ropes that hang all winter and gives them as presents
+
+# ---- minor incompetence ---------------------------------------------------
+cannot whistle and has been trying since childhood
+sings the wrong words with complete confidence
+burns the toast every morning and eats it
+has killed four houseplants and been given a fifth
+overwinds the clock every time and has it mended every time
+cannot reverse, and drives round the green rather than try
+puts things somewhere sensible and never finds them again
+has never made a decent gravy and knows it
+cannot get a fire to draw in that particular grate
+loses gloves at a rate nobody can account for
+forgets faces entirely and remembers every dog
+cannot tell two of the neighbours apart and has stopped trying to hide it
+has ruined the same recipe four times and will make it again on Sunday
+cannot tie a proper knot and uses six of the wrong kind instead
+gets the day of the week wrong on any week with a bank holiday in it
+has never once managed to fold a road map back the way it came
+paints over the hinges every time and has to be shown again
+cannot judge a pint of milk and buys too much every single day
+starts sentences in the middle and is asked to start again
+has broken three teapot lids and glued all three, visibly
+misjudges the bus by four minutes in the same direction every time
+cannot spell one particular word and works round it in writing
+saws crooked, cheerfully, and has built a good deal of the shed that way
+mishears names and uses the mishearing for years afterwards
+has never learned to swim and goes out in a boat quite happily
+cannot leave a wireless alone and detunes it looking for something better
+reads a recipe through afterwards to find out what was left out of it
+
+# ---- quietly proud --------------------------------------------------------
+has not missed a day at the mill in nineteen years and does not mention it  # works
+cuts the memorial grass and lets people assume it is the council
+taught half the village to swim in the river and never brings it up
+has the tidiest woodpile for miles, and knows it
+has given blood forty times and keeps the card in a drawer
+can still lift a churn and finds reasons to
+put the hall roof right single-handed and let the committee take the credit
+laid the hedge the old way when everybody else went to wire
+knits for the church sale and puts somebody else's name on the label
+has the neatest garden on Back Lane and pretends it is nothing
+reads the paper aloud to a neighbour every Tuesday and calls it nothing
+paid for the swings and made the committee promise not to say so
+walks the footpaths every spring and reports every broken stile, anonymously
+has kept the churchyard gate oiled for eleven years and nobody has noticed
+sat the same examination four times and passed it, and never says which
+drove the mobile library route as a volunteer through the whole of seventy-six
+has the finest handwriting in the parish and lets a schoolteacher take the credit
+mends the village noticeboard every time the wind has it, within a day
+sends a cheque to the lifeboats every year and has never seen the sea
+taught somebody to read, as an adult, and neither of them has ever said
+keeps the war memorial free of moss with a toothbrush and an old blade
+returned a wallet with everything in it and refused to give a name
+has never once been late for anything in a working life, and would not say so
+grew the biggest onion in the county in 1968 and has the photograph face down
+gave the hall its piano and had it entered in the book as anonymous
+carried the mail round in the snow of sixty-three for a fortnight, unpaid  # elder
+sits up with anybody's sick animal at any hour and calls it nothing at all
+
+# ---- work and the shift ---------------------------------------------------
+# Written so most of these survive on somebody retired. The few that need a current job
+# are tagged.
+carries the same lunch tin and has carried it since it was new   # carries
+has a mug that nobody else uses and everybody knows it  # works
+eats the same sandwich every working day and has never once varied it  # works
+gets to the gate four minutes early and stands there rather than go in  # works
+knows the hooter is a half-minute out and has told the office twice  # works
+keeps a pencil behind an ear all day and looks for it while it is there
+has a coat that hangs on the same peg and the peg is understood to be spoken for
+counts the days to a Friday out loud from about Wednesday
+takes the same route in and would go round rather than change it
+has a pair of boots kept only for work and never brings them in the house
+washes at the sink before doing anything else on getting home
+knows the sound of the machinery well enough to say when one bearing is going  # works
+brings the flask home unopened about once a week and cannot say why
+has never taken a full week off in one go, and takes the days singly
+puts the overalls to soak in a bucket in the yard, every night
+whistles on the way in and never on the way out
+keeps a works pencil, a works rule and a works knife and marks them all
+has a chair in the mess room that is not claimed but is not taken either  # works
+signs off with the same three words to the same people every day
+never once carries anything home from work, and is quietly known for it
+knows every man's shift and can say who is where without thinking  # works
+takes the long way home to walk off the noise of the place
+has done the same job so long the hands do it without being asked to
+brings a paper in every morning and leaves it for the next shift  # works
+keeps a tally of overtime in a pocket diary that nobody else sees
+has a workshop radio tuned with a screwdriver because the knob is long gone
+has never in a working life had an accident and touches the bench about it
+puts the week's wages in the same tin on the same night and it is a ceremony
+knows exactly how long the walk takes and leaves accordingly, to the minute
+came off nights years ago and still wakes at ten to two  # elder
+
+# ---- the yard, the shed and the tools -------------------------------------
+hangs every tool on a painted outline of itself
+keeps a shed so tidy that people ask to see it
+has a jar of nails sorted by length and another jar for the ones that are not
+oils everything in October whether it needs it or not
+has a bench with a vice on it that has never been used for anything difficult
+keeps a stub of candle in the shed and has done since before the electric came
+brushes the yard down last thing, in the dark, in every month of the year
+has a wheelbarrow, a truck and a sack barrow and uses only the barrow
+saves every offcut of timber and has never once found the one wanted
+keeps a paraffin heater going in the shed all winter for the sake of the tools
+labels the drawers and then puts things in the wrong ones
+has an old kitchen chair in the shed and a rug on it
+puts a new handle on a spade rather than buy a spade
+keeps a coil of wire that has been there since before the house was bought
+has three hammers and a favourite among them
+mends the shed roof with a different material every year
+keeps rainwater in a butt and will not use the tap on the garden
+strops a knife on a boot in the yard, standing, before every job
+has a stack of flowerpots washed and graded by size
+keeps the good paintbrushes in white spirit in a jam jar with a lid
+will not lend a chisel and gives the same reason each time
+has a shed clock that is an hour out and is left that way deliberately
+puts every screw back in the tin it came from, wherever it came from
+keeps a broom by the door and uses it standing in the doorway
+has a bicycle upside down in the yard permanently, and it is somebody else's
+tars the shed roof on the first warm Saturday and the smell reaches the lane
+saves the sawdust in a sack and cannot say for what
+keeps a tin of assorted washers that has solved four problems in twenty years
+
+# ---- the river, the woods and the fields ----------------------------------
+knows every stile between here and Marlbury and which of them are wrong
+picks blackberries from one particular hedge and will not say which
+goes to the spinney for holly in December and takes a saw and a sack
+can name the field by the shape of it from the top of the hill
+has walked the water meadow every Sunday since coming to the parish
+knows where the first primroses come up and visits them like an appointment
+watches the mill leat for trout and has never fished it
+throws a stick in the river at the bridge and goes to the other side for it
+collects sloes in October and the gin is not opened until the next Christmas
+knows which gate in the parish swings shut on its own and props it
+counts the lambs in the top field each morning and would notice one missing
+takes the same short cut across the corner of a field and has permission for it
+gathers kindling on the way home from anywhere, in any weather
+knows the depth of the ford by which stone is showing
+has a favourite tree and has been seen standing under it doing nothing
+picks mushrooms at dawn and is home before anybody else is out
+knows where every badger sett in the parish is and tells nobody
+takes a bucket to the hazel in September and gets there first every year
+walks the riverbank counting herons and reports the total to whoever will listen
+has a stretch of hedge that gets laid every year though it is not this land
+knows which of the fields floods and by how much and has been right since 1959
+carries a stick cut from the same hedge every year and burns last year's   # carries
+puts a plank across the ditch at the same place every autumn
+knows all the parish boundary stones and has shown them to people who did not ask
+brings back a pocketful of odd stones from the ploughed field, every time
+watches the mill race for an hour at a time and calls it clearing the head
+
+# ---- the road, the market and Marlbury ------------------------------------
+goes into Marlbury on market day and buys one thing badly needed and one not
+knows the price of everything on the market and buys from one stall only
+takes the early bus in and the late bus back and fills the day somehow
+carries a shopping list into Marlbury and comes back with none of it
+has a cafe in Marlbury with a particular table and gets there for eleven
+knows every driver on the Marlbury route by name and their days off
+walks the last mile home from the bus rather than get off in the village
+buys wool in Marlbury and nowhere else and pays more for it
+has not been further than Marlbury since 1964 and does not consider it a lack
+gets a haircut in Marlbury though there is somebody nearer
+knows which shop in Marlbury will take a return without a receipt
+buys the same magazine at the station bookstall and reads it on the bus back
+takes a flask on the bus and drinks it at the same point in the journey
+has a favourite seat on the top deck and will stand rather than not have it
+comes back from market with a plant that will not survive the winter
+knows the timetable well enough to give it out and gives it out
+buys fish in Marlbury on a Friday and carries it home in newspaper
+goes to Marlbury for the library and to nowhere else in the town
+counts the churches visible from the bus and gets a different number each way
+has a standing order at a Marlbury shop for one item, monthly
+stops at the same lay-by on the way back and looks at the same view
+brings sweets back for the whole lane and cannot be persuaded to stop
+knows every road name in Marlbury and has never driven there
+buys the local paper in Marlbury a day before it reaches the village, and mentions it
+takes a list of other people's errands and does them all before doing any own
+sits on the bench by the market cross for exactly one hour, whatever the weather
+
+# ---- laundry, linen and the line ------------------------------------------
+will not hang washing out on a Sunday, and has views about those who do
+pegs everything in order of size and would not consider another order
+gets the whites out by eight and has them in before the afternoon turns
+irons everything, including things that plainly do not want it
+has a mangle in the outhouse and still uses it in preference
+sniffs the sheets off the line before folding, every time
+keeps a peg bag made from a child's dress from twenty years ago
+turns the sheets sides to middle and the seam is felt through the night
+darns everything and keeps a wooden mushroom for the purpose
+puts the wash on at the same hour on the same two days, unfailingly
+has a line prop cut from the spinney and replaces it every third year
+folds towels in three and refolds anybody else's
+airs everything on the rail over the range for a full day before putting it away
+counts the pegs back into the bag and knows when one is short
+starches collars for a household that has not needed a starched collar in years
+hangs the washing on the same line in the same order as the week before
+will bring somebody else's washing in when the rain comes and say nothing
+has a copper in the outhouse that has not been lit since 1968 and is polished
+keeps a bar of green soap for the collars and swears by it
+soaks everything overnight in a galvanised bath and empties it on the garden
+puts a lavender bag in with the linen and makes them from the garden
+has never used a launderette and speaks of them as a curiosity
+dries everything indoors from October and the house smells of it
+sews a name tape into everything, at an age when nobody could confuse it
+
+# ---- the year, the seasons and the calendar -------------------------------
+puts the clocks forward the night before and gets it wrong once every few years
+has a diary with nothing in it but the dates the bills were paid
+starts the Christmas pudding on the same Sunday in November, without fail
+takes the decorations down on Twelfth Night before breakfast, to the hour
+buys the new calendar in September and hangs it in September
+marks the shortest day and mentions it to everybody met that week
+keeps the same seat at the fete every year and arrives early to have it
+has been to every bonfire night since the field was first used for it
+gives the same thing to the same people every Christmas and it is expected
+plants bulbs on the first wet day after the middle of October
+opens the windows on the first of May whatever is happening outside
+counts the Sundays in Advent aloud and gets ahead of the church
+puts a wreath on the door made from the hedge and never from a shop
+knows the date of every bank holiday for the coming year, in January
+takes the same week off every year and goes to the same place  # works
+has a birthday nobody is told about and takes the day quietly
+lights the first fire of the year on a fixed date rather than a cold day
+saves the good wrapping paper and uses it again the following year
+writes the year on the inside of the pantry door with every new January
+goes to the horse fair every year and has never bought or sold anything
+looks at the swallows going in September and says the same sentence
+picks the apples on the same weekend and stores them not touching, on newspaper
+gets the coal in for winter in July because it is cheaper, and says so
+has a jar of pennies that gets emptied at the fete and nowhere else
+starts talking about Christmas in the second week of September
+puts the garden to bed on a fixed Saturday and will not be rushed by weather
+
+# ---- sound and quiet ------------------------------------------------------
+has a clock that ticks loud enough to be heard in the lane and will not have it stopped
+can sleep through the mill hooter and cannot sleep through a dripping tap
+hums when concentrating and stops the moment anybody comes in
+knows the church bell is a fraction flat and has said so for years
+taps a foot to nothing at all and is asked to stop
+has a cough that is recognised at fifty yards and is not ill
+shuts every door with the same particular click and can be identified by it
+whistles one phrase going up the path and another coming down
+counts the church clock chimes even in the middle of a conversation
+sings only in the yard, and only when there is running water
+cannot bear the wireless and the kettle at the same time and turns one off
+has a squeaking gate and has decided against oiling it
+speaks to a cat in one voice and to people in another
+knocks on a door in a rhythm everybody in the lane recognises
+clears the throat before every sentence and is unaware of it
+listens to the eleven o'clock train from three miles off and remarks on it
+has a laugh that carries across the green and does not know that it does
+walks in boots that are heard before they are seen, and always has
+turns the volume down before the doorbell can possibly ring
+finds the quiet of Sunday afternoon unbearable and goes out into it anyway
+rings the bell at the shop door twice, going in and coming out
+sighs on sitting down, every time, and is teased about it
+plays the wireless loud enough to be heard in the garden and stands in the garden
+puts a hand up to the ear on hearing anything at all, out of long habit
+
+# ---- reading, writing and the paper ---------------------------------------
+reads the deaths in the county paper before anything else and always has
+takes two papers and disagrees with both
+keeps every letter ever received in shoeboxes by year
+writes in the margins of library books, in pencil, and rubs them out
+reads the same three books over and re-reads them in the same order
+has never finished one particular novel and starts it again every winter
+underlines things in the parish magazine with a ruler
+writes a diary of one line a day and has since 1953  # elder
+buys the local paper on a Thursday and reads it at the same table
+has a fountain pen that is filled from a bottle and refuses a biro
+copies out recipes and never cooks any of them
+keeps a dictionary on the table and looks up words from the wireless
+writes letters that are four pages long to people who send back a card
+reads standing up at the kitchen counter and never in a chair
+has a library ticket that has been used every fortnight for twenty years
+reads out the interesting bits to whoever is in the room and does not stop
+writes the shopping down in a shorthand nobody else could follow
+keeps the crossword clues that were unsolved and returns to them months later
+addresses envelopes in capitals throughout, which nobody has ever queried
+saves the newspaper of any day something happened and has a drawerful
+has an atlas open at the same page permanently on a side table
+reads the small advertisements right through and never answers one
+learns a poem a year off by heart and has never once been heard to recite one
+will not have a paperback in the house and gives reasons
+
+# ---- smoking, matches and small indulgences -------------------------------
+smokes Embassy and keeps the coupons in a rubber band
+rolls them and offers them to people who plainly do not want one
+gave up eleven years ago and still carries a lighter
+smokes a pipe that goes out constantly and is relit constantly
+keeps a cigarette card in a wallet from a set long since lost  # elder
+buys twenty on a Friday and makes them last the week exactly
+has a match struck on the same brick by the back door for twenty years
+gave up for Lent every year and never at any other time
+keeps a tin of tobacco that has gone dry and will not throw it out
+has one whisky on a Sunday and measures it against a mark on the glass
+buys a bar of chocolate on a Thursday and eats a square a day
+takes snuff, still, and is the only one in the parish who does  # elder
+counts how many are left in the packet before going out, every time
+smokes only outdoors and only standing, in any weather
+has a cigarette case that is never used and is carried
+keeps the matches in the same pocket and pats it before leaving a room
+buys the sweets by the quarter and hides them from nobody in particular
+has a pint on a Wednesday and only on a Wednesday, and mentions it on Tuesday
+saves the silver paper for a hospital collection that ended years ago
+has a pipe rack with six pipes and smokes the same one
+puts a mint in before going into church, every Sunday
+never buys a drink for the enjoyment of it and always for the company
+
+# ---- music and singing ----------------------------------------------------
+sings in the bath and denies it flatly
+has a piano nobody plays and has it tuned every year
+knows all the words to every hymn and none to anything else
+plays the same two records and has worn one of them through
+sang in a choir once and hums the alto line to everything ever since
+has a mouth organ in a coat pocket and plays it walking
+taps out the rhythm of a tune on any surface until asked to stop
+buys one record a year and it is always the same kind of record
+can name a piece from four notes on the wireless and cannot say from where
+learned the piano to grade three and stopped, and plays those pieces still
+puts a record on to be got on with rather than listened to
+has a gramophone with a handle and prefers it to the electric  # elder
+sings the wrong harmony with total commitment
+knows every verse of one long ballad and needs very little persuading
+has gone to the same Marlbury concert since it began and sits at the back
+whistles the tune of the shipping forecast and does not know its name
+keeps sheet music in a piano stool for a piano that was sold
+sings while cycling and stops when anybody is in sight
+knows which of the church hymn tunes came from a folk song and will explain
+has a set of handbells that come out at Christmas and only then
+plays the accordion for the whist drive and takes nothing for it
+listens to the same brass band programme and marks the pieces in the paper
+
+# ===========================================================================================
+#  STAGED â€” CHILDREN AND THE YOUNG.  DO NOT UNCOMMENT UNTIL THE GENERATOR CAN SCOPE.
+# ===========================================================================================
+#
+#  Every clause below is commented out on purpose and the parser therefore never sees one.
+#  They are here because the live table has a defect that is already shipping and is exactly
+#  the class of the pronoun bug:
+#
+#      Douglas Purslow, 9   "Douglas watched the Coronation on a borrowed set."
+#      Douglas Purslow, 9   "Douglas buys one chop at a time, four days a week."
+#      Wendy Hedditch, 14   "Wendy displays a photograph taken at twenty-two and no later one."
+#
+#  Particulars are drawn with no regard to life stage, so children draw an adult's life. At
+#  109 people that is 20 children and about 48 wrong renders; at 600 it is roughly 110
+#  children and 264 of them. Adding these clauses to the LIVE table would only reverse the
+#  fault and put conkers in the pockets of the elderly, so they wait here.
+#
+#  To land them: teach ParticularsTable.Parse to read the trailing tag as a scope, treat an
+#  untagged clause as adult-or-elder, and have PopulationGenerator.Add draw from the slice
+#  that matches the citizen's LifeStage. Then strip the leading "# " from these lines.
+#
+# collects conkers and keeps them until they have gone soft and dull
+# walks the top of every wall between the school and home, without exception
+# has a bicycle that is a size too big and stands on the pedals for it
+# knows which of the shop's sweets are the best value to the halfpenny
+# reads comics back to front and the middle page first
+# keeps a jam jar of tadpoles on a windowsill every single spring
+# can name every make of car on the Marlbury road at a hundred yards
+# swaps things at a loss, cheerfully, and swaps them back the next week
+# has a den in the spinney that has been rebuilt four times
+# saves the picture cards out of the tea packets and has three sets of doubles
+# runs the whole way everywhere and has never been seen to walk a straight road
+# will not step on a crack in the pavement and takes very long strides for it
+# has a favourite tree to climb and a second one for when it is wet
+# knows every dog in the village and which of them will sit for a biscuit
+# takes the same short cut to school and it is longer
+# keeps a nature table in a bedroom that the rest of the house has given up on
+# collects bus tickets and has them in a shoebox by the day of the week
+# can skim a stone six times and has never managed seven
+# writes a name in the dust on every parked lorry in the lane
+# has a torch and reads under the covers with it, and has been caught twice
+# is halfway through the same annual since Christmas
+# keeps a bag of marbles and will not play with the good one
+# knows the whole of one hymn and none of the rest
+# feeds the ducks with bread saved from school dinner, every Friday
+# has a scab that is being carefully preserved
+# counts to the same number every time before jumping off anything
+# builds a dam in the leat every summer and it goes every autumn
+# has learned to whistle through a blade of grass and does it constantly
+# collects stamps with enormous seriousness and has forty of them
+# knows which floorboard at home sounds and steps over it out of pure habit
+# can recite the football results in the announcer's voice, and does
+# picks the icing off first and eats the cake afterwards
+# has a comic annual from four years ago that is read to pieces
+# rides no-handed down the one hill in the parish and is spoken to about it
+# keeps a diary that has three entries in it, all from January
+# has a best friend a year older and copies everything, including the walk
+# will only drink from one particular cup and there is no reasoning with it
+# knows every conker tree in the parish and the order they ripen in
+# takes an interest in one football team four counties away and can say why
+# has a pocket full of string, a stub of pencil and something that was a watch
+# eats the middle out of a sandwich and leaves the crusts in the tin
+# can do one card trick and does it to everybody, including twice to the same person
+# has a pen pal in Wales and has written three letters and had four
+# knows all the words to the television adverts and none to the news
+# collects milk bottle tops for a charity that was announced two years ago
+# is learning the recorder and practises in the yard by arrangement
+# has a model aeroplane on a shelf that took a whole winter
+# runs errands for a whole row of houses and is paid in sweets
+# knows the times of every bus and has never been on one alone
+# saves up for one thing all year and changes what the thing is monthly
+# has a joke book and reads it out at meals until stopped
+# keeps a pressed flower in a school hymn book and has forgotten which flower
+# cuts photographs of horses out of magazines and has a wall of them
+# can name every bird that comes to the table and gets one of them wrong always
+# has a pair of plimsolls worn to nothing and will not have new ones

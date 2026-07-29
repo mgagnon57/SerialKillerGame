@@ -1,0 +1,265 @@
+﻿using System;
+using System.Collections.Generic;
+using Noir.Core.Contracts;
+
+namespace Noir.Core.World
+{
+    /// <summary>
+    /// A line of authored content that does not say what it looks like it says. Named for
+    /// village.txt because that is where it started; it now covers kinds.txt too, which shares
+    /// this file's syntax for times, days and terrain.
+    /// </summary>
+    public sealed class VillageParseException : Exception
+    {
+        public VillageParseException(int line, string message)
+            : this("village.txt", line, message) { }
+
+        public VillageParseException(string file, int line, string message)
+            : base($"{file} line {line}: {message}") { }
+    }
+
+    /// <summary>
+    /// Parser for the authored village format.
+    ///
+    /// A purpose-built text format rather than JSON, for two reasons: System.Text.Json is not in
+    /// Unity's netstandard2.1 profile (so JSON would mean taking a dependency), and this format
+    /// is simply nicer to hand-edit - a village is mostly coordinates and one-line prose.
+    ///
+    ///   village Ashcombe
+    ///   size 120 90
+    ///   terrain field 0,0 120x28
+    ///   road main 5 4,46 116,46
+    ///   place pub 52,38 9x7 "The Wheatsheaf"
+    ///     door 56,44
+    ///     hours 11:00-14:30
+    ///     hours 17:00-23:00
+    ///     jobs 2
+    ///     human Eleven men sit in the same order every night.
+    ///
+    /// Indented lines attach to the place above them. '#' begins a comment.
+    /// </summary>
+    public static class VillageParser
+    {
+        public static VillageLayout Parse(string text)
+        {
+            if (text == null) throw new ArgumentNullException(nameof(text));
+
+            var kinds = PlaceKindTable.Current;
+            var layout = new VillageLayout();
+            PlaceSpec current = null;
+
+            string[] lines = ContentText.SplitLines(text);
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                int lineNo = i + 1;
+                string raw = lines[i];
+
+                int hash = raw.IndexOf('#');
+                if (hash >= 0) raw = raw.Substring(0, hash);
+                if (raw.Trim().Length == 0) continue;
+
+                bool indented = raw.Length > 0 && (raw[0] == ' ' || raw[0] == '\t');
+                string line = raw.Trim();
+
+                var tokens = Tokenise(line);
+                if (tokens.Count == 0) continue;
+                string cmd = tokens[0].ToLowerInvariant();
+
+                if (indented && current != null)
+                {
+                    ParsePlaceAttribute(current, cmd, tokens, line, lineNo);
+                    continue;
+                }
+
+                switch (cmd)
+                {
+                    case "village":
+                        layout.Name = line.Substring(cmd.Length).Trim();
+                        break;
+
+                    case "size":
+                        Require(tokens, 3, lineNo, "size <width> <height>");
+                        layout.Width = Int(tokens[1], lineNo);
+                        layout.Height = Int(tokens[2], lineNo);
+                        break;
+
+                    case "terrain":
+                    {
+                        Require(tokens, 4, lineNo, "terrain <kind> <x>,<y> <w>x<h>");
+                        layout.Terrain.Add(new TerrainPatch
+                        {
+                            Kind = TerrainKind(tokens[1], lineNo),
+                            Area = RectAt(tokens[2], tokens[3], lineNo)
+                        });
+                        break;
+                    }
+
+                    case "road":
+                    case "path":
+                    {
+                        // road <name> <width> <x,y> <x,y> ...
+                        Require(tokens, 5, lineNo, "road <name> <width> <x>,<y> <x>,<y> ...");
+                        var run = new RoadRun
+                        {
+                            Kind = cmd == "road" ? Terrain.Road : Terrain.Path,
+                            Width = Int(tokens[2], lineNo)
+                        };
+                        for (int t = 3; t < tokens.Count; t++)
+                            run.Points.Add(Point(tokens[t], lineNo));
+                        if (run.Points.Count < 2)
+                            throw new VillageParseException(lineNo, "a road needs at least two points");
+                        layout.Roads.Add(run);
+                        break;
+                    }
+
+                    case "place":
+                    {
+                        Require(tokens, 5, lineNo, "place <kind> <x>,<y> <w>x<h> \"<name>\"");
+                        var kind = PlaceKindOf(kinds, tokens[1], lineNo);
+                        current = new PlaceSpec
+                        {
+                            Kind = kind,
+                            Bounds = RectAt(tokens[2], tokens[3], lineNo),
+                            Name = tokens[4],
+
+                            // The kind's staffing, until the place says otherwise on a `jobs`
+                            // line below. Set here rather than afterwards so that a place
+                            // stating its own is a plain overwrite and needs no flag to
+                            // remember that it did.
+                            JobSlots = kinds.Row(kind).Jobs
+                        };
+                        layout.Places.Add(current);
+                        break;
+                    }
+
+                    default:
+                        throw new VillageParseException(lineNo, $"unknown directive '{tokens[0]}'");
+                }
+            }
+
+            ApplyKindDefaults(layout, kinds);
+            Validate(layout);
+            return layout;
+        }
+
+        /// <summary>
+        /// Fill in what the place did not bother to say, from what its kind is.
+        ///
+        /// Only hours: staffing is settled at the `place` line, where a later `jobs` line simply
+        /// overwrites it. Hours accumulate rather than replace, so the only honest test of
+        /// "did the author state these" is that there are none, and it can only be asked once
+        /// the whole block has been read.
+        /// </summary>
+        private static void ApplyKindDefaults(VillageLayout layout, PlaceKindTable kinds)
+        {
+            foreach (var place in layout.Places)
+            {
+                if (place.Hours.Count > 0) continue;
+                foreach (var window in kinds.Row(place.Kind).Hours) place.Hours.Add(window);
+            }
+        }
+
+        private static void ParsePlaceAttribute(PlaceSpec place, string cmd, List<string> tokens,
+                                                string line, int lineNo)
+        {
+            switch (cmd)
+            {
+                case "door":
+                    Require(tokens, 2, lineNo, "door <x>,<y>");
+                    place.Door = Point(tokens[1], lineNo);
+                    break;
+
+                case "jobs":
+                    Require(tokens, 2, lineNo, "jobs <n>");
+                    place.JobSlots = Int(tokens[1], lineNo);
+                    break;
+
+                case "units":
+                    Require(tokens, 2, lineNo, "units <n>");
+                    place.Units = Int(tokens[1], lineNo);
+                    if (place.Units < 1)
+                        throw new VillageParseException(lineNo, "a building needs at least one home in it");
+                    break;
+
+                case "human":
+                    place.Human = line.Substring(cmd.Length).Trim();
+                    break;
+
+                case "key":
+                    place.Key = line.Substring(cmd.Length).Trim();
+                    if (place.Key.Length == 0)
+                        throw new VillageParseException(lineNo, "a key line needs something to hash");
+                    break;
+
+                case "hours":
+                {
+                    Require(tokens, 2, lineNo, "hours <hh:mm>-<hh:mm> [days]");
+                    var (start, end) = TimeRange(tokens[1], lineNo);
+                    byte days = tokens.Count > 2 ? DaysMask(tokens[2], lineNo) : OpenWindow.AllDays;
+                    place.Hours.Add(new OpenWindow(start, end, days));
+                    break;
+                }
+
+                default:
+                    throw new VillageParseException(lineNo, $"unknown place attribute '{tokens[0]}'");
+            }
+        }
+
+        private static void Validate(VillageLayout layout)
+        {
+            for (int i = 0; i < layout.Places.Count; i++)
+            {
+                var p = layout.Places[i];
+                if (p.Bounds.W <= 0 || p.Bounds.H <= 0)
+                    throw new VillageParseException(0, $"place '{p.Name}' has an empty footprint");
+                if (p.Bounds.X < 0 || p.Bounds.Y < 0 ||
+                    p.Bounds.Right >= layout.Width || p.Bounds.Bottom >= layout.Height)
+                    throw new VillageParseException(0, $"place '{p.Name}' at {p.Bounds} falls outside the {layout.Width}x{layout.Height} map");
+
+                if (p.IsBuilding && !p.Door.IsValid)
+                    throw new VillageParseException(0, $"building '{p.Name}' has no door");
+            }
+        }
+
+        // ---- token helpers ----
+
+        // The syntax below is shared with kinds.txt and lives in ContentText. These stay as
+        // named wrappers so that every call site here reads the way it always did.
+
+        private const string File = "village.txt";
+
+        private static List<string> Tokenise(string line) => ContentText.Tokenise(line);
+
+        private static void Require(List<string> tokens, int count, int lineNo, string usage) =>
+            ContentText.Require(tokens, count, File, lineNo, usage);
+
+        private static int Int(string s, int lineNo) => ContentText.Int(s, File, lineNo);
+
+        private static Tile Point(string s, int lineNo) => ContentText.Point(s, File, lineNo);
+
+        private static TileRect RectAt(string origin, string size, int lineNo) =>
+            ContentText.RectAt(origin, size, File, lineNo);
+
+        private static (int, int) TimeRange(string s, int lineNo) =>
+            ContentText.TimeRange(s, File, lineNo);
+
+        private static byte DaysMask(string s, int lineNo) => ContentText.DaysMask(s, File, lineNo);
+
+        private static Terrain TerrainKind(string s, int lineNo) =>
+            ContentText.TerrainKind(s, File, lineNo);
+
+        /// <summary>
+        /// The word for a kind, resolved through the table rather than through a list here.
+        ///
+        /// Throwing on a word nothing answers to is the one behaviour of the old switch worth
+        /// keeping: a misspelt kind is a building that would otherwise be silently something
+        /// else, and this is the last point at which anyone can be told.
+        /// </summary>
+        private static PlaceKind PlaceKindOf(PlaceKindTable kinds, string s, int lineNo)
+        {
+            if (kinds.TryKindOf(s, out var kind)) return kind;
+            throw new VillageParseException(lineNo, $"unknown place kind '{s}'");
+        }
+    }
+}

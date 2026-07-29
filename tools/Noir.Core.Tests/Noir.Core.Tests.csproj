@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Noir.Core.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the GATE, not the source. One compile of Core, shared by tests and harness. -->
+    <ProjectReference Include="..\Noir.Core\Noir.Core.csproj" />
+
+    <!--
+      The harness, for TwoToOneTests only.
+
+      The 2:1 instrument is deliberately in two halves: the classifier lives behind the
+      observation firewall in Assets/Noir/Core/Observation, and the EYE that produces its input
+      lives in tools/Noir.Sim, outside the Unity import path, so that no inspector and no case
+      board can ever instantiate a watcher. The gate has to run both halves, so it references
+      the harness. Noir.Sim depends on Noir.Core and on nothing here, so there is no cycle.
+    -->
+    <ProjectReference Include="..\Noir.Sim\Noir.Sim.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Content is loaded from disk at test time; point tests at the repo copy. -->
+    <None Include="..\..\Content\**\*" LinkBase="Content" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

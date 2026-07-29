@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    THE API GATE.
+
+    This project compiles the EXACT SAME source files that Unity compiles, but targets
+    netstandard2.1 / C# 9 — which is Unity 6's profile. If any Core code uses a .NET 9/10
+    API or a C# 10+ language feature, it fails here, on the command line, in two seconds —
+    instead of failing later inside the Unity editor where it is far more annoying to find.
+
+    It also enforces "no UnityEngine in Core" for free: there is no UnityEngine reference
+    available here, so a stray `using UnityEngine;` simply will not compile.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Noir.Core</AssemblyName>
+    <RootNamespace>Noir.Core</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Every Core assembly, including Noir.Core.Observation. The glob picks up new asmdef folders
+      automatically, so the gate never falls behind Unity.
+
+      Know what this merge costs, though: Unity compiles five assemblies with a strict reference
+      graph, and this compiles all five into one. So `dotnet build` cannot tell you that
+      Observation reached into Sim — here, it can. That is what ObservationFirewallTests exists
+      for. Do not read a green build as proof the layers are separate; it only proves the code
+      is netstandard2.1-clean and UnityEngine-free.
+    -->
+    <Compile Include="..\..\Assets\Noir\Core\**\*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+</Project>

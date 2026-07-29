@@ -1,0 +1,36 @@
+# Text files are normalised to LF in the repository and checked out native.
+* text=auto
+
+# ---- things git must never touch ------------------------------------------
+#
+# docs/snapshots/ is a REGRESSION BASELINE, not a folder of pictures. The whole
+# point of it is that twelve PNGs come out byte-identical from two separate
+# Unity processes, and they get diffed byte-for-byte. Git detects PNG as binary
+# on content anyway, but the check that matters here is too important to leave
+# to a heuristic.
+*.png binary
+*.jpg binary
+*.wav binary
+*.unitypackage binary
+
+# ---- Unity ----------------------------------------------------------------
+#
+# Serialization is Force Text, so these are YAML and worth diffing as text.
+# They are NOT worth merging automatically: Unity's YAML has file-scoped ids
+# that a three-way text merge will happily corrupt into a scene that opens to
+# nothing. -merge makes the conflict loud instead.
+*.asset    text -merge
+*.prefab   text -merge
+*.unity    text -merge
+*.mat      text -merge
+*.meta     text -merge
+*.asmdef   text
+
+# ---- content --------------------------------------------------------------
+#
+# village.txt and friends are authored by hand and read by the parser; the
+# floor file is a ratchet that gets compared line by line.
+*.txt   text
+*.floor text
+*.md    text
+*.cs    text

@@ -1,0 +1,254 @@
+# ============================================================================
+#  ASHCOMBE
+#
+#  170 x 120 tiles, one tile = one metre.
+#
+#  Houses are sized so people can actually live in them. A 6x7 cottage is 6m by
+#  7m, which after one-metre walls leaves 20 m2 of floor - too small for a
+#  bedroom AND a bathroom, so families of four were living in two rooms. These
+#  are 8x8 to 12x10: a real 1970s village house, 50-90 m2, three or four rooms.
+#
+#  Interiors are generated per building (see InteriorGenerator) so no two
+#  layouts are identical. Only the footprint and the front door are authored.
+#
+#  Painted in order: terrain, then roads over terrain, then buildings over
+#  roads. Read top to bottom and you know what covers what.
+#
+#  The `human` line is the ONLY text the UI may ever show about a place.
+# ============================================================================
+
+village Ashcombe
+size 170 120
+
+# ---- terrain -------------------------------------------------------------
+terrain field      0,0    170x26      # farmland, north
+terrain wood       0,74    22x40      # the spinney, west
+terrain field    150,72    20x34      # east field
+terrain water      0,112  170x8       # the Ash, along the south
+terrain field     26,100   60x11      # water meadow
+
+# ---- roads ---------------------------------------------------------------
+# Ashcombe Street reaches both edges on purpose. VillageMesh carries the lane on
+# out past the map from wherever it leaves, so the village reads as being on the
+# way to somewhere instead of as an island in a field.
+road  main    5   0,58  169,58        # Ashcombe Street, edge to edge
+road  church  3   24,58  24,22        # Church Lane
+road  school  3   90,58  90,32        # School Lane
+road  mill    3  148,58 148,100       # Mill Lane
+road  back    3   30,84 140,84        # Back Lane
+path  greenwalk 2  66,60  66,72
+path  millpath  2 148,100 158,106
+
+# ---- the church, at the top of Church Lane -------------------------------
+place church 6,24 14x16 "St Anne's"
+  door 19,32
+  hours 08:00-18:00
+  hours 09:00-12:00 sun
+  jobs 1
+  human The bell is wound by hand on Fridays and everyone can hear it.
+
+place churchyard 6,42 17x10 "the churchyard"
+  human The oldest stones are unreadable and the newest are kept clear of grass.
+
+# ---- school, up School Lane ----------------------------------------------
+place school 70,32 18x12 "Ashcombe Primary"
+  door 80,43
+  hours 08:30-15:30 mon-fri
+  jobs 4
+  human Forty-one children, two classrooms, and a bell rung by whoever is nearest.
+
+place playground 96,34 12x10 "the playground"
+  human The swings are the meeting point for anyone under eleven and their mothers.
+
+# ---- the centre ----------------------------------------------------------
+place pub 52,44 14x11 "The Wheatsheaf"
+  door 58,54
+  hours 11:00-14:30
+  hours 17:30-23:00
+  jobs 3
+  human Eleven men sit in the same order every night, and notice when one of them doesn't.
+
+place shop 96,62 12x10 "Pethick's"
+  door 101,62
+  hours 07:00-13:00 mon-sat
+  hours 14:00-17:30 mon-fri
+  jobs 2
+  human You cannot buy anything here without being asked after.
+
+place post 110,62 11x9 "the Post Office"
+  door 115,62
+  hours 09:00-13:00 mon-fri
+  hours 09:00-12:00 sat
+  jobs 1
+  human Pensions on Thursday, and a queue that is mostly conversation.
+
+place hall 110,44 16x11 "the Village Hall"
+  door 117,54
+  hours 09:00-22:00
+  jobs 1
+  human Whist on Tuesdays, the Women's Institute on the first Monday, jumble in spring.
+
+place green 30,62 20x10 "the Green"
+  human Cricket in summer, and in winter a flat wet square nobody crosses.
+
+place busstop 64,62 2x2 "the bus stop"
+  human Two buses a day to Marlbury, and everyone knows both times.
+
+place phonebox 70,62 1x1 "the telephone box"
+  human The only telephone for some people, so there is often somebody waiting.
+
+# ---- east end ------------------------------------------------------------
+place surgery 128,62 12x10 "the Surgery"
+  door 133,62
+  hours 08:30-11:30 mon-fri
+  hours 16:00-18:00 mon,tue,thu,fri
+  jobs 2
+  human Dr Halloran on Mondays and Thursdays, and a nurse the rest of the week.
+
+place garage 152,44 15x12 "Ivey's Garage"
+  door 159,55
+  hours 08:00-18:00 mon-fri
+  hours 08:00-13:00 sat
+  jobs 3
+  human Two pumps and a pit, and the only man for eleven miles who can weld.
+
+# ---- the mill, on the river ----------------------------------------------
+place mill 118,98 24x14 "Ashcombe Mill"
+  door 130,98
+  hours 06:00-14:00 mon-fri
+  hours 14:00-22:00 mon-fri
+  jobs 22
+  human Two shifts, a hooter at six and at two, and you can set a watch by the men leaving.
+
+# ---- farms ---------------------------------------------------------------
+place farm 14,6 20x14 "Wick Farm"
+  door 24,19
+  hours 05:30-19:00
+  jobs 5
+  human Milking twice a day, which means somebody is always awake before everybody.
+
+place farm 120,4 19x13 "Long Barrow Farm"
+  door 129,16
+  hours 05:30-19:00
+  jobs 4
+  human Arable, so the yard is empty for weeks and then full of everyone at harvest.
+
+place allotments 30,88 26x10 "the allotments"
+  human Twenty-two plots, a waiting list, and a shed nobody admits to sleeping in.
+
+# ============================================================================
+#  DWELLINGS - 44 households
+#  Sizes vary deliberately: a labourer's cottage and the doctor's house should
+#  not have the same floor plan.
+# ============================================================================
+
+# ---- Church Row, north side of Ashcombe Street, west ----------------------
+place cottage 28,45 10x10 "1 Church Row"
+  door 32,54
+place cottage 40,46 9x9 "2 Church Row"
+  door 44,54
+place cottage 52,30 11x10 "Glebe House"
+  door 57,39
+place cottage 28,30 10x9 "3 Church Row"
+  door 32,38
+place cottage 40,30 9x9 "4 Church Row"
+  door 44,38
+
+# ---- north side, centre and east -----------------------------------------
+place cottage 68,46 9x9 "The Laurels"
+  door 72,54
+place cottage 94,44 12x11 "Fern House"
+  door 100,54
+place cottage 130,44 11x11 "Ashcombe House"
+  door 135,54
+place cottage 142,46 8x9 "Yew Cottage"
+  door 145,54
+
+# ---- south side of Ashcombe Street, west ---------------------------------
+# A terrace: one building, one roof, four front doors. The people in it are
+# neighbours through a shared wall, which is a different thing from living
+# nearby - they hear each other come in.
+place cottage 6,62 24x11 "Ash Terrace"
+  door 10,62
+  units 4
+place cottage 52,62 12x10 "3 Ash Terrace"
+  door 57,62
+place cottage 72,62 10x10 "4 Ash Terrace"
+  door 76,62
+place cottage 84,62 10x10 "5 Ash Terrace"
+  door 88,62
+
+# ---- south side, east ----------------------------------------------------
+place cottage 142,62 9x10 "1 Mill View"
+  door 146,62
+place cottage 154,62 11x10 "2 Mill View"
+  door 159,62
+place cottage 154,74 11x9 "3 Mill View"
+  door 159,74
+
+# ---- Back Lane, north side -----------------------------------------------
+place cottage 32,74 9x9 "1 Back Lane"
+  door 36,82
+place cottage 43,74 9x9 "2 Back Lane"
+  door 47,82
+place cottage 54,74 9x9 "3 Back Lane"
+  door 58,82
+place cottage 65,74 9x9 "4 Back Lane"
+  door 69,82
+place cottage 76,74 10x9 "5 Back Lane"
+  door 80,82
+place cottage 88,74 9x9 "6 Back Lane"
+  door 92,82
+place cottage 99,74 10x9 "7 Back Lane"
+  door 103,82
+place cottage 111,74 9x9 "8 Back Lane"
+  door 115,82
+place cottage 122,74 10x9 "9 Back Lane"
+  door 126,82
+
+# ---- Back Lane, south side -----------------------------------------------
+place cottage 60,88 9x9 "10 Back Lane"
+  door 64,88
+place cottage 71,88 10x9 "11 Back Lane"
+  door 75,88
+place cottage 83,88 9x9 "12 Back Lane"
+  door 87,88
+place cottage 94,88 10x9 "13 Back Lane"
+  door 98,88
+place cottage 106,88 9x9 "14 Back Lane"
+  door 110,88
+
+# ---- Mill Lane -----------------------------------------------------------
+place cottage 132,88 8x8 "1 Mill Cottages"
+  door 135,88
+place cottage 152,88 9x8 "2 Mill Cottages"
+  door 156,88
+place cottage 152,98 9x8 "3 Mill Cottages"
+  door 156,98
+place cottage 152,108 9x7 "Riverside"
+  door 156,108
+
+# ---- outlying -------------------------------------------------------------
+place cottage 44,8 11x10 "Wick Lodge"
+  door 49,17
+place cottage 60,10 10x9 "Barrow Cottage"
+  door 64,18
+place cottage 92,8 11x10 "The Firs"
+  door 97,17
+place cottage 152,24 12x10 "Hillside"
+  door 157,33
+place cottage 76,8 11x10 "Spinney End"
+  door 81,17
+place cottage 4,78 11x10 "Woodside"
+  door 9,87
+place cottage 4,92 11x10 "Meadow Cottage"
+  door 9,101
+place cottage 62,102 11x9 "Ford Cottage"
+  door 67,102
+# Flats put up for the mill hands. Four homes off one frontage, and the only
+# building in the village where you can hear the people upstairs.
+place cottage 88,98 24x12 "Mill Buildings"
+  door 92,98
+  units 4
+place cottage 118,30 12x11 "The Old Rectory"
+  door 123,40
