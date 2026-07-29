@@ -142,10 +142,12 @@ set; it would pass while the feature reached no watcher at all.
    Budget: 6–14 door transits a day at 20–40s is 2–9 minutes of drift, inside the existing ±15 min
    `Punctuality` — but asserted, not assumed.
 
-**Two existing assertions fail by construction and must be made beat-aware, not widened:**
-`QueueAndDoorTests.cs:368` asserts every pause is `InRange(6, 11)` and `:448` asserts
-`<= Longest`. Both should branch on the beat, keeping the tight assertion for everyone else.
-Widening the range would delete the invariant instead of updating it.
+**The two existing door assertions stay exactly as they are.** `QueueAndDoorTests.cs:368`
+(`InRange(6, 11)`) and `:448` (`<= Longest`) run against Queueham, whose citizens are built with
+the 14-argument `Citizen` constructor and so take `Beat beats = Beat.None` by default. No Queueham
+citizen can hold a beat, so neither assertion changes — and together they already *are* test 2
+above, pinning the untouched-pause invariant for free. Test 2 therefore adds a lingerer
+deliberately rather than modifying these.
 
 Regression sweep: `dotnet run --project Noir.Sim -- strand --days 3`.
 
