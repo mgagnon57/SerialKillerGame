@@ -1,8 +1,10 @@
 using NUnit.Framework;
 using Noir.Core.People;
 using Noir.Core.Contracts;
+using Noir.Core.Observation;
 using Noir.Core.Sim;
 using Noir.Core.World;
+using Noir.Sim;
 
 namespace Noir.Core.Tests
 {
@@ -101,6 +103,80 @@ namespace Noir.Core.Tests
 
             Assert.That(lingererPauses, Is.GreaterThan(0), "the lingerer never crossed a threshold");
             Assert.That(plainPauses, Is.GreaterThan(0), "nobody else crossed one either");
+        }
+    }
+
+    /// <summary>
+    /// The whole point, asserted at the far end.
+    ///
+    /// Runs the real village rather than a fixture, because what is being tested is whether the
+    /// authored content reaches a watcher — and the content is the thing under test. Two days
+    /// rather than the instrument's fourteen: this asks whether the manner appears at all, not
+    /// what the ratio is.
+    /// </summary>
+    [TestFixture]
+    public class BeatsAreEnactedTests
+    {
+        [Test]
+        public void SomebodyWhoseParticularsSayTheyLingerIsSeenLingering()
+        {
+            var ctx = VillageContext.Load();
+            var logs = Eyewitness.WatchAll(ctx, 2);
+
+            int lingerers = 0, seenLingering = 0;
+
+            for (int i = 0; i < logs.Length; i++)
+            {
+                var who = ctx.People.Get(new CitizenId(i));
+                if (who == null || (who.Beats & Beat.Lingers) == 0) continue;
+
+                lingerers++;
+                foreach (Observed o in logs[i].Entries)
+                {
+                    if ((o.Manner & ObservedManner.Lingering) == 0) continue;
+                    seenLingering++;
+                    break;
+                }
+            }
+
+            Assert.That(lingerers, Is.GreaterThan(0),
+                "no villager drew a clause tagged `# lingers` — the editorial pass has not "
+              + "reached anybody, so this proves nothing either way");
+
+            Assert.That(seenLingering * 2, Is.GreaterThanOrEqualTo(lingerers),
+                $"only {seenLingering} of {lingerers} lingerers were ever seen on a threshold "
+              + "in two days — the pause is too short for a watcher who looks once a minute");
+        }
+
+        [Test]
+        public void TheSentenceAndTheBagAreTheSameFact()
+        {
+            // A citizen who drew a clause tagged `# carries` must BE a carrier. This is the
+            // property that deriving beats from particulars exists to guarantee: the sentence an
+            // inspector prints and the thing a watcher sees can never be two facts that merely
+            // happen to agree.
+            var ctx = VillageContext.Load();
+            int carriers = 0;
+
+            for (int i = 0; i < ctx.People.Count; i++)
+            {
+                var who = ctx.People.Get(new CitizenId(i));
+                if (who == null) continue;
+
+                bool clauseSaysSo = false;
+                foreach (int p in who.Particulars)
+                    if ((ctx.Particulars.BeatAt(p) & Beat.Carries) != 0) clauseSaysSo = true;
+
+                bool beatSaysSo = (who.Beats & Beat.Carries) != 0;
+                Assert.That(beatSaysSo, Is.EqualTo(clauseSaysSo),
+                    $"citizen {i} holds Beat.Carries={beatSaysSo} but their clauses say "
+                  + $"{clauseSaysSo} — the two have come apart");
+
+                if (clauseSaysSo) carriers++;
+            }
+
+            Assert.That(carriers, Is.GreaterThan(0),
+                "nobody in the village drew a clause tagged `# carries`");
         }
     }
 }
