@@ -1,5 +1,91 @@
 ﻿# Where we are
 
+## STOP HERE — 2026-07-29, later. Beats are enacted. Numbers moved exactly as predicted, and the machine is still not to be trusted.
+
+**Still the faulty machine below — nothing here changes that.** Every figure in this section was
+taken in Release on the same unpatched i9-13900K (microcode `0x10E`, BIOS 0809, 2023-01-05) and is
+**PROVISIONAL** until the BIOS update lands. Do not spend these numbers as evidence before then.
+
+### What landed (five tasks, branch `massing`, commit `22283fe`)
+
+1. **`Beat.RoundAbout` deleted.** It could only ever produce `ObservedManner.SomewhereNew`, and the
+   act-by-manner table already read 158 of 158 on both "came out" and "walked past" for that manner
+   — nobody left to make it a *new* proposition for. It was also the one beat that would have needed
+   a routing change, risking the determinism guarantee for a beat that could add nothing.
+2. **`Beat.Lingers` wired into `BeginDoorPause`** (`Assets/Noir/Core/Sim/Simulation.cs`), on its own
+   `Rolls.Purpose("lingering")` stream so every non-lingerer's door pause stays byte-identical.
+   `LingerBase = 400`, `LingerSpread = 400` — a lingerer pauses 406-811 ticks (20-40s) against the
+   usual 6-11 (0.3-0.55s), sized against an observer that samples once a simulated minute.
+3. **Editorial tagging pass on `Content/particulars.txt`**: 42 `# carries` and 21 `# lingers`
+   clauses out of 914. Four over-tags caught in review and reverted (pocketed items never produced
+   are not visible from across a road).
+4. **End-to-end tests added.** The village has 9 lingerers and 16 carriers; all 9 lingerers were
+   seen lingering within 2 observed days. A falsification check (pause shortened back to 0-6 ticks)
+   dropped that to 1 of 9 — the test genuinely discriminates on the wiring, not on the sampling.
+5. **This sweep** — strand check, full suite, `ratio`, and this entry. No code, test, or content
+   touched.
+
+### Verification run
+
+- `strand --days 3`: nobody stranded, nobody misplaced, 0 of 158 either way. The 20-40s lingering
+  pause does not leave anyone stuck in a doorway.
+- `dotnet test -c Release`: **137 pass, 2 fail** — the two headline 2:1 gates
+  (`TheMedianVillagerYieldsTwiceAsMuchTextureAsUse`, `TheTenthPercentileIsNotALock`), both by
+  design, unchanged from before this feature.
+
+### The `ratio` instrument, before vs. after (seed 1979, same 158-person village) — PROVISIONAL
+
+Before = commit `905dca8`, checked out into a disposable worktree for a clean comparison, never
+touching the working tree on `massing`.
+
+```
+                        before    after     delta
+median ratio            1.2727   1.3182    +0.045
+p10                      0.6522   0.6522     0
+texture_median             25       26      +1
+texture_min                 10       10       0
+sight_median              5.34%    5.34%      0
+sign: busiest quarter    1.0763   1.0582    -0.018
+sign: quietest quarter   1.3895   1.4898    +0.100
+sign gap (quiet-busy)     0.313    0.432    +0.119
+
+"came out"  / carry          2        16     +14
+"came out"  / linger         6        11      +5
+"went in"   / carry         75        79      +4
+"went in"   / linger        16        24      +8
+```
+
+**Against the predictions, plainly:** the design predicted `texture.median` and `texture.min`
+would barely move, because the beats reach only ~25 of 158 villagers and the median and minimum
+villager still hold no tagged clause. That held: `texture.min` is exactly unchanged (10 → 10) and
+`texture.median` moved by one villager's worth (25 → 26). `p10` and `sight.median` are exactly
+unchanged. `median` moved by +0.045 — small, and nowhere near closing the gap to the 2.0 rule.
+
+The design also predicted the inverted sign might slightly widen, because beats land independently
+of how busy a villager already is. It did widen, from a 0.313 gap to 0.432 — a small move in this
+instrument's own units, not a point-or-two swing, and not something to treat as suspicious given the
+prediction named it explicitly.
+
+**`linger` moved as intended** — "came out" went from 6 of 158 to 11 of 158 (task-5's asked-for
+number). **`carry` moved further than the brief called out**: "came out"/carry went from 2 of 158
+to 16 of 158, an 8x jump, because task 3's editorial pass added 42 `# carries` clauses on top of
+carry-tagging that was already routed before this batch of work. Not a bug — the carry vocabulary
+genuinely grew — but worth flagging since only `linger` was named as expected to move.
+
+**Nothing here moved by more than a fraction of a point.** No number is treated as a green light;
+all of it is provisional pending the BIOS fix.
+
+### Snapshots — deliberately NOT re-rendered
+
+Per this task's brief, the Unity snapshot render is deferred until after the BIOS update. Positions
+will differ for the 9 lingerers and whoever is near them when it is finally run — any *other*
+difference at that point is a real defect, not an artifact of this change.
+
+Full instrument output, both before and after, is in
+`.superpowers/sdd/2026-07-29-enacting-beats/task-5-report.md`.
+
+---
+
 ## STOP HERE — 2026-07-29. THE MACHINE IS FAULTY. Read this before believing any red test.
 
 `dotnet test` in **Debug** crashes the test host on this machine, and the crashes are not
