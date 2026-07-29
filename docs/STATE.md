@@ -1,5 +1,94 @@
 ﻿# Where we are
 
+## STOP HERE — 2026-07-29, later still. A wiring audit, and two floors nobody was guarding.
+
+Five audits for one bug class: **things built and never wired up.** Read-only, then fixed on
+branch `audit-fixes`. **139 pass / 2 fail**, the same two 2:1 gates by design.
+
+### The two you would have seen in Unity
+
+- **The garage had a chimney on its flat roof.** `AddChimneys` ran for every place that passed
+  `IsRoofed`, with nothing checking `RoofForm.Flat`. `GarageMassing` is eaves 3.4, pitch 0, so a
+  stack was planted flat on the roof at 3.4 m. Fixed by giving `Massing` a `Chimneys` field so the
+  *grammar* answers — not a `switch` on `PlaceKind`, which would have reopened the open-kind
+  property Stage 4 bought.
+- **Nobody was ever shown as talking.** `Activity.Talking` was set at `Simulation.cs:520` and read
+  by nothing: 35 `Activity` cases across `VillageUI` and `Reports`, none for it. Worse, the census
+  counted two people stopped in the road talking as **walking**, because `Travelling` stays true
+  through a conversation. The census now tests `Talking` *before* `Travelling` and prints its own
+  column.
+
+### The most valuable fix is invisible: two floors were recorded and enforced by nothing
+
+`Content/watched.floor` carries five thresholds. Three were ratcheted. **`ratio.p10` and
+`texture.min` were written down and checked by no test at all** — `Ratio.cs` read them only to
+print them.
+
+Both *look* covered, because each has an absolute gate elsewhere. `ratio.p10`'s is
+`TheTenthPercentileIsNotALock`, against the required 1.00 — **and that test already fails by
+design.** A test that is already red cannot report a regression. The tenth percentile could have
+fallen from 0.53 to 0.20 and nothing on the board would have changed colour.
+
+`ProgressDoesNotReverse` now ratchets both, against the recorded floor only (not
+`Math.Max(requirement, floor)` as the sight gate does — folding in an aspirational requirement
+would just restate the failing gate). Both were falsified by raising the floors and confirming
+they fire.
+
+**And that exposed a number worth knowing.** Worst-of-three-seeds:
+
+```
+                floor   worst of 3   headroom
+ratio.p10        0.52         0.53       0.01
+texture.min         8            8       NONE
+```
+
+The `texture_min 10` in the entry below is **seed 1979 alone**. Across three seeds it is 8 —
+sitting exactly on its recorded floor and exactly on the absolute G3 requirement. G3 passes by
+nothing at all. It is now ratcheted, which is the only reason a slip would be noticed.
+
+### Wired up as it appeared, or honestly labelled
+
+- **`PersonDescription` and `Sighting` are never constructed. Anywhere — tests included.**
+  `new Sighting(` and `new PersonDescription(` return zero hits repo-wide, and no file under
+  `Assets/Noir/Unity` or `Assets/Noir/Editor` references `Noir.Core.Observation` at all. **The
+  running game observes nothing.** Sixteen enum values across `ApparentSex`, `HeightBand`,
+  `BuildBand`, `AgeBand`, `ClothingTone` and `CarriedThing` cannot be produced. The live half of
+  that assembly — `Observed`, `ObservationLog`, `Salience` — is filled by `Eyewitness` and graded
+  by `Ratio`, and is load-bearing. Kept, with headers on both files saying plainly that they do
+  not run yet, because the firewall is worth having in place before there is a consumer. Do not
+  read those files' confidence as evidence that they execute.
+- **`Activity.WaitingForTheBus` is gone.** Nothing ever assigned it, and `Reports.cs` carried a
+  display branch for a state no villager could be in. `village.txt` still places the bus stop and
+  still says two buses a day go to Marlbury; its `kinds.txt` row is `hours none, jobs 0`, which is
+  what scenery looks like. Reinstate the value only alongside a planner that queues somebody
+  at the kerb.
+- **`Palette` is down from fifteen members to one.** Only `Palette.Selected` was ever read;
+  `Materials3D` replaced the rest when the renderer went 3D. A colour table that looks like the
+  authority and is consulted by nothing is worse than none — the next person to change a colour
+  changes it there and sees nothing happen.
+- **`TileFlags.Water`** is produced and read by nothing; every water check asks `Terrain.Water`.
+  Kept and commented, because removing it rewrites stored flags for no behavioural gain.
+- **`ObservedAct.NothingInParticular`** is a legitimate zero-default so `default(Observed)` is
+  inert, but nothing produces it — now documented as unreachable rather than as a default a
+  watcher writes.
+- **`AgentState.PathIndex` and `TalkCooldown`** have no reader outside `Simulation.cs`; documented
+  as internal working state.
+
+### What came back clean
+
+All 18 `Noir.Sim` commands reachable and documented; every advertised flag parsed; `ratio`
+correctly refuses `--days` as its usage claims. All three `-executeMethod` targets named in docs
+exist. Fifteen-plus enums fully wired both ways. No second instance of the winding-order or
+depth-fighting faults — the renderer now self-asserts with `AssertWinding`/`AssertFootprint`.
+
+### Not verified, and why
+
+Snapshots are **not** re-rendered. The garage fix changes geometry, so `elevations/garage.png` and
+any snapshot containing a garage will move — that is expected, and it batches with the
+re-baseline already owed after the BIOS update. **Nothing here was verified by eye in Unity.**
+
+---
+
 ## STOP HERE — 2026-07-29, later. Beats are enacted. The predicted numbers held; one nobody predicted jumped 8x. The machine is still not to be trusted.
 
 **Still the faulty machine below — nothing here changes that.** Every figure in this section was

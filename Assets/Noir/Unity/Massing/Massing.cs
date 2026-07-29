@@ -51,12 +51,29 @@ namespace Noir.Unity
         /// </summary>
         public readonly bool RidgeAcross;
 
-        public Massing(float eaves, RoofForm roof, float pitch, bool ridgeAcross = false)
+        /// <summary>
+        /// Whether this building carries chimney stacks.
+        ///
+        /// Defaults true, because in 1979 almost everything in a village is heated by something
+        /// that needs a flue. The grammar decides rather than a switch on PlaceKind, for the same
+        /// reason RoofForm is a column and not an enum test: a kind the enum has never heard of
+        /// must be able to answer this from content, and a switch here would quietly close the
+        /// open-kind property Stage 4 bought.
+        ///
+        /// A flat roof with a chimney on it was the defect that made this a field: AddChimneys
+        /// ran for every roofed place, so the garage — eaves 3.4, RoofForm.Flat, pitch 0 — got a
+        /// stack planted flat on its roof at ridge height, which is 3.4 + 0.
+        /// </summary>
+        public readonly bool Chimneys;
+
+        public Massing(float eaves, RoofForm roof, float pitch, bool ridgeAcross = false,
+                       bool chimneys = true)
         {
             Eaves = eaves;
             Roof = roof;
             Pitch = pitch;
             RidgeAcross = ridgeAcross;
+            Chimneys = chimneys;
         }
 
         /// <summary>

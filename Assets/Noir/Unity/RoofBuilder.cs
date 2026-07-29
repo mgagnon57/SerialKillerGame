@@ -66,8 +66,11 @@ namespace Noir.Unity
                 // what tells you from the street how many families live in the building -
                 // and it is the detail that makes a roofline read as inhabited rather than
                 // as a shape.
-                int stacks = place.Kind == PlaceKind.Dwelling ? place.Units : 1;
-                AddChimneys(place.Bounds, stacks, massing, into, Materials3D.ChimneyIndex);
+                if (massing.Chimneys)
+                {
+                    int stacks = place.Kind == PlaceKind.Dwelling ? place.Units : 1;
+                    AddChimneys(place.Bounds, stacks, massing, into, Materials3D.ChimneyIndex);
+                }
 
                 // Whatever this kind and no other gets: a tower, a bell-cote, a hoist.
                 MassingGrammars.For(place).Extras(place, into);

@@ -12,6 +12,10 @@ namespace Noir.Core.World
         Indoor = 1 << 2,
         Road = 1 << 3,   // carriageway — vehicles later, and where people walk fastest
         Path = 1 << 4,   // footpath, verge, yard
+        // Set from Terrain.Water, and read by NOTHING — every water check in the game asks
+        // Terrain.Water directly. Kept because it is produced and removing it would rewrite the
+        // stored flags of every water tile for no behavioural gain, but do not assume testing
+        // this bit does anything: Terrain is the source of truth. Audited 2026-07-29.
         Water = 1 << 5,
         Rough = 1 << 6,  // field, scrub — passable but slow
     }

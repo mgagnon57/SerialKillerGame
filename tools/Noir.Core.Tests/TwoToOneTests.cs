@@ -195,6 +195,50 @@ namespace Noir.Core.Tests
                     "deliberately made people more legible in exchange for making them more",
                     "various — lower ratio.median and raise texture.median in the same commit,",
                     "and say in the message which trade was made and why."));
+
+            // ---- the two floors that were recorded and never enforced --------------------
+            //
+            // Content/watched.floor carries five thresholds. Until this was added, three of them
+            // were ratcheted here and in TheEyeHasNotBeenNarrowed, and TWO were written down and
+            // checked by nothing: ratio.p10 and texture.min.
+            //
+            // Both DO have absolute gates elsewhere — TheTenthPercentileIsNotALock against 1.00
+            // and NobodyIsOnlyASchedule against 8 — so it looked covered. It was not, and p10 is
+            // the instructive case: its absolute gate FAILS BY DESIGN today, at 0.65 against a
+            // required 1.00. A test that is already red cannot report a regression. The tenth
+            // percentile could have fallen from 0.65 to 0.20 and nothing on the board would have
+            // changed colour.
+            //
+            // These compare against the recorded floor ONLY, deliberately, and not against
+            // Math.Max(requirement, floor) as the sight gate does. Folding in the aspirational
+            // requirement here would just restate the failing gate and buy back nothing.
+
+            var (p10Seed, worstP10) = Worst(w => Percentile(w.Ratios, 10));
+
+            Assert.That(worstP10, Is.GreaterThanOrEqualTo(_floor.RatioP10 - 0.005),
+                Say(p10Seed, $"THE TENTH PERCENTILE HAS FALLEN TO {worstP10:0.00}, AGAINST A "
+                           + $"RECORDED FLOOR OF {_floor.RatioP10:0.00}.",
+                    "This is the ratchet, not the 2:1 rule. The rule wants 1.00 and we are far",
+                    "from it; what this gate says is that the worst-served tenth of the village",
+                    "may not get WORSE than it already was while we work on the rest.",
+                    "",
+                    "The bottom tenth is where the failure this instrument exists to catch",
+                    "actually lives — a villager about whom a fortnight taught you more about how",
+                    "to hurt them than about who they are. Losing ground there is not a trade."));
+
+            var (minSeed, worstMin) = Worst(w => Percentile(w.Texture, 0));
+
+            Assert.That(worstMin, Is.GreaterThanOrEqualTo(_floor.TextureMin),
+                Say(minSeed, $"THE LEAST VARIOUS VILLAGER IS DOWN TO {worstMin:0} DISTINCT KINDS "
+                           + $"OF MOMENT, AGAINST A RECORDED FLOOR OF {_floor.TextureMin:0}.",
+                    "NobodyIsOnlyASchedule gates this against the absolute floor of eight. This",
+                    "gates it against what the village had ALREADY REACHED, which was higher.",
+                    "Without this line the minimum could give back everything above eight without",
+                    "failing anything.",
+                    "",
+                    "This is a minimum over a stochastic population and will be the first gate to",
+                    "flicker as the village changes. If it flickers, raise the population or the",
+                    "watch length — do not quietly lower the floor."));
         }
 
         // ---- what may not be tuned -------------------------------------------------------

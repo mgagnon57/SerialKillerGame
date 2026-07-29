@@ -29,6 +29,14 @@ namespace Noir.Core.Observation
     /// </summary>
     public enum ObservedAct : byte
     {
+        /// <summary>
+        /// The zero value, so a default-constructed Observed is inert rather than a lie.
+        ///
+        /// NOTE, because an audit had to establish it: nothing ever produces this. Every call
+        /// site passes an explicit act. It is here to make `default(Observed)` harmless, not
+        /// because any watcher writes it down — so a reader of the log will never encounter it,
+        /// and code branching on it is unreachable rather than merely rare.
+        /// </summary>
         NothingInParticular = 0,
 
         CameOut,            // a door, from outside. Which door is not recorded, and cannot be.

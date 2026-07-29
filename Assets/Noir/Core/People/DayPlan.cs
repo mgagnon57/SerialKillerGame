@@ -19,7 +19,14 @@ namespace Noir.Core.People
         Walking,
         AtThePlayground,
         OnTheAllotment,
-        WaitingForTheBus,
+
+        // There was a WaitingForTheBus here. Nothing ever assigned it: village.txt places a bus
+        // stop and says "two buses a day to Marlbury, and everyone knows both times", but no
+        // DayPlanner path has ever sent anybody to wait at one, so the value could not occur and
+        // Reports carried a display branch for a state no villager could be in. The bus stop
+        // stays as authored scenery — its kinds.txt row is hours none, jobs 0, which is what
+        // scenery looks like. Reinstate this only alongside a planner that actually queues
+        // somebody at the kerb.
 
         /// <summary>
         /// Stopped in the street, talking to somebody.

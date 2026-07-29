@@ -1,6 +1,18 @@
 using System;
 using System.Text;
 
+// ---------------------------------------------------------------------------------------------
+//  STAGED, NOT LIVE. NOTHING CONSTRUCTS A PersonDescription — 2026-07-29.
+//
+//  An audit found zero hits for `new PersonDescription(` anywhere in the repository, tests
+//  included, and zero references to this type outside this directory. Every band declared below
+//  is therefore unreachable: nothing can produce anything but the default "somebody, unnoticed".
+//
+//  This is not rot — it is a type waiting for the investigation layer, and the assembly's
+//  firewall (see the header of Sighting.cs) is what it is here to be shaped by. But the file
+//  reads as finished work, so: it does not run yet. See docs/STATE.md.
+// ---------------------------------------------------------------------------------------------
+
 namespace Noir.Core.Observation
 {
     // Every band below has Unnoticed = 0, so `default(PersonDescription)` is "somebody was

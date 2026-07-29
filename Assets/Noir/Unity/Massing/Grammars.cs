@@ -119,7 +119,9 @@ namespace Noir.Unity
     /// </summary>
     public sealed class GarageMassing : IMassingGrammar
     {
-        public Massing Profile(Place place) => new Massing(3.4f, RoofForm.Flat, 0f);
+        // No chimney. A lock-up garage has nothing to burn, and a stack sitting flat on a flat
+        // roof was the one silhouette in the village that read as a mistake rather than a choice.
+        public Massing Profile(Place place) => new Massing(3.4f, RoofForm.Flat, 0f, chimneys: false);
         public void Extras(Place place, MeshChunk into) { }
     }
 }

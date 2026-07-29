@@ -162,11 +162,17 @@ namespace Noir.Unity
 
         private string Census()
         {
-            int asleep = 0, walking = 0, work = 0, school = 0, pub = 0, outside = 0;
+            int asleep = 0, walking = 0, work = 0, school = 0, pub = 0, outside = 0, talking = 0;
             var sim = _host.Sim;
             for (int i = 0; i < sim.AgentCount; i++)
             {
                 var a = sim.GetAgent(i);
+
+                // Talking BEFORE Travelling, and that order is the whole point. Travelling stays
+                // true through a conversation — a stopped figure still holds its path — so this
+                // census used to count two people standing in the road talking to each other as
+                // "walking", and Activity.Talking was set by the simulation and read by nothing.
+                if (a.Doing == Activity.Talking) { talking++; continue; }
                 if (a.Travelling) { walking++; continue; }
                 switch (a.Doing)
                 {
@@ -179,7 +185,8 @@ namespace Noir.Unity
                 }
             }
             return $"{_host.People.Count} souls   ·   asleep {asleep}   walking {walking}   "
-                 + $"at work {work}   school {school}   pub {pub}   out {outside}";
+                 + $"talking {talking}   at work {work}   school {school}   pub {pub}   "
+                 + $"out {outside}";
         }
 
         private bool _showHelp;
@@ -402,6 +409,7 @@ namespace Noir.Unity
                 case Activity.AtThePlayground: return "playing at";
                 case Activity.OnTheAllotment: return "digging at";
                 case Activity.TravellingTo: return "on the way to";
+                case Activity.Talking: return "stopped to talk on";
                 default: return "at";
             }
         }

@@ -15,6 +15,10 @@ namespace Noir.Core.Sim
         public PlaceId Destination;
         public Activity Doing;
         public bool Travelling;
+
+        /// <summary>How far along the current path they are. Simulation's own working state —
+        /// public because AgentState is a plain struct, but no consumer outside Simulation.cs
+        /// reads it, and none should: it means nothing without the path it indexes into.</summary>
         public int PathIndex;
 
         /// <summary>
@@ -56,7 +60,8 @@ namespace Noir.Core.Sim
         /// <summary>Who they are talking to.</summary>
         public CitizenId TalkingTo;
 
-        /// <summary>Ticks before they will stop for anyone again. Stops a pair looping forever.</summary>
+        /// <summary>Ticks before they will stop for anyone again. Stops a pair looping forever.
+        /// Simulation's own working state — no consumer outside Simulation.cs reads it.</summary>
         public int TalkCooldown;
 
         /// <summary>

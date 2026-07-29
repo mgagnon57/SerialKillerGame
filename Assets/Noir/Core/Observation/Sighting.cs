@@ -2,6 +2,25 @@ using System;
 using Noir.Core.Contracts;
 
 // ---------------------------------------------------------------------------------------------
+//  STAGED, NOT LIVE. NOTHING CONSTRUCTS A Sighting — 2026-07-29.
+//
+//  An audit went looking for `new Sighting(` across the whole repository and found zero hits,
+//  including in the tests. The same is true of PersonDescription. The running game does not
+//  reference this assembly at all: no file under Assets/Noir/Unity or Assets/Noir/Editor names
+//  anything in Noir.Core.Observation.
+//
+//  What IS live in this assembly is the OTHER half — Observed, ObservationLog, ObservedAct,
+//  ObservedManner and Salience — which tools/Noir.Sim/Eyewitness.cs fills and Ratio.cs grades.
+//  That half is load-bearing and measured daily. This half, the witness DESCRIPTION, is waiting
+//  for the investigation layer that will consume it, and until then every band below is
+//  unreachable: ApparentSex, HeightBand, BuildBand, AgeBand, ClothingTone and CarriedThing have
+//  sixteen values between them that no code path can produce.
+//
+//  Kept rather than deleted, deliberately: the firewall below is the reason this assembly exists
+//  and it constrains everything written here later, so the shape is worth having in place before
+//  there is a consumer. But do not read the file's confidence as evidence that it runs.
+//
+// ---------------------------------------------------------------------------------------------
 //  THE FIREWALL.
 //
 //  Noir.Core.Observation.asmdef references Noir.Core.Contracts AND NOTHING ELSE. That one short
