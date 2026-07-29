@@ -1,5 +1,38 @@
 ﻿# Where we are
 
+## STOP HERE — 2026-07-29. THE MACHINE IS FAULTY. Read this before believing any red test.
+
+`dotnet test` in **Debug** crashes the test host on this machine, and the crashes are not
+code. They are faults that cannot occur in correct execution:
+
+- `_blocks[i]` with `i=8` on an array whose `Length` is `9` threw `IndexOutOfRangeException`
+  — instrumented and printed; the index was in range and the access faulted anyway.
+- `AccessViolationException` in `Rolls.Bits` (four lines of integer arithmetic), in
+  `Pathfinder.HeapPush`, in `Simulation.ServeCounters` — a different site every run, on the
+  same binary and the same seed.
+- `ArgumentOutOfRangeException` raised *inside* the BCL's own `ValueStringBuilder.Grow`.
+
+Ruled out by checking rather than assuming: no `unsafe`/`stackalloc`/`fixed`/P-Invoke
+anywhere in the repo; no threading in Core or in `tools/`; NUnit is single-threaded (no
+`[Parallelizable]`, no `.runsettings`); reproduces identically on .NET 9 **and** .NET 10, so
+not a JIT bug; a standalone integrity check verified **47.9 billion reads with zero faults**,
+so it is not RAM.
+
+**The CPU is an Intel Core i9-13900K on microcode `0x10E`, BIOS 0809 dated 2023-01-05.**
+That is Raptor Lake with the documented Vmin Shift Instability defect, and Intel's
+mitigations — microcode `0x125`, `0x12B`, `0x12F` — are all later than what is installed.
+**Fix: update the BIOS to one carrying `0x12B` or later.** If it persists after that the part
+is degraded; Intel extended the warranty on these to five years, so it is an RMA.
+
+**In Release the suite is clean: 134 tests, 132 pass, 2 fail — the two headline 2:1 gates,
+by design.** Use `dotnet test -c Release` until the microcode is updated, and do not read a
+Debug crash as a defect until it reproduces on healthy hardware.
+
+One trap worth knowing: `dotnet test | tail` reports *tail's* exit status, so a crashed run
+reads as a pass. Run it bare, or capture the exit code directly.
+
+---
+
 ## STOP HERE — 2026-07-29, overnight. Low-hanging fruit, and one thing PARKED.
 
 **132 tests pass, 2 fail.** The two are the headline 2:1 gates. Everything below is on branch
