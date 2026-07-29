@@ -415,8 +415,11 @@ namespace Noir.Unity
             for (int i = baseIndex; i < verts.Count; i++)
                 uvs.Add(new Vector2(verts[i].x, -verts[i].z));
 
-            tris.Add(baseIndex + 0); tris.Add(baseIndex + 3); tris.Add(baseIndex + 2);
-            tris.Add(baseIndex + 0); tris.Add(baseIndex + 2); tris.Add(baseIndex + 1);
+            // Wound so cross(v1-v0, v2-v0) points UP. The first version of this had it the other
+            // way and the roof was backface-culled from every camera above it - which looks
+            // exactly like no roof at all, and is the same fault the ground had once.
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 1); tris.Add(baseIndex + 2);
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 2); tris.Add(baseIndex + 3);
         }
 
         /// <summary>
@@ -429,7 +432,14 @@ namespace Noir.Unity
             var uvs = into.Uvs;
             var tris = into.Tris[submesh];
 
-            float y = m.Eaves;
+            // Clear of the wall caps rather than level with them.
+            //
+            // A pitched roof rises away from the eaves, so it never shares a plane with the top
+            // of a wall. A flat one does, and coplanar surfaces let the depth buffer pick a
+            // winner per pixel per frame - which showed up as the wall tops flickering through
+            // the roof in slivers. Twenty centimetres also happens to be about what a parapet
+            // stands anyway.
+            float y = m.Eaves + 0.2f;
 
             float x0 = bounds.X - Overhang;
             float x1 = bounds.X + bounds.W + Overhang;
@@ -446,8 +456,9 @@ namespace Noir.Unity
             for (int i = baseIndex; i < verts.Count; i++)
                 uvs.Add(new Vector2(verts[i].x, -verts[i].z));
 
-            tris.Add(baseIndex + 0); tris.Add(baseIndex + 3); tris.Add(baseIndex + 2);
-            tris.Add(baseIndex + 0); tris.Add(baseIndex + 2); tris.Add(baseIndex + 1);
+            // Upward, for the same reason as the flat roof above.
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 1); tris.Add(baseIndex + 2);
+            tris.Add(baseIndex + 0); tris.Add(baseIndex + 2); tris.Add(baseIndex + 3);
         }
     }
 }

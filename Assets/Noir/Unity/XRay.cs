@@ -105,7 +105,7 @@ namespace Noir.Unity
                 var b = place.Bounds;
                 float x0 = b.X - Skin, x1 = b.X + b.W + Skin;
                 float y0 = b.Y - Skin, y1 = b.Y + b.H + Skin;
-                float top = Space3D.WallHeight;
+                float top = MassingGrammars.Of(place).Eaves;
 
                 Rect(buildings, x0, y0, x1, y1, 0f);
                 Rect(buildings, x0, y0, x1, y1, top);

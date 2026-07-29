@@ -59,7 +59,13 @@ namespace Noir.Unity
     /// </summary>
     public sealed class ChurchMassing : IMassingGrammar
     {
-        public Massing Profile(Place place) => new Massing(5.5f, RoofForm.Gable, 4.5f);
+        /// <summary>
+        /// 3.0 rather than the 4.5 this started at. St Anne's is 14x16 - very nearly square - and
+        /// a 4.5 pitch across sixteen metres is a roof eight metres tall standing on walls of
+        /// five and a half. It read as a marquee. The steepness has to be judged against the
+        /// SPAN, and a near-square church is the worst case for it.
+        /// </summary>
+        public Massing Profile(Place place) => new Massing(5.5f, RoofForm.Gable, 3.0f);
 
         public void Extras(Place place, MeshChunk into)
         {

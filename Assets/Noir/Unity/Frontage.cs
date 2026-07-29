@@ -271,11 +271,16 @@ namespace Noir.Unity
         /// </summary>
         private static int Doorway(Transform parent, Place place, Tile door, Front f)
         {
+            // The building's OWN wall height, not the old global one. The opening runs the whole
+            // storey, so on a church at 5.5 m a panel sized for a 3 m cottage leaves a
+            // two-and-a-half-metre gap of daylight over the door.
+            float eaves = MassingGrammars.Of(place).Eaves;
+
             // Set back into the reveal by five centimetres at each end, so the panel meets the
             // wall in a shadow line instead of sharing a plane with it.
             Piece(parent, "doorhead",
-                  f.On((DoorHeight + Space3D.WallHeight) * 0.5f, -0.5f),
-                  f.Size(1.0f, Space3D.WallHeight - DoorHeight, 0.9f), Materials3D.Wall);
+                  f.On((DoorHeight + eaves) * 0.5f, -0.5f),
+                  f.Size(1.0f, eaves - DoorHeight, 0.9f), Materials3D.Wall);
 
             Piece(parent, "doorcase", f.On(DoorHeight * 0.5f + 0.03f, -0.05f),
                   f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone);

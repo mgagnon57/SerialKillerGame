@@ -37,8 +37,16 @@ namespace Noir.Unity
         public static TowerTop Tower(Place place, Massing m, MeshChunk into, int submesh)
         {
             var b = place.Bounds;
-            float side = Mathf.Min(b.W, b.H) * 0.55f;
-            float height = m.Eaves + m.Pitch + 4.0f;
+
+            // Capped, not just proportional.
+            //
+            // The first version took 0.55 of the short side, which on St Anne's 14x16 is a tower
+            // seven and a half metres square carrying a seventeen-metre spire - a cathedral
+            // dropped on a parish church, and it swallowed the nave whole. A village tower is
+            // about four metres square whatever the church is; it is the HEIGHT that varies, not
+            // the footprint.
+            float side = Mathf.Min(Mathf.Min(b.W, b.H) * 0.4f, 5f);
+            float height = m.Eaves + m.Pitch + 3.0f;
 
             // The four edge midpoints, in grid space.
             var candidates = new[]
@@ -75,9 +83,12 @@ namespace Noir.Unity
             return new TowerTop(new Vector3(at.x, height, -at.y), side);
         }
 
-        /// <summary>The spire on top of the tower. Steep, because a shallow one reads as a hat.</summary>
+        /// <summary>
+        /// The spire on top of the tower. Steep, because a shallow one reads as a hat - but 1.8
+        /// rather than the 2.2 it started at, which put more spire than church on the skyline.
+        /// </summary>
         public static void Spire(TowerTop tower, MeshChunk into, int submesh) =>
-            Pyramid(into, tower.Centre, tower.Side, tower.Side * 2.2f, submesh);
+            Pyramid(into, tower.Centre, tower.Side, tower.Side * 1.8f, submesh);
 
         /// <summary>
         /// A bell over the gable. Small - the point is the outline against the sky, and anything
@@ -192,8 +203,13 @@ namespace Noir.Unity
             uvs.Add(new Vector2(1f, 0f));
             uvs.Add(new Vector2(0f, 0f));
 
-            tris.Add(i); tris.Add(i + 1); tris.Add(i + 2);
-            tris.Add(i); tris.Add(i + 2); tris.Add(i + 3);
+            // Reversed from the obvious order so that cross(v1-v0, v2-v0) points OUT of the box.
+            // Written the other way round first, which turned every tower and bell-cote inside
+            // out: you see the far inner faces through the near ones, and from most angles the
+            // thing simply is not there. The hip roof, which has always been correct, is the
+            // reference for which way round this goes.
+            tris.Add(i); tris.Add(i + 2); tris.Add(i + 1);
+            tris.Add(i); tris.Add(i + 3); tris.Add(i + 2);
         }
 
         private static void Tri(MeshChunk into, int submesh, Vector3 a, Vector3 b, Vector3 c)
