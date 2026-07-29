@@ -1,5 +1,70 @@
 ﻿# Where we are
 
+## STOP HERE — 2026-07-29, overnight. Low-hanging fruit, and one thing PARKED.
+
+**132 tests pass, 2 fail.** The two are the headline 2:1 gates. Everything below is on branch
+`massing`, still NOT merged.
+
+### Landed
+
+| | |
+|---|---|
+| **`Assets/Noir/Unity` no longer switches on `PlaceKind` at all** | `IsRoofed` and `Frontage.Sign`/`BoardPaint` read the authored `roof` and `frontage` columns. Both were live bugs, not tidying — see below. |
+| **Trades print names, not numbers** | The village's largest employer printed as `14  33`. That is 33 machinists. |
+| **Gable ends and towers in wall stone** | A gable end is masonry carried to the ridge, not roofing. It was clay tile, then chimney brick, now the wall's own material. |
+| **Spires in slate** | A spire is lead or slate, never brick. |
+| **The lucam moved to the eaves** | It sat near the ridge and read as a second chimney. A lucam overhangs the wall so the hoist rope drops clear to a cart. |
+| **Snapshots re-baselined** | 12 of 12 byte-identical across two Unity processes. |
+
+### The two column reads were live bugs
+
+`IsRoofed` listed open-ground kinds by hand with `default: return true`. It had already drifted out
+of step with `VillageLayout.IsBuilding` once and left a pyramid with a chimney hanging above bare
+grass. Worse: **any content-authored kind got a roof whether or not its row said `roof no`** — so
+Stage 4's open-kind property was quietly broken for anything that was not a building.
+
+`Frontage` had a live instance of the same fault. **The factory says `frontage mill` and got a
+plain nameboard**, because the enum has never heard of `PlaceKind.Factory`. The column was
+authored, correct, and ignored. Both now switch on the *style*, which is a closed set the file
+defines — the same distinction as `RoofForm` against `PlaceKind`.
+
+### PARKED on branch `particulars-deck`: dealing particulars
+
+STATE.md task #36, complete and tested — worst sharer 4 → 2, at 383 draws over 913 clauses. It is
+**not on `massing`**, because it costs three floors and the exception clause does not cover it:
+
+```
+                floor   with the deck
+ratio.median     1.21   1.19   FAIL
+ratio.p10        0.52   0.48   FAIL
+texture.min         8      7   FAIL — G3 goes red again
+texture.median     24     24   unchanged, so no trade is available
+```
+
+**The honest difficulty:** dealing shifts the RNG stream, so all three seeds now generate
+*different villages* (1981 went 142 → 153 people). I cannot separate "the village got worse" from
+"these are different villages" — per-seed it moved both ways, 1979 and 1981 up, 1980 down. And
+`texture.min` at 7 is exactly the flicker the instrument's own author predicted for G3.
+
+That is a judgement about what the ratchet is for, and it is yours. **Adopting it is one merge.**
+
+### Deliberately not done
+
+- **The lockstep dinner hour.** Everyone breaks within fifteen minutes. Cheap to stagger, but it
+  is a taste call about whether a village should have a dinner rush.
+- **Task #37, children drawing adult lives.** The content is written and staged inert, but the fix
+  changes who draws what and would shift the RNG stream exactly as the deck did. It would very
+  likely need parking too. Worth doing deliberately, with the floor question settled first.
+- **Merging to `main`.** Not mine to do unattended.
+
+### Still the work
+
+Median 1.21 against a rule of 2.00. **Enact the particulars** — 900 clauses read by two inspectors
+and no line of simulation code. Every instrument has said so for two days.
+
+---
+
+
 ## STOP HERE — 2026-07-28. A factory, and G3 goes green for the first time.
 
 **`dotnet test` is now 132 pass, 2 fail.** The two are the headline 2:1 gates, which fail by
