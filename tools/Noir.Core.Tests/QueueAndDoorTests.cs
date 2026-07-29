@@ -48,6 +48,13 @@ namespace Noir.Core.Tests
             }
         }
 
+        /// <summary>
+        /// A population built exactly like <see cref="People"/>, except each citizen's beats
+        /// come from <paramref name="beatFor"/> instead of always being <see cref="Beat.None"/>.
+        /// Lets a test give exactly one villager a beat without duplicating the fixture.
+        /// </summary>
+        public static Population PeopleWith(System.Func<int, Beat> beatFor) => Inhabit(World, beatFor);
+
         public static PlaceId Shop => World.PlacesOfKind(PlaceKind.Shop)[0];
 
         /// <summary>The one person who works behind the counter rather than queuing at it.</summary>
@@ -79,7 +86,7 @@ namespace Noir.Core.Tests
         }
 
         /// <summary>One adult per cottage, hand-built rather than generated so the fixture is exact.</summary>
-        private static Population Inhabit(WorldModel world)
+        private static Population Inhabit(WorldModel world, System.Func<int, Beat> beatFor = null)
         {
             var homes = world.PlacesOfKind(PlaceKind.Dwelling);
             var shop = world.PlacesOfKind(PlaceKind.Shop)[0];
@@ -102,7 +109,8 @@ namespace Noir.Core.Tests
                                           LifeStage.Adult,
                                           keeper ? Occupation.Shopkeeper : Occupation.None,
                                           house, homes[i], keeper ? shop : PlaceId.None, 0, 0,
-                                          (byte)(110 + i * 5), (byte)(40 + i * 8), null);
+                                          (byte)(110 + i * 5), (byte)(40 + i * 8), null,
+                                          beatFor == null ? Beat.None : beatFor(i));
 
                 households[i] = new Household(house, homes[i], "Customer" + (i + 1),
                                               HouseholdShape.Solitary, new[] { id });

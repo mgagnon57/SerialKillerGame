@@ -407,6 +407,25 @@ namespace Noir.Core.Sim
         private static readonly ulong TalkPurpose = Rolls.Purpose("conversations");
         private static readonly ulong QueuePurpose = Rolls.Purpose("queues");
         private static readonly ulong DoorPurpose = Rolls.Purpose("doorways");
+
+        /// <summary>
+        /// The extra time somebody who lingers spends on a threshold, and its OWN purpose.
+        ///
+        /// A separate purpose rather than a wider range on DoorPurpose, deliberately: Rolls is a
+        /// positionless hash, so drawing from a new purpose leaves every existing draw in the
+        /// village byte-identical. Widening the door draw would change the pause of all 158
+        /// people and regenerate nothing but would move everybody, which is the cost this whole
+        /// change was scoped to avoid.
+        ///
+        /// Sized against the WATCHER, not against taste. Eyewitness samples once per simulated
+        /// minute (1,200 ticks), so a 6-11 tick pause is caught under 1% of the time — which is
+        /// why lingering read as 6 people of 158 and not as a habit. 400-800 ticks is 20-40 s of
+        /// game time and a 33-67% chance per crossing, which is the difference between a
+        /// coincidence and something a watcher would write down.
+        /// </summary>
+        private static readonly ulong LingerPurpose = Rolls.Purpose("lingering");
+        private const int LingerBase = 400;
+        private const int LingerSpread = 400;
         private static readonly ulong DeparturePurpose = Rolls.Purpose("departures");
 
         private readonly CounterQueue[] _counters;
@@ -897,8 +916,13 @@ namespace Noir.Core.Sim
             var who = People.Get(new CitizenId(index));
             ulong key = who != null ? who.Key.Value : (ulong)index + 1UL;
 
-            _agents[index].DoorPauseTicks =
-                6 + Rolls.Int(Seed, DoorPurpose, key, _clock.Tick, 0, 6);
+            int ticks = 6 + Rolls.Int(Seed, DoorPurpose, key, _clock.Tick, 0, 6);
+
+            // The sentence in the inspector and the figure still on the step are now one fact.
+            if (who != null && (who.Beats & Beat.Lingers) != 0)
+                ticks += LingerBase + Rolls.Int(Seed, LingerPurpose, key, _clock.Tick, 0, LingerSpread);
+
+            _agents[index].DoorPauseTicks = ticks;
             _agents[index].PreviousPosition = _agents[index].Position;
             StandStill(index);
         }
