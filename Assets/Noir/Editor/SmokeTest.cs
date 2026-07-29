@@ -64,6 +64,24 @@ namespace Noir.Editor
                 var village = VillageMesh.Build(world, root.transform);
                 Log($"render     built {CountRenderers(root)} renderers");
 
+                // Every building must resolve to a massing grammar and survive being asked for
+                // its profile. These are runtime failures - a null row, a missing registry
+                // entry, bad index arithmetic in tower geometry - and compiling catches none of
+                // them. This is the assertion that makes `massing` safe to extend.
+                int shaped = 0;
+                foreach (var place in world.AllPlaces)
+                {
+                    if (!PlaceKindTable.Current.Row(place.Kind).IsBuilding) continue;
+                    var m = MassingGrammars.Of(place);
+                    if (m.Eaves <= 0f)
+                    {
+                        LogError($"massing: '{place.Name}' has eaves {m.Eaves}");
+                        failures++;
+                    }
+                    shaped++;
+                }
+                Log($"massing    {shaped} buildings shaped");
+
                 // Both ways round, because they are different code paths and the second one is
                 // the one that has to put back exactly what the first took away. A wireframe
                 // that cannot be switched off is worse than no wireframe.
