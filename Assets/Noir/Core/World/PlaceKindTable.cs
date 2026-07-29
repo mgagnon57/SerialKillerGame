@@ -77,6 +77,20 @@ namespace Noir.Core.World
         public readonly string Grammar;
 
         /// <summary>
+        /// Which massing grammar shapes the OUTSIDE of it: how tall the walls stand, what the
+        /// roof does above them, and whether it gets a tower. Read by the renderer, not by Core,
+        /// the same as <see cref="Roofed"/> and <see cref="Frontage"/>.
+        ///
+        /// Never null, and "cottage" when the row says nothing. Note the asymmetry with
+        /// <see cref="Grammar"/> one line up, which IS refused when it names something nothing
+        /// answers to: Core can check that because InteriorGenerator lives in Core, and it cannot
+        /// check this one, because the massing grammars live in Assets/Noir/Unity. A typo here
+        /// therefore costs a plain building and an editor warning rather than a refusal at load.
+        /// That is the right trade for a column that only decides how something looks.
+        /// </summary>
+        public readonly string Massing;
+
+        /// <summary>
         /// Whether it has a roof over it, which is also the question of whether its windows can
         /// light up. Read by the renderer, not by Core - see the note on RoofBuilder in the
         /// class remarks.
@@ -124,7 +138,7 @@ namespace Noir.Core.World
 
         public PlaceKindRow(PlaceKind kind, string name, IReadOnlyList<string> words,
                             bool isBuilding, Terrain ground, RoomPlan rooms, string grammar,
-                            bool roofed, string frontage, PlacePropStyle props,
+                            string massing, bool roofed, string frontage, PlacePropStyle props,
                             bool hasCounter, int serviceMinutes, int serviceSpread,
                             IReadOnlyList<OpenWindow> hours, int jobs, IReadOnlyList<string> roles,
                             bool splitShifts, bool isCatchment, bool wantsDescription)
@@ -136,6 +150,7 @@ namespace Noir.Core.World
             Ground = ground;
             Rooms = rooms;
             Grammar = grammar;
+            Massing = massing;
             Roofed = roofed;
             Frontage = frontage;
             Props = props;
@@ -317,6 +332,7 @@ namespace Noir.Core.World
             public Terrain? Ground;
             public RoomPlan? Rooms;
             public string Grammar;
+            public string Massing;
             public bool? Roofed;
             public string Frontage;
             public PlacePropStyle? Props;
@@ -366,6 +382,11 @@ namespace Noir.Core.World
                     case "grammar":
                         ContentText.Require(tokens, 2, File, lineNo, "grammar <name>");
                         Grammar = tokens[1].ToLowerInvariant();
+                        break;
+
+                    case "massing":
+                        ContentText.Require(tokens, 2, File, lineNo, "massing <name>");
+                        Massing = tokens[1].ToLowerInvariant();
                         break;
 
                     case "roof":
@@ -621,7 +642,8 @@ namespace Noir.Core.World
 
             return new PlaceKindRow(kind, d.Name, d.Words.ToArray(),
                                     d.IsBuilding.Value, open ? d.Ground.Value : Terrain.Grass,
-                                    d.Rooms.Value, d.Grammar, d.Roofed.Value, d.Frontage,
+                                    d.Rooms.Value, d.Grammar, d.Massing ?? "cottage",
+                                    d.Roofed.Value, d.Frontage,
                                     d.Props.Value, d.HasCounter.Value,
                                     d.ServiceMinutes, d.ServiceSpread,
                                     d.Hours.ToArray(), d.Jobs.Value, d.Roles.ToArray(),

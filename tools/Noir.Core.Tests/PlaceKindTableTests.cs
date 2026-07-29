@@ -145,6 +145,43 @@ kind shed
         }
 
 
+        [Test]
+        public void MassingDefaultsToCottageWhenTheRowDoesNotSayOtherwise()
+        {
+            var table = PlaceKindTable.Parse(TestContent.ReadRaw("kinds.txt"));
+            Assert.That(table.Row(PlaceKind.Dwelling).Massing, Is.EqualTo("cottage"));
+        }
+
+        [Test]
+        public void MassingIsReadFromTheRowWhenPresent()
+        {
+            var table = PlaceKindTable.Parse(TestContent.ReadRaw("kinds.txt"));
+            Assert.That(table.Row(PlaceKind.Church).Massing, Is.EqualTo("church"));
+            Assert.That(table.Row(PlaceKind.Mill).Massing, Is.EqualTo("mill"));
+        }
+
+        /// <summary>
+        /// Massing is decoration, so a row without it must still load.
+        ///
+        /// Deliberately unlike `grammar`, one line up, which IS refused when it names something
+        /// nothing answers to. Core can check that one because InteriorGenerator lives in Core;
+        /// the massing grammars live in Assets/Noir/Unity, which Core cannot reference and must
+        /// not learn about. So this column joins `roof` and `frontage` as one Core carries and
+        /// never reads â€” and the cost of that is that a typo here surfaces as a plain building
+        /// and an editor warning rather than a refusal at load.
+        ///
+        /// A village with an unstyled barber is worth having. A village that will not open is not.
+        /// </summary>
+        [Test]
+        public void AKindWithNoMassingLineStillLoads()
+        {
+            var table = PlaceKindTable.Parse(WithEveryEnumKind(Complete));
+
+            Assert.That(table.TryKindOf("shed", out var shed), Is.True,
+                "the test row should have loaded despite naming no massing");
+            Assert.That(table.Row(shed).Massing, Is.EqualTo("cottage"));
+        }
+
         private static string Join(IReadOnlyList<string> parts)
         {
             var copy = new List<string>(parts);

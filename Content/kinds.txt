@@ -60,6 +60,7 @@ kind dwelling
   grammar   domestic
   roof      yes
   frontage  dwelling
+  massing   cottage
   props     none
   counter   no
   hours     none
@@ -77,6 +78,7 @@ kind pub
   grammar   open
   roof      yes
   frontage  pub
+  massing   pub
   props     none
   counter   no
   hours     11:00-14:30 17:30-23:00
@@ -93,6 +95,7 @@ kind shop
   grammar   open
   roof      yes
   frontage  shop
+  massing   shopfront
   props     none
   counter   yes
   service   5 7
@@ -110,6 +113,7 @@ kind postoffice
   grammar   open
   roof      yes
   frontage  post
+  massing   shopfront
   props     postbox
   counter   yes
   service   4 7
@@ -129,6 +133,7 @@ kind church
   grammar   hall
   roof      yes
   frontage  church
+  massing   church
   props     none
   counter   no
   hours     08:00-18:00 09:00-12:00@sun
@@ -145,6 +150,7 @@ kind school
   grammar   spine
   roof      yes
   frontage  school
+  massing   school
   props     none
   counter   no
   hours     08:30-15:30@mon-fri
@@ -163,6 +169,7 @@ kind surgery
   grammar   spine
   roof      yes
   frontage  surgery
+  massing   shopfront
   props     none
   counter   yes
   service   6 9
@@ -180,6 +187,7 @@ kind garage
   grammar   open
   roof      yes
   frontage  garage
+  massing   garage
   props     none
   counter   no
   hours     08:00-18:00@mon-fri 08:00-13:00@sat
@@ -198,6 +206,7 @@ kind mill
   grammar   open
   roof      yes
   frontage  mill
+  massing   mill
   props     none
   counter   no
   hours     06:00-14:00@mon-fri 14:00-22:00@mon-fri
@@ -214,6 +223,7 @@ kind farm
   grammar   domestic
   roof      yes
   frontage  farm
+  massing   cottage
   props     trough
   counter   no
   hours     05:30-19:00
@@ -230,6 +240,7 @@ kind villagehall
   grammar   hall
   roof      yes
   frontage  hall
+  massing   hall
   props     none
   counter   no
   hours     09:00-22:00
