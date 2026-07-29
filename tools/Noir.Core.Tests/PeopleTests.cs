@@ -61,6 +61,44 @@ namespace Noir.Core.Tests
                 "the population should follow from the authored dwellings");
         }
 
+        /// <summary>
+        /// Particulars are DEALT from a shuffled deck, not sampled with replacement.
+        ///
+        /// Sampling meant `rng.NextInt(particulars.Count)` per person, so the worst-case repeat
+        /// barely improved however much was authored - measured at ~7 holders across 913 clauses,
+        /// and still ~5 if the content were doubled to 1,655. Every clause landing on one or two
+        /// people is worth more than doubling the content again, and it is ten lines.
+        ///
+        /// The bound is two rather than one because the deck is reshuffled when it runs out, and
+        /// a clause can fall late in one pass and early in the next.
+        /// </summary>
+        [Test]
+        public void NoParticularIsSharedByMoreThanTwoPeople()
+        {
+            var holders = new Dictionary<int, int>();
+            int draws = 0;
+
+            foreach (var c in Village.People.Citizens)
+            foreach (int p in c.Particulars)
+            {
+                holders.TryGetValue(p, out int n);
+                holders[p] = n + 1;
+                draws++;
+            }
+
+            int worst = 0, worstClause = -1;
+            foreach (var kv in holders)
+                if (kv.Value > worst) { worst = kv.Value; worstClause = kv.Key; }
+
+            var table = ParticularsTable.Parse(TestContent.Read("particulars.txt"));
+
+            Assert.That(draws, Is.LessThan(table.Count * 2),
+                "this bound only means anything while there are fewer draws than clauses to go round");
+            Assert.That(worst, Is.LessThanOrEqualTo(2),
+                $"clause {worstClause} is held by {worst} people, of {draws} draws "
+              + $"over {table.Count} clauses");
+        }
+
         [Test]
         public void EveryoneHasAHomeThatIsADwelling()
         {
