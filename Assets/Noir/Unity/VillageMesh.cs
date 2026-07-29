@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Noir.Core.Contracts;
 using Noir.Core.World;
 using Terrain = Noir.Core.World.Terrain;
 
@@ -777,6 +778,46 @@ namespace Noir.Unity
             var used = new bool[world.Width * world.Height];
             int count = 0;
 
+            // ---- which building owns each wall tile ----
+            //
+            // Runs used to be merged PURELY GEOMETRICALLY, which was correct while every building
+            // in the village was three metres tall and is wrong the moment they are not: a run
+            // that spans two buildings would have to pick one of their heights.
+            //
+            // Where two buildings share a boundary tile the LOWEST PLACE ID WINS. Any rule would
+            // do; what matters is that it is FIXED. Letting iteration order decide a wall's
+            // height would make the mesh differ run to run, and the twelve snapshots are asserted
+            // byte-identical across two separate Unity processes - so this would not fail as a
+            // wrong-looking wall, it would fail as a regression check that has quietly stopped
+            // meaning anything.
+            var owner = new int[world.Width * world.Height];
+            for (int i = 0; i < owner.Length; i++) owner[i] = -1;
+
+            foreach (var place in world.AllPlaces)
+            {
+                if (!PlaceKindTable.Current.Row(place.Kind).IsBuilding) continue;
+
+                var b = place.Bounds;
+                for (int y = b.Y; y < b.Y + b.H; y++)
+                for (int x = b.X; x < b.X + b.W; x++)
+                {
+                    if (x < 0 || y < 0 || x >= world.Width || y >= world.Height) continue;
+                    int at = y * world.Width + x;
+                    if (owner[at] < 0 || place.Id.Value < owner[at]) owner[at] = place.Id.Value;
+                }
+            }
+
+            // A garden wall or a churchyard wall belongs to no building and keeps the old height.
+            float HeightAt(int gx, int gy)
+            {
+                int id = owner[gy * world.Width + gx];
+                if (id < 0) return Space3D.WallHeight;
+                var p = world.GetPlace(new PlaceId(id));
+                return p == null ? Space3D.WallHeight : MassingGrammars.Of(p).Eaves;
+            }
+
+            int OwnerAt(int gx, int gy) => owner[gy * world.Width + gx];
+
             // Horizontal runs first, then whatever vertical runs remain.
             for (int gy = 0; gy < world.Height; gy++)
             {
@@ -786,13 +827,19 @@ namespace Noir.Unity
                     if (!IsWall(world, gx, gy) || used[gy * world.Width + gx]) { gx++; continue; }
 
                     int start = gx;
-                    while (gx < world.Width && IsWall(world, gx, gy) && !used[gy * world.Width + gx])
+                    int mine = OwnerAt(gx, gy);
+                    while (gx < world.Width && IsWall(world, gx, gy) && !used[gy * world.Width + gx]
+                           && OwnerAt(gx, gy) == mine)
                     {
                         used[gy * world.Width + gx] = true;
                         gx++;
                     }
                     int length = gx - start;
-                    if (length >= 2) { AddWall(chunks.At(start, gy), start, gy, length, 1); count++; }
+                    if (length >= 2)
+                    {
+                        AddWall(chunks.At(start, gy), start, gy, length, 1, HeightAt(start, gy));
+                        count++;
+                    }
                     else { used[gy * world.Width + start] = false; }   // leave singles for the vertical pass
                 }
             }
@@ -805,12 +852,14 @@ namespace Noir.Unity
                     if (!IsWall(world, gx, gy) || used[gy * world.Width + gx]) { gy++; continue; }
 
                     int start = gy;
-                    while (gy < world.Height && IsWall(world, gx, gy) && !used[gy * world.Width + gx])
+                    int mine = OwnerAt(gx, gy);
+                    while (gy < world.Height && IsWall(world, gx, gy) && !used[gy * world.Width + gx]
+                           && OwnerAt(gx, gy) == mine)
                     {
                         used[gy * world.Width + gx] = true;
                         gy++;
                     }
-                    AddWall(chunks.At(gx, start), gx, start, 1, gy - start);
+                    AddWall(chunks.At(gx, start), gx, start, 1, gy - start, HeightAt(gx, start));
                     count++;
                 }
             }
@@ -839,13 +888,12 @@ namespace Noir.Unity
         /// whichever mesh it ends up in, and splitting the runs across meshes cannot change a
         /// single shaded pixel.
         /// </summary>
-        private static void AddWall(MeshChunk into, int gx, int gy, int w, int h)
+        private static void AddWall(MeshChunk into, int gx, int gy, int w, int h, float top)
         {
             var verts = into.Verts;
             var uvs = into.Uvs;
             var tris = into.Tris[0];
 
-            float top = Space3D.WallHeight;
             float x0 = gx, x1 = gx + w;
             float z0 = -gy, z1 = -(gy + h);
 
