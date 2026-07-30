@@ -46,27 +46,46 @@
 # ============================================================================
 
 village Northgate
-size 360 360
+size 960 960
 
 # ---- the ground ----------------------------------------------------------
+# Field first, over the whole map: it is the cheap ground. Grass gives 1.2% of its
+# tiles a tree and field gives 0.4%, and on 920,000 tiles that difference is nine
+# thousand objects against three. The old 360m square keeps the grass and paving it
+# already had; everything past it is farmland, which is also what it should look
+# like when there is nothing built on it yet.
+terrain field 0,0 960x960
 terrain grass 0,0 360x360
 terrain path  0,0 240x240
+
+# A dozen pastures cut into the arable, so the far country is a patchwork rather
+# than one enormous prairie. Boundaries between field and grass are what the prop
+# generator turns into hedgerows and post-and-rail.
+terrain grass 420,60 150x120
+terrain grass 700,180 180x140
+terrain grass 390,520 160x130
+terrain grass 660,600 200x150
+terrain grass 120,430 180x120
+terrain grass 60,700 200x160
+terrain grass 420,820 160x110
+terrain grass 780,860 150x90
+terrain grass 860,380 90x160
 
 # ---- the street grid -----------------------------------------------------
 # All four run the full width or height of the map, so every junction is a full
 # crossing and the roads carry on out into the country rather than stopping at
 # the edge of town.
 
-road northgate 30 0,75 359,75
+road northgate 30 0,75 959,75
   class freeway
 
-road franklin 30 0,165 359,165
+road franklin 30 0,165 959,165
   class mainroad
 
-road first 30 75,0 75,359
+road first 30 75,0 75,959
   class mainroad
 
-road second 30 165,0 165,359
+road second 30 165,0 165,959
   class freeway
 
 # ---- the dirt tracks -----------------------------------------------------
@@ -81,8 +100,32 @@ road hometrack 10 0,300 76,300
 # only forms where one road's centre line falls INSIDE the other's declared run,
 # and starting this at 166 left it one metre short of the centre at 165 - so the
 # track met the street with no crossing between them.
-road backtrack 10 150,318 359,318
+road backtrack 10 150,318 305,318
   class track
+
+# ---- the wider road system -----------------------------------------------
+# Everything below is beyond the old 360m square, so none of it crosses anything
+# already built. Freeways every three hundred metres or so with main roads
+# between them; nothing is built out here yet, which is the point - this is the
+# skeleton a town grows on.
+
+road midway 30 0,465 959,465
+  class freeway
+road brook 30 0,615 959,615
+  class mainroad
+road southway 30 0,795 959,795
+  class freeway
+road boundary 30 0,915 959,915
+  class mainroad
+
+road fifth 30 465,0 465,959
+  class freeway
+road sixth 30 615,0 615,959
+  class mainroad
+road eighth 30 795,0 795,959
+  class freeway
+road ninth 30 915,0 915,959
+  class mainroad
 
 # ==========================================================================
 #  THE CITY - north-west quadrant, unchanged

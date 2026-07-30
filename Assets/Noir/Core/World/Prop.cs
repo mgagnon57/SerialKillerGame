@@ -151,8 +151,20 @@ namespace Noir.Core.World
                     break;
 
                 case Terrain.Field:
-                    // Field boundaries get post-and-rail; the middle stays open.
-                    if (OnFieldEdge(grid, x, y) && rng.Chance(0.55f))
+                    // A ROADSIDE IS HEDGED, NOT POST-AND-RAILED. Post-and-rail is for the
+                    // boundary between one field and the next; what a field shows a road is a
+                    // hedge, the same as grass does.
+                    //
+                    // It is also the difference between a map that builds and one that does not.
+                    // A fence is one prop per tile and a hedge is drawn as a RUN, and a road
+                    // through farmland puts an edge down both of its verges for its whole
+                    // length: on a 960m map that is some thirteen kilometres of verge, which at
+                    // 55% is fourteen thousand individual fence posts and pales.
+                    if (NextToRoad(grid, x, y))
+                    {
+                        if (rng.Chance(0.42f)) props.Add(new Prop(PropKind.Hedge, new Tile(x, y), Roll(rng)));
+                    }
+                    else if (OnFieldEdge(grid, x, y) && rng.Chance(0.55f))
                         props.Add(new Prop(PropKind.Fence, new Tile(x, y), Roll(rng)));
                     else if (rng.Chance(0.004f))
                         props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));

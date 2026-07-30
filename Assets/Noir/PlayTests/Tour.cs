@@ -3,6 +3,7 @@ using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Noir.Unity;
 
 namespace Noir.PlayTests
 {
@@ -66,7 +67,10 @@ namespace Noir.PlayTests
             new Stop("The east belt",                        330f, 120f, 0f,    80f, 20f,  90f),
             new Stop("Wicker End, the back place",           300f, 278f, 0f,    55f, 18f, 210f),
             new Stop("The old orchard, gone to scrub",       300f, 340f, 0f,    55f, 15f, 340f),
-            new Stop("The whole map",                        180f, 180f, 0f,   430f, 45f,  30f),
+            new Stop("Out on the new grid",                  465f, 465f, 0f,   150f, 25f,  40f),
+            new Stop("A rural arterial",                     465f, 615f, 1.8f,  60f,  4f, 180f),
+            new Stop("The old town from the new road",       300f, 465f, 0f,   260f, 30f, 320f),
+            new Stop("The whole map",                        480f, 480f, 0f,  1150f, 50f,  30f),
         };
 
         [UnityTest, Timeout(1800000)]
@@ -112,6 +116,28 @@ namespace Noir.PlayTests
 
                 Capture(cam, rt, shot, frame++, stop.Name);
             }
+
+            // THE LAST FRAME IS TAKEN IN CLEAR AIR.
+            //
+            // SunRig's fog is tuned for standing in the place, and at a kilometre back it eats
+            // the whole map - the grid came out as a grey suggestion of itself. The rig writes
+            // fog every frame, so it has to be stood down rather than merely overridden, and put
+            // back afterwards because the junction frames below want the weather they ship with.
+            var weather = Object.FindFirstObjectByType<SunRig>();
+            if (weather != null) weather.enabled = false;
+            bool wasFog = RenderSettings.fog;
+            RenderSettings.fog = false;
+
+            var far = Route[Route.Length - 1];
+            var farRotation = Quaternion.Euler(far.Pitch, far.Yaw, 0f);
+            camGo.transform.rotation = farRotation;
+            camGo.transform.position = far.At + Vector3.up * 2f
+                                     - farRotation * Vector3.forward * far.Distance;
+            yield return null;
+            Capture(cam, rt, shot, frame - 1, far.Name + " (clear air)");
+
+            RenderSettings.fog = wasFog;
+            if (weather != null) weather.enabled = true;
 
             // And then stand at one junction and watch it work: four frames far enough apart to
             // cover a change of phase, which is the only way to show a queue forming and going.
