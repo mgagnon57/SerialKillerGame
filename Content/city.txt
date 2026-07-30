@@ -1,81 +1,92 @@
 # ============================================================================
 #  NORTHGATE
 #
-#  240 x 240 tiles, one tile = one metre. Nine blocks of sixty metres, separated
-#  by four roads, crossing at four signalised junctions.
+#  360 x 360 tiles, one tile = one metre. The city fills the north-west quadrant
+#  exactly as it did; the other three are country.
+#
+#      0                       240                 360
+#  0   +--------------------------+-------------------+
+#      |                          |                   |
+#      |     T H E   C I T Y      |   the east fields |
+#      |     nine 60m blocks      |   and the orchard |
+#      |     four junctions       |                   |
+#  240 +--------------------------+-------------------+
+#      |  HOME FARM               |  the back place   |
+#      |  and the cornfields      |  no made road     |
+#  360 +--------------------------+-------------------+
 #
 #  THE ROAD KIT DECIDES THE GRID, not taste. Prefabs/City/Roads City is built at
 #  thirty metres, so a through-road is a THIRTY-METRE CORRIDOR and the plan snaps
-#  to thirty. What differs between an arterial and a main road is not the
-#  corridor - both are thirty - but how much of it is asphalt:
+#  to thirty. What differs between an arterial and a main road is not the corridor
+#  - both are thirty - but how much of it is asphalt:
 #
 #    freeway    30m corridor, 24m asphalt, two lanes each way, orange centre
-#    mainroad   30m corridor, 12m asphalt, one lane each way, bus lay-bys
+#    mainroad   30m corridor, 12m asphalt, one lane each way
 #    street     10m corridor,  6m asphalt, unmarked
+#    track      10m corridor,  7m of dirt, no kerb and no markings
 #
 #  Because width alone cannot tell a freeway from a mainroad, the class is said
 #  outright on an indented `class` line rather than inferred.
 #
-#  The previous city was 160x120 with 10m roads, which was 6m of asphalt: two
-#  lanes and nothing over, no room to pass, turn or stop, and no junction big
-#  enough to hold a signal. Everything below is that plan at the scale the road
-#  kit was actually drawn for.
+#  A ROAD IS TILED BETWEEN THE POINTS IT IS DECLARED BETWEEN. The four city roads
+#  are declared edge to edge and so cross the whole map; a farm track is declared
+#  from a map edge to the road it joins, and stops there. Declaring a track that
+#  stops in a field would leave traffic driving off the end of it.
 #
-#  THE MODULES DECIDE THE LOTS:
-#    - the townhouse module is 6.1m wide, so a terrace lot is 6 and a terrace is
-#      that repeated. Sixty metres of block edge is nine of them and a corner.
-#    - every landmark lot is the pack's own measured footprint rounded up.
-#      Skyscraper_A is 46.9 x 38.2 and gets 48x39; Casino is 34.5 x 45.4 and
-#      gets 35x46. Measure first: a lot smaller than its model is a building
-#      standing in the road.
+#  THE GROUND: grass everywhere, then the city paved over the top of it. Trees,
+#  hedges and bushes are scattered by Prop.ScatterOn, which fires on grass, field,
+#  wood and churchyard and on NOTHING else - so paving the city is what stops a
+#  hedge growing down the middle of the avenue, and leaving the country unpaved is
+#  what lets it grow anywhere at all.
 #
-#  THE GROUND IS PAVED, and not only because a city is paved: trees, hedges and
-#  bushes are scattered by Prop.ScatterOn, which fires on grass, wood, field and
-#  churchyard and on NOTHING else. Paving is what stops a hedge growing down the
-#  middle of the avenue, and the parks are where greenery is allowed back.
-#
-#  Painted in order: terrain, then roads over terrain, then places over roads.
-#  An open place STAMPS ITS GROUND, so a place laid over a road must have road
-#  for its ground or it quietly erases the street - which is what the Elevated
-#  did to Second Street in the last plan.
-#
-#      0    60   90  150 180  240
-#  0   +----+====+====+====+====+
-#      | WN |  # | CN |  # | EN |
-#  60  +----+====+====+====+====+
-#      |==== N O R T H G A T E ====|   freeway, four lanes
-#  90  +----+====+====+====+====+
-#      | WM |  # | CM |  # | EM |
-#  150 +----+====+====+====+====+
-#      |====  F R A N K L I N  ====|   mainroad, two lanes
-#  180 +----+====+====+====+====+
-#      | WS |  # | CS |  # | ES |
-#  240 +----+====+====+====+====+
-#           First     Second
-#          mainroad   freeway (and the Elevated over it)
+#  Painted in order: terrain, then roads over terrain, then places over roads. An
+#  open place STAMPS ITS GROUND, so a place laid over a road must have road for
+#  its ground or it quietly erases the street - which is what the Elevated did to
+#  Second Street in an earlier plan.
 # ============================================================================
 
 village Northgate
-size 240 240
+size 360 360
 
 # ---- the ground ----------------------------------------------------------
-terrain path 0,0 240x240
+terrain grass 0,0 360x360
+terrain path  0,0 240x240
 
 # ---- the street grid -----------------------------------------------------
-# Every corridor reaches both edges, so every junction is a full crossing and
-# there is no dead end for traffic to have to turn round in.
+# All four run the full width or height of the map, so every junction is a full
+# crossing and the roads carry on out into the country rather than stopping at
+# the edge of town.
 
-road northgate 30 0,75 239,75
+road northgate 30 0,75 359,75
   class freeway
 
-road franklin 30 0,165 239,165
+road franklin 30 0,165 359,165
   class mainroad
 
-road first 30 75,0 75,239
+road first 30 75,0 75,359
   class mainroad
 
-road second 30 165,0 165,239
+road second 30 165,0 165,359
   class freeway
+
+# ---- the dirt tracks -----------------------------------------------------
+# Each runs from a map edge to the made road it joins. Where a track meets a
+# main road the junction piece is sized to the main road, which is right: a farm
+# track does meet the highway at a proper metalled junction.
+
+road hometrack 10 0,300 76,300
+  class track
+
+# Declared from inside Second Street's corridor, not from its edge: a junction
+# only forms where one road's centre line falls INSIDE the other's declared run,
+# and starting this at 166 left it one metre short of the centre at 165 - so the
+# track met the street with no crossing between them.
+road backtrack 10 150,318 359,318
+  class track
+
+# ==========================================================================
+#  THE CITY - north-west quadrant, unchanged
+# ==========================================================================
 
 # ---- block WN: the depot corner ------------------------------------------
 place carwash 2,4 10x13 "the wash"
@@ -163,8 +174,6 @@ place diner 36,105 20x11 "the Northgate Diner"
   human Open before anyone needs it to be, and the same four faces are in it at six.
 
 # ---- block CM: downtown --------------------------------------------------
-# The tallest thing in the city, on the corner of the two arterials, fronting
-# the avenue. Skyscraper_B measures 44.7 x 36 and stands 111m.
 place tower 95,100 46x37 "the Meridian"
   door 118,100
   human A hundred and eleven metres of it, and the top four floors have been empty for a year.
@@ -212,9 +221,82 @@ place casino 185,185 35x46 "the Regency Rooms"
   human Open all night, and the carpet is loud enough that nobody notices the hour.
 
 # ---- the elevated railway ------------------------------------------------
-# Straight over Second Street, which is what an El is: the street stays a street
-# and the line runs ten metres above it on pillars. The lot is EXACTLY the
-# street's corridor, and the railway kind's ground is road, so stamping it is a
-# no-op rather than a demolition.
+# Straight over Second Street. The lot is EXACTLY the street's corridor, and the
+# railway kind's ground is road, so stamping it is a no-op rather than a
+# demolition. It stops at the edge of town rather than running out over the farm.
 place railway 150,0 30x240 "the Elevated"
   human It goes over the top of everything and you hear it before you see it.
+
+# ==========================================================================
+#  THE COUNTRY
+#
+#  Every lot below is the pack's own measured footprint rounded up.
+#  House_Farm_British is 13.8 x 15.1 and gets 15x16; Barn_Farm_Scandinavian is
+#  17.1 x 37.9 and gets 18x39; Silo_Grain_Old is 6.7 x 6 and gets 7x7.
+#
+#  There is not an animal anywhere in this pack, so a paddock is fenced, gated
+#  and troughed and stands empty. See the note in kinds.txt.
+# ==========================================================================
+
+# ---- the east fields -----------------------------------------------------
+# Northgate Avenue's corridor is y 60..89 and Franklin's is y 150..179, so the
+# fields go in the bands between them. A field laid across a road would stamp
+# its own ground over the carriageway and quietly erase it.
+
+place cornfield 250,4 100x52 "the top field"
+  human Forty acres, and the tractor lines run out of true where the ground dips.
+
+place cornfield 250,95 100x52 "the long field"
+  human It floods at the bottom corner every spring and nobody has ever drained it.
+
+place orchard 250,186 100x50 "the orchard"
+  human Planted in rows by somebody who is dead now.
+
+# ---- HOME FARM - south-west, on the dirt track ---------------------------
+# First Street's corridor is x 60..89, so the farm buildings sit west of it in
+# the strip x 0..59. The track runs east-west at y 295..304: the house and yard
+# are north of it and the barn and silos south, which is how a farm is laid out
+# - you do not walk through the machinery to get to the front door.
+
+place farm 5,262 15x16 "Home Farm"
+  door 12,277
+  human The kitchen light is on at half past four and the radio is never off.
+
+place farmyard 24,264 30x28 "the yard"
+  human Mud, diesel and forty years of things that might come in useful.
+
+place barn 5,312 18x39 "the big barn"
+  door 14,312
+  human Big enough to lose a car in, and dark enough at noon that you would.
+
+place silo 28,315 7x7 "the near silo"
+  human It booms when you knock on it.
+
+place silo 38,315 7x7 "the far silo"
+  human Empty since the wet year, and the ladder up the side is still sound.
+
+# The paddocks go in the strip between First Street and Second, x 90..149.
+place paddock 95,250 50x40 "the near paddock"
+  human Cropped flat and empty. The gate has been open for a while.
+
+place paddock 95,300 50x50 "the far paddock"
+  human You cannot see this one from the road, or the road from it.
+
+# And the big field east of Second Street, x 180..239.
+place cornfield 185,245 50x105 "the bottom field"
+  human The corn is over head height by August and the rows run away from the track.
+
+# ---- the back place - south-east ----------------------------------------
+# Reached only by the back track, which comes off Second Street at y 313..322.
+# Nothing else goes near it.
+
+place farm 300,270 15x16 "Wicker End"
+  door 307,285
+  human Nobody has farmed it for years. Somebody is living in it.
+
+place barn 262,262 11x14 "the old barn"
+  door 267,275
+  human Half the roof is down and the half that is not is worse.
+
+place orchard 262,326 96x30 "the old orchard"
+  human Gone to scrub. The fruit falls and nobody picks it up.

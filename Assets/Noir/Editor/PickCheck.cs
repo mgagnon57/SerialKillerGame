@@ -27,6 +27,7 @@ namespace Noir.Editor
         {
             GameObject city = null;
             int fromAbove = 0, fromTheStreet = 0, tested = 0, missedAbove = 0, missedStreet = 0;
+            int doorless = 0;
 
             try
             {
@@ -68,8 +69,11 @@ namespace Noir.Editor
                     // Stand outside the front door looking back at the middle of the facade.
                     // The door is on the lot's boundary, so the way out of the building is
                     // simply the way from its middle towards its door.
+                    // A silo has no front door, so there is nowhere to stand outside it. Counted
+                    // separately rather than silently, or the two totals disagree and the reader
+                    // is left wondering which buildings failed.
                     var door = place.Door;
-                    if (!door.IsValid) continue;
+                    if (!door.IsValid) { doorless++; continue; }
 
                     var outward = new Vector3(door.X + 0.5f - cx, 0f, -(door.Y + 0.5f - cy));
                     if (outward.sqrMagnitude < 0.01f) continue;
@@ -90,7 +94,8 @@ namespace Noir.Editor
                 }
 
                 Debug.Log($"[pick] {tested} buildings: {fromAbove} found from above, "
-                        + $"{fromTheStreet} found from the street.");
+                        + $"{fromTheStreet} of {tested - doorless} found from the street "
+                        + $"({doorless} have no door to stand outside).");
                 Debug.Log(missedAbove + missedStreet == 0
                     ? "[pick] VERDICT: every building can be clicked."
                     : $"[pick] VERDICT: {missedAbove} missed from above, "

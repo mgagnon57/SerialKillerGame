@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -78,6 +78,7 @@ namespace Noir.Editor
                 CityStreets.Build(world, city.transform);
                 CityBuildings.Build(world, city.transform);
                 CityRail.Build(world, city.transform);
+                CityFarm.Build(world, city.transform);
 
                 // The lighting rig's own fixtures, exactly as Snapshot does it. Without these
                 // the still has no window panes, no lamps and no lit glass - which is to say it
@@ -165,6 +166,20 @@ namespace Noir.Editor
                 // signals rather than admire the skyline.
                 Frame(camGo, new Vector3(75f, 0f, -75f), 55f, 45f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-junction.png"));
+
+                // Home Farm, from over the dirt track looking west at the yard. The house and
+                // yard are north of the track at y 262..293, the barn and silos south of it.
+                Frame(camGo, new Vector3(30f, 0f, -295f), 70f, 22f, 300f);
+                Capture(cam, Path.Combine(OutputDir, "farm-yard.png"));
+
+                // The whole country: city top-left, fields east, farm south.
+                Frame(camGo, new Vector3(180f, 0f, -180f), 400f, 42f, 30f);
+                Capture(cam, Path.Combine(OutputDir, "farm-country.png"));
+
+                // Where the track meets First Street - the edge of town, which is the whole
+                // point of having a country at all.
+                Frame(camGo, new Vector3(75f, 0f, -300f), 80f, 25f, 200f);
+                Capture(cam, Path.Combine(OutputDir, "farm-track.png"));
             }
             catch (Exception ex)
             {

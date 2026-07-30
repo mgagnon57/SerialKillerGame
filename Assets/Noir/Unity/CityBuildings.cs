@@ -29,6 +29,7 @@ namespace Noir.Unity
     {
         private const string City = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings Modular City/";
         private const string Whole = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings City/";
+        private const string Land = "Assets/polyperfect/Poly Universal Pack/Prefabs/Farm/Buildings Farm/";
 
         /// <summary>Every floor in the kit is exactly three metres.</summary>
         private const float Floor = 3f;
@@ -87,6 +88,13 @@ namespace Noir.Unity
                     "restroom"    => Whole + "Restroom_City.prefab",
                     "newsstand"   => Whole + "Newspaper_Shop_City.prefab",
                     "tower"       => Skyscraper(place.Bounds),
+
+                    // The country. `farm` is the kind Ashcombe already had, so the farmhouse
+                    // needs no new row in the table - only a model.
+                    "farm"        => Land + "House_Farm_British.prefab",
+                    "barn"        => BestFit(Land, new[]
+                                     { "Barn_Farm_British", "Barn_Farm_Scandinavian" }, place.Bounds),
+                    "silo"        => Land + "Silo_Grain_Old.prefab",
                     _             => null,
                 };
                 if (prefab == null) continue;
@@ -146,6 +154,7 @@ namespace Noir.Unity
                 case "firestation": case "cinema": case "bank": case "casino":
                 case "gasstation": case "icecream": case "carwash":
                 case "restroom": case "newsstand": case "tower":
+                case "farm": case "barn": case "silo":
                     return true;
                 default:
                     return false;
@@ -551,14 +560,25 @@ namespace Noir.Unity
         /// other - so a name typed into a switch puts a building through the wall of its
         /// neighbour the first time a lot is resized.
         /// </summary>
-        private static string Skyscraper(TileRect lot)
+        private static string Skyscraper(TileRect lot) =>
+            BestFit(Whole, new[] { "Skyscraper_A_City", "Skyscraper_B_City", "Skyscraper_C_City" }, lot);
+
+        /// <summary>
+        /// The BIGGEST of these models that still fits the lot, measured rather than assumed.
+        ///
+        /// Two towers differ by eleven metres of footprint and the two barns by twenty-seven, so
+        /// a name typed into a switch puts a building through the wall of its neighbour the
+        /// first time a lot is resized. Asking the model how big it is costs one instantiation
+        /// and cannot go stale.
+        /// </summary>
+        private static string BestFit(string folder, string[] names, TileRect lot)
         {
             string best = null;
-            float tallest = -1f;
+            float biggest = -1f;
 
-            foreach (var name in new[] { "Skyscraper_A_City", "Skyscraper_B_City", "Skyscraper_C_City" })
+            foreach (var name in names)
             {
-                string path = Whole + name + ".prefab";
+                string path = folder + name + ".prefab";
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (prefab == null) continue;
 
@@ -576,14 +596,17 @@ namespace Noir.Unity
                     // it fits either way round.
                     bool fits = (b.size.x <= lot.W && b.size.z <= lot.H)
                              || (b.size.z <= lot.W && b.size.x <= lot.H);
-                    if (fits && b.size.y > tallest) { tallest = b.size.y; best = path; }
+                    // Biggest by footprint, so a generous lot gets the generous model. For the
+                    // towers that also picks the tallest, which is what a downtown wants.
+                    float size = b.size.x * b.size.z;
+                    if (fits && size > biggest) { biggest = size; best = path; }
                 }
                 UnityEngine.Object.DestroyImmediate(probe);
             }
 
             if (best == null)
-                Debug.LogWarning($"[city] no skyscraper fits a {lot.W}x{lot.H} lot at "
-                               + $"{lot.X},{lot.Y} - the smallest is 35.6 x 40.3.");
+                Debug.LogWarning($"[city] none of {string.Join(", ", names)} fits a "
+                               + $"{lot.W}x{lot.H} lot at {lot.X},{lot.Y}.");
             return best;
         }
 

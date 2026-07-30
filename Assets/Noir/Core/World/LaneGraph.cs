@@ -163,7 +163,10 @@ namespace Noir.Core.World
                 var line = roads.Lines[li];
                 if (!line.IsStraight) continue;
 
-                float span = line.IsNorthSouth ? height : width;
+                // A road runs between the points it was DECLARED between, which for the city's
+                // arterials is edge to edge and for a farm track is not. Using the map's size
+                // here instead would have run every track the full width of the world, laying
+                // lanes across fields nobody put a road in.
                 int lanes = RoadClasses.LanesEachWay(line.Class);
 
                 // The junctions on THIS road, as village coordinates along its own axis, with
@@ -190,8 +193,10 @@ namespace Noir.Core.World
                         ordered.Add((TravelOf(way, along), reach, index));
                     ordered.Sort((a, b) => a.s.CompareTo(b.s));
 
-                    float start = TravelOf(way, Headings.Increasing(way) ? -margin : span + margin);
-                    float end = TravelOf(way, Headings.Increasing(way) ? span + margin : -margin);
+                    float start = TravelOf(way, Headings.Increasing(way)
+                        ? line.From - margin : line.To + margin);
+                    float end = TravelOf(way, Headings.Increasing(way)
+                        ? line.To + margin : line.From - margin);
 
                     for (int lane = 0; lane < lanes; lane++)
                     {

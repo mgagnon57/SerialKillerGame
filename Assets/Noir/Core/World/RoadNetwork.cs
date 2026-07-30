@@ -16,6 +16,12 @@ namespace Noir.Core.World
     /// </summary>
     public enum RoadClass
     {
+        /// <summary>
+        /// A dirt track. Ten-metre corridor, no markings and no kerbs, because it is not a made
+        /// road at all - it is the way the tractor goes.
+        /// </summary>
+        Track,
+
         /// <summary>A residential street. Ten-metre corridor, no markings.</summary>
         Street,
 
@@ -35,7 +41,8 @@ namespace Noir.Core.World
         /// paints and what the road kit's tiles measure. How much of it is asphalt is a property
         /// of the models and is measured off the mesh by the renderer, not asserted here.
         /// </summary>
-        public static int CorridorWidth(RoadClass klass) => klass == RoadClass.Street ? 10 : 30;
+        public static int CorridorWidth(RoadClass klass) =>
+            klass == RoadClass.Street || klass == RoadClass.Track ? 10 : 30;
 
         /// <summary>
         /// How many running lanes there are in each direction.
@@ -53,6 +60,7 @@ namespace Noir.Core.World
         {
             switch ((text ?? "").Trim().ToLowerInvariant())
             {
+                case "track":    klass = RoadClass.Track;    return true;
                 case "street":   klass = RoadClass.Street;   return true;
                 case "mainroad": klass = RoadClass.Mainroad; return true;
                 case "freeway":  klass = RoadClass.Freeway;  return true;

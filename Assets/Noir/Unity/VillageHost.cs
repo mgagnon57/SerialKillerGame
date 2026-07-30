@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
@@ -152,6 +152,7 @@ namespace Noir.Unity
             CityStreets.Build(World, city.transform);
             CityBuildings.Build(World, city.transform);
             CityRail.Build(World, city.transform);
+            CityFarm.Build(World, city.transform);
 
             // Assembled out of pieces, drawn as a handful of meshes.
             CityChunker.Bake(city);

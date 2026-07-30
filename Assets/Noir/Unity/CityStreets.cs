@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 #if UNITY_EDITOR
@@ -58,11 +58,21 @@ namespace Noir.Unity
         private static readonly Dictionary<RoadClass, float> _asphalt =
             new Dictionary<RoadClass, float>();
 
+        private const string Dirt = "Assets/polyperfect/Poly Universal Pack/Prefabs/Farm/Roads Farm/";
+
         /// <summary>The straight tile for a class, which is also what its width is measured off.</summary>
         private static string Straight(RoadClass klass) => klass switch
         {
             RoadClass.Freeway  => Kit + "Freeway_Straight_30x30_City.prefab",
             RoadClass.Mainroad => Kit + "Mainroad_Straight_30x30_City.prefab",
+
+            // A dirt tile is built quite unlike the city ones: its pivot is CENTRED rather than
+            // at a corner, and though it is called 10x10m it measures 7.1m across and 13.7m
+            // long. Laid every ten metres it therefore overlaps its neighbour by nearly four,
+            // which on a rutted track is not a fault - it is what stops the joins showing.
+            // Seating by measured bounds is what makes that harmless.
+            RoadClass.Track    => Dirt + "Road_Dirt_A_Straight_10x10m.prefab",
+
             _                  => Kit + "Road_Straight_10x10_City.prefab",
         };
 
@@ -70,17 +80,28 @@ namespace Noir.Unity
         {
             RoadClass.Freeway  => Kit + "Freeway_Crosswalk_30x30_City.prefab",
             RoadClass.Mainroad => Kit + "Mainroad_Crosswalk_City.prefab",
+            RoadClass.Track    => Straight(klass),      // nobody paints a zebra on a farm track
             _                  => Kit + "Road_Crosswalk_10x10_City.prefab",
         };
 
-        private static string Cross(RoadClass klass) => klass switch
+        /// <summary>
+        /// The crossing piece for a junction, sized to the road that needs the most room.
+        ///
+        /// Chosen by REACH rather than by class, because the piece has to fit the junction
+        /// tile: dropping a thirty-metre crossing on the ten-metre square where two tracks meet
+        /// would overhang the fields by ten metres on every side.
+        /// </summary>
+        private static string Cross(RoadClass widest, float reach)
         {
+            if (reach < 8f) return Kit + "Road_Cross_10x10_City.prefab";
+
             // A freeway crossing takes the wide piece; anything else takes the main-road
             // crossing, which is the only junction in the kit with zebras painted on all four
             // arms and so the one that reads as signalised.
-            RoadClass.Freeway => Kit + "Freeway_Cross_30x30_City.prefab",
-            _                 => Kit + "Mainroad_Cross_Crosswalk_30x30_City.prefab",
-        };
+            return widest == RoadClass.Freeway
+                ? Kit + "Freeway_Cross_30x30_City.prefab"
+                : Kit + "Mainroad_Cross_Crosswalk_30x30_City.prefab";
+        }
 
         /// <summary>
         /// HALF the width of the actual asphalt for this class, measured off its own tile.
@@ -107,18 +128,35 @@ namespace Noir.Unity
                     var mr = mf.GetComponent<MeshRenderer>();
                     if (mesh == null || mr == null) continue;
 
+                    // The city tiles carry the carriageway on its own submesh, so the surface is
+                    // the one painted with asphalt. A DIRT TILE HAS ONLY ONE SUBMESH - the whole
+                    // tile is the track - so on those the single submesh IS the surface. Without
+                    // this the search for "Asphalt" finds nothing on a track and the width falls
+                    // through to a guess, silently, which is how the last three width bugs
+                    // happened.
+                    bool single = mesh.subMeshCount == 1;
+
                     for (int s = 0; s < mesh.subMeshCount && s < mr.sharedMaterials.Length; s++)
                     {
                         var m = mr.sharedMaterials[s];
-                        if (m == null || m.name.IndexOf("Asphalt", System.StringComparison.Ordinal) < 0)
+                        if (!single &&
+                            (m == null || m.name.IndexOf("Asphalt", System.StringComparison.Ordinal) < 0))
                             continue;
 
                         // SubMeshDescriptor.bounds is importer metadata, so this works whether or
-                        // not Read/Write is enabled on the model. The tile spans x[-corridor,0],
-                        // so measure out from its own centre.
+                        // not Read/Write is enabled on the model.
                         var b = mesh.GetSubMesh(s).bounds;
-                        float centre = -corridor / 2f;
-                        half = Mathf.Max(Mathf.Abs(b.min.x - centre), Mathf.Abs(b.max.x - centre));
+
+                        // HALF THE SURFACE'S OWN WIDTH, and nothing about where the pivot is.
+                        //
+                        // The city tiles fill x[-corridor,0] about a corner pivot and the dirt
+                        // tiles straddle a centred one, and an earlier version of this tried to
+                        // work out which - and got it backwards, reporting a thirty-metre main
+                        // road as carrying forty-two metres of asphalt and minus six metres of
+                        // pavement. The pivot never mattered: the carriageway is symmetrical
+                        // about its own centre line by construction, and Seat() puts that centre
+                        // on the corridor's centre, so its half-width is simply half its extent.
+                        half = (b.max.x - b.min.x) * 0.5f;
                         break;
                     }
                 }
@@ -180,23 +218,21 @@ namespace Noir.Unity
 #if UNITY_EDITOR
             int tiles = 0, dressing = 0;
 
-            // 1. The junctions first, so the straights know which cells are already spoken for.
-            var taken = new HashSet<long>();
+            // 1. The junctions first, so the straights know which ground is already spoken for.
             foreach (var j in world.Roads.Junctions)
             {
                 var klass = j.NorthSouth.Class == RoadClass.Freeway || j.EastWest.Class == RoadClass.Freeway
                     ? RoadClass.Freeway : RoadClass.Mainroad;
 
                 float reach = j.Reach;
-                if (Seat(root.transform, Cross(klass),
+                if (Seat(root.transform, Cross(klass, reach),
                          j.X - reach, j.Y - reach, reach * 2f, reach * 2f, 0f) != null) tiles++;
 
-                taken.Add(KeyOf(j.X, j.Y));
             }
 
             // 2. The carriageways.
             foreach (var line in world.Roads.Lines)
-                tiles += Lay(root.transform, line, world, taken);
+                tiles += Lay(root.transform, line, world);
 
             // 3. Everything that is not a carriageway, sampled off the terrain grid as before:
             //    pavement where a street has an edge, parks, and the backs of blocks.
@@ -210,10 +246,6 @@ namespace Noir.Unity
         }
 
 #if UNITY_EDITOR
-        /// <summary>A junction's cell, for asking "is this stretch already a crossing".</summary>
-        private static long KeyOf(float x, float y) =>
-            (long)Mathf.RoundToInt(x) * 100000L + Mathf.RoundToInt(y);
-
         /// <summary>
         /// One road, tiled end to end at its own module, skipping the cells the junctions took.
         ///
@@ -221,8 +253,7 @@ namespace Noir.Unity
         /// is where a pedestrian crossing goes and because it puts a painted stop line exactly
         /// where the traffic has to stop.
         /// </summary>
-        private static int Lay(Transform parent, RoadLine line, WorldModel world,
-                               HashSet<long> taken)
+        private static int Lay(Transform parent, RoadLine line, WorldModel world)
         {
             if (!line.IsStraight)
             {
@@ -235,17 +266,25 @@ namespace Noir.Unity
             float half = module / 2f;
             float yaw = line.IsNorthSouth ? 0f : 90f;
 
-            // Edge to edge of the map, not just between the declared points: a road declared
-            // 0,75 239,75 is meant to leave the map, and the brush already paints it that far.
-            float span = line.IsNorthSouth ? world.Height : world.Width;
+            // BETWEEN THE POINTS IT WAS DECLARED BETWEEN. The city's arterials are declared edge
+            // to edge, so for them this is the whole map; a farm track is not, and running it
+            // the full width would lay a road across fields nobody put one in.
+            float from = line.From, to = line.To;
 
             int laid = 0;
-            for (float along = 0f; along + module <= span + 0.01f; along += module)
+            for (float along = from; along + module <= to + 0.01f; along += module)
             {
                 float cx = line.IsNorthSouth ? line.Centre : along + half;
                 float cy = line.IsNorthSouth ? along + half : line.Centre;
 
-                if (taken.Contains(KeyOf(cx, cy))) continue;
+                // Inside a crossing? Tested by REACH rather than by an exact cell, because a
+                // thirty-metre junction swallows three ten-metre tiles of the track that meets
+                // it, and only the middle one shares its centre.
+                bool inJunction = false;
+                foreach (var j in world.Roads.Junctions)
+                    if (Mathf.Abs(cx - j.X) < j.Reach && Mathf.Abs(cy - j.Y) < j.Reach)
+                    { inJunction = true; break; }
+                if (inJunction) continue;
 
                 // Next to a crossing? Then this is where the zebra and the stop line go.
                 bool atCrossing = false;
@@ -355,6 +394,19 @@ namespace Noir.Unity
             };
             parkKit.RemoveAll(c => c.Count == 0);
 
+            // OPEN COUNTRY IS NOT A PARK. Grass beyond the town gets tufts, flowers and the odd
+            // bush and NOTHING TALL: a park's kit sown across two hundred cells of farmland
+            // turned every field into woodland with boulders in it, which is the opposite of
+            // what a field is - you cannot see across it, and being able to see across it is
+            // the whole reason to have one.
+            var countryKit = new List<List<string>>
+            {
+                Catalogue(Nat + "/Grass", null),
+                Catalogue(Nat + "/Flowers", null),
+                Catalogue(Nat + "/Bushes", null),
+            };
+            countryKit.RemoveAll(c => c.Count == 0);
+
             // What piles up behind a building rather than in front of it.
             var alley = new List<List<string>>
             {
@@ -369,6 +421,13 @@ namespace Noir.Unity
             for (int cx = 0; cx < cols; cx++)
             {
                 if (Is(cx, cy, Noir.Core.World.Terrain.Road)) continue;   // laid from the network
+
+                // THE COUNTRY BELONGS TO CityFarm. A farmyard is authored with path for its
+                // ground because it is bare and hard-standing, and this used to read that as
+                // "pavement" - so it laid city flagstones over the yard, then walked its kerb
+                // and hung street lamps, a phone box and a litter bin round a working farm.
+                // Whoever owns a place dresses it; this one does not own these.
+                if (Owned(world, cx, cy)) continue;
 
                 float vx = cx * Cell, vy = cy * Cell;
 
@@ -411,7 +470,11 @@ namespace Noir.Unity
                 // live. Both were bought and neither had ever been on screen.
                 else if (Is(cx, cy, Noir.Core.World.Terrain.Grass))
                 {
-                    var kit = (cx + cy) % 2 == 0 ? play : skate;
+                    // A PARK IS A PLACE, NOT A COLOUR. Swings and a skate ramp go where somebody
+                    // authored a green; they must not appear in a paddock just because a paddock
+                    // is also grass.
+                    bool park = IsPark(world, cx, cy);
+                    var kit = park ? ((cx + cy) % 2 == 0 ? play : skate) : Empty;
 
                     for (int k = 0; k < 3 && kit.Count > 0; k++)
                     {
@@ -421,9 +484,14 @@ namespace Noir.Unity
                                 Materials3D.Scatter(cx, cy + k, 151) % 4 * 90f) != null) n++;
                     }
 
-                    for (int k = 0; k < 5 && parkKit.Count > 0; k++)
+                    // Five pieces of planting to a park cell and one to a field: a park is
+                    // gardened and a field is not, and at five the country came out as forest.
+                    var green = park ? parkKit : countryKit;
+                    int how = park ? 5 : 1;
+
+                    for (int k = 0; k < how && green.Count > 0; k++)
                     {
-                        var role = parkKit[(int)(Materials3D.Scatter(cx + k, cy, 691) % (uint)parkKit.Count)];
+                        var role = green[(int)(Materials3D.Scatter(cx + k, cy, 691) % (uint)green.Count)];
                         float ox = 1f + Materials3D.Scatter(cx * 11 + k, cy, 701) % 8;
                         float oz = 1f + Materials3D.Scatter(cx, cy * 11 + k, 709) % 8;
                         if (Put(parent, Pick(role, cx + k, cy + k, 719), vx + ox, vy + oz,
@@ -506,6 +574,19 @@ namespace Noir.Unity
                 if (path.IndexOf("Palm", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 if (path.IndexOf("Cactus", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 if (path.IndexOf("Dead", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                // AND IT SHIPS ALL FOUR SEASONS. FindAssets searches a folder recursively, so
+                // asking Nature/Rocks for a rock also hands back Nature/Rocks Winter - which is
+                // how a summer afternoon in the fields came to be strewn with snow-capped
+                // boulders. Two hundred prefabs across Nature are seasonal.
+                if (path.IndexOf("Winter", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (path.IndexOf("Snow", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (path.IndexOf("Ice", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (path.IndexOf("Frozen", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                // A menhir is a four-metre standing stone. Atmospheric once; not eighty times
+                // in a field somebody is trying to grow wheat in.
+                if (path.IndexOf("Menhir", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 if (startsWith != null &&
                     System.IO.Path.GetFileName(path).StartsWith(startsWith, System.StringComparison.Ordinal) == false)
                     continue;
@@ -513,6 +594,33 @@ namespace Noir.Unity
             }
             found.Sort(System.StringComparer.Ordinal);   // stable, so the city looks the same twice
             return found;
+        }
+
+        private static readonly List<string> Empty = new List<string>();
+
+        /// <summary>What kind of place a cell belongs to, or "" for open ground.</summary>
+        private static string KindAt(WorldModel world, int cx, int cy)
+        {
+            var id = world.Grid.PlaceAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2);
+            if (!id.IsValid) return "";
+            var place = world.GetPlace(id);
+            return place == null ? "" : PlaceKindTable.Current.Row(place.Kind).Name;
+        }
+
+        /// <summary>Is this cell inside somewhere authored as a green, rather than just grass?</summary>
+        private static bool IsPark(WorldModel world, int cx, int cy) =>
+            KindAt(world, cx, cy) == "green";
+
+        /// <summary>Does another renderer own the ground here? See CityFarm.</summary>
+        private static bool Owned(WorldModel world, int cx, int cy)
+        {
+            switch (KindAt(world, cx, cy))
+            {
+                case "farmyard": case "cornfield": case "paddock": case "orchard":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static string Pick(List<string> from, int x, int y, int salt) =>

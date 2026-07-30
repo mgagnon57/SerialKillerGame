@@ -48,6 +48,15 @@ namespace Noir.Editor
             })
                 One(City + n + ".prefab", n);
 
+            Debug.Log("=== ROADS FARM (the dirt track kit) ===");
+            const string Farm = "Assets/polyperfect/Poly Universal Pack/Prefabs/Farm/Roads Farm/";
+            foreach (var n in new[]
+            {
+                "Road_Dirt_A_Straight_10x10m", "Road_Dirt_B_Straight_10x10m",
+                "Road_Dirt_A_Turn_20x20m", "Road_Dirt_B_Turn_20x20m",
+            })
+                One(Farm + n + ".prefab", n);
+
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 

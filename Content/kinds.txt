@@ -689,3 +689,117 @@ kind railway
   shifts    one
   catchment no
   describe  yes
+
+# ---- the country ------------------------------------------------------------
+#  Northgate grew to 360x360 and three of its four quadrants are open land. These
+#  are the kinds that live out there. Between them they open the pack's 486 farm
+#  prefabs, which the city had used none of.
+#
+#  Note what is NOT here: an animal. There is not a cow, pig, chicken or sheep
+#  anywhere in the pack - only a butcher's props in the fantasy set and a
+#  cattle-crossing road sign. A paddock is therefore fenced, gated and troughed,
+#  and empty, until somebody buys some livestock.
+
+kind barn
+  words     barn
+  form      building
+  rooms     auto
+  grammar   hall
+  roof      yes
+  frontage  farm
+  massing   shopfront
+  props     none
+  counter   no
+  hours     05:30-19:00
+  jobs      2
+  roles     farmhand
+  shifts    one
+  catchment no
+  describe  yes
+
+kind silo
+  words     silo grainstore
+  # Open, not building. A grain silo is a structure standing on a concrete pad,
+  # not a room anybody goes into, and `form building` requires a door - which
+  # would mean inventing a front door for a tube of wheat. It still gets its
+  # model: CityBuildings places by kind, not by form.
+  form      open
+  ground    path
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+# Open ground, all four of these: they are areas of land, not buildings, and the
+# renderer fills them rather than standing something on them. See CityFarm.
+
+kind cornfield
+  words     cornfield field crop
+  form      open
+  ground    field
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind paddock
+  words     paddock pen pasture
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind orchard
+  words     orchard
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind farmyard
+  words     farmyard yard
+  form      open
+  ground    path
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes

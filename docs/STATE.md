@@ -1,6 +1,76 @@
 ﻿# Where we are
 
-## RESUME HERE — 2026-07-30, later still. Click a building.
+## RESUME HERE — 2026-07-30, evening. The country: 360×360, and a farm.
+
+Northgate is now a quadrant of its own map. The city is unchanged in the north-west; the other
+three quadrants are open land, and the pack's **486 farm prefabs** — which the city had used none
+of — are on screen.
+
+### What the scan found
+
+Everything asked for except one thing. Farmhouse, barn, silos, grain bins, water tower,
+greenhouse, two working mills; `Fence_Horse` paddock fencing with gates and posts; troughs;
+166 crop prefabs including tileable `Wheat_*_Square_1x1m_A` at five growth stages; 18 farm
+vehicles; and `Road_Dirt_A/B_Straight_10x10m`, which is **the same 10m module as the street kit**
+so a dirt track drops straight into the road network.
+
+**There are no animals in this pack.** Not a cow, pig, chicken or sheep in ~4,000 prefabs — only
+a butcher's props in the fantasy set and a cattle-crossing road sign. The paddocks are fenced,
+gated, troughed and empty. That is a purchase, not a bug.
+
+### New
+
+- **`RoadClass.Track`** — a fourth class, 10m corridor, laid with dirt tiles. It goes into the
+  lane graph like any other road, so a junction forms where it meets the highway and traffic
+  drives it.
+- **`Unity/CityFarm.cs`** — the things that FILL an area rather than stand on a point: crops as
+  tiled squares (stage chosen per *field*, not per square, or one field has seedlings next to a
+  ready harvest), pens as a fence walked greedily round a boundary with a gate, orchards as a
+  lattice, and yards scattered from whole folders.
+- Six new kinds: barn, silo, cornfield, paddock, orchard, farmyard. **`silo` is `form open`** —
+  a grain silo is a structure on a pad, not a room, and `form building` demands a door.
+
+### Five faults the renders caught
+
+1. **Snow-capped boulders across every field.** `FindAssets` searches folders *recursively*, so
+   asking `Nature/Rocks` for a rock also returns `Nature/Rocks Winter`. 200 seasonal prefabs
+   were leaking in.
+2. **The farmyard was paved with city flagstones** and given street lamps, a phone box and a
+   litter bin — because a farmyard is authored with `path` ground and `Dress()` read that as
+   "pavement". Ground owned by another renderer is now skipped outright.
+3. **Municipal lamp posts down the dirt track**, every 13m. A track rasterises to the same
+   `Terrain.Road` as an arterial; `SunRig` now asks the road network which class it is.
+4. **A main road measured 42m of asphalt in a 30m corridor**, with minus six metres of pavement.
+   My own change, caught by its own log line. The pivot never mattered: a carriageway is
+   symmetrical about its centre line, so its half-width is simply half its extent.
+5. **`backtrack` met Second Street with no junction** — declared from x=166 when the centre line
+   is x=165, missing by a metre. A junction forms only where one road's centre falls *inside*
+   the other's declared run.
+
+Also: a road is now tiled between **the points it was declared between**, not across the whole
+map. That was invisible while every road ran edge to edge, and would have laid a farm track the
+full width of the world.
+
+### Verified
+
+- Core **23/23** on the road and lane-graph fixtures; full suite running at time of writing.
+- `PlayCheck`: 360×360, 59 places, 57 people in 27 households, 600 ticks clean.
+- `TrafficCheck`: 50 segments, 82 turns, 16 entries, 6 junctions all signalled; every lane inside
+  its own asphalt, every turn inside its crossing. Freeway 24.0m, Mainroad 12.0m, Track 7.1m.
+- `PickCheck`: 48 buildings, all clickable from above and from the street.
+- Renders: `farm-yard`, `farm-track`, `farm-country`.
+
+### Known and left
+
+- Street lamps still line First Street where it crosses the country. Correct for a lit main road
+  out of town, arguably too urban for a field.
+- The mainroad tile carries 9m of pavement each side, so a country road has kerbs. That is the
+  kit; using the narrow `Road` tile for rural stretches would need class-per-stretch.
+- Nothing highlights a selected building.
+
+---
+
+## 2026-07-30, later still. Click a building.
 
 Almost all of this panel was already written down and had never been shown to anybody: the
 authored `human` line, the opening hours, the staffing, the household. The one piece that is not

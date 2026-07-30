@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -40,6 +40,7 @@ namespace Noir.Editor
                 CityStreets.Build(world, probe.transform);
                 CityBuildings.Build(world, probe.transform);
                 CityRail.Build(world, probe.transform);
+                CityFarm.Build(world, probe.transform);
 
                 // Which model asset each placed mesh came from.
                 var models = new SortedSet<string>(StringComparer.Ordinal);

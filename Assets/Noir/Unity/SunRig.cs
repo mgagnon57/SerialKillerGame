@@ -318,6 +318,13 @@ namespace Noir.Unity
             {
                 if ((world.Grid.FlagsAt(x, y) & TileFlags.Road) == 0) continue;
 
+                // NOBODY LIGHTS A FARM TRACK. A track rasterises to the same Terrain.Road as an
+                // arterial, so this lit the dirt road to Home Farm on a thirteen-metre spacing
+                // and stood municipal lamp posts down it across two hundred metres of field.
+                // The road network remembers which corridor a tile belongs to; ask it.
+                var road = world.Roads.At(x + 0.5f, y + 0.5f);
+                if (road != null && road.Class == RoadClass.Track) continue;
+
                 // On the kerb, not in the carriageway.
                 if (!NextToVerge(world, x, y)) continue;
 
