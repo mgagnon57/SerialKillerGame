@@ -92,7 +92,7 @@ namespace Noir.Unity
                 if (prefab == null) continue;
 
                 var built = Landmark(root.transform, prefab, place.Bounds);
-                if (built != null) { Glazing(built, place); pieces++; }
+                if (built != null) { Glazing(built, place); Record(place, built); pieces++; }
                 pieces += Fleet(root.transform, place);
             }
 
@@ -111,6 +111,32 @@ namespace Noir.Unity
         /// model. That is what X-ray was revealing: pressing X hides the procedural geometry and
         /// the bought building appears, because it had been inside the box the whole time.
         /// </summary>
+        private static readonly Dictionary<int, float> _tops = new Dictionary<int, float>();
+
+        /// <summary>
+        /// How tall the model on this place turned out, measured after it was built.
+        ///
+        /// Picking needs it. A click is a ray, and deciding which building a ray touches means
+        /// knowing how far up each one reaches - otherwise a click on the front of a terrace
+        /// selects whatever stands behind it, which at street level is most of the time. Nothing
+        /// else in the pack knows a building's height: a townhouse is a stack of modules chosen
+        /// at build time and a skyscraper is picked by lot, so both are only knowable afterwards.
+        /// </summary>
+        public static bool TryHeight(PlaceId place, out float top) =>
+            _tops.TryGetValue(place.Value, out top);
+
+        private static void Record(Place place, GameObject built)
+        {
+            if (place == null || built == null) return;
+
+            var rends = built.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return;
+
+            var b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+            _tops[place.Id.Value] = b.max.y;
+        }
+
         public static bool Handles(Place place)
         {
             switch (KindOf(place))
@@ -218,6 +244,7 @@ namespace Noir.Unity
             Glazing(house, place);
             n += Roof(house, lot);
             n += Shopfront(house, lot, yaw);
+            Record(place, house);        // after the roof, or the terrace picks up short
             return n;
         }
 

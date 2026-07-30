@@ -33,6 +33,18 @@ namespace Noir.Unity
         public bool Following { get; set; }
 
         /// <summary>
+        /// The building the player has clicked on, if any.
+        ///
+        /// Kept separate from <see cref="Selected"/> rather than folded into one "selection"
+        /// because the two answer different questions and the inspector shows different things
+        /// for each. Only one is ever set at a time; selecting either clears the other.
+        /// </summary>
+        public PlaceId SelectedPlace { get; set; } = PlaceId.None;
+
+        public Place SelectedPlaceModel =>
+            SelectedPlace.IsValid ? World?.GetPlace(SelectedPlace) : null;
+
+        /// <summary>
         /// One seed for the whole village. It was previously written as two separate literals -
         /// one for the population, one for the simulation - which meant a typo in either would
         /// give you people generated from one world and day plans from another. Nothing would

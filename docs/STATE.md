@@ -1,6 +1,55 @@
 ﻿# Where we are
 
-## RESUME HERE — 2026-07-30, later. The lane graph: cars turn.
+## RESUME HERE — 2026-07-30, later still. Click a building.
+
+Almost all of this panel was already written down and had never been shown to anybody: the
+authored `human` line, the opening hours, the staffing, the household. The one piece that is not
+authored is the one that matters most for a game about who was where — **who is inside right
+now** — and the simulation already knew it. `Agent.At` is a `PlaceId`.
+
+### How picking works, and why it is not a raycast
+
+There are no colliders in this city and there should not be: `CityChunker` combines four hundred
+prefabs into a handful of meshes, so a physics raycast would hit "chunk 7, material 3" and have
+no idea which building that was. But `WorldBuilder` already claims **every tile of a place's
+footprint** for it, so a point on the ground answers the question directly.
+
+The obvious version — flatten the click onto the ground plane and look up that tile — is wrong
+wherever the camera is low: pointing at the front of a terrace, the ray meets the ground *behind*
+it and you select the building across the street. So `PlacePicker` **walks the ray** and takes
+the first place whose footprint is under it and whose roof is above it. That needs heights, and
+nothing in the pack knows a building's height — a townhouse is a stack of modules chosen at
+build time, a skyscraper is picked by lot — so `CityBuildings` now measures each one as it puts
+it up.
+
+One rule worth knowing: **the building you are standing in does not count.** At street level the
+camera is regularly inside something, and without that every click from in there selects the
+walls around you rather than what you pointed at. It is tested against the building's *height*,
+not just its footprint, so standing on the road under the elevated railway — whose lot is the
+street's own corridor — leaves the El clickable.
+
+### Verified
+
+`Editor/PickCheck.cs` points at all 42 buildings twice: straight down (tests the tile lookup and
+the y-into--z conversion) and from the street outside its own front door at eye height (tests the
+walk against a facade, the case a flat projection gets wrong). **42 found from above, 42 from the
+street.**
+
+The first run found 2 street misses — the bank and the diner. The cause was exact: the bank's
+door is at y=105 and the terrace ends at y=97, an 8m gap, and the test camera stood 9m out, i.e.
+*inside a townhouse*. The picker was right and the test was wrong; the standing-in rule above is
+the fix, and it closes a genuine street-level bug at the same time.
+
+### Still to do here
+
+- Nothing highlights the selected building. A tinted outline would help, but the geometry is
+  baked into shared chunk meshes, so it needs thought rather than a material swap.
+- Clicking a road selects "the Elevated" along Second Street, because that lot *is* the corridor.
+  Defensible, possibly confusing.
+
+---
+
+## 2026-07-30, later. The lane graph: cars turn.
 
 Traffic used to own one lane from one edge of the map to the other and wrap round when it left,
 because nothing told a car which lane it could move into. Turning is not a flourish — bus routes

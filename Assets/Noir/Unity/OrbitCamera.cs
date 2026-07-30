@@ -266,19 +266,32 @@ namespace Noir.Unity
             if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
             if (VillageUI.PointerOverUI) return;
 
-            // Intersect the view ray with the ground plane, then take the nearest person to it.
             var ray = _camera.ScreenPointToRay(mouse.position.ReadValue());
+
+            // PEOPLE FIRST: they are small, they move, and they are the harder thing to hit, so
+            // a click that could mean either should mean the person. They stand on the ground,
+            // so the flat projection is the right test for them.
             var ground = new Plane(Vector3.up, Vector3.zero);
-            if (!ground.Raycast(ray, out float enter)) return;
-
-            var hit = ray.GetPoint(enter);
             var view = _host.GetComponentInChildren<AgentMeshView>();
-            if (view == null) return;
 
-            float radius = Mathf.Max(1.5f, _distance * 0.03f);
-            var picked = view.Pick(hit, radius);
-            _host.Selected = picked;
-            if (!picked.IsValid) _host.Following = false;
+            if (view != null && ground.Raycast(ray, out float enter))
+            {
+                float radius = Mathf.Max(1.5f, _distance * 0.03f);
+                var picked = view.Pick(ray.GetPoint(enter), radius);
+                if (picked.IsValid)
+                {
+                    _host.Selected = picked;
+                    _host.SelectedPlace = Noir.Core.Contracts.PlaceId.None;
+                    return;
+                }
+            }
+
+            // Otherwise whatever building the ray goes through. Walked rather than flattened
+            // onto the ground, so pointing at a wall selects the wall's building - see
+            // PlacePicker.
+            _host.Selected = Noir.Core.Contracts.CitizenId.None;
+            _host.Following = false;
+            _host.SelectedPlace = PlacePicker.Pick(_host.World, ray);
         }
 
         private void HandleFollow()

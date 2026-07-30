@@ -93,7 +93,8 @@ namespace Noir.Unity
             // Let the camera know not to treat a click on the panel as a click on the village.
             var mouse = Event.current.mousePosition;
             PointerOverUI = mouse.y < BarHeight ||
-                            (_host.Selected.IsValid && mouse.x > Screen.width - PanelWidth);
+                            ((_host.Selected.IsValid || _host.SelectedPlace.IsValid)
+                             && mouse.x > Screen.width - PanelWidth);
         }
 
         private void DrawTopBar()
@@ -250,8 +251,138 @@ namespace Noir.Unity
             GUILayout.EndHorizontal();
         }
 
+        /// <summary>
+        /// What a building is, and who is in it.
+        ///
+        /// Almost all of this was already written down and had never been shown to anybody: the
+        /// authored `human` line, the opening hours, the staffing, the household. The one piece
+        /// that is not authored is the last one, and it is the reason this panel matters for a
+        /// game about who was where - the simulation knows which agents are inside a place at
+        /// this minute, so the panel can simply ask it.
+        /// </summary>
+        private void DrawPlaceInspector(Place place)
+        {
+            var rect = new Rect(Screen.width - PanelWidth, BarHeight + 8, PanelWidth - 12,
+                                Screen.height - BarHeight - 20);
+            GUI.Box(rect, GUIContent.none, _panel);
+            GUILayout.BeginArea(new Rect(rect.x + 14, rect.y + 12, rect.width - 28, rect.height - 24));
+
+            var world = _host.World;
+            var sim = _host.Sim;
+            var kind = PlaceKindTable.Current.Row(place.Kind);
+
+            GUILayout.Label(place.Name, _title);
+            GUILayout.Label($"{Article(kind.Name)}   ·   {place.Bounds.W}x{place.Bounds.H}m", _small);
+            GUILayout.Space(10);
+
+            // The line somebody wrote about this building when they put it in the map.
+            if (!string.IsNullOrWhiteSpace(place.Human))
+            {
+                GUILayout.Label($"<i>{place.Human}</i>", _label);
+                GUILayout.Space(10);
+            }
+
+            // ---- when it is open ----
+            if (place.Hours.Count > 0)
+            {
+                var clock = sim.Clock;
+                bool open = false;
+                foreach (var window in place.Hours)
+                    if (window.Covers(clock.MinuteOfDay, clock.DayOfWeek)) { open = true; break; }
+
+                GUILayout.Label(open
+                    ? "<color=#9fd08a><b>open now</b></color>"
+                    : "<color=#a8817a><b>closed</b></color>", _label);
+                foreach (var window in place.Hours)
+                    GUILayout.Label($"<color=#8a8a86>{window}</color>", _small);
+                GUILayout.Space(10);
+            }
+
+            // ---- who belongs to it ----
+            var household = _host.People.HouseholdAt(place.Id);
+            if (household.IsValid)
+            {
+                var home = _host.People.GetHousehold(household);
+                GUILayout.Label($"<color=#8a8a86>home to</color>  the {home.Surname} household"
+                              + (home.Size > 1 ? $", {home.Size} people" : ""), _label);
+            }
+            if (place.Units > 1)
+                GUILayout.Label($"<color=#8a8a86>{place.Units} separate homes</color>", _small);
+
+            var workers = _host.People.WorkersAt(place.Id);
+            if (workers.Count > 0)
+                GUILayout.Label($"<color=#8a8a86>worked by</color>  {workers.Count} "
+                              + (workers.Count == 1 ? "person" : "people"), _label);
+            else if (place.JobSlots > 0)
+                GUILayout.Label($"<color=#8a8a86>{place.JobSlots} jobs, nobody in them</color>", _small);
+
+            GUILayout.Space(10);
+
+            // ---- who is inside RIGHT NOW ----
+            //
+            // The whole reason a detective wants to click a building.
+            _inside.Clear();
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var agent = sim.GetAgent(i);
+                if (agent.Travelling || !agent.At.IsValid) continue;
+                if (agent.At.Value != place.Id.Value) continue;
+                _inside.Add(i);
+            }
+
+            if (_inside.Count == 0)
+            {
+                GUILayout.Label("<color=#75736e>nobody inside</color>", _label);
+            }
+            else
+            {
+                GUILayout.Label($"<b>inside now</b>  ·  {_inside.Count}", _label);
+                _placeScroll = GUILayout.BeginScrollView(_placeScroll, GUILayout.MaxHeight(260));
+                foreach (int i in _inside)
+                {
+                    // An agent's index IS its citizen id - Simulation.GetAgent(CitizenId) is
+                    // a straight lookup into the same array.
+                    var agent = sim.GetAgent(i);
+                    var citizen = _host.People.Get(new CitizenId(i));
+                    if (citizen == null) continue;
+
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button(citizen.FullName, _button, GUILayout.Height(22)))
+                    {
+                        _host.Selected = citizen.Id;
+                        _host.SelectedPlace = PlaceId.None;
+                    }
+                    GUILayout.Label($"<color=#8a8a86>{Verb(agent.Doing)}</color>", _small,
+                                    GUILayout.Width(96));
+                    GUILayout.EndHorizontal();
+                }
+                GUILayout.EndScrollView();
+            }
+
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
+                _host.SelectedPlace = PlaceId.None;
+
+            GUILayout.EndArea();
+        }
+
+        private readonly System.Collections.Generic.List<int> _inside =
+            new System.Collections.Generic.List<int>();
+        private Vector2 _placeScroll;
+
+        /// <summary>"a diner", "an apartment" - the kind's own name, read out loud.</summary>
+        private static string Article(string kind)
+        {
+            if (string.IsNullOrEmpty(kind)) return "a place";
+            bool vowel = "aeiou".IndexOf(char.ToLowerInvariant(kind[0])) >= 0;
+            return (vowel ? "an " : "a ") + kind;
+        }
+
         private void DrawInspector()
         {
+            var place = _host.SelectedPlaceModel;
+            if (place != null) { DrawPlaceInspector(place); return; }
+
             var citizen = _host.SelectedCitizen;
             if (citizen == null)
             {
@@ -260,7 +391,7 @@ namespace Noir.Unity
                   + "<b>R</b>/<b>Shift+F</b> tilt   ·   <b>WASD</b> move   ·   wheel zoom", _small);
                 GUI.Label(new Rect(16, Screen.height - 40, 900, 22),
                     "<b>Space</b> pause   ·   <b>[</b> <b>]</b> speed   ·   <b>1</b>–<b>6</b> skip to hour   ·   "
-                  + "click anyone   ·   <b>F</b> follow   ·   <b>H</b> for help", _small);
+                  + "click anyone or any building   ·   <b>F</b> follow   ·   <b>H</b> for help", _small);
                 return;
             }
 
