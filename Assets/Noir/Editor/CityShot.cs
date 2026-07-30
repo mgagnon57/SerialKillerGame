@@ -78,6 +78,12 @@ namespace Noir.Editor
                 CityStreets.Build(world, city.transform);
                 CityBuildings.Build(world, city.transform);
                 CityRail.Build(world, city.transform);
+
+                // The lighting rig's own fixtures, exactly as Snapshot does it. Without these
+                // the still has no window panes, no lamps and no lit glass - which is to say it
+                // cannot show whether the night lighting works at all.
+                var fixtures = SunRig.BuildFixtures(world, city.transform);
+                var paneBlock = new MaterialPropertyBlock();
                 CityChunker.Bake(city);
 
                 if (pipeline != null) pipeline.shadowDistance = 320f;
@@ -120,6 +126,9 @@ namespace Noir.Editor
                 sun.enabled = intensity > 0.01f;
                 if (sky != null && sky.HasProperty("_Exposure"))
                     sky.SetFloat("_Exposure", Mathf.Lerp(0.18f, 1.15f, Mathf.Clamp01(intensity)));
+
+                Snapshot.LightUp(world, fixtures, paneBlock, hour, intensity);
+                fixtures.Lights.Reset();
 
                 // Standing in Northgate Avenue looking east, which is the view the game is
                 // actually played from and the only one that says whether this is a street.

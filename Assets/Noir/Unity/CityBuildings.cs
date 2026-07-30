@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Noir.Core.Contracts;
 using Noir.Core.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -44,6 +45,7 @@ namespace Noir.Unity
         {
             var root = new GameObject("CityBuildings");
             root.transform.SetParent(parent, false);
+            _glazing.Clear();
 
 #if UNITY_EDITOR
             // A terrace is only a terrace if its units know they are in one. Neighbours are
@@ -58,7 +60,7 @@ namespace Noir.Unity
             {
                 bool leftEnd = !HasNeighbour(lots, place, -1);
                 bool rightEnd = !HasNeighbour(lots, place, +1);
-                pieces += Townhouse(root.transform, place.Bounds, leftEnd || rightEnd, FacingOf(place));
+                pieces += Townhouse(root.transform, place, place.Bounds, leftEnd || rightEnd, FacingOf(place));
             }
 
             foreach (var place in world.AllPlaces)
@@ -85,7 +87,8 @@ namespace Noir.Unity
                 };
                 if (prefab == null) continue;
 
-                if (Landmark(root.transform, prefab, place.Bounds)) pieces++;
+                var built = Landmark(root.transform, prefab, place.Bounds);
+                if (built != null) { Glazing(built, place); pieces++; }
                 pieces += Fleet(root.transform, place);
             }
 
@@ -165,7 +168,7 @@ namespace Noir.Unity
         /// One stacked townhouse, centred on its lot. Sections pivot at their own base, so the
         /// stack is nothing more cunning than adding the floor height each time.
         /// </summary>
-        private static int Townhouse(Transform parent, TileRect lot, bool end, float yaw)
+        private static int Townhouse(Transform parent, Place place, TileRect lot, bool end, float yaw)
         {
             string family = SquareAt(lot) ? "Squarehouse" : "Bayhouse";
 
@@ -208,12 +211,82 @@ namespace Noir.Unity
             if (Place(house.transform, $"{City}{family}_Roof_A_City.prefab", y) > 0f) n++;
 
             Seat(house, lot, yaw);
+            Glazing(house, place);
             n += Roof(house, lot);
             n += Shopfront(house, lot, yaw);
             return n;
         }
 
         private static List<string> _roofKit, _neon, _pipes;
+
+        // ---- glazing ----
+        //
+        // Which renderers carry a bought building's windows, per place, so SunRig can light them
+        // when somebody is home. Filled as the city is built and read once when the rig starts.
+        private static readonly Dictionary<int, List<MeshRenderer>> _glazing =
+            new Dictionary<int, List<MeshRenderer>>();
+
+        private static Material _glassDay, _glassNight;
+
+        /// <summary>Hand SunRig the glass belonging to one place.</summary>
+        public static void CollectGlazing(Place place, List<MeshRenderer> into, List<PlaceId> places)
+        {
+            if (!_glazing.TryGetValue(place.Id.Value, out var mine)) return;
+            foreach (var r in mine)
+            {
+                if (r == null) continue;
+                into.Add(r);
+                places.Add(place.Id);
+            }
+        }
+
+        /// <summary>
+        /// Switch one piece of glass between the pack's day and night materials.
+        ///
+        /// A swap rather than an emission tweak, because these are the pack's OWN materials and
+        /// the night one is already the warm orange of a lit room. Nothing here invents a look;
+        /// it picks between two the artist already drew.
+        /// </summary>
+        public static void SetGlazing(MeshRenderer r, bool lit)
+        {
+            if (r == null || _glassDay == null || _glassNight == null) return;
+
+            var want = lit ? _glassNight : _glassDay;
+            var slots = r.sharedMaterials;
+            bool change = false;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] != _glassDay && slots[i] != _glassNight) continue;
+                if (slots[i] == want) continue;
+                slots[i] = want;
+                change = true;
+            }
+            if (change) r.sharedMaterials = slots;
+        }
+
+#if UNITY_EDITOR
+        /// <summary>Note any renderer on this building that carries glass we can light.</summary>
+        private static void Glazing(GameObject house, Place place)
+        {
+            _glassDay ??= AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/polyperfect/Poly Universal Pack/Materials/M_Universal_Glass.mat");
+            _glassNight ??= AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/polyperfect/Poly Universal Pack/Materials/M_Universal_Glass_Night.mat");
+            if (_glassDay == null || _glassNight == null) return;
+
+            foreach (var r in house.GetComponentsInChildren<MeshRenderer>())
+            {
+                bool glass = false;
+                foreach (var m in r.sharedMaterials)
+                    if (m == _glassDay || m == _glassNight) { glass = true; break; }
+                if (!glass) continue;
+
+                if (!_glazing.TryGetValue(place.Id.Value, out var mine))
+                    _glazing[place.Id.Value] = mine = new List<MeshRenderer>();
+                mine.Add(r);
+            }
+        }
+#endif
 
         private const string CarsCity = "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars/Cars City/";
         private const string CarsTrucks = "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars/Cars Trucks/";
@@ -440,17 +513,17 @@ namespace Noir.Unity
         }
 
         /// <summary>A whole building, centred on its lot and turned to face the long way.</summary>
-        private static bool Landmark(Transform parent, string path, TileRect lot)
+        private static GameObject Landmark(Transform parent, string path, TileRect lot)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (prefab == null) { Debug.LogWarning("[city] missing " + path); return false; }
+            if (prefab == null) { Debug.LogWarning("[city] missing " + path); return null; }
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
             Reglaze(go);
 
             var rends = go.GetComponentsInChildren<Renderer>();
-            if (rends.Length == 0) return false;
+            if (rends.Length == 0) return null;
 
             var b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
@@ -470,7 +543,7 @@ namespace Noir.Unity
             go.transform.position = new Vector3(want.x - drift.x,
                                                 go.transform.position.y - (b.min.y - go.transform.position.y),
                                                 want.z - drift.z);
-            return true;
+            return go;
         }
 #endif
     }

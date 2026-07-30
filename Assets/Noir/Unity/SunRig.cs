@@ -60,6 +60,10 @@ namespace Noir.Unity
             public readonly List<MeshRenderer> Panes = new List<MeshRenderer>();
             public readonly List<PlaceId> PanePlaces = new List<PlaceId>();
 
+            /// <summary>Glass that came with a bought building, lit by swapping its material.</summary>
+            public readonly List<MeshRenderer> Glazing = new List<MeshRenderer>();
+            public readonly List<PlaceId> GlazingPlaces = new List<PlaceId>();
+
             public Fixtures(Transform parent) { Lights = new LightPool(parent); }
         }
 
@@ -190,6 +194,16 @@ namespace Noir.Unity
                 Mathf.Max(6f, Mathf.Max(place.Bounds.W, place.Bounds.H) * 1.4f),
                 place.Id.Value));
             into.WindowPlaces.Add(place.Id);
+
+            // THE POINT LIGHT STAYS, THE PANES DO NOT. A bought building has its own glass in
+            // its own walls; these panes are quads positioned against the PROCEDURAL walls,
+            // which for these places are no longer built. They were left hanging in the air in
+            // front of the terraces like lit paintings.
+            if (CityBuildings.Handles(place))
+            {
+                CityBuildings.CollectGlazing(place, into.Glazing, into.GlazingPlaces);
+                return;
+            }
 
             BuildWindowPanes(world, place, parent, into.Panes, into.PanePlaces);
         }
@@ -518,6 +532,15 @@ namespace Noir.Unity
             }
 
             var lights = _fixtures.Lights;
+            // A bought building's own glass, switched between the pack's day and night
+            // materials. Same occupancy test as a pane: the window is lit because somebody is
+            // in and awake, which is the only reason a window is ever lit in this game.
+            for (int i = 0; i < _fixtures.Glazing.Count; i++)
+            {
+                bool on = level > 0.02f && _occupied.Contains(_fixtures.GlazingPlaces[i].Value);
+                CityBuildings.SetGlazing(_fixtures.Glazing[i], on);
+            }
+
             for (int i = 0; i < _fixtures.Lamps.Count; i++)
                 lights.SetIntensity(_fixtures.Lamps[i], level * LampIntensity);
 
