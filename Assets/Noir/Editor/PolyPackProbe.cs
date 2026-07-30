@@ -15,6 +15,7 @@ namespace Noir.Editor
     {
         private const string Parts = "Assets/polyperfect/Poly Universal Pack/Prefabs/Modular Parts/";
         private const string City = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings Modular City/";
+        private const string Rails = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Rails City/";
 
         private static readonly string[] Interesting =
         {
@@ -62,6 +63,16 @@ namespace Noir.Editor
             Parts + "Roads/Mainroad_Paved_Straight_10x10m.prefab",
             Parts + "Roads/Sidewalk_Paved_10x10m.prefab",
             Parts + "Roads/Sidewalk_Paved_5x5m.prefab",
+
+            // The elevated railway. If the straight is a 10m tile like the roads it drops
+            // straight into the grid the city is already built on.
+            Rails + "Rails_Overground_Striaght_City.prefab",
+            Rails + "Rails_Overground_Turn_City.prefab",
+            Rails + "Rails_Overground_End_City.prefab",
+            Rails + "Rails_Overground_Pillar_City.prefab",
+            Rails + "Rails_Overground_Station_A_City.prefab",
+            Rails + "Train_Overground_Clean_City.prefab",
+            Rails + "Carriage_Overground_Clean_City.prefab",
         };
 
         [MenuItem("Noir/Probe Poly Pack")]

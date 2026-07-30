@@ -74,6 +74,7 @@ namespace Noir.Editor
                 city = new GameObject("CityAll");
                 CityStreets.Build(world, city.transform);
                 CityBuildings.Build(world, city.transform);
+                CityRail.Build(world, city.transform);
                 CityChunker.Bake(city);
 
                 if (pipeline != null) pipeline.shadowDistance = 320f;

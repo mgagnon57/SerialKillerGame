@@ -665,3 +665,23 @@ kind tower
   shifts    one
   catchment no
   describe  yes
+
+# ---- the elevated railway ---------------------------------------------------
+# A corridor rather than a building: the renderer lays track along its long axis,
+# on pillars, ten metres over whatever is underneath. Authored as a place so the
+# line lives in the map like everything else rather than as a constant in C#.
+kind railway
+  words     railway rail el
+  form      open
+  ground    path
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes

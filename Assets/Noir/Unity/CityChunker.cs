@@ -41,12 +41,26 @@ namespace Noir.Unity
             var materials = new List<Material>();
             var index = new Dictionary<Material, int>();
 
+            // EXACTLY the renderers whose triangles ended up in a baked mesh. Deciding what to
+            // destroy from the same test that decided what to bake is not enough: the bake also
+            // needs the mesh to be READABLE, and an unreadable one was being skipped by the
+            // grouping loop and then deleted anyway by the removal loop. The elevated railway
+            // vanished that way - placed, logged, and quietly thrown away a moment later.
+            var consumed = new HashSet<GameObject>();
+
             foreach (var r in before)
             {
                 if (!Combinable(r)) continue;
 
                 var f = r.GetComponent<MeshFilter>();
-                if (f == null || f.sharedMesh == null || !f.sharedMesh.isReadable) continue;
+                if (f == null || f.sharedMesh == null) continue;
+                if (!f.sharedMesh.isReadable)
+                {
+                    Debug.LogWarning($"[chunker] '{r.name}' is not Read/Write enabled, so it is "
+                                   + "left alone. Run Noir/Make City Meshes Readable.");
+                    continue;
+                }
+                consumed.Add(r.gameObject);
 
                 var at = r.bounds.center;
                 int cx = Mathf.FloorToInt(at.x / Chunk), cz = Mathf.FloorToInt(at.z / Chunk);
@@ -106,7 +120,7 @@ namespace Noir.Unity
             int removed = 0;
             foreach (var r in before)
             {
-                if (r == null || !Combinable(r)) continue;
+                if (r == null || !consumed.Contains(r.gameObject)) continue;
                 if (r.transform.IsChildOf(baked.transform)) continue;
                 Object.DestroyImmediate(r.gameObject);
                 removed++;

@@ -139,6 +139,7 @@ namespace Noir.Unity
             city.transform.SetParent(_village.transform, false);
             CityStreets.Build(World, city.transform);
             CityBuildings.Build(World, city.transform);
+            CityRail.Build(World, city.transform);
 
             // Assembled out of pieces, drawn as a handful of meshes.
             CityChunker.Bake(city);

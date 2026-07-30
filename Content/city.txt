@@ -55,8 +55,6 @@ place apartment 64,26 6x8 "9 Northgate"
   door 67,33
 place apartment 70,26 6x8 "11 Northgate"
   door 73,33
-place apartment 76,26 6x8 "13 Northgate"
-  door 79,33
 
 # ---- homes: the terrace south of Northgate Avenue ------------------------
 place apartment 40,46 6x8 "2 Northgate"
@@ -71,8 +69,6 @@ place apartment 64,46 6x8 "10 Northgate"
   door 67,46
 place apartment 70,46 6x8 "12 Northgate"
   door 73,46
-place apartment 76,46 6x8 "14 Northgate"
-  door 79,46
 
 # ---- homes: Franklin Avenue, north side ----------------------------------
 place apartment 40,76 6x8 "1 Franklin"
@@ -87,8 +83,6 @@ place apartment 64,76 6x8 "9 Franklin"
   door 67,83
 place apartment 70,76 6x8 "11 Franklin"
   door 73,83
-place apartment 76,76 6x8 "13 Franklin"
-  door 79,83
 
 # ---- homes: Franklin Avenue, south side ----------------------------------
 place apartment 40,96 6x8 "2 Franklin"
@@ -103,8 +97,6 @@ place apartment 64,96 6x8 "10 Franklin"
   door 67,96
 place apartment 70,96 6x8 "12 Franklin"
   door 73,96
-place apartment 76,96 6x8 "14 Franklin"
-  door 79,96
 
 # ---- the civic block, east of Second Street ------------------------------
 place hospital 92,46 40x27 "Northgate General"
@@ -158,3 +150,10 @@ place green 0,90 30x30 "Franklin Park"
 
 place green 124,0 34x24 "the north green"
   human Nobody planted it; it is simply the piece nothing was built on.
+
+# ---- the elevated railway ------------------------------------------------
+# Straight over Second Street, which is what an El is: the street stays a street
+# and the line runs ten metres above it on pillars. Runs the full height of the
+# map so it reads as passing through rather than terminating here.
+place railway 80,0 10x120 "the Elevated"
+  human It goes over the top of everything and you hear it before you see it.

@@ -39,6 +39,7 @@ namespace Noir.Editor
                 probe = new GameObject("ReadableProbe");
                 CityStreets.Build(world, probe.transform);
                 CityBuildings.Build(world, probe.transform);
+                CityRail.Build(world, probe.transform);
 
                 // Which model asset each placed mesh came from.
                 var models = new SortedSet<string>(StringComparer.Ordinal);
