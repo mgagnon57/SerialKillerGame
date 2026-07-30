@@ -1,6 +1,81 @@
 ﻿# Where we are
 
-## RESUME HERE — 2026-07-31. The farm, made farmy.
+## RESUME HERE — 2026-07-31, later. A town in the middle of a 960m map.
+
+Four things, in order.
+
+### Vehicles are chosen by road class
+
+Every vehicle came from one list, so a four-lane arterial carried the same traffic as a farm
+track. The pack has **69 trucks** and one had ever been placed. Fleets are now per class —
+**91** vehicles for a freeway (box, container, cistern, dump, logging, garbage, sleepercab), 43
+for a main road, 26 for a track (pickups, old vans, the farm truck, a tractor).
+
+The emergency fleet was never excluded: `Fleet()` already puts police at the precinct, an
+ambulance at the hospital, an engine at Engine 9, a bus at the school, a tanker at the pumps.
+
+**Racing stays out.** The Racetrack folder is a modular kit of 25 road pieces, not a built track,
+so using the 79 racing cars is a decision about land.
+
+### The map is 960 × 960, and the roads came before the buildings
+
+Fourteen roads, **38 signalised junctions, 262 lane segments, 518 legal turns.** Nothing is built
+on the new ground on purpose — it is the skeleton a town grows on.
+
+Two cost decisions made it buildable:
+
+- **The far ground is `field`, not `grass`** — 0.4% tree density against 1.2%, which over 790,000
+  new tiles is three thousand objects instead of nine.
+- **A roadside is hedged, not post-and-railed.** `PropGenerator` fenced every field-edge tile, and
+  a road through farmland puts an edge down both verges for its whole length: thirteen kilometres
+  here, which at 55% is **fourteen thousand individual fence posts**. A hedge is drawn as a *run*.
+
+Watch the chunker: **1,724** renderers, up from 534. That is about where the village sat for a map
+a fiftieth of the size, and it is why the far country is bare.
+
+### "No vehicles at all" was a real bug
+
+They existed — sixteen, spread over a 960m map, which is the same as none. But underneath:
+**the traffic budget multiplied by `Homes.Count`, which counts BUILDINGS.** A terrace is one
+building with four front doors; a block of flats is one with a dozen. Anything scaled off the
+building count treats a tower block as a cottage. `WorldModel.Households` counts the units inside.
+
+That alone was not enough, because `units` defaults to 1 and no apartment said otherwise —
+twenty-seven four-storey townhouses were twenty-seven homes. They are **six flats each** now.
+
+| | before | after |
+|---|---|---|
+| Households | 27 | **162** |
+| People | 57 | **365** |
+| Vehicles | 16 | **97** |
+
+`units` on any home place is the lever for both, and traffic follows it automatically.
+
+### The town is the centre now
+
+All 61 places shifted +360 in both axes **by script**, so every internal relationship survived
+intact. The network radiates from the centre square (360..720): the town's own pairs through the
+middle, a ring at 255 and 795, the outer at 105 and 915.
+
+**The rings are not mirrored and cannot be** — the farm and shelter belt reach to 720 on the south
+and east, so a ring placed at 705 for symmetry would run through the big barn. The reason is
+written beside the roads in `city.txt`.
+
+### Still to do
+
+1. **The Survival pack is scanned and unused.** Best-matched pack in the project for this game:
+   `Tree_Stand` (a hunting platform — for a game about someone watching people), `Bear_Trap`,
+   `Cross_Wood` for a roadside memorial, `Road_Flare`, three signposts, abandoned suitcases and
+   bedrolls, storm lanterns, a radio transceiver. Deliberately not placed: where a bear trap goes
+   is a story decision, not a scatter rule.
+2. Vines (19) still unplaced — they want the derelict walls at Wicker End.
+3. Buildings on the new ground. Traffic and population already scale to whatever is added.
+4. Bus routes — the lane graph is public on `CityTraffic.Graph` for exactly this.
+5. A racetrack, if the land is worth spending.
+
+---
+
+## 2026-07-31. The farm, made farmy.
 
 Every field was wheat, laid as tiles. The pack's Crops folder is **166 prefabs** and holds a dozen
 crops with growth stages and row-plant variants — potato, beetroot, carrot, parsnip, sunflower,
