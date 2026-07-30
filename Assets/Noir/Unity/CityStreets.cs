@@ -33,6 +33,77 @@ namespace Noir.Unity
         /// <summary>The road kit's tile. Everything here is a multiple of it.</summary>
         public const int Cell = 10;
 
+        private static float _carriageway = -1f;
+
+        /// <summary>
+        /// Half the width of the actual TARMAC, measured off the road tile.
+        ///
+        /// The tile is ten metres square and carries three materials - M_Road_Paved,
+        /// M_Sidewalk_Paved and M_Universal_A - so ten metres is carriageway AND pavement, not
+        /// carriageway. That is why the streets came out with kerbs without anybody placing a
+        /// kerb, and it is why every offset picked "off the centre of the road" was wrong: it
+        /// was measured from the centre of a tile that is mostly not road.
+        ///
+        /// Everything that stands on or drives down a street now derives from this one number,
+        /// so there is no second place to get it wrong.
+        /// </summary>
+        public static float Carriageway
+        {
+            get
+            {
+#if UNITY_EDITOR
+                if (_carriageway > 0f) return _carriageway;
+                _carriageway = Cell / 2f - 2f;   // fallback if the mesh cannot be read
+
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    Parts + "Mainroad_Paved_Straight_10x10m.prefab");
+                if (prefab == null) return _carriageway;
+
+                var mf = prefab.GetComponentInChildren<MeshFilter>();
+                var mr = prefab.GetComponentInChildren<MeshRenderer>();
+                if (mf == null || mf.sharedMesh == null || mr == null) return _carriageway;
+                if (!mf.sharedMesh.isReadable) return _carriageway;
+
+                var mesh = mf.sharedMesh;
+                var verts = mesh.vertices;
+                for (int s = 0; s < mesh.subMeshCount && s < mr.sharedMaterials.Length; s++)
+                {
+                    var m = mr.sharedMaterials[s];
+                    if (m == null || m.name.IndexOf("Road_Paved", System.StringComparison.Ordinal) < 0)
+                        continue;
+
+                    float reach = 0f;
+                    foreach (var t in mesh.GetTriangles(s))
+                    {
+                        // The tile spans x[-10,0], so measure out from its own centre at -5.
+                        float off = Mathf.Abs(verts[t].x + Cell / 2f);
+                        if (off > reach) reach = off;
+                    }
+                    if (reach > 0.5f) _carriageway = reach;
+                    break;
+                }
+
+                Debug.Log($"[streets] carriageway measured at {_carriageway:0.00}m either side of "
+                        + $"the centre line ({Cell}m tile, so {Cell / 2f - _carriageway:0.00}m of "
+                        + "pavement each side).");
+#endif
+                return _carriageway;
+            }
+        }
+
+        /// <summary>
+        /// Where a car drives: the middle of its own half of the carriageway.
+        ///
+        /// A 6m road is two 3m lanes and NOTHING ELSE. There is no kerbside parking on these
+        /// streets any more, because the measurement says there is no room for it: park a car
+        /// against the kerb and it is either in a running lane or on the pavement, and both of
+        /// those are what this whole exercise was about.
+        /// </summary>
+        public static float LaneOffset => Carriageway * 0.5f;
+
+        /// <summary>The middle of the pavement, for anything that stands rather than drives.</summary>
+        public static float VergeOffset => (Cell / 2f + Carriageway) * 0.5f;
+
         public static GameObject Build(WorldModel world, Transform parent)
         {
             var root = new GameObject("CityStreets");
@@ -127,7 +198,7 @@ namespace Noir.Unity
                     // Every road in the city runs edge to edge, so the only cases are a straight
                     // and a crossing. Turns and T-pieces exist in the kit and are not needed
                     // until a road stops somewhere.
-                    string piece = ew && ns ? "Road_Paved_X_10x10m" : "Road_Paved_Straight_10x10m";
+                    string piece = ew && ns ? "Road_Paved_X_10x10m" : "Mainroad_Paved_Straight_10x10m";
                     float yaw = ew && ns ? 0f : (ew ? 90f : 0f);
 
                     if (Put(root.transform, Parts + piece + ".prefab", at, yaw) != null) tiles++;
@@ -258,7 +329,11 @@ namespace Noir.Unity
             // pavement is outside it and the carriageway inside.
             for (int side = 0; side < 2; side++)
             {
-                float kerb = side == 0 ? -0.9f : -Cell + 0.9f;   // near and far pavement
+                // Just OUTSIDE the tarmac, which is the pavement. Measured, not guessed: at a
+                // fixed 0.9m from the tile edge a lamp stood in the road on a wide carriageway
+                // and in a garden on a narrow one.
+                float verge = Cell / 2f - VergeOffset;
+                float kerb = side == 0 ? -verge : -Cell + verge;
                 float facing = side == 0 ? 180f : 0f;
 
                 for (int step = 0; step < 3; step++)
@@ -285,17 +360,10 @@ namespace Noir.Unity
                     if (Put(parent, Pick(role, cx + step, cy + side, 223), spot, yaw) != null) n++;
                 }
 
-                // A parking bay against the kerb, pointing the way the road runs. NOT filled
-                // here: every bay in the town is collected first and only a budgeted number of
-                // them get a car, so the traffic is a property of how many people live here
-                // rather than of how much tarmac was laid.
-                {
-                    float lane = side == 0 ? -2.6f : -Cell + 2.6f;
-                    var bay = ew
-                        ? at + new Vector3(-Cell / 2f, 0f, lane)
-                        : at + new Vector3(lane, 0f, -Cell / 2f);
-                    bays.Add((bay, (ew ? 90f : 0f) + (side == 0 ? 0f : 180f)));
-                }
+                // NO KERBSIDE PARKING. The carriageway measures 6m, which is two lanes and
+                // nothing over; a parked car would stand either in a running lane or on the
+                // pavement. The town's vehicles are the moving ones plus the fleet outside the
+                // buildings they belong to, which is enough traffic for a place this size.
             }
 
             // One traffic sign per block, on the near kerb, facing the traffic.

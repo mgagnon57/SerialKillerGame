@@ -38,11 +38,14 @@ namespace Noir.Unity
         private const float Speed = 7f;
 
         /// <summary>
-        /// How far off the road's centre line a lane sits. The carriageway inside the kerbs is
-        /// about 8m of the 10m tile, so 2.2m puts a car squarely in its own half with a metre
-        /// of margin to the kerb.
+        /// How far off the road's centre line a moving lane sits - MEASURED, via CityStreets,
+        /// from the tarmac submesh of the road tile.
+        ///
+        /// Every previous number here was picked by eye off the centre of the TILE, and a tile
+        /// is carriageway plus pavement. Parked cars sat 2.6m from the tile edge and moving ones
+        /// 2.8m, which is to say the traffic drove through the parking.
         /// </summary>
-        private const float Lane = 2.2f;
+        private static float Lane => CityStreets.LaneOffset;
 
         /// <summary>How far ahead a car looks, and how wide that look is.</summary>
         private const float LookAhead = 7f, LookWide = 3.2f;
