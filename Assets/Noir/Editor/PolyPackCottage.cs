@@ -128,6 +128,21 @@ namespace Noir.Editor
                 // Straight on to the front, where the door and windows are.
                 Frame(camGo, pad + Vector3.up * 1.5f, 15f, 6f, yaw: 0f);
                 Capture(cam, Path.Combine(OutputDir, "compare-polypack-front.png"));
+
+                // ---- shot C: the same cottage with colour in it ----
+                // The muted palette was never argued for anywhere in the codebase, so the two
+                // are worth seeing side by side rather than debated.
+                UnityEngine.Object.DestroyImmediate(cottage);
+                PolyPackCottageBuilder.Painted = true;
+                cottage = PolyPackCottageBuilder.Assemble(origin);
+                PolyPackCottageBuilder.Painted = false;
+
+                Frame(camGo, pad + Vector3.up * 1.5f, 15f, 6f, yaw: 0f);
+                Capture(cam, Path.Combine(OutputDir, "compare-painted-front.png"));
+                Frame(camGo, pad + Vector3.up * 1.5f, 13f, 10f);
+                Capture(cam, Path.Combine(OutputDir, "compare-painted-close.png"));
+                Frame(camGo, pad, 26f, 30f);
+                Capture(cam, Path.Combine(OutputDir, "compare-painted.png"));
             }
             catch (Exception ex)
             {

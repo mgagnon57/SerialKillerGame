@@ -42,6 +42,13 @@ namespace Noir.Unity
         private const float WindowMid = 1.55f;
 
         /// <summary>
+        /// Limewash, terracotta and a red door, instead of render and slate. A comparison, not a
+        /// decision: the muted palette was never argued for anywhere in the codebase, so this is
+        /// here to be looked at rather than reasoned about.
+        /// </summary>
+        public static bool Painted = false;
+
+        /// <summary>
         /// One cottage, origin at its south-west ground corner. Walls pivot on their right edge
         /// at ground level, so each face is laid out by walking segments along it.
         /// </summary>
@@ -60,12 +67,28 @@ namespace Noir.Unity
             // every vertex of a panel lands on one palette texel - and under those materials a
             // wall came out invisible. Materials3D.Stone is the one untextured member of the set
             // and it was the one piece that rendered correctly, which is the whole argument.
-            var wall = Flat("PackWall", new Color32(0xC6, 0xB8, 0xA6, 0xFF));
-            var roof = Flat("PackRoofSlate", new Color32(0x6B, 0x70, 0x79, 0xFF));
-            var timber = Flat("PackTimber", new Color32(0x6E, 0x5A, 0x46, 0xFF));
+            // Two palettes, because "muted" turned out never to have been decided. Nothing in
+            // Materials3D argues for it - the village is desaturated by accretion, one
+            // individually low-saturation colour at a time. The single properly saturated thing
+            // in the whole palette is the postbox at 8E1F1C, which is saturated precisely
+            // BECAUSE it is meant to catch the eye. That is the principle worth keeping: colour
+            // rationed so it still means something, not colour absent.
+            var wall = Painted
+                ? Flat("PaintedWall", new Color32(0xE9, 0xDE, 0xC6, 0xFF))   // limewash
+                : Flat("PackWall", new Color32(0xC6, 0xB8, 0xA6, 0xFF));
+            var roof = Painted
+                ? Flat("PaintedRoof", new Color32(0xA8, 0x58, 0x3C, 0xFF))   // terracotta pantile
+                : Flat("PackRoofSlate", new Color32(0x6B, 0x70, 0x79, 0xFF));
+            // A painted front door is the most English thing a cottage owns, and Ashcombe already
+            // has the right red on the shelf - the postbox's.
+            var timber = Painted
+                ? Flat("PaintedDoor", new Color32(0x8E, 0x1F, 0x1C, 0xFF))
+                : Flat("PackTimber", new Color32(0x6E, 0x5A, 0x46, 0xFF));
             // Window casings are the pale painted joinery that does most of the work in the
             // publisher's own farmhouse, so they are lighter than the render, not darker.
-            var casing = Flat("PackCasing", new Color32(0xDE, 0xD6, 0xC6, 0xFF));
+            var casing = Painted
+                ? Flat("PaintedCasing", new Color32(0xF4, 0xEF, 0xE6, 0xFF))
+                : Flat("PackCasing", new Color32(0xDE, 0xD6, 0xC6, 0xFF));
             var stone = Materials3D.Stone;
             var glass = Materials3D.WindowGlass;
 
