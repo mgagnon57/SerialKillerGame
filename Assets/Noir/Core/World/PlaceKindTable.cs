@@ -68,6 +68,21 @@ namespace Noir.Core.World
         /// <summary>Walls, a floor and a door - as against open ground with a boundary.</summary>
         public readonly bool IsBuilding;
 
+        /// <summary>
+        /// Whether people LIVE here, and therefore whether households are made in it.
+        ///
+        /// This is the column that stops the open-kind promise being half true. Core swore that
+        /// a kind the enum never heard of "works everywhere without a line of C#", and it very
+        /// nearly did - but PopulationGenerator and DayPlan both asked for PlaceKind.Dwelling by
+        /// its ENUM MEMBER, so a city of `apartment` came out with forty homes and nobody in a
+        /// single one of them. Being a home is a property of the kind, not of which kinds
+        /// happened to be known when the enum was written.
+        ///
+        /// It defaults to "is this the Dwelling member" when a row does not say, so a table
+        /// written before this column existed behaves exactly as it did.
+        /// </summary>
+        public readonly bool IsHome;
+
         /// <summary>What open ground of this kind is made of. Grass unless it says otherwise.</summary>
         public readonly Terrain Ground;
 
@@ -141,12 +156,14 @@ namespace Noir.Core.World
                             string massing, bool roofed, string frontage, PlacePropStyle props,
                             bool hasCounter, int serviceMinutes, int serviceSpread,
                             IReadOnlyList<OpenWindow> hours, int jobs, IReadOnlyList<string> roles,
-                            bool splitShifts, bool isCatchment, bool wantsDescription)
+                            bool splitShifts, bool isCatchment, bool wantsDescription,
+                            bool isHome = false)
         {
             Kind = kind;
             Name = name;
             Words = words;
             IsBuilding = isBuilding;
+            IsHome = isHome;
             Ground = ground;
             Rooms = rooms;
             Grammar = grammar;
@@ -329,6 +346,7 @@ namespace Noir.Core.World
 
             public List<string> Words;
             public bool? IsBuilding;
+            public bool? IsHome;
             public Terrain? Ground;
             public RoomPlan? Rooms;
             public string Grammar;
@@ -356,6 +374,11 @@ namespace Noir.Core.World
                         ContentText.Require(tokens, 2, File, lineNo, "words <name> [<name> ...]");
                         Words = new List<string>();
                         for (int t = 1; t < tokens.Count; t++) Words.Add(tokens[t].ToLowerInvariant());
+                        break;
+
+                    case "home":
+                        ContentText.Require(tokens, 2, File, lineNo, "home yes|no");
+                        IsHome = ContentText.YesNo(tokens[1], File, lineNo);
                         break;
 
                     case "form":
@@ -648,7 +671,11 @@ namespace Noir.Core.World
                                     d.ServiceMinutes, d.ServiceSpread,
                                     d.Hours.ToArray(), d.Jobs.Value, d.Roles.ToArray(),
                                     d.SplitShifts.Value, d.IsCatchment.Value,
-                                    d.WantsDescription.Value);
+                                    d.WantsDescription.Value,
+                                    // Unstated means "the way it was before this column existed",
+                                    // which is that Dwelling and nothing else is a home. A table
+                                    // written against the old schema therefore behaves identically.
+                                    d.IsHome ?? (kind == PlaceKind.Dwelling));
         }
 
         private static void Need(Draft d, bool present, string attribute)

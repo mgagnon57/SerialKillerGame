@@ -52,7 +52,9 @@ namespace Noir.Core.People
             var citizens = new List<Citizen>();
             var households = new List<Household>();
 
-            var dwellings = world.PlacesOfKind(PlaceKind.Dwelling);
+            // Every place people live in, not every place of the Dwelling ENUM MEMBER: a city of
+            // apartments has no Dwellings at all and came out with nobody in it.
+            var dwellings = world.Homes;
             var usedSurnames = new HashSet<string>();
 
             // ---- 1. households, one per home ----

@@ -89,6 +89,33 @@ namespace Noir.Core.World
         public IReadOnlyList<PlaceId> PlacesOfKind(PlaceKind kind) =>
             (int)kind < _byKind.Length ? _byKind[(int)kind] : NoPlaces;
 
+        private PlaceId[] _homes;
+
+        /// <summary>
+        /// Every place people live in, whatever it is called.
+        /// </summary>
+        /// <remarks>
+        /// Ask for this rather than for PlacesOfKind(PlaceKind.Dwelling). A kind the enum has
+        /// never heard of is numbered after its members, so asking for the member by name finds
+        /// cottages and misses apartments - which is how a city came to be built with forty
+        /// homes in it and nobody living in any of them. Being a home is a property of the kind
+        /// table now; see PlaceKindRow.IsHome.
+        /// </remarks>
+        public IReadOnlyList<PlaceId> Homes
+        {
+            get
+            {
+                if (_homes != null) return _homes;
+
+                var kinds = PlaceKindTable.Current;
+                var found = new List<PlaceId>();
+                for (int i = 0; i < _places.Length; i++)
+                    if (kinds.Row(_places[i].Kind).IsHome) found.Add(_places[i].Id);
+
+                return _homes = found.ToArray();
+            }
+        }
+
         public int RoomCount => _rooms.Length;
         public IReadOnlyList<Room> AllRooms => _rooms;
 

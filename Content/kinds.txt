@@ -24,6 +24,12 @@
 #
 #  words      what village.txt may call it. The first is the canonical name.
 #  form       building (walls, floor, a door) or open (bounded ground).
+#  home       whether people LIVE here, and so whether households are made in it.
+#             Optional, and unstated means "dwelling and nothing else", which is how
+#             it behaved before the column existed. It exists because Core used to
+#             ask for PlaceKind.Dwelling by its ENUM MEMBER, so a city of
+#             `apartment` was built with forty homes and nobody in one of them -
+#             the open-kind promise held everywhere except the one place it mattered.
 #  ground     what open ground is made of. Only for `form open`.
 #  rooms      none, or auto - however many the grammar thinks a building of
 #             this sort needs. A stated range is refused until a grammar takes
@@ -56,6 +62,7 @@
 kind dwelling
   words     dwelling house cottage
   form      building
+  home      yes
   rooms     auto
   grammar   domestic
   roof      yes
@@ -389,6 +396,7 @@ kind allotments
 kind apartment
   words     apartment flat townhouse
   form      building
+  home      yes
   rooms     auto
   grammar   domestic
   roof      yes

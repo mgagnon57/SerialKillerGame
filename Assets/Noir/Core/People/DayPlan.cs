@@ -547,7 +547,7 @@ namespace Noir.Core.People
         /// </summary>
         private static IReadOnlyList<PlaceId> NeighboursOf(WorldModel world, Citizen who)
         {
-            var all = world.PlacesOfKind(PlaceKind.Dwelling);
+            var all = world.Homes;
             var others = new List<PlaceId>(all.Count);
             foreach (var id in all)
                 if (id.Value != who.Home.Value) others.Add(id);
