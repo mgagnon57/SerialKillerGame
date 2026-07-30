@@ -33,10 +33,22 @@ namespace Noir.Editor
             Parts + "Chimneys/Chimney_3m_A_Fantasy.prefab",
             Parts + "Chimneys/Chimney_Top_A_Fantasy.prefab",
             Parts + "Doors/Doors Fantasy/Door_Single_A_Regular_Fantasy.prefab",
-            Parts + "Doors/Doors Fantasy/Door_Single_C_Regular_Fantasy.prefab",
+            Parts + "Doors/Doors City/Door_Single_A_Regular_City.prefab",
             Parts + "Windows/Windows Fantasy/Window_Wood_Small_A_Fantasy.prefab",
-            Parts + "Windows/Windows Fantasy/Window_A_Fantasy.prefab",
-            Parts + "Windows/Windows Fantasy/Window_Wood_Small_Shutter_Fantasy.prefab",
+            Parts + "Windows/Windows City/Window_A_City.prefab",
+            Parts + "Windows/Windows City/Window_B_City.prefab",
+
+            // The dressing layer: eaves, rakes and gutters, none of which the bare cottage uses.
+            Parts + "Roofs/Roof Regular/Roof_Regular_2m_Edge.prefab",
+            Parts + "Roofs/Roof Regular/Roof_Regular_2m_Front.prefab",
+            Parts + "Roofs/Roof Regular/Roof_Regular_Edge_Corner_A.prefab",
+            Parts + "Roofs/Roof Regular/Roof_Regular_Edge_Corner_B.prefab",
+            Parts + "Roofs/Gutter/Gutter_Regular_2m.prefab",
+            Parts + "Roofs/Gutter/Gutter_Regular_End.prefab",
+            Parts + "Roofs/Gutter/Gutter_Regular_Corner.prefab",
+            Parts + "Roofs/Gutter/Gutter_Pipe_3m.prefab",
+            Parts + "Roofs/Gutter/Gutter_Pipe_Top_Regular.prefab",
+            Parts + "Roofs/Gutter/Gutter_Pipe_Bottom.prefab",
         };
 
         [MenuItem("Noir/Probe Poly Pack")]

@@ -72,6 +72,43 @@ failure rather than an error, so each needs to be encoded rather than rediscover
    `Horizontal A/B` and `Vertical A/B/C` wall families are all available and read differently.
    Pick deliberately and consistently before building the catalog.
 
+8. **There is no exterior trim in the kit.** `Walls/Trims/` is entirely `_Int_` — skirting and
+   ceiling coving. The white casing round a window in the publisher's own farmhouse is part of
+   the *window prefab*, so choosing the family IS how you get trim. Swapping Fantasy for City
+   is what turned the prototype from a shed with holes into something that reads as a house.
+
+9. **Repaint by the original material's name, not by piece.** A window is a frame submesh plus
+   a pane submesh, and the kit names the second one for what it is. Painting every slot the
+   same colour turns a window into a dark slab — a frame with no glass reads as a hole. Keep
+   anything the pack called glass as glass.
+
+10. **Inserts keep their own height.** A City window carries its sill at 0.54m and its head at
+    2.65m. Steer inserts onto the opening in x and z only; re-centring them on a guessed
+    mid-height slides them off the hole they were cut for.
+
+## The dressing layer
+
+Eaves, barge boards, gutters and a downpipe are what the eye reads as "a built house" rather
+than "a shape", and none of them is structural. The bare prototype used only flat slope tiles,
+so the roof stopped dead at the wall with no overhang and no shadow line under it — the single
+biggest difference from the publisher's dressed farmhouse.
+
+Adding them is cheap, because the pivots cooperate: an `_Edge` piece occupies the half metre
+*outside* the eave line exactly where the slope tile occupies the two metres inside it, so eaves
+take the same position and rotation as the tile they hang off. Gutters pivot on their **left**
+edge, unlike walls and roofs. Barge boards (`_Front`) have the same one-handedness problem as
+the gable and need the same reflection.
+
+**This doubles the piece count: 26 → 49 for one cottage.** Which makes the draw-call question
+below sharper, not softer — a hundred dressed buildings is on the order of five thousand
+renderers.
+
+Still missing against the reference, in rising order of cost: a plinth (no dedicated piece —
+would need a thin floor slab or a bespoke one), porch steps (`Stairs/` has them), and **a second
+volume** — the lean-to with its own lower roof. That last one is not decoration, it is massing,
+and it means `Grammars.cs` would have to emit buildings as more than one box. It is the only
+item on this list that changes the shape of the work.
+
 ## Shape of the work
 
 **A seam in the Unity layer only.** `Noir.Core` stays a pure simulation and is not touched.

@@ -24,8 +24,9 @@ namespace Noir.Unity
         private const string Parts = "Assets/polyperfect/Poly Universal Pack/Prefabs/Modular Parts/";
         private const string Plain = Parts + "Walls/3m/Walls Plain/";
         private const string Slope = Parts + "Roofs/Roof Regular/";
-        private const string Doors = Parts + "Doors/Doors Fantasy/";
-        private const string Windows = Parts + "Windows/Windows Fantasy/";
+        private const string Doors = Parts + "Doors/Doors City/";
+        private const string Windows = Parts + "Windows/Windows City/";
+        private const string Gutters = Parts + "Roofs/Gutter/";
 
         /// <summary>Footprint 6m x 4m, 3m to the eaves, 45-degree gable ridge along x at 5m.</summary>
         public const float W = 6f, D = 4f;
@@ -62,6 +63,9 @@ namespace Noir.Unity
             var wall = Flat("PackWall", new Color32(0xC6, 0xB8, 0xA6, 0xFF));
             var roof = Flat("PackRoofSlate", new Color32(0x6B, 0x70, 0x79, 0xFF));
             var timber = Flat("PackTimber", new Color32(0x6E, 0x5A, 0x46, 0xFF));
+            // Window casings are the pale painted joinery that does most of the work in the
+            // publisher's own farmhouse, so they are lighter than the render, not darker.
+            var casing = Flat("PackCasing", new Color32(0xDE, 0xD6, 0xC6, 0xFF));
             var stone = Materials3D.Stone;
             var glass = Materials3D.WindowGlass;
 
@@ -93,14 +97,20 @@ namespace Noir.Unity
             // Their pivots are not consistent with each other (a door is centred on its own
             // opening, a window is not), so each is seated by measuring the piece and moving its
             // centre onto the hole rather than by a per-prefab magic number.
-            Fit(go, Doors + "Door_Single_A_Regular_Fantasy.prefab",
-                new Vector3(3f, 0f, -0.05f), 180f, timber, sitOnGround: true);
-            Fit(go, Windows + "Window_Wood_Small_A_Fantasy.prefab",
-                new Vector3(1f, WindowMid, -0.05f), 180f, glass, sitOnGround: false);
-            Fit(go, Windows + "Window_Wood_Small_A_Fantasy.prefab",
-                new Vector3(2f, WindowMid, D + 0.05f), 0f, glass, sitOnGround: false);
-            Fit(go, Windows + "Window_Wood_Small_A_Fantasy.prefab",
-                new Vector3(W + 0.05f, WindowMid, 2f), 90f, glass, sitOnGround: false);
+            //
+            // The City family rather than Fantasy. There is no exterior trim in the kit's Trims
+            // folder - that is all interior skirting and coving - so the white casing round a
+            // window in the publisher's own farmhouse is part of the WINDOW, not a separate
+            // piece. Picking the family is therefore how you get trim. Fantasy gave an arched
+            // plank door and a pointed leaded light, which read medieval; City reads as a house.
+            Fit(go, Doors + "Door_Single_A_Regular_City.prefab",
+                new Vector3(3f, 0f, -0.05f), 180f, timber, glass);
+            Fit(go, Windows + "Window_A_City.prefab",
+                new Vector3(1f, 0f, -0.05f), 180f, casing, glass);
+            Fit(go, Windows + "Window_A_City.prefab",
+                new Vector3(2f, 0f, D + 0.05f), 0f, casing, glass);
+            Fit(go, Windows + "Window_A_City.prefab",
+                new Vector3(W + 0.05f, 0f, 2f), 90f, casing, glass);
 
             // Gable triangles fill wall-top to ridge on the two ends the ridge runs into.
             Gable(go, x: 0f,  facing: 270f, paint: wall);
@@ -115,6 +125,8 @@ namespace Noir.Unity
 
             Put(go, Parts + "Chimneys/Chimney_3m_A_Fantasy.prefab",
                 new Vector3(1.4f, WallTop, D / 2f), 0f, stone);
+
+            Dress(go, roof, Materials3D.Ironwork);
 #else
             Debug.LogWarning("[polypack] the cottage prototype only assembles inside the editor.");
 #endif
@@ -122,6 +134,60 @@ namespace Noir.Unity
         }
 
 #if UNITY_EDITOR
+        /// <summary>
+        /// Eaves, barge boards, gutters and a downpipe.
+        ///
+        /// None of this is structure and all of it is what the eye reads as "a built house"
+        /// rather than "a shape". The bare cottage used only the flat slope tiles, which leaves
+        /// the roof stopping dead at the wall with no overhang and no shadow line under it -
+        /// the single biggest difference between the prototype and the publisher's own dressed
+        /// farmhouse.
+        ///
+        /// The eave pieces take the same position and rotation as the slope tile they belong to,
+        /// which is a happy accident of the kit's pivots: an _Edge piece occupies the half metre
+        /// OUTSIDE the eave line where the tile occupies the two metres inside it.
+        /// </summary>
+        private static void Dress(GameObject go, Material roof, Material metal)
+        {
+            const float EaveY = WallTop - Lip;
+
+            // Eaves along both long sides, following the tiles they hang off.
+            for (float x = 2f; x <= W; x += 2f)
+                Put(go, Slope + "Roof_Regular_2m_Edge.prefab", new Vector3(x, EaveY, D), 0f, roof);
+            for (float x = 0f; x < W; x += 2f)
+                Put(go, Slope + "Roof_Regular_2m_Edge.prefab", new Vector3(x, EaveY, 0f), 180f, roof);
+
+            // Barge boards up the two gable slopes. Same handedness problem as the gable itself:
+            // the piece only rises one way, so each end gets one placed and one reflected.
+            Rake(go, new Vector3(W, EaveY, D), 0f, roof);     // east
+            Rake(go, new Vector3(0f, EaveY, 0f), 180f, roof); // west
+
+            // Gutters sit under the eave overhang. Their pivot is the LEFT edge, unlike the
+            // walls and roofs, so a run spanning [a, a+2] is placed at a going one way and at
+            // a+2 going the other.
+            for (float x = 0f; x < W; x += 2f)
+                Put(go, Gutters + "Gutter_Regular_2m.prefab", new Vector3(x, EaveY, D), 0f, metal);
+            for (float x = 2f; x <= W; x += 2f)
+                Put(go, Gutters + "Gutter_Regular_2m.prefab", new Vector3(x, EaveY, 0f), 180f, metal);
+
+            // One downpipe, off the back corner, ground to eave.
+            Put(go, Gutters + "Gutter_Pipe_3m.prefab", new Vector3(W - 0.15f, 0f, D + 0.4f), 0f, metal);
+        }
+
+        /// <summary>
+        /// One gable's pair of barge boards, the far one reflected through the ridge plane.
+        /// </summary>
+        private static void Rake(GameObject parent, Vector3 at, float yaw, Material paint)
+        {
+            Put(parent, Slope + "Roof_Regular_2m_Front.prefab", at, yaw, paint);
+
+            var mirror = new GameObject("RakeMirror");
+            mirror.transform.SetParent(parent.transform, false);
+            mirror.transform.localPosition = new Vector3(0f, 0f, D);
+            mirror.transform.localScale = new Vector3(1f, 1f, -1f);
+            Put(mirror, Slope + "Roof_Regular_2m_Front.prefab", at, yaw, paint);
+        }
+
         /// <summary>
         /// A gable end: two right triangles meeting at the ridge. The kit only ships the half
         /// that rises toward its pivot, and a Y rotation cannot turn a right triangle into a
@@ -147,14 +213,14 @@ namespace Noir.Unity
         /// pivots do not, so placing either by its pivot puts one of them through the wall.
         /// </summary>
         private static void Fit(GameObject parent, string path, Vector3 anchor, float yaw,
-                                Material paint, bool sitOnGround)
+                                Material paint, Material glass = null)
         {
             var go = Spawn(parent, path);
             if (go == null) return;
 
             go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
             go.transform.localPosition = Vector3.zero;
-            Paint(go, paint);
+            Paint(go, paint, glass);
 
             var rends = go.GetComponentsInChildren<Renderer>();
             if (rends.Length == 0) return;
@@ -162,15 +228,16 @@ namespace Noir.Unity
             var b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
 
+            // Only x and z are steered onto the hole. HEIGHT IS THE PIECE'S OWN: these inserts
+            // are authored to sit at the wall's base, and a City window already carries its sill
+            // at 0.54 and its head at 2.65. Re-centring it on a guessed mid-height only slid it
+            // off the opening it was cut for.
             var drift = b.center - go.transform.position;
-            var target = parent.transform.TransformPoint(anchor);
+            var target = parent.transform.TransformPoint(new Vector3(anchor.x, 0f, anchor.z));
 
-            // A door stands on the floor; a window is centred on its hole.
-            float y = sitOnGround
-                ? target.y + (go.transform.position.y - b.min.y)
-                : target.y - drift.y;
-
-            go.transform.position = new Vector3(target.x - drift.x, y, target.z - drift.z);
+            go.transform.position = new Vector3(target.x - drift.x,
+                                                go.transform.position.y,
+                                                target.z - drift.z);
         }
 
         private static void Put(GameObject parent, string path, Vector3 localPos, float yaw,
@@ -195,13 +262,28 @@ namespace Noir.Unity
             return go;
         }
 
-        private static void Paint(GameObject go, Material paint)
+        /// <summary>
+        /// Repaint a piece, keeping its glazing glazed.
+        ///
+        /// A window is not one material: the kit models the frame and the pane as separate
+        /// submeshes and names the second one for what it is. Painting every slot the same
+        /// turned the City windows into dark slabs - a frame with no glass reads as a hole, and
+        /// glass with no frame reads as nothing at all. So the ORIGINAL material's name decides:
+        /// anything the pack called glass stays glass and everything else takes the paint.
+        /// </summary>
+        private static void Paint(GameObject go, Material paint, Material glass = null)
         {
             if (paint == null) return;
             foreach (var r in go.GetComponentsInChildren<Renderer>())
             {
-                var slots = new Material[r.sharedMaterials.Length];
-                for (int i = 0; i < slots.Length; i++) slots[i] = paint;
+                var originals = r.sharedMaterials;
+                var slots = new Material[originals.Length];
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    bool glazed = glass != null && originals[i] != null
+                        && originals[i].name.IndexOf("Glass", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                    slots[i] = glazed ? glass : paint;
+                }
                 r.sharedMaterials = slots;
             }
         }
