@@ -8,17 +8,31 @@ using UnityEditor;
 namespace Noir.Unity
 {
     /// <summary>
-    /// Lays the street itself out of bought models: road surface, kerbs, pavement, lamps, signs,
-    /// bins and parked cars.
+    /// Lays the street itself out of bought models: carriageway, junctions, crossings, kerbs,
+    /// pavement, lamps, signs, bins and street trees.
     ///
-    /// Until this existed the city was bought buildings standing on Ashcombe's ground - a flat
-    /// village-lane colour with nothing on it - which is why it read as models on a plane rather
-    /// than as a street. Almost none of the pack was actually on screen.
+    /// THE ROADS COME FROM THE ROAD NETWORK, NOT FROM THE TERRAIN GRID. A rasterised road is a
+    /// field of identical Terrain.Road tiles: it has forgotten which corridor it belonged to, how
+    /// wide that corridor was and what class it is, so every pass that wanted those had to infer
+    /// them by sampling neighbours. That inference is how a lane came to be measured off the
+    /// centre of a TILE - which is mostly pavement - rather than the centre of a ROAD.
+    /// WorldModel.Roads keeps the corridors, and this reads them.
     ///
-    /// THE ROAD TILE IS 10m, exactly as the townhouse module is 6.1m, and the grid in city.txt is
-    /// built on that. Tiles are chosen from the TERRAIN GRID rather than placed by hand, so the
-    /// map stays the single description of the city and this stays a renderer: paint a road in
-    /// city.txt and the surface, kerbs and lamps follow.
+    /// THE KIT IS Prefabs/City/Roads City, not Modular Parts/Roads. The city was built for
+    /// months out of the generic ten-metre kit, whose "main road" is six metres of unpainted
+    /// asphalt. The City kit is drawn at thirty metres with painted lanes, zebra crossings, stop
+    /// lines, lay-bys and matching junction pieces, and it had never been opened.
+    ///
+    ///     freeway    30m corridor, 24m asphalt, two lanes each way, solid orange centre
+    ///     mainroad   30m corridor, 12m asphalt, one lane each way
+    ///     street     10m corridor,  6m asphalt, unmarked
+    ///
+    /// Every one of those asphalt widths is MEASURED off the tile at load, never typed in here.
+    ///
+    /// TILES ARE SEATED BY THEIR BOUNDS, NOT THEIR PIVOTS. These prefabs pivot at the corner
+    /// opposite the origin, so a tile turned ninety degrees lands a full tile away from where its
+    /// pivot says it will. Placing by pivot laid every east-west road one cell north of its own
+    /// corridor - which put the traffic, correctly following the map, on the pavement.
     ///
     /// Furniture is picked by scanning the pack's own folders rather than naming prefabs here.
     /// There are 232 cars and 181 props in it; a hand-written list would have used six.
@@ -27,114 +41,289 @@ namespace Noir.Unity
     /// </summary>
     public static class CityStreets
     {
-        private const string Parts = "Assets/polyperfect/Poly Universal Pack/Prefabs/Modular Parts/Roads/";
+        private const string Kit = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Roads City/";
         private const string CityProps = "Assets/polyperfect/Poly Universal Pack/Prefabs/City";
 
-        /// <summary>The road kit's tile. Everything here is a multiple of it.</summary>
+        /// <summary>
+        /// The smallest module in the kit, and the grid this samples terrain on for everything
+        /// that is not a carriageway - pavement, parks, back alleys.
+        /// </summary>
         public const int Cell = 10;
 
-        private static float _carriageway = -1f;
+        /// <summary>The module a through-road is drawn at. A corridor is three cells.</summary>
+        public const int Block = 30;
+
+        // ---- measured geometry --------------------------------------------------------
+
+        private static readonly Dictionary<RoadClass, float> _asphalt =
+            new Dictionary<RoadClass, float>();
+
+        /// <summary>The straight tile for a class, which is also what its width is measured off.</summary>
+        private static string Straight(RoadClass klass) => klass switch
+        {
+            RoadClass.Freeway  => Kit + "Freeway_Straight_30x30_City.prefab",
+            RoadClass.Mainroad => Kit + "Mainroad_Straight_30x30_City.prefab",
+            _                  => Kit + "Road_Straight_10x10_City.prefab",
+        };
+
+        private static string Crosswalk(RoadClass klass) => klass switch
+        {
+            RoadClass.Freeway  => Kit + "Freeway_Crosswalk_30x30_City.prefab",
+            RoadClass.Mainroad => Kit + "Mainroad_Crosswalk_City.prefab",
+            _                  => Kit + "Road_Crosswalk_10x10_City.prefab",
+        };
+
+        private static string Cross(RoadClass klass) => klass switch
+        {
+            // A freeway crossing takes the wide piece; anything else takes the main-road
+            // crossing, which is the only junction in the kit with zebras painted on all four
+            // arms and so the one that reads as signalised.
+            RoadClass.Freeway => Kit + "Freeway_Cross_30x30_City.prefab",
+            _                 => Kit + "Mainroad_Cross_Crosswalk_30x30_City.prefab",
+        };
 
         /// <summary>
-        /// Half the width of the actual TARMAC, measured off the road tile.
+        /// HALF the width of the actual asphalt for this class, measured off its own tile.
         ///
-        /// The tile is ten metres square and carries three materials - M_Road_Paved,
-        /// M_Sidewalk_Paved and M_Universal_A - so ten metres is carriageway AND pavement, not
-        /// carriageway. That is why the streets came out with kerbs without anybody placing a
-        /// kerb, and it is why every offset picked "off the centre of the road" was wrong: it
-        /// was measured from the centre of a tile that is mostly not road.
-        ///
-        /// Everything that stands on or drives down a street now derives from this one number,
-        /// so there is no second place to get it wrong.
+        /// A tile is carriageway AND pavement - a thirty-metre main-road tile is twelve metres of
+        /// asphalt and nine metres of pavement each side - so anything positioned "off the middle
+        /// of the road" by eye is positioned off the middle of a strip that is mostly not road.
+        /// Everything that drives on or stands beside a street derives from this one number.
         /// </summary>
-        public static float Carriageway
+        public static float Asphalt(RoadClass klass)
         {
-            get
-            {
 #if UNITY_EDITOR
-                if (_carriageway > 0f) return _carriageway;
-                _carriageway = Cell / 2f - 2f;   // fallback if the mesh cannot be read
+            if (_asphalt.TryGetValue(klass, out float known)) return known;
 
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    Parts + "Mainroad_Paved_Straight_10x10m.prefab");
-                if (prefab == null) return _carriageway;
+            int corridor = RoadClasses.CorridorWidth(klass);
+            float half = corridor / 2f - 2f;              // a fallback, if the mesh cannot be read
 
-                var mf = prefab.GetComponentInChildren<MeshFilter>();
-                var mr = prefab.GetComponentInChildren<MeshRenderer>();
-                if (mf == null || mf.sharedMesh == null || mr == null) return _carriageway;
-                if (!mf.sharedMesh.isReadable) return _carriageway;
-
-                var mesh = mf.sharedMesh;
-                var verts = mesh.vertices;
-                for (int s = 0; s < mesh.subMeshCount && s < mr.sharedMaterials.Length; s++)
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Straight(klass));
+            if (prefab != null)
+            {
+                foreach (var mf in prefab.GetComponentsInChildren<MeshFilter>())
                 {
-                    var m = mr.sharedMaterials[s];
-                    if (m == null || m.name.IndexOf("Road_Paved", System.StringComparison.Ordinal) < 0)
-                        continue;
+                    var mesh = mf.sharedMesh;
+                    var mr = mf.GetComponent<MeshRenderer>();
+                    if (mesh == null || mr == null) continue;
 
-                    float reach = 0f;
-                    foreach (var t in mesh.GetTriangles(s))
+                    for (int s = 0; s < mesh.subMeshCount && s < mr.sharedMaterials.Length; s++)
                     {
-                        // The tile spans x[-10,0], so measure out from its own centre at -5.
-                        float off = Mathf.Abs(verts[t].x + Cell / 2f);
-                        if (off > reach) reach = off;
-                    }
-                    if (reach > 0.5f) _carriageway = reach;
-                    break;
-                }
+                        var m = mr.sharedMaterials[s];
+                        if (m == null || m.name.IndexOf("Asphalt", System.StringComparison.Ordinal) < 0)
+                            continue;
 
-                Debug.Log($"[streets] carriageway measured at {_carriageway:0.00}m either side of "
-                        + $"the centre line ({Cell}m tile, so {Cell / 2f - _carriageway:0.00}m of "
-                        + "pavement each side).");
-#endif
-                return _carriageway;
+                        // SubMeshDescriptor.bounds is importer metadata, so this works whether or
+                        // not Read/Write is enabled on the model. The tile spans x[-corridor,0],
+                        // so measure out from its own centre.
+                        var b = mesh.GetSubMesh(s).bounds;
+                        float centre = -corridor / 2f;
+                        half = Mathf.Max(Mathf.Abs(b.min.x - centre), Mathf.Abs(b.max.x - centre));
+                        break;
+                    }
+                }
             }
+
+            Debug.Log($"[streets] {klass}: {half * 2f:0.0}m of asphalt in a {corridor}m corridor "
+                    + $"({corridor / 2f - half:0.0}m of pavement each side), "
+                    + $"{LanesEachWay(klass)} lane(s) each way.");
+            return _asphalt[klass] = half;
+#else
+            return RoadClasses.CorridorWidth(klass) / 2f - 2f;
+#endif
         }
 
         /// <summary>
-        /// Where a car drives: the middle of its own half of the carriageway.
+        /// How many running lanes there are in each direction.
         ///
-        /// A 6m road is two 3m lanes and NOTHING ELSE. There is no kerbside parking on these
-        /// streets any more, because the measurement says there is no room for it: park a car
-        /// against the kerb and it is either in a running lane or on the pavement, and both of
-        /// those are what this whole exercise was about.
+        /// Read off the paint, which is the only place it is written down: the freeway tile has
+        /// a dashed line either side of a solid orange centre, and the main-road tile has one
+        /// dashed centre line and nothing else.
         /// </summary>
-        public static float LaneOffset => Carriageway * 0.5f;
+        public static int LanesEachWay(RoadClass klass) => klass == RoadClass.Freeway ? 2 : 1;
+
+        /// <summary>
+        /// How far off the centre line lane <paramref name="index"/> runs, counting outward from
+        /// the middle. Derived from the measured asphalt so a lane is always inside it.
+        /// </summary>
+        public static float LaneOffset(RoadClass klass, int index)
+        {
+            int lanes = LanesEachWay(klass);
+            return Asphalt(klass) * (2 * index + 1) / (2f * lanes);
+        }
 
         /// <summary>The middle of the pavement, for anything that stands rather than drives.</summary>
-        public static float VergeOffset => (Cell / 2f + Carriageway) * 0.5f;
+        public static float VergeOffset(RoadClass klass) =>
+            (RoadClasses.CorridorWidth(klass) / 2f + Asphalt(klass)) * 0.5f;
+
+        // ---- building ------------------------------------------------------------------
 
         public static GameObject Build(WorldModel world, Transform parent)
         {
             var root = new GameObject("CityStreets");
             root.transform.SetParent(parent, false);
 
-            // A whisker above Ashcombe's ground, which is still drawn underneath at y=0. The
-            // sidewalk tile is a flat plane at exactly zero, so without this the two planes
-            // z-fight and the street comes out in blotches that look like a texture fault.
-            root.transform.localPosition = new Vector3(0f, 0.04f, 0f);
+            // Clear of Ashcombe's ground, which is still drawn underneath the whole city at y=0.
+            //
+            // A road tile is TWO levels: its pavement is a plane at y=0 and its asphalt is a
+            // plane at y=-0.1, ten centimetres lower, which is the kerb. The old lift of 0.04
+            // was chosen to stop the pavement z-fighting with the ground and nobody checked the
+            // other plane - so the asphalt sat at -0.06, UNDER the ground, and was never once
+            // drawn. Every road in every screenshot so far has been the village renderer's own
+            // road colour showing through the hole where the real carriageway was hidden, which
+            // is why the streets looked like paving and the lane markings never appeared.
+            //
+            // 0.12 puts the asphalt at 0.02 and the kerb at 0.12, both above the ground plane,
+            // and leaves the kerb reading as a kerb.
+            root.transform.localPosition = new Vector3(0f, 0.12f, 0f);
 
 #if UNITY_EDITOR
-            int cols = world.Width / Cell, rows = world.Height / Cell;
+            int tiles = 0, dressing = 0;
 
-            // Is this whole 10m cell road? Sampled at the centre, because a road painted 10 wide
-            // lands exactly on a cell and anything narrower is a path, not a carriageway.
-            bool IsRoad(int cx, int cy)
+            // 1. The junctions first, so the straights know which cells are already spoken for.
+            var taken = new HashSet<long>();
+            foreach (var j in world.Roads.Junctions)
             {
-                if (cx < 0 || cy < 0 || cx >= cols || cy >= rows) return false;
-                return world.Grid.TerrainAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2) == Noir.Core.World.Terrain.Road;
+                var klass = j.NorthSouth.Class == RoadClass.Freeway || j.EastWest.Class == RoadClass.Freeway
+                    ? RoadClass.Freeway : RoadClass.Mainroad;
+
+                float reach = j.Reach;
+                if (Seat(root.transform, Cross(klass),
+                         j.X - reach, j.Y - reach, reach * 2f, reach * 2f, 0f) != null) tiles++;
+
+                taken.Add(KeyOf(j.X, j.Y));
             }
 
+            // 2. The carriageways.
+            foreach (var line in world.Roads.Lines)
+                tiles += Lay(root.transform, line, world, taken);
+
+            // 3. Everything that is not a carriageway, sampled off the terrain grid as before:
+            //    pavement where a street has an edge, parks, and the backs of blocks.
+            dressing += Dress(root.transform, world);
+
+            Debug.Log($"[streets] {tiles} road tiles on {world.Roads.Lines.Count} roads and "
+                    + $"{world.Roads.Junctions.Count} junctions, {dressing} pieces of furniture, "
+                    + $"{root.GetComponentsInChildren<Renderer>().Length} renderers.");
+#endif
+            return root;
+        }
+
+#if UNITY_EDITOR
+        /// <summary>A junction's cell, for asking "is this stretch already a crossing".</summary>
+        private static long KeyOf(float x, float y) =>
+            (long)Mathf.RoundToInt(x) * 100000L + Mathf.RoundToInt(y);
+
+        /// <summary>
+        /// One road, tiled end to end at its own module, skipping the cells the junctions took.
+        ///
+        /// The tile immediately either side of a junction is the CROSSWALK variant, because that
+        /// is where a pedestrian crossing goes and because it puts a painted stop line exactly
+        /// where the traffic has to stop.
+        /// </summary>
+        private static int Lay(Transform parent, RoadLine line, WorldModel world,
+                               HashSet<long> taken)
+        {
+            if (!line.IsStraight)
+            {
+                Debug.LogWarning($"[streets] '{line.Name}' bends, and only straight roads are "
+                               + "tiled. It will have terrain but no surface.");
+                return 0;
+            }
+
+            int module = RoadClasses.CorridorWidth(line.Class);
+            float half = module / 2f;
+            float yaw = line.IsNorthSouth ? 0f : 90f;
+
+            // Edge to edge of the map, not just between the declared points: a road declared
+            // 0,75 239,75 is meant to leave the map, and the brush already paints it that far.
+            float span = line.IsNorthSouth ? world.Height : world.Width;
+
+            int laid = 0;
+            for (float along = 0f; along + module <= span + 0.01f; along += module)
+            {
+                float cx = line.IsNorthSouth ? line.Centre : along + half;
+                float cy = line.IsNorthSouth ? along + half : line.Centre;
+
+                if (taken.Contains(KeyOf(cx, cy))) continue;
+
+                // Next to a crossing? Then this is where the zebra and the stop line go.
+                bool atCrossing = false;
+                foreach (var j in world.Roads.Junctions)
+                {
+                    if (line.IsNorthSouth && Mathf.Abs(j.X - line.Centre) > 0.5f) continue;
+                    if (!line.IsNorthSouth && Mathf.Abs(j.Y - line.Centre) > 0.5f) continue;
+
+                    float gap = line.IsNorthSouth ? Mathf.Abs(cy - j.Y) : Mathf.Abs(cx - j.X);
+                    if (gap < module * 1.5f) { atCrossing = true; break; }
+                }
+
+                string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
+                if (Seat(parent, piece, cx - half, cy - half, module, module, yaw) != null) laid++;
+            }
+            return laid;
+        }
+
+        /// <summary>
+        /// Put a tile down so that its MEASURED FOOTPRINT covers the given patch of village.
+        ///
+        /// Not by pivot. These tiles pivot at the corner opposite the origin and fill the square
+        /// behind it, so a tile rotated ninety degrees about that pivot ends up a whole tile away
+        /// from where the arithmetic says. Every east-west road in the city was laid one cell
+        /// north of its own corridor for exactly that reason, and the traffic - which was
+        /// correctly following the map - drove down the pavement beside it.
+        ///
+        /// Village y runs into Unity -z, as everywhere else.
+        /// </summary>
+        private static GameObject Seat(Transform parent, string path,
+                                       float x, float y, float w, float h, float yaw)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) { Debug.LogWarning("[streets] missing " + path); return null; }
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetParent(parent, false);
+            go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            var rends = go.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return go;
+
+            var b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+            // Where the middle of this tile is meant to end up. Only x and z are corrected: the
+            // height is the ROOT's, which is what lifts the asphalt clear of the ground plane.
+            // Writing a world y of zero here quietly cancelled that lift and put the carriageway
+            // back underneath the village.
+            var want = new Vector3(x + w / 2f, 0f, -(y + h / 2f));
+            var drift = b.center - go.transform.position;
+            go.transform.position =
+                new Vector3(want.x - drift.x, parent.position.y, want.z - drift.z);
+            return go;
+        }
+
+        /// <summary>
+        /// Everything that is not carriageway: pavement at the edge of a street, the parks, and
+        /// what piles up behind a building. Walks the terrain grid, because those ARE properties
+        /// of the ground rather than of a road.
+        /// </summary>
+        private static int Dress(Transform parent, WorldModel world)
+        {
+            int cols = world.Width / Cell, rows = world.Height / Cell;
+
+            bool Is(int cx, int cy, Noir.Core.World.Terrain want) =>
+                cx >= 0 && cy >= 0 && cx < cols && cy < rows &&
+                world.Grid.TerrainAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2) == want;
+
             var lamps = Catalogue(CityProps + "/Lamps City", "Lamp_Sidewalk");
-            var cars = Everyday(CityProps + "/../Cars");
-            var lights = Catalogue(CityProps + "/TrafficLights City", "Traffic_Light");
             var play = Catalogue(CityProps + "/Playground City", null);
             var skate = Catalogue(CityProps + "/SkatePark City", "Skate_");
+            var signs = Catalogue(CityProps + "/Signs City", "Sign_");
 
-            // What actually stands on a pavement, as against one bin every seventh cell. Each
-            // of these is a role rather than a prefab, so the pack's own variants get used:
-            // there are five bins, four bollards and two phone boxes in here and a hand-written
-            // list would have picked one of each.
+            // What actually stands on a pavement, as against one bin every seventh cell. Each of
+            // these is a role rather than a prefab, so the pack's own variants get used: there
+            // are five bins, four bollards and two phone boxes in here and a hand-written list
+            // would have picked one of each.
             var kerbside = new List<List<string>>
             {
                 Catalogue(CityProps + "/Props City", "Hydrant"),
@@ -152,11 +341,8 @@ namespace Noir.Unity
             };
             kerbside.RemoveAll(c => c.Count == 0);
 
-            var manholes = Catalogue(CityProps + "/Props City", "Manhole");
-            var signs = Catalogue(CityProps + "/Signs City", "Sign_");
-
-            // Nature has 760 prefabs and the city was using none of them. Trees City is the
-            // nine authored for a pavement; the rest is what a park is made of.
+            // Nature has 760 prefabs and the city was using none of them. Trees City is the nine
+            // authored for a pavement; the rest is what a park is made of.
             const string Nat = "Assets/polyperfect/Poly Universal Pack/Prefabs/Nature";
             var streetTrees = Catalogue(Nat + "/Trees City", null);
             var parkKit = new List<List<string>>
@@ -177,279 +363,125 @@ namespace Noir.Unity
             };
             alley.RemoveAll(c => c.Count == 0);
 
-            int tiles = 0, dressing = 0;
-
-            // Every kerbside parking bay in the town, filled afterwards to a budget.
-            var bays = new List<(Vector3 at, float yaw)>();
+            int n = 0;
 
             for (int cy = 0; cy < rows; cy++)
             for (int cx = 0; cx < cols; cx++)
             {
-                // A tile occupies x from its west edge to its east, and the prefab's pivot is at
-                // the corner OPPOSITE the origin: it fills x[-10,0] z[-10,0] about its own point.
-                // Village y runs into Unity -z, as everywhere else.
-                var at = new Vector3(cx * Cell + Cell, 0f, -(cy * Cell));
+                if (Is(cx, cy, Noir.Core.World.Terrain.Road)) continue;   // laid from the network
 
-                if (IsRoad(cx, cy))
+                float vx = cx * Cell, vy = cy * Cell;
+
+                if (Is(cx, cy, Noir.Core.World.Terrain.Path))
                 {
-                    bool ew = IsRoad(cx - 1, cy) || IsRoad(cx + 1, cy);
-                    bool ns = IsRoad(cx, cy - 1) || IsRoad(cx, cy + 1);
+                    // PAVE THE WHOLE BLOCK, not just the strip beside the road.
+                    //
+                    // Paving only the kerb-adjacent ring left the middle of every block showing
+                    // the village renderer's own path colour, which is a warm tan meant for a
+                    // 1979 English lane and sits next to the pack's grey stone like a different
+                    // game. A city block's ground between its buildings IS paved; the reason
+                    // this was once a ring is that the map used to be mostly empty, and it is
+                    // not any more. Building interiors are stamped as floor rather than path, so
+                    // they are already excluded.
+                    if (Seat(parent, Kit + "Sidewalk_10x10_City.prefab", vx, vy, Cell, Cell, 0f) != null)
+                        n++;
 
-                    // Every road in the city runs edge to edge, so the only cases are a straight
-                    // and a crossing. Turns and T-pieces exist in the kit and are not needed
-                    // until a road stops somewhere.
-                    string piece = ew && ns ? "Road_Paved_X_10x10m" : "Mainroad_Paved_Straight_10x10m";
-                    float yaw = ew && ns ? 0f : (ew ? 90f : 0f);
+                    bool besideAStreet = Is(cx - 1, cy, Noir.Core.World.Terrain.Road)
+                                      || Is(cx + 1, cy, Noir.Core.World.Terrain.Road)
+                                      || Is(cx, cy - 1, Noir.Core.World.Terrain.Road)
+                                      || Is(cx, cy + 1, Noir.Core.World.Terrain.Road);
 
-                    if (Put(root.transform, Parts + piece + ".prefab", at, yaw) != null) tiles++;
-
-                    // A crossing gets signals and a stop sign on the corner it is entered from.
-                    if (ew && ns)
+                    if (besideAStreet)
+                        n += Kerb(parent, cx, cy, vx, vy, lamps, kerbside, signs, streetTrees);
+                    // Behind the buildings. Bins, crates, pallets, tyres, and the pipework that
+                    // runs up an alley wall.
+                    else if (alley.Count > 0 && Materials3D.Scatter(cx, cy, 653) % 3 == 0)
                     {
-                        var corner = at + new Vector3(-Cell + 1.2f, 0f, -Cell + 1.2f);
-                        if (lights.Count > 0 && Put(root.transform, Pick(lights, cx, cy, 5), corner, 0f) != null)
-                            dressing++;
-                        if (signs.Count > 0 &&
-                            Put(root.transform, Pick(signs, cx, cy, 17), corner + new Vector3(0f, 0f, -2f), 180f) != null)
-                            dressing++;
-                    }
-                    else
-                    {
-                        // A straight gets both its kerbs walked. Everything below is placed
-                        // ALONG the carriageway rather than once per tile, which is the whole
-                        // difference between a street with things on it and a road with a bin.
-                        dressing += Kerb(root.transform, at, cx, cy, ew, lamps, bays, kerbside, signs);
-
-                        if (manholes.Count > 0 && Materials3D.Scatter(cx, cy, 191) % 3 == 0)
+                        for (int k = 0; k < 2; k++)
                         {
-                            var mid = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
-                            if (Put(root.transform, Pick(manholes, cx, cy, 193), mid, 0f) != null) dressing++;
+                            var role = alley[(int)(Materials3D.Scatter(cx + k, cy, 659) % (uint)alley.Count)];
+                            float ox = 2f + Materials3D.Scatter(cx * 5 + k, cy, 661) % 7;
+                            float oz = 2f + Materials3D.Scatter(cx, cy * 5 + k, 673) % 7;
+                            if (Put(parent, Pick(role, cx + k, cy, 677), vx + ox, vy + oz,
+                                    Materials3D.Scatter(cx + k, cy, 683) % 4 * 90f) != null) n++;
                         }
-                    }
-                }
-                // Pavement FRAMES the carriageway; it does not carpet the map. Tiling every cell
-                // paved the whole two hundred metres in one repeating stone pattern and the city
-                // read as a retail park with houses parked on it. A pavement is the edge of a
-                // street, so it only exists where a street is.
-                else if (world.Grid.TerrainAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2) == Noir.Core.World.Terrain.Path
-                         && (IsRoad(cx - 1, cy) || IsRoad(cx + 1, cy) || IsRoad(cx, cy - 1) || IsRoad(cx, cy + 1)))
-                {
-                    if (Put(root.transform, Parts + "Sidewalk_Paved_10x10m.prefab", at, 0f) != null) tiles++;
-
-                    // The back of the pavement, against the buildings, gets its own scatter -
-                    // the kerb walk above only furnishes the road edge, and a pavement has two.
-                    if (kerbside.Count > 0 && Materials3D.Scatter(cx, cy, 613) % 3 == 0)
-                    {
-                        var role = kerbside[(int)(Materials3D.Scatter(cy, cx, 617) % (uint)kerbside.Count)];
-                        var spot = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
-                        if (Put(root.transform, Pick(role, cx, cy, 619), spot, 0f) != null) dressing++;
-                    }
-
-                    // Street trees. Nature/Trees City is the nine authored to stand in a
-                    // pavement rather than in a wood, and they do more for a street than any
-                    // other single prop - they break the roofline and cast something on it.
-                    if (streetTrees.Count > 0 && Materials3D.Scatter(cx, cy, 641) % 2 == 0)
-                    {
-                        var verge = at + new Vector3(-Cell + 2f, 0f, -2f);
-                        if (Put(root.transform, Pick(streetTrees, cx, cy, 643), verge,
-                                Materials3D.Scatter(cx, cy, 647) % 4 * 90f) != null) dressing++;
-                    }
-                }
-                // Behind the buildings. Everything a street hides round the back: bins, crates,
-                // pallets, tyres, and the pipework that runs up an alley wall.
-                else if (world.Grid.TerrainAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2)
-                         == Noir.Core.World.Terrain.Path && alley.Count > 0)
-                {
-                    if (Materials3D.Scatter(cx, cy, 653) % 3 != 0) continue;
-                    for (int k = 0; k < 2; k++)
-                    {
-                        var role = alley[(int)(Materials3D.Scatter(cx + k, cy, 659) % (uint)alley.Count)];
-                        float ox = -2f - (Materials3D.Scatter(cx * 5 + k, cy, 661) % 7);
-                        float oz = -2f - (Materials3D.Scatter(cx, cy * 5 + k, 673) % 7);
-                        if (Put(root.transform, Pick(role, cx + k, cy, 677), at + new Vector3(ox, 0f, oz),
-                                Materials3D.Scatter(cx + k, cy, 683) % 4 * 90f) != null) dressing++;
                     }
                 }
                 // The parks: the only unpaved ground, and where the playground and the skatepark
                 // live. Both were bought and neither had ever been on screen.
-                else if (world.Grid.TerrainAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2)
-                         == Noir.Core.World.Terrain.Grass)
+                else if (Is(cx, cy, Noir.Core.World.Terrain.Grass))
                 {
                     var kit = (cx + cy) % 2 == 0 ? play : skate;
 
-                    // Three pieces of equipment to a park cell, spread so it reads as a park
-                    // rather than as one object dropped in the middle of a lawn.
                     for (int k = 0; k < 3 && kit.Count > 0; k++)
                     {
-                        float ox = -2f - (Materials3D.Scatter(cx * 7 + k, cy, 131) % 6);
-                        float oz = -2f - (Materials3D.Scatter(cx, cy * 7 + k, 137) % 6);
-                        var where = at + new Vector3(ox, 0f, oz);
-                        if (Put(root.transform, Pick(kit, cx + k, cy, 149 + k), where,
-                                Materials3D.Scatter(cx, cy + k, 151) % 4 * 90f) != null) dressing++;
+                        float ox = 2f + Materials3D.Scatter(cx * 7 + k, cy, 131) % 6;
+                        float oz = 2f + Materials3D.Scatter(cx, cy * 7 + k, 137) % 6;
+                        if (Put(parent, Pick(kit, cx + k, cy, 149 + k), vx + ox, vy + oz,
+                                Materials3D.Scatter(cx, cy + k, 151) % 4 * 90f) != null) n++;
                     }
 
-                    // And the park itself - trees, bushes, flowers, rocks, tufts of grass. The
-                    // pack has 760 nature prefabs and the city had been using precisely none.
                     for (int k = 0; k < 5 && parkKit.Count > 0; k++)
                     {
                         var role = parkKit[(int)(Materials3D.Scatter(cx + k, cy, 691) % (uint)parkKit.Count)];
-                        float ox = -1f - (Materials3D.Scatter(cx * 11 + k, cy, 701) % 8);
-                        float oz = -1f - (Materials3D.Scatter(cx, cy * 11 + k, 709) % 8);
-                        if (Put(root.transform, Pick(role, cx + k, cy + k, 719), at + new Vector3(ox, 0f, oz),
-                                Materials3D.Scatter(cx + k, cy, 727) % 4 * 90f) != null) dressing++;
+                        float ox = 1f + Materials3D.Scatter(cx * 11 + k, cy, 701) % 8;
+                        float oz = 1f + Materials3D.Scatter(cx, cy * 11 + k, 709) % 8;
+                        if (Put(parent, Pick(role, cx + k, cy + k, 719), vx + ox, vy + oz,
+                                Materials3D.Scatter(cx + k, cy, 727) % 4 * 90f) != null) n++;
                     }
                 }
             }
 
-            dressing += Park(root.transform, bays, cars, world);
-
-            Debug.Log($"[streets] {tiles} road and pavement tiles, {dressing} pieces of furniture, "
-                    + $"{root.GetComponentsInChildren<Renderer>().Length} renderers.");
-#endif
-            return root;
+            return n;
         }
 
-#if UNITY_EDITOR
         /// <summary>
-        /// Walk both kerbs of one straight tile, placing what actually stands on a pavement.
+        /// Furnish ten metres of pavement.
         ///
-        /// The point is that it walks ALONG the carriageway rather than dropping one prop per
-        /// tile: a street is furnished at intervals of a few metres, and at ten it reads as a
-        /// road with an ornament on it. Lamps keep a fixed rhythm because street lighting is
-        /// laid out by a highways department; everything else is rolled, so no two blocks carry
-        /// the same run of hydrant, meter, phone box and planter.
+        /// Walks ALONG it rather than dropping one prop per cell: a street is furnished at
+        /// intervals of a few metres, and at ten it reads as a road with an ornament on it. Lamps
+        /// keep a fixed rhythm because street lighting is laid out by a highways department;
+        /// everything else is rolled, so no two blocks carry the same run of hydrant, meter,
+        /// phone box and planter.
         /// </summary>
-        private static int Kerb(Transform parent, Vector3 at, int cx, int cy, bool ew,
-                                List<string> lamps, List<(Vector3 at, float yaw)> bays,
-                                List<List<string>> kerbside, List<string> signs)
+        private static int Kerb(Transform parent, int cx, int cy, float vx, float vy,
+                                List<string> lamps, List<List<string>> kerbside,
+                                List<string> signs, List<string> trees)
         {
             int n = 0;
 
-            // Both sides of the street. The kerb line sits just inside the tile edge; the
-            // pavement is outside it and the carriageway inside.
-            for (int side = 0; side < 2; side++)
+            for (int step = 0; step < 3; step++)
             {
-                // Just OUTSIDE the tarmac, which is the pavement. Measured, not guessed: at a
-                // fixed 0.9m from the tile edge a lamp stood in the road on a wide carriageway
-                // and in a garden on a narrow one.
-                float verge = Cell / 2f - VergeOffset;
-                float kerb = side == 0 ? -verge : -Cell + verge;
-                float facing = side == 0 ? 180f : 0f;
+                float along = 1.8f + step * 3.2f;
+                float across = 1.2f + Materials3D.Scatter(cx, cy * 7 + step, 227) % 6;
 
-                for (int step = 0; step < 3; step++)
+                uint roll = Materials3D.Scatter(cx * 31 + step, cy * 17, 211);
+
+                // Lighting on its own rhythm - twice a block, same place every block.
+                if (step == 1 && lamps.Count > 0 && ((cx + cy) & 1) == 0)
                 {
-                    float along = -1.8f - step * 3.2f;
-                    var spot = ew
-                        ? at + new Vector3(along, 0f, kerb)
-                        : at + new Vector3(kerb, 0f, along);
-                    float yaw = ew ? facing : facing + 90f;
-
-                    uint roll = Materials3D.Scatter(cx * 31 + step, cy * 17 + side, 211);
-
-                    // Lighting on its own rhythm - twice a block, same place every block.
-                    if (step == 1 && lamps.Count > 0 && ((cx + cy) & 1) == 0)
-                    {
-                        if (Put(parent, Pick(lamps, cx, cy + side, 11), spot, yaw) != null) n++;
-                        continue;
-                    }
-
-                    // Not every metre of kerb has something on it, or it reads as a jumble sale.
-                    if (roll % 5 >= 3) continue;
-
-                    var role = kerbside[(int)(roll / 5 % (uint)kerbside.Count)];
-                    if (Put(parent, Pick(role, cx + step, cy + side, 223), spot, yaw) != null) n++;
+                    if (Put(parent, Pick(lamps, cx, cy, 11), vx + along, vy + across, 0f) != null) n++;
+                    continue;
                 }
 
-                // NO KERBSIDE PARKING. The carriageway measures 6m, which is two lanes and
-                // nothing over; a parked car would stand either in a running lane or on the
-                // pavement. The town's vehicles are the moving ones plus the fleet outside the
-                // buildings they belong to, which is enough traffic for a place this size.
+                if (roll % 5 >= 3) continue;      // not every metre of kerb has something on it
+
+                var role = kerbside[(int)(roll / 5 % (uint)kerbside.Count)];
+                if (Put(parent, Pick(role, cx + step, cy, 223), vx + along, vy + across,
+                        roll % 4 * 90f) != null) n++;
             }
 
-            // One traffic sign per block, on the near kerb, facing the traffic.
+            // Street trees. Nature/Trees City is the nine authored to stand in a pavement rather
+            // than in a wood, and they do more for a street than any other single prop - they
+            // break the roofline and cast something on it.
+            if (trees.Count > 0 && Materials3D.Scatter(cx, cy, 641) % 2 == 0)
+                if (Put(parent, Pick(trees, cx, cy, 643), vx + 5f, vy + 5f,
+                        Materials3D.Scatter(cx, cy, 647) % 4 * 90f) != null) n++;
+
             if (signs.Count > 0 && Materials3D.Scatter(cx, cy, 233) % 4 == 0)
-            {
-                var post = ew
-                    ? at + new Vector3(-Cell + 1.2f, 0f, -0.9f)
-                    : at + new Vector3(-0.9f, 0f, -Cell + 1.2f);
-                if (Put(parent, Pick(signs, cx, cy, 239), post, ew ? 180f : 270f) != null) n++;
-            }
+                if (Put(parent, Pick(signs, cx, cy, 239), vx + 8.5f, vy + 1.5f, 180f) != null) n++;
 
             return n;
-        }
-
-        /// <summary>
-        /// Roughly how many households own a car. Two hundred vehicles in a town of a hundred
-        /// people is not a busy street, it is a scrapyard.
-        /// </summary>
-        public static float CarsPerHome = 0.75f;
-
-        /// <summary>
-        /// Fill a budgeted share of the town's parking bays.
-        ///
-        /// The budget comes from HOW MANY PEOPLE LIVE HERE, not from how much tarmac was laid,
-        /// which is the only version of this that scales: a bigger map gets more bays and the
-        /// same fraction of them occupied, so a village stays quiet and a city fills up without
-        /// anybody retuning a number.
-        ///
-        /// Bays are taken at an even stride through the list rather than at random, so cars are
-        /// spread over the whole town instead of clumping wherever the die fell.
-        /// </summary>
-        private static int Park(Transform parent, List<(Vector3 at, float yaw)> bays,
-                                List<string> cars, WorldModel world)
-        {
-            if (cars.Count == 0 || bays.Count == 0) return 0;
-
-            int budget = Mathf.Clamp(Mathf.RoundToInt(world.Homes.Count * CarsPerHome), 3, bays.Count);
-            float stride = bays.Count / (float)budget;
-
-            int n = 0;
-            for (int i = 0; i < budget; i++)
-            {
-                var bay = bays[Mathf.Min((int)(i * stride), bays.Count - 1)];
-                var pick = cars[(int)(Materials3D.Scatter(i, budget, 733) % (uint)cars.Count)];
-                if (Put(parent, pick, bay.at, bay.yaw) != null) n++;
-            }
-
-            Debug.Log($"[streets] {n} vehicles for {world.Homes.Count} homes "
-                    + $"({bays.Count} bays available, {CarsPerHome:0.00} per home).");
-            return n;
-        }
-
-        /// <summary>
-        /// What is plausibly parked outside somebody's flat.
-        ///
-        /// The Cars folder is 232 prefabs and holds a whole motorsport paddock - Formula, Nascar,
-        /// Le Mans prototypes, a gokart - as well as heavy haulage, a monster truck and the
-        /// emergency fleet. Taking "a car" from all of that put an articulated container lorry
-        /// and a stock car at a residential kerb. These are the ones that belong there; the
-        /// emergency vehicles are parked at the buildings they answer to instead, and the racing
-        /// set has no business in a town at all.
-        /// </summary>
-        private static List<string> Everyday(string folder)
-        {
-            string[] wanted =
-            {
-                "Car_Modern", "Car_Pickup_Modern", "Car_Sport_Modern", "Car_Roadster_Cabrio_Modern",
-                "Car_Offroad_Modern", "Car_Offroad_Roofless_Modern", "Car_Van_Old",
-                "Car_Van_Old_Painted", "Car_Cargovan_Modern", "Car_Taxi_Modern",
-            };
-
-            var found = new List<string>();
-            foreach (var path in Catalogue(folder, null))
-            {
-                string name = System.IO.Path.GetFileNameWithoutExtension(path);
-                if (name.IndexOf("Racing", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
-
-                foreach (var w in wanted)
-                {
-                    // Colour variants are the base name with _A, _B and so on after it.
-                    if (name != w && !name.StartsWith(w + "_", System.StringComparison.Ordinal)) continue;
-                    found.Add(path);
-                    break;
-                }
-            }
-            return found;
         }
 
         /// <summary>
@@ -486,14 +518,18 @@ namespace Noir.Unity
         private static string Pick(List<string> from, int x, int y, int salt) =>
             from[(int)(Materials3D.Scatter(x, y, salt) % (uint)from.Count)];
 
-        private static GameObject Put(Transform parent, string path, Vector3 at, float yaw)
+        /// <summary>A prop, by its pivot, at a point in village coordinates.</summary>
+        private static GameObject Put(Transform parent, string path, float vx, float vy, float yaw)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) return null;
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
-            go.transform.position = at;
+
+            // On the pavement, which is the root's height - not at world zero, which is the
+            // ground the pavement is laid on top of.
+            go.transform.position = new Vector3(vx, parent.position.y, -vy);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return go;
         }

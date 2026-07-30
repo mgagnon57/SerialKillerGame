@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -6,64 +7,79 @@ namespace Noir.Editor
     /// <summary>
     /// Measures where the CARRIAGEWAY actually is inside a road tile.
     ///
-    /// The tile is 10m square and carries three materials - M_Road_Paved, M_Sidewalk_Paved and
-    /// M_Universal_A - which means the ten metres is tarmac AND pavement, not tarmac. Lanes were
-    /// placed by assuming the whole tile was road and offsetting by eye, which is how a car ends
-    /// up with two wheels on the kerb.
+    /// The first version of this probed the Modular Parts kit and found the lesson that a 10m
+    /// tile is 6m of tarmac and 4m of pavement. It is kept and widened because the pack turns
+    /// out to have a SECOND road kit - Prefabs/City/Roads City - built at 30m with painted lanes,
+    /// stop lines, crosswalks and parking bays, which is the kit a city actually wants.
     ///
-    /// This reports the extent of each submesh separately, so the lane offset can come from the
-    /// mesh rather than from a guess.
+    /// Reports per-submesh extents via SubMeshDescriptor.bounds, which is importer metadata and
+    /// so works whether or not Read/Write is enabled on the model.
     /// </summary>
     public static class RoadProbe
     {
-        private const string Roads =
-            "Assets/polyperfect/Poly Universal Pack/Prefabs/Modular Parts/Roads/";
+        private const string Parts = "Assets/polyperfect/Poly Universal Pack/Prefabs/Modular Parts/Roads/";
+        private const string City  = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Roads City/";
 
         [MenuItem("Noir/Probe Road Tile")]
         public static void Probe()
         {
-            foreach (var name in new[] { "Road_Paved_Straight_10x10m", "Mainroad_Paved_Straight_10x10m", "Mainroad_To_Road_Paved_Straight_10x10m" })
+            Debug.Log("=== MODULAR PARTS (the 10m kit the city is built from today) ===");
+            foreach (var n in new[]
             {
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Roads + name + ".prefab");
-                if (prefab == null) { Debug.Log($"[road] MISSING {name}"); continue; }
+                "Road_Paved_Straight_10x10m", "Mainroad_Paved_Straight_10x10m", "Road_Paved_X_10x10m",
+            })
+                One(Parts + n + ".prefab", n);
 
-                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-                go.transform.position = Vector3.zero;
-                go.transform.rotation = Quaternion.identity;
-
-                var mf = go.GetComponentInChildren<MeshFilter>();
-                var mr = go.GetComponentInChildren<MeshRenderer>();
-                if (mf != null && mf.sharedMesh != null)
-                {
-                    var mesh = mf.sharedMesh;
-                    var verts = mesh.vertices;
-
-                    for (int s = 0; s < mesh.subMeshCount; s++)
-                    {
-                        var tris = mesh.GetTriangles(s);
-                        if (tris.Length == 0) continue;
-
-                        float minX = float.MaxValue, maxX = float.MinValue;
-                        float minZ = float.MaxValue, maxZ = float.MinValue;
-                        foreach (var t in tris)
-                        {
-                            var v = verts[t];
-                            if (v.x < minX) minX = v.x;
-                            if (v.x > maxX) maxX = v.x;
-                            if (v.z < minZ) minZ = v.z;
-                            if (v.z > maxZ) maxZ = v.z;
-                        }
-
-                        string mat = s < mr.sharedMaterials.Length && mr.sharedMaterials[s] != null
-                            ? mr.sharedMaterials[s].name : "?";
-                        Debug.Log($"[road] {name} submesh {s} = {mat}: "
-                                + $"x {minX:0.##}..{maxX:0.##}  z {minZ:0.##}..{maxZ:0.##}");
-                    }
-                }
-                UnityEngine.Object.DestroyImmediate(go);
-            }
+            Debug.Log("=== ROADS CITY (the 30m kit, never used) ===");
+            foreach (var n in new[]
+            {
+                "Mainroad_Straight_30x30_City", "Mainroad_Cross_30x30_City",
+                "Mainroad_Cross_Crosswalk_30x30_City", "Mainroad_T_Crosswalk_30x30_City",
+                "Mainroad_Crosswalk_City", "Mainroad_Stop_30x30_City",
+                "Mainroad_Stop_Middle_30x30_City", "MainRoad_Stop_Start_30x30_City",
+                "Mainroad_Stop_Start_L_30x30_City", "Mainroad_Stop_Start_R_30x30_City",
+                "Mainroad_Turn_30x30_City", "Mainroad_End_30x30_City",
+                "Road_Straight_10x10_City", "Road_Cross_10x10_City", "Road_Crosswalk_10x10_City",
+                "Road_Stop_10x10_City", "Road_T_10x10_City", "Road_Turn_10x10_City",
+                "Road_Parking_10x10_City", "Road_Parking_Side_10x10_City",
+                "MainroadToRoad_30x30_City", "MainroadToParking_30x30_City",
+                "Sidewalk_30x30_City", "Sidewalk_10x10_City",
+                "Freeway_Straight_30x30_City",
+            })
+                One(City + n + ".prefab", n);
 
             if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
+        private static void One(string path, string name)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) { Debug.Log($"[road] MISSING {name}"); return; }
+
+            var lines = new List<string>();
+            foreach (var mf in prefab.GetComponentsInChildren<MeshFilter>())
+            {
+                var mesh = mf.sharedMesh;
+                var mr = mf.GetComponent<MeshRenderer>();
+                if (mesh == null || mr == null) continue;
+
+                // Where this piece sits relative to the prefab root, so multi-part prefabs read
+                // in one coordinate system rather than each in its own.
+                var off = mf.transform.position - prefab.transform.position;
+
+                for (int s = 0; s < mesh.subMeshCount; s++)
+                {
+                    var b = mesh.GetSubMesh(s).bounds;
+                    string mat = s < mr.sharedMaterials.Length && mr.sharedMaterials[s] != null
+                        ? mr.sharedMaterials[s].name : "?";
+                    lines.Add($"    {mat,-24} "
+                            + $"x {b.min.x + off.x,7:0.##}..{b.max.x + off.x,-7:0.##} "
+                            + $"y {b.min.y + off.y,6:0.##}..{b.max.y + off.y,-6:0.##} "
+                            + $"z {b.min.z + off.z,7:0.##}..{b.max.z + off.z,-7:0.##}");
+                }
+            }
+
+            Debug.Log($"[road] {name}\n{string.Join("\n", lines)}");
         }
     }
 }

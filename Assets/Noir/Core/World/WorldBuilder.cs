@@ -25,9 +25,17 @@ namespace Noir.Core.World
             foreach (var patch in layout.Terrain)
                 FillRect(grid, patch.Area, patch.Kind);
 
-            // 2. roads and footpaths
+            // 2. roads and footpaths. Kept as well as painted: rasterising a road into terrain
+            //    loses which corridor a tile belonged to and how wide it was, and streets,
+            //    traffic and signals all need that back. See RoadNetwork.
+            var lines = new List<RoadLine>();
             foreach (var run in layout.Roads)
+            {
                 StrokePolyline(grid, run);
+                if (run.Kind == Terrain.Road)
+                    lines.Add(new RoadLine(run.Name, run.EffectiveClass, run.Width, run.Points));
+            }
+            var roads = new RoadNetwork(lines);
 
             // 3. places
             var places = new List<Place>(layout.Places.Count);
@@ -79,7 +87,7 @@ namespace Noir.Core.World
             var props = PropGenerator.Generate(grid, placeArray, seed);
 
             return new WorldModel(layout.Name, grid, placeArray,
-                                  rooms.ToArray(), furniture.ToArray(), props.ToArray());
+                                  rooms.ToArray(), furniture.ToArray(), props.ToArray(), roads);
         }
 
         /// <summary>

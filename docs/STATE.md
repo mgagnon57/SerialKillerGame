@@ -1,6 +1,88 @@
 ﻿# Where we are
 
-## STOP HERE — 2026-07-29, later still. A wiring audit, and two floors nobody was guarding.
+## RESUME HERE — 2026-07-30. Northgate rebuilt at city scale, on the road kit we already owned.
+
+**Safe to reboot.** Everything below is committed. Core builds, Unity compiles, `PlayCheck` says
+Play should work, and five stills are in `docs/snapshots/`.
+
+### The finding that made the day
+
+`Prefabs/City/Roads City/` — 48 pieces, 30m module, painted lanes, zebra crossings, stop lines,
+lay-bys, parking aprons, and matching junction sets. **Never opened.** The whole city had been
+built out of `Modular Parts/Roads`, the generic 10m kit whose "main road" is six metres of
+unpainted asphalt. Measured, per corridor:
+
+| class | corridor | asphalt | lanes each way |
+|---|---|---|---|
+| freeway | 30m | 24m | **2**, solid orange centre |
+| mainroad | 30m | 12m | 1, dashed centre |
+| street | 10m | 6m | 1, unmarked |
+
+The pack has **no centre turn lane** — checked every piece. The freeway's two-lanes-each-way is
+the nearest real thing and is better for us anyway.
+
+### Four bugs, all mine, all from not measuring
+
+1. **The asphalt has never once been drawn.** A road tile is two planes: pavement at y=0 and
+   asphalt at **y = −0.1**. `CityStreets` lifted its root 0.04 to stop the pavement z-fighting
+   and nobody checked the other plane, so the carriageway sat at −0.06, *under* Ashcombe's ground.
+   Every "road" in every screenshot to date was the village renderer's own road colour showing
+   through the hole. Root is now 0.12.
+2. **Every east-west road tile was laid a full cell north of its corridor.** These tiles pivot at
+   the corner opposite the origin; a yaw of 90° rotates the footprint clean off the pivot. Tiles
+   are now seated by **measured bounds** (`CityStreets.Seat`). This is the rest of the
+   cars-on-the-pavement complaint.
+3. **`place railway` erased Second Street.** `railway` was `form open, ground path`, and open
+   places stamp their ground *after* roads — so the El paved over the street it runs above.
+   `kinds.txt` now gives it `ground road`.
+4. **`RenderNoon` came back dark** because `SunRig.SetLanternGlow` threw on a lantern the chunker
+   had already combined away, aborting `Render()` before any capture. Both glow setters now
+   null-check.
+
+Also: `school2` mapped to nothing while `school` mapped Ashcombe's village school to the pack's
+American elementary. Fixed.
+
+### What is new
+
+- **`Core/World/RoadNetwork.cs`** — `RoadClass`, `RoadLine`, `Junction`, `RoadNetwork`, reachable
+  as `world.Roads`. Roads used to be rasterised into terrain and thrown away, which left every
+  later pass inferring corridors by sampling tiles. Centre lines are derived from how
+  `WorldBuilder` actually strokes a road, not from the declared number. 9 tests.
+- **`class` on a road in the map**, because width alone cannot tell a freeway from a mainroad.
+  Mismatched width against class is a parse error, not a silent misdraw.
+- **`Unity/CitySignals.cs`** — a post on every approach, NS/EW phases with amber and all-red,
+  37s cycle offset per junction. The pack's traffic light **cannot change colour** (lens colours
+  are baked into the atlas UVs; proved with `SignalProbe`), so state is shown by an unlit
+  emissive lens seated on the measured head, plus a point light.
+- **`CityTraffic` rewritten** — lanes from the road class and the measured asphalt, right-hand
+  driving, stop lines at every junction, easing to a stop on red. The arbitrary permanent
+  right-of-way hack is gone; signals separate the flows so nothing can deadlock.
+- **`Content/city.txt` is 240×240** — nine 60m blocks, four junctions, two freeway arterials
+  (Northgate, Second) and two mainroads (Franklin, First). 45 places, 27 homes, 57 people.
+  First outing for the school, the casino, and two skyscrapers (the Meridian is 111m).
+
+### Verified
+
+- Core: **148 pass / 2 fail** — the same two 2:1 gates by design (`ratio.p10` 0.53, unchanged).
+- `PlayCheck`: 240×240, 45 places, 57 people in 27 households, 600 ticks without throwing.
+- Stills: `city-street`, `city-junction`, `city-block`, `city-corner`, `city-terrace`, plus
+  `road-kit.png` and `signal-probe.png` (the two probes that settled the design).
+
+### Next, in order
+
+1. **Look at it in Play.** Stills cannot show the signals cycling or the cars stopping — that
+   needs the editor. Nothing else should be trusted until this is done.
+2. **Cars cannot turn.** Each owns one lane end to end. Turning needs junction geometry — which
+   lane feeds which — and bus routes and pedestrian crossings all want the same graph. This is
+   the next real piece of work.
+3. Bus stops and subway entrances are bought and still unplaced; `Mainroad_Stop_*` lay-by tiles
+   exist for exactly that.
+4. `Skyscraper_C` fits no current lot. The integration spec under `docs/superpowers/specs/`
+   still describes the abandoned modular-parts plan.
+
+---
+
+## 2026-07-29, later still. A wiring audit, and two floors nobody was guarding.
 
 Five audits for one bug class: **things built and never wired up.** Read-only, then fixed on
 branch `audit-fixes`. **139 pass / 2 fail**, the same two 2:1 gates by design.

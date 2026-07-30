@@ -24,8 +24,31 @@ namespace Noir.Core.World
     public sealed class RoadRun
     {
         public Terrain Kind;          // Road or Path
+        public string Name = "";
         public int Width = 3;
         public readonly List<Tile> Points = new List<Tile>();
+
+        /// <summary>
+        /// What is painted on it, or null to take the obvious answer from the width.
+        ///
+        /// Optional because every map written before roads had classes leaves it unsaid, and
+        /// those maps should keep meaning what they meant. See <see cref="EffectiveClass"/>.
+        /// </summary>
+        public RoadClass? Class;
+
+        /// <summary>
+        /// The class this road actually has: what was declared, or the widest class that fits
+        /// inside the declared width.
+        ///
+        /// A corridor is only wide enough for a main road at thirty metres, so anything narrower
+        /// is a street whatever it is called. A thirty-metre road that does not say otherwise is
+        /// a main road rather than an arterial, because two lanes each way is the thing you
+        /// should have to ask for.
+        /// </summary>
+        public RoadClass EffectiveClass =>
+            Class ?? (Width >= RoadClasses.CorridorWidth(RoadClass.Mainroad)
+                          ? RoadClass.Mainroad
+                          : RoadClass.Street);
     }
 
     public sealed class PlaceSpec

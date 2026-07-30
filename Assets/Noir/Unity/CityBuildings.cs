@@ -71,7 +71,11 @@ namespace Noir.Unity
                 {
                     "diner"       => Whole + "Diner_City.prefab",
                     "precinct"    => Whole + "Police_Station_City.prefab",
-                    "school"      => Whole + "School_City.prefab",
+                    // school2, not school: `school` is Ashcombe's village school and this is the
+                    // pack's American elementary. Mapping the village kind here put a City
+                    // school in a 1979 English village and left the city's own school - which
+                    // is a different kind, numbered past the enum - with no model at all.
+                    "school2"     => Whole + "School_City.prefab",
                     "hospital"    => Whole + "Hospital_City.prefab",
                     "firestation" => Whole + "Fire_Station_City.prefab",
                     "cinema"      => Whole + "Cinema_City.prefab",
@@ -82,7 +86,7 @@ namespace Noir.Unity
                     "carwash"     => Whole + "Car_Wash_City.prefab",
                     "restroom"    => Whole + "Restroom_City.prefab",
                     "newsstand"   => Whole + "Newspaper_Shop_City.prefab",
-                    "tower"       => Whole + "Skyscraper_A_City.prefab",
+                    "tower"       => Skyscraper(place.Bounds),
                     _             => null,
                 };
                 if (prefab == null) continue;
@@ -112,7 +116,7 @@ namespace Noir.Unity
             switch (KindOf(place))
             {
                 case "apartment":
-                case "diner": case "precinct": case "school": case "hospital":
+                case "diner": case "precinct": case "school2": case "hospital":
                 case "firestation": case "cinema": case "bank": case "casino":
                 case "gasstation": case "icecream": case "carwash":
                 case "restroom": case "newsstand": case "tower":
@@ -510,6 +514,50 @@ namespace Noir.Unity
             // pack ships its windows already lit, and this was painting over them with a flat
             // dark grey. The city could not light up at night because its glass had been
             // replaced with something that does not glow.
+        }
+
+        /// <summary>
+        /// Which of the three skyscrapers stands on this lot: the TALLEST that fits it.
+        ///
+        /// Measured off the prefabs rather than listed here. Skyscraper_A is 46.9 x 38.2 and
+        /// Skyscraper_C is 35.6 x 40.3, and a lot authored for one of them will not hold the
+        /// other - so a name typed into a switch puts a building through the wall of its
+        /// neighbour the first time a lot is resized.
+        /// </summary>
+        private static string Skyscraper(TileRect lot)
+        {
+            string best = null;
+            float tallest = -1f;
+
+            foreach (var name in new[] { "Skyscraper_A_City", "Skyscraper_B_City", "Skyscraper_C_City" })
+            {
+                string path = Whole + name + ".prefab";
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null) continue;
+
+                var probe = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                probe.transform.position = Vector3.zero;
+                probe.transform.rotation = Quaternion.identity;
+
+                var rends = probe.GetComponentsInChildren<Renderer>();
+                if (rends.Length > 0)
+                {
+                    var b = rends[0].bounds;
+                    for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+                    // Landmark() turns a model to lie along its lot's long side, so it fits if
+                    // it fits either way round.
+                    bool fits = (b.size.x <= lot.W && b.size.z <= lot.H)
+                             || (b.size.z <= lot.W && b.size.x <= lot.H);
+                    if (fits && b.size.y > tallest) { tallest = b.size.y; best = path; }
+                }
+                UnityEngine.Object.DestroyImmediate(probe);
+            }
+
+            if (best == null)
+                Debug.LogWarning($"[city] no skyscraper fits a {lot.W}x{lot.H} lot at "
+                               + $"{lot.X},{lot.Y} - the smallest is 35.6 x 40.3.");
+            return best;
         }
 
         /// <summary>A whole building, centred on its lot and turned to face the long way.</summary>

@@ -571,6 +571,13 @@ namespace Noir.Unity
         /// </summary>
         public static void SetLanternGlow(MeshRenderer lantern, MaterialPropertyBlock block, float glow)
         {
+            // Fixtures are collected BEFORE CityChunker bakes and used after it, and the bake
+            // combines away most of what it finds - so by the time this runs a lantern may be a
+            // destroyed object that a stale reference still points at. Touching one throws, and
+            // because that throw happened inside the render it took the whole photograph with
+            // it: every city still came out as whatever had been on the buffer before.
+            if (lantern == null) return;
+
             var warm = new Color(1.00f, 0.82f, 0.50f);
 
             lantern.GetPropertyBlock(block);
@@ -581,6 +588,8 @@ namespace Noir.Unity
 
         public static void SetPaneGlow(MeshRenderer pane, MaterialPropertyBlock block, float glow)
         {
+            if (pane == null) return;      // may have been baked away; see SetLanternGlow
+
             var warm = new Color(1.00f, 0.80f, 0.48f);
             var cold = new Color(0.16f, 0.19f, 0.24f);
 

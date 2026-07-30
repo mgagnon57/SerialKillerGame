@@ -86,6 +86,10 @@ namespace Noir.Editor
                 var paneBlock = new MaterialPropertyBlock();
                 CityChunker.Bake(city);
 
+                // Outside the baked node, as in the game: the signals change colour and a
+                // combined mesh cannot. Without these the junctions photograph unlit.
+                CitySignals.Create(world, root.transform);
+
                 if (pipeline != null) pipeline.shadowDistance = 320f;
 
                 sunGo = new GameObject("CitySun");
@@ -132,21 +136,32 @@ namespace Noir.Editor
 
                 // Standing in Northgate Avenue looking east, which is the view the game is
                 // actually played from and the only one that says whether this is a street.
-                Frame(camGo, new Vector3(60f, 1.6f, -35f), 32f, 3f, 90f);
+                // The avenue's centre line is y=75, so Unity z=-75.
+                // EVERY CAMERA STANDS IN A STREET. Northgate Avenue's corridor is y 60..90 and
+                // Second Street's is x 150..180; anywhere else is a sixty-metre block with a
+                // building on it, and Frame() puts the camera a long way BACK from its target -
+                // which is how the last set of these ended up inside a townhouse and inside the
+                // Meridian, photographing wallpaper.
+                Frame(camGo, new Vector3(70f, 1.6f, -75f), 36f, 3f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-street.png"));
 
-                // The whole city, to see the grid.
-                Frame(camGo, new Vector3(80f, 0f, -60f), 165f, 40f, 30f);
+                // The whole city, to see the grid: nine blocks, four junctions.
+                Frame(camGo, new Vector3(120f, 0f, -120f), 265f, 38f, 30f);
                 Capture(cam, Path.Combine(OutputDir, "city-block.png"));
 
-                // A terrace three-quarters on, close enough to read a doorway.
-                Frame(camGo, new Vector3(60f, 1.5f, -30f), 30f, 12f, 40f);
+                // The terrace on the north side of Northgate, from the middle of the avenue.
+                Frame(camGo, new Vector3(120f, 1.5f, -62f), 30f, 8f, 20f);
                 Capture(cam, Path.Combine(OutputDir, "city-terrace.png"));
 
-                // The junction of Northgate Avenue and Second Street, where the diner and the
-                // precinct are - a corner rather than a straight, so the block reads as a block.
-                Frame(camGo, new Vector3(100f, 0f, -70f), 90f, 24f, 30f);
+                // Northgate Avenue meeting Second Street: the only place two four-lane arterials
+                // cross, with the Elevated over the top of it. Looking east along the avenue.
+                Frame(camGo, new Vector3(165f, 0f, -75f), 70f, 10f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-corner.png"));
+
+                // Straight down on a junction, to read the lanes, the stop lines and the
+                // signals rather than admire the skyline.
+                Frame(camGo, new Vector3(75f, 0f, -75f), 55f, 45f, 90f);
+                Capture(cam, Path.Combine(OutputDir, "city-junction.png"));
             }
             catch (Exception ex)
             {

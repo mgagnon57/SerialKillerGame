@@ -1,159 +1,220 @@
 # ============================================================================
 #  NORTHGATE
 #
-#  160 x 120 tiles, one tile = one metre. SMALL AND DENSE ON PURPOSE. The first
-#  cut was 240x180 and mostly empty, so the city read as a few blocks marooned in
-#  a field. A demo wants everything inside one look.
+#  240 x 240 tiles, one tile = one metre. Nine blocks of sixty metres, separated
+#  by four roads, crossing at four signalised junctions.
 #
-#  THE MODULES DECIDE THE GRID, not taste:
-#    - the road tile is 10m, so every road fills exactly one 10m cell row or
-#      column and the whole plan snaps to 10.
+#  THE ROAD KIT DECIDES THE GRID, not taste. Prefabs/City/Roads City is built at
+#  thirty metres, so a through-road is a THIRTY-METRE CORRIDOR and the plan snaps
+#  to thirty. What differs between an arterial and a main road is not the
+#  corridor - both are thirty - but how much of it is asphalt:
+#
+#    freeway    30m corridor, 24m asphalt, two lanes each way, orange centre
+#    mainroad   30m corridor, 12m asphalt, one lane each way, bus lay-bys
+#    street     10m corridor,  6m asphalt, unmarked
+#
+#  Because width alone cannot tell a freeway from a mainroad, the class is said
+#  outright on an indented `class` line rather than inferred.
+#
+#  The previous city was 160x120 with 10m roads, which was 6m of asphalt: two
+#  lanes and nothing over, no room to pass, turn or stop, and no junction big
+#  enough to hold a signal. Everything below is that plan at the scale the road
+#  kit was actually drawn for.
+#
+#  THE MODULES DECIDE THE LOTS:
 #    - the townhouse module is 6.1m wide, so a terrace lot is 6 and a terrace is
-#      that repeated.
-#    - every landmark lot is the pack's own footprint rounded up. School_City is
-#      46.2 x 17.9; Hospital_City is 39.2 x 25.8 and gets 40x27.
+#      that repeated. Sixty metres of block edge is nine of them and a corner.
+#    - every landmark lot is the pack's own measured footprint rounded up.
+#      Skyscraper_A is 46.9 x 38.2 and gets 48x39; Casino is 34.5 x 45.4 and
+#      gets 35x46. Measure first: a lot smaller than its model is a building
+#      standing in the road.
 #
 #  THE GROUND IS PAVED, and not only because a city is paved: trees, hedges and
 #  bushes are scattered by Prop.ScatterOn, which fires on grass, wood, field and
 #  churchyard and on NOTHING else. Paving is what stops a hedge growing down the
 #  middle of the avenue, and the parks are where greenery is allowed back.
 #
-#  Painted in order: terrain, then roads over terrain, then buildings over roads.
+#  Painted in order: terrain, then roads over terrain, then places over roads.
+#  An open place STAMPS ITS GROUND, so a place laid over a road must have road
+#  for its ground or it quietly erases the street - which is what the Elevated
+#  did to Second Street in the last plan.
+#
+#      0    60   90  150 180  240
+#  0   +----+====+====+====+====+
+#      | WN |  # | CN |  # | EN |
+#  60  +----+====+====+====+====+
+#      |==== N O R T H G A T E ====|   freeway, four lanes
+#  90  +----+====+====+====+====+
+#      | WM |  # | CM |  # | EM |
+#  150 +----+====+====+====+====+
+#      |====  F R A N K L I N  ====|   mainroad, two lanes
+#  180 +----+====+====+====+====+
+#      | WS |  # | CS |  # | ES |
+#  240 +----+====+====+====+====+
+#           First     Second
+#          mainroad   freeway (and the Elevated over it)
 # ============================================================================
 
 village Northgate
-size 160 120
+size 240 240
 
 # ---- the ground ----------------------------------------------------------
-terrain path    0,0    160x120
-
-# ---- the parks -----------------------------------------------------------
-# The only two places trees happen, and where the playground and skatepark go.
-terrain grass   0,90    30x30
-terrain grass 124,0     34x24
+terrain path 0,0 240x240
 
 # ---- the street grid -----------------------------------------------------
-# Two avenues, three streets, every one filling one cell and reaching the edge.
-road  northgate  10   0,35   159,35    # Northgate Avenue  - cell row 3
-road  franklin   10   0,85   159,85    # Franklin Avenue   - cell row 8
-road  first      10  35,0     35,119   # First Street      - cell col 3
-road  second     10  85,0     85,119   # Second Street     - cell col 8
-road  third      10 135,0    135,119   # Third Street      - cell col 13
+# Every corridor reaches both edges, so every junction is a full crossing and
+# there is no dead end for traffic to have to turn round in.
 
-# ---- homes: the terrace north of Northgate Avenue ------------------------
-# Doors on the avenue side. CityBuildings takes each house's facing from its
-# door, so a row turns to look at the street without being told twice.
-place apartment 40,26 6x8 "1 Northgate"
-  door 43,33
-place apartment 46,26 6x8 "3 Northgate"
-  door 49,33
-place apartment 52,26 6x8 "5 Northgate"
-  door 55,33
-place apartment 58,26 6x8 "7 Northgate"
-  door 61,33
-place apartment 64,26 6x8 "9 Northgate"
-  door 67,33
-place apartment 70,26 6x8 "11 Northgate"
-  door 73,33
+road northgate 30 0,75 239,75
+  class freeway
 
-# ---- homes: the terrace south of Northgate Avenue ------------------------
-place apartment 40,46 6x8 "2 Northgate"
-  door 43,46
-place apartment 46,46 6x8 "4 Northgate"
-  door 49,46
-place apartment 52,46 6x8 "6 Northgate"
-  door 55,46
-place apartment 58,46 6x8 "8 Northgate"
-  door 61,46
-place apartment 64,46 6x8 "10 Northgate"
-  door 67,46
-place apartment 70,46 6x8 "12 Northgate"
-  door 73,46
+road franklin 30 0,165 239,165
+  class mainroad
 
-# ---- homes: Franklin Avenue, north side ----------------------------------
-place apartment 40,76 6x8 "1 Franklin"
-  door 43,83
-place apartment 46,76 6x8 "3 Franklin"
-  door 49,83
-place apartment 52,76 6x8 "5 Franklin"
-  door 55,83
-place apartment 58,76 6x8 "7 Franklin"
-  door 61,83
-place apartment 64,76 6x8 "9 Franklin"
-  door 67,83
-place apartment 70,76 6x8 "11 Franklin"
-  door 73,83
+road first 30 75,0 75,239
+  class mainroad
 
-# ---- homes: Franklin Avenue, south side ----------------------------------
-place apartment 40,96 6x8 "2 Franklin"
-  door 43,96
-place apartment 46,96 6x8 "4 Franklin"
-  door 49,96
-place apartment 52,96 6x8 "6 Franklin"
-  door 55,96
-place apartment 58,96 6x8 "8 Franklin"
-  door 61,96
-place apartment 64,96 6x8 "10 Franklin"
-  door 67,96
-place apartment 70,96 6x8 "12 Franklin"
-  door 73,96
+road second 30 165,0 165,239
+  class freeway
 
-# ---- the civic block, east of Second Street ------------------------------
-place hospital 92,46 40x27 "Northgate General"
-  door 112,72
-  human The only lit windows on this street at four in the morning.
-
-place precinct 92,96 36x19 "Northgate Precinct"
-  door 110,96
-  human The light in the front office never goes off, which is not the same as somebody being awake.
-
-place firestation 92,4 28x27 "Engine 9"
-  door 106,30
-  human The doors are open in all weather and the crew watch the street from inside them.
-
-place cinema 138,46 21x34 "the Rialto"
-  door 138,63
-  human Two screens, one of which has been showing the same film since spring.
-
-# ---- the parade, west of First Street ------------------------------------
-place bank 2,46 30x24 "Northgate Savings"
-  door 17,69
-  human Marble that was meant to look permanent.
-
-place diner 2,76 21x12 "the Northgate Diner"
-  door 12,76
-  human Open before anyone needs it to be, and the same four faces are in it at six.
-
-place gasstation 2,4 21x12 "the pumps"
-  door 12,15
-  human Somebody is always sitting in a car here not buying anything.
-
-place icecream 40,4 17x12 "Bruno's"
-  door 48,15
-  human Shut half the year, and the queue at Easter goes round the corner.
-
-place carwash 62,4 11x14 "the wash"
-  door 67,17
+# ---- block WN: the depot corner ------------------------------------------
+place carwash 2,4 10x13 "the wash"
+  door 6,16
   human A place people leave a car and walk away from for ten minutes.
 
-place newsstand 138,26 8x6 "the stand"
-  door 141,31
-  human Papers, cigarettes, and the man who knows who bought which.
+place gasstation 38,4 20x11 "the pumps"
+  door 57,9
+  human Somebody is always sitting in a car here not buying anything.
 
-place restroom 138,88 14x9 "the public conveniences"
-  door 144,88
+place firestation 2,30 28x27 "Engine 9"
+  door 16,56
+  human The doors are open in all weather and the crew watch the street from inside them.
+
+place green 33,20 24x37 "the depot yard"
+  human Grass that grew because nobody got round to paving it.
+
+# ---- block CN: the north tower and the terrace ---------------------------
+place tower 96,4 48x39 "the Hallam Building"
+  door 96,23
+  human Forty floors of offices and a lobby nobody is ever turned away from.
+
+place apartment 95,52 6x8 "1 Northgate"
+  door 98,59
+place apartment 101,52 6x8 "3 Northgate"
+  door 104,59
+place apartment 107,52 6x8 "5 Northgate"
+  door 110,59
+place apartment 113,52 6x8 "7 Northgate"
+  door 116,59
+place apartment 119,52 6x8 "9 Northgate"
+  door 122,59
+place apartment 125,52 6x8 "11 Northgate"
+  door 128,59
+place apartment 131,52 6x8 "13 Northgate"
+  door 134,59
+place apartment 137,52 6x8 "15 Northgate"
+  door 140,59
+place apartment 143,52 6x8 "17 Northgate"
+  door 146,59
+
+# ---- block EN: the school corner -----------------------------------------
+place school2 185,4 47x18 "Northgate Elementary"
+  door 208,21
+  human Painted every summer and scuffed back to the undercoat by October.
+
+place icecream 185,30 16x11 "Bruno's"
+  door 192,40
+  human Shut half the year, and the queue at Easter goes round the corner.
+
+place restroom 222,30 14x8 "the public conveniences"
+  door 228,37
   human Council-green tile and a door that does not lock.
 
-# ---- open ground ---------------------------------------------------------
-place green 0,90 30x30 "Franklin Park"
+place newsstand 210,50 7x3 "the stand"
+  door 213,52
+  human Papers, cigarettes, and the man who knows who bought which.
+
+# ---- block WM: the parade ------------------------------------------------
+place apartment 2,90 6x8 "2 Northgate"
+  door 5,90
+place apartment 8,90 6x8 "4 Northgate"
+  door 11,90
+place apartment 14,90 6x8 "6 Northgate"
+  door 17,90
+place apartment 20,90 6x8 "8 Northgate"
+  door 23,90
+place apartment 26,90 6x8 "10 Northgate"
+  door 29,90
+place apartment 32,90 6x8 "12 Northgate"
+  door 35,90
+place apartment 38,90 6x8 "14 Northgate"
+  door 41,90
+place apartment 44,90 6x8 "16 Northgate"
+  door 47,90
+place apartment 50,90 6x8 "18 Northgate"
+  door 53,90
+
+place bank 2,105 29x23 "Northgate Savings"
+  door 16,105
+  human Marble that was meant to look permanent.
+
+place diner 36,105 20x11 "the Northgate Diner"
+  door 45,105
+  human Open before anyone needs it to be, and the same four faces are in it at six.
+
+# ---- block CM: downtown --------------------------------------------------
+# The tallest thing in the city, on the corner of the two arterials, fronting
+# the avenue. Skyscraper_B measures 44.7 x 36 and stands 111m.
+place tower 95,100 46x37 "the Meridian"
+  door 118,100
+  human A hundred and eleven metres of it, and the top four floors have been empty for a year.
+
+# ---- block EM: the hospital ----------------------------------------------
+place apartment 182,90 6x8 "20 Northgate"
+  door 185,90
+place apartment 188,90 6x8 "22 Northgate"
+  door 191,90
+place apartment 194,90 6x8 "24 Northgate"
+  door 197,90
+place apartment 200,90 6x8 "26 Northgate"
+  door 203,90
+place apartment 206,90 6x8 "28 Northgate"
+  door 209,90
+place apartment 212,90 6x8 "30 Northgate"
+  door 215,90
+place apartment 218,90 6x8 "32 Northgate"
+  door 221,90
+place apartment 224,90 6x8 "34 Northgate"
+  door 227,90
+place apartment 230,90 6x8 "36 Northgate"
+  door 233,90
+
+place hospital 185,110 40x27 "Northgate General"
+  door 205,110
+  human The only lit windows on this street at four in the morning.
+
+# ---- block WS: the park --------------------------------------------------
+place green 0,180 60x60 "Franklin Park"
   human Grass worn to earth along the line everyone actually walks.
 
-place green 124,0 34x24 "the north green"
-  human Nobody planted it; it is simply the piece nothing was built on.
+# ---- block CS: the precinct and the picture house ------------------------
+place precinct 95,182 35x18 "Northgate Precinct"
+  door 112,182
+  human The light in the front office never goes off, which is not the same as somebody being awake.
+
+place cinema 125,205 22x35 "the Rialto"
+  door 135,205
+  human Two screens, one of which has been showing the same film since spring.
+
+# ---- block ES: the casino ------------------------------------------------
+place casino 185,185 35x46 "the Regency Rooms"
+  door 202,185
+  human Open all night, and the carpet is loud enough that nobody notices the hour.
 
 # ---- the elevated railway ------------------------------------------------
 # Straight over Second Street, which is what an El is: the street stays a street
-# and the line runs ten metres above it on pillars. Runs the full height of the
-# map so it reads as passing through rather than terminating here.
-place railway 80,0 10x120 "the Elevated"
+# and the line runs ten metres above it on pillars. The lot is EXACTLY the
+# street's corridor, and the railway kind's ground is road, so stamping it is a
+# no-op rather than a demolition.
+place railway 150,0 30x240 "the Elevated"
   human It goes over the top of everything and you hear it before you see it.

@@ -46,7 +46,11 @@ namespace Noir.Core.World
 
             var kinds = PlaceKindTable.Current;
             var layout = new VillageLayout();
+
+            // What an indented line attaches to. Exactly one of these is ever non-null: whichever
+            // of `place` or `road` was declared most recently.
             PlaceSpec current = null;
+            RoadRun currentRoad = null;
 
             string[] lines = ContentText.SplitLines(text);
 
@@ -65,6 +69,12 @@ namespace Noir.Core.World
                 var tokens = Tokenise(line);
                 if (tokens.Count == 0) continue;
                 string cmd = tokens[0].ToLowerInvariant();
+
+                if (indented && currentRoad != null)
+                {
+                    ParseRoadAttribute(currentRoad, cmd, tokens, lineNo);
+                    continue;
+                }
 
                 if (indented && current != null)
                 {
@@ -103,6 +113,7 @@ namespace Noir.Core.World
                         var run = new RoadRun
                         {
                             Kind = cmd == "road" ? Terrain.Road : Terrain.Path,
+                            Name = tokens[1],
                             Width = Int(tokens[2], lineNo)
                         };
                         for (int t = 3; t < tokens.Count; t++)
@@ -110,6 +121,10 @@ namespace Noir.Core.World
                         if (run.Points.Count < 2)
                             throw new VillageParseException(lineNo, "a road needs at least two points");
                         layout.Roads.Add(run);
+
+                        // An indented line after this attaches to the road, not to the last place.
+                        current = null;
+                        currentRoad = run;
                         break;
                     }
 
@@ -130,6 +145,7 @@ namespace Noir.Core.World
                             JobSlots = kinds.Row(kind).Jobs
                         };
                         layout.Places.Add(current);
+                        currentRoad = null;
                         break;
                     }
 
@@ -157,6 +173,44 @@ namespace Noir.Core.World
             {
                 if (place.Hours.Count > 0) continue;
                 foreach (var window in kinds.Row(place.Kind).Hours) place.Hours.Add(window);
+            }
+        }
+
+        /// <summary>
+        /// An indented line under a `road`. Only one so far:
+        ///
+        ///   road northgate 30 0,75 239,75
+        ///     class freeway
+        ///
+        /// Saying it rather than inferring it, because a main road and an arterial occupy the
+        /// same thirty-metre corridor and differ only in what is painted on them.
+        /// </summary>
+        private static void ParseRoadAttribute(RoadRun road, string cmd, List<string> tokens,
+                                               int lineNo)
+        {
+            switch (cmd)
+            {
+                case "class":
+                {
+                    Require(tokens, 2, lineNo, "class <street|mainroad|freeway>");
+                    if (!RoadClasses.TryParse(tokens[1], out var klass))
+                        throw new VillageParseException(
+                            lineNo, $"unknown road class '{tokens[1]}' - "
+                                  + "expected street, mainroad or freeway");
+
+                    int wanted = RoadClasses.CorridorWidth(klass);
+                    if (road.Width != wanted)
+                        throw new VillageParseException(
+                            lineNo, $"a {tokens[1]} is a {wanted}m corridor, but "
+                                  + $"'{road.Name}' is declared {road.Width}m wide. The road kit's "
+                                  + "tiles are that size, so the width is not a free choice.");
+
+                    road.Class = klass;
+                    break;
+                }
+
+                default:
+                    throw new VillageParseException(lineNo, $"unknown road attribute '{cmd}'");
             }
         }
 

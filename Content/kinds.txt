@@ -673,7 +673,11 @@ kind tower
 kind railway
   words     railway rail el
   form      open
-  ground    path
+  # Road, because an elevated railway is authored ON TOP OF a street and an open
+  # place stamps its ground last of all. With `path` here the El silently paved
+  # over the whole of Second Street - the corridor it runs above - so the street
+  # under the line stopped being a street and no traffic would use it.
+  ground    road
   rooms     none
   roof      no
   frontage  none

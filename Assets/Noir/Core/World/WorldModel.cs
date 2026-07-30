@@ -34,7 +34,23 @@ namespace Noir.Core.World
 
         public WorldModel(string name, TileGrid grid, Place[] places, Room[] rooms,
                           Furniture[] furniture, Prop[] props)
+            : this(name, grid, places, rooms, furniture, props, RoadNetwork.Empty) { }
+
+        /// <summary>
+        /// Every road in the city, with its name, class and centre line intact.
+        /// </summary>
+        /// <remarks>
+        /// Roads used to be rasterised into the terrain grid and discarded, so anything wanting
+        /// to know where a carriageway ran had to sample tiles and infer it. That inference is
+        /// how a lane came to be measured off the centre of a TILE rather than the centre of a
+        /// ROAD. Ask this instead.
+        /// </remarks>
+        public readonly RoadNetwork Roads;
+
+        public WorldModel(string name, TileGrid grid, Place[] places, Room[] rooms,
+                          Furniture[] furniture, Prop[] props, RoadNetwork roads)
         {
+            Roads = roads ?? RoadNetwork.Empty;
             _props = props ?? Array.Empty<Prop>();
             Name = name;
             Grid = grid;
