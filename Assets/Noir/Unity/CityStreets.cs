@@ -84,6 +84,28 @@ namespace Noir.Unity
             var manholes = Catalogue(CityProps + "/Props City", "Manhole");
             var signs = Catalogue(CityProps + "/Signs City", "Sign_");
 
+            // Nature has 760 prefabs and the city was using none of them. Trees City is the
+            // nine authored for a pavement; the rest is what a park is made of.
+            const string Nat = "Assets/polyperfect/Poly Universal Pack/Prefabs/Nature";
+            var streetTrees = Catalogue(Nat + "/Trees City", null);
+            var parkKit = new List<List<string>>
+            {
+                Catalogue(Nat + "/Trees", null),
+                Catalogue(Nat + "/Bushes", null),
+                Catalogue(Nat + "/Flowers", null),
+                Catalogue(Nat + "/Rocks", null),
+                Catalogue(Nat + "/Grass", null),
+            };
+            parkKit.RemoveAll(c => c.Count == 0);
+
+            // What piles up behind a building rather than in front of it.
+            var alley = new List<List<string>>
+            {
+                Catalogue(CityProps + "/Props City/Garbage Props", null),
+                Catalogue(CityProps + "/Props City/Pipes Props", null),
+            };
+            alley.RemoveAll(c => c.Count == 0);
+
             int tiles = 0, dressing = 0;
 
             for (int cy = 0; cy < rows; cy++)
@@ -148,6 +170,31 @@ namespace Noir.Unity
                         var spot = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
                         if (Put(root.transform, Pick(role, cx, cy, 619), spot, 0f) != null) dressing++;
                     }
+
+                    // Street trees. Nature/Trees City is the nine authored to stand in a
+                    // pavement rather than in a wood, and they do more for a street than any
+                    // other single prop - they break the roofline and cast something on it.
+                    if (streetTrees.Count > 0 && Materials3D.Scatter(cx, cy, 641) % 2 == 0)
+                    {
+                        var verge = at + new Vector3(-Cell + 2f, 0f, -2f);
+                        if (Put(root.transform, Pick(streetTrees, cx, cy, 643), verge,
+                                Materials3D.Scatter(cx, cy, 647) % 4 * 90f) != null) dressing++;
+                    }
+                }
+                // Behind the buildings. Everything a street hides round the back: bins, crates,
+                // pallets, tyres, and the pipework that runs up an alley wall.
+                else if (world.Grid.TerrainAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2)
+                         == Noir.Core.World.Terrain.Path && alley.Count > 0)
+                {
+                    if (Materials3D.Scatter(cx, cy, 653) % 3 != 0) continue;
+                    for (int k = 0; k < 2; k++)
+                    {
+                        var role = alley[(int)(Materials3D.Scatter(cx + k, cy, 659) % (uint)alley.Count)];
+                        float ox = -2f - (Materials3D.Scatter(cx * 5 + k, cy, 661) % 7);
+                        float oz = -2f - (Materials3D.Scatter(cx, cy * 5 + k, 673) % 7);
+                        if (Put(root.transform, Pick(role, cx + k, cy, 677), at + new Vector3(ox, 0f, oz),
+                                Materials3D.Scatter(cx + k, cy, 683) % 4 * 90f) != null) dressing++;
+                    }
                 }
                 // The parks: the only unpaved ground, and where the playground and the skatepark
                 // live. Both were bought and neither had ever been on screen.
@@ -155,17 +202,27 @@ namespace Noir.Unity
                          == Noir.Core.World.Terrain.Grass)
                 {
                     var kit = (cx + cy) % 2 == 0 ? play : skate;
-                    if (kit.Count == 0) continue;
 
-                    // Three pieces to a park cell, spread so it reads as equipment rather than
-                    // as one object dropped in the middle of a lawn.
-                    for (int k = 0; k < 3; k++)
+                    // Three pieces of equipment to a park cell, spread so it reads as a park
+                    // rather than as one object dropped in the middle of a lawn.
+                    for (int k = 0; k < 3 && kit.Count > 0; k++)
                     {
                         float ox = -2f - (Materials3D.Scatter(cx * 7 + k, cy, 131) % 6);
                         float oz = -2f - (Materials3D.Scatter(cx, cy * 7 + k, 137) % 6);
                         var where = at + new Vector3(ox, 0f, oz);
                         if (Put(root.transform, Pick(kit, cx + k, cy, 149 + k), where,
                                 Materials3D.Scatter(cx, cy + k, 151) % 4 * 90f) != null) dressing++;
+                    }
+
+                    // And the park itself - trees, bushes, flowers, rocks, tufts of grass. The
+                    // pack has 760 nature prefabs and the city had been using precisely none.
+                    for (int k = 0; k < 5 && parkKit.Count > 0; k++)
+                    {
+                        var role = parkKit[(int)(Materials3D.Scatter(cx + k, cy, 691) % (uint)parkKit.Count)];
+                        float ox = -1f - (Materials3D.Scatter(cx * 11 + k, cy, 701) % 8);
+                        float oz = -1f - (Materials3D.Scatter(cx, cy * 11 + k, 709) % 8);
+                        if (Put(root.transform, Pick(role, cx + k, cy + k, 719), at + new Vector3(ox, 0f, oz),
+                                Materials3D.Scatter(cx + k, cy, 727) % 4 * 90f) != null) dressing++;
                     }
                 }
             }
@@ -262,6 +319,13 @@ namespace Noir.Unity
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (path.IndexOf("Collider", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                // Nature ships the whole world in one folder. A palm or a cactus on Northgate
+                // Avenue is not a bug in the pack, it is a bug in asking the pack for "a tree"
+                // and taking whatever comes back.
+                if (path.IndexOf("Palm", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (path.IndexOf("Cactus", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (path.IndexOf("Dead", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 if (startsWith != null &&
                     System.IO.Path.GetFileName(path).StartsWith(startsWith, System.StringComparison.Ordinal) == false)
                     continue;

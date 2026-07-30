@@ -183,7 +183,104 @@ namespace Noir.Unity
             if (Place(house.transform, $"{City}{family}_Roof_A_City.prefab", y) > 0f) n++;
 
             Seat(house, lot, yaw);
+            n += Roof(house, lot);
+            n += Shopfront(house, lot, yaw);
             return n;
+        }
+
+        private static List<string> _roofKit, _neon, _pipes;
+
+        /// <summary>
+        /// Everything that lives on a flat roof: air conditioning, vents, satellite dishes,
+        /// antennas, solar panels, a water tower.
+        ///
+        /// A flat roof is the emptiest surface in a city and it is in every overview shot, so
+        /// this is the cheapest density in the whole pack - thirty-six prefabs that had never
+        /// been instantiated once. It is also what stops a terrace reading as extruded boxes:
+        /// rooflines differ even when the buildings below them do not.
+        /// </summary>
+        private static int Roof(GameObject house, TileRect lot)
+        {
+            _roofKit ??= Catalogue("Assets/polyperfect/Poly Universal Pack/Prefabs/City/Props City/Roof Props");
+            if (_roofKit.Count == 0) return 0;
+
+            var rends = house.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return 0;
+            var b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+            int n = 0;
+            int how = 2 + (int)(Materials3D.Scatter(lot.X, lot.Y, 307) % 3);
+            for (int k = 0; k < how; k++)
+            {
+                // Kept a metre inside the parapet, or the dish hangs over the street.
+                float fx = (Materials3D.Scatter(lot.X + k, lot.Y, 311) % 100) / 100f;
+                float fz = (Materials3D.Scatter(lot.X, lot.Y + k, 313) % 100) / 100f;
+                var on = new Vector3(Mathf.Lerp(b.min.x + 1f, b.max.x - 1f, fx),
+                                     b.max.y,
+                                     Mathf.Lerp(b.min.z + 1f, b.max.z - 1f, fz));
+
+                var go = Spawn(house, Pick(_roofKit, lot.X + k, lot.Y, 317));
+                if (go == null) continue;
+                go.transform.position = on;
+                go.transform.rotation = Quaternion.Euler(0f, Materials3D.Scatter(lot.X, lot.Y + k, 319) % 4 * 90f, 0f);
+                n++;
+            }
+            return n;
+        }
+
+        /// <summary>
+        /// A lit sign over the ground floor. The townhouse's bottom section is a shopfront and
+        /// every one of them was a blank panel; the pack ships eight neons - bar, coffee, hotel,
+        /// club, restaurant, casino, barber, OPEN - and none had been used.
+        /// </summary>
+        private static int Shopfront(GameObject house, TileRect lot, float yaw)
+        {
+            _neon ??= Catalogue("Assets/polyperfect/Poly Universal Pack/Prefabs/City/Props City/Neon Props");
+            if (_neon.Count == 0) return 0;
+
+            // Not every front door is a business. Roughly one unit in three.
+            if (Materials3D.Scatter(lot.X, lot.Y, 331) % 3 != 0) return 0;
+
+            var rends = house.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return 0;
+            var b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+            // On the face the door is on, just above the shopfront glazing.
+            var mid = new Vector3(b.center.x, 3.1f, b.center.z);
+            var outward = Quaternion.Euler(0f, yaw, 0f) * Vector3.back;
+            var on = mid + outward * (yaw == 0f || yaw == 180f ? b.extents.z + 0.15f : b.extents.x + 0.15f);
+
+            var go = Spawn(house, Pick(_neon, lot.X, lot.Y, 337));
+            if (go == null) return 0;
+            go.transform.position = on;
+            go.transform.rotation = Quaternion.Euler(0f, yaw + 180f, 0f);
+            return 1;
+        }
+
+        private static List<string> Catalogue(string folder)
+        {
+            var found = new List<string>();
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { folder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.IndexOf("Collider", System.StringComparison.OrdinalIgnoreCase) < 0) found.Add(path);
+            }
+            found.Sort(System.StringComparer.Ordinal);
+            return found;
+        }
+
+        private static string Pick(List<string> from, int x, int y, int salt) =>
+            from[(int)(Materials3D.Scatter(x, y, salt) % (uint)from.Count)];
+
+        private static GameObject Spawn(GameObject parent, string path)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) return null;
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetParent(parent.transform, true);
+            return go;
         }
 
         /// <summary>
