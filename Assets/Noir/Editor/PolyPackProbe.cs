@@ -52,6 +52,16 @@ namespace Noir.Editor
             City + "Squarehouse_Bottom_A_F_City.prefab",
             City + "Squarehouse_Floor_A_Mid_F_City.prefab",
             City + "Squarehouse_Roof_A_City.prefab",
+
+            // The street itself. A 10x10m road tile is as much a module as the 6.1m townhouse,
+            // and the grid has to be built out of it rather than the other way round.
+            Parts + "Roads/Road_Paved_Straight_10x10m.prefab",
+            Parts + "Roads/Road_Paved_X_10x10m.prefab",
+            Parts + "Roads/Road_Paved_T_10x10m.prefab",
+            Parts + "Roads/Road_Paved_Turn_10x10m.prefab",
+            Parts + "Roads/Mainroad_Paved_Straight_10x10m.prefab",
+            Parts + "Roads/Sidewalk_Paved_10x10m.prefab",
+            Parts + "Roads/Sidewalk_Paved_5x5m.prefab",
         };
 
         [MenuItem("Noir/Probe Poly Pack")]

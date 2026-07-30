@@ -135,6 +135,7 @@ namespace Noir.Unity
             // The ground, roads and props are still drawn by the village renderer; only the
             // BUILDINGS are bought models. Nothing happens here for a map that has no city
             // kinds in it, so Ashcombe still builds exactly as it did.
+            CityStreets.Build(World, _village.transform);
             CityBuildings.Build(World, _village.transform);
             _xray = XRay.Create(World, _village);
             _agentView = AgentMeshView.Create(this, transform);

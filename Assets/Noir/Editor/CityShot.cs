@@ -71,7 +71,9 @@ namespace Noir.Editor
                 root = new GameObject("CityGround");
                 VillageMesh.Build(world, root.transform);
 
-                city = CityBuildings.Build(world, null);
+                city = new GameObject("CityAll");
+                CityStreets.Build(world, city.transform);
+                CityBuildings.Build(world, city.transform);
 
                 if (pipeline != null) pipeline.shadowDistance = 320f;
 
