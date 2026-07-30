@@ -168,7 +168,7 @@ namespace Noir.Unity
 
             if (Place(house.transform, $"{City}{family}_Roof_A_City.prefab", y) > 0f) n++;
 
-            Seat(house, lot);
+            Seat(house, lot, yaw);
             return n;
         }
 
@@ -176,7 +176,7 @@ namespace Noir.Unity
         /// Slide a finished house so its measured footprint centres on its lot, in x and z only -
         /// the stack has already settled its own height and must not be lifted off the ground.
         /// </summary>
-        private static void Seat(GameObject house, TileRect lot)
+        private static void Seat(GameObject house, TileRect lot, float yaw)
         {
             var rends = house.GetComponentsInChildren<Renderer>();
             if (rends.Length == 0) return;
@@ -185,12 +185,30 @@ namespace Noir.Unity
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
 
             // Village y runs into Unity -z, as everywhere else in the renderers.
-            var want = new Vector3(lot.X + lot.W / 2f, 0f, -(lot.Y + lot.H / 2f));
-            var drift = b.center - house.transform.position;
+            float westX = lot.X, eastX = lot.X + lot.W;
+            float northZ = -lot.Y, southZ = -(lot.Y + lot.H);
+            var pos = house.transform.position;
 
-            house.transform.position = new Vector3(want.x - drift.x,
-                                                   house.transform.position.y,
-                                                   want.z - drift.z);
+            // THE FRONT WALL GOES ON THE BUILDING LINE. Centring the footprint on the lot
+            // instead - which is what this did - lines up the MIDDLES, and Bayhouse is 7m deep
+            // where Squarehouse is 9m, so a terrace of mixed families stood in a ragged
+            // zigzag with every other house set back a metre. A terrace is a terrace because
+            // its FACADES agree; what the backs do is nobody's business.
+            if (yaw == 0f)          // faces -z: front is the low-z face, on the south edge
+                pos.z += southZ - b.min.z;
+            else if (yaw == 180f)   // faces +z: front is the high-z face, on the north edge
+                pos.z += northZ - b.max.z;
+            else
+                pos.z += -(lot.Y + lot.H / 2f) - b.center.z;
+
+            if (yaw == 90f)         // faces -x
+                pos.x += westX - b.min.x;
+            else if (yaw == 270f)   // faces +x
+                pos.x += eastX - b.max.x;
+            else
+                pos.x += (lot.X + lot.W / 2f) - b.center.x;
+
+            house.transform.position = pos;
         }
 
         /// <summary>Instantiate one section at a height, returning how tall it turned out.</summary>

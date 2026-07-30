@@ -23,6 +23,15 @@ namespace Noir.Editor
     {
         private const int Width = 1600, Height = 900;
 
+        /// <summary>Set by Render06 / Render13; defaults to the hour the game opens at.</summary>
+        private static float Hour = 6f;
+
+        [MenuItem("Noir/Render City Block (as the game opens, 06:00)")]
+        public static void RenderDawn() { Hour = 6f; Render(); }
+
+        [MenuItem("Noir/Render City Block (noon)")]
+        public static void RenderNoon() { Hour = 13f; Render(); }
+
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "..", "docs", "snapshots"));
 
@@ -89,7 +98,11 @@ namespace Noir.Editor
                 RenderSettings.fogMode = FogMode.ExponentialSquared;
                 RenderSettings.ambientMode = AmbientMode.Flat;
 
-                const float hour = 13f;
+                // The hour the GAME starts at, not a flattering one. Rendering these at noon was
+                // honest about the geometry and quietly dishonest about the experience: at 06:00
+                // the sun is barely up, SunRig's fog is at its thickest, and the city that
+                // photographed well at one o'clock is a brown smudge.
+                float hour = Hour;
                 var (colour, intensity, ambient) = SunRig.SkyAt(hour);
                 sun.color = colour;
                 sun.intensity = intensity;
