@@ -63,11 +63,25 @@ namespace Noir.Unity
 
             foreach (var place in world.AllPlaces)
             {
+                // One bought building per kind. The lot in city.txt is sized from the prefab,
+                // never the other way round - these are the pack's own footprints rounded up.
                 string prefab = KindOf(place) switch
                 {
-                    "diner"    => Whole + "Diner_City.prefab",
-                    "precinct" => Whole + "Police_Station_City.prefab",
-                    _          => null,
+                    "diner"       => Whole + "Diner_City.prefab",
+                    "precinct"    => Whole + "Police_Station_City.prefab",
+                    "school"      => Whole + "School_City.prefab",
+                    "hospital"    => Whole + "Hospital_City.prefab",
+                    "firestation" => Whole + "Fire_Station_City.prefab",
+                    "cinema"      => Whole + "Cinema_City.prefab",
+                    "bank"        => Whole + "Bank_City.prefab",
+                    "casino"      => Whole + "Casino_City.prefab",
+                    "gasstation"  => Whole + "Gas_Station_City.prefab",
+                    "icecream"    => Whole + "Shop_Icecream_City.prefab",
+                    "carwash"     => Whole + "Car_Wash_City.prefab",
+                    "restroom"    => Whole + "Restroom_City.prefab",
+                    "newsstand"   => Whole + "Newspaper_Shop_City.prefab",
+                    "tower"       => Whole + "Skyscraper_A_City.prefab",
+                    _             => null,
                 };
                 if (prefab == null) continue;
 

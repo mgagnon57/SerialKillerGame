@@ -57,6 +57,12 @@ namespace Noir.Unity
             var lamps = Catalogue(CityProps + "/Lamps City", "Lamp_Sidewalk");
             var cars = Catalogue(CityProps + "/../Cars", null);
             var bins = Catalogue(CityProps + "/Props City", "Bin_");
+            var lights = Catalogue(CityProps + "/TrafficLights City", "Traffic_Light");
+            var planters = Catalogue(CityProps + "/Park City", "City_Planter");
+            var potted = Catalogue(CityProps + "/Park City", "Tree_Pot_City");
+            var play = Catalogue(CityProps + "/Playground City", null);
+            var skate = Catalogue(CityProps + "/SkatePark City", "Skate_");
+            var poles = Catalogue(CityProps + "/Poles City", "Pole_Electric_A");
 
             int tiles = 0, dressing = 0;
 
@@ -80,6 +86,14 @@ namespace Noir.Unity
                     float yaw = ew && ns ? 0f : (ew ? 90f : 0f);
 
                     if (Put(root.transform, Parts + piece + ".prefab", at, yaw) != null) tiles++;
+
+                    // A crossing gets signals on the corner it is entered from. Four would be
+                    // correct and reads as a thicket at this scale; one apiece says junction.
+                    if (ew && ns && lights.Count > 0)
+                    {
+                        var corner = at + new Vector3(-Cell + 1f, 0f, -Cell + 1f);
+                        if (Put(root.transform, Pick(lights, cx, cy, 5), corner, 0f) != null) dressing++;
+                    }
 
                     // Lamps stand at the kerb where the carriageway meets the pavement, one
                     // every other tile so a street is lit without becoming a fence of poles.
@@ -106,10 +120,37 @@ namespace Noir.Unity
                 {
                     if (Put(root.transform, Parts + "Sidewalk_Paved_10x10m.prefab", at, 0f) != null) tiles++;
 
-                    if (bins.Count > 0 && Materials3D.Scatter(cx, cy, 613) % 7 == 0)
+                    // Pavement furniture. A bare kerb is what makes a street read as a diagram,
+                    // and the pack has thirty planters and potted trees nobody had touched.
+                    uint roll = Materials3D.Scatter(cx, cy, 613) % 6;
+                    var spot = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
+
+                    if (roll == 0 && bins.Count > 0)
+                    { if (Put(root.transform, Pick(bins, cx, cy, 71), spot, 0f) != null) dressing++; }
+                    else if (roll == 1 && planters.Count > 0)
+                    { if (Put(root.transform, Pick(planters, cx, cy, 83), spot, 0f) != null) dressing++; }
+                    else if (roll == 2 && potted.Count > 0)
+                    { if (Put(root.transform, Pick(potted, cx, cy, 97), spot, 0f) != null) dressing++; }
+                    else if (roll == 3 && poles.Count > 0)
+                    { if (Put(root.transform, Pick(poles, cx, cy, 103), spot, 0f) != null) dressing++; }
+                }
+                // The parks: the only unpaved ground, and where the playground and the skatepark
+                // live. Both were bought and neither had ever been on screen.
+                else if (world.Grid.TerrainAt(cx * Cell + Cell / 2, cy * Cell + Cell / 2)
+                         == Noir.Core.World.Terrain.Grass)
+                {
+                    var kit = (cx + cy) % 2 == 0 ? play : skate;
+                    if (kit.Count == 0) continue;
+
+                    // Three pieces to a park cell, spread so it reads as equipment rather than
+                    // as one object dropped in the middle of a lawn.
+                    for (int k = 0; k < 3; k++)
                     {
-                        var spot = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
-                        if (Put(root.transform, Pick(bins, cx, cy, 71), spot, 0f) != null) dressing++;
+                        float ox = -2f - (Materials3D.Scatter(cx * 7 + k, cy, 131) % 6);
+                        float oz = -2f - (Materials3D.Scatter(cx, cy * 7 + k, 137) % 6);
+                        var where = at + new Vector3(ox, 0f, oz);
+                        if (Put(root.transform, Pick(kit, cx + k, cy, 149 + k), where,
+                                Materials3D.Scatter(cx, cy + k, 151) % 4 * 90f) != null) dressing++;
                     }
                 }
             }

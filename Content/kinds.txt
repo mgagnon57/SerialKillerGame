@@ -446,3 +446,222 @@ kind precinct
   shifts    split
   catchment yes
   describe  yes
+
+# ---- landmarks, one bought building each ------------------------------------
+# Every one of these is a whole prefab from the pack placed on a lot sized from it.
+# The counter and hours are what make it a place people GO to rather than scenery.
+
+kind school2
+  words     school2 elementary
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  school
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      6
+  roles     teacher
+  shifts    one
+  catchment yes
+  describe  yes
+
+kind hospital
+  words     hospital
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  surgery
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      14
+  roles     doctor nurse
+  shifts    one
+  catchment yes
+  describe  yes
+
+kind firestation
+  words     firestation fire
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  hall
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      8
+  roles     chief firefighter
+  shifts    one
+  catchment no
+  describe  yes
+
+kind cinema
+  words     cinema
+  form      building
+  rooms     auto
+  grammar   hall
+  roof      yes
+  frontage  hall
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      5
+  roles     projectionist usher
+  shifts    one
+  catchment no
+  describe  yes
+
+kind bank
+  words     bank
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  shopfront
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      7
+  roles     manager teller
+  shifts    one
+  catchment no
+  describe  yes
+
+kind casino
+  words     casino
+  form      building
+  rooms     auto
+  grammar   hall
+  roof      yes
+  frontage  hall
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      9
+  roles     pitboss dealer
+  shifts    one
+  catchment no
+  describe  yes
+
+kind gasstation
+  words     gasstation gas
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  garage
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      3
+  roles     attendant
+  shifts    one
+  catchment no
+  describe  yes
+
+kind icecream
+  words     icecream parlour
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  shopfront
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      2
+  roles     server
+  shifts    one
+  catchment no
+  describe  yes
+
+kind carwash
+  words     carwash
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  garage
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      2
+  roles     washer
+  shifts    one
+  catchment no
+  describe  yes
+
+kind restroom
+  words     restroom
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  hall
+  massing   shopfront
+  props     none
+  counter   no
+  hours     08:00-20:00
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind newsstand
+  words     newsstand news
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  shopfront
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      1
+  roles     vendor
+  shifts    one
+  catchment no
+  describe  yes
+
+kind tower
+  words     tower highrise
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  hall
+  massing   shopfront
+  props     none
+  counter   yes
+  service   4 7
+  hours     08:00-20:00
+  jobs      20
+  roles     receptionist clerk
+  shifts    one
+  catchment no
+  describe  yes
