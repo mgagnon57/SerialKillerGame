@@ -68,36 +68,107 @@ namespace Noir.Unity
 
 #if UNITY_EDITOR
         /// <summary>
-        /// A field under crop.
+        /// What a field is under, and how it is planted.
         ///
-        /// Wheat tiles at one metre, which would be forty thousand objects on a two-hundred-metre
-        /// field, so it is laid on a coarser grid and the tile scaled up to cover it. Low-poly
-        /// wheat is a handful of crossed quads and stretching it reads as denser planting rather
-        /// than as a stretched model.
+        /// Wheat is the only crop the pack tiles - Wheat_*_Square_1x1m covers ground and nothing
+        /// else does. Everything else is an individual plant, and an individual plant is only
+        /// worth having IF IT IS PLANTED IN ROWS. That is the whole difference between a field
+        /// and a green rectangle: rows are the thing the eye reads as farmed, and they are what
+        /// makes one field look like somebody's work rather than like terrain.
+        /// </summary>
+        private readonly struct Planting
+        {
+            public readonly string Name;
+            public readonly string[] Plants;   // under Crops Farm/, without the extension
+            public readonly float Row, Along;  // metres between rows, and along one
+            public readonly float Scale;
+            public readonly bool Tiled;
+
+            public Planting(string name, float row, float along, float scale, bool tiled,
+                            params string[] plants)
+            {
+                Name = name; Row = row; Along = along; Scale = scale; Tiled = tiled; Plants = plants;
+            }
+        }
+
+        /// <summary>
+        /// The crops a field round here might be under.
+        ///
+        /// Spacings are wide and the models scaled up to meet: a potato at its true 0.4m spacing
+        /// is nine thousand objects on one field, and at three metres and scaled it covers the
+        /// same ground for six hundred. On flat-shaded low-poly that trade is invisible and it is
+        /// the only reason a field can be planted individually at all.
+        /// </summary>
+        private static readonly Planting[] Crops =
+        {
+            new Planting("wheat", 4f, 4f, 4f, true,
+                         "Wheat_Seedling_Square_1x1m_A", "Wheat_Sprout_Square_1x1m_A",
+                         "Wheat_Ripening_Square_1x1m_A", "Wheat_Mature_Square_1x1m_A"),
+
+            new Planting("field corn", 2.6f, 2.0f, 1.7f, false,
+                         "Corn_Ripe_Fieldcorn_A", "Corn_Ripe_Fieldcorn_B", "Corn_Ripe_Fieldcorn_C"),
+
+            new Planting("sunflowers", 3.0f, 2.4f, 1.5f, false,
+                         "Sunflower_Plant_Mature_A", "Sunflower_Plant_Mature_B",
+                         "Sunflower_Plant_Ripe_A", "Sunflower_Plant_Ripe_B",
+                         "Sunflower_Plant_Ripe_C", "Sunflower_Plant_Ripe_D"),
+
+            new Planting("potatoes", 3.0f, 2.4f, 1.8f, false,
+                         "Potato_Plant_Flowering_A", "Potato_Plant_Flowering_B",
+                         "Potato_Plant_Ripe_A", "Potato_Plant_Ripe_B"),
+
+            new Planting("beet", 2.8f, 2.2f, 1.9f, false,
+                         "Beetroot_Plant_Ripe_A", "Beetroot_Plant_Ripe_B",
+                         "Beetroot_Plant_Young", "Beetroot_Plant_Ripe_Root_A"),
+
+            new Planting("pumpkins", 3.4f, 3.0f, 1.6f, false,
+                         "Pumpkin_Ripe_A", "Pumpkin_B", "Pumpkin_C",
+                         "Pumpkin_D", "Pumpkin_Flowering_A"),
+        };
+
+        /// <summary>
+        /// A field under crop, planted in rows along its own long axis.
+        ///
+        /// ONE CROP TO A FIELD, and one growth stage. A field is sown on a day, not a square at a
+        /// time, and a field carrying seedlings next to a ready harvest reads as a bug.
         /// </summary>
         private static int Crop(Transform parent, Place place)
         {
             var lot = place.Bounds;
+            var crop = Crops[Materials3D.Scatter(lot.X, lot.Y, 1301) % (uint)Crops.Length];
 
-            // One stage for the whole field. A field is sown on a day, not a square at a time.
-            string[] stages =
-            {
-                "Wheat_Seedling_Square_1x1m_A", "Wheat_Sprout_Square_1x1m_A",
-                "Wheat_Ripening_Square_1x1m_A", "Wheat_Mature_Square_1x1m_A",
-            };
-            string stage = stages[Materials3D.Scatter(lot.X, lot.Y, 1301) % (uint)stages.Length];
-            string path = Farm + "Crops Farm/" + stage + ".prefab";
+            // One plant model for the whole field, for the same reason.
+            string path = Farm + "Crops Farm/"
+                        + crop.Plants[Materials3D.Scatter(lot.Y, lot.X, 1303) % (uint)crop.Plants.Length]
+                        + ".prefab";
 
-            const int Patch = 4;               // metres to a tile, after scaling
+            // Rows run the long way, as they are ploughed.
+            bool alongX = lot.W >= lot.H;
+            float step = crop.Along, gap = crop.Row;
             int n = 0;
 
-            for (int y = lot.Y; y + Patch <= lot.Y + lot.H; y += Patch)
-            for (int x = lot.X; x + Patch <= lot.X + lot.W; x += Patch)
+            for (float across = gap * 0.5f; across < (alongX ? lot.H : lot.W); across += gap)
+            for (float down = step * 0.5f; down < (alongX ? lot.W : lot.H); down += step)
             {
-                var go = Put(parent, path, x + Patch / 2f, y + Patch / 2f, 0f);
+                float x = lot.X + (alongX ? down : across);
+                float y = lot.Y + (alongX ? across : down);
+
+                // Jitter ALONG the row and barely across it. A row that wanders is a row nobody
+                // drilled; a row that is perfectly straight is a texture.
+                if (!crop.Tiled)
+                {
+                    uint r = Materials3D.Scatter(Mathf.RoundToInt(x), Mathf.RoundToInt(y), 1305);
+                    float wobble = (r % 100 / 100f - 0.5f) * step * 0.35f;
+                    if (alongX) x += wobble; else y += wobble;
+                }
+
+                var go = Put(parent, path, x, y, crop.Tiled ? 0f : Materials3D.Scatter(
+                                 Mathf.RoundToInt(x), Mathf.RoundToInt(y), 1309) % 360);
                 if (go == null) continue;
 
-                go.transform.localScale = new Vector3(Patch, 1f, Patch);
+                go.transform.localScale = crop.Tiled
+                    ? new Vector3(crop.Scale, 1f, crop.Scale)
+                    : Vector3.one * crop.Scale;
                 n++;
             }
 
@@ -251,6 +322,59 @@ namespace Noir.Unity
             if (kit.Count == 0) return 0;
 
             int n = 0;
+
+            // ---- what STANDS in a yard, placed rather than scattered ---------------------
+            //
+            // A water tower and a grain bin are structures. Rolling for them the way a crate is
+            // rolled for puts a twelve-metre tower at a jaunty angle in the middle of the mud,
+            // and the yard stops reading as somewhere that was laid out by anybody. These go on
+            // the boundary, square to it, like everything else on a farm that had to be poured.
+            var standing = new (string path, float fx, float fy)[]
+            {
+                (Farm + "Buildings Farm/Tower_Water_Farm.prefab",  0.10f, 0.14f),
+                (Farm + "Buildings Farm/Windmill_Pump.prefab",     0.90f, 0.16f),
+                (Farm + "Buildings Farm/Bin_Grain_Old.prefab",     0.14f, 0.86f),
+                (Farm + "Buildings Farm/Bin_Grain_New.prefab",     0.34f, 0.88f),
+                (Farm + "Buildings Farm/Greenhouse_Modern_A.prefab", 0.86f, 0.84f),
+            };
+            foreach (var (path, fx, fy) in standing)
+                if (Put(parent, path, lot.X + lot.W * fx, lot.Y + lot.H * fy, 0f) != null) n++;
+
+            // ---- the kitchen garden ------------------------------------------------------
+            //
+            // A run of planter boxes along one edge, because a farm feeds itself first. The
+            // pack has seventeen of these and the city had used none.
+            var boxes = Catalogue(Farm + "Planters Farm");
+            for (int b = 0; b < 4 && boxes.Count > 0; b++)
+            {
+                string box = boxes[(int)(Materials3D.Scatter(lot.X + b, lot.Y, 1371) % (uint)boxes.Count)];
+                if (Put(parent, box, lot.X + 3f + b * 3.2f, lot.Y + lot.H - 3f, 0f) != null) n++;
+            }
+
+            // ---- somewhere to sit, and the hay ------------------------------------------
+            var sitting = Catalogue(Farm + "Furniture Farm");
+            if (sitting.Count > 0)
+            {
+                uint s = Materials3D.Scatter(lot.X, lot.Y, 1373);
+                if (Put(parent, sitting[(int)(s % (uint)sitting.Count)],
+                        lot.X + lot.W * 0.5f, lot.Y + 2.5f, s % 4 * 90f) != null) n++;
+            }
+
+            string[] hay =
+            {
+                "Crops Farm/Haybale_Round", "Crops Farm/Haybale_Square_Big",
+                "Crops Farm/Hay_Pile_Dry_A", "Crops Farm/Hay_Wheelbarrow_Dry",
+                "Crops Farm/Hay_Wheelbarrow_Fresh",
+            };
+            for (int h = 0; h < 5; h++)
+            {
+                uint r = Materials3D.Scatter(lot.X + h * 3, lot.Y, 1377);
+                float hx = lot.X + 4f + r % (uint)Mathf.Max(1, lot.W - 8);
+                float hy = lot.Y + 4f + Materials3D.Scatter(lot.X, lot.Y + h * 3, 1379)
+                                        % (uint)Mathf.Max(1, lot.H - 8);
+                if (Put(parent, Farm + hay[r % (uint)hay.Length] + ".prefab",
+                        hx, hy, r % 4 * 90f) != null) n++;
+            }
             for (int i = 0; i < lot.W * lot.H / 45; i++)
             {
                 var role = kit[(int)(Materials3D.Scatter(lot.X + i, lot.Y, 1339) % (uint)kit.Count)];

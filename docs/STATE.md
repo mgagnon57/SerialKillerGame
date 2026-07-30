@@ -1,6 +1,41 @@
 ﻿# Where we are
 
-## RESUME HERE — 2026-07-30, late. The trees are bought models now.
+## RESUME HERE — 2026-07-31. The farm, made farmy.
+
+Every field was wheat, laid as tiles. The pack's Crops folder is **166 prefabs** and holds a dozen
+crops with growth stages and row-plant variants — potato, beetroot, carrot, parsnip, sunflower,
+pumpkin, tomato, field corn — plus 17 planter boxes and 10 pieces of farmhouse furniture, none of
+it used.
+
+### Rows are the whole thing
+
+Wheat is the only crop the pack tiles; everything else is an individual plant, and an individual
+plant is only worth having **if it is planted in rows**. That is the difference between a field
+and a green rectangle — rows are what the eye reads as farmed. `CityFarm.Crops` is now a table of
+six plantings, one chosen per field, rows running the field's long axis with jitter *along* the
+row and barely across it: a row that wanders is a row nobody drilled, and a row that is perfectly
+straight is a texture.
+
+Spacings are wide and the models scaled up to meet. A potato at its true 0.4m spacing is nine
+thousand objects on one field; at three metres and scaled it covers the same ground for six
+hundred. On flat-shaded low-poly that trade is invisible, and it is the only reason a field can be
+planted individually at all.
+
+### Structures are placed, not scattered
+
+A water tower and a grain bin are not crates. Rolling for them the way the yard rolls for a
+toolbox put a twelve-metre tower at a jaunty angle in the middle of the mud. They now go on the
+yard boundary, square to it: water tower, windmill pump, two grain bins, greenhouse. Plus a
+kitchen garden of planter boxes, a bench and table, and hay — round bales, piles, wheelbarrows.
+
+### Numbers
+
+Farm pieces **1,068 → 2,348**. Chunker still lands at **534** renderers from 8,397, because it is
+all the same handful of materials.
+
+---
+
+## 2026-07-30, late. The trees are bought models now.
 
 Everything green outside the street verges and the orchard was **four primitives**: `VillageMesh`
 draws a tree as a cylinder and three overlapping spheres. That was the right answer while there
