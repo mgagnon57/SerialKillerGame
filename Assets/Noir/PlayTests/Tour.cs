@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using UnityEngine;
@@ -52,24 +52,24 @@ namespace Noir.PlayTests
         // its resting position worked out and checked against the map.
         private static readonly Stop[] Route =
         {
-            new Stop("Northgate Avenue, looking east",        70f,  75f, 1.6f,  36f,  3f,  90f),
-            new Stop("Northgate meets First Street",          75f,  75f, 0f,    55f, 45f,  90f),
-            new Stop("Under the Elevated, at Second Street", 165f,  75f, 0f,    70f, 10f,  90f),
-            new Stop("The terrace on Northgate",             120f,  62f, 1.5f,  30f,  8f,  20f),
-            new Stop("Downtown, the Meridian",               118f, 119f, 0f,   120f, 25f,  40f),
-            new Stop("The whole city",                       120f, 120f, 0f,   265f, 38f,  30f),
-            new Stop("Franklin Park",                         30f, 210f, 0f,    60f, 20f, 300f),
-            new Stop("First Street, leaving town",            75f, 250f, 1.6f,  45f,  5f, 180f),
-            new Stop("Where the track meets the road",        75f, 300f, 0f,    70f, 25f, 200f),
-            new Stop("Home Farm",                             30f, 280f, 0f,    60f, 20f, 300f),
-            new Stop("The big barn and the silos",            25f, 325f, 0f,    55f, 18f, 250f),
-            new Stop("The bottom field",                     210f, 300f, 0f,    90f, 30f,  30f),
-            new Stop("The east belt",                        330f, 120f, 0f,    80f, 20f,  90f),
-            new Stop("Wicker End, the back place",           300f, 278f, 0f,    55f, 18f, 210f),
-            new Stop("The old orchard, gone to scrub",       300f, 340f, 0f,    55f, 15f, 340f),
-            new Stop("Out on the new grid",                  465f, 465f, 0f,   150f, 25f,  40f),
-            new Stop("A rural arterial",                     465f, 615f, 1.8f,  60f,  4f, 180f),
-            new Stop("The old town from the new road",       300f, 465f, 0f,   260f, 30f, 320f),
+            new Stop("Northgate Avenue, looking east",       430f, 435f, 1.6f,  36f,  3f,  90f),
+            new Stop("Northgate meets First Street",         435f, 435f, 0f,    55f, 45f,  90f),
+            new Stop("Under the Elevated, at Second Street", 525f, 435f, 0f,    70f, 10f,  90f),
+            new Stop("The terrace on Northgate",             480f, 422f, 1.5f,  30f,  8f,  20f),
+            new Stop("Downtown, the Meridian",               478f, 479f, 0f,   120f, 25f,  40f),
+            new Stop("The whole town",                       480f, 480f, 0f,   265f, 38f,  30f),
+            new Stop("Franklin Park",                        390f, 570f, 0f,    60f, 20f, 300f),
+            new Stop("First Street, leaving town",           435f, 610f, 1.6f,  45f,  5f, 180f),
+            new Stop("Where the track meets the road",       435f, 660f, 0f,    70f, 25f, 200f),
+            new Stop("Home Farm",                            390f, 640f, 0f,    60f, 20f, 300f),
+            new Stop("The big barn and the silos",           385f, 685f, 0f,    55f, 18f, 250f),
+            new Stop("The bottom field",                     570f, 660f, 0f,    90f, 30f,  30f),
+            new Stop("The east belt",                        690f, 480f, 0f,    80f, 20f,  90f),
+            new Stop("Wicker End, the back place",           660f, 638f, 0f,    55f, 18f, 210f),
+            new Stop("The old orchard, gone to scrub",       660f, 700f, 0f,    55f, 15f, 340f),
+            new Stop("Out on the ring",                      255f, 255f, 0f,   150f, 25f,  40f),
+            new Stop("A rural arterial",                     255f, 500f, 1.8f,  60f,  4f, 180f),
+            new Stop("The town from the ring road",          390f, 300f, 0f,   300f, 26f, 150f),
             new Stop("The whole map",                        480f, 480f, 0f,  1150f, 50f,  30f),
         };
 
@@ -143,7 +143,7 @@ namespace Noir.PlayTests
             // cover a change of phase, which is the only way to show a queue forming and going.
             var watchRotation = Quaternion.Euler(40f, 70f, 0f);
             camGo.transform.rotation = watchRotation;
-            camGo.transform.position = new Vector3(75f, 2f, -75f)
+            camGo.transform.position = new Vector3(435f, 2f, -435f)
                                      - watchRotation * Vector3.forward * 58f;
 
             for (int burst = 0; burst < 4; burst++)

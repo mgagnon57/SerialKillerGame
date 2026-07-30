@@ -50,106 +50,113 @@ size 960 960
 
 # ---- the ground ----------------------------------------------------------
 # Field first, over the whole map: it is the cheap ground. Grass gives 1.2% of its
-# tiles a tree and field gives 0.4%, and on 920,000 tiles that difference is nine
-# thousand objects against three. The old 360m square keeps the grass and paving it
-# already had; everything past it is farmland, which is also what it should look
-# like when there is nothing built on it yet.
+# tiles a tree and field gives 0.4%, and on 900,000 tiles that difference is nine
+# thousand objects against three. Grass and paving only where the town is.
 terrain field 0,0 960x960
-terrain grass 0,0 360x360
-terrain path  0,0 240x240
+terrain grass 360,360 360x360
+terrain path  360,360 240x240
 
-# A dozen pastures cut into the arable, so the far country is a patchwork rather
-# than one enormous prairie. Boundaries between field and grass are what the prop
-# generator turns into hedgerows and post-and-rail.
-terrain grass 420,60 150x120
-terrain grass 700,180 180x140
-terrain grass 390,520 160x130
-terrain grass 660,600 200x150
-terrain grass 120,430 180x120
-terrain grass 60,700 200x160
-terrain grass 420,820 160x110
-terrain grass 780,860 150x90
-terrain grass 860,380 90x160
+# Pastures cut into the arable, so the country is a patchwork rather than one
+# enormous prairie. Field/grass boundaries are what the prop generator turns into
+# hedgerows and post-and-rail.
+terrain grass 40,140 170x130
+terrain grass 150,560 160x150
+terrain grass 30,760 190x140
+terrain grass 760,120 150x120
+terrain grass 830,430 110x150
+terrain grass 760,760 170x140
+terrain grass 420,60 160x110
+terrain grass 400,840 170x100
 
-# ---- the street grid -----------------------------------------------------
-# All four run the full width or height of the map, so every junction is a full
-# crossing and the roads carry on out into the country rather than stopping at
-# the edge of town.
+# ==========================================================================
+#  THE ROAD SYSTEM
+#
+#  THE TOWN IS THE MIDDLE OF THE MAP AND THE ROADS COME OUT OF IT. Northgate
+#  used to sit in a corner with a grid bolted on beside it, which reads as two
+#  places rather than one - a town, and separately some roads. Everything built
+#  now occupies the centre square, 360..720, and the network radiates from it:
+#  the town's own two pairs at the middle, then a ring at 255 and 795, then the
+#  outer at 105 and 915.
+#
+#  The rings are not perfectly mirrored about the centre. They cannot be: the
+#  farm, its fields and the shelter belt sit south and east of the town and reach
+#  to 720, so the ring on that side has to run wider than the one on the west.
+#  A road placed for symmetry would have been laid through the big barn.
+# ==========================================================================
 
-road northgate 30 0,75 959,75
+# ---- the town's own, running the full width and height -------------------
+road northgate 30 0,435 959,435
   class freeway
 
-road franklin 30 0,165 959,165
+road franklin 30 0,525 959,525
   class mainroad
 
-road first 30 75,0 75,959
+road first 30 435,0 435,959
   class mainroad
 
-road second 30 165,0 165,959
+road second 30 525,0 525,959
   class freeway
 
-# ---- the dirt tracks -----------------------------------------------------
-# Each runs from a map edge to the made road it joins. Where a track meets a
-# main road the junction piece is sized to the main road, which is right: a farm
-# track does meet the highway at a proper metalled junction.
-
-road hometrack 10 0,300 76,300
-  class track
-
-# Declared from inside Second Street's corridor, not from its edge: a junction
-# only forms where one road's centre line falls INSIDE the other's declared run,
-# and starting this at 166 left it one metre short of the centre at 165 - so the
-# track met the street with no crossing between them.
-road backtrack 10 150,318 305,318
-  class track
-
-# ---- the wider road system -----------------------------------------------
-# Everything below is beyond the old 360m square, so none of it crosses anything
-# already built. Freeways every three hundred metres or so with main roads
-# between them; nothing is built out here yet, which is the point - this is the
-# skeleton a town grows on.
-
-road midway 30 0,465 959,465
+# ---- the inner ring ------------------------------------------------------
+road westway 30 255,0 255,959
   class freeway
-road brook 30 0,615 959,615
-  class mainroad
+
+road eastway 30 795,0 795,959
+  class freeway
+
+road northway 30 0,255 959,255
+  class freeway
+
 road southway 30 0,795 959,795
   class freeway
-road boundary 30 0,915 959,915
+
+# ---- the outer ----------------------------------------------------------
+road westbound 30 105,0 105,959
   class mainroad
 
-road fifth 30 465,0 465,959
-  class freeway
-road sixth 30 615,0 615,959
+road eastbound 30 915,0 915,959
   class mainroad
-road eighth 30 795,0 795,959
-  class freeway
-road ninth 30 915,0 915,959
+
+road northbound 30 0,105 959,105
   class mainroad
+
+road southbound 30 0,915 959,915
+  class mainroad
+
+# ---- the dirt tracks -----------------------------------------------------
+# Each runs from the farm to the made road it joins and stops there, which is
+# what a farm track does. A junction only forms where one road's centre line
+# falls INSIDE the other's declared run.
+
+road hometrack 10 360,660 436,660
+  class track
+
+road backtrack 10 510,678 665,678
+  class track
 
 # ==========================================================================
 #  THE CITY - north-west quadrant, unchanged
 # ==========================================================================
 
 # ---- block WN: the depot corner ------------------------------------------
-place carwash 2,4 10x13 "the wash"
-  door 6,16
+place carwash 362,364 10x13 "the wash"
+  door 366,376
   human A place people leave a car and walk away from for ten minutes.
 
-place gasstation 38,4 20x11 "the pumps"
-  door 57,9
+place gasstation 398,364 20x11 "the pumps"
+  door 417,369
   human Somebody is always sitting in a car here not buying anything.
 
-place firestation 2,30 28x27 "Engine 9"
-  door 16,56
+place firestation 362,390 28x27 "Engine 9"
+  door 376,416
   human The doors are open in all weather and the crew watch the street from inside them.
 
-place green 33,20 24x37 "the depot yard"
+place green 393,380 24x37 "the depot yard"
   human Grass that grew because nobody got round to paving it.
 
 # ---- block CN: the north tower and the terrace ---------------------------
-place tower 96,4 48x39 "the Hallam Building"
-  door 96,23
+place tower 456,364 48x39 "the Hallam Building"
+  door 456,383
   human Forty floors of offices and a lobby nobody is ever turned away from.
 
 # SIX FLATS TO A BLOCK. These are four-storey townhouses, not cottages, and a
@@ -157,149 +164,149 @@ place tower 96,4 48x39 "the Hallam Building"
 # neighbours real - people who share a roof and a front path and notice each
 # other - and it is also what the traffic budget counts, so it is the difference
 # between empty roads and a town.
-place apartment 95,52 6x8 "1 Northgate"
-  door 98,59
+place apartment 455,412 6x8 "1 Northgate"
+  door 458,419
   units 6
-place apartment 101,52 6x8 "3 Northgate"
-  door 104,59
+place apartment 461,412 6x8 "3 Northgate"
+  door 464,419
   units 6
-place apartment 107,52 6x8 "5 Northgate"
-  door 110,59
+place apartment 467,412 6x8 "5 Northgate"
+  door 470,419
   units 6
-place apartment 113,52 6x8 "7 Northgate"
-  door 116,59
+place apartment 473,412 6x8 "7 Northgate"
+  door 476,419
   units 6
-place apartment 119,52 6x8 "9 Northgate"
-  door 122,59
+place apartment 479,412 6x8 "9 Northgate"
+  door 482,419
   units 6
-place apartment 125,52 6x8 "11 Northgate"
-  door 128,59
+place apartment 485,412 6x8 "11 Northgate"
+  door 488,419
   units 6
-place apartment 131,52 6x8 "13 Northgate"
-  door 134,59
+place apartment 491,412 6x8 "13 Northgate"
+  door 494,419
   units 6
-place apartment 137,52 6x8 "15 Northgate"
-  door 140,59
+place apartment 497,412 6x8 "15 Northgate"
+  door 500,419
   units 6
-place apartment 143,52 6x8 "17 Northgate"
-  door 146,59
+place apartment 503,412 6x8 "17 Northgate"
+  door 506,419
   units 6
 
 # ---- block EN: the school corner -----------------------------------------
-place school2 185,4 47x18 "Northgate Elementary"
-  door 208,21
+place school2 545,364 47x18 "Northgate Elementary"
+  door 568,381
   human Painted every summer and scuffed back to the undercoat by October.
 
-place icecream 185,30 16x11 "Bruno's"
-  door 192,40
+place icecream 545,390 16x11 "Bruno's"
+  door 552,400
   human Shut half the year, and the queue at Easter goes round the corner.
 
-place restroom 222,30 14x8 "the public conveniences"
-  door 228,37
+place restroom 582,390 14x8 "the public conveniences"
+  door 588,397
   human Council-green tile and a door that does not lock.
 
-place newsstand 210,50 7x3 "the stand"
-  door 213,52
+place newsstand 570,410 7x3 "the stand"
+  door 573,412
   human Papers, cigarettes, and the man who knows who bought which.
 
 # ---- block WM: the parade ------------------------------------------------
-place apartment 2,90 6x8 "2 Northgate"
-  door 5,90
+place apartment 362,450 6x8 "2 Northgate"
+  door 365,450
   units 6
-place apartment 8,90 6x8 "4 Northgate"
-  door 11,90
+place apartment 368,450 6x8 "4 Northgate"
+  door 371,450
   units 6
-place apartment 14,90 6x8 "6 Northgate"
-  door 17,90
+place apartment 374,450 6x8 "6 Northgate"
+  door 377,450
   units 6
-place apartment 20,90 6x8 "8 Northgate"
-  door 23,90
+place apartment 380,450 6x8 "8 Northgate"
+  door 383,450
   units 6
-place apartment 26,90 6x8 "10 Northgate"
-  door 29,90
+place apartment 386,450 6x8 "10 Northgate"
+  door 389,450
   units 6
-place apartment 32,90 6x8 "12 Northgate"
-  door 35,90
+place apartment 392,450 6x8 "12 Northgate"
+  door 395,450
   units 6
-place apartment 38,90 6x8 "14 Northgate"
-  door 41,90
+place apartment 398,450 6x8 "14 Northgate"
+  door 401,450
   units 6
-place apartment 44,90 6x8 "16 Northgate"
-  door 47,90
+place apartment 404,450 6x8 "16 Northgate"
+  door 407,450
   units 6
-place apartment 50,90 6x8 "18 Northgate"
-  door 53,90
+place apartment 410,450 6x8 "18 Northgate"
+  door 413,450
   units 6
 
-place bank 2,105 29x23 "Northgate Savings"
-  door 16,105
+place bank 362,465 29x23 "Northgate Savings"
+  door 376,465
   human Marble that was meant to look permanent.
 
-place diner 36,105 20x11 "the Northgate Diner"
-  door 45,105
+place diner 396,465 20x11 "the Northgate Diner"
+  door 405,465
   human Open before anyone needs it to be, and the same four faces are in it at six.
 
 # ---- block CM: downtown --------------------------------------------------
-place tower 95,100 46x37 "the Meridian"
-  door 118,100
+place tower 455,460 46x37 "the Meridian"
+  door 478,460
   human A hundred and eleven metres of it, and the top four floors have been empty for a year.
 
 # ---- block EM: the hospital ----------------------------------------------
-place apartment 182,90 6x8 "20 Northgate"
-  door 185,90
+place apartment 542,450 6x8 "20 Northgate"
+  door 545,450
   units 6
-place apartment 188,90 6x8 "22 Northgate"
-  door 191,90
+place apartment 548,450 6x8 "22 Northgate"
+  door 551,450
   units 6
-place apartment 194,90 6x8 "24 Northgate"
-  door 197,90
+place apartment 554,450 6x8 "24 Northgate"
+  door 557,450
   units 6
-place apartment 200,90 6x8 "26 Northgate"
-  door 203,90
+place apartment 560,450 6x8 "26 Northgate"
+  door 563,450
   units 6
-place apartment 206,90 6x8 "28 Northgate"
-  door 209,90
+place apartment 566,450 6x8 "28 Northgate"
+  door 569,450
   units 6
-place apartment 212,90 6x8 "30 Northgate"
-  door 215,90
+place apartment 572,450 6x8 "30 Northgate"
+  door 575,450
   units 6
-place apartment 218,90 6x8 "32 Northgate"
-  door 221,90
+place apartment 578,450 6x8 "32 Northgate"
+  door 581,450
   units 6
-place apartment 224,90 6x8 "34 Northgate"
-  door 227,90
+place apartment 584,450 6x8 "34 Northgate"
+  door 587,450
   units 6
-place apartment 230,90 6x8 "36 Northgate"
-  door 233,90
+place apartment 590,450 6x8 "36 Northgate"
+  door 593,450
   units 6
 
-place hospital 185,110 40x27 "Northgate General"
-  door 205,110
+place hospital 545,470 40x27 "Northgate General"
+  door 565,470
   human The only lit windows on this street at four in the morning.
 
 # ---- block WS: the park --------------------------------------------------
-place green 0,180 60x60 "Franklin Park"
+place green 360,540 60x60 "Franklin Park"
   human Grass worn to earth along the line everyone actually walks.
 
 # ---- block CS: the precinct and the picture house ------------------------
-place precinct 95,182 35x18 "Northgate Precinct"
-  door 112,182
+place precinct 455,542 35x18 "Northgate Precinct"
+  door 472,542
   human The light in the front office never goes off, which is not the same as somebody being awake.
 
-place cinema 125,205 22x35 "the Rialto"
-  door 135,205
+place cinema 485,565 22x35 "the Rialto"
+  door 495,565
   human Two screens, one of which has been showing the same film since spring.
 
 # ---- block ES: the casino ------------------------------------------------
-place casino 185,185 35x46 "the Regency Rooms"
-  door 202,185
+place casino 545,545 35x46 "the Regency Rooms"
+  door 562,545
   human Open all night, and the carpet is loud enough that nobody notices the hour.
 
 # ---- the elevated railway ------------------------------------------------
 # Straight over Second Street. The lot is EXACTLY the street's corridor, and the
 # railway kind's ground is road, so stamping it is a no-op rather than a
 # demolition. It stops at the edge of town rather than running out over the farm.
-place railway 150,0 30x240 "the Elevated"
+place railway 510,360 30x240 "the Elevated"
   human It goes over the top of everything and you hear it before you see it.
 
 # ==========================================================================
@@ -318,19 +325,19 @@ place railway 150,0 30x240 "the Elevated"
 # fields go in the bands between them. A field laid across a road would stamp
 # its own ground over the carriageway and quietly erase it.
 
-place cornfield 250,4 76x52 "the top field"
+place cornfield 610,364 76x52 "the top field"
   human Forty acres, and the tractor lines run out of true where the ground dips.
 
-place cornfield 250,95 76x52 "the long field"
+place cornfield 610,455 76x52 "the long field"
   human It floods at the bottom corner every spring and nobody has ever drained it.
 
-place orchard 250,186 76x50 "the orchard"
+place orchard 610,546 76x50 "the orchard"
   human Planted in rows by somebody who is dead now.
 
 # A shelter belt along the east edge. Woodland is the one ground the prop
 # generator plants densely, so this is where actual trees go - scattering them
 # across the fields instead made the whole country read as forest.
-place copse 332,4 26x230 "the east belt"
+place copse 692,364 26x230 "the east belt"
   human Planted as a windbreak and never thinned. You cannot see through it.
 
 # ---- HOME FARM - south-west, on the dirt track ---------------------------
@@ -339,48 +346,48 @@ place copse 332,4 26x230 "the east belt"
 # are north of it and the barn and silos south, which is how a farm is laid out
 # - you do not walk through the machinery to get to the front door.
 
-place farm 5,262 15x16 "Home Farm"
-  door 12,277
+place farm 365,622 15x16 "Home Farm"
+  door 372,637
   human The kitchen light is on at half past four and the radio is never off.
 
-place farmyard 24,264 30x28 "the yard"
+place farmyard 384,624 30x28 "the yard"
   human Mud, diesel and forty years of things that might come in useful.
 
-place barn 5,312 18x39 "the big barn"
-  door 14,312
+place barn 365,672 18x39 "the big barn"
+  door 374,672
   human Big enough to lose a car in, and dark enough at noon that you would.
 
-place silo 28,315 7x7 "the near silo"
+place silo 388,675 7x7 "the near silo"
   human It booms when you knock on it.
 
-place silo 38,315 7x7 "the far silo"
+place silo 398,675 7x7 "the far silo"
   human Empty since the wet year, and the ladder up the side is still sound.
 
 # The paddocks go in the strip between First Street and Second, x 90..149.
-place paddock 95,250 50x40 "the near paddock"
+place paddock 455,610 50x40 "the near paddock"
   human Cropped flat and empty. The gate has been open for a while.
 
-place paddock 95,300 50x50 "the far paddock"
+place paddock 455,660 50x50 "the far paddock"
   human You cannot see this one from the road, or the road from it.
 
 # And the big field east of Second Street, x 180..239.
-place cornfield 185,245 50x105 "the bottom field"
+place cornfield 545,605 50x105 "the bottom field"
   human The corn is over head height by August and the rows run away from the track.
 
 # ---- the back place - south-east ----------------------------------------
 # Reached only by the back track, which comes off Second Street at y 313..322.
 # Nothing else goes near it.
 
-place farm 300,270 15x16 "Wicker End"
-  door 307,285
+place farm 660,630 15x16 "Wicker End"
+  door 667,645
   human Nobody has farmed it for years. Somebody is living in it.
 
-place barn 262,262 11x14 "the old barn"
-  door 267,275
+place barn 622,622 11x14 "the old barn"
+  door 627,635
   human Half the roof is down and the half that is not is worse.
 
-place orchard 262,326 96x30 "the old orchard"
+place orchard 622,686 96x30 "the old orchard"
   human Gone to scrub. The fruit falls and nobody picks it up.
 
-place copse 296,240 52x20 "the far spinney"
+place copse 656,600 52x20 "the far spinney"
   human Too small to be worth clearing and too thick to walk through quickly.
