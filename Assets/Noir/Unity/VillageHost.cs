@@ -41,6 +41,15 @@ namespace Noir.Unity
         /// </summary>
         public const ulong Seed = 1979;
 
+        /// <summary>
+        /// Which map the game loads.
+        ///
+        /// Northgate is built from bought models placed on authored lots; Ashcombe generated its
+        /// geometry to fill lots instead, and is kept in the tree because it is the only thing
+        /// the two can be compared against. Point this at "village.txt" to get it back.
+        /// </summary>
+        public const string MapFile = "city.txt";
+
         // ---- time ----
         //
         // Slow motion matters as much as fast-forward. At 1x a person crosses a room in real
@@ -96,7 +105,7 @@ namespace Noir.Unity
                 // would fail here as an unknown kind while working perfectly in the tools.
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
 
-                var layout = VillageParser.Parse(ContentLoader.Read("village.txt"));
+                var layout = VillageParser.Parse(ContentLoader.Read(MapFile));
                 World = WorldBuilder.Build(layout);
 
                 var report = WorldValidator.Validate(World);
@@ -122,6 +131,11 @@ namespace Noir.Unity
             }
 
             _village = VillageMesh.Build(World, transform);
+
+            // The ground, roads and props are still drawn by the village renderer; only the
+            // BUILDINGS are bought models. Nothing happens here for a map that has no city
+            // kinds in it, so Ashcombe still builds exactly as it did.
+            CityBuildings.Build(World, _village.transform);
             _xray = XRay.Create(World, _village);
             _agentView = AgentMeshView.Create(this, transform);
             _rig = OrbitCamera.Create(this);

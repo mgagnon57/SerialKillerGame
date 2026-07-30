@@ -1,79 +1,168 @@
 # ============================================================================
-#  CITY BLOCK - vertical slice
+#  NORTHGATE
 #
-#  160 x 100 tiles, one tile = one metre, exactly as Ashcombe.
+#  240 x 180 tiles, one tile = one metre, exactly as Ashcombe.
 #
-#  This is NOT the city. It is one block, authored to answer whether the
-#  existing content format carries a city at all and whether the bought models
-#  sit on lots this file describes. Ashcombe stays untouched next door so the
-#  two can be photographed under the same sun.
+#  LOT SIZES COME FROM THE MODELS, not from taste. The townhouse module measures
+#  6.1m wide and 3.0m per floor, so a terrace lot is 6 wide and a terrace is that
+#  repeated. Bayhouse is about 7m deep and Squarehouse 9m, so lots are 8 and the
+#  renderer centres what it places. The landmarks are the pack's own footprints
+#  rounded up: Diner_City is 19.6 x 10.5, Police_Station_City 34.5 x 18.
 #
-#  LOT SIZES COME FROM THE MODELS, not from taste. The townhouse module
-#  measures 6.1m wide and 3.0m per floor, so a terrace lot is 6 wide and the
-#  terrace is that repeated. Bayhouse is about 7m deep and Squarehouse 9m, so
-#  lots are 8 and the renderer centres what it places. The landmarks are the
-#  pack's own footprints rounded up: Diner_City is 19.6 x 10.5, and
-#  Police_Station_City is 34.5 x 18.
+#  That is the whole inversion from Ashcombe, where the lot came first and the
+#  geometry was generated to fill it. Here the model came first.
 #
-#  That is the whole difference from Ashcombe, where the lot came first and
-#  the geometry was generated to fill it. Here the model came first.
+#  THE GROUND IS PAVED ON PURPOSE, and not only because a city is paved: trees,
+#  hedges and bushes are scattered by Prop.ScatterOn, which fires on grass, wood,
+#  field and churchyard and on NOTHING else. Paving the block is therefore also
+#  what stops a hedge growing down the middle of the avenue.
+#
+#  Painted in order: terrain, then roads over terrain, then buildings over roads.
+#  Read top to bottom and you know what covers what.
 # ============================================================================
 
 village Northgate
-size 160 100
+size 240 180
 
-# ---- roads ---------------------------------------------------------------
-# Wider than a village lane. Ashcombe Street is 5m; a city street carrying two
-# lanes and parked cars is not.
-road  main    12   0,50  159,50        # Northgate Avenue, edge to edge
-road  cross    8  40,0    40,99        # the cross street
-road  back     6   0,18  159,18        # the back service street
+# ---- the ground ----------------------------------------------------------
+# Pavement everywhere to begin with. The roads go over it below, and the two
+# parks are cut back out of it afterwards.
+terrain path    0,0    240x180
 
-# ---- the terraces --------------------------------------------------------
-# Two rows facing each other across the avenue. Every unit is one 6m module,
-# which is what makes them a terrace rather than six detached houses in a row:
-# they share their side walls, and the renderer gives the interior units the
-# front-only facade and the two ends the all-sides one.
+# ---- the parks -----------------------------------------------------------
+# A city needs somewhere that is not paved, or the eye has nothing to rest on
+# and every shot reads as a car park. These are also the only two places trees
+# are allowed to happen.
+terrain grass  12,96    32x40
+terrain grass 186,26    42x36
 
-place apartment 50,32 6x8 "1 Northgate"
-  door 53,39
-place apartment 56,32 6x8 "2 Northgate"
-  door 59,39
-place apartment 62,32 6x8 "3 Northgate"
-  door 65,39
-place apartment 68,32 6x8 "4 Northgate"
-  door 71,39
-place apartment 74,32 6x8 "5 Northgate"
-  door 77,39
-place apartment 80,32 6x8 "6 Northgate"
-  door 83,39
+# ---- the street grid -----------------------------------------------------
+# Avenues run east-west, streets north-south, and both reach the map edge so
+# the city reads as a piece of somewhere larger rather than an island.
+road  northgate   14   0,52   239,52     # Northgate Avenue, the main one
+road  franklin    12   0,124  239,124    # Franklin Avenue
+road  quay        10   0,16   239,16     # the quayside road, north edge
 
-place apartment 50,58 6x8 "7 Northgate"
-  door 53,58
-place apartment 56,58 6x8 "8 Northgate"
-  door 59,58
-place apartment 62,58 6x8 "9 Northgate"
-  door 65,58
-place apartment 68,58 6x8 "10 Northgate"
-  door 71,58
-place apartment 74,58 6x8 "11 Northgate"
-  door 77,58
-place apartment 80,58 6x8 "12 Northgate"
-  door 83,58
+road  first       12  40,0    40,179     # First Street
+road  second      10 108,0   108,179     # Second Street
+road  third       10 172,0   172,179     # Third Street
 
-# ---- what the block is for -----------------------------------------------
-place diner 95,36 20x11 "the Northgate Diner"
-  door 105,46
+# ---- north terrace, Northgate Avenue -------------------------------------
+# Eight units shoulder to shoulder. Every door is on the avenue side, which is
+# what turns the row round to face it: CityBuildings takes each house's facing
+# from its authored door rather than being told the same thing twice.
+place apartment 46,36 6x8 "1 Northgate"
+  door 49,43
+place apartment 52,36 6x8 "3 Northgate"
+  door 55,43
+place apartment 58,36 6x8 "5 Northgate"
+  door 61,43
+place apartment 64,36 6x8 "7 Northgate"
+  door 67,43
+place apartment 70,36 6x8 "9 Northgate"
+  door 73,43
+place apartment 76,36 6x8 "11 Northgate"
+  door 79,43
+place apartment 82,36 6x8 "13 Northgate"
+  door 85,43
+place apartment 88,36 6x8 "15 Northgate"
+  door 91,43
+
+# ---- south terrace, Northgate Avenue -------------------------------------
+place apartment 46,66 6x8 "2 Northgate"
+  door 49,66
+place apartment 52,66 6x8 "4 Northgate"
+  door 55,66
+place apartment 58,66 6x8 "6 Northgate"
+  door 61,66
+place apartment 64,66 6x8 "8 Northgate"
+  door 67,66
+place apartment 70,66 6x8 "10 Northgate"
+  door 73,66
+place apartment 76,66 6x8 "12 Northgate"
+  door 79,66
+place apartment 82,66 6x8 "14 Northgate"
+  door 85,66
+place apartment 88,66 6x8 "16 Northgate"
+  door 91,66
+
+# ---- Franklin Avenue, north side -----------------------------------------
+place apartment 48,108 6x8 "1 Franklin"
+  door 51,115
+place apartment 54,108 6x8 "3 Franklin"
+  door 57,115
+place apartment 60,108 6x8 "5 Franklin"
+  door 63,115
+place apartment 66,108 6x8 "7 Franklin"
+  door 69,115
+place apartment 72,108 6x8 "9 Franklin"
+  door 75,115
+place apartment 78,108 6x8 "11 Franklin"
+  door 81,115
+
+# ---- Franklin Avenue, south side -----------------------------------------
+place apartment 48,138 6x8 "2 Franklin"
+  door 51,138
+place apartment 54,138 6x8 "4 Franklin"
+  door 57,138
+place apartment 60,138 6x8 "6 Franklin"
+  door 63,138
+place apartment 66,138 6x8 "8 Franklin"
+  door 69,138
+place apartment 72,138 6x8 "10 Franklin"
+  door 75,138
+place apartment 78,138 6x8 "12 Franklin"
+  door 81,138
+
+# ---- the east block, off Second Street -----------------------------------
+place apartment 120,36 6x8 "1 Second"
+  door 123,43
+place apartment 126,36 6x8 "3 Second"
+  door 129,43
+place apartment 132,36 6x8 "5 Second"
+  door 135,43
+place apartment 138,36 6x8 "7 Second"
+  door 141,43
+place apartment 144,36 6x8 "9 Second"
+  door 147,43
+place apartment 150,36 6x8 "11 Second"
+  door 153,43
+
+place apartment 120,66 6x8 "2 Second"
+  door 123,66
+place apartment 126,66 6x8 "4 Second"
+  door 129,66
+place apartment 132,66 6x8 "6 Second"
+  door 135,66
+place apartment 138,66 6x8 "8 Second"
+  door 141,66
+place apartment 144,66 6x8 "10 Second"
+  door 147,66
+place apartment 150,66 6x8 "12 Second"
+  door 153,66
+
+# ---- what the city is for ------------------------------------------------
+place diner 120,100 20x11 "the Northgate Diner"
+  door 130,110
   hours 07:00-22:00
   jobs 4
   human Open before anyone needs it to be, and the same four faces are in it at six.
 
-place precinct 95,58 35x18 "Northgate Precinct"
-  door 112,58
+place precinct 120,136 35x18 "Northgate Precinct"
+  door 137,136
   hours 00:00-23:59
   jobs 12
   human The light in the front office never goes off, which is not the same as somebody being awake.
 
+place diner 186,100 20x11 "the Quayside"
+  door 196,110
+  hours 07:00-22:00
+  jobs 4
+  human The window seats face the water and are taken by seven every morning.
+
 # ---- open ground ---------------------------------------------------------
-place green 8,28 26x16 "Northgate Park"
+place green 12,96 32x40 "Franklin Park"
   human Grass worn to earth along the line everyone actually walks.
+
+place green 186,26 42x36 "the north green"
+  human Nobody planted it; it is simply the piece nothing was built on.

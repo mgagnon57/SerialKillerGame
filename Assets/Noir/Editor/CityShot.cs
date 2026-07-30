@@ -99,15 +99,23 @@ namespace Noir.Editor
                 RenderSettings.fogDensity = 0.0010f;
                 if (sky != null && sky.HasProperty("_Exposure")) sky.SetFloat("_Exposure", 1.15f);
 
-                // Down the avenue at street level, then the block from above.
-                Frame(camGo, new Vector3(70f, 2f, -50f), 38f, 8f, 250f);
+                // Standing in Northgate Avenue looking east, which is the view the game is
+                // actually played from and the only one that says whether this is a street.
+                Frame(camGo, new Vector3(70f, 1.6f, -52f), 30f, 3f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-street.png"));
 
-                Frame(camGo, new Vector3(78f, 0f, -48f), 78f, 34f, 35f);
+                // The whole city, to see the grid.
+                Frame(camGo, new Vector3(110f, 0f, -90f), 210f, 42f, 30f);
                 Capture(cam, Path.Combine(OutputDir, "city-block.png"));
 
-                Frame(camGo, new Vector3(65f, 1.5f, -40f), 26f, 10f, 20f);
+                // A terrace three-quarters on, close enough to read a doorway.
+                Frame(camGo, new Vector3(70f, 1.5f, -44f), 30f, 12f, 40f);
                 Capture(cam, Path.Combine(OutputDir, "city-terrace.png"));
+
+                // The junction of Northgate Avenue and Second Street, where the diner and the
+                // precinct are - a corner rather than a straight, so the block reads as a block.
+                Frame(camGo, new Vector3(120f, 0f, -105f), 95f, 26f, 30f);
+                Capture(cam, Path.Combine(OutputDir, "city-corner.png"));
             }
             catch (Exception ex)
             {

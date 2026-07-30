@@ -129,7 +129,15 @@ namespace Noir.Unity
         private static int Townhouse(Transform parent, TileRect lot, bool end, float yaw)
         {
             string family = SquareAt(lot) ? "Squarehouse" : "Bayhouse";
-            string face = end ? "AS" : "F";
+
+            // All-sides everywhere, not front-only for the interior of a terrace.
+            //
+            // _F is an optimisation for units whose flanks a neighbour completely hides, and it
+            // pays for it by UV-ing those flanks onto a marker cell in the universal atlas - a
+            // hard, saturated blue. Any gap at all and you get a blue wall. Ours are 6m lots
+            // holding 6.1m buildings on a grid with cross streets, so flanks ARE seen; the
+            // saving was never real here and the failure is the loudest thing in the frame.
+            const string face = "AS";
             int storeys = StoreysAt(lot);
 
             // Every section of one house goes under a single node, which is then turned to face
@@ -195,6 +203,7 @@ namespace Noir.Unity
             go.transform.SetParent(parent, false);
             go.transform.localPosition = Vector3.up * y;
             go.transform.localRotation = Quaternion.identity;
+            Reglaze(go);
 
             var rends = go.GetComponentsInChildren<Renderer>();
             if (rends.Length == 0) return Floor;
@@ -202,6 +211,35 @@ namespace Noir.Unity
             var b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
             return b.size.y;
+        }
+
+        /// <summary>
+        /// Swap the pack's glazing for Ashcombe's, which is the one thing about these buildings
+        /// that does not survive the move.
+        ///
+        /// M_Universal_Glass comes through as a flat, saturated blue - the same atlas fault the
+        /// cottage hit, and far louder here because a terrace is mostly windows. Only the slots
+        /// the pack itself named glass are touched; the brick and the stonework are the pack's
+        /// own and are exactly right.
+        /// </summary>
+        private static void Reglaze(GameObject go)
+        {
+            var glass = Materials3D.WindowGlass;
+            foreach (var r in go.GetComponentsInChildren<Renderer>())
+            {
+                var originals = r.sharedMaterials;
+                Material[] slots = null;
+                for (int i = 0; i < originals.Length; i++)
+                {
+                    if (originals[i] == null) continue;
+                    if (originals[i].name.IndexOf("Glass", System.StringComparison.OrdinalIgnoreCase) < 0)
+                        continue;
+
+                    slots ??= (Material[])originals.Clone();
+                    slots[i] = glass;
+                }
+                if (slots != null) r.sharedMaterials = slots;
+            }
         }
 
         /// <summary>A whole building, centred on its lot and turned to face the long way.</summary>
@@ -212,6 +250,7 @@ namespace Noir.Unity
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
+            Reglaze(go);
 
             var rends = go.GetComponentsInChildren<Renderer>();
             if (rends.Length == 0) return false;

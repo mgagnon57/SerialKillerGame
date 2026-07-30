@@ -18,8 +18,15 @@ namespace Noir.Unity
     [DefaultExecutionOrder(100)]   // after VillageHost, which is -100 and builds the world
     public sealed class PolyPackTrial : MonoBehaviour
     {
-        /// <summary>Set false to stop the trial cottage appearing without deleting anything.</summary>
-        public static bool Enabled = true;
+        /// <summary>
+        /// Off. The trial cottage answered its question - a building assembled from the modular
+        /// parts kit reads as a house - and the answer sent the project somewhere else: whole
+        /// city sections placed on authored lots, which is CityBuildings. Left in the tree
+        /// because the cottage is still the only worked example of the fine-grained kit, and
+        /// the two costs are worth being able to compare: 49 pieces for that one cottage against
+        /// about five for a townhouse.
+        /// </summary>
+        public static bool Enabled = false;
 
         private bool _built;
 
