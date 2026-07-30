@@ -32,6 +32,9 @@ namespace Noir.Editor
         [MenuItem("Noir/Render City Block (noon)")]
         public static void RenderNoon() { Hour = 13f; Render(); }
 
+        [MenuItem("Noir/Render City Block (night, 22:00)")]
+        public static void RenderNight() { Hour = 22f; Render(); }
+
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "..", "docs", "snapshots"));
 
@@ -113,8 +116,10 @@ namespace Noir.Editor
                 sunGo.transform.rotation = SunRig.SunRotation(hour);
                 RenderSettings.ambientLight = ambient;
                 RenderSettings.fogColor = SunRig.FogAt(colour, intensity, ambient);
-                RenderSettings.fogDensity = 0.0010f;
-                if (sky != null && sky.HasProperty("_Exposure")) sky.SetFloat("_Exposure", 1.15f);
+                RenderSettings.fogDensity = Mathf.Lerp(0.0022f, 0.0010f, Mathf.Clamp01(intensity));
+                sun.enabled = intensity > 0.01f;
+                if (sky != null && sky.HasProperty("_Exposure"))
+                    sky.SetFloat("_Exposure", Mathf.Lerp(0.18f, 1.15f, Mathf.Clamp01(intensity)));
 
                 // Standing in Northgate Avenue looking east, which is the view the game is
                 // actually played from and the only one that says whether this is a street.

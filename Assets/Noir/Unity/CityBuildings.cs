@@ -426,22 +426,17 @@ namespace Noir.Unity
         /// </summary>
         private static void Reglaze(GameObject go)
         {
-            var glass = Materials3D.WindowGlass;
-            foreach (var r in go.GetComponentsInChildren<Renderer>())
-            {
-                var originals = r.sharedMaterials;
-                Material[] slots = null;
-                for (int i = 0; i < originals.Length; i++)
-                {
-                    if (originals[i] == null) continue;
-                    if (originals[i].name.IndexOf("Glass", System.StringComparison.OrdinalIgnoreCase) < 0)
-                        continue;
-
-                    slots ??= (Material[])originals.Clone();
-                    slots[i] = glass;
-                }
-                if (slots != null) r.sharedMaterials = slots;
-            }
+            // NOTHING. Left as a named no-op because deleting the calls would hide what was
+            // learned here.
+            //
+            // This used to swap every material named Glass for Ashcombe's WindowGlass, to fix
+            // facades coming through saturated blue. That diagnosis was wrong: the blue was the
+            // _F front-only variant UV-ing its hidden flanks onto a marker cell in the atlas,
+            // fixed by using _AS everywhere. So the swap was solving nothing and costing a great
+            // deal - M_Universal_Glass_Night is an EMISSIVE warm orange, which is to say the
+            // pack ships its windows already lit, and this was painting over them with a flat
+            // dark grey. The city could not light up at night because its glass had been
+            // replaced with something that does not glow.
         }
 
         /// <summary>A whole building, centred on its lot and turned to face the long way.</summary>

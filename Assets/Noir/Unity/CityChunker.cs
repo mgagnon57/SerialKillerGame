@@ -142,6 +142,21 @@ namespace Noir.Unity
             if (r.GetComponentInParent<Light>() != null) return false;
             if (r.GetComponent<SkinnedMeshRenderer>() != null) return false;
             if (r.GetComponentInParent<ParticleSystem>() != null) return false;
+
+            // ANYTHING THAT LIGHTS UP STAYS ADDRESSABLE.
+            //
+            // Baking trades away the ability to change a thing at runtime, which is the whole
+            // point of a chunker and exactly wrong for a window. A city where you watch who is
+            // home needs its glass switchable by the hour, and a headlight needs to come on at
+            // dusk. The pack marks these for us: _Night glass is an emissive warm orange and the
+            // Emission materials are the lamps and headlights, so the material name is a
+            // reliable signal about which renderers have to survive.
+            foreach (var m in r.sharedMaterials)
+            {
+                if (m == null) continue;
+                if (m.name.IndexOf("Night", System.StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                if (m.name.IndexOf("Emission", System.StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            }
             return true;
         }
     }
