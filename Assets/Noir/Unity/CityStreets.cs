@@ -56,13 +56,33 @@ namespace Noir.Unity
 
             var lamps = Catalogue(CityProps + "/Lamps City", "Lamp_Sidewalk");
             var cars = Catalogue(CityProps + "/../Cars", null);
-            var bins = Catalogue(CityProps + "/Props City", "Bin_");
             var lights = Catalogue(CityProps + "/TrafficLights City", "Traffic_Light");
-            var planters = Catalogue(CityProps + "/Park City", "City_Planter");
-            var potted = Catalogue(CityProps + "/Park City", "Tree_Pot_City");
             var play = Catalogue(CityProps + "/Playground City", null);
             var skate = Catalogue(CityProps + "/SkatePark City", "Skate_");
-            var poles = Catalogue(CityProps + "/Poles City", "Pole_Electric_A");
+
+            // What actually stands on a pavement, as against one bin every seventh cell. Each
+            // of these is a role rather than a prefab, so the pack's own variants get used:
+            // there are five bins, four bollards and two phone boxes in here and a hand-written
+            // list would have picked one of each.
+            var kerbside = new List<List<string>>
+            {
+                Catalogue(CityProps + "/Props City", "Hydrant"),
+                Catalogue(CityProps + "/Props City", "Bollard_"),
+                Catalogue(CityProps + "/Props City", "Bin_"),
+                Catalogue(CityProps + "/Props City", "Parking_Machine"),
+                Catalogue(CityProps + "/Props City", "Telephone_Booth"),
+                Catalogue(CityProps + "/Props City", "Newspaper_Stand"),
+                Catalogue(CityProps + "/Props City", "Clock_"),
+                Catalogue(CityProps + "/Props City", "Stand_"),
+                Catalogue(CityProps + "/Park City", "City_Planter"),
+                Catalogue(CityProps + "/Park City", "Tree_Pot_City"),
+                Catalogue(CityProps + "/Props City", "Barrier_"),
+                Catalogue(CityProps + "/Props City", "Cone"),
+            };
+            kerbside.RemoveAll(c => c.Count == 0);
+
+            var manholes = Catalogue(CityProps + "/Props City", "Manhole");
+            var signs = Catalogue(CityProps + "/Signs City", "Sign_");
 
             int tiles = 0, dressing = 0;
 
@@ -87,28 +107,28 @@ namespace Noir.Unity
 
                     if (Put(root.transform, Parts + piece + ".prefab", at, yaw) != null) tiles++;
 
-                    // A crossing gets signals on the corner it is entered from. Four would be
-                    // correct and reads as a thicket at this scale; one apiece says junction.
-                    if (ew && ns && lights.Count > 0)
+                    // A crossing gets signals and a stop sign on the corner it is entered from.
+                    if (ew && ns)
                     {
-                        var corner = at + new Vector3(-Cell + 1f, 0f, -Cell + 1f);
-                        if (Put(root.transform, Pick(lights, cx, cy, 5), corner, 0f) != null) dressing++;
+                        var corner = at + new Vector3(-Cell + 1.2f, 0f, -Cell + 1.2f);
+                        if (lights.Count > 0 && Put(root.transform, Pick(lights, cx, cy, 5), corner, 0f) != null)
+                            dressing++;
+                        if (signs.Count > 0 &&
+                            Put(root.transform, Pick(signs, cx, cy, 17), corner + new Vector3(0f, 0f, -2f), 180f) != null)
+                            dressing++;
                     }
-
-                    // Lamps stand at the kerb where the carriageway meets the pavement, one
-                    // every other tile so a street is lit without becoming a fence of poles.
-                    if (lamps.Count > 0 && ew && !ns && (cx & 1) == 0)
+                    else
                     {
-                        var kerb = at + new Vector3(-Cell / 2f, 0f, 0.5f);
-                        if (Put(root.transform, Pick(lamps, cx, cy, 11), kerb, 0f) != null) dressing++;
-                    }
+                        // A straight gets both its kerbs walked. Everything below is placed
+                        // ALONG the carriageway rather than once per tile, which is the whole
+                        // difference between a street with things on it and a road with a bin.
+                        dressing += Kerb(root.transform, at, cx, cy, ew, lamps, cars, kerbside, signs);
 
-                    // A car at the kerb on some straights. Nothing says "a street somebody lives
-                    // on" faster than something parked badly on it.
-                    if (cars.Count > 0 && ew && !ns && (cx % 3) == 1)
-                    {
-                        var bay = at + new Vector3(-Cell / 2f, 0f, -2.5f);
-                        if (Put(root.transform, Pick(cars, cx, cy, 29), bay, 90f) != null) dressing++;
+                        if (manholes.Count > 0 && Materials3D.Scatter(cx, cy, 191) % 3 == 0)
+                        {
+                            var mid = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
+                            if (Put(root.transform, Pick(manholes, cx, cy, 193), mid, 0f) != null) dressing++;
+                        }
                     }
                 }
                 // Pavement FRAMES the carriageway; it does not carpet the map. Tiling every cell
@@ -120,19 +140,14 @@ namespace Noir.Unity
                 {
                     if (Put(root.transform, Parts + "Sidewalk_Paved_10x10m.prefab", at, 0f) != null) tiles++;
 
-                    // Pavement furniture. A bare kerb is what makes a street read as a diagram,
-                    // and the pack has thirty planters and potted trees nobody had touched.
-                    uint roll = Materials3D.Scatter(cx, cy, 613) % 6;
-                    var spot = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
-
-                    if (roll == 0 && bins.Count > 0)
-                    { if (Put(root.transform, Pick(bins, cx, cy, 71), spot, 0f) != null) dressing++; }
-                    else if (roll == 1 && planters.Count > 0)
-                    { if (Put(root.transform, Pick(planters, cx, cy, 83), spot, 0f) != null) dressing++; }
-                    else if (roll == 2 && potted.Count > 0)
-                    { if (Put(root.transform, Pick(potted, cx, cy, 97), spot, 0f) != null) dressing++; }
-                    else if (roll == 3 && poles.Count > 0)
-                    { if (Put(root.transform, Pick(poles, cx, cy, 103), spot, 0f) != null) dressing++; }
+                    // The back of the pavement, against the buildings, gets its own scatter -
+                    // the kerb walk above only furnishes the road edge, and a pavement has two.
+                    if (kerbside.Count > 0 && Materials3D.Scatter(cx, cy, 613) % 3 == 0)
+                    {
+                        var role = kerbside[(int)(Materials3D.Scatter(cy, cx, 617) % (uint)kerbside.Count)];
+                        var spot = at + new Vector3(-Cell / 2f, 0f, -Cell / 2f);
+                        if (Put(root.transform, Pick(role, cx, cy, 619), spot, 0f) != null) dressing++;
+                    }
                 }
                 // The parks: the only unpaved ground, and where the playground and the skatepark
                 // live. Both were bought and neither had ever been on screen.
@@ -162,6 +177,76 @@ namespace Noir.Unity
         }
 
 #if UNITY_EDITOR
+        /// <summary>
+        /// Walk both kerbs of one straight tile, placing what actually stands on a pavement.
+        ///
+        /// The point is that it walks ALONG the carriageway rather than dropping one prop per
+        /// tile: a street is furnished at intervals of a few metres, and at ten it reads as a
+        /// road with an ornament on it. Lamps keep a fixed rhythm because street lighting is
+        /// laid out by a highways department; everything else is rolled, so no two blocks carry
+        /// the same run of hydrant, meter, phone box and planter.
+        /// </summary>
+        private static int Kerb(Transform parent, Vector3 at, int cx, int cy, bool ew,
+                                List<string> lamps, List<string> cars,
+                                List<List<string>> kerbside, List<string> signs)
+        {
+            int n = 0;
+
+            // Both sides of the street. The kerb line sits just inside the tile edge; the
+            // pavement is outside it and the carriageway inside.
+            for (int side = 0; side < 2; side++)
+            {
+                float kerb = side == 0 ? -0.9f : -Cell + 0.9f;   // near and far pavement
+                float facing = side == 0 ? 180f : 0f;
+
+                for (int step = 0; step < 3; step++)
+                {
+                    float along = -1.8f - step * 3.2f;
+                    var spot = ew
+                        ? at + new Vector3(along, 0f, kerb)
+                        : at + new Vector3(kerb, 0f, along);
+                    float yaw = ew ? facing : facing + 90f;
+
+                    uint roll = Materials3D.Scatter(cx * 31 + step, cy * 17 + side, 211);
+
+                    // Lighting on its own rhythm - twice a block, same place every block.
+                    if (step == 1 && lamps.Count > 0 && ((cx + cy) & 1) == 0)
+                    {
+                        if (Put(parent, Pick(lamps, cx, cy + side, 11), spot, yaw) != null) n++;
+                        continue;
+                    }
+
+                    // Not every metre of kerb has something on it, or it reads as a jumble sale.
+                    if (roll % 5 >= 3) continue;
+
+                    var role = kerbside[(int)(roll / 5 % (uint)kerbside.Count)];
+                    if (Put(parent, Pick(role, cx + step, cy + side, 223), spot, yaw) != null) n++;
+                }
+
+                // Parked cars, nose to tail against the kerb and pointing the way the road runs.
+                if (cars.Count > 0 && Materials3D.Scatter(cx, cy * 3 + side, 29) % 3 != 0)
+                {
+                    float lane = side == 0 ? -2.6f : -Cell + 2.6f;
+                    var bay = ew
+                        ? at + new Vector3(-Cell / 2f, 0f, lane)
+                        : at + new Vector3(lane, 0f, -Cell / 2f);
+                    float carYaw = (ew ? 90f : 0f) + (side == 0 ? 0f : 180f);
+                    if (Put(parent, Pick(cars, cx, cy + side * 5, 29), bay, carYaw) != null) n++;
+                }
+            }
+
+            // One traffic sign per block, on the near kerb, facing the traffic.
+            if (signs.Count > 0 && Materials3D.Scatter(cx, cy, 233) % 4 == 0)
+            {
+                var post = ew
+                    ? at + new Vector3(-Cell + 1.2f, 0f, -0.9f)
+                    : at + new Vector3(-0.9f, 0f, -Cell + 1.2f);
+                if (Put(parent, Pick(signs, cx, cy, 239), post, ew ? 180f : 270f) != null) n++;
+            }
+
+            return n;
+        }
+
         /// <summary>
         /// Every prefab in a folder, so the city draws on the whole library rather than on the
         /// half-dozen names somebody could be bothered to type.
