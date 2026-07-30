@@ -1,0 +1,79 @@
+# ============================================================================
+#  CITY BLOCK - vertical slice
+#
+#  160 x 100 tiles, one tile = one metre, exactly as Ashcombe.
+#
+#  This is NOT the city. It is one block, authored to answer whether the
+#  existing content format carries a city at all and whether the bought models
+#  sit on lots this file describes. Ashcombe stays untouched next door so the
+#  two can be photographed under the same sun.
+#
+#  LOT SIZES COME FROM THE MODELS, not from taste. The townhouse module
+#  measures 6.1m wide and 3.0m per floor, so a terrace lot is 6 wide and the
+#  terrace is that repeated. Bayhouse is about 7m deep and Squarehouse 9m, so
+#  lots are 8 and the renderer centres what it places. The landmarks are the
+#  pack's own footprints rounded up: Diner_City is 19.6 x 10.5, and
+#  Police_Station_City is 34.5 x 18.
+#
+#  That is the whole difference from Ashcombe, where the lot came first and
+#  the geometry was generated to fill it. Here the model came first.
+# ============================================================================
+
+village Northgate
+size 160 100
+
+# ---- roads ---------------------------------------------------------------
+# Wider than a village lane. Ashcombe Street is 5m; a city street carrying two
+# lanes and parked cars is not.
+road  main    12   0,50  159,50        # Northgate Avenue, edge to edge
+road  cross    8  40,0    40,99        # the cross street
+road  back     6   0,18  159,18        # the back service street
+
+# ---- the terraces --------------------------------------------------------
+# Two rows facing each other across the avenue. Every unit is one 6m module,
+# which is what makes them a terrace rather than six detached houses in a row:
+# they share their side walls, and the renderer gives the interior units the
+# front-only facade and the two ends the all-sides one.
+
+place apartment 50,32 6x8 "1 Northgate"
+  door 53,39
+place apartment 56,32 6x8 "2 Northgate"
+  door 59,39
+place apartment 62,32 6x8 "3 Northgate"
+  door 65,39
+place apartment 68,32 6x8 "4 Northgate"
+  door 71,39
+place apartment 74,32 6x8 "5 Northgate"
+  door 77,39
+place apartment 80,32 6x8 "6 Northgate"
+  door 83,39
+
+place apartment 50,58 6x8 "7 Northgate"
+  door 53,58
+place apartment 56,58 6x8 "8 Northgate"
+  door 59,58
+place apartment 62,58 6x8 "9 Northgate"
+  door 65,58
+place apartment 68,58 6x8 "10 Northgate"
+  door 71,58
+place apartment 74,58 6x8 "11 Northgate"
+  door 77,58
+place apartment 80,58 6x8 "12 Northgate"
+  door 83,58
+
+# ---- what the block is for -----------------------------------------------
+place diner 95,36 20x11 "the Northgate Diner"
+  door 105,46
+  hours 07:00-22:00
+  jobs 4
+  human Open before anyone needs it to be, and the same four faces are in it at six.
+
+place precinct 95,58 35x18 "Northgate Precinct"
+  door 112,58
+  hours 00:00-23:59
+  jobs 12
+  human The light in the front office never goes off, which is not the same as somebody being awake.
+
+# ---- open ground ---------------------------------------------------------
+place green 8,28 26x16 "Northgate Park"
+  human Grass worn to earth along the line everyone actually walks.

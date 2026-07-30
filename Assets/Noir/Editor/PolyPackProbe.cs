@@ -14,6 +14,7 @@ namespace Noir.Editor
     public static class PolyPackProbe
     {
         private const string Parts = "Assets/polyperfect/Poly Universal Pack/Prefabs/Modular Parts/";
+        private const string City = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings Modular City/";
 
         private static readonly string[] Interesting =
         {
@@ -38,17 +39,19 @@ namespace Noir.Editor
             Parts + "Windows/Windows City/Window_A_City.prefab",
             Parts + "Windows/Windows City/Window_B_City.prefab",
 
-            // The dressing layer: eaves, rakes and gutters, none of which the bare cottage uses.
-            Parts + "Roofs/Roof Regular/Roof_Regular_2m_Edge.prefab",
-            Parts + "Roofs/Roof Regular/Roof_Regular_2m_Front.prefab",
-            Parts + "Roofs/Roof Regular/Roof_Regular_Edge_Corner_A.prefab",
-            Parts + "Roofs/Roof Regular/Roof_Regular_Edge_Corner_B.prefab",
-            Parts + "Roofs/Gutter/Gutter_Regular_2m.prefab",
-            Parts + "Roofs/Gutter/Gutter_Regular_End.prefab",
-            Parts + "Roofs/Gutter/Gutter_Regular_Corner.prefab",
-            Parts + "Roofs/Gutter/Gutter_Pipe_3m.prefab",
-            Parts + "Roofs/Gutter/Gutter_Pipe_Top_Regular.prefab",
-            Parts + "Roofs/Gutter/Gutter_Pipe_Bottom.prefab",
+            // The city housing kit. Stacked, not assembled panel by panel: a Bottom, some
+            // Floors and a Roof make a townhouse of whatever height the block wants. The AS/FB/F
+            // suffixes are the interesting unknown - they should be which faces are detailed,
+            // for terraces where the neighbours hide the sides.
+            City + "Bayhouse_Bottom_A_F_City.prefab",
+            City + "Bayhouse_Bottom_A_FB_City.prefab",
+            City + "Bayhouse_Bottom_A_AS_City.prefab",
+            City + "Bayhouse_Floor_A_Entrance_F_City.prefab",
+            City + "Bayhouse_Floor_A_Mid_F_City.prefab",
+            City + "Bayhouse_Roof_A_City.prefab",
+            City + "Squarehouse_Bottom_A_F_City.prefab",
+            City + "Squarehouse_Floor_A_Mid_F_City.prefab",
+            City + "Squarehouse_Roof_A_City.prefab",
         };
 
         [MenuItem("Noir/Probe Poly Pack")]

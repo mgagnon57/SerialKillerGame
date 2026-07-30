@@ -366,3 +366,75 @@ kind allotments
   shifts    one
   catchment no
   describe  yes
+
+# ============================================================================
+#  CITY KINDS
+#
+#  Added for the city built from bought models (see
+#  docs/superpowers/specs/2026-07-29-poly-universal-pack-integration-design.md).
+#  None of these exists in the PlaceKind enum, which is the point: the table is
+#  open, so they are numbered after the enum members and work everywhere in
+#  Core without a line of C#. What they do NOT get for free is geometry - the
+#  renderer decides that, and for these it places bought prefabs rather than
+#  generating walls.
+#
+#  `massing` still names a village grammar because the massing grammars are
+#  what the OLD renderer reads; an unknown name falls back to cottage with a
+#  warning. Once CityBuildings owns these kinds the column stops being read
+#  for them.
+# ============================================================================
+
+# A stacked townhouse: Bottom, an entrance floor, some middle floors, a roof.
+# Six metres wide, which is the width of the module and therefore of the lot.
+kind apartment
+  words     apartment flat townhouse
+  form      building
+  rooms     auto
+  grammar   domestic
+  roof      yes
+  frontage  dwelling
+  massing   cottage
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  no
+
+kind diner
+  words     diner
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  shop
+  massing   shopfront
+  props     none
+  counter   yes
+  service   6 8
+  hours     07:00-22:00
+  jobs      4
+  roles     cook server
+  shifts    one
+  catchment no
+  describe  yes
+
+kind precinct
+  words     precinct police station
+  form      building
+  rooms     auto
+  grammar   spine
+  roof      yes
+  frontage  none
+  massing   hall
+  props     none
+  counter   yes
+  service   5 9
+  hours     00:00-23:59
+  jobs      12
+  roles     sergeant officer
+  shifts    split
+  catchment yes
+  describe  yes

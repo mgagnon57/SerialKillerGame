@@ -1,0 +1,173 @@
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using Noir.Core.World;
+using Noir.Unity;
+
+namespace Noir.Editor
+{
+    /// <summary>
+    /// Loads the city block from Content/city.txt and photographs it under the same sun Ashcombe
+    /// uses, so the two can be compared without a variable between them but the buildings.
+    ///
+    /// It also prints the renderer count, which is the number the whole approach turns on: the
+    /// village manages 1,835 renderers for everything, and a city of bought models has to land
+    /// somewhere near that after chunking or it does not ship.
+    ///
+    ///   Unity.exe -batchmode -quit -projectPath . -executeMethod Noir.Editor.CityShot.Render -logFile &lt;log&gt;
+    /// </summary>
+    public static class CityShot
+    {
+        private const int Width = 1600, Height = 900;
+
+        private static string OutputDir =>
+            Path.GetFullPath(Path.Combine(Application.dataPath, "..", "docs", "snapshots"));
+
+        [MenuItem("Noir/Render City Block")]
+        public static void Render()
+        {
+            GameObject root = null, city = null, camGo = null, sunGo = null;
+            Volume fx = null;
+            Material sky = null;
+
+            var wasSky = RenderSettings.skybox;
+            var wasSun = RenderSettings.sun;
+            bool wasFog = RenderSettings.fog;
+            var wasFogColour = RenderSettings.fogColor;
+            float wasFogDensity = RenderSettings.fogDensity;
+            var wasAmbientMode = RenderSettings.ambientMode;
+            var wasAmbient = RenderSettings.ambientLight;
+
+            var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            float wasShadowDistance = pipeline != null ? pipeline.shadowDistance : 0f;
+
+            try
+            {
+                Directory.CreateDirectory(OutputDir);
+
+                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
+                var layout = VillageParser.Parse(ContentLoader.Read("city.txt"));
+                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                Debug.Log($"[cityshot] loaded {world.Width}x{world.Height}, {world.PlaceCount} places.");
+
+                var report = WorldValidator.Validate(world);
+                foreach (var problem in report.Errors) Debug.LogError("city.txt: " + problem);
+                foreach (var warning in report.Warnings) Debug.LogWarning("city.txt: " + warning);
+
+                // The ground, roads and props still come from the old renderer - only the
+                // BUILDINGS are bought models. That is the point of the slice.
+                root = new GameObject("CityGround");
+                VillageMesh.Build(world, root.transform);
+
+                city = CityBuildings.Build(world, null);
+
+                if (pipeline != null) pipeline.shadowDistance = 320f;
+
+                sunGo = new GameObject("CitySun");
+                var sun = sunGo.AddComponent<Light>();
+                sun.type = LightType.Directional;
+                sun.shadows = LightShadows.Soft;
+                sun.shadowStrength = 0.7f;
+
+                camGo = new GameObject("CityCamera");
+                var cam = camGo.AddComponent<Camera>();
+                cam.fieldOfView = 45f;
+                cam.nearClipPlane = 0.3f;
+                cam.farClipPlane = 3000f;
+                cam.clearFlags = CameraClearFlags.Skybox;
+
+                fx = PostFx.Create(null);
+                PostFx.EnableOn(cam);
+
+                sky = Snapshot.MakeSky();
+                RenderSettings.skybox = sky;
+                RenderSettings.sun = sun;
+                RenderSettings.fog = true;
+                RenderSettings.fogMode = FogMode.ExponentialSquared;
+                RenderSettings.ambientMode = AmbientMode.Flat;
+
+                const float hour = 13f;
+                var (colour, intensity, ambient) = SunRig.SkyAt(hour);
+                sun.color = colour;
+                sun.intensity = intensity;
+                sunGo.transform.rotation = SunRig.SunRotation(hour);
+                RenderSettings.ambientLight = ambient;
+                RenderSettings.fogColor = SunRig.FogAt(colour, intensity, ambient);
+                RenderSettings.fogDensity = 0.0010f;
+                if (sky != null && sky.HasProperty("_Exposure")) sky.SetFloat("_Exposure", 1.15f);
+
+                // Down the avenue at street level, then the block from above.
+                Frame(camGo, new Vector3(70f, 2f, -50f), 38f, 8f, 250f);
+                Capture(cam, Path.Combine(OutputDir, "city-street.png"));
+
+                Frame(camGo, new Vector3(78f, 0f, -48f), 78f, 34f, 35f);
+                Capture(cam, Path.Combine(OutputDir, "city-block.png"));
+
+                Frame(camGo, new Vector3(65f, 1.5f, -40f), 26f, 10f, 20f);
+                Capture(cam, Path.Combine(OutputDir, "city-terrace.png"));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[cityshot] FAILED: " + ex);
+            }
+            finally
+            {
+                if (city != null) UnityEngine.Object.DestroyImmediate(city);
+                if (root != null) UnityEngine.Object.DestroyImmediate(root);
+                if (camGo != null) UnityEngine.Object.DestroyImmediate(camGo);
+                if (sunGo != null) UnityEngine.Object.DestroyImmediate(sunGo);
+                if (fx != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(fx.sharedProfile);
+                    UnityEngine.Object.DestroyImmediate(fx.gameObject);
+                }
+                if (sky != null) UnityEngine.Object.DestroyImmediate(sky);
+
+                RenderSettings.skybox = wasSky;
+                RenderSettings.sun = wasSun;
+                RenderSettings.fog = wasFog;
+                RenderSettings.fogColor = wasFogColour;
+                RenderSettings.fogDensity = wasFogDensity;
+                RenderSettings.ambientMode = wasAmbientMode;
+                RenderSettings.ambientLight = wasAmbient;
+                if (pipeline != null) pipeline.shadowDistance = wasShadowDistance;
+            }
+
+            if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
+        private static void Frame(GameObject camGo, Vector3 target, float dist, float pitch, float yaw)
+        {
+            var rotation = Quaternion.Euler(pitch, yaw, 0f);
+            camGo.transform.position = target + Vector3.up * 2f - rotation * Vector3.forward * dist;
+            camGo.transform.rotation = rotation;
+        }
+
+        private static void Capture(Camera cam, string path)
+        {
+            var rt = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
+            var previousTarget = cam.targetTexture;
+            var previousActive = RenderTexture.active;
+
+            cam.targetTexture = rt;
+            cam.Render();
+            RenderTexture.active = rt;
+
+            var shot = new Texture2D(Width, Height, TextureFormat.RGB24, false);
+            shot.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+            shot.Apply();
+            File.WriteAllBytes(path, shot.EncodeToPNG());
+
+            cam.targetTexture = previousTarget;
+            RenderTexture.active = previousActive;
+
+            UnityEngine.Object.DestroyImmediate(shot);
+            rt.Release();
+            UnityEngine.Object.DestroyImmediate(rt);
+            Debug.Log("[cityshot] wrote " + path);
+        }
+    }
+}
