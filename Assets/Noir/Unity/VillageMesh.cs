@@ -102,6 +102,14 @@ namespace Noir.Unity
             {
                 if (prop.Kind == PropKind.Hedge) continue;   // handled as runs, above
 
+                // A BOUGHT MODEL STANDS HERE INSTEAD. The tree below - a cylinder and three
+                // spheres - was the right answer while there was nothing else, and the pack has
+                // 216 trees and 33 bushes that were never on screen outside the street verges.
+                // Single answer, consumed here, exactly as CityBuildings.Handles is: drawing one
+                // as well as placing the other is how every apartment came to have a grey box
+                // inside it.
+                if (CityGreenery.Handles(prop.Kind)) continue;
+
                 float v = prop.Variant / 255f;
                 var at = Space3D.ToWorld(prop.At);
 

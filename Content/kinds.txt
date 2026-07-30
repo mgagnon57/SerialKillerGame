@@ -803,3 +803,24 @@ kind farmyard
   shifts    one
   catchment no
   describe  yes
+
+kind copse
+  words     copse wood spinney
+  # Ground `wood`, which is the one terrain PropGenerator plants densely - a third
+  # of its tiles get a tree against roughly one in eighty on grass. That is what
+  # makes a wood a wood rather than a field with trees on it, and it is why this
+  # exists as a kind at all: raising the density everywhere turned the whole
+  # countryside into forest, and you could no longer see across a field.
+  form      open
+  ground    wood
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes

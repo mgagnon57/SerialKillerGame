@@ -79,6 +79,7 @@ namespace Noir.Editor
                 CityBuildings.Build(world, city.transform);
                 CityRail.Build(world, city.transform);
                 CityFarm.Build(world, city.transform);
+                CityGreenery.Build(world, city.transform);
 
                 // The lighting rig's own fixtures, exactly as Snapshot does it. Without these
                 // the still has no window panes, no lamps and no lit glass - which is to say it

@@ -1,6 +1,59 @@
 ﻿# Where we are
 
-## RESUME HERE — 2026-07-30, night. PlayMode tests: the city can be watched, not just measured.
+## RESUME HERE — 2026-07-30, late. The trees are bought models now.
+
+Everything green outside the street verges and the orchard was **four primitives**: `VillageMesh`
+draws a tree as a cylinder and three overlapping spheres. That was the right answer while there
+was nothing else — the lobes give a broken outline and at distance that is all the eye needs. But
+the pack holds **216 trees and 33 bushes** and not one of them was on screen out there.
+
+`Unity/CityGreenery.cs` replaces `PropKind.Tree` and `PropKind.Bush` with bought models, on the
+same single-answer pattern as `CityBuildings.Handles` — a pure function of the prop, so it does
+not matter which renderer runs first. Hedges stay drawn: `VillageMesh` lays them as continuous
+**runs** rather than one object per tile, which is what makes the hedgerow lattice read as field
+boundaries instead of a line of shrubs.
+
+### Where a prop stands decides what it is
+
+That is the part worth having, rather than swapping one model for another:
+
+| Where | What grows |
+|---|---|
+| a park (`green`) | broadleaf, and one in seven clipped into topiary |
+| a wood (`Terrain.Wood`) | spruce, pine, juniper, cypress |
+| a derelict place | three in five are fallen trunks, stumps, logs and broken branches |
+| anywhere else | hedgerow species — oak, beech, birch, willow, poplar |
+
+**And the climate is curated.** The Trees folder is the whole world in one drawer: baobab,
+mangrove, acacia, jungle and six palms. Asking it for "a tree" is the same fault as asking Nature
+for "a rock" and being handed one with snow on it — which is exactly what happened last time.
+
+### Woodland, because density belongs somewhere
+
+`PropGenerator` plants **a third** of `Terrain.Wood` tiles against roughly one in eighty on grass.
+So rather than raise density everywhere — which turned the whole country into forest and meant
+you could no longer see across a field — there is now a `copse` kind, and two of them: a shelter
+belt down the east edge and a spinney behind Wicker End.
+
+### Numbers
+
+- **2,890 trees and 836 bushes** as bought models — 22 broadleaf variants, 20 conifer, 47 fallen,
+  13 topiary, 29 shrub.
+- Chunker: **6,792 renderers → 377** across 292 baked meshes. The greenery costs almost nothing
+  once baked.
+- 61 places, 57 people, 600 ticks clean. Road fixtures 24/24. All five traffic PlayMode tests
+  still pass against the greened city.
+
+### Still to do here
+
+- Vines (19 in the pack) are catalogued but unplaced — they want the derelict walls at Wicker End
+  and the old barn.
+- `Countryside` still draws the surround beyond the map with its own procedural trees, which is
+  fine as background but means the far horizon and the near fields are different kits.
+
+---
+
+## 2026-07-30, night. PlayMode tests: the city can be watched, not just measured.
 
 Every check before this measured the city **standing still** — where a lane is, how wide the
 asphalt is, which building a ray touches. All arithmetic, none of it needing the game to run. So

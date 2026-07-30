@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  NORTHGATE
 #
 #  360 x 360 tiles, one tile = one metre. The city fills the north-west quadrant
@@ -243,14 +243,20 @@ place railway 150,0 30x240 "the Elevated"
 # fields go in the bands between them. A field laid across a road would stamp
 # its own ground over the carriageway and quietly erase it.
 
-place cornfield 250,4 100x52 "the top field"
+place cornfield 250,4 76x52 "the top field"
   human Forty acres, and the tractor lines run out of true where the ground dips.
 
-place cornfield 250,95 100x52 "the long field"
+place cornfield 250,95 76x52 "the long field"
   human It floods at the bottom corner every spring and nobody has ever drained it.
 
-place orchard 250,186 100x50 "the orchard"
+place orchard 250,186 76x50 "the orchard"
   human Planted in rows by somebody who is dead now.
+
+# A shelter belt along the east edge. Woodland is the one ground the prop
+# generator plants densely, so this is where actual trees go - scattering them
+# across the fields instead made the whole country read as forest.
+place copse 332,4 26x230 "the east belt"
+  human Planted as a windbreak and never thinned. You cannot see through it.
 
 # ---- HOME FARM - south-west, on the dirt track ---------------------------
 # First Street's corridor is x 60..89, so the farm buildings sit west of it in
@@ -300,3 +306,6 @@ place barn 262,262 11x14 "the old barn"
 
 place orchard 262,326 96x30 "the old orchard"
   human Gone to scrub. The fruit falls and nobody picks it up.
+
+place copse 296,240 52x20 "the far spinney"
+  human Too small to be worth clearing and too thick to walk through quickly.
