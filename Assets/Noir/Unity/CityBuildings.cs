@@ -86,6 +86,7 @@ namespace Noir.Unity
                 if (prefab == null) continue;
 
                 if (Landmark(root.transform, prefab, place.Bounds)) pieces++;
+                pieces += Fleet(root.transform, place);
             }
 
             Debug.Log($"[city] {lots.Count} townhouses + landmarks, {pieces} pieces, "
@@ -189,6 +190,54 @@ namespace Noir.Unity
         }
 
         private static List<string> _roofKit, _neon, _pipes;
+
+        private const string CarsCity = "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars/Cars City/";
+        private const string CarsTrucks = "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars/Cars Trucks/";
+
+        /// <summary>
+        /// The vehicle that belongs to a building, parked at its door.
+        ///
+        /// A cruiser outside the precinct and an engine outside the fire station do more for
+        /// "this town is staffed and running" than any amount of scatter, because they are the
+        /// one kind of prop that is somewhere for a REASON. They are also the four vehicles
+        /// deliberately kept out of the residential parking pool, so this is where they finally
+        /// get used.
+        ///
+        /// Parked at the authored front door, which the simulation already needs, and pushed
+        /// clear of the wall along the direction the door faces.
+        /// </summary>
+        private static int Fleet(Transform parent, Place place)
+        {
+            string vehicle = KindOf(place) switch
+            {
+                "precinct"    => CarsCity + "Car_Police_Modern.prefab",
+                "hospital"    => CarsCity + "Car_Ambulance_Modern.prefab",
+                "firestation" => CarsCity + "Car_Firetruck_Modern.prefab",
+                "school"      => CarsCity + "Car_Bus_School_Modern.prefab",
+                "school2"     => CarsCity + "Car_Bus_School_Modern.prefab",
+                "gasstation"  => CarsTrucks + "Car_Truck_Modern_Cistern.prefab",
+                "diner"       => CarsCity + "Car_Cargovan_Modern.prefab",
+                _             => null,
+            };
+            if (vehicle == null) return 0;
+
+            var lot = place.Bounds;
+            var door = place.Door;
+
+            // Out from the door, away from the building, and turned to lie along the frontage.
+            float yaw = FacingOf(place);
+            var outward = Quaternion.Euler(0f, yaw, 0f) * Vector3.back;
+            var at = new Vector3(door.X, 0f, -door.Y) + outward * 4.5f;
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(vehicle);
+            if (prefab == null) { Debug.LogWarning("[city] missing " + vehicle); return 0; }
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetParent(parent, false);
+            go.transform.position = at;
+            go.transform.rotation = Quaternion.Euler(0f, yaw + 90f, 0f);
+            return 1;
+        }
 
         /// <summary>
         /// Everything that lives on a flat roof: air conditioning, vents, satellite dishes,
