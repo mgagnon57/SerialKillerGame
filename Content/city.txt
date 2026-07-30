@@ -337,8 +337,19 @@ place orchard 610,546 76x50 "the orchard"
 # A shelter belt along the east edge. Woodland is the one ground the prop
 # generator plants densely, so this is where actual trees go - scattering them
 # across the fields instead made the whole country read as forest.
-place copse 692,364 26x230 "the east belt"
+# BROKEN WHERE THE ROADS CROSS IT. This is one shelter belt in three pieces, because
+# Northgate's corridor is y 420..449 and Franklin's is y 510..539 and a copse laid
+# across them stamps WOODLAND over the carriageway - and woodland is the one ground
+# the prop generator plants at a third of its tiles, so the avenues came up with
+# trees growing across them.
+place copse 692,364 26x56 "the east belt"
   human Planted as a windbreak and never thinned. You cannot see through it.
+
+place copse 692,450 26x60 "the east belt, middle"
+  human The stretch between the two avenues, and the darkest of the three.
+
+place copse 692,540 26x54 "the east belt, south"
+  human It gives out where the ground turns wet.
 
 # ---- HOME FARM - south-west, on the dirt track ---------------------------
 # First Street's corridor is x 60..89, so the farm buildings sit west of it in
@@ -371,8 +382,13 @@ place paddock 455,660 50x50 "the far paddock"
   human You cannot see this one from the road, or the road from it.
 
 # And the big field east of Second Street, x 180..239.
-place cornfield 545,605 50x105 "the bottom field"
+place cornfield 545,605 50x68 "the bottom field"
   human The corn is over head height by August and the rows run away from the track.
+
+# The other side of the track. Split for the same reason as the belt: a field laid
+# across a road stamps its own ground over the road.
+place cornfield 545,683 50x27 "the bottom field, far side"
+  human A thin strip nobody bothers to turn the machine round in.
 
 # ---- the back place - south-east ----------------------------------------
 # Reached only by the back track, which comes off Second Street at y 313..322.
