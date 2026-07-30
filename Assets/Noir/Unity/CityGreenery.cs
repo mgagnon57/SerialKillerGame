@@ -125,6 +125,34 @@ namespace Noir.Unity
                 if (prop.Kind == PropKind.Bush) shrubs++; else trees++;
             }
 
+            // ---- and the near band of the countryside ------------------------------------
+            //
+            // Countryside dresses the five hundred metres around the map, and inside its first
+            // hundred and twenty it drew the same four green lobes the village used to. Against
+            // bought trees on the other side of the map edge that read as a line on the ground.
+            // It now hands those positions over rather than building them, and this plants them
+            // from the same hedgerow set the fields use - so the two sides of the boundary are
+            // the same wood.
+            //
+            // Only the near band. Past it Countryside's canopy LOD has already taken the trunks
+            // off and is building crowns from the coarsest shape whose outline holds, which is
+            // the right answer for a green mass seen through fog.
+            int outfield = 0;
+            foreach (var at in Countryside.NearTrees)
+            {
+                int hx = Mathf.RoundToInt(at.x), hy = Mathf.RoundToInt(-at.z);
+                string path = broadleaf[(int)(Materials3D.Scatter(hx, hy, 1461) % (uint)broadleaf.Count)];
+
+                var tree = Put(root.transform, path, at, Materials3D.Scatter(hx, hy, 1463) % 360);
+                if (tree == null) continue;
+
+                tree.transform.localScale = Vector3.one * (0.85f + Materials3D.Scatter(hx, hy, 1467) % 40 / 100f);
+                outfield++;
+            }
+
+            Debug.Log($"[greenery] {outfield} of them beyond the map edge, in the near band "
+                    + "Countryside handed over.");
+
             Debug.Log($"[greenery] {trees} trees and {shrubs} bushes as bought models "
                     + $"({broadleaf.Count} broadleaf, {conifer.Count} conifer, "
                     + $"{deadwood.Count} fallen, {topiary.Count} topiary, {bushes.Count} shrub), "

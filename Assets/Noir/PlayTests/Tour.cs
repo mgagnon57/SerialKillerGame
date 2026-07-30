@@ -63,7 +63,9 @@ namespace Noir.PlayTests
             new Stop("Home Farm",                             30f, 280f, 0f,    60f, 20f, 300f),
             new Stop("The big barn and the silos",            25f, 325f, 0f,    55f, 18f, 250f),
             new Stop("The bottom field",                     210f, 300f, 0f,    90f, 30f,  30f),
+            new Stop("The east belt",                        330f, 120f, 0f,    80f, 20f,  90f),
             new Stop("Wicker End, the back place",           300f, 278f, 0f,    55f, 18f, 210f),
+            new Stop("The old orchard, gone to scrub",       300f, 340f, 0f,    55f, 15f, 340f),
             new Stop("The whole map",                        180f, 180f, 0f,   430f, 45f,  30f),
         };
 

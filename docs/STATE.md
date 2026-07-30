@@ -44,12 +44,27 @@ belt down the east edge and a spinney behind Wicker End.
 - 61 places, 57 people, 600 ticks clean. Road fixtures 24/24. All five traffic PlayMode tests
   still pass against the greened city.
 
+### The horizon seam, closed
+
+`Countryside` dresses the 500m around the map, and inside its first 120 it drew the same four
+green lobes the village used to — which against bought trees on the other side of the map edge
+read as **a line on the ground**. It now hands those positions to `CityGreenery` rather than
+building them, and they are planted from the same hedgerow set the fields use, so both sides of
+the boundary are the same wood.
+
+**Only the near band.** Past `Detail` the canopy LOD has already taken the trunks off and is
+building crowns from the coarsest shape whose outline still holds; at that range a tree is a
+green mass through fog and a detailed model would cost its full vertex count to render something
+nobody can resolve. What remains is a seam between two kinds of blur, which nobody sees.
+
+It made the countryside **cheaper**: 320 trees handed over, and because they were exactly the ones
+inside the LOD threshold still paying for full-detail canopies, `Countryside` went from 367,868
+vertices to **174,908**.
+
 ### Still to do here
 
 - Vines (19 in the pack) are catalogued but unplaced — they want the derelict walls at Wicker End
   and the old barn.
-- `Countryside` still draws the surround beyond the map with its own procedural trees, which is
-  fine as background but means the far horizon and the near fields are different kits.
 
 ---
 

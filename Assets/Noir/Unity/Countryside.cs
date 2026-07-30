@@ -124,6 +124,7 @@ namespace Noir.Unity
             root.transform.SetParent(parent, false);
 
             _canopies = _coarse = _spared = 0;
+            _handedOver.Clear();       // in play mode this runs again
 
             var chunks = new MeshChunks(Scenery.Count, Chunk,
                                         -Reach, -Reach, world.Width + Reach, world.Height + Reach);
@@ -149,7 +150,8 @@ namespace Noir.Unity
                     + $"{woods:N0} treeline - combined into {renderers.Count} chunk meshes, "
                     + $"{chunks.VertexCount:N0} vertices, {chunks.DrawCalls} draw calls. "
                     + $"{_coarse:N0} of {_canopies:N0} canopies built coarse, "
-                    + $"{_spared:N0} vertices spared.");
+                    + $"{_spared:N0} vertices spared. "
+                    + $"{_handedOver.Count:N0} near-band trees handed to CityGreenery.");
         }
 
         /// <summary>
@@ -387,10 +389,40 @@ namespace Noir.Unity
         /// field size. A hedgerow oak is half again the height of anything in a garden, and at
         /// this range that difference is the whole silhouette.
         /// </summary>
+        /// <summary>
+        /// Where a near-band tree WOULD have gone, for CityGreenery to plant a bought model on.
+        ///
+        /// Filled during Build and read straight afterwards. Safe because the order is fixed and
+        /// one way: VillageMesh builds the countryside, and every caller runs CityGreenery after
+        /// VillageMesh. Nothing here waits on anything.
+        /// </summary>
+        private static readonly List<Vector3> _handedOver = new List<Vector3>();
+
+        public static IReadOnlyList<Vector3> NearTrees => _handedOver;
+
         private static int Tree(MeshChunks chunks, WorldModel world, float gx, float gy, int salt)
         {
             int hx = Mathf.RoundToInt(gx), hy = Mathf.RoundToInt(gy);
             float v = Roll(hx + salt, hy, 877);
+
+            // CLOSE ENOUGH TO TELL THE DIFFERENCE? THEN IT IS NOT OURS.
+            //
+            // Everything inside the map is a bought model now, and a drawn tree beside a bought
+            // one draws a line along the map edge - the same four green lobes repeating where a
+            // moment ago there were oaks and birches. So the near band is handed over and only
+            // the distance work is kept.
+            //
+            // The handover stops at Detail on purpose. Past it the canopy LOD has already taken
+            // the trunks away and is building crowns from the coarsest shape whose outline still
+            // holds; at that range a tree is a green mass through fog and a detailed model would
+            // cost its full vertex count to render something nobody can resolve. The seam that
+            // remains is between two kinds of blur, which is not a seam anybody sees.
+            float outside = OutsideBy(world, gx, gy);
+            if (outside <= Detail)
+            {
+                _handedOver.Add(new Vector3(gx, 0f, -gy));
+                return 0;
+            }
 
             // Height and spread drawn separately, or the tallest tree in the county is always
             // also the widest one and a copse comes out as a neat little pyramid.
