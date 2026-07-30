@@ -1,6 +1,69 @@
 ﻿# Where we are
 
-## RESUME HERE — 2026-07-30. Northgate rebuilt at city scale, on the road kit we already owned.
+## RESUME HERE — 2026-07-30, later. The lane graph: cars turn.
+
+Traffic used to own one lane from one edge of the map to the other and wrap round when it left,
+because nothing told a car which lane it could move into. Turning is not a flourish — bus routes
+need it, a crossing needs to know which movements it conflicts with, and a city where every
+vehicle drives in a dead straight line for ever does not read as a place anyone lives.
+
+### Where the work went, and why
+
+**`Core/World/LaneGraph.cs`.** Every lane cut at its junctions into segments, plus every legal
+movement through one. **The topology is in Core and the metres are not**: what connects to what,
+and which turns are legal, follow from the map and from driving on the right, so they belong
+where they can be tested. *Where* a lane sits across the carriageway is measured off the bought
+tile and stays with the renderer.
+
+Two ideas do most of the work:
+
+- **Lanes are numbered outward from the centre line**, so lane 0 is the inside lane whatever the
+  road's class. That is what makes the turn rules expressible at all: a left turn leaves from
+  lane 0, a right turn from the outermost, and both stay true when a four-lane arterial meets a
+  two-lane main road. No special case for the pair.
+- **Travel coordinates**: a number that rises along the direction of travel whichever way it
+  points. Segment progress is always `FromS` → `ToS`, so no code carries a sign around.
+
+Driving side is derived, not tabulated: village coordinates are x east, y south — the same
+handedness as a screen — so for travel `(dx,dy)` the right-hand side is `(-dy,dx)`. Northbound
+keeps east; eastbound keeps south.
+
+**`CityTraffic` rewritten onto it.** A car is only ever running a segment or crossing a junction
+on a turn it was allowed to take. Turns are a quadratic through the point where the two lane
+centre lines would meet. Three things keep them apart, in order of how much work they do:
+signals (only one axis is ever green, so crossing streams never meet); **giving way when turning
+left**, which is the one movement a signal cannot protect because the oncoming stream shares the
+green; and a look-ahead box for following.
+
+**`Editor/TrafficCheck.cs`** — the answer to "I cannot press Play". A still cannot prove a car
+stops at a red, but it does not need to prove where the lanes *are*: that is arithmetic. This
+walks every metre of every lane and every turn and measures each point against the measured
+half-width of the asphalt it should be on.
+
+### Verified
+
+- Core **162 pass / 2 fail** — the same two 2:1 gates by design. 14 new `LaneGraphTests`.
+- `TrafficCheck`: 36 segments, 56 turns, 12 entries. Every lane inside its own asphalt with a
+  metre of car either side; every turn inside its crossing; all four junctions signalled;
+  nothing arrives anywhere with no legal way out.
+- Stills now include the traffic, so `city-junction.png` shows the signals paired diagonally
+  (each head is on the near-right corner of its approach) with red on one axis and green on the
+  other, and a van sitting in lane.
+
+### Still to do
+
+1. **Press Play.** Everything above is geometry and topology, both checkable headlessly. That a
+   car actually *stops* at a red and *gives way* turning left is behaviour over time, and only
+   the editor can show it. Watch for: cars queueing at a red rather than sliding through it,
+   left-turners waiting for a gap, and nobody clipping a kerb on a turn.
+2. Bus routes — the graph is public on `CityTraffic.Graph` precisely so buses reuse it rather
+   than growing a second copy that can disagree.
+3. Pedestrian crossings: the zebras are painted and nobody uses them.
+4. Bus stops and subway entrances still unplaced; `Mainroad_Stop_*` lay-bys exist for them.
+
+---
+
+## 2026-07-30. Northgate rebuilt at city scale, on the road kit we already owned.
 
 **Safe to reboot.** Everything below is committed. Core builds, Unity compiles, `PlayCheck` says
 Play should work, and five stills are in `docs/snapshots/`.

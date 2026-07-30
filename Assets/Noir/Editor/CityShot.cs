@@ -86,9 +86,12 @@ namespace Noir.Editor
                 var paneBlock = new MaterialPropertyBlock();
                 CityChunker.Bake(city);
 
-                // Outside the baked node, as in the game: the signals change colour and a
-                // combined mesh cannot. Without these the junctions photograph unlit.
-                CitySignals.Create(world, root.transform);
+                // Outside the baked node, as in the game: these move and change colour, and a
+                // combined mesh can do neither. Without them the junctions photograph unlit and
+                // the streets photograph empty - which is exactly the pair of things a still is
+                // worth taking to check.
+                var signals = CitySignals.Create(world, root.transform);
+                CityTraffic.Create(world, root.transform, signals);
 
                 if (pipeline != null) pipeline.shadowDistance = 320f;
 

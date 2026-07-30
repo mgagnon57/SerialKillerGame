@@ -1,0 +1,285 @@
+using System;
+using System.Collections.Generic;
+
+namespace Noir.Core.World
+{
+    /// <summary>
+    /// Which way along a road, in village coordinates. Village y increases SOUTH.
+    /// </summary>
+    public enum Heading { North, South, East, West }
+
+    public enum TurnKind { Straight, Left, Right }
+
+    public static class Headings
+    {
+        /// <summary>Does travelling this way increase the coordinate it runs along?</summary>
+        public static bool Increasing(Heading way) => way == Heading.South || way == Heading.East;
+
+        public static bool IsNorthSouth(Heading way) => way == Heading.North || way == Heading.South;
+
+        /// <summary>
+        /// Which side of the centre line traffic going this way keeps to: +1 for the greater
+        /// cross-coordinate, -1 for the lesser. THIS CITY DRIVES ON THE RIGHT.
+        ///
+        /// Derived rather than tabulated by eye. Village coordinates are x east, y south - the
+        /// same handedness as a screen - so for a travel vector (dx,dy) the right-hand side is
+        /// (-dy,dx). North is (0,-1), whose right is (1,0): east, the greater x. East is (1,0),
+        /// whose right is (0,1): south, the greater y.
+        /// </summary>
+        public static int Side(Heading way) =>
+            way == Heading.North || way == Heading.East ? 1 : -1;
+
+        /// <summary>The heading you are facing after turning right. A cycle: N, E, S, W.</summary>
+        public static Heading Right(Heading way) => way switch
+        {
+            Heading.North => Heading.East,
+            Heading.East  => Heading.South,
+            Heading.South => Heading.West,
+            _             => Heading.North,
+        };
+
+        public static Heading Left(Heading way) => Right(Right(Right(way)));
+
+        public static Heading Back(Heading way) => Right(Right(way));
+
+        /// <summary>Turning from one heading to another, or null if it is a U-turn.</summary>
+        public static TurnKind? Between(Heading from, Heading to)
+        {
+            if (to == from) return TurnKind.Straight;
+            if (to == Right(from)) return TurnKind.Right;
+            if (to == Left(from)) return TurnKind.Left;
+            return null;                      // a U-turn; not offered at a junction
+        }
+    }
+
+    /// <summary>
+    /// One lane of one road, running one way: a straight piece between two junctions, or between
+    /// a junction and the edge of the map.
+    ///
+    /// Lanes are numbered OUTWARD FROM THE CENTRE LINE, so lane 0 is always the inside lane
+    /// whatever the road's class. That numbering is what makes the turn rules expressible at all:
+    /// a left turn leaves from lane 0 and a right turn from the outermost, and both of those stay
+    /// true when a four-lane arterial meets a two-lane main road.
+    /// </summary>
+    public sealed class LaneSegment
+    {
+        /// <summary>This segment's own index in <see cref="LaneGraph.Segments"/>.</summary>
+        public int Index;
+
+        /// <summary>Index into <see cref="RoadNetwork.Lines"/>.</summary>
+        public int Line;
+
+        public Heading Way;
+
+        /// <summary>0 is the lane against the centre line.</summary>
+        public int Lane;
+
+        /// <summary>
+        /// Start and end in TRAVEL COORDINATES: a number that increases along the direction of
+        /// travel whichever way that points, so a car's progress is always FromS rising to ToS
+        /// and no code has to carry a sign around. <see cref="LaneGraph.AlongOf"/> turns it back
+        /// into a village coordinate.
+        /// </summary>
+        public float FromS, ToS;
+
+        /// <summary>Junction indices, or -1 where the segment runs off the edge of the map.</summary>
+        public int FromJunction = -1, ToJunction = -1;
+
+        public float Length => ToS - FromS;
+
+        /// <summary>Nothing feeds this: it is where a car enters the city.</summary>
+        public bool IsEntry => FromJunction < 0;
+
+        /// <summary>Nothing follows it: a car reaching the end of this has left the city.</summary>
+        public bool IsExit => ToJunction < 0;
+    }
+
+    /// <summary>One legal movement through one junction, from one lane into another.</summary>
+    public readonly struct LaneTurn
+    {
+        public readonly int Junction;
+        public readonly int From, To;          // indices into LaneGraph.Segments
+        public readonly TurnKind Kind;
+
+        public LaneTurn(int junction, int from, int to, TurnKind kind)
+        {
+            Junction = junction;
+            From = from;
+            To = to;
+            Kind = kind;
+        }
+    }
+
+    /// <summary>
+    /// Every lane in the city, cut at the junctions, and every legal way through one.
+    ///
+    /// WHY THIS EXISTS. Traffic used to own one lane end to end and wrap round when it left the
+    /// map, because there was nothing to tell a car which lane it could move into. That made
+    /// turning impossible, and turning is not a flourish: bus routes need it, a pedestrian
+    /// crossing needs to know which movements it conflicts with, and a city where every vehicle
+    /// travels in a dead straight line for ever does not read as a place anyone lives.
+    ///
+    /// THE TOPOLOGY IS HERE AND THE METRES ARE NOT. What lane connects to what, and which turns
+    /// are legal, follow from the map and from driving on the right - so they belong in Core
+    /// where they can be tested. WHERE a lane sits across the carriageway is measured off the
+    /// bought road tile and stays with the renderer.
+    ///
+    /// STRAIGHT, AXIS-ALIGNED ROADS ONLY, which is what RoadNetwork already restricts itself to.
+    /// </summary>
+    public sealed class LaneGraph
+    {
+        public readonly IReadOnlyList<LaneSegment> Segments;
+        public readonly IReadOnlyList<LaneTurn> Turns;
+
+        private readonly int[][] _fromSegment;
+
+        /// <summary>How far past the edge of the map a lane runs, so cars arrive from off-stage.</summary>
+        public readonly float Margin;
+
+        /// <summary>The turns available to a car finishing this segment.</summary>
+        public IReadOnlyList<int> TurnsFrom(int segment) =>
+            segment >= 0 && segment < _fromSegment.Length ? _fromSegment[segment] : Array.Empty<int>();
+
+        /// <summary>Segments a car can be introduced on: the ones fed by nothing.</summary>
+        public readonly IReadOnlyList<int> Entries;
+
+        /// <summary>Travel coordinate back to a village coordinate along the road's own axis.</summary>
+        public static float AlongOf(Heading way, float s) => Headings.Increasing(way) ? s : -s;
+
+        /// <summary>A village coordinate along the road's axis, as a travel coordinate.</summary>
+        public static float TravelOf(Heading way, float along) =>
+            Headings.Increasing(way) ? along : -along;
+
+        public LaneGraph(RoadNetwork roads, float width, float height, float margin = 30f)
+        {
+            if (roads == null) throw new ArgumentNullException(nameof(roads));
+            Margin = margin;
+
+            var segments = new List<LaneSegment>();
+
+            // ---- 1. cut every lane at the junctions it passes through --------------------
+            for (int li = 0; li < roads.Lines.Count; li++)
+            {
+                var line = roads.Lines[li];
+                if (!line.IsStraight) continue;
+
+                float span = line.IsNorthSouth ? height : width;
+                int lanes = RoadClasses.LanesEachWay(line.Class);
+
+                // The junctions on THIS road, as village coordinates along its own axis, with
+                // how far each one reaches.
+                var stops = new List<(float along, float reach, int index)>();
+                for (int j = 0; j < roads.Junctions.Count; j++)
+                {
+                    var junction = roads.Junctions[j];
+                    float cross = line.IsNorthSouth ? junction.X : junction.Y;
+                    if (Math.Abs(cross - line.Centre) > 0.5f) continue;   // not on this road
+                    stops.Add((line.IsNorthSouth ? junction.Y : junction.X, junction.Reach, j));
+                }
+
+                var ways = line.IsNorthSouth
+                    ? new[] { Heading.North, Heading.South }
+                    : new[] { Heading.East, Heading.West };
+
+                foreach (var way in ways)
+                {
+                    // In travel order. Sorting in travel coordinates rather than village ones is
+                    // what lets a single loop below serve both directions.
+                    var ordered = new List<(float s, float reach, int index)>();
+                    foreach (var (along, reach, index) in stops)
+                        ordered.Add((TravelOf(way, along), reach, index));
+                    ordered.Sort((a, b) => a.s.CompareTo(b.s));
+
+                    float start = TravelOf(way, Headings.Increasing(way) ? -margin : span + margin);
+                    float end = TravelOf(way, Headings.Increasing(way) ? span + margin : -margin);
+
+                    for (int lane = 0; lane < lanes; lane++)
+                    {
+                        float cursor = start;
+                        int previous = -1;
+
+                        foreach (var (s, reach, index) in ordered)
+                        {
+                            Add(segments, li, way, lane, cursor, s - reach, previous, index);
+                            cursor = s + reach;
+                            previous = index;
+                        }
+                        Add(segments, li, way, lane, cursor, end, previous, -1);
+                    }
+                }
+            }
+
+            Segments = segments;
+
+            // ---- 2. join them up through the junctions -----------------------------------
+            var turns = new List<LaneTurn>();
+            var outgoing = new List<int>[segments.Count];
+            for (int i = 0; i < outgoing.Length; i++) outgoing[i] = new List<int>();
+
+            foreach (var into in segments)
+            {
+                if (into.IsExit) continue;
+
+                var fromLine = roads.Lines[into.Line];
+                int fromLanes = RoadClasses.LanesEachWay(fromLine.Class);
+
+                foreach (var onward in segments)
+                {
+                    if (onward.FromJunction != into.ToJunction) continue;
+
+                    var kind = Headings.Between(into.Way, onward.Way);
+                    if (kind == null) continue;                      // no U-turns
+
+                    var toLine = roads.Lines[onward.Line];
+                    int toLanes = RoadClasses.LanesEachWay(toLine.Class);
+
+                    // Straight stays on the same road, so it stays in the same lane. A turn
+                    // changes road: it leaves from the lane nearest the side it is turning
+                    // towards and arrives in the matching lane of the new road. That is what
+                    // keeps a two-lane arterial and a one-lane main road compatible without
+                    // anybody writing down a special case for the pair.
+                    bool legal = kind switch
+                    {
+                        TurnKind.Straight => onward.Line == into.Line && onward.Lane == into.Lane,
+                        TurnKind.Left     => into.Lane == 0 && onward.Lane == 0,
+                        _                 => into.Lane == fromLanes - 1 && onward.Lane == toLanes - 1,
+                    };
+                    if (!legal) continue;
+
+                    outgoing[into.Index].Add(turns.Count);
+                    turns.Add(new LaneTurn(into.ToJunction, into.Index, onward.Index, kind.Value));
+                }
+            }
+
+            Turns = turns;
+            _fromSegment = new int[segments.Count][];
+            for (int i = 0; i < segments.Count; i++) _fromSegment[i] = outgoing[i].ToArray();
+
+            var entries = new List<int>();
+            foreach (var segment in segments)
+                if (segment.IsEntry) entries.Add(segment.Index);
+            Entries = entries;
+        }
+
+        private static void Add(List<LaneSegment> into, int line, Heading way, int lane,
+                                float fromS, float toS, int fromJunction, int toJunction)
+        {
+            // A junction wider than the gap between it and the next one would produce a segment
+            // of negative length. It cannot happen on a grid whose blocks are wider than its
+            // roads, but a map is authored by hand and this is cheaper than the bug would be.
+            if (toS - fromS <= 0.01f) return;
+
+            into.Add(new LaneSegment
+            {
+                Index = into.Count,
+                Line = line,
+                Way = way,
+                Lane = lane,
+                FromS = fromS,
+                ToS = toS,
+                FromJunction = fromJunction,
+                ToJunction = toJunction,
+            });
+        }
+    }
+}

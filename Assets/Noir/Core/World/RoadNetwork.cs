@@ -37,6 +37,18 @@ namespace Noir.Core.World
         /// </summary>
         public static int CorridorWidth(RoadClass klass) => klass == RoadClass.Street ? 10 : 30;
 
+        /// <summary>
+        /// How many running lanes there are in each direction.
+        ///
+        /// Read off the paint: the freeway tile carries a dashed line either side of a solid
+        /// orange centre, and both the main road and the street carry one dashed centre line and
+        /// nothing else. It lives here rather than with the renderer because it is a fact about
+        /// the ROAD - it decides which turns are legal from which lane, and the lane graph has to
+        /// know that without a renderer in the room. Where each lane sits in metres is a
+        /// different question, and that one is measured off the mesh.
+        /// </summary>
+        public static int LanesEachWay(RoadClass klass) => klass == RoadClass.Freeway ? 2 : 1;
+
         public static bool TryParse(string text, out RoadClass klass)
         {
             switch ((text ?? "").Trim().ToLowerInvariant())
