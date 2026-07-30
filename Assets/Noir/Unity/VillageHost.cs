@@ -143,6 +143,10 @@ namespace Noir.Unity
 
             // Assembled out of pieces, drawn as a handful of meshes.
             CityChunker.Bake(city);
+
+            // AFTER the bake and OUTSIDE the node it bakes: a combined mesh cannot move, so
+            // anything that drives has to be built once the static city is already frozen.
+            CityTraffic.Create(World, transform);
             _xray = XRay.Create(World, _village);
             _agentView = AgentMeshView.Create(this, transform);
             _rig = OrbitCamera.Create(this);

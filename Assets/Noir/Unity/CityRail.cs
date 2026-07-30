@@ -100,20 +100,39 @@ namespace Noir.Unity
                 if (!station && Put(parent, Rails + "Rails_Overground_Pillar_City.prefab", pillar, yaw) != null)
                     n++;
 
-                // A train standing at the platform. Two carriages, because one reads as a bus.
                 if (!station) continue;
+
+                // A two-car train that RUNS the line rather than standing on it. Built under
+                // its own node and driven by CityTrain, so it is never handed to the chunker -
+                // a combined mesh cannot move.
+                var train = new GameObject("Train");
+                train.transform.SetParent(parent, false);
+
                 for (int c = 0; c < 2; c++)
                 {
                     string car = c == 0
                         ? Rails + "Train_Overground_Clean_City.prefab"
                         : Rails + "Carriage_Overground_Clean_City.prefab";
 
-                    // On the deck: the track surface is 10m up, and a carriage is 16.9m long.
+                    // The deck is 10m up and a carriage is 16.9m long, so they sit nose to tail.
                     var on = northSouth
-                        ? new Vector3(cx, 10.05f, along - 8f - c * 17f)
-                        : new Vector3(along - 8f - c * 17f, 10.05f, cz);
-                    if (Put(parent, car, on, yaw) != null) n++;
+                        ? new Vector3(cx, 10.05f, -c * 17f)
+                        : new Vector3(-c * 17f, 10.05f, cz);
+                    if (Put(train.transform, car, on, yaw) != null) n++;
                 }
+
+                // End to end of the corridor, pausing where the platform is.
+                var driver = train.AddComponent<CityTrain>();
+                driver.Along = northSouth ? new Vector3(0f, 0f, -1f) : new Vector3(1f, 0f, 0f);
+                driver.From = northSouth
+                    ? new Vector3(0f, 0f, 20f)
+                    : new Vector3(-20f, 0f, 0f);
+                driver.To = northSouth
+                    ? new Vector3(0f, 0f, -(lot.Y + lot.H) - 20f)
+                    : new Vector3(lot.X + lot.W + 20f, 0f, 0f);
+                driver.StopAt = northSouth
+                    ? Mathf.InverseLerp(20f, -(lot.Y + lot.H) - 20f, along - 15f)
+                    : Mathf.InverseLerp(-20f, lot.X + lot.W + 20f, along - 15f);
             }
             return n;
         }
