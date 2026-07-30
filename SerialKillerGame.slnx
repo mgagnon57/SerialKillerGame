@@ -4,6 +4,7 @@
   <Project Path="Noir.Core.Sim.csproj" />
   <Project Path="Noir.Core.People.csproj" />
   <Project Path="Noir.Core.Contracts.csproj" />
+  <Project Path="Noir.PlayTests.csproj" />
   <Project Path="Noir.Editor.csproj" />
   <Project Path="Noir.Core.Observation.csproj" />
   <Project Path="Polyperfect.Universal.csproj" />

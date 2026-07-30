@@ -193,10 +193,19 @@ namespace Noir.Core.World
                         ordered.Add((TravelOf(way, along), reach, index));
                     ordered.Sort((a, b) => a.s.CompareTo(b.s));
 
-                    float start = TravelOf(way, Headings.Increasing(way)
-                        ? line.From - margin : line.To + margin);
-                    float end = TravelOf(way, Headings.Increasing(way)
-                        ? line.To + margin : line.From - margin);
+                    // THE MARGIN IS FOR LEAVING THE MAP, NOT FOR LEAVING THE ROAD.
+                    //
+                    // Lanes run a little past the edge of the world so that traffic arrives from
+                    // off-stage instead of appearing out of nothing. Applying that to an end
+                    // that is NOT the edge sends cars thirty metres beyond where the road stops
+                    // - which for the farm track that comes off Second Street meant a van
+                    // driving out into a field, in a straight line, on nothing.
+                    float span = line.IsNorthSouth ? height : width;
+                    float low = line.From <= 0.01f ? line.From - margin : line.From;
+                    float high = line.To >= span - 0.01f ? line.To + margin : line.To;
+
+                    float start = TravelOf(way, Headings.Increasing(way) ? low : high);
+                    float end = TravelOf(way, Headings.Increasing(way) ? high : low);
 
                     for (int lane = 0; lane < lanes; lane++)
                     {

@@ -1,0 +1,123 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using Noir.Core.World;
+using Noir.Unity;
+
+namespace Noir.PlayTests
+{
+    /// <summary>
+    /// The living city, for tests to watch.
+    ///
+    /// Everything checked headlessly until now has been GEOMETRY - where a lane is, how wide the
+    /// asphalt is, which building a ray touches. All of that is arithmetic and none of it needs
+    /// the game to be running. What could not be checked was BEHAVIOUR OVER TIME: that a car
+    /// actually stops at a red rather than merely having a stop line in front of it.
+    ///
+    /// A PlayMode test is the answer, because it is not a simulation of the game loop - it IS the
+    /// game loop. Unity enters Play, VillageHost bootstraps itself off its own
+    /// RuntimeInitializeOnLoadMethod exactly as it does when you press the button, and a
+    /// [UnityTest] coroutine can yield a frame at a time and watch what happens.
+    ///
+    /// Play is entered ONCE for the whole run and every test shares the city that comes up, which
+    /// is why this is a static helper rather than a fixture: rebuilding four thousand prefabs per
+    /// test would take longer than anybody will wait.
+    /// </summary>
+    public static class CityUnderTest
+    {
+        /// <summary>Long enough to build the whole city, short enough to fail rather than hang.</summary>
+        private const int BuildFrames = 4000;
+
+        public static VillageHost Host => VillageHost.Instance;
+        public static WorldModel World => Host != null ? Host.World : null;
+
+        private static CityTraffic _traffic;
+        private static CitySignals _signals;
+
+        public static CityTraffic Traffic =>
+            _traffic != null ? _traffic : _traffic = Object.FindFirstObjectByType<CityTraffic>();
+
+        public static CitySignals Signals =>
+            _signals != null ? _signals : _signals = Object.FindFirstObjectByType<CitySignals>();
+
+        /// <summary>
+        /// Wait until the city is up, or give up loudly.
+        ///
+        /// The build is synchronous inside Awake, so this is really waiting for the one very long
+        /// frame in which four hundred prefabs are placed and baked.
+        /// </summary>
+        public static IEnumerator WaitUntilBuilt()
+        {
+            for (int frame = 0; frame < BuildFrames; frame++)
+            {
+                if (Host != null && Host.LoadError != null)
+                    throw new System.Exception("the city failed to load: " + Host.LoadError);
+
+                if (Host != null && Host.Sim != null && Traffic != null && Signals != null)
+                {
+                    // One more frame so everything has had an Update before anybody looks.
+                    yield return null;
+                    yield break;
+                }
+                yield return null;
+            }
+
+            throw new System.Exception(
+                $"the city was still not built after {BuildFrames} frames "
+              + $"(host={(Host == null ? "null" : "up")}, "
+              + $"traffic={(Traffic == null ? "null" : "up")})");
+        }
+
+        /// <summary>Every moving vehicle, as transforms. Black box on purpose.</summary>
+        public static List<Transform> Vehicles()
+        {
+            var found = new List<Transform>();
+            if (Traffic == null) return found;
+
+            foreach (Transform child in Traffic.transform) found.Add(child);
+            return found;
+        }
+
+        /// <summary>
+        /// Is this point on a carriageway, or inside a junction where a turning car belongs?
+        ///
+        /// The same test TrafficCheck applies to the lane geometry, applied instead to where a
+        /// car has actually got to - which is the version that catches a turn that swings wide.
+        /// </summary>
+        public static bool OnTheRoad(Vector3 at, float tolerance, out float over)
+        {
+            over = 0f;
+            var world = World;
+            if (world == null) return true;
+
+            float vx = at.x, vy = -at.z;
+
+            // In a junction? Then any position within it is legitimate.
+            foreach (var junction in world.Roads.Junctions)
+                if (Mathf.Abs(vx - junction.X) <= junction.Reach &&
+                    Mathf.Abs(vy - junction.Y) <= junction.Reach)
+                    return true;
+
+            var line = world.Roads.At(vx, vy);
+            if (line == null)
+            {
+                // Off the map entirely is fine - lanes run past the edge so cars arrive from
+                // off-stage rather than appearing out of nothing.
+                if (vx < 0f || vy < 0f || vx > world.Width || vy > world.Height) return true;
+                over = 999f;
+                return false;
+            }
+
+            float across = line.IsNorthSouth ? vx : vy;
+            float off = Mathf.Abs(across - line.Centre);
+            float half = CityStreets.Asphalt(line.Class);
+
+            over = off - half;
+            return over <= tolerance;
+        }
+
+        /// <summary>Which axis a vehicle is travelling on, from where it is pointing.</summary>
+        public static bool IsNorthSouth(Transform vehicle) =>
+            Mathf.Abs(vehicle.forward.z) > Mathf.Abs(vehicle.forward.x);
+    }
+}

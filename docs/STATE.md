@@ -1,6 +1,62 @@
 ﻿# Where we are
 
-## RESUME HERE — 2026-07-30, evening. The country: 360×360, and a farm.
+## RESUME HERE — 2026-07-30, night. PlayMode tests: the city can be watched, not just measured.
+
+Every check before this measured the city **standing still** — where a lane is, how wide the
+asphalt is, which building a ray touches. All arithmetic, none of it needing the game to run. So
+the one question that mattered about traffic — *does it actually stop?* — could not be answered
+without a human pressing Play.
+
+It can now. `Assets/Noir/PlayTests/` runs under:
+
+```
+Unity.exe -runTests -batchmode -projectPath . -testPlatform PlayMode
+```
+
+That is not a simulation of the game loop, it IS the game loop: Unity enters Play, `VillageHost`
+bootstraps off its own `RuntimeInitializeOnLoadMethod` exactly as it does when you press the
+button, and a `[UnityTest]` coroutine yields a frame at a time and watches. Play is entered
+**once** for the whole run, so the city is built once and every test observes the same living
+city.
+
+**Six tests, all passing:**
+
+| Test | What it settles |
+|---|---|
+| `TheCityComesUpAndRuns` | host up, 360×360, the clock advances |
+| `NoJunctionEverShowsGreenBothWays` | over two full cycles, and every phase is reached |
+| `NoVehicleEverLeavesTheRoad` | every car, every frame, on asphalt or inside a junction |
+| `NoTwoVehiclesOccupyTheSameSpace` | closest approach over 60s |
+| **`TrafficMovesAndStopsAtRedLights`** | **the fleet travels, and a car is seen waiting at a stop line on a red** |
+| `PhotographTheJunctionWhileItRuns` | twelve frames to `docs/snapshots/motion/` |
+
+### It found a real bug on its first run
+
+`NoVehicleEverLeavesTheRoad` caught a van at village (120, 320) — thirty metres west of Second
+Street, in an open field, driving in a straight line on nothing. `LaneGraph` adds a 30m margin to
+**every** road end so traffic arrives from off-stage. That is right at a map edge and wrong where
+a road ends at a junction, which is exactly what a farm track does. Fixed, and pinned in Core by
+`ALaneOnlyRunsPastTheMapWhereTheROADDoes`.
+
+### Two things worth knowing about the rig
+
+- **`WaitForEndOfFrame` never fires in batchmode.** The runner raises
+  "which is not evoked in batchmode" and kills the test. Not needed anyway when rendering your
+  own camera into your own target.
+- **The simulation runs on `Time.unscaledDeltaTime`,** deliberately — how fast the day passes is
+  a property of the game, not of Unity's timescale. So the `Time.timeScale = 8` these tests use
+  to compress a 37-second signal cycle speeds up **traffic and lights but not the clock**.
+  Anything asserting on sim time has to wait in real seconds.
+
+### And the filmstrip shows it
+
+`motion-03.png` → `motion-07.png`: two cars queued behind the stop line on a red, then the phases
+swap, the queue clears, and a van and a car cross the junction while the other axis holds. That
+is the whole traffic system working, seen rather than inferred.
+
+---
+
+## 2026-07-30, evening. The country: 360×360, and a farm.
 
 Northgate is now a quadrant of its own map. The city is unchanged in the north-west; the other
 three quadrants are open land, and the pack's **486 farm prefabs** — which the city had used none

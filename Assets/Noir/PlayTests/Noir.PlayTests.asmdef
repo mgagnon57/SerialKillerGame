@@ -1,0 +1,26 @@
+{
+    "name": "Noir.PlayTests",
+    "rootNamespace": "Noir.PlayTests",
+    "references": [
+        "Noir.Unity",
+        "Noir.Core.Contracts",
+        "Noir.Core.World",
+        "Noir.Core.People",
+        "Noir.Core.Sim",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

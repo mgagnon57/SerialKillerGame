@@ -286,6 +286,41 @@ namespace Noir.Core.Tests
         }
 
         [Test]
+        public void ALaneOnlyRunsPastTheMapWhereTheROADDoes()
+        {
+            // A farm track that comes off a street in the middle of the map ends AT that street.
+            // Lanes run a margin past the edge of the world so traffic arrives from off-stage,
+            // and applying that to an end which is not the edge sent a van thirty metres out
+            // into a field, driving in a straight line on nothing. Caught in Play, pinned here.
+            // A 360m map, because the track is declared out to x=359 and a road declared past
+            // the edge of its own map is a different bug from the one under test.
+            const string Big = "village Test\nsize 360 360\nterrain path 0,0 360x360\n";
+            var graph = Build(Big
+                            + "road second 30 165,0 165,359\n  class freeway\n"
+                            + "road backtrack 10 150,318 359,318\n  class track\n", out var world);
+
+            int track = -1;
+            for (int i = 0; i < world.Roads.Lines.Count; i++)
+                if (world.Roads.Lines[i].Name == "backtrack") track = i;
+            Assert.That(track, Is.GreaterThanOrEqualTo(0));
+
+            foreach (var segment in graph.Segments)
+            {
+                if (segment.Line != track) continue;
+
+                float a = LaneGraph.AlongOf(segment.Way, segment.FromS);
+                float b = LaneGraph.AlongOf(segment.Way, segment.ToS);
+
+                // Second Street's corridor is x 150..180, so nothing on this track may reach
+                // west of it. The east end may overhang, because there the map does end.
+                Assert.That(System.Math.Min(a, b), Is.GreaterThanOrEqualTo(149.9f),
+                            "a track segment runs west of the street it joins");
+                Assert.That(System.Math.Max(a, b),
+                            Is.LessThanOrEqualTo(world.Width + graph.Margin + 0.1f));
+            }
+        }
+
+        [Test]
         public void TheRealCityBuildsAGraph()
         {
             TestContent.EnsureKinds();
