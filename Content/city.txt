@@ -302,12 +302,18 @@ place casino 545,545 35x46 "the Regency Rooms"
   door 562,545
   human Open all night, and the carpet is loud enough that nobody notices the hour.
 
-# ---- the elevated railway ------------------------------------------------
+# ---- the elevated railway: TAKEN OUT FOR NOW ------------------------------
+# Uncomment to put it back. Nothing else has to change - CityRail walks the map
+# for places of kind `railway` and builds none when there are none, and CityTrain
+# is only created by CityRail, so the whole line comes and goes with this one
+# statement. The kind, the renderer and the moving train are all still there.
+#
 # Straight over Second Street. The lot is EXACTLY the street's corridor, and the
 # railway kind's ground is road, so stamping it is a no-op rather than a
 # demolition. It stops at the edge of town rather than running out over the farm.
-place railway 510,360 30x240 "the Elevated"
-  human It goes over the top of everything and you hear it before you see it.
+#
+# place railway 510,360 30x240 "the Elevated"
+#   human It goes over the top of everything and you hear it before you see it.
 
 # ==========================================================================
 #  THE COUNTRY
