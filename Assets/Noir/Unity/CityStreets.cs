@@ -55,7 +55,7 @@ namespace Noir.Unity
             }
 
             var lamps = Catalogue(CityProps + "/Lamps City", "Lamp_Sidewalk");
-            var cars = Catalogue(CityProps + "/../Cars", null);
+            var cars = Everyday(CityProps + "/../Cars");
             var lights = Catalogue(CityProps + "/TrafficLights City", "Traffic_Light");
             var play = Catalogue(CityProps + "/Playground City", null);
             var skate = Catalogue(CityProps + "/SkatePark City", "Skate_");
@@ -108,6 +108,9 @@ namespace Noir.Unity
 
             int tiles = 0, dressing = 0;
 
+            // Every kerbside parking bay in the town, filled afterwards to a budget.
+            var bays = new List<(Vector3 at, float yaw)>();
+
             for (int cy = 0; cy < rows; cy++)
             for (int cx = 0; cx < cols; cx++)
             {
@@ -144,7 +147,7 @@ namespace Noir.Unity
                         // A straight gets both its kerbs walked. Everything below is placed
                         // ALONG the carriageway rather than once per tile, which is the whole
                         // difference between a street with things on it and a road with a bin.
-                        dressing += Kerb(root.transform, at, cx, cy, ew, lamps, cars, kerbside, signs);
+                        dressing += Kerb(root.transform, at, cx, cy, ew, lamps, bays, kerbside, signs);
 
                         if (manholes.Count > 0 && Materials3D.Scatter(cx, cy, 191) % 3 == 0)
                         {
@@ -227,6 +230,8 @@ namespace Noir.Unity
                 }
             }
 
+            dressing += Park(root.transform, bays, cars, world);
+
             Debug.Log($"[streets] {tiles} road and pavement tiles, {dressing} pieces of furniture, "
                     + $"{root.GetComponentsInChildren<Renderer>().Length} renderers.");
 #endif
@@ -244,7 +249,7 @@ namespace Noir.Unity
         /// the same run of hydrant, meter, phone box and planter.
         /// </summary>
         private static int Kerb(Transform parent, Vector3 at, int cx, int cy, bool ew,
-                                List<string> lamps, List<string> cars,
+                                List<string> lamps, List<(Vector3 at, float yaw)> bays,
                                 List<List<string>> kerbside, List<string> signs)
         {
             int n = 0;
@@ -280,15 +285,16 @@ namespace Noir.Unity
                     if (Put(parent, Pick(role, cx + step, cy + side, 223), spot, yaw) != null) n++;
                 }
 
-                // Parked cars, nose to tail against the kerb and pointing the way the road runs.
-                if (cars.Count > 0 && Materials3D.Scatter(cx, cy * 3 + side, 29) % 3 != 0)
+                // A parking bay against the kerb, pointing the way the road runs. NOT filled
+                // here: every bay in the town is collected first and only a budgeted number of
+                // them get a car, so the traffic is a property of how many people live here
+                // rather than of how much tarmac was laid.
                 {
                     float lane = side == 0 ? -2.6f : -Cell + 2.6f;
                     var bay = ew
                         ? at + new Vector3(-Cell / 2f, 0f, lane)
                         : at + new Vector3(lane, 0f, -Cell / 2f);
-                    float carYaw = (ew ? 90f : 0f) + (side == 0 ? 0f : 180f);
-                    if (Put(parent, Pick(cars, cx, cy + side * 5, 29), bay, carYaw) != null) n++;
+                    bays.Add((bay, (ew ? 90f : 0f) + (side == 0 ? 0f : 180f)));
                 }
             }
 
@@ -302,6 +308,80 @@ namespace Noir.Unity
             }
 
             return n;
+        }
+
+        /// <summary>
+        /// Roughly how many households own a car. Two hundred vehicles in a town of a hundred
+        /// people is not a busy street, it is a scrapyard.
+        /// </summary>
+        public static float CarsPerHome = 0.75f;
+
+        /// <summary>
+        /// Fill a budgeted share of the town's parking bays.
+        ///
+        /// The budget comes from HOW MANY PEOPLE LIVE HERE, not from how much tarmac was laid,
+        /// which is the only version of this that scales: a bigger map gets more bays and the
+        /// same fraction of them occupied, so a village stays quiet and a city fills up without
+        /// anybody retuning a number.
+        ///
+        /// Bays are taken at an even stride through the list rather than at random, so cars are
+        /// spread over the whole town instead of clumping wherever the die fell.
+        /// </summary>
+        private static int Park(Transform parent, List<(Vector3 at, float yaw)> bays,
+                                List<string> cars, WorldModel world)
+        {
+            if (cars.Count == 0 || bays.Count == 0) return 0;
+
+            int budget = Mathf.Clamp(Mathf.RoundToInt(world.Homes.Count * CarsPerHome), 3, bays.Count);
+            float stride = bays.Count / (float)budget;
+
+            int n = 0;
+            for (int i = 0; i < budget; i++)
+            {
+                var bay = bays[Mathf.Min((int)(i * stride), bays.Count - 1)];
+                var pick = cars[(int)(Materials3D.Scatter(i, budget, 733) % (uint)cars.Count)];
+                if (Put(parent, pick, bay.at, bay.yaw) != null) n++;
+            }
+
+            Debug.Log($"[streets] {n} vehicles for {world.Homes.Count} homes "
+                    + $"({bays.Count} bays available, {CarsPerHome:0.00} per home).");
+            return n;
+        }
+
+        /// <summary>
+        /// What is plausibly parked outside somebody's flat.
+        ///
+        /// The Cars folder is 232 prefabs and holds a whole motorsport paddock - Formula, Nascar,
+        /// Le Mans prototypes, a gokart - as well as heavy haulage, a monster truck and the
+        /// emergency fleet. Taking "a car" from all of that put an articulated container lorry
+        /// and a stock car at a residential kerb. These are the ones that belong there; the
+        /// emergency vehicles are parked at the buildings they answer to instead, and the racing
+        /// set has no business in a town at all.
+        /// </summary>
+        private static List<string> Everyday(string folder)
+        {
+            string[] wanted =
+            {
+                "Car_Modern", "Car_Pickup_Modern", "Car_Sport_Modern", "Car_Roadster_Cabrio_Modern",
+                "Car_Offroad_Modern", "Car_Offroad_Roofless_Modern", "Car_Van_Old",
+                "Car_Van_Old_Painted", "Car_Cargovan_Modern", "Car_Taxi_Modern",
+            };
+
+            var found = new List<string>();
+            foreach (var path in Catalogue(folder, null))
+            {
+                string name = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (name.IndexOf("Racing", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                foreach (var w in wanted)
+                {
+                    // Colour variants are the base name with _A, _B and so on after it.
+                    if (name != w && !name.StartsWith(w + "_", System.StringComparison.Ordinal)) continue;
+                    found.Add(path);
+                    break;
+                }
+            }
+            return found;
         }
 
         /// <summary>
