@@ -128,7 +128,16 @@ namespace Noir.Unity
             var chunks = new MeshChunks(Scenery.Count, Chunk,
                                         -Reach, -Reach, world.Width + Reach, world.Height + Reach);
 
-            int boundaries = Fields(world, chunks);
+            // A PLACE WITH NO FIELDS IN IT IS NOT IN FARMING COUNTRY.
+            //
+            // The field lattice - hedgerows, stone walls, the patchwork of boundaries - is the
+            // single most village thing on screen, and it was being drawn to the horizon around
+            // a city. Rather than add a switch to the map format, ask the map: Ashcombe is full
+            // of `terrain field` and Northgate has none, so the content already says which this
+            // is. Outskirt woodland stays either way, because a town has trees around it too.
+            bool farmland = HasFarmland(world);
+
+            int boundaries = farmland ? Fields(world, chunks) : 0;
             int copses = Copses(world, chunks);
             int woods = Woods(world, chunks);
 
@@ -141,6 +150,18 @@ namespace Noir.Unity
                     + $"{chunks.VertexCount:N0} vertices, {chunks.DrawCalls} draw calls. "
                     + $"{_coarse:N0} of {_canopies:N0} canopies built coarse, "
                     + $"{_spared:N0} vertices spared.");
+        }
+
+        /// <summary>
+        /// Does this place have farmland in it? Read off the map rather than declared, so a new
+        /// map says what it is by what is in it and nobody has to remember a flag.
+        /// </summary>
+        private static bool HasFarmland(WorldModel world)
+        {
+            for (int y = 0; y < world.Height; y += 4)
+            for (int x = 0; x < world.Width; x += 4)
+                if (world.Grid.TerrainAt(x, y) == Noir.Core.World.Terrain.Field) return true;
+            return false;
         }
 
         // ---------- fields ----------

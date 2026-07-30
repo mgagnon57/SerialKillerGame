@@ -65,6 +65,9 @@ namespace Noir.Unity
 
             foreach (var place in world.AllPlaces)
             {
+                // A bought model brings its own door and windows.
+                if (CityBuildings.Handles(place)) continue;
+
                 Openings(world, place, openings);
 
                 foreach (var tile in openings)

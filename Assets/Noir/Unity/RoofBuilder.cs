@@ -53,6 +53,10 @@ namespace Noir.Unity
             {
                 if (!IsRoofed(place.Kind)) continue;
 
+                // A bought model brings its own roof. Without this every apartment and every
+                // landmark had a generated one hanging inside it.
+                if (CityBuildings.Handles(place)) continue;
+
                 var into = chunks.At(place.Bounds.X, place.Bounds.Y);
 
                 // The covering is still chosen from the building's own corner, so which roof a

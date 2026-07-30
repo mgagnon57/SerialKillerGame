@@ -793,9 +793,27 @@ namespace Noir.Unity
             var owner = new int[world.Width * world.Height];
             for (int i = 0; i < owner.Length; i++) owner[i] = -1;
 
+            // Tiles belonging to a building that arrives as a bought model. Their walls are in
+            // the model, so the run-walker below has to leave them alone entirely.
+            var bought = new bool[world.Width * world.Height];
+
             foreach (var place in world.AllPlaces)
             {
                 if (!PlaceKindTable.Current.Row(place.Kind).IsBuilding) continue;
+
+                // A bought model brings its own walls. Marked rather than skipped, because the
+                // wall run below is walked off the TERRAIN GRID and not off the place list -
+                // leaving these unowned would not omit them, it would just draw them at the
+                // default height with nobody responsible for them.
+                if (CityBuildings.Handles(place))
+                {
+                    var m = place.Bounds;
+                    for (int y = m.Y; y < m.Y + m.H; y++)
+                    for (int x = m.X; x < m.X + m.W; x++)
+                        if (x >= 0 && y >= 0 && x < world.Width && y < world.Height)
+                            bought[y * world.Width + x] = true;
+                    continue;
+                }
 
                 var b = place.Bounds;
                 for (int y = b.Y; y < b.Y + b.H; y++)
@@ -818,17 +836,22 @@ namespace Noir.Unity
 
             int OwnerAt(int gx, int gy) => owner[gy * world.Width + gx];
 
+            // Every test below goes through this rather than IsWall, so a bought building's
+            // perimeter is invisible to the run-walker and no run can start on or cross it.
+            bool Walled(int gx, int gy) =>
+                IsWall(world, gx, gy) && !bought[gy * world.Width + gx];
+
             // Horizontal runs first, then whatever vertical runs remain.
             for (int gy = 0; gy < world.Height; gy++)
             {
                 int gx = 0;
                 while (gx < world.Width)
                 {
-                    if (!IsWall(world, gx, gy) || used[gy * world.Width + gx]) { gx++; continue; }
+                    if (!Walled(gx, gy) || used[gy * world.Width + gx]) { gx++; continue; }
 
                     int start = gx;
                     int mine = OwnerAt(gx, gy);
-                    while (gx < world.Width && IsWall(world, gx, gy) && !used[gy * world.Width + gx]
+                    while (gx < world.Width && Walled(gx, gy) && !used[gy * world.Width + gx]
                            && OwnerAt(gx, gy) == mine)
                     {
                         used[gy * world.Width + gx] = true;
@@ -849,11 +872,11 @@ namespace Noir.Unity
                 int gy = 0;
                 while (gy < world.Height)
                 {
-                    if (!IsWall(world, gx, gy) || used[gy * world.Width + gx]) { gy++; continue; }
+                    if (!Walled(gx, gy) || used[gy * world.Width + gx]) { gy++; continue; }
 
                     int start = gy;
                     int mine = OwnerAt(gx, gy);
-                    while (gy < world.Height && IsWall(world, gx, gy) && !used[gy * world.Width + gx]
+                    while (gy < world.Height && Walled(gx, gy) && !used[gy * world.Width + gx]
                            && OwnerAt(gx, gy) == mine)
                     {
                         used[gy * world.Width + gx] = true;

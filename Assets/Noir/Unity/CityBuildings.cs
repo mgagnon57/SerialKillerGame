@@ -96,6 +96,30 @@ namespace Noir.Unity
         }
 
         /// <summary>
+        /// Does a bought model stand on this place?
+        ///
+        /// THE OLD RENDERER MUST NOT ALSO BUILD IT. VillageMesh walls it, RoofBuilder roofs it
+        /// and Frontage hangs a shopfront on it - all keyed off the place, all still running -
+        /// so every apartment and every landmark had a generated grey box standing inside the
+        /// model. That is what X-ray was revealing: pressing X hides the procedural geometry and
+        /// the bought building appears, because it had been inside the box the whole time.
+        /// </summary>
+        public static bool Handles(Place place)
+        {
+            switch (KindOf(place))
+            {
+                case "apartment":
+                case "diner": case "precinct": case "school": case "hospital":
+                case "firestation": case "cinema": case "bank": case "casino":
+                case "gasstation": case "icecream": case "carwash":
+                case "restroom": case "newsstand": case "tower":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
         /// The kind's canonical name from kinds.txt, not Kind.ToString().
         ///
         /// A kind the PlaceKind enum has never heard of - which is every city kind - is numbered
