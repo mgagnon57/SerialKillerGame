@@ -51,8 +51,14 @@ namespace Noir.PlayTests
             var host = CityUnderTest.Host;
             Assert.That(host, Is.Not.Null);
             Assert.That(host.LoadError, Is.Null);
-            Assert.That(host.World.Width, Is.EqualTo(360));
-            Assert.That(host.World.Height, Is.EqualTo(360));
+            // Not a hardcoded size. The map has been 160x120, 240x240, 360x360 and 960x960 in
+            // one day, and a test that pins the number fails every time the city grows without
+            // ever having found a fault.
+            Assert.That(host.World.Width, Is.GreaterThan(100));
+            Assert.That(host.World.Height, Is.EqualTo(host.World.Width), "the map is square");
+            Assert.That(host.World.Roads.Junctions.Count, Is.GreaterThan(0), "no junctions");
+            Assert.That(host.World.Households, Is.GreaterThan(host.World.Homes.Count),
+                        "homes hold more than one household each");
 
             // THE SIMULATION RUNS ON UNSCALED TIME, deliberately: VillageHost advances it by
             // Time.unscaledDeltaTime times its own speed setting, so that how fast the day goes

@@ -132,6 +132,35 @@ namespace Noir.Core.World
             }
         }
 
+        private int _households = -1;
+
+        /// <summary>
+        /// How many separate homes there are, counting the units inside each building.
+        /// </summary>
+        /// <remarks>
+        /// NOT <see cref="Homes"/>.Count, which counts BUILDINGS. A terrace is one building with
+        /// four front doors and a block of flats is one building with a dozen, so the two numbers
+        /// diverge the moment anywhere holds more than one household - and anything scaled off
+        /// the building count then treats a tower block as a cottage. The traffic did exactly
+        /// that: sixteen vehicles for a town of three hundred, because there were twenty-seven
+        /// buildings.
+        /// </remarks>
+        public int Households
+        {
+            get
+            {
+                if (_households >= 0) return _households;
+
+                int total = 0;
+                foreach (var id in Homes)
+                {
+                    var place = GetPlace(id);
+                    total += place == null ? 0 : Math.Max(1, place.Units);
+                }
+                return _households = total;
+            }
+        }
+
         public int RoomCount => _rooms.Length;
         public IReadOnlyList<Room> AllRooms => _rooms;
 

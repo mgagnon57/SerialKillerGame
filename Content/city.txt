@@ -152,24 +152,38 @@ place tower 96,4 48x39 "the Hallam Building"
   door 96,23
   human Forty floors of offices and a lobby nobody is ever turned away from.
 
+# SIX FLATS TO A BLOCK. These are four-storey townhouses, not cottages, and a
+# household per building gave a city of twenty-seven homes. `units` is what makes
+# neighbours real - people who share a roof and a front path and notice each
+# other - and it is also what the traffic budget counts, so it is the difference
+# between empty roads and a town.
 place apartment 95,52 6x8 "1 Northgate"
   door 98,59
+  units 6
 place apartment 101,52 6x8 "3 Northgate"
   door 104,59
+  units 6
 place apartment 107,52 6x8 "5 Northgate"
   door 110,59
+  units 6
 place apartment 113,52 6x8 "7 Northgate"
   door 116,59
+  units 6
 place apartment 119,52 6x8 "9 Northgate"
   door 122,59
+  units 6
 place apartment 125,52 6x8 "11 Northgate"
   door 128,59
+  units 6
 place apartment 131,52 6x8 "13 Northgate"
   door 134,59
+  units 6
 place apartment 137,52 6x8 "15 Northgate"
   door 140,59
+  units 6
 place apartment 143,52 6x8 "17 Northgate"
   door 146,59
+  units 6
 
 # ---- block EN: the school corner -----------------------------------------
 place school2 185,4 47x18 "Northgate Elementary"
@@ -191,22 +205,31 @@ place newsstand 210,50 7x3 "the stand"
 # ---- block WM: the parade ------------------------------------------------
 place apartment 2,90 6x8 "2 Northgate"
   door 5,90
+  units 6
 place apartment 8,90 6x8 "4 Northgate"
   door 11,90
+  units 6
 place apartment 14,90 6x8 "6 Northgate"
   door 17,90
+  units 6
 place apartment 20,90 6x8 "8 Northgate"
   door 23,90
+  units 6
 place apartment 26,90 6x8 "10 Northgate"
   door 29,90
+  units 6
 place apartment 32,90 6x8 "12 Northgate"
   door 35,90
+  units 6
 place apartment 38,90 6x8 "14 Northgate"
   door 41,90
+  units 6
 place apartment 44,90 6x8 "16 Northgate"
   door 47,90
+  units 6
 place apartment 50,90 6x8 "18 Northgate"
   door 53,90
+  units 6
 
 place bank 2,105 29x23 "Northgate Savings"
   door 16,105
@@ -224,22 +247,31 @@ place tower 95,100 46x37 "the Meridian"
 # ---- block EM: the hospital ----------------------------------------------
 place apartment 182,90 6x8 "20 Northgate"
   door 185,90
+  units 6
 place apartment 188,90 6x8 "22 Northgate"
   door 191,90
+  units 6
 place apartment 194,90 6x8 "24 Northgate"
   door 197,90
+  units 6
 place apartment 200,90 6x8 "26 Northgate"
   door 203,90
+  units 6
 place apartment 206,90 6x8 "28 Northgate"
   door 209,90
+  units 6
 place apartment 212,90 6x8 "30 Northgate"
   door 215,90
+  units 6
 place apartment 218,90 6x8 "32 Northgate"
   door 221,90
+  units 6
 place apartment 224,90 6x8 "34 Northgate"
   door 227,90
+  units 6
 place apartment 230,90 6x8 "36 Northgate"
   door 233,90
+  units 6
 
 place hospital 185,110 40x27 "Northgate General"
   door 205,110

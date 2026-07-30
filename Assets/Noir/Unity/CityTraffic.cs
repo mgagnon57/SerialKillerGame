@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 #if UNITY_EDITOR
@@ -55,10 +55,15 @@ namespace Noir.Unity
         private const float Oncoming = 22f;
 
         /// <summary>
-        /// Moving vehicles per home. The budget comes from HOW MANY PEOPLE LIVE HERE rather than
-        /// from how much tarmac was laid, which is the only version of this that scales: a bigger
-        /// map gets more lanes and the same traffic per resident, so a village stays quiet and a
-        /// city fills up without anybody retuning a number.
+        /// Moving vehicles per HOUSEHOLD. The budget comes from how many people live here rather
+        /// than from how much tarmac was laid, which is the only version of this that scales: a
+        /// bigger map gets more lanes and the same traffic per resident, so a village stays quiet
+        /// and a city fills up without anybody retuning a number.
+        ///
+        /// PER HOUSEHOLD AND NOT PER HOME BUILDING, which is what it used to be and why the roads
+        /// looked empty. A terrace is one building with four front doors and a block of flats is
+        /// one with a dozen; counting buildings gave a town of three hundred the traffic of a
+        /// hamlet of twenty-seven, and spread across a 960m map that is no traffic at all.
         /// </summary>
         public static float CarsPerHome = 0.6f;
 
@@ -187,7 +192,7 @@ namespace Noir.Unity
             foreach (RoadClass klass in System.Enum.GetValues(typeof(RoadClass)))
                 fleets[klass] = Everyday(klass);
 
-            int budget = Mathf.Clamp(Mathf.RoundToInt(world.Homes.Count * CarsPerHome),
+            int budget = Mathf.Clamp(Mathf.RoundToInt(world.Households * CarsPerHome),
                                      Mathf.Min(6, Graph.Segments.Count),
                                      Graph.Segments.Count);
 
