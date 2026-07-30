@@ -181,22 +181,34 @@ namespace Noir.Unity
         {
             if (Graph.Segments.Count == 0) { Debug.LogWarning("[traffic] no lanes"); return; }
 
-            var cars = Everyday();
-            if (cars.Count == 0) { Debug.LogWarning("[traffic] no vehicles"); return; }
+            // One fleet per road class, fetched once. A vehicle is drawn from the fleet of the
+            // road it is actually going to be on - see Everyday.
+            var fleets = new Dictionary<RoadClass, List<string>>();
+            foreach (RoadClass klass in System.Enum.GetValues(typeof(RoadClass)))
+                fleets[klass] = Everyday(klass);
 
             int budget = Mathf.Clamp(Mathf.RoundToInt(world.Homes.Count * CarsPerHome),
                                      Mathf.Min(6, Graph.Segments.Count),
                                      Graph.Segments.Count);
 
+            var counted = new Dictionary<RoadClass, int>();
+
             for (int n = 0; n < budget; n++)
             {
+                // Spread over the whole graph rather than queued at the edges, so the city has
+                // traffic in it the moment it appears rather than thirty seconds later.
+                var segment = Graph.Segments[n * 7919 % Graph.Segments.Count];
+                var onClass = world.Roads.Lines[segment.Line].Class;
+
+                var cars = fleets[onClass];
+                if (cars.Count == 0) continue;
+
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                     cars[(int)(Materials3D.Scatter(n, 0, 811) % (uint)cars.Count)]);
                 if (prefab == null) continue;
 
-                // Spread over the whole graph rather than queued at the edges, so the city has
-                // traffic in it the moment it appears rather than thirty seconds later.
-                var segment = Graph.Segments[n * 7919 % Graph.Segments.Count];
+                counted[onClass] = counted.TryGetValue(onClass, out int was) ? was + 1 : 1;
+
                 float s = Mathf.Lerp(segment.FromS, segment.ToS,
                                      Materials3D.Scatter(n, 1, 821) % 100 / 100f);
 
@@ -208,33 +220,83 @@ namespace Noir.Unity
                 Seat(mover);
             }
 
+            var byClass = new List<string>();
+            foreach (var pair in counted)
+                byClass.Add($"{pair.Value} on {pair.Key.ToString().ToLowerInvariant()}");
+
             Debug.Log($"[traffic] {_movers.Count} vehicles on {Graph.Segments.Count} lane segments "
-                    + $"({world.Homes.Count} homes x {CarsPerHome:0.00}), "
+                    + $"({string.Join(", ", byClass)}), drawn from fleets of "
+                    + $"{fleets[RoadClass.Freeway].Count} / {fleets[RoadClass.Mainroad].Count} / "
+                    + $"{fleets[RoadClass.Track].Count} (freeway / mainroad / track). "
                     + $"{Graph.Turns.Count} turns through {world.Roads.Junctions.Count} junctions.");
         }
 
         /// <summary>
-        /// What is plausibly driving through a town.
+        /// WHAT USES A ROAD DEPENDS ON WHAT SORT OF ROAD IT IS.
         ///
-        /// The Cars folder is 232 prefabs and holds a whole motorsport paddock - Formula, Nascar,
-        /// Le Mans prototypes, a gokart - as well as heavy haulage and a monster truck. Taking
-        /// "a car" from all of that put a stock car on the avenue.
+        /// Every vehicle in the city came from one list, which meant a four-lane arterial carried
+        /// exactly the same traffic as a farm track: hatchbacks. The pack has sixty-nine trucks in
+        /// it - box, cistern, concrete, container, dump, garbage, gritter, logging, flatbed, and
+        /// the tractor units and trailers to pull them - and ONE of them was ever placed. An
+        /// arterial with no lorry on it does not read as an arterial.
+        ///
+        /// So: heavy goods take the arterials and nothing else, because that is where they are
+        /// allowed and because a container lorry on a farm track is the same category of mistake
+        /// as a stock car on the avenue. A track gets what a farm owns - pickups, old vans, an
+        /// off-roader. Everything in between gets the everyday traffic of a town.
+        ///
+        /// STILL EXCLUDED: the 79-strong motorsport paddock. Formula, Nascar, Le Mans prototypes
+        /// and a gokart have nowhere to be until there is somewhere to race them.
         /// </summary>
-        private static List<string> Everyday()
+        private static List<string> Everyday(RoadClass klass)
         {
-            string[] wanted =
+            // The everyday traffic of a town, on every road.
+            var wanted = new List<string>
             {
-                "Car_Modern", "Car_Pickup_Modern", "Car_Sport_Modern", "Car_Taxi_Modern",
+                "Car_Modern", "Car_Pickup_Modern", "Car_Taxi_Modern",
                 "Car_Cargovan_Modern", "Car_Van_Old", "Car_Offroad_Modern",
             };
+
+            if (klass == RoadClass.Track)
+            {
+                // A farm track carries what the farm owns and nothing that could not turn round
+                // at the end of it.
+                wanted = new List<string>
+                {
+                    "Car_Pickup_Modern", "Car_Van_Old", "Car_Offroad_Modern",
+                    "Pickup_Truck_Old_Farm", "Tractor_Old",
+                };
+            }
+            else if (klass == RoadClass.Freeway)
+            {
+                // Two lanes each way and room to pass: this is the road the freight is on.
+                wanted.AddRange(new[]
+                {
+                    "Car_Sport_Modern", "Car_Roadster_Cabrio_Modern",
+                    "Car_Truck_Modern_Box", "Car_Truck_Modern_Container",
+                    "Car_Truck_Modern_Cistern", "Car_Truck_Modern_Dump",
+                    "Car_Truck_Modern_Logging", "Car_Truck_Modern_Garbage",
+                    "Car_Truck_Trailer_Sleepercab_Modern",
+                });
+            }
+            else
+            {
+                wanted.Add("Car_Sport_Modern");
+            }
+
             var found = new List<string>();
-            foreach (var guid in AssetDatabase.FindAssets(
-                         "t:Prefab", new[] { "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars" }))
+            foreach (var folder in new[]
+                     {
+                         "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars",
+                         "Assets/polyperfect/Poly Universal Pack/Prefabs/Farm/Vehicles Farm",
+                     })
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { folder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 string name = System.IO.Path.GetFileNameWithoutExtension(path);
                 if (path.IndexOf("Collider", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                if (name.IndexOf("Racing", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (path.IndexOf("Racing", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
                 foreach (var w in wanted)
                     if (name == w || name.StartsWith(w + "_", System.StringComparison.Ordinal))
                     { found.Add(path); break; }
