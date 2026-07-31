@@ -279,7 +279,7 @@ namespace Noir.Unity
 
             if (Place(house.transform, $"{City}{family}_Roof_A_City.prefab", y) > 0f) n++;
 
-            Seat(house, lot, yaw);
+            Seat(house, lot, yaw, dressedOnly: true);
             Glazing(house, place);
             n += Roof(house, lot);
             n += Shopfront(house, lot, yaw);
@@ -541,13 +541,30 @@ namespace Noir.Unity
         /// Slide a finished house so its measured footprint centres on its lot, in x and z only -
         /// the stack has already settled its own height and must not be lifted off the ground.
         /// </summary>
-        private static void Seat(GameObject house, TileRect lot, float yaw)
+        /// <param name="dressedOnly">
+        /// Measure by brick and glass, not by the raw combined mesh. `Squarehouse_Bottom_A`'s
+        /// brick and glass end at z 3.01 but its `M_Universal_A` submesh runs to 5.96 - an
+        /// unfaced tail the OTHER sections in the same stack (Entrance, Mid, Roof) do not carry
+        /// anywhere near as far (0.1-0.6m, not 3m), so it is specific to Bottom rather than a
+        /// real building depth. Seating by the whole combined bounds put that tail's far edge on
+        /// the building line for a north-facing front, which pushed the actual brick wall up to
+        /// 3m behind it - the tan slab on every building front that faced that way. This is
+        /// probably also why Bayhouse and Squarehouse were measured as 7m and 9m deep elsewhere
+        /// in this file: both numbers include a Bottom-only tail of a different size, and their
+        /// brick footprints alone measure within a centimetre of each other. Towers pass false:
+        /// Skyscraper meshes have no brick or glass submesh to measure by, so this falls back to
+        /// the raw bounds unchanged.
+        /// </param>
+        private static void Seat(GameObject house, TileRect lot, float yaw, bool dressedOnly = false)
         {
-            var rends = house.GetComponentsInChildren<Renderer>();
-            if (rends.Length == 0) return;
+            if (!dressedOnly || !TryDressedBounds(house, out var b))
+            {
+                var rends = house.GetComponentsInChildren<Renderer>();
+                if (rends.Length == 0) return;
 
-            var b = rends[0].bounds;
-            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+            }
 
             // Village y runs into Unity -z, as everywhere else in the renderers.
             float westX = lot.X, eastX = lot.X + lot.W;
@@ -574,6 +591,45 @@ namespace Noir.Unity
                 pos.x += (lot.X + lot.W / 2f) - b.center.x;
 
             house.transform.position = pos;
+        }
+
+        /// <summary>
+        /// The house's bounds by its brick and glass submeshes only, skipping `M_Universal_A` -
+        /// see Seat's `dressedOnly`. False if nothing in the house has either, so the caller
+        /// falls back to the raw combined bounds instead of seating by an empty box.
+        /// </summary>
+        private static bool TryDressedBounds(GameObject house, out Bounds bounds)
+        {
+            bounds = default;
+            bool any = false;
+
+            foreach (var mf in house.GetComponentsInChildren<MeshFilter>())
+            {
+                var mesh = mf.sharedMesh;
+                var mr = mf.GetComponent<MeshRenderer>();
+                if (mesh == null || mr == null) continue;
+
+                var mats = mr.sharedMaterials;
+                var verts = mesh.vertices;
+                var xform = mf.transform;
+
+                for (int s = 0; s < mesh.subMeshCount; s++)
+                {
+                    var mat = s < mats.Length ? mats[s] : null;
+                    if (mat == null
+                        || mat.name.StartsWith("M_Universal_A", System.StringComparison.Ordinal))
+                        continue;
+
+                    foreach (var idx in mesh.GetTriangles(s))
+                    {
+                        var world = xform.TransformPoint(verts[idx]);
+                        if (!any) { bounds = new Bounds(world, Vector3.zero); any = true; }
+                        else bounds.Encapsulate(world);
+                    }
+                }
+            }
+
+            return any;
         }
 
         /// <summary>Instantiate one section at a height, returning how tall it turned out.</summary>
