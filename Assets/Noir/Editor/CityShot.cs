@@ -82,6 +82,7 @@ namespace Noir.Editor
                 CityDistrict.Build(world, city.transform);
                 CityRail.Build(world, city.transform);
                 CityFarm.Build(world, city.transform);
+                CityPowerlines.Build(world, city.transform);
                 CityGreenery.Build(world, city.transform);
 
                 // The lighting rig's own fixtures, exactly as Snapshot does it. Without these
@@ -195,6 +196,14 @@ namespace Noir.Editor
                 // for rather than away from them.
                 Frame(camGo, new Vector3(241f, 1.4f, -238f), 13f, 6f, 180f);
                 Capture(cam, Path.Combine(OutputDir, "country-stop.png"));
+
+                // Down the southbound ring out in open country: the poles and their wires, which
+                // are the only thing that makes a road through fields look maintained rather
+                // than laid on a lawn. Aimed where the ground is still grass - the check that
+                // puts them there asks the map the same question, so if the town ever grows out
+                // this far the poles and this camera stop agreeing and that is worth seeing.
+                Frame(camGo, new Vector3(500f, 0f, -915f), 40f, 12f, 90f);
+                Capture(cam, Path.Combine(OutputDir, "country-poles.png"));
 
                 // The precinct car park, which is the biggest of the five and the one with the
                 // cruisers in it.

@@ -166,6 +166,7 @@ namespace Noir.Unity
             CityDistrict.Build(World, city.transform);
             CityRail.Build(World, city.transform);
             CityFarm.Build(World, city.transform);
+            CityPowerlines.Build(World, city.transform);
             CityGreenery.Build(World, city.transform);
 
             // Assembled out of pieces, drawn as a handful of meshes.
