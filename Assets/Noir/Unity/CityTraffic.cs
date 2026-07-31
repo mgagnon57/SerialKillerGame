@@ -85,18 +85,21 @@ namespace Noir.Unity
         /// one with a dozen; counting buildings gave a town of three hundred the traffic of a
         /// hamlet of twenty-seven, and spread across a 960m map that is no traffic at all.
         ///
-        /// AND WHY IT IS NO LONGER 0.6. The downtown grew from nine blocks to thirty-six and the
-        /// traffic did not move: ninety-seven vehicles before and ninety-seven after, because a
-        /// `district` is an OPEN place with no residents in it, so twenty-seven new blocks added
-        /// exactly nothing to the household count the budget is drawn from.
+        /// AND WHY IT IS NO LONGER 1.5. That figure was a fudge and said so: the downtown had
+        /// grown from nine blocks to thirty-six without the traffic moving at all - ninety-seven
+        /// vehicles before and ninety-seven after - because a `district` is an OPEN place with no
+        /// residents, so twenty-seven new blocks added nothing to the count this is drawn from.
+        /// Rather than fix that, the multiplier was inflated past one car per household to make
+        /// the roads look right, which is a number covering for a different number being wrong.
         ///
-        /// A downtown is not driven only by the people who sleep in it. It is driven by everyone
-        /// who works there, delivers to it, or is passing through - so once the town is bigger
-        /// than the houses in it, cars-per-resident-household stops being the whole answer. This
-        /// is the honest short-term number for that; the real fix is for a district to declare
-        /// how many people live in the block, and then this drops back towards one.
+        /// A district now says how many live in it and the budget reads
+        /// <see cref="WorldModel.DeclaredHouseholds"/>, so the multiplier can go back to meaning
+        /// something: not how many cars a household OWNS, but how many are ON THE ROAD AT ONCE.
+        /// Roughly one household in four - the rest are parked, garaged, in a lot somewhere, or
+        /// were never a car-owning household to begin with. That is why it is well under one, and
+        /// why it no longer has to move when the city grows: the household count moves instead.
         /// </summary>
-        public static float CarsPerHome = 1.5f;
+        public static float CarsOutPerHousehold = 0.25f;
 
         private sealed class Mover
         {
@@ -227,7 +230,7 @@ namespace Noir.Unity
             foreach (RoadClass klass in System.Enum.GetValues(typeof(RoadClass)))
                 fleets[klass] = Everyday(klass);
 
-            int budget = Mathf.Clamp(Mathf.RoundToInt(world.Households * CarsPerHome),
+            int budget = Mathf.Clamp(Mathf.RoundToInt(world.DeclaredHouseholds * CarsOutPerHousehold),
                                      Mathf.Min(6, Graph.Segments.Count),
                                      Graph.Segments.Count);
 

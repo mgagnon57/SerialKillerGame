@@ -388,88 +388,123 @@ place carpark 562,390 20x30 "the school lot"
 #  block is a PLACE. It has a name, it can be clicked on, it can be told apart
 #  from its neighbours, and when one of them is where somebody was last seen it
 #  has to be something the map knows about rather than a gap between four roads.
+#
+#  `units` IS HOW MANY LIVE IN THE BLOCK, and 29 is measured rather than liked:
+#  CityDistrict reports 662 buildings across the twenty-three blocks it fills
+#  with a perimeter, which is 28.8 apiece. It is not a home in its own right -
+#  it has no rooms and nobody is housed in it one by one - so this feeds only
+#  the things that scale to how busy the map is. See WorldModel.DeclaredHouseholds.
+#  Before it existed the traffic budget counted households, a district had none,
+#  and twenty-seven new blocks added not one car to the roads.
 # ==========================================================================
 
 place district 270,270 60x60 "Westway at Northway"
   human The last block before the ring road, and half of it is still hoardings.
+  units 29
 
 place district 360,270 60x60 "Market at Northway"
   human Wholesalers, and nothing open after six.
+  units 29
 
 place district 450,270 60x60 "First at Northway"
   human The good end of the north side, which is not saying a great deal.
+  units 29
 
 place district 540,270 60x60 "Second at Northway"
   human Offices above, and a shop below that has been three different shops this year.
+  units 29
 
 place district 630,270 60x60 "Third at Northway"
   human Where the buses turn round.
+  units 29
 
 place district 720,270 60x60 "Fourth at Northway"
   human Backs onto the ring road and gets the noise of it all night.
+  units 29
 
 place district 270,360 60x60 "Westway at Bishop"
   human Rooming houses. Nobody signs a lease here for a year.
+  units 29
 
 place district 630,360 60x60 "Third at Bishop"
   human Trade counters, and a yard nobody locks.
+  units 29
 
 place district 720,360 60x60 "Fourth at Bishop"
   human The far side, and the streetlights on it have been out since spring.
+  units 29
 
 place district 270,450 60x60 "Westway at Northgate"
   human Cheap frontage on an expensive street, which tells you what happened here.
+  units 29
 
 place district 630,450 60x60 "Third at Northgate"
   human Two floors of anything and a top floor of nothing.
+  units 29
 
 place district 720,450 60x60 "Fourth at Northgate"
   human You can see the fields from the upper windows.
+  units 29
 
 place district 270,540 60x60 "Westway at Franklin"
   human The laundry, the pawn shop and the place that cashes cheques.
+  units 29
 
 place district 630,540 60x60 "Third at Franklin"
   human Quiet in a way the middle of town never is.
+  units 29
 
 place district 720,540 60x60 "Fourth at Franklin"
   human Half-let, and the half that is let keeps odd hours.
+  units 29
 
 place district 270,630 60x60 "Westway at Hale"
   human Built all at once and all the same, and it has not aged evenly.
+  units 29
 
 place district 360,630 60x60 "Market at Hale"
   human The south-west corner, and the wind comes straight up it.
+  units 29
 
 place district 450,630 60x60 "First at Hale"
   human Where people live who work in the middle.
+  units 29
 
 place district 540,630 60x60 "Second at Hale"
   human Shopfronts with flats over them and a bar at the end.
+  units 29
 
 place district 630,630 60x60 "Third at Hale"
   human Somebody keeps a light on all night on the third floor.
+  units 29
 
 place district 720,630 60x60 "Fourth at Hale"
   human The edge of it. After this there are fields.
+  units 29
 
 place district 270,720 60x60 "Westway at Merrow"
   human The southern limit, and it looks it.
+  units 29
 
 place district 360,720 60x60 "Market at Merrow"
   human Lock-ups, mostly. A few of them are not lock-ups.
+  units 29
 
 place district 450,720 60x60 "First at Merrow"
   human Terraces facing the ring road with their backs to each other.
+  units 29
 
 place district 540,720 60x60 "Second at Merrow"
   human A block you could park on all night and nobody would ask.
+  units 29
 
 place district 630,720 60x60 "Third at Merrow"
   human The last of the paving, and the kerbs give out halfway along.
+  units 29
 
 place district 720,720 60x60 "Fourth at Merrow"
   human The corner nobody has any reason to come to.
+  units 29
 
 
 # ==========================================================================

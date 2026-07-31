@@ -161,6 +161,46 @@ namespace Noir.Core.World
             }
         }
 
+        private int _declaredHouseholds = -1;
+
+        /// <summary>
+        /// Every household the map DECLARES, including the ones inside places Core does not
+        /// simulate one at a time.
+        /// </summary>
+        /// <remarks>
+        /// NOT <see cref="Households"/>, and deliberately a second number rather than a wider
+        /// definition of the first. A downtown `district` is one open place standing for a whole
+        /// block - twenty-nine buildings of flats over shops, once CityDistrict has filled it in -
+        /// but it has no rooms and no interiors, so making it a HOME would hand PopulationGenerator
+        /// hundreds of citizens to house in a paved rectangle. It says how many live there
+        /// instead, and only the things that scale to how busy the map is read this.
+        ///
+        /// This exists because the traffic budget was counting households and a district has
+        /// none, so twenty-seven new downtown blocks added exactly nothing to it and the
+        /// shortfall was papered over by inflating the cars-per-household figure instead.
+        /// </remarks>
+        public int DeclaredHouseholds
+        {
+            get
+            {
+                if (_declaredHouseholds >= 0) return _declaredHouseholds;
+
+                var kinds = PlaceKindTable.Current;
+                int total = 0;
+                for (int i = 0; i < _places.Length; i++)
+                {
+                    var place = _places[i];
+                    if (kinds.Row(place.Kind).IsHome) { total += Math.Max(1, place.Units); continue; }
+
+                    // Somewhere people live that is not a home in its own right. Units is 1 for
+                    // everything by default, so only a stated figure counts - a shop does not
+                    // quietly become a household.
+                    if (place.Units > 1) total += place.Units;
+                }
+                return _declaredHouseholds = total;
+            }
+        }
+
         public int RoomCount => _rooms.Length;
         public IReadOnlyList<Room> AllRooms => _rooms;
 
