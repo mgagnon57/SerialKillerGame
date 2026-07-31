@@ -108,6 +108,49 @@ namespace Noir.Editor
                 Debug.Log($"[folk] carryable in {where}: {n}");
             }
 
+            // WHERE A CHARACTER'S UVs LAND. Universal_A_Alb is not a texture, it is a labelled
+            // swatch grid: each ROW is a role - primary, secondary, tertiary, hair, skin, hide,
+            // wood, metal - and each row is a ramp of shades across its columns. If a character's
+            // vertices sit on discrete points of that grid then recolouring one is a matter of
+            // moving a garment along its own row, which is the whole question behind wanting no
+            // two people to look alike.
+            foreach (var who in new[] { "Man_Slavic_Summer_Hair", "Woman_Slavic_Winter" })
+            {
+                string path = null;
+                foreach (var guid in AssetDatabase.FindAssets($"{who} t:Prefab", new[] { Folk }))
+                    path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path == null) continue;
+
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                var skin = go.GetComponentInChildren<SkinnedMeshRenderer>();
+                var mesh = skin != null ? skin.sharedMesh : null;
+
+                if (mesh != null)
+                {
+                    var uv = mesh.uv;
+                    var cells = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                    foreach (var t in uv)
+                    {
+                        // Quantise to a 64 x 64 grid of the 4096 atlas, which is 64px a cell.
+                        int cu = Mathf.Clamp((int)(t.x * 64f), 0, 63);
+                        int cv = Mathf.Clamp((int)(t.y * 64f), 0, 63);
+                        string key = $"{cu},{cv}";
+                        cells[key] = cells.TryGetValue(key, out int had) ? had + 1 : 1;
+                    }
+
+                    var rows = new SortedSet<int>();
+                    foreach (var c in cells.Keys) rows.Add(int.Parse(c.Split(',')[1]));
+
+                    Debug.Log($"[folk] {who}: {uv.Length} vertices land on {cells.Count} distinct "
+                            + $"atlas cells, across {rows.Count} rows (roles).");
+                    foreach (var c in cells)
+                        Debug.Log($"[folk]      cell {c.Key,-8} {c.Value,4} vertices");
+                }
+
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
     }
