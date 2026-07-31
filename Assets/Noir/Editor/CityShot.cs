@@ -201,6 +201,11 @@ namespace Noir.Editor
                 Frame(camGo, new Vector3(467f, 0f, -580f), 75f, 32f, 45f);
                 Capture(cam, Path.Combine(OutputDir, "city-carpark.png"));
 
+                // Down among the bays, which is the only distance at which two cars sharing a
+                // bay can be told from two cars merely close together.
+                Frame(camGo, new Vector3(465f, 0f, -578f), 26f, 22f, 40f);
+                Capture(cam, Path.Combine(OutputDir, "city-carpark-close.png"));
+
                 // Where the farm track meets First Street. THREE arms, not four: this junction
                 // used to be laid as a full crossroads with a fourth arm, kerbs and a stop line
                 // painted straight into the paddock.
