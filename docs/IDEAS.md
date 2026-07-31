@@ -12,7 +12,30 @@ done or delete the line when it turns out to be a bad idea.
 
 ## Roads
 
-- [ ] The outer city, and the map-size fork that comes with it. Downtown fills 255..795; the suburbs would take the 105..255 and 795..915 bands, which is one thin ring and squeezes the country to a 105m frame. Either the countryside moves out again or the map grows to ~1440 (2.25x the props). Decide after measuring what a block actually costs. — *2026-07-30*
+- [ ] The outer city. **THE FORK IS SETTLED — the map grows to 1290** and the design is written up
+  at `docs/superpowers/specs/2026-07-31-the-outer-city-design.md`. Not started, and deliberately
+  QUEUED BEHIND THE JAMS ITEM below: 28 suburb cells is ~450 households against the 945 declared
+  now, which grows the fleet 236 -> ~350, and holding the fleet flat is the entire reason
+  `CarsOutPerHousehold` is 0.25. Building it on an unfixed give-way fault makes a reproduced defect
+  worse and muddies the evidence for whether any fix worked.
+
+  Three things the old note had wrong, all of them checked. THE COUNTRY HAS NOWHERE TO MOVE TO: the
+  road grid is not centred on the map (`westbound`/`eastbound` at 105 and 915 have a midpoint of 510
+  against a map centre of 480), so outside the outer ring there is 90m on two sides and **30m** on
+  the other two - one corridor's width. And the bands are not empty, they are where Home Farm and
+  Wicker End live, so "the countryside moves out" actually means it stops existing and the farm is
+  evicted a second time. THE PACK HAS NO SUBURBAN HOUSE - two farmhouses, both already placed, and a
+  summer-camp cabin - but it does not need one: the modules ship an `_AS` all-sides variant that
+  `CityBuildings.Stack` already uses, so a suburb is the same kit at ~14m pitch set back behind a
+  hedge, not a new model. Bayhouse, because its unfaced universal tail is ~1m against Squarehouse's
+  3m and on a detached house that tail is in the back garden. AND 1440 WAS AN OVER-ESTIMATE: the
+  pitch is 90m, N blocks span `90N + 30`, and N=14 gives 1290 at 1.81x the area - 1110 would even
+  have done at 1.34x, and the extra was bought deliberately to give the Racetrack, the tram kit and
+  the Survival sites land without moving anything twice.
+
+  MEASURED at `c1afb0c`, which the note asked for and nobody had taken: 31,814 renderers -> 4,462
+  baked over 30 materials; the 27 district blocks are 8,228 of that, so **a block costs ~305
+  renderers** and downtown is 26% of the city. — *2026-07-31*
 - [ ] `Modular Parts/Rails` is a 6-piece GROUND-LEVEL tram kit (1/3/5/10m plus turns), unused and quite separate from the elevated railway that is commented out in city.txt. — *2026-07-30*
 - [ ] `Racetrack` is 152 prefabs - 25 road pieces, 91 fences, a control gate, an overpass - plus 79 racing cars excluded from traffic because there is nowhere to race them. Needs land. — *2026-07-30*
 
