@@ -147,17 +147,54 @@ namespace Noir.Editor
                 cam.backgroundColor = new Color(0.62f, 0.72f, 0.85f);
                 cam.farClipPlane = 800f;
 
-                // "Westway at Northway" is the block at 390,390. Its WEST face looks out at the
-                // ring road, so that side is residential. Stand on the ring and look at it.
-                camGo.transform.position = new Vector3(370f, 5f, -420f);
-                camGo.transform.LookAt(new Vector3(392f, 7f, -420f));
+                // "Fourth at Northgate" - the block at 840,570, bounded by Fourth Street (825) to
+                // the west and Northgate Avenue (555) to the north. Reported by name, so this is
+                // the one to look at rather than a block chosen for convenience.
+                //
+                // From Fourth, looking east at the block's west frontage.
+                camGo.transform.position = new Vector3(818f, 5f, -600f);
+                camGo.transform.LookAt(new Vector3(842f, 6f, -600f));
                 Shoot(cam, Path.Combine(Out, "probe-city-frontage.png"));
 
-                // And obliquely along the same run, which is where a mass standing proud of the
-                // wall separates from it.
-                camGo.transform.position = new Vector3(372f, 4f, -452f);
-                camGo.transform.LookAt(new Vector3(391f, 6f, -410f));
+                // From Northgate, looking south at its north frontage.
+                camGo.transform.position = new Vector3(870f, 5f, -548f);
+                camGo.transform.LookAt(new Vector3(870f, 6f, -572f));
+                Shoot(cam, Path.Combine(Out, "probe-city-north.png"));
+
+                // And across the north-west corner, which is where a step between storeys shows
+                // on two faces at once.
+                camGo.transform.position = new Vector3(818f, 4f, -545f);
+                camGo.transform.LookAt(new Vector3(848f, 7f, -578f));
                 Shoot(cam, Path.Combine(Out, "probe-city-oblique.png"));
+
+                // THE SAME VIEW WITH THE STREET TURNED OFF. Every section of every building on
+                // this frontage measures flush to within two centimetres, so the mass that appears
+                // to stand proud of them is not them - and this is the one picture that says so
+                // rather than arguing it.
+                var streets = GameObject.Find("CityStreets");
+                if (streets != null)
+                {
+                    streets.SetActive(false);
+                    camGo.transform.position = new Vector3(870f, 5f, -548f);
+                    camGo.transform.LookAt(new Vector3(870f, 6f, -572f));
+                    Shoot(cam, Path.Combine(Out, "probe-city-nostreet.png"));
+                    streets.SetActive(true);
+                    Debug.Log("[stack] wrote probe-city-nostreet.png (buildings only)");
+                }
+
+                // STRAIGHT DOWN, which no perspective can lie about. A ground floor standing
+                // proud of the storeys above shows in plan as a band outside the facade line and
+                // cannot be confused with looking down onto a cornice from eye level - which is
+                // what every oblique view of this has been unable to rule out.
+                {
+                    cam.orthographic = true;
+                    cam.orthographicSize = 42f;
+                    camGo.transform.position = new Vector3(870f, 120f, -600f);
+                    camGo.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                    Shoot(cam, Path.Combine(Out, "probe-city-plan.png"));
+                    cam.orthographic = false;
+                    Debug.Log("[stack] wrote probe-city-plan.png (orthographic, straight down)");
+                }
 
                 Debug.Log("[stack] wrote probe-city-frontage.png and probe-city-oblique.png");
 
@@ -215,8 +252,7 @@ namespace Noir.Editor
                 if (district != null)
                 foreach (Transform child in district.transform)
                 {
-                    if (!child.name.StartsWith("Squarehouse_390_")
-                        && !child.name.StartsWith("Bayhouse_390_")) continue;
+                    if (!child.name.EndsWith("_570")) continue;   // the NORTH run of Fourth at Northgate
                     if (shown++ >= 4) break;
 
                     Bounds raw = default, faced = default;
@@ -249,9 +285,22 @@ namespace Noir.Editor
                     }
                     if (!anyRaw) continue;
 
-                    Debug.Log($"[line] {child.name}: block edge x=390, "
+                    Debug.Log($"[line] {child.name}: block edge x=840, "
                             + $"raw front x={raw.min.x:0.00}, faced front x={faced.min.x:0.00}, "
                             + $"tail stands {faced.min.x - raw.min.x:0.00}m proud of the brick");
+
+                    // PER SECTION. The whole-house numbers cannot see a ground floor that stands
+                    // proud of the storeys above IF THE PROUD PART IS FACED - both bounds simply
+                    // include it. This is the measurement that separates them.
+                    foreach (Transform section in child)
+                    {
+                        var sr = section.GetComponentsInChildren<Renderer>();
+                        if (sr.Length == 0) continue;
+                        var sb = sr[0].bounds;
+                        for (int i = 1; i < sr.Length; i++) sb.Encapsulate(sr[i].bounds);
+                        Debug.Log($"[line]      {section.name,-46} village-y front={-sb.max.z:0.00} "
+                                + $"back={-sb.min.z:0.00} (height {sb.min.y:0.0}..{sb.max.y:0.0})");
+                    }
                 }
             }
             catch (Exception ex) { Debug.LogError("[stack] FAILED: " + ex); }
