@@ -176,6 +176,28 @@ done or delete the line when it turns out to be a bad idea.
 
 ## City
 
+- [x] ~~**The front steps stop a metre short of the front door.**~~ FIXED, and it was in `Place`,
+  not anywhere the four earlier theories looked. `Place` returned the section's total vertical
+  EXTENT and stacked the next storey on it. For four of the kit's five pieces that is the same
+  number; `Squarehouse_Bottom_A` and `Bayhouse_Bottom_A` are semi-basements with an AREA RAILING
+  round the top, and the railing stands proud of the floor slab. MEASURED, per section, by the
+  highest sizeable upward-facing surface:
+
+      Squarehouse_Bottom_A   floor 2.00m, extent 3.01m   ->  1.01m of railing
+      Bayhouse_Bottom_A      floor 2.00m, extent 2.68m   ->  0.68m
+      every other section    floor and extent identical  ->  0.00m
+
+  So every residential building above its basement floated a metre clear of it, the stoop landed a
+  metre below the door, and the basement read as a separate tan plinth in front of the facade. It
+  only showed on RESIDENTIAL frontages, because a shopfront ground floor is a `Squarehouse_Market`
+  piece with no railing - which is why the isolated shopfront stack looked right and sent the
+  investigation the wrong way twice. `Storey()` now finds the floor by looking for the highest
+  upward-facing surface of at least a sixth of the section's plan, so a railing cannot be mistaken
+  for a floor and the answer follows the mesh rather than a table of section names. Gates: PlayMode
+  11/11, Core 163/165, MapAudit clean, PickCheck 48/48 from above and 46/46 from the street.
+  `probe-join-Squarehouse.png` and `probe-section-*-plusZ.png` show the join and which section owns
+  the steps and which the door. — *2026-07-31*
+
 - [x] ~~**The tan slab on every building front.**~~ FIXED: found what the geometry was, per-submesh. `Squarehouse_Bottom_A`'s brick and glass end at z 3.01 but its `M_Universal_A` submesh runs to 5.96 - and the OTHER sections in the same stack (Entrance, Mid, Roof) carry nowhere near as much of a tail past their own brick (0.1-0.6m, not 3m), so this is a defect in the Bottom piece specifically, not a real building depth. `Bayhouse_Bottom_A` has the same fault at a smaller scale (~1m). `Seat()` was aligning the front wall to the far edge of the WHOLE combined renderer bounds, which for a north-facing front put that unfaced tail's edge on the building line and left the actual brick wall recessed up to 3m behind it, invisible from the street - confirmed by rendering the same view before and after: flat black wall with no texture at all, vs. proper brick, at the identical camera position. This is also almost certainly why this file used to say Bayhouse is 7m deep and Squarehouse 9m: both figures come from the same whole-bounds measurement, and both families' BRICK footprints alone measure within a centimetre of each other. FIX: `CityBuildings.Seat` takes a `dressedOnly` flag; `Stack()` (the modular townhouse path) now measures by brick and glass submeshes only via `TryDressedBounds`, skipping `M_Universal_A`. `Tower()` still passes the old raw-bounds path unchanged, since skyscraper meshes have no brick or glass submesh to measure by. MapAudit clean, PlayMode 7/7. — *2026-07-30*
 - [x] ~~Parking overlap was reported again after the fix.~~ FOUND AND FIXED, and it was never the scale bug. Wrote the audit that was missing - `MapAudit` check 8 now BUILDS the lots and compares real renderer bounds pairwise, because the other seven checks are arithmetic on the authored layout and a parked car is not in the layout. First run: **19 overlapping pairs out of 85 cars**, including the vans and taxis at the lot near 584,545 that the original report described and that the precinct render could never have shown. ROOT CAUSE was `Bay = 5f` - the last guessed number in the file, exactly the fault its own `Gap` comment rails against one axis over. The pack's cars are 5.0-5.5m long, a back-to-back PAIR was pitched `Bay` apart, and each car was CENTRED on its row line, so any two cars longer than 5m met in the middle and buried their tails in each other by (L1+L2)/2 - 5, which is the observed 0.24-0.61m exactly. Invisible from above because it happens BETWEEN rows, not along them. `Width()` was correct all along - verified it against the placed renderer bounds on four vehicles, agreeing to 0.00m. FIX: a car now backs onto the outer edge of its own half of the pair, positioned by its own measured length (`Long()`, mirroring `Width()`), so the two halves cannot reach each other whatever parks in them; anything too long for its half (a school bus, an ambulance) leaves the slot empty rather than hanging into the row behind. 19 overlaps -> 0, 85 cars -> 73, all eight audit checks clean, precinct render eyeballed. — *2026-07-31*
 

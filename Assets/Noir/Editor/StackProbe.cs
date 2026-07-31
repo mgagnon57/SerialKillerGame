@@ -314,6 +314,201 @@ namespace Noir.Editor
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 
+        /// <summary>
+        /// Each section of the kit on its own, at ground level, front on.
+        ///
+        /// The reported fault is that the front steps rise to a landing and the door is a storey
+        /// above where they stop. That is a question about WHICH SECTION OWNS WHAT - which one has
+        /// the stoop, which one has the door, and at what height each sits inside its own prefab -
+        /// and it cannot be answered from a stack, where they are already on top of each other.
+        ///
+        ///   Unity.exe -batchmode -quit -projectPath . -executeMethod Noir.Editor.StackProbe.Sections
+        /// </summary>
+        [MenuItem("Noir/Probe The Sections Separately")]
+        public static void Sections()
+        {
+            const string Kit = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings Modular City/";
+            string[] want =
+            {
+                "Squarehouse_Bottom_A_AS_City",
+                "Squarehouse_Floor_A_Entrance_AS_City",
+                "Squarehouse_Floor_A_Mid_AS_City",
+                "Bayhouse_Bottom_A_AS_City",
+                "Bayhouse_Floor_A_Entrance_AS_City",
+            };
+
+            GameObject root = null, camGo = null, sunGo = null;
+            try
+            {
+                Directory.CreateDirectory(Out);
+                root = new GameObject("Sections");
+
+                var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                floor.transform.SetParent(root.transform, false);
+                floor.transform.position = new Vector3(16f, 0f, 0f);
+                floor.transform.localScale = new Vector3(8f, 1f, 8f);
+
+                for (int i = 0; i < want.Length; i++)
+                {
+                    var pf = AssetDatabase.LoadAssetAtPath<GameObject>(Kit + want[i] + ".prefab");
+                    if (pf == null) { Debug.Log($"[sect] MISSING {want[i]}"); continue; }
+
+                    var go = (GameObject)PrefabUtility.InstantiatePrefab(pf);
+                    go.transform.SetParent(root.transform, false);
+                    go.transform.position = new Vector3(i * 8f, 0f, 0f);
+                    go.transform.rotation = Quaternion.identity;
+
+                    var rs = go.GetComponentsInChildren<Renderer>();
+                    if (rs.Length == 0) continue;
+                    var b = rs[0].bounds;
+                    for (int k = 1; k < rs.Length; k++) b.Encapsulate(rs[k].bounds);
+
+                    // Sit it on the ground by its own measured base, as Place does.
+                    go.transform.position += Vector3.up * (0f - b.min.y);
+
+                    Debug.Log($"[sect] {want[i],-42} height {b.size.y:0.00}  "
+                            + $"depth z {b.min.z:0.00}..{b.max.z:0.00}");
+
+                    // Per material, because the section's TOTAL height is not the height the next
+                    // floor should sit at if something thin stands proud of the roof slab.
+                    var tops = new Dictionary<string, float>();
+                    foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+                    {
+                        var mesh = mf.sharedMesh; var mr = mf.GetComponent<MeshRenderer>();
+                        if (mesh == null || mr == null) continue;
+                        var mats = mr.sharedMaterials; var vs = mesh.vertices;
+                        for (int sm = 0; sm < mesh.subMeshCount; sm++)
+                        {
+                            string nm = sm < mats.Length && mats[sm] != null ? mats[sm].name : "null";
+                            foreach (var idx in mesh.GetTriangles(sm))
+                            {
+                                float wy = mf.transform.TransformPoint(vs[idx]).y;
+                                if (!tops.TryGetValue(nm, out float had) || wy > had) tops[nm] = wy;
+                            }
+                        }
+                    }
+                    foreach (var kv in tops)
+                        Debug.Log($"[sect]      {kv.Key,-32} tops out at {kv.Value:0.00}m");
+
+                    // THE HIGHEST FLOOR SURFACE. A railing is thin: it reaches the section's top
+                    // and carries almost no horizontal area. A roof slab is the opposite. So the
+                    // height the next storey should sit at is the highest sizeable UPWARD-FACING
+                    // surface, which is a physical question with a physical answer.
+                    float slab = 0f, slabArea = 0f;
+                    var byHeight = new Dictionary<int, float>();
+                    foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+                    {
+                        var mesh = mf.sharedMesh;
+                        if (mesh == null) continue;
+                        var vs = mesh.vertices; var ts = mesh.triangles; var xf = mf.transform;
+                        for (int t = 0; t + 2 < ts.Length; t += 3)
+                        {
+                            var a = xf.TransformPoint(vs[ts[t]]);
+                            var b2 = xf.TransformPoint(vs[ts[t + 1]]);
+                            var c = xf.TransformPoint(vs[ts[t + 2]]);
+                            var n = Vector3.Cross(b2 - a, c - a);
+                            float area = n.magnitude * 0.5f;
+                            if (area < 0.0001f) continue;
+                            if (n.normalized.y < 0.9f) continue;          // not a floor surface
+                            int bucket = Mathf.RoundToInt((a.y + b2.y + c.y) / 3f * 20f);
+                            byHeight[bucket] = byHeight.TryGetValue(bucket, out float w) ? w + area : area;
+                        }
+                    }
+                    foreach (var kv in byHeight)
+                    {
+                        if (kv.Value < 1.5f) continue;                    // not a slab, a ledge
+                        float h = kv.Key / 20f;
+                        if (h > slab) { slab = h; slabArea = kv.Value; }
+                    }
+                    Debug.Log($"[sect]      -> highest floor surface {slab:0.00}m ({slabArea:0.0} sq m), "
+                            + $"but Place returns {b.size.y:0.00}m  "
+                            + $"=> GAP {b.size.y - slab:0.00}m");
+                }
+
+                sunGo = new GameObject("Sun");
+                var sun = sunGo.AddComponent<Light>();
+                sun.type = LightType.Directional;
+                sun.shadows = LightShadows.Soft;
+                sun.intensity = 1.15f;
+                sunGo.transform.rotation = Quaternion.Euler(35f, 15f, 0f);
+                RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+                RenderSettings.ambientLight = new Color(0.55f, 0.57f, 0.6f);
+                RenderSettings.fog = false;
+
+                camGo = new GameObject("Cam");
+                var cam = camGo.AddComponent<Camera>();
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = new Color(0.62f, 0.72f, 0.85f);
+                cam.orthographic = true;
+                cam.orthographicSize = 6f;           // 21m of width at 16:9, which is five sections
+                cam.farClipPlane = 300f;
+                camGo.transform.position = new Vector3(16f, 3f, -60f);
+                camGo.transform.rotation = Quaternion.identity;
+
+                // ONE PICTURE PER SECTION, tightly framed. Five in a row at this scale means
+                // the interesting one is always half out of shot.
+                for (int i = 0; i < want.Length; i++)
+                {
+                    cam.orthographicSize = 3.4f;
+
+                    // The -z face, which is the one Seat calls the FRONT for yaw 0.
+                    camGo.transform.position = new Vector3(i * 8f, 2.2f, -60f);
+                    camGo.transform.rotation = Quaternion.identity;
+                    Shoot(cam, Path.Combine(Out, $"probe-section-{i}-minusZ.png"));
+
+                    // And the +z face. Both Bottom and Entrance carry more geometry on this side
+                    // than the other, which is where the door and the steps are likely to be.
+                    camGo.transform.position = new Vector3(i * 8f, 2.2f, 60f);
+                    camGo.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+                    Shoot(cam, Path.Combine(Out, $"probe-section-{i}-plusZ.png"));
+                }
+                Debug.Log("[sect] wrote both faces of every section");
+
+                // THE JOIN ITSELF: bottom and entrance, stacked exactly as Stack does it, seen
+                // from the +z side where both the steps and the door live. If the steps reach the
+                // door this is one picture that says so, and if they do not it says that.
+                foreach (var fam in new[] { "Squarehouse", "Bayhouse" })
+                {
+                    var pair = new GameObject(fam + "_pair");
+                    pair.transform.SetParent(root.transform, false);
+                    pair.transform.position = new Vector3(100f, 0f, 0f);
+
+                    float y = 0f;
+                    foreach (var part in new[] { "_Bottom_A_AS_City", "_Floor_A_Entrance_AS_City" })
+                    {
+                        var pf2 = AssetDatabase.LoadAssetAtPath<GameObject>(Kit + fam + part + ".prefab");
+                        if (pf2 == null) continue;
+                        var g2 = (GameObject)PrefabUtility.InstantiatePrefab(pf2);
+                        g2.transform.SetParent(pair.transform, false);
+                        g2.transform.localPosition = Vector3.up * y;
+
+                        var rr = g2.GetComponentsInChildren<Renderer>();
+                        if (rr.Length == 0) continue;
+                        var bb = rr[0].bounds;
+                        for (int k = 1; k < rr.Length; k++) bb.Encapsulate(rr[k].bounds);
+                        g2.transform.position += Vector3.up * (pair.transform.position.y + y - bb.min.y);
+                        y += bb.size.y;
+                    }
+
+                    cam.orthographicSize = 4.6f;
+                    camGo.transform.position = new Vector3(100f, 3.4f, 60f);
+                    camGo.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+                    Shoot(cam, Path.Combine(Out, $"probe-join-{fam}.png"));
+                    UnityEngine.Object.DestroyImmediate(pair);
+                }
+                Debug.Log("[sect] wrote the bottom-to-entrance join for both families");
+            }
+            catch (Exception ex) { Debug.LogError("[sect] FAILED: " + ex); }
+            finally
+            {
+                if (camGo != null) UnityEngine.Object.DestroyImmediate(camGo);
+                if (sunGo != null) UnityEngine.Object.DestroyImmediate(sunGo);
+                if (root != null) UnityEngine.Object.DestroyImmediate(root);
+            }
+
+            if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
         [MenuItem("Noir/Probe One Townhouse Stack")]
         public static void Run()
         {

@@ -671,7 +671,76 @@ namespace Noir.Unity
             if (Mathf.Abs(b.min.y - sits) > 0.001f)
                 go.transform.position += Vector3.up * (sits - b.min.y);
 
-            return b.size.y;
+            return Storey(go, b, sits);
+        }
+
+        /// <summary>
+        /// How far up the NEXT section goes - the top of this one's FLOOR, not the top of whatever
+        /// happens to stick out of it.
+        ///
+        /// This used to return the section's whole vertical extent, and for four of the kit's five
+        /// pieces that is the same number. `Squarehouse_Bottom_A` and `Bayhouse_Bottom_A` are the
+        /// exception: they are semi-basements with an AREA RAILING round the top, and the railing
+        /// stands a metre proud of the slab. Measured:
+        ///
+        ///     Squarehouse_Bottom_A   floor at 2.00m, extent 3.01m   ->  1.01m of railing
+        ///     Bayhouse_Bottom_A      floor at 2.00m, extent 2.68m   ->  0.68m
+        ///     every other section    floor and extent identical     ->  0.00m
+        ///
+        /// So the storey above was being stood on the railing tops, and the whole building above
+        /// the basement floated a metre clear of it. The visible symptom is the one that was
+        /// reported: THE FRONT STEPS RISE TO A LANDING AND THE DOOR IS A METRE ABOVE WHERE THEY
+        /// STOP. The stoop belongs to the bottom section and the door to the entrance floor, and
+        /// they are modelled to meet exactly - it was the stacking that pushed them apart. It only
+        /// showed on residential frontages because a shopfront ground floor is a Market piece,
+        /// which has no railing and so no gap.
+        ///
+        /// THE FLOOR IS FOUND, NOT LISTED. A railing is thin and carries almost no horizontal
+        /// area; a floor slab is the opposite. So this takes the highest sizeable UPWARD-FACING
+        /// surface, which is a physical question about the mesh rather than a table of section
+        /// names that would go stale the moment the kit gained a piece. Same lesson as the road
+        /// tiles and the parking bays: measure the model.
+        /// </summary>
+        private static float Storey(GameObject section, Bounds raw, float baseY)
+        {
+            // A slab has to be a real floor, not a window cill or a doorstep: at least a sixth of
+            // the section's own plan, and never less than a couple of square metres.
+            float wanted = Mathf.Max(2f, raw.size.x * raw.size.z * 0.15f);
+
+            var area = new Dictionary<int, float>();
+
+            foreach (var mf in section.GetComponentsInChildren<MeshFilter>())
+            {
+                var mesh = mf.sharedMesh;
+                if (mesh == null) continue;
+
+                var verts = mesh.vertices;
+                var tris = mesh.triangles;
+                var xform = mf.transform;
+
+                for (int t = 0; t + 2 < tris.Length; t += 3)
+                {
+                    var a = xform.TransformPoint(verts[tris[t]]);
+                    var b = xform.TransformPoint(verts[tris[t + 1]]);
+                    var c = xform.TransformPoint(verts[tris[t + 2]]);
+
+                    var cross = Vector3.Cross(b - a, c - a);
+                    float size = cross.magnitude * 0.5f;
+                    if (size < 0.0001f) continue;
+                    if (cross.normalized.y < 0.9f) continue;      // not something you stand on
+
+                    int at = Mathf.RoundToInt((a.y + b.y + c.y) / 3f * 20f);   // 5cm bands
+                    area[at] = area.TryGetValue(at, out float had) ? had + size : size;
+                }
+            }
+
+            float top = float.MinValue;
+            foreach (var band in area)
+                if (band.Value >= wanted) top = Mathf.Max(top, band.Key / 20f);
+
+            // Nothing that reads as a floor - the roof cap, for one - so fall back to the extent,
+            // which is what every section used to get and is right when nothing stands proud.
+            return top > float.MinValue ? Mathf.Max(0.1f, top - baseY) : raw.size.y;
         }
 
         /// <summary>
