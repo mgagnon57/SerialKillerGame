@@ -58,8 +58,17 @@ AND SOUND, not surface detail.
 
   ### Three settings on every download
 
-  Upload one of our own characters first - any `.fbx` from `Meshes/People` - so the preview shows
-  OUR proportions rather than Mixamo's mannequin. Then per clip:
+  **You do not have to upload anything.** Browse with Mixamo's own mannequin (X Bot or Y Bot) and
+  download from that: Unity's Humanoid retargeting maps a clip onto our people whoever it was
+  authored on, so the skeleton it was recorded against does not matter. Uploading one of ours only
+  makes the PREVIEW look like our game, and our characters arrive already rigged, which Mixamo's
+  auto-rigger will try to redo.
+
+  If you do want the preview to match, the file to upload is one of the 79 under
+  `Assets/polyperfect/Poly Universal Pack/Meshes/People/` - note the `SKM_` prefix, for example
+  `Slavic People/SKM_Man_Slavic_Summer_Hair.fbx`.
+
+  Per clip:
 
   | setting | value | why |
   |---|---|---|

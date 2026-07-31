@@ -162,14 +162,20 @@ namespace Noir.Unity
             CityStreets.Build(World, city.transform);
             CityParking.Build(World, city.transform);
             CitySigns.Build(World, city.transform);
-            CityBuildings.Build(World, city.transform);
-            CityDistrict.Build(World, city.transform);
-            CitySuburb.Build(World, city.transform);
+            var authored = CityBuildings.Build(World, city.transform);
+            var blocks = CityDistrict.Build(World, city.transform);
+            var estates = CitySuburb.Build(World, city.transform);
             CityStory.Build(World, city.transform);
             CityRail.Build(World, city.transform);
             CityFarm.Build(World, city.transform);
             CityPowerlines.Build(World, city.transform);
             CityGreenery.Build(World, city.transform);
+
+            // BEFORE the bake, because it measures the buildings the bake is about to destroy,
+            // and parented outside the node the bake touches so it survives. Nothing else in the
+            // project raycasts against this - picking still walks the world model - it exists so
+            // a person has a floor and the bank has walls.
+            CityCollision.Build(World, transform, authored, blocks, estates);
 
             // Assembled out of pieces, drawn as a handful of meshes.
             CityChunker.Bake(city);
@@ -188,6 +194,11 @@ namespace Noir.Unity
             // laid is noise over the thing actually being looked at.
             if (ShowPeople) _agentView = AgentMeshView.Create(this, transform);
             _rig = OrbitCamera.Create(this);
+
+            // P drops you into the town at eye height with a body, and P again lifts you back
+            // out. Nothing is spawned until the first press: a rigged character standing in the
+            // street costs nothing to nobody who never asks for it.
+            Player.Create(this, transform);
             _lighting = SunRig.Create(this, transform);
 
             PostFx.Create(transform);
