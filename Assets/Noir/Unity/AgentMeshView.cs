@@ -20,7 +20,7 @@ namespace Noir.Unity
     public sealed class AgentMeshView : MonoBehaviour
     {
         private VillageHost _host;
-        private AgentFigure[] _figures;
+        private IAgentBody[] _figures;
         private AgentLook[] _looks;
         private MaterialPropertyBlock _block;
 
@@ -56,8 +56,8 @@ namespace Noir.Unity
             _host = host;
             _block = new MaterialPropertyBlock();
 
-            int n = host.People.Count;
-            _figures = new AgentFigure[n];
+            int n = host.People.Count, rigged = 0;
+            _figures = new IAgentBody[n];
             _looks = new AgentLook[n];
             _lastPosition = new Vector2[n];
             _phase = new float[n];
@@ -70,7 +70,17 @@ namespace Noir.Unity
                 var look = AgentLook.Of(citizen);
 
                 _looks[i] = look;
-                _figures[i] = AgentFigure.Build(transform, citizen.FullName, look, _block);
+
+                // A BOUGHT PERSON IF THERE IS ONE, and the primitives if there is not. The pack
+                // has about twenty figures in register for an ordinary town, so the fallback is
+                // not dead code - it is what a map whose people the pack cannot cast still looks
+                // like, and it is what Ashcombe has always looked like.
+                IAgentBody body = null;
+#if UNITY_EDITOR
+                body = AgentBody.Build(transform, citizen, look);
+                if (body != null) rigged++;
+#endif
+                _figures[i] = body ?? AgentFigure.Build(transform, citizen.FullName, look, _block);
 
                 // Everybody starts somewhere different in the stride, or the first street you
                 // watch is a marching band.
@@ -83,7 +93,8 @@ namespace Noir.Unity
                 }
             }
 
-            Debug.Log($"People: {n} figures, {n * AgentFigure.PartCount} parts.");
+            Debug.Log($"People: {n} figures, {rigged} of them bought and animated, "
+                    + $"{(n - rigged) * AgentFigure.PartCount} primitive parts.");
         }
 
         public void Refresh()
@@ -210,7 +221,8 @@ namespace Noir.Unity
                 // Running is the child at play and nothing else: an adult jogging across
                 // Northgate reads as fleeing, which is a story event rather than a commute.
                 AgentAnimation.Drive(_figures[i].Animator, agent.Doing, walking,
-                                     hurrying: agent.Doing == Activity.AtThePlayground);
+                                     hurrying: agent.Doing == Activity.AtThePlayground,
+                                     who: _host.People.Get(new CitizenId(i)).Key.Value);
             }
         }
 

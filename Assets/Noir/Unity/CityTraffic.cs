@@ -630,11 +630,58 @@ namespace Noir.Unity
 
         // ---- driving --------------------------------------------------------------------
 
+        /// <summary>
+        /// How long a slice of driving is, in seconds.
+        ///
+        /// EVERY DECISION HERE IS MADE ONCE A FRAME, which quietly made the quality of the driving
+        /// a property of the frame rate. A car looking for a gap gets one look per step: at sixty
+        /// frames a second it gets sixty chances a second to take one, and on a frame long enough
+        /// it gets a handful - so a busy junction that was passable becomes one where nobody ever
+        /// catches the gap. That is not theoretical. Putting 365 rigged and animated people into
+        /// the town lengthened the frame enough that one lane of the eastbound ring road starved:
+        /// the median wait and the ninetieth percentile did not move at all, and the worst single
+        /// wait went from 54 seconds to 120 - the whole observation window, three runs running,
+        /// every one of them at x=1002.
+        ///
+        /// Thirtieths, and the rest carried, so the number of decisions a car gets per SECOND OF
+        /// GAME TIME is the same whatever else is on screen. Exactly the fault AgentMeshView's
+        /// leg swing had and for exactly the same reason: a renderer is entitled to know the frame
+        /// rate, and nothing that decides anything is.
+        /// </summary>
+        private const float Slice = 1f / 30f;
+
+        /// <summary>
+        /// The most driving one frame may do, as slices.
+        ///
+        /// Twelve is four hundred milliseconds of game time. Past that the traffic falls behind
+        /// rather than trying to catch up, because catching up costs more frame time, which puts
+        /// it further behind - and a spiral that ends in a locked editor is worse than a lorry
+        /// arriving somewhere a little late.
+        /// </summary>
+        private const int MostSlices = 12;
+
+        private float _owed;
+
         private void Update()
         {
             if (Graph == null) return;
-            float dt = Time.deltaTime;
 
+            _owed += Time.deltaTime;
+
+            int slices = 0;
+            while (_owed >= Slice && slices++ < MostSlices)
+            {
+                Drive(Slice);
+                _owed -= Slice;
+            }
+
+            // Whatever is left over is dropped rather than banked, or a hitch is repaid over the
+            // following second and the whole city surges.
+            if (slices >= MostSlices) _owed = 0f;
+        }
+
+        private void Drive(float dt)
+        {
             for (int i = 0; i < _movers.Count; i++)
             {
                 var me = _movers[i];

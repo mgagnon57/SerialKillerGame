@@ -86,7 +86,7 @@ namespace Noir.Unity
         /// inside this building" panel all keep working with it off, because none of them ever
         /// went through the figures.
         /// </summary>
-        public static bool ShowPeople = false;
+        public static bool ShowPeople = true;
 
         private GameObject _village;
         private XRay _xray;

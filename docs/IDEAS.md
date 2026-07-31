@@ -232,6 +232,45 @@ done or delete the line when it turns out to be a bad idea.
 
 ## People
 
+- [x] ~~The people are capsules.~~ DONE - `AgentBody`, 365 of them, bought and animated, and NO
+  TWO ALIKE. The pack has about twenty figures in register for an ordinary town against a
+  population of 365, so the variety is not in the prefabs: `Universal_A_Alb` is a labelled SWATCH
+  GRID - 4096 square and 428KB, which is the compression signature of flat colour blocks - where
+  each row is a role (primary, secondary, tertiary, hair, skin, hide) and each row is a ramp of
+  shades. A coat colour is a UV coordinate, not a texture. Measured: `Man_Slavic_Summer_Hair` puts
+  2,841 vertices on 27 cells across 10 roles. Each person's mesh is cloned and every vertex nudged
+  ALONG its own row, never across it - which is what makes it safe without knowing which row is
+  which, because skin stays in the skin ramp and hair in the hair ramp. Hue variation needs the
+  rows mapped first and is a later job; shade alone is plenty.
+
+  `Citizen.Male` now exists. `PopulationGenerator` always decided it, to pick which forename list
+  to draw from, and then THREW IT AWAY - so nothing downstream could tell a Margaret from a
+  George, and half of them would have been rendered as men. It is also the first of the six things
+  `PersonDescription` describes that the running game can actually fill in.
+
+  Adults and children come from separate casts; elders come from the adult cast, stooped and
+  shrunk by `AgentLook`, because there is NO ELDERLY FIGURE ANYWHERE IN THE PACK - which is also
+  why `AgeBand` will only ever say adult or child. — *2026-07-31*
+
+- [x] ~~Which animation a person plays was a switch statement in C#.~~ FIXED - it is
+  `Content/animations.txt` now, in the same shape and for the same reason as `kinds.txt`. Adding
+  an animation is a line of text: drop the .fbx in `Assets/Noir/Animations` (it configures its own
+  import), name it in a row, done. A row may name SEVERAL clips and each person is given one off
+  their citizen key, so a bar holds three sorts of drinker and the same person drinks the same way
+  every time you look. `Noir/Check The Animations` reports both directions - clips a row asks for
+  that are not downloaded, and clips downloaded that no row mentions, which is the quiet failure
+  where somebody grabs Sweeping and waits forever for a caretaker to sweep. — *2026-07-31*
+
+- [x] ~~Traffic decisions were made once per RENDERED frame.~~ FIXED - `CityTraffic` steps in
+  thirtieths now and carries the remainder, capped at twelve slices so a hitch cannot spiral. The
+  fault was that a car looking for a gap got ONE look per frame, so the quality of the driving was
+  a property of the frame rate. Not theoretical: putting 365 rigged people in the town lengthened
+  the frame enough that one lane of the eastbound ring road starved - median wait and p90 did not
+  move at all, and the worst single wait went 54s -> 120s, three runs running, every one of them
+  at x=1002. With fixed slices it is 57s and both the median and p90 came out better than before.
+  Same fault the leg swing had, and the same lesson: a renderer may know the frame rate and
+  nothing that DECIDES anything may. — *2026-07-31*
+
 ## Story
 
 - [x] ~~`Survival` is 174 prefabs and nothing has ever placed one.~~ DONE - `Assets/Noir/Unity/CityStory.cs`,

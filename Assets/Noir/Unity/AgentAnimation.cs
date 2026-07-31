@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.People;
 
@@ -6,106 +7,146 @@ namespace Noir.Unity
     /// <summary>
     /// Which clip a person should be playing, given what the simulation says they are doing.
     ///
-    /// INERT UNTIL THE CLIPS EXIST. Nothing here loads, requires or asserts an animation: ask it
-    /// for a clip name and it answers, and <see cref="Drive"/> does nothing at all when handed a
-    /// null Animator or an Animator whose controller has no such state. That is deliberate - the
-    /// mapping is the part worth writing down NOW, while the reasoning is fresh, and downloading
-    /// thirteen files from Mixamo is the part that cannot be done from here. See docs/ASSETS.md.
+    /// THE MAPPING IS CONTENT, NOT CODE. It used to be a switch in this file, which meant every
+    /// animation downloaded afterwards needed a recompile to be used at all - and an animation
+    /// set is exactly the sort of thing that arrives a few files at a time over weeks. It now
+    /// reads `Content/animations.txt`, in the same shape and for the same reason as `kinds.txt`:
+    /// adding a clip is a line of text, and the file can be read by anything that wants to check
+    /// it, including a test.
     ///
-    /// THE NAMES ARE MIXAMO'S OWN, exactly as they appear on the site, so there is no translation
-    /// step between what you downloaded and what this asks for. An animation called "Standing
-    /// Idle" on mixamo.com is `Standing Idle` here and should be the state name in the controller.
+    /// MORE THAN ONE CLIP PER SITUATION, chosen per person off their citizen key. A row that
+    /// names three ways of drinking gives a bar three sorts of drinker, stably - the same person
+    /// drinks the same way every time you look at them, because the choice is a hash of who they
+    /// are rather than a roll.
+    ///
+    /// INERT UNTIL THE CLIPS EXIST. Nothing here loads or asserts an animation. Ask for a clip
+    /// and it answers a name; <see cref="Drive"/> does nothing when handed a null Animator or a
+    /// controller with no such state. That is what makes a half-imported set safe to run.
     ///
     /// IN PLACE, ALWAYS. Every locomotive clip must be downloaded with Mixamo's "In Place" box
-    /// ticked, and this is not a preference. `Simulation` decides where everybody is by
-    /// pathfinding and `AgentMeshView` draws them at the position it computed; a clip carrying
-    /// root motion drives the transform ITSELF, so the animation and the simulation would fight
-    /// over the same number and people would walk off their own paths. Same reasoning as
-    /// CityTraffic moving a car along its lane coordinate rather than letting anything else push
-    /// it about.
+    /// ticked. `Simulation` decides where everybody is by pathfinding and `AgentMeshView` draws
+    /// them at the position it computed; a clip carrying root motion drives the transform ITSELF,
+    /// so the two would fight over the same number and people would walk off their own paths.
+    /// `Noir/Check The Animations` measures it. See docs/ASSETS.md.
     /// </summary>
     public static class AgentAnimation
     {
+        /// <summary>The row every situation falls back to.</summary>
+        public const string Default = "default";
+
+        /// <summary>The two rows that answer "on the move", which beats whatever they are doing.</summary>
+        public const string Moving = "moving", Hurrying = "hurrying";
+
+        private static Dictionary<string, string[]> _rows;
+
         /// <summary>
-        /// The clip for a person who is on their feet and moving.
+        /// The table, read once.
         ///
-        /// Movement beats activity: somebody on the way to the pub is walking, not drinking, and
-        /// what the eye reads at fifty metres is the gait rather than the errand. Only when they
-        /// have arrived and stopped does <see cref="Resting"/> get a say.
+        /// A missing or unreadable file is not an error worth stopping for: it leaves every
+        /// situation empty, every lookup null, and every figure standing still - which is exactly
+        /// what the city looked like before any of this existed.
         /// </summary>
-        public const string Walking = "Walking";
-
-        /// <summary>Children at the playground, and nobody else. See <see cref="Moving"/>.</summary>
-        public const string Running = "Running";
-
-        /// <summary>What to play when there is no clip for the activity. Always safe.</summary>
-        public const string Fallback = "Standing Idle";
-
-        /// <summary>
-        /// The clip for somebody who is moving, which is almost always the walk.
-        /// </summary>
-        /// <param name="hurrying">
-        /// A child at play. The only case in the whole day plan where somebody runs - an adult
-        /// crossing Northgate at a jog would read as fleeing, which is a story event rather than
-        /// a commute, and this game should not say that by accident.
-        /// </param>
-        public static string Moving(bool hurrying) => hurrying ? Running : Walking;
-
-        /// <summary>
-        /// The clip for somebody standing still, by what they are there to do.
-        ///
-        /// SITTING IS A LIE THIS TELLS ON PURPOSE, for now. Church, school and a front room all
-        /// map to `Sitting Idle`, and nothing here knows whether there is actually a chair under
-        /// the person - the interior generator places furniture but the day plan does not reserve
-        /// it. A congregation standing to attention for an hour reads worse than a congregation
-        /// sitting on nothing, at the distance this is seen from. Revisit when somebody is
-        /// assigned a seat rather than a room.
-        /// </summary>
-        public static string Resting(Activity doing) => doing switch
+        public static IReadOnlyDictionary<string, string[]> Rows
         {
-            Activity.Talking          => "Talking",
-            Activity.AtThePub         => "Drinking",
-            Activity.AtWork           => "Standing Idle",
-            Activity.Shopping         => "Looking Around",
-            Activity.OnTheAllotment   => "Digging",
+            get
+            {
+                if (_rows != null) return _rows;
+                _rows = new Dictionary<string, string[]>(System.StringComparer.OrdinalIgnoreCase);
 
-            Activity.AtChurch         => "Sitting Idle",
-            Activity.AtSchool         => "Sitting Idle",
-            Activity.AtHome           => "Sitting Idle",
-            Activity.Visiting         => "Sitting Idle",
+                string text = null;
+                try { text = ContentLoader.Read("animations.txt"); }
+                catch { /* see the summary: no table is a survivable state */ }
 
-            // Asleep has no clip and wants none: they are indoors, behind a wall, in the dark,
-            // and the only thing that ever shows it is the window not being lit.
-            Activity.Asleep           => null,
+                if (string.IsNullOrEmpty(text))
+                {
+                    Debug.LogWarning("[anim] no Content/animations.txt - nobody will animate.");
+                    return _rows;
+                }
 
-            _                         => Fallback,
-        };
+                foreach (var raw in text.Split('\n'))
+                {
+                    var line = raw.Trim();
+                    if (line.Length == 0 || line[0] == '#') continue;
+
+                    // `situation  clip, another clip` - the situation is the first word, the rest
+                    // of the line is a comma-separated list, and a row may name nothing at all.
+                    int gap = line.IndexOfAny(new[] { ' ', '\t' });
+                    string what = gap < 0 ? line : line.Substring(0, gap);
+                    string rest = gap < 0 ? "" : line.Substring(gap).Trim();
+
+                    var clips = new List<string>();
+                    foreach (var piece in rest.Split(','))
+                    {
+                        var clip = piece.Trim();
+                        if (clip.Length > 0) clips.Add(clip);
+                    }
+
+                    _rows[what] = clips.ToArray();
+                }
+
+                return _rows;
+            }
+        }
+
+        /// <summary>Read the table again. For the editor checks, which change the file.</summary>
+        public static void Reload() => _rows = null;
 
         /// <summary>
-        /// Everything above in one call: what should this person be playing?
+        /// The clip this person should play, or null for "animate nothing".
         ///
-        /// Null means "draw them, animate nothing" - which is right for somebody asleep and is
-        /// also what a caller gets before any clips have been imported.
+        /// Null is a real answer rather than a failure: it is what somebody asleep behind a wall
+        /// should be given, and it is what everybody gets before any clips are imported.
         /// </summary>
-        public static string ClipFor(Activity doing, bool moving, bool hurrying = false) =>
-            moving ? Moving(hurrying) : Resting(doing);
+        /// <param name="who">
+        /// Which person, so a row naming several clips always gives THIS person the same one.
+        /// </param>
+        public static string ClipFor(Activity doing, bool moving, bool hurrying = false,
+                                     ulong who = 0)
+        {
+            string row = moving ? (hurrying ? Hurrying : Moving)
+                                : doing.ToString().ToLowerInvariant();
+
+            var clips = Pick(row);
+
+            // A situation with no row of its own falls through - but a row that exists and names
+            // nothing, like `asleep`, means nothing ON PURPOSE and must not fall through.
+            if (clips == null) clips = Pick(Default);
+            if (clips == null || clips.Length == 0) return null;
+
+            if (clips.Length == 1) return clips[0];
+
+            // Stable per person: a hash of who they are, never a roll, so nobody changes the way
+            // they stand between one look and the next.
+            return clips[(int)(Mix(who) % (ulong)clips.Length)];
+        }
+
+        private static string[] Pick(string row) =>
+            Rows.TryGetValue(row, out var clips) ? clips : null;
+
+        private static ulong Mix(ulong v)
+        {
+            v ^= v >> 33; v *= 0xFF51AFD7ED558CCDUL;
+            v ^= v >> 33; v *= 0xC4CEB9FE1A85EC53UL;
+            return v ^ (v >> 33);
+        }
 
         /// <summary>
         /// Put an Animator into the right state, and do nothing if it cannot be.
         ///
         /// Crossfaded rather than snapped, because a figure changing gait between two frames is
-        /// the thing that makes a crowd read as puppets. A quarter second is under the threshold
-        /// at which anybody notices a transition and over the one at which they notice a pop.
+        /// what makes a crowd read as puppets. A quarter second is under the threshold at which
+        /// anybody notices a transition and over the one at which they notice a pop.
         ///
         /// Every reason this can fail is silent by design: no Animator, no controller, a
         /// controller with no such state. The city has to keep running while the animation set is
-        /// half imported, or nobody will ever import it one clip at a time.
+        /// half imported, or nobody will ever import it a few clips at a time.
         /// </summary>
-        public static void Drive(Animator animator, Activity doing, bool moving, bool hurrying = false)
+        public static void Drive(Animator animator, Activity doing, bool moving,
+                                 bool hurrying = false, ulong who = 0)
         {
             if (animator == null || animator.runtimeAnimatorController == null) return;
 
-            string clip = ClipFor(doing, moving, hurrying);
+            string clip = ClipFor(doing, moving, hurrying, who);
             if (string.IsNullOrEmpty(clip)) return;
 
             int state = Animator.StringToHash(clip);

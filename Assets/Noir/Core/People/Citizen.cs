@@ -116,6 +116,25 @@ namespace Noir.Core.People
         public readonly string Forename;
         public readonly string Surname;
         public readonly int Age;
+
+        /// <summary>
+        /// Which forename list they were drawn from.
+        ///
+        /// THE GENERATOR ALWAYS KNEW THIS AND THREW IT AWAY. `PopulationGenerator` decides it to
+        /// pick between the male and female name tables and then kept nothing, so from that point
+        /// on the only trace of it was the forename itself - which means anything downstream had
+        /// to guess, and a rigged figure would have rendered half the Margarets as men.
+        ///
+        /// It is also one of the six things `PersonDescription` describes and has never once been
+        /// able to fill in: a witness who saw somebody in the street saw a man or a woman before
+        /// they saw anything else about them, and until now nothing in the running game could say
+        /// which.
+        ///
+        /// Named for what it IS - which list the name came from - rather than for a claim about
+        /// the person. What an observer reports is `ApparentSex`, and the two are deliberately
+        /// different words.
+        /// </summary>
+        public readonly bool Male;
         public readonly LifeStage Stage;
         public readonly Occupation Job;
 
@@ -152,15 +171,15 @@ namespace Noir.Core.People
         public Citizen(CitizenId id, string forename, string surname, int age, LifeStage stage,
                        Occupation job, HouseholdId household, PlaceId home, PlaceId work, byte shift,
                        sbyte punctuality, byte pace, byte sociability, int[] particulars,
-                       Beat beats = Beat.None)
+                       Beat beats = Beat.None, bool? male = null)
             : this(id, CitizenKey.None, 0, forename, surname, age, stage, job, household, home,
-                   work, shift, punctuality, pace, sociability, particulars, beats) { }
+                   work, shift, punctuality, pace, sociability, particulars, beats, male) { }
 
         public Citizen(CitizenId id, CitizenKey key, int birthOrder,
                        string forename, string surname, int age, LifeStage stage,
                        Occupation job, HouseholdId household, PlaceId home, PlaceId work, byte shift,
                        sbyte punctuality, byte pace, byte sociability, int[] particulars,
-                       Beat beats = Beat.None)
+                       Beat beats = Beat.None, bool? male = null)
         {
             // A citizen built without one — a hand-made test fixture — still needs a key that is
             // theirs alone, or every roll about them would be a roll about everybody.
@@ -181,6 +200,10 @@ namespace Noir.Core.People
             Sociability = sociability;
             Particulars = particulars ?? Array.Empty<int>();
             Beats = beats;
+
+            // A hand-made fixture that does not say gets one off its own key rather than a
+            // constant, so a test village is not a village of men.
+            Male = male ?? ((Keys.Combine(Key.Value, 0xB1A5UL) & 1UL) != 0UL);
         }
 
         /// <summary>A person's name, in the sense a generator means it: the home they were born

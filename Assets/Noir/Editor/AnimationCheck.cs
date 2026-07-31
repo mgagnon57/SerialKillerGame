@@ -79,15 +79,31 @@ namespace Noir.Editor
                 }
             }
 
-            // ---- what the day plan still has nothing to play ----
+            // ---- what the table asks for and the folder has not got ----
+            AgentAnimation.Reload();          // the file may have been edited since Play
+
             var missing = new SortedSet<string>(System.StringComparer.Ordinal);
-            foreach (Activity doing in System.Enum.GetValues(typeof(Activity)))
+            var wanted = new HashSet<string>(System.StringComparer.Ordinal);
+
+            foreach (var row in AgentAnimation.Rows)
+            foreach (var clip in row.Value)
             {
-                string still = AgentAnimation.ClipFor(doing, moving: false);
-                if (!string.IsNullOrEmpty(still) && !have.Contains(still)) missing.Add(still);
+                wanted.Add(clip);
+                if (!have.Contains(clip)) missing.Add(clip);
             }
-            foreach (var move in new[] { AgentAnimation.Walking, AgentAnimation.Running })
-                if (!have.Contains(move)) missing.Add(move);
+
+            // ---- and the other way round: downloaded, and nothing uses it ----
+            //
+            // The failure this catches is the quiet one. A clip nobody references is not an
+            // error, throws nothing and looks exactly like a clip that works - so somebody
+            // downloads Sweeping, waits for a caretaker to sweep, and nothing ever happens.
+            var idle = new SortedSet<string>(System.StringComparer.Ordinal);
+            foreach (var name in have)
+                if (!wanted.Contains(name)) idle.Add(name);
+
+            if (idle.Count > 0)
+                Debug.Log($"[anim] downloaded but no row in Content/animations.txt mentions them: "
+                        + $"{string.Join(", ", idle)}");
 
             Debug.Log($"[anim] {found} clip{(found == 1 ? "" : "s")} in {Folder}, "
                     + $"{faults} with something wrong.");

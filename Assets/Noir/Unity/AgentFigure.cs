@@ -175,7 +175,7 @@ namespace Noir.Unity
     /// it is deep gives the shoulder line, and the hair sits back on the skull so the head
     /// tells you which end of that line is the face - from street level and from overhead.
     /// </summary>
-    public sealed class AgentFigure
+    public sealed class AgentFigure : IAgentBody
     {
         /// <summary>Renderers per person, counting the bag they are usually not carrying.</summary>
         public const int PartCount = 8;

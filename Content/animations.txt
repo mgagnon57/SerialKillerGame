@@ -1,0 +1,61 @@
+# ============================================================================
+#  WHAT PEOPLE ARE PLAYING
+#
+#  One row per situation. The left word is the situation; the rest of the line is
+#  the clips that suit it, by their own names.
+#
+#  ADDING AN ANIMATION IS A LINE HERE AND NOTHING ELSE. Drop the .fbx in
+#  Assets/Noir/Animations - it configures its own import - add its name to a row,
+#  and everybody in that situation can play it. No C#, no Animator graph, no
+#  editor work. `Noir/Check The Animations` lists any clip in the folder that no
+#  row mentions, so one that has been downloaded and forgotten says so out loud
+#  rather than sitting there unused.
+#
+#  MORE THAN ONE CLIP TO A ROW IS THE POINT. Where a row names several, each
+#  person is given one of them, chosen off their own citizen key - so a bar holds
+#  people drinking in three different ways rather than a chorus line, and the same
+#  person drinks the same way every time you look. A room where everybody moves
+#  identically is the same failure as a street where everybody looks identical.
+#
+#  THE NAMES ARE MIXAMO'S OWN, unchanged, because the clip keeps its filename
+#  through the import and the Animator state is called the same thing. There is
+#  nothing to translate anywhere along that chain and so nothing to get wrong.
+#
+#  A situation with no row, or a row naming a clip that has not been downloaded,
+#  falls through to `default`. That is what makes a half-finished animation set
+#  safe to run: people stand about rather than the city refusing to build.
+# ============================================================================
+
+# ---- moving --------------------------------------------------------------
+# Movement beats activity. Somebody on the way to the pub is walking, not
+# drinking: at fifty metres the eye reads the gait and never the errand.
+moving          Walking
+# Running is the child at the playground and NOBODY else. An adult jogging across
+# Northgate reads as fleeing, which is a story event rather than a commute, and
+# this game should not say that by accident.
+hurrying        Running
+
+# ---- standing still, by what they are there for --------------------------
+talking         Talking
+atthepub        Drinking
+atwork          Standing Idle
+shopping        Looking Around
+ontheallotment  Digging, Dig And Plant Seeds
+
+# Sitting is a lie told on purpose, for now: nothing here knows whether there is
+# a chair under the person, because the interior generator places furniture and
+# the day plan does not reserve any of it. At this distance a congregation
+# sitting on nothing reads better than one standing to attention for an hour.
+atchurch        Sitting Idle
+atschool        Sitting Idle
+athome          Sitting Idle
+visiting        Sitting Idle
+
+# Asleep is deliberately empty. They are indoors, behind a wall, in the dark, and
+# the only thing that ever shows it is the window not being lit.
+asleep
+
+# ---- the fallback --------------------------------------------------------
+# Every situation with nothing else to say, which on a half-imported set is most
+# of them.
+default         Standing Idle

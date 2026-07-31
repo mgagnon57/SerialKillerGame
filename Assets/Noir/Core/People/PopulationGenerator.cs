@@ -227,7 +227,10 @@ namespace Noir.Core.People
                 pace: (byte)rng.NextInt(256),
                 sociability: (byte)rng.NextInt(256),
                 particulars: chosen.ToArray(),
-                beats: beats));
+                beats: beats,
+                // The bool that decided which name list to draw from, kept instead of discarded.
+                // See Citizen.Male.
+                male: male));
 
             members.Add(id);
         }
