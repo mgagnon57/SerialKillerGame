@@ -178,6 +178,12 @@ namespace Noir.Editor
                 Frame(camGo, new Vector3(435f, 0f, -435f), 55f, 45f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-junction.png"));
 
+                // FROM THE DRIVER'S SEAT, held at the northbound stop line on First Street at
+                // Northgate Avenue. This is the only view that says whether a signal is facing
+                // the traffic it governs, and it is the view the complaint came from.
+                Frame(camGo, new Vector3(441f, 0f, -435f), 34f, -2f, 0f);
+                Capture(cam, Path.Combine(OutputDir, "city-stopline.png"));
+
                 // A COUNTRY crossroads - westway meeting northway, and the pair that decides
                 // whether taking the lights off the farmland worked. There should be stop signs
                 // on the north-south arms, no signal heads, and no zebra painted on any of it.

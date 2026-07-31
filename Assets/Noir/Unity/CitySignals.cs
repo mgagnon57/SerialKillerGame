@@ -304,13 +304,23 @@ namespace Noir.Unity
 
                     foreach (var (travel, northSouth) in approaches)
                     {
-                        // Back down the approach to the stop line, then out to the right kerb.
-                        var right = new Vector2(-travel.y, travel.x);
-                        float back = j.Reach + 1.5f;
+                        // ON THE FAR CORNER, NOT THE NEAR ONE. A mast-arm signal stands
+                        // BEYOND the junction with its arm reaching back across it, which is
+                        // the whole reason the arm exists: a driver held at the stop line looks
+                        // across the junction and up at a head thirty metres in front of them.
+                        // Put on the near corner - which is where these were - the head hangs
+                        // directly over the car waiting at the line, and the one person who
+                        // most needs to read it cannot see it at all.
+                        // The kerb the mast stands on follows the head's facing - see
+                        // LensFacesPlusX in Mount. Turn the head and the arm turns with it, so
+                        // the mast has to cross the road too or the arm reaches out over the
+                        // pavement and the lamps hang above the shopfronts.
+                        var kerb = new Vector2(travel.y, -travel.x);
+                        float beyond = j.Reach + 2.5f;
                         float side = j.Reach - 2.5f;
 
-                        float hx = j.X - travel.x * back + right.x * side;
-                        float hy = j.Y - travel.y * back + right.y * side;
+                        float hx = j.X + travel.x * beyond + kerb.x * side;
+                        float hy = j.Y + travel.y * beyond + kerb.y * side;
 
                         var head = Mount(post, lensMaterial, hx, hy, travel, northSouth);
                         if (head != null) { node.Heads.Add(head); heads++; }
@@ -359,14 +369,23 @@ namespace Noir.Unity
             go.transform.SetParent(transform, false);
             go.transform.position = new Vector3(vx, 0f, -vy);
 
-            // The lenses face -x at rest and the arm reaches out along +z, so the yaw that puts
-            // the lamps in front of an arriving car is the one that turns +x onto its direction
-            // of travel. That also swings the arm out over the carriageway and leaves the mast
-            // on the kerb to the car's right, which is where it belongs on a road driven on the
-            // right - the two follow from each other and neither is a separate decision.
+            // WHICH WAY THE LAMPS LOOK IS NOT DERIVABLE FROM THE BOUNDS, and this is the one
+            // thing about this prefab that had to be found by looking. The lens plate measures
+            // x -0.12..-0.08: that says where it SITS, four centimetres thick in x, and says
+            // nothing at all about which of its two faces is the front. Both yaws below put the
+            // arm across the carriageway and the head over the road; only one of them has the
+            // lamps pointing at the traffic, and the other has them pointing at the cars going
+            // the other way - which is exactly what it looked like on screen.
+            //
+            // So it is one constant rather than an argument. The arm and the head are rigid in
+            // the model, so turning the head also turns the arm, and the mast has to change
+            // kerbs with it or the arm swings out over the pavement instead of the road. Both
+            // follow from this flag; neither is a separate decision.
+            const float LensFacesPlusX = 180f;
+
             var along = new Vector3(travel.x, 0f, -travel.y);
-            go.transform.rotation =
-                Quaternion.Euler(0f, Mathf.Atan2(-along.z, along.x) * Mathf.Rad2Deg, 0f);
+            go.transform.rotation = Quaternion.Euler(
+                0f, Mathf.Atan2(-along.z, along.x) * Mathf.Rad2Deg + LensFacesPlusX, 0f);
 
             var mf = FindLamps(go);
             if (mf == null) { Debug.LogWarning("[signals] no lamps on " + post.name); return null; }
