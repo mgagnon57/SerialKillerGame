@@ -61,18 +61,53 @@ namespace Noir.Unity
         /// <summary>Where a car begins easing off for a red light.</summary>
         private const float Braking = 14f;
 
-        /// <summary>How far up the road an oncoming car stops a left turn.</summary>
-        private const float Oncoming = 22f;
+        /// <summary>
+        /// The pace an apparently stopped car is credited with when working out when it arrives.
+        ///
+        /// A CAR THAT IS NOT MOVING IS NOT COMING, and the old rules could not say so: both asked
+        /// only how FAR away the nearest car was, so a queue standing at its own red light thirty
+        /// metres up the crossing road blocked this junction for as long as it stood there. That
+        /// is most of why the traffic starved. Time-to-arrival says it properly - a stopped car is
+        /// infinitely far away in time - but crediting a genuinely stationary car with zero pace
+        /// would let somebody pull out in front of a car about to move off, so it is floored here
+        /// instead. Two metres a second: a car five metres back still counts as arriving in two and
+        /// a half seconds, and one thirty metres back does not block at all.
+        /// </summary>
+        private const float Creep = 2f;
 
         /// <summary>
-        /// How far up the priority road a car has to be before it is safe to pull out across it.
+        /// How close two turn arcs have to pass before they are treated as conflicting.
         ///
-        /// Longer than <see cref="Oncoming"/>, and deliberately: a left-turner at a signal is
-        /// crossing traffic that has the same green and is already committed to a queue, whereas
-        /// this is crossing a country arterial at speed. At 8 m/s a car thirty-five metres away
-        /// arrives in four and a half seconds, which is about how long it takes to get across.
+        /// The pack's widest vehicle is about 2.6m across, so two of them at three metres centre
+        /// to centre are touching. Four and a half leaves a margin without marking the whole
+        /// junction as one conflict: opposing straight-ahead movements sit at least six metres
+        /// apart even on the narrowest main road, so they stay independent and a junction can pass
+        /// two streams at once, which is the entire point of having lanes.
         /// </summary>
-        private const float Crossing = 35f;
+        private const float Clearance = 4.5f;
+
+        /// <summary>
+        /// Half a lane, for deciding when a turning car is clear of somebody else's lane rather
+        /// than merely past the middle of it.
+        /// </summary>
+        private const float LaneHalf = 3f;
+
+        /// <summary>
+        /// How long a driver persists with a movement before deciding on a different one.
+        ///
+        /// A DRIVER WHO CANNOT TURN LEFT EVENTUALLY GOES STRAIGHT ON, and that is the whole of
+        /// this. `Choose` is deterministic per car and junction, so a car that draws a left turn
+        /// into a stream that never breaks will sit there wanting that same left turn until the
+        /// heat death of the city - re-asking the question every frame and getting the same
+        /// answer. Twelve seconds is about when a real driver gives up and goes round the block.
+        ///
+        /// THIS IS NOT THE `Patience` TIMEOUT THAT WAS TRIED AND REVERTED. That one let a car
+        /// cross ANYWAY, which is to say it bypassed the only rule keeping the streams apart, and
+        /// it put two vehicles in the same space. This bypasses nothing: the car still has to
+        /// satisfy the signal, the claim on the junction, the room on the far side and the gap.
+        /// All it changes is WHERE THE CAR WANTS TO GO, which no safety rule depends on.
+        /// </summary>
+        private const float Rethink = 12f;
 
         /// <summary>
         /// Moving vehicles per HOUSEHOLD. The budget comes from how many people live here rather
@@ -113,7 +148,51 @@ namespace Noir.Unity
             /// <summary>Half this vehicle's MEASURED length, nose to tail.</summary>
             public float Reach = 2.2f;
 
+            /// <summary>
+            /// Metres per second actually covered last frame, which is not the same as
+            /// <see cref="Speed"/>: a car easing down to a stop line, held behind somebody, or
+            /// standing at a red is doing less, and how long it will take to arrive somewhere is
+            /// a question about what it is doing rather than about what it is capable of.
+            /// </summary>
+            public float Pace;
+
             public int Choices;        // bumped each junction, so its route is not a loop
+
+            /// <summary>Seconds held at this stop line. See <see cref="Rethink"/>.</summary>
+            public float Waited;
+
+            /// <summary>What stopped it last frame. Instrumentation; nothing steers by it.</summary>
+            public Hold Why;
+        }
+
+        /// <summary>
+        /// Why a car did not move. There is no way to tell from outside - a stationary car looks
+        /// identical whichever rule is holding it - and guessing which one it was is how two
+        /// wrong fixes got written.
+        /// </summary>
+        public enum Hold
+        {
+            None, Following, Signal, GiveWay, Oncoming, TurnBusy, NoRoomBeyond, NoLegalTurn, Arriving,
+        }
+
+        /// <summary>A tally of what is holding the traffic up right now, for the diagnostics.</summary>
+        public string Holds()
+        {
+            var tally = new Dictionary<Hold, int>();
+            int still = 0;
+
+            foreach (var mover in _movers)
+            {
+                if (mover.What == null) continue;
+                if (mover.Pace > 0.05f) continue;
+                still++;
+                tally[mover.Why] = tally.TryGetValue(mover.Why, out int was) ? was + 1 : 1;
+            }
+
+            var parts = new List<string>();
+            foreach (var pair in tally) parts.Add($"{pair.Key}={pair.Value}");
+            parts.Sort(System.StringComparer.Ordinal);
+            return $"{still} of {_movers.Count} stopped: {string.Join(", ", parts)}";
         }
 
         private readonly List<Mover> _movers = new List<Mover>();
@@ -126,6 +205,25 @@ namespace Noir.Unity
         /// </summary>
         public LaneGraph Graph { get; private set; }
 
+        /// <summary>
+        /// For each turn, the other turns through the same junction whose path it crosses.
+        ///
+        /// WHY THIS HAD TO EXIST. Nothing in this file ever tested whether two cars were about to
+        /// occupy the same piece of junction. `Blocked()` looks like it does and does not: it
+        /// projects a box 2.4m wide straight down the car's own heading, which is a FOLLOWING
+        /// model. Two cars on crossing paths are not in front of one another until they are
+        /// practically touching, so that box cannot separate them and never could. Measured on the
+        /// live city before this existed, crossing pairs shared a junction for 17,395 frames and
+        /// came within 2.84m of each other - two lorries at 2.84m are all but in contact.
+        ///
+        /// So the streams were being kept apart ENTIRELY by the signals and by the give-way rules,
+        /// which is why the earlier `Patience` timeout produced a real collision the moment it let
+        /// a car pull out anyway: it removed the only separation there was and leaned on a safety
+        /// net that was never there. This IS that net, and it is what makes the gap rules below
+        /// safe to relax.
+        /// </summary>
+        private int[][] _conflicts;
+
         public static CityTraffic Create(WorldModel world, Transform parent, CitySignals signals)
         {
             var go = new GameObject("CityTraffic");
@@ -134,6 +232,7 @@ namespace Noir.Unity
             traffic._signals = signals;
             traffic._world = world;
             traffic.Graph = new LaneGraph(world.Roads, world.Width, world.Height);
+            traffic.MapConflicts();
 #if UNITY_EDITOR
             traffic.Populate(world);
 #endif
@@ -217,6 +316,80 @@ namespace Noir.Unity
         {
             TurnArc(turn, out var a, out var b, out var c);
             return Vector3.Distance(a, b) + Vector3.Distance(b, c);
+        }
+
+        /// <summary>
+        /// Which turns through a junction cross which others, worked out once from the arcs
+        /// themselves rather than from a table of movements somebody wrote down.
+        ///
+        /// Deriving it from the geometry is what keeps it honest when the map changes: reclassify
+        /// a road, move a lane, widen a carriageway, and the conflicts follow, because they are
+        /// measured off the same arcs the cars actually drive. A hand-written table of "a left
+        /// turn conflicts with the opposing straight" would be right for a four-arm crossroads
+        /// and quietly wrong at the two three-way junctions this map already has.
+        /// </summary>
+        private void MapConflicts()
+        {
+            const int Steps = 12;
+
+            int n = Graph.Turns.Count;
+            _conflicts = new int[n][];
+            if (n == 0) return;
+
+            var path = new Vector3[n][];
+            for (int t = 0; t < n; t++)
+            {
+                TurnArc(Graph.Turns[t], out var a, out var b, out var c);
+                var points = new Vector3[Steps + 1];
+                for (int i = 0; i <= Steps; i++) points[i] = Bezier(a, b, c, i / (float)Steps);
+                path[t] = points;
+            }
+
+            // Only turns through the same junction can possibly meet.
+            var byJunction = new Dictionary<int, List<int>>();
+            for (int t = 0; t < n; t++)
+            {
+                int j = Graph.Turns[t].Junction;
+                if (!byJunction.TryGetValue(j, out var list)) byJunction[j] = list = new List<int>();
+                list.Add(t);
+            }
+
+            var found = new List<int>[n];
+            int pairs = 0;
+
+            foreach (var list in byJunction.Values)
+            for (int x = 0; x < list.Count; x++)
+            for (int y = x + 1; y < list.Count; y++)
+            {
+                int p = list[x], q = list[y];
+
+                // CARS LEAVING THE SAME LANE ARE IN SINGLE FILE and following distance already
+                // holds them apart. Calling those a conflict would make every car wait for the
+                // whole junction to empty before the one behind it could set off, which is a
+                // worse jam than the one being fixed.
+                if (Graph.Turns[p].From == Graph.Turns[q].From) continue;
+
+                if (!Crosses(path[p], path[q])) continue;
+
+                (found[p] ??= new List<int>()).Add(q);
+                (found[q] ??= new List<int>()).Add(p);
+                pairs++;
+            }
+
+            for (int t = 0; t < n; t++)
+                _conflicts[t] = found[t] != null ? found[t].ToArray() : System.Array.Empty<int>();
+
+            Debug.Log($"[traffic] {pairs} conflicting turn pairs over {byJunction.Count} junctions "
+                    + $"and {n} turns.");
+        }
+
+        /// <summary>Do these two arcs pass close enough to be treated as the same ground?</summary>
+        private static bool Crosses(Vector3[] a, Vector3[] b)
+        {
+            for (int i = 0; i < a.Length; i++)
+            for (int j = 0; j < b.Length; j++)
+                if ((a[i] - b[j]).sqrMagnitude < Clearance * Clearance) return true;
+            return false;
         }
 
 #if UNITY_EDITOR
@@ -407,10 +580,22 @@ namespace Noir.Unity
                 var me = _movers[i];
                 if (me.What == null) continue;
 
+                var was = me.What.position;
+
                 if (me.Turn >= 0) CrossJunction(me, i, dt);
                 else RunSegment(me, i, dt);
 
                 Seat(me);
+
+                // MEASURED, not inferred from what the car was allowed to do. Everything that
+                // asks when this car will arrive somewhere reads this, and a car easing down to a
+                // stop line is not travelling at Speed however much its segment would permit.
+                // Capped at Speed because Reintroduce TELEPORTS a car from one edge of the map to
+                // another, and a car credited with nine hundred metres a second arrives
+                // everywhere instantly and blocks its whole new junction for a frame.
+                me.Pace = dt > 0f
+                    ? Mathf.Min(Speed, Vector3.Distance(was, me.What.position) / dt)
+                    : 0f;
             }
         }
 
@@ -431,10 +616,18 @@ namespace Noir.Unity
                 {
                     float allowed = Mathf.Max(0f, toEnd - 0.4f);
                     step = Mathf.Min(step, allowed, Mathf.Max(step * (toEnd / Braking), 0f));
+
+                    // Safe to do here and nowhere else: being held means the step above has
+                    // already been clamped short of the line, so this car cannot commit to a
+                    // turn on this frame and the movement MayCross just validated is not the
+                    // one that will be acted on.
+                    me.Waited += dt;
+                    if (me.Waited > Rethink) { me.Choices++; me.Waited = 0f; }
                 }
+                else me.Waited = 0f;
             }
 
-            if (Blocked(index)) step = 0f;
+            if (Blocked(index)) { step = 0f; me.Why = Hold.Following; }
 
             me.S += step;
 
@@ -443,7 +636,15 @@ namespace Noir.Unity
             if (segment.IsExit) { Reintroduce(me); return; }
 
             int turn = Choose(me, segment);
-            if (turn < 0) { me.S = segment.ToS; return; }     // nothing legal: hold
+            if (turn < 0) { me.S = segment.ToS; me.Why = Hold.NoLegalTurn; return; }
+
+            // ASKED AGAIN AT THE MOMENT OF ENTRY, and not only on the approach. MayCross tests
+            // this once the car is within two metres of the line, which is normally two frames'
+            // travel - but a long frame can carry a car from beyond that window to over the line
+            // in one step, and the one rule that must never be skipped is the one keeping two
+            // cars off the same ground. Here it cannot be outrun by a frame rate.
+            if (!TurnFree(turn, me)) { me.S = segment.ToS; me.Why = Hold.TurnBusy; return; }
+            if (!RoomBeyond(me, turn)) { me.S = segment.ToS; me.Why = Hold.NoRoomBeyond; return; }
 
             me.Turn = turn;
             me.T = 0f;
@@ -455,11 +656,36 @@ namespace Noir.Unity
             var turn = Graph.Turns[me.Turn];
             float length = Mathf.Max(0.5f, TurnLength(turn));
 
-            // A TURNING CAR USED TO CHECK NOTHING AT ALL. Blocked() was only ever called from
-            // RunSegment, so a car part-way round a corner drove through whatever was standing
-            // on the lane it was entering - which is what NoTwoVehiclesOccupyTheSameSpace
-            // reported as two vehicles at 0.00m. It has to keep its distance the whole way
-            // through the junction, not just up to the stop line.
+            // ONCE COMMITTED, IT CLEARS. Nothing stops a car inside a junction, and that is a
+            // deliberate reversal of what was here before.
+            //
+            // `Blocked()` used to be called here, and it deadlocked the entire map: a car stalled
+            // mid-turn keeps its claim on that ground, and both give-way rules treat anybody
+            // inside a junction as an absolute blocker, so one stopped car shut its junction
+            // permanently and the queues behind it grew until nothing on the map moved. Measured:
+            // eighteen cars stuck on give-way in every sample fifteen seconds apart, following
+            // traffic climbing 151 -> 167, and total distance travelled by the whole fleet ZERO.
+            //
+            // It is safe to drop because the two entry rules already prove the way out is clear,
+            // and NOTHING CAN TAKE IT AWAY AFTERWARDS:
+            //
+            //   `RoomBeyond` proves the nearest car on the destination is a full stopping gap
+            //   past the exit, and cars only ever move FORWARD, so that gap can only grow.
+            //
+            //   Nothing new can appear in between. Two turns that merge into one lane finish at
+            //   the same point, so the arcs touch and they are already conflicting; a destination
+            //   is fed by a junction and is therefore never a segment `Reintroduce` can drop a
+            //   car onto.
+            //
+            //   `TurnFree` proves no conflicting path is occupied, and holds that for as long as
+            //   this car is inside, because the same test blocks everyone else from entering.
+            //
+            // So the ground ahead of a committed car belongs to it - against CROSSING traffic.
+            // It still has to keep off the back of whoever is on the same arc in front of it,
+            // because two cars may hold the same turn at once: a turn does not conflict with
+            // itself, and RoomBeyond cannot see a car that is still mid-turn. Without this a
+            // follower enters the arc behind a leader and drives straight through it, which is
+            // exactly what NoTwoVehiclesOccupyTheSameSpace reported at 0.00m.
             if (Blocked(index)) return;
 
             me.T += TurnSpeed * dt / length;
@@ -490,29 +716,134 @@ namespace Noir.Unity
         {
             bool northSouth = Headings.IsNorthSouth(segment.Way);
             int node = segment.ToJunction;
+            float toEnd = segment.ToS - me.S;
 
-            if (_signals != null)
-            {
-                if (_signals.IsSignalised(node))
-                {
-                    if (!_signals.MayEnter(node, northSouth)) return false;
-                }
-                else if (_signals.GivesWay(node, northSouth))
-                {
-                    // Look further back than a signal would. A car on the priority road is not
-                    // slowing down for this, so the gap has to be there before the wait starts.
-                    if (segment.ToS - me.S < Braking && !NothingCrossing(me, segment)) return false;
-                }
-            }
-
-            // Only worth asking once it is nearly there.
-            if (segment.ToS - me.S > 2f) return true;
+            bool signalised = _signals != null && _signals.IsSignalised(node);
+            if (signalised && !_signals.MayEnter(node, northSouth))
+            { me.Why = Hold.Signal; return false; }
 
             int turn = Choose(me, segment);
-            if (turn < 0 || Graph.Turns[turn].Kind != TurnKind.Left) return true;
+            if (turn < 0) return true;                  // nothing legal; RunSegment holds it
 
-            return NothingComing(me, segment);
+            // Giving way starts early. A car on the priority road is not slowing down for this,
+            // so the decision has to be taken while there is still room to stop for it.
+            if (!signalised && _signals != null && _signals.GivesWay(node, northSouth)
+                && toEnd < Braking && !NothingCrossing(me, segment, turn))
+            { me.Why = Hold.GiveWay; return false; }
+
+            // The rest is only worth asking once it is nearly at the line.
+            if (toEnd > 2f) return true;
+
+            // NOTHING ENTERS A JUNCTION ON GROUND SOMEBODY IS ALREADY DRIVING OVER. This is the
+            // one hard rule, and it is what makes the two gap tests below safe to be generous:
+            // they decide whether pulling out would be RUDE, this decides whether it is possible.
+            if (!TurnFree(turn, me)) { me.Why = Hold.TurnBusy; return false; }
+            if (!RoomBeyond(me, turn)) { me.Why = Hold.NoRoomBeyond; return false; }
+
+            if (Graph.Turns[turn].Kind == TurnKind.Left && !NothingComing(me, segment, turn))
+            { me.Why = Hold.Oncoming; return false; }
+
+            me.Why = Hold.None;
+            return true;
         }
+
+        /// <summary>
+        /// Is every turn that crosses this one currently empty?
+        ///
+        /// A car holds its claim from the moment it enters the junction to the moment it leaves,
+        /// and takes the claim only on ENTRY - never while it is waiting. Nothing therefore ever
+        /// holds one path while queuing for another, which is the shape a deadlock needs.
+        /// </summary>
+        private bool TurnFree(int turn, Mover me)
+        {
+            if (_conflicts == null || turn < 0 || turn >= _conflicts.Length) return true;
+
+            var against = _conflicts[turn];
+            if (against.Length == 0) return true;
+
+            foreach (var other in _movers)
+            {
+                if (other == me || other.What == null || other.Turn < 0) continue;
+
+                for (int i = 0; i < against.Length; i++)
+                    if (against[i] == other.Turn) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Is there somewhere to BE on the far side, once through?
+        ///
+        /// DO NOT ENTER A BOX YOU CANNOT LEAVE, which is the rule painted on the road at every
+        /// yellow-box junction in the country, and it turns out to be load-bearing here rather
+        /// than decorative. A car already inside a junction can be stopped by traffic ahead of it
+        /// - `CrossJunction` calls `Blocked()` and holds - and it keeps its claim on that ground
+        /// for as long as it sits there. Without this the first car to stop mid-junction locks out
+        /// every turn that crosses it, that junction backs up, and the jam propagates until
+        /// NOTHING ON THE MAP MOVES. Measured: with claims and without this rule, total distance
+        /// travelled by two hundred and thirty-six vehicles over ninety seconds was ZERO.
+        ///
+        /// A claim can now only be taken by a car that has room to complete the movement, so
+        /// holding one while waiting for something else is no longer a state a car can be in.
+        /// </summary>
+        private bool RoomBeyond(Mover me, int turn)
+        {
+            var to = Graph.Segments[Graph.Turns[turn].To];
+
+            foreach (var other in _movers)
+            {
+                if (other == me || other.What == null || other.Turn >= 0) continue;
+                if (other.Segment != to.Index) continue;
+
+                if (other.S - to.FromS < me.Reach + other.Reach + Headway) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// How long until this car is out of that lane, in seconds.
+        ///
+        /// Walks its own turn and finds the last point at which the arc is still inside the other
+        /// lane, then adds its own length so a lorry is not counted clear while its trailer is
+        /// still across the carriageway. That is the number a gap has to beat, and it is the whole
+        /// difference between this and what was here before: the old rule compared a distance
+        /// against a constant somebody chose, and could not express "long enough for ME" at all -
+        /// so an articulated lorry and a hatchback waited for exactly the same gap.
+        /// </summary>
+        private float WhenClear(Mover me, int turn, LaneSegment theirs)
+        {
+            const int Steps = 12;
+
+            var line = _world.Roads.Lines[theirs.Line];
+            float cross = CrossOf(theirs);
+
+            TurnArc(Graph.Turns[turn], out var a, out var b, out var c);
+
+            float last = 0f;
+            for (int i = 0; i <= Steps; i++)
+            {
+                float t = i / (float)Steps;
+                var p = Bezier(a, b, c, t);
+                float off = line.IsNorthSouth ? Mathf.Abs(p.x - cross) : Mathf.Abs(-p.z - cross);
+                if (off <= LaneHalf) last = t;
+            }
+
+            return (TurnLength(Graph.Turns[turn]) * last + me.Reach) / TurnSpeed;
+        }
+
+        /// <summary>Do these two turns cross? See <see cref="_conflicts"/>.</summary>
+        private bool Conflicts(int turn, int other)
+        {
+            if (_conflicts == null || turn < 0 || turn >= _conflicts.Length) return true;
+
+            var against = _conflicts[turn];
+            for (int i = 0; i < against.Length; i++) if (against[i] == other) return true;
+            return false;
+        }
+
+        /// <summary>When that car reaches its stop line, in seconds. See <see cref="Creep"/>.</summary>
+        private static float Arrival(Mover other, LaneSegment theirs) =>
+            Mathf.Max(0f, theirs.ToS - other.S) / Mathf.Max(other.Pace, Creep);
 
         /// <summary>
         /// Is the road this one is about to cross clear enough to pull out into?
@@ -522,7 +853,7 @@ namespace Noir.Unity
         /// the two streams apart, so a car that has committed has to be waited out whichever way
         /// it came from.
         /// </summary>
-        private bool NothingCrossing(Mover me, LaneSegment mine)
+        private bool NothingCrossing(Mover me, LaneSegment mine, int turn)
         {
             bool mineIsNorthSouth = Headings.IsNorthSouth(mine.Way);
 
@@ -532,9 +863,11 @@ namespace Noir.Unity
 
                 if (other.Turn >= 0)
                 {
-                    // Committed and moving through. Wait for it regardless of its arm.
-                    if (Graph.Segments[Graph.Turns[other.Turn].From].ToJunction == mine.ToJunction)
-                        return false;
+                    // ONLY SOMEBODY WHOSE PATH ACTUALLY CROSSES MINE. This was a blanket "anybody
+                    // inside this junction", which is both wrong and dangerous: wrong because a
+                    // car crossing on a path that never meets mine is no reason to wait, and
+                    // dangerous because it made one stalled car an absolute permanent block.
+                    if (Conflicts(turn, other.Turn)) return false;
                     continue;
                 }
 
@@ -542,15 +875,18 @@ namespace Noir.Unity
                 if (theirs.ToJunction != mine.ToJunction) continue;
                 if (Headings.IsNorthSouth(theirs.Way) == mineIsNorthSouth) continue;   // my axis
 
-                // A car on the priority road that is itself stopped is not coming, so the
-                // distance is what counts rather than the mere fact of it being on the approach.
-                if (theirs.ToS - other.S < Crossing) return false;
+                // WILL IT GET HERE BEFORE I AM OUT OF ITS WAY? Which is a question about time,
+                // and the thing thirty-five metres of fixed distance could never ask. A stream of
+                // cars eight metres apart at eight metres a second puts somebody inside any fixed
+                // window every single second, so the old rule's answer was permanently no and a
+                // give-way car could sit for the whole two minutes it was watched.
+                if (Arrival(other, theirs) < WhenClear(me, turn, theirs)) return false;
             }
             return true;
         }
 
         /// <summary>Is the oncoming lane clear enough to turn across?</summary>
-        private bool NothingComing(Mover me, LaneSegment mine)
+        private bool NothingComing(Mover me, LaneSegment mine, int turn)
         {
             var facing = Headings.Back(mine.Way);
 
@@ -558,18 +894,18 @@ namespace Noir.Unity
             {
                 if (other == me || other.What == null) continue;
 
-                // Someone already in the junction, coming the other way.
+                // Someone already in the junction on a path that crosses this turn.
                 if (other.Turn >= 0)
                 {
-                    var crossing = Graph.Segments[Graph.Turns[other.Turn].From];
-                    if (crossing.ToJunction == mine.ToJunction && crossing.Way == facing) return false;
+                    if (Conflicts(turn, other.Turn)) return false;
                     continue;
                 }
 
                 var theirs = Graph.Segments[other.Segment];
                 if (theirs.ToJunction != mine.ToJunction) continue;
                 if (theirs.Way != facing) continue;
-                if (theirs.ToS - other.S < Oncoming) return false;
+
+                if (Arrival(other, theirs) < WhenClear(me, turn, theirs)) return false;
             }
             return true;
         }
@@ -593,18 +929,55 @@ namespace Noir.Unity
             return options[(int)(roll % (uint)options.Count)];
         }
 
-        /// <summary>Off one edge of the map and back on at another.</summary>
+        /// <summary>
+        /// Off one edge of the map and back on at another - INTO A GAP, not on top of somebody.
+        ///
+        /// This used to drop a car at its new entry with no regard for what was already standing
+        /// there, and two cars put on the same entry are not close together, they are at 0.00m
+        /// exactly. That is the collision `NoTwoVehiclesOccupyTheSameSpace` reports, and it is
+        /// not a driving fault: nothing drove anywhere, one car was placed inside another.
+        ///
+        /// IT ONLY BECAME COMMON ONCE THE TRAFFIC FLOWED. While the city was jamming, almost
+        /// nothing ever reached an exit to be recycled, so the fault could hardly fire - which is
+        /// also why it surfaces late in a run rather than early, and why isolated short reruns
+        /// are no test of it. Fixing the jams is what exposed it.
+        /// </summary>
         private void Reintroduce(Mover me)
         {
             if (Graph.Entries.Count == 0) return;
 
             me.Choices++;
-            var entry = Graph.Segments[
-                Graph.Entries[(int)(Materials3D.Scatter(me.Choices, me.Segment, 911)
-                                    % (uint)Graph.Entries.Count)]];
-            me.Segment = entry.Index;
-            me.S = entry.FromS;
-            me.Turn = -1;
+            int start = (int)(Materials3D.Scatter(me.Choices, me.Segment, 911)
+                              % (uint)Graph.Entries.Count);
+
+            for (int i = 0; i < Graph.Entries.Count; i++)
+            {
+                var entry = Graph.Segments[Graph.Entries[(start + i) % Graph.Entries.Count]];
+                if (!RoomAt(me, entry)) continue;
+
+                me.Segment = entry.Index;
+                me.S = entry.FromS;
+                me.Turn = -1;
+                me.Waited = 0f;
+                return;
+            }
+
+            // Every way back on is occupied. Wait off-stage, which is out of shot anyway, rather
+            // than materialise inside another vehicle.
+            me.S = Graph.Segments[me.Segment].ToS;
+        }
+
+        /// <summary>Is the start of that lane clear enough to put this vehicle on it?</summary>
+        private bool RoomAt(Mover me, LaneSegment entry)
+        {
+            foreach (var other in _movers)
+            {
+                if (other == me || other.What == null || other.Turn >= 0) continue;
+                if (other.Segment != entry.Index) continue;
+
+                if (other.S - entry.FromS < me.Reach + other.Reach + Headway) return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -669,10 +1042,22 @@ namespace Noir.Unity
                 if (j == index) continue;
                 var other = _movers[j];
                 if (other.What == null) continue;
-                // Parallel traffic only - EXCEPT inside a junction, where a car is crossing
-                // the others rather than following them and every heading is a conflict. That
-                // exception is the difference between two vehicles at 1.89m and two at 4m.
-                if (me.Turn < 0 && Vector3.Dot(me.Forward, other.Forward) < 0.7f) continue;
+                // PARALLEL TRAFFIC ONLY, INSIDE A JUNCTION AS WELL AS OUTSIDE IT.
+                //
+                // There used to be an exception here: a car part-way round a corner counted every
+                // heading, on the reasoning that it crosses the others rather than following
+                // them. That reasoning is right about the geometry and wrong about the remedy -
+                // this is a FOLLOWING model, a 2.4m box projected down the car's own heading, and
+                // it cannot separate crossing paths anyway. What it did instead was stop a car
+                // dead in the middle of a junction, which locks that ground for everyone whose
+                // path crosses it, and the whole map seized: every vehicle stationary, total
+                // distance travelled zero.
+                //
+                // Crossing paths are now separated where they can be, by the claim on the turn
+                // itself. What is left for this to do is what it was always good at: keeping a
+                // car off the back of the one in front, which inside a junction means the car
+                // ahead of it on the same arc and the one it is about to come out behind.
+                if (Vector3.Dot(me.Forward, other.Forward) < 0.7f) continue;
 
                 var gap = other.What.position - here;
 

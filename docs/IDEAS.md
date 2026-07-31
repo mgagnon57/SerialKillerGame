@@ -47,7 +47,50 @@ done or delete the line when it turns out to be a bad idea.
 - [x] ~~`NoJunctionEverShowsGreenBothWays` tests an invariant that no longer holds.~~ FIXED: the test now skips unsignalised junctions in both assertions. `MayEnter` returns true on BOTH axes at a priority junction by design - the separation moved into `NothingCrossing`. The test should assert the new rule: signalised junctions never both green, priority junctions have exactly one axis with priority. — *2026-07-30*
 - [x] ~~Vehicle look-ahead is a constant 8m~~ — done in 4724abf: it is now both vehicles' measured half-lengths plus a headway. Did NOT fix the failing test; see the junction item above. — *2026-07-30*
 - [ ] No colliders on any vehicle: `CityTraffic` avoids by RULES (signals, give-way, look-ahead box), never by intersection test, so where a rule has no case cars pass through each other. Probably right for AI-vs-AI; needs revisiting the moment the player can drive. — *2026-07-30*
-- [ ] Jams appeared after the fleet went 97 -> 243. CONFIRMED, both halves of it, by direct reproduction on the live city - and a fix was tried and reverted, because it traded starvation for an actual collision.
+- [x] ~~Jams appeared after the fleet went 97 -> 243.~~ **FIXED**, and the fix is four separate
+  faults rather than the one this entry described. Measured on the live city before: **100 of 236
+  vehicles held at the head of a CLEAR queue**, median 20.8s, **p90 and worst both 119.9s in a
+  120s window** - the worst tenth never moved once while they were watched. After: median 16.9s,
+  p90 24.7s, worst 53.6s, and the commonest reason a car is stopped is now a red light.
+
+  THE GAP TESTS ASKED THE WRONG QUESTION. Both reduced to "is anybody within N metres of the
+  junction", counting cars that were STOPPED as well as approaching, so a queue standing at its
+  own red light thirty metres up the crossing road blocked this junction for as long as it stood
+  there. Now `Arrival()` against `WhenClear()`: will it get here before I am out of its way, from
+  measured pace and this vehicle's own turn - so a lorry and a hatchback no longer wait for the
+  same gap.
+
+  THERE WAS NEVER A COLLISION TEST INSIDE A JUNCTION. `CrossJunction`'s comment called `Blocked()`
+  the safety net; `Blocked()` is a FOLLOWING model, a 2.4m box down the car's own heading, and it
+  cannot separate crossing paths at all. Measured: crossing pairs shared a junction for 17,395
+  frames and came within 2.84m. So signals and give-way were doing ALL of it, which is exactly why
+  `Patience` produced a collision the moment it let a car pull out anyway. `MapConflicts` now
+  derives which turns cross which from the arcs themselves (2,847 pairs over 84 junctions), and a
+  car claims its turn on entry.
+
+  A CAR COULD STOP INSIDE A JUNCTION AND HOLD ITS CLAIM FOR EVER. Adding claims turned that from a
+  local stall into a global lock: eighteen cars stuck on give-way in every sample, following
+  traffic climbing 151 -> 167, **total distance travelled by the whole fleet ZERO**. Fixed by
+  `RoomBeyond` (do not enter a box you cannot leave) plus restricting `Blocked()` to parallel
+  traffic everywhere, so crossing traffic can never stop a committed car.
+
+  `Reintroduce` PUT CARS INSIDE EACH OTHER. It dropped a recycled vehicle on an entry with no
+  regard for what was standing there - two cars at 0.00m exactly, which is not a driving fault at
+  all. It only became common ONCE THE TRAFFIC FLOWED, because while the city was jamming almost
+  nothing ever reached an exit to be recycled. This is the one that would have been missed by
+  isolated reruns.
+
+  The safe version of `Patience` is in as `Rethink`: after twelve seconds a driver who cannot turn
+  left **chooses a different movement**. It bypasses no rule - the signal, the claim, the room
+  beyond and the gap all still apply - it only changes where the car wants to go, which no safety
+  rule depends on.
+
+  VERIFIED THE WAY THE OLD NOTE SAID TO: two consecutive FULL-SUITE PlayMode runs, 11/11 both
+  times, exit 0. Core 163/165 (the two known 2:1 gates). MapAudit clean on all eight. New
+  `TrafficDiagnostics` reports the numbers above and gates nothing; `NoCarWaitsForeverAtTheHead
+  OfAClearQueue` gates the distribution - p90 under one signal cycle, worst under two. — *2026-07-31*
+
+- [ ] ~~Jams~~ SUPERSEDED, kept for the reasoning: the original entry follows.
 
   ROOT CAUSE: `NothingCrossing` (give-way) and `NothingComing` (left turn) both wait for zero
   traffic within a fixed distance (`Crossing`=35m, `Oncoming`=22m), and a busy two-lane road can

@@ -160,6 +160,116 @@ namespace Noir.PlayTests
             Assert.That(worst, Is.Zero, where);
         }
 
+        /// <summary>
+        /// NOBODY WAITS FOR EVER.
+        ///
+        /// A car with clear road in front of it that is not moving is being held by a RULE, not by
+        /// traffic - and the two rules that can hold it, `NothingCrossing` and `NothingComing`,
+        /// both wait for zero traffic inside a fixed distance. A busy road hands that gap from one
+        /// car to the next with no frame ever clear, so the wait has no upper bound at all.
+        ///
+        /// IT GATES THE DISTRIBUTION, NOT THE UNLUCKIEST CAR, and that distinction is the whole
+        /// difficulty. This test first asserted a flat 45s on the worst wait, reasoning that a
+        /// signal cycle is 37s so one cycle is legitimate. That model of legitimate waiting is
+        /// wrong: an unprotected left-turner gets its green, fails to find a gap in the oncoming
+        /// stream before the green ends, and waits ANOTHER WHOLE CYCLE. Two cycles is a driver
+        /// having a bad turn at a busy junction, not a city that has seized, and a gate that
+        /// cannot tell those apart is a gate that will be tuned until it stops complaining.
+        ///
+        /// So: the ninetieth percentile is held to about one cycle, which is what says the FLEET
+        /// is flowing, and the worst single wait to two cycles and a bit, which is what says
+        /// nobody is stuck for ever. Measured before any of this was fixed, both arms were 119.9s
+        /// in a 120s window - which is to say the tenth-worst car and the worst car had both never
+        /// moved once while they were watched.
+        ///
+        /// THE HEAD OF THE QUEUE IS THE ONLY CAR WHOSE BEHAVIOUR IS A DECISION. Everybody behind
+        /// it is correctly stopped because the car in front is stopped, and counting them would
+        /// turn one held car into a twelve-car fault and hide the one that matters.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator NoCarWaitsForeverAtTheHeadOfAClearQueue()
+        {
+            const float Cycle = 37f;            // CitySignals' own cycle length
+            const float Typical = Cycle;        // the fleet keeps moving
+            const float Worst = Cycle * 2 + 10f; // nobody is stuck for ever
+            const float Still = 0.02f;
+
+            var held = new Dictionary<int, float>();
+            var longest = new Dictionary<int, float>();
+            var previous = new Dictionary<int, Vector3>();
+            float worst = 0f;
+            string where = "";
+            float last = Time.time;
+
+            yield return Watch(120f, () =>
+            {
+                float dt = Time.time - last;
+                last = Time.time;
+                if (dt <= 0f) return;
+
+                var cars = CityUnderTest.Vehicles();
+
+                foreach (var car in cars)
+                {
+                    if (car == null) continue;
+                    int id = car.GetInstanceID();
+                    var now = car.position;
+
+                    if (!previous.TryGetValue(id, out var was)) { previous[id] = now; continue; }
+                    previous[id] = now;
+
+                    bool moving = Vector3.Distance(was, now) >= Still;
+                    if (moving || SomebodyInFront(cars, car)) { held[id] = 0f; continue; }
+
+                    float spell = (held.TryGetValue(id, out float sofar) ? sofar : 0f) + dt;
+                    held[id] = spell;
+
+                    if (!longest.TryGetValue(id, out float best) || spell > best) longest[id] = spell;
+
+                    if (spell <= worst) continue;
+                    worst = spell;
+                    where = $"{car.name} stood at {now} for {spell:0.0}s with clear road ahead";
+                }
+            });
+
+            var waits = new List<float>(longest.Values);
+            waits.RemoveAll(w => w <= 0.5f);
+            waits.Sort();
+
+            Assert.That(waits.Count, Is.GreaterThan(0), "nothing was measured");
+
+            float p90 = waits[Mathf.Min(waits.Count - 1, waits.Count * 9 / 10)];
+
+            Assert.That(p90, Is.LessThan(Typical),
+                        $"nine tenths of the vehicles that stopped waited {p90:0.0}s or less, which "
+                      + $"is longer than a whole signal cycle - the fleet is starving, not queuing. "
+                      + $"Worst: {where}");
+
+            Assert.That(worst, Is.LessThan(Worst),
+                        $"a car was stuck at a junction well beyond any signal cycle. {where}");
+        }
+
+        /// <summary>Is there a vehicle close in front of this one, going roughly its way?</summary>
+        private static bool SomebodyInFront(List<Transform> cars, Transform me)
+        {
+            var here = me.position;
+            var forward = me.forward;
+
+            foreach (var other in cars)
+            {
+                if (other == null || other == me) continue;
+                if (Vector3.Dot(forward, other.forward) < 0.7f) continue;
+
+                var gap = other.position - here;
+                float ahead = Vector3.Dot(gap, forward);
+                if (ahead <= 0f || ahead > 12f) continue;
+                if (Vector3.Cross(forward, gap).magnitude > 2.4f) continue;
+
+                return true;
+            }
+            return false;
+        }
+
         /// <summary>Cars are solid. They may queue nose to tail; they may not share a bumper.</summary>
         [UnityTest, Timeout(900000)]
         public IEnumerator NoTwoVehiclesOccupyTheSameSpace()
