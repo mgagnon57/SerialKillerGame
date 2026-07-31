@@ -404,7 +404,7 @@ namespace Noir.Unity
                 var me = _movers[i];
                 if (me.What == null) continue;
 
-                if (me.Turn >= 0) CrossJunction(me, dt);
+                if (me.Turn >= 0) CrossJunction(me, i, dt);
                 else RunSegment(me, i, dt);
 
                 Seat(me);
@@ -447,10 +447,17 @@ namespace Noir.Unity
         }
 
         /// <summary>Through the junction on the chosen turn.</summary>
-        private void CrossJunction(Mover me, float dt)
+        private void CrossJunction(Mover me, int index, float dt)
         {
             var turn = Graph.Turns[me.Turn];
             float length = Mathf.Max(0.5f, TurnLength(turn));
+
+            // A TURNING CAR USED TO CHECK NOTHING AT ALL. Blocked() was only ever called from
+            // RunSegment, so a car part-way round a corner drove through whatever was standing
+            // on the lane it was entering - which is what NoTwoVehiclesOccupyTheSameSpace
+            // reported as two vehicles at 0.00m. It has to keep its distance the whole way
+            // through the junction, not just up to the stop line.
+            if (Blocked(index)) return;
 
             me.T += TurnSpeed * dt / length;
             if (me.T < 1f) return;
@@ -659,7 +666,10 @@ namespace Noir.Unity
                 if (j == index) continue;
                 var other = _movers[j];
                 if (other.What == null) continue;
-                if (Vector3.Dot(me.Forward, other.Forward) < 0.7f) continue;
+                // Parallel traffic only - EXCEPT inside a junction, where a car is crossing
+                // the others rather than following them and every heading is a conflict. That
+                // exception is the difference between two vehicles at 1.89m and two at 4m.
+                if (me.Turn < 0 && Vector3.Dot(me.Forward, other.Forward) < 0.7f) continue;
 
                 var gap = other.What.position - here;
 

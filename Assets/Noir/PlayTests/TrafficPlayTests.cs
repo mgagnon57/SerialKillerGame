@@ -92,6 +92,13 @@ namespace Noir.PlayTests
             {
                 for (int j = 0; j < signals.Count; j++)
                 {
+                    // SIGNALISED JUNCTIONS ONLY. Out of town there is no signal and State()
+                    // answers Green on both axes on purpose - the streams are separated by
+                    // priority and CityTraffic.NothingCrossing, not by a light. This test
+                    // predates that and was reporting the design as a fault a hundred and
+                    // forty-seven thousand times.
+                    if (!signals.IsSignalised(j)) continue;
+
                     var ns = signals.State(j, true);
                     var ew = signals.State(j, false);
 
@@ -103,12 +110,18 @@ namespace Noir.PlayTests
 
             Assert.That(both, Is.Zero, "a junction showed green on both axes at once");
 
-            // And they are not simply stuck: every colour is reached on both axes.
+            // And they are not simply stuck: every colour is reached on both axes. Signalised
+            // junctions only, for the same reason as above - a priority junction has no cycle
+            // to be stuck in.
             for (int j = 0; j < signals.Count; j++)
+            {
+                if (!signals.IsSignalised(j)) continue;
+
             foreach (var light in new[] { CitySignals.Light.Red, CitySignals.Light.Amber,
                                           CitySignals.Light.Green })
                 Assert.That(seen, Does.Contain($"{j}:{light}"),
                             $"junction {j} never showed {light} - the cycle is stuck");
+            }
         }
 
         /// <summary>
