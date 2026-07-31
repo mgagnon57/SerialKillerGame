@@ -186,9 +186,22 @@ namespace Noir.Editor
             catch (Exception ex)
             {
                 Debug.LogError("[audit] FAILED: " + ex);
+                faults++;                      // a crashed audit has not proved the map is clean
             }
 
-            if (Application.isBatchMode) EditorApplication.Exit(0);
+            // THE EXIT CODE IS THE VERDICT, and it used to be zero whatever was found.
+            //
+            // Every check above reports with Debug.LogError and the process then exited 0
+            // regardless, so a caller could only tell a clean map from a broken one by grepping
+            // the log for words - which is to say a broken map LOOKED EXACTLY LIKE A CLEAN PASS,
+            // the same shape as the `-quit` + `-runTests` race that TestInvocationGuard exists to
+            // stop. Nothing depended on the zero: no script, workflow or task in the repo runs
+            // this, only the documented command line and the menu item.
+            //
+            // A thrown exception counts as a fault too. An audit that fell over part way through
+            // has not looked at the rest of the map, and reporting that as success is the same
+            // lie in a different coat.
+            if (Application.isBatchMode) EditorApplication.Exit(faults == 0 ? 0 : 1);
         }
 
         /// <summary>
