@@ -74,8 +74,19 @@ namespace Noir.Unity
         /// looked empty. A terrace is one building with four front doors and a block of flats is
         /// one with a dozen; counting buildings gave a town of three hundred the traffic of a
         /// hamlet of twenty-seven, and spread across a 960m map that is no traffic at all.
+        ///
+        /// AND WHY IT IS NO LONGER 0.6. The downtown grew from nine blocks to thirty-six and the
+        /// traffic did not move: ninety-seven vehicles before and ninety-seven after, because a
+        /// `district` is an OPEN place with no residents in it, so twenty-seven new blocks added
+        /// exactly nothing to the household count the budget is drawn from.
+        ///
+        /// A downtown is not driven only by the people who sleep in it. It is driven by everyone
+        /// who works there, delivers to it, or is passing through - so once the town is bigger
+        /// than the houses in it, cars-per-resident-household stops being the whole answer. This
+        /// is the honest short-term number for that; the real fix is for a district to declare
+        /// how many people live in the block, and then this drops back towards one.
         /// </summary>
-        public static float CarsPerHome = 0.6f;
+        public static float CarsPerHome = 1.5f;
 
         private sealed class Mover
         {
@@ -270,6 +281,7 @@ namespace Noir.Unity
             {
                 "Car_Modern", "Car_Pickup_Modern", "Car_Taxi_Modern",
                 "Car_Cargovan_Modern", "Car_Van_Old", "Car_Offroad_Modern",
+                "Car_Offroad_Roofless_Modern",
             };
 
             if (klass == RoadClass.Track)
@@ -279,26 +291,65 @@ namespace Noir.Unity
                 wanted = new List<string>
                 {
                     "Car_Pickup_Modern", "Car_Van_Old", "Car_Offroad_Modern",
-                    "Pickup_Truck_Old_Farm", "Tractor_Old",
+                    "Car_Offroad_Roofless_Modern",
+                    "Pickup_Truck_Old_Farm", "Tractor_Old", "Tractor_Big", "Atv",
                 };
+                return Found(wanted);
             }
-            else if (klass == RoadClass.Freeway)
+
+            // WHAT A TOWN RUNS, as against what people own. A police car, an ambulance, a tow
+            // truck and the school bus were bought, were sitting in the folder, and appeared
+            // nowhere on the road - the ambulance's only outing was standing still in the
+            // hospital car park. For a game about who was where at what time, a cruiser going
+            // past at the wrong hour is not scenery.
+            //
+            // THEY WEIGHT THEMSELVES. A vehicle is drawn uniformly from the list of matching
+            // PREFABS, and the everyday cars ship in six colours each while there is exactly one
+            // police car and one ambulance - so putting them in the same list makes them roughly
+            // one in ninety without anybody tuning a frequency. The pack's own variant counts
+            // are the weighting.
+            wanted.AddRange(new[]
             {
-                // Two lanes each way and room to pass: this is the road the freight is on.
+                "Car_Police_Modern", "Car_Ambulance_Modern", "Car_Towtruck_Modern",
+                "Car_Bus_School_Modern",
+            });
+
+            if (klass == RoadClass.Freeway)
+            {
+                // Two lanes each way and room to pass: this is the road the freight is on, and
+                // it is the only road wide enough for an articulated lorry to be on at all.
                 wanted.AddRange(new[]
                 {
-                    "Car_Sport_Modern", "Car_Roadster_Cabrio_Modern",
-                    "Car_Truck_Modern_Box", "Car_Truck_Modern_Container",
+                    "Car_Sport_Modern", "Car_Roadster_Cabrio_Modern", "Car_Firetruck_Modern",
+                    "Car_Truck_Modern", "Car_Truck_Modern_Box", "Car_Truck_Modern_Container",
                     "Car_Truck_Modern_Cistern", "Car_Truck_Modern_Dump",
                     "Car_Truck_Modern_Logging", "Car_Truck_Modern_Garbage",
-                    "Car_Truck_Trailer_Sleepercab_Modern",
+                    "Car_Truck_Modern_Concrete", "Car_Truck_Modern_Gritter",
+                    "Car_Truck_Modern_Loadingplatform",
+                    "Car_Truck_Trailer_Modern", "Car_Truck_Trailer_Sleepercab_Modern",
+                    "Car_Truck_Trailer_Car_Modern", "Car_Truck_Trailer_Container_Large",
                 });
             }
             else
             {
+                // A caravan is a main-road vehicle: it is going somewhere out of town and it is
+                // not going there quickly.
                 wanted.Add("Car_Sport_Modern");
+                wanted.Add("Car_Caravan_Modern");
             }
 
+            return Found(wanted);
+        }
+
+        /// <summary>
+        /// Every prefab in the vehicle folders whose name is one of these, or a colour variant
+        /// of one.
+        ///
+        /// STILL EXCLUDED: the 79-strong motorsport paddock. Formula, Nascar, Le Mans prototypes
+        /// and a gokart have nowhere to be until there is somewhere to race them.
+        /// </summary>
+        private static List<string> Found(List<string> wanted)
+        {
             var found = new List<string>();
             foreach (var folder in new[]
                      {
@@ -316,7 +367,7 @@ namespace Noir.Unity
                     if (name == w || name.StartsWith(w + "_", System.StringComparison.Ordinal))
                     { found.Add(path); break; }
             }
-            found.Sort(System.StringComparer.Ordinal);
+            found.Sort(System.StringComparer.Ordinal);   // stable, so the city looks the same twice
             return found;
         }
 #endif
