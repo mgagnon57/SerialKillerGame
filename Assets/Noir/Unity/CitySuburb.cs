@@ -80,23 +80,25 @@ namespace Noir.Unity
                 for (int x = lot.X; x + Pitch <= lot.X + lot.W; x += Pitch)
                 {
                     int i = (x - lot.X) / Pitch;
+                    bool lastX = x + Pitch * 2 > lot.X + lot.W;
                     houses += One(root.transform, place, lot, i,
-                                  new TileRect(x, lot.Y + Setback, Pitch, Depth), 180f,
+                                  new TileRect(x, lot.Y + Setback, Pitch, Depth), 180f, lastX,
                                   ref pieces, ref garages, ref cars);
                     houses += One(root.transform, place, lot, i + 40,
                                   new TileRect(x, lot.Y + lot.H - Setback - Depth, Pitch, Depth), 0f,
-                                  ref pieces, ref garages, ref cars);
+                                  lastX, ref pieces, ref garages, ref cars);
                 }
 
                 for (int y = lot.Y + Pitch; y + Pitch <= lot.Y + lot.H - Pitch; y += Pitch)
                 {
                     int i = (y - lot.Y) / Pitch;
+                    bool lastY = y + Pitch * 2 > lot.Y + lot.H - Pitch;
                     houses += One(root.transform, place, lot, i + 80,
-                                  new TileRect(lot.X + Setback, y, Depth, Pitch), 90f,
+                                  new TileRect(lot.X + Setback, y, Depth, Pitch), 90f, lastY,
                                   ref pieces, ref garages, ref cars);
                     houses += One(root.transform, place, lot, i + 120,
                                   new TileRect(lot.X + lot.W - Setback - Depth, y, Depth, Pitch), 270f,
-                                  ref pieces, ref garages, ref cars);
+                                  lastY, ref pieces, ref garages, ref cars);
                 }
 
                 hedges += Hedges(root.transform, lot);
@@ -119,7 +121,7 @@ namespace Noir.Unity
         /// more than none, because a run of houses with no break in it reads as a terrace again.
         /// </summary>
         private static int One(Transform parent, Place place, TileRect cell, int index,
-                               TileRect lot, float yaw, ref int pieces, ref int garages,
+                               TileRect lot, float yaw, bool last, ref int pieces, ref int garages,
                                ref int cars)
         {
             if (Materials3D.Scatter(cell.X + index, cell.Y + index, 5171) % 7 == 0) return 0;
@@ -134,7 +136,7 @@ namespace Noir.Unity
             // The garage goes BESIDE the house, towards the street, on the side away from the
             // next house along - so the drive runs off the road rather than through a garden.
             uint roll = Materials3D.Scatter(cell.X + index, cell.Y + index, 5189) % 100;
-            if (roll < 65)
+            if (roll < 65 && !last)
             {
                 var drive = Beside(lot, yaw);
                 if (Put(parent, City + "Buildings Modular City/Squarehouse_Garage_City.prefab",
@@ -147,10 +149,16 @@ namespace Noir.Unity
                     // useful one: it says somebody is in.
                     if (roll < 34)
                     {
-                        _cars ??= Catalogue(Cars, "Car_");
+                        // IN FRONT OF THE GARAGE, ALONG THE WAY IT FACES - which is not what this
+                        // did. The offset was applied to y only, so on a north or south frontage
+                        // it worked and on an east or west one it was zero and the car was put
+                        // inside the garage. Ninety-eight of a hundred and two cars were, and the
+                        // footprint check found every one of them.
+                        var out_ = Outward(yaw);
+                        _cars ??= Domestic(Catalogue(Cars, "Car_"));
                         if (_cars.Count > 0 &&
                             Put(parent, Pick(_cars, cell.X + index, cell.Y, 5197),
-                                drive.x, drive.y + Nudge(yaw), yaw) != null) cars++;
+                                drive.x + out_.x * Clear, drive.y + out_.y * Clear, yaw) != null) cars++;
                     }
                 }
             }
@@ -158,23 +166,48 @@ namespace Noir.Unity
             return 1;
         }
 
-        /// <summary>The drive, beside the house and nearer the street than the house is.</summary>
+        /// <summary>
+        /// The drive, in the gap between this house and the next one along.
+        ///
+        /// HALF THE PITCH, WHICH IS THE MIDDLE OF THE GAP, and that is derived rather than tuned.
+        /// Houses stand every fourteen metres and are 6.10 across, so the gap between two of them
+        /// is 7.9m centred seven metres from either. A garage is 6.10, so at the middle of the gap
+        /// it has 0.9m of daylight on each side and cannot touch either house or the garage of the
+        /// house beyond - all three of which the first two attempts at this managed to do.
+        ///
+        /// The first put it 4.5m out, which is inside the house. The second put it 6.8m out, which
+        /// cleared the house and then met the NEXT RUN'S garage round the corner of the cell. This
+        /// one cannot: it is in a gap that belongs to exactly one pair of houses, and the run's
+        /// last house has no next house so it gets no garage at all.
+        /// </summary>
         private static Vector2 Beside(TileRect lot, float yaw)
         {
+            const float Gap = Pitch * 0.5f;
             float cx = lot.X + lot.W * 0.5f, cy = lot.Y + lot.H * 0.5f;
 
-            // yaw 180 faces -y (north edge), 0 faces +y, 90 faces -x, 270 faces +x.
-            return yaw switch
-            {
-                180f => new Vector2(cx + 4.5f, cy - 4f),
-                0f   => new Vector2(cx + 4.5f, cy + 4f),
-                90f  => new Vector2(cx - 4f, cy + 4.5f),
-                _    => new Vector2(cx + 4f, cy + 4.5f),
-            };
+            // yaw 180 and 0 are the runs that step along x; 90 and 270 step along y.
+            return yaw == 180f || yaw == 0f
+                ? new Vector2(cx + Gap, cy)
+                : new Vector2(cx, cy + Gap);
         }
 
-        /// <summary>How far in front of the garage a car on the drive stands.</summary>
-        private static float Nudge(float yaw) => yaw == 180f ? -3.5f : yaw == 0f ? 3.5f : 0f;
+        /// <summary>
+        /// How far in front of the garage a car on the drive stands.
+        ///
+        /// `Squarehouse_Garage_City` measures 6.10 x 6.66, so half of it is 3.33 and a car half
+        /// its own length again. Five and a half metres clears both and still reads as ON the
+        /// drive rather than parked in the road.
+        /// </summary>
+        private const float Clear = 5.5f;
+
+        /// <summary>Which way this frontage faces, in village coordinates.</summary>
+        private static Vector2 Outward(float yaw) => yaw switch
+        {
+            180f => new Vector2(0f, -1f),
+            0f   => new Vector2(0f, 1f),
+            90f  => new Vector2(-1f, 0f),
+            _    => new Vector2(1f, 0f),
+        };
 
         /// <summary>
         /// The garden boundary, laid as a RUN along each frontage.
@@ -210,6 +243,28 @@ namespace Noir.Unity
             }
 
             return laid;
+        }
+
+        /// <summary>
+        /// What actually stands on a suburban drive.
+        ///
+        /// The whole Cars City folder includes a twelve-metre school bus, an ambulance and a fire
+        /// engine, and a drive is five and a half metres long - so the bus overhung the garage
+        /// whatever the clearance, which the footprint check caught on two plots. The same
+        /// reasoning CityParking uses when it leaves a bay empty rather than hang a coach out of
+        /// it, except that here the answer is simpler: nobody parks a fire engine outside a semi.
+        /// </summary>
+        private static List<string> Domestic(List<string> all)
+        {
+            var kept = new List<string>();
+            foreach (var path in all)
+            {
+                string file = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (file.Contains("Bus") || file.Contains("Truck") || file.Contains("Ambulance")
+                    || file.Contains("Firetruck") || file.Contains("Police")) continue;
+                kept.Add(path);
+            }
+            return kept;
         }
 
         private static List<string> _hedge3, _cars;
