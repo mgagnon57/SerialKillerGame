@@ -46,6 +46,18 @@ done or delete the line when it turns out to be a bad idea.
 - [x] ~~**A car crossing a junction ignores every other vehicle.**~~ FIXED: CrossJunction now calls Blocked(), and inside a junction the same-heading filter is dropped because a turning car crosses the others rather than following them. `Blocked()` is only called from `RunSegment`; `CrossJunction` has no check at all, so a turning car drives through anything on the lane it is entering. This is what `NoTwoVehiclesOccupyTheSameSpace` catches at 0.00m, and the look-ahead fix does not touch it. — *2026-07-30*
 - [x] ~~`NoJunctionEverShowsGreenBothWays` tests an invariant that no longer holds.~~ FIXED: the test now skips unsignalised junctions in both assertions. `MayEnter` returns true on BOTH axes at a priority junction by design - the separation moved into `NothingCrossing`. The test should assert the new rule: signalised junctions never both green, priority junctions have exactly one axis with priority. — *2026-07-30*
 - [x] ~~Vehicle look-ahead is a constant 8m~~ — done in 4724abf: it is now both vehicles' measured half-lengths plus a headway. Did NOT fix the failing test; see the junction item above. — *2026-07-30*
+- [ ] Semi trailers drive the freeway with no cab. `Car_Truck_Trailer_Modern`,
+  `Car_Truck_Trailer_Container_Large` (+B..F) and `Car_Truck_Trailer_Car_Modern` are BARE TRAILERS
+  - checked the prefabs, they have rear wheels and no steering wheel - and `CityTraffic.Everyday`
+  puts all three in the freeway fleet as if they were vehicles. That is 8 of the 134 freeway
+  prefabs, so about one heavy in sixteen is a driverless box gliding down the road. The trap is the
+  naming: `Car_Truck_Trailer_Sleepercab_Modern` is the one that sounds most like a trailer and is
+  the only COMPLETE unit of the four - it has a steering wheel, front doors and front wheels. Fix is
+  either to drop the three bare trailers from the fleet, or to tow them properly by drawing a
+  tractor unit in front and keeping the pair at a fixed offset along the lane, which the lane graph
+  already makes easy since a trailer is just a second Mover pinned a few metres behind the first.
+  — *2026-07-31*
+
 - [ ] No colliders on any vehicle: `CityTraffic` avoids by RULES (signals, give-way, look-ahead box), never by intersection test, so where a rule has no case cars pass through each other. Probably right for AI-vs-AI; needs revisiting the moment the player can drive. — *2026-07-30*
 - [x] ~~Jams appeared after the fleet went 97 -> 243.~~ **FIXED**, and the fix is four separate
   faults rather than the one this entry described. Measured on the live city before: **100 of 236
