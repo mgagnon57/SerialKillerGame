@@ -55,6 +55,16 @@ namespace Noir.Unity
         private const float Oncoming = 22f;
 
         /// <summary>
+        /// How far up the priority road a car has to be before it is safe to pull out across it.
+        ///
+        /// Longer than <see cref="Oncoming"/>, and deliberately: a left-turner at a signal is
+        /// crossing traffic that has the same green and is already committed to a queue, whereas
+        /// this is crossing a country arterial at speed. At 8 m/s a car thirty-five metres away
+        /// arrives in four and a half seconds, which is about how long it takes to get across.
+        /// </summary>
+        private const float Crossing = 35f;
+
+        /// <summary>
         /// Moving vehicles per HOUSEHOLD. The budget comes from how many people live here rather
         /// than from how much tarmac was laid, which is the only version of this that scales: a
         /// bigger map gets more lanes and the same traffic per resident, so a village stays quiet
@@ -384,15 +394,35 @@ namespace Noir.Unity
         /// <summary>
         /// May this car leave its stop line?
         ///
-        /// The signal decides for everyone; a left-turner additionally has to wait for a gap in
-        /// the oncoming stream, because the oncoming stream has the same green it does. That is
-        /// the one conflict signals never resolve on their own.
+        /// Three things can hold it, and which of them apply depends on the junction:
+        ///
+        ///   IN THE TOWN the signal decides for everyone, and a left-turner additionally has to
+        ///   wait for a gap in the oncoming stream, because the oncoming stream has the same
+        ///   green it does. That is the one conflict signals never resolve on their own.
+        ///
+        ///   IN THE COUNTRY there is no signal, so the two streams are separated by priority
+        ///   instead: the bigger road runs through and the smaller one waits for a gap. Without
+        ///   this, taking the lights off the farmland junctions would have turned every one of
+        ///   them into a crossing where both streams simply drive through each other.
         /// </summary>
         private bool MayCross(Mover me, LaneSegment segment)
         {
-            if (_signals != null &&
-                !_signals.MayEnter(segment.ToJunction, Headings.IsNorthSouth(segment.Way)))
-                return false;
+            bool northSouth = Headings.IsNorthSouth(segment.Way);
+            int node = segment.ToJunction;
+
+            if (_signals != null)
+            {
+                if (_signals.IsSignalised(node))
+                {
+                    if (!_signals.MayEnter(node, northSouth)) return false;
+                }
+                else if (_signals.GivesWay(node, northSouth))
+                {
+                    // Look further back than a signal would. A car on the priority road is not
+                    // slowing down for this, so the gap has to be there before the wait starts.
+                    if (segment.ToS - me.S < Braking && !NothingCrossing(me, segment)) return false;
+                }
+            }
 
             // Only worth asking once it is nearly there.
             if (segment.ToS - me.S > 2f) return true;
@@ -401,6 +431,41 @@ namespace Noir.Unity
             if (turn < 0 || Graph.Turns[turn].Kind != TurnKind.Left) return true;
 
             return NothingComing(me, segment);
+        }
+
+        /// <summary>
+        /// Is the road this one is about to cross clear enough to pull out into?
+        ///
+        /// The other axis of the same junction, both directions of it, plus anybody already
+        /// inside the junction on any arm - at a priority junction there is nothing else keeping
+        /// the two streams apart, so a car that has committed has to be waited out whichever way
+        /// it came from.
+        /// </summary>
+        private bool NothingCrossing(Mover me, LaneSegment mine)
+        {
+            bool mineIsNorthSouth = Headings.IsNorthSouth(mine.Way);
+
+            foreach (var other in _movers)
+            {
+                if (other == me || other.What == null) continue;
+
+                if (other.Turn >= 0)
+                {
+                    // Committed and moving through. Wait for it regardless of its arm.
+                    if (Graph.Segments[Graph.Turns[other.Turn].From].ToJunction == mine.ToJunction)
+                        return false;
+                    continue;
+                }
+
+                var theirs = Graph.Segments[other.Segment];
+                if (theirs.ToJunction != mine.ToJunction) continue;
+                if (Headings.IsNorthSouth(theirs.Way) == mineIsNorthSouth) continue;   // my axis
+
+                // A car on the priority road that is itself stopped is not coming, so the
+                // distance is what counts rather than the mere fact of it being on the approach.
+                if (theirs.ToS - other.S < Crossing) return false;
+            }
+            return true;
         }
 
         /// <summary>Is the oncoming lane clear enough to turn across?</summary>

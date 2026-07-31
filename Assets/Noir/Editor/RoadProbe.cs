@@ -45,8 +45,38 @@ namespace Noir.Editor
                 "MainroadToRoad_30x30_City", "MainroadToParking_30x30_City",
                 "Sidewalk_30x30_City", "Sidewalk_10x10_City",
                 "Freeway_Straight_30x30_City",
+
+                // The pieces for junctions that are NOT four-way crossings. Every junction in
+                // Northgate is laid with a Cross tile, including the two where a dirt track
+                // dead-ends into a through road - so those crossings have a fourth arm painted
+                // on them that leads into a paddock.
+                "Freeway_T_30x30_City", "Freeway_Turn_30x30_City",
+                "Mainroad_T_30x30_City", "Road_End_10x10_City",
+                "FreewayToMainroad_30x30_City", "FreewayToMainroad_T_30x30_City",
+                "FreewayToMainroad_Cross_30x30_City", "FreewayToMainroad_Exit_30x30_City",
+                "Road_Parking_Corner_10x10_City", "Road_Parking_Entrance_10x10_City",
+                "Road_Parking_Half_10x10_City", "Grass_10x10_City",
             })
                 One(City + n + ".prefab", n);
+
+            // What stands BESIDE the road. The country roads have nothing on their verges at
+            // all, and the pack has nine electric poles - two of which carry a twenty-metre
+            // span of wire, which is the piece that turns a road through a field into a road
+            // somebody built.
+            Debug.Log("=== STREET FURNITURE (verges and junction signs) ===");
+            const string Poles = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Poles City/";
+            const string Signs = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Signs City/";
+            foreach (var n in new[]
+            {
+                Poles + "Pole_Electric_A_City", Poles + "Pole_Electric_B_City",
+                Poles + "Pole_Electric_Double_A_City",
+                Poles + "Pole_Electric_Wire_20m_A_City", Poles + "Pole_Electric_Wire_20m_B_City",
+                Signs + "Sign_Stop_A_City", Signs + "Sign_Stop_B_City",
+                Signs + "Sign_Yield_A_City", Signs + "Sign_Stop_Ahead_A_City",
+                Signs + "Sign_Speed_25_A_City", Signs + "Sign_Destination_Medium_City",
+                Signs + "Sign_Base_City",
+            })
+                One(n + ".prefab", System.IO.Path.GetFileNameWithoutExtension(n));
 
             Debug.Log("=== ROADS FARM (the dirt track kit) ===");
             const string Farm = "Assets/polyperfect/Poly Universal Pack/Prefabs/Farm/Roads Farm/";

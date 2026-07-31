@@ -114,7 +114,31 @@ namespace Noir.Editor
                 }
                 faults += Say("places off the edge of the map", outside);
 
-                // ---- 6. roads that meet without a junction -----------------------------
+                // ---- 6. a car park you cannot drive into --------------------------------
+                //
+                // A surface lot has to touch a road. Placed in the middle of a block it looks
+                // perfectly correct from above and is reachable only by driving across the
+                // pavement, which is exactly the sort of thing that survives a screenshot: the
+                // cars are parked, the tarmac is laid, and there is no way in.
+                var landlocked = new List<string>();
+                foreach (var place in world.AllPlaces)
+                {
+                    if (kinds.Row(place.Kind).Name != "carpark") continue;
+
+                    float nearest = float.MaxValue;
+                    foreach (var line in world.Roads.Lines)
+                    {
+                        if (!line.IsStraight) continue;
+                        nearest = Math.Min(nearest, Gap(place.Bounds, line));
+                    }
+
+                    if (nearest > 4f)
+                        landlocked.Add($"'{place.Name}' at {place.Bounds} is {nearest:0}m from "
+                                     + "the nearest road");
+                }
+                faults += Say("car parks with no way in", landlocked);
+
+                // ---- 7. roads that meet without a junction -----------------------------
                 //
                 // A junction forms only where one road's centre falls INSIDE the other's declared
                 // run. A road stopping one metre short crosses the other with no crossing between
@@ -155,6 +179,27 @@ namespace Noir.Editor
             }
 
             if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
+        /// <summary>
+        /// The shortest distance from a lot to a road's corridor, or zero where they touch.
+        ///
+        /// Both axes matter: a lot beside the road but two hundred metres past the end of it is
+        /// not beside that road at all.
+        /// </summary>
+        private static float Gap(TileRect lot, RoadLine line)
+        {
+            float lo = line.Centre - line.HalfWidth, hi = line.Centre + line.HalfWidth;
+
+            float a = line.IsNorthSouth ? lot.X : lot.Y;
+            float b = a + (line.IsNorthSouth ? lot.W : lot.H);
+            float across = Math.Max(0f, Math.Max(lo - b, a - hi));
+
+            float c = line.IsNorthSouth ? lot.Y : lot.X;
+            float d = c + (line.IsNorthSouth ? lot.H : lot.W);
+            float along = Math.Max(0f, Math.Max(line.From - d, c - line.To));
+
+            return (float)Math.Sqrt(across * across + along * along);
         }
 
         /// <summary>How far a lot reaches into a road's corridor, if at all.</summary>

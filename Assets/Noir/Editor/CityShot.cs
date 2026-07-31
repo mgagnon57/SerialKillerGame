@@ -76,6 +76,8 @@ namespace Noir.Editor
 
                 city = new GameObject("CityAll");
                 CityStreets.Build(world, city.transform);
+                CityParking.Build(world, city.transform);
+                CitySigns.Build(world, city.transform);
                 CityBuildings.Build(world, city.transform);
                 CityRail.Build(world, city.transform);
                 CityFarm.Build(world, city.transform);
@@ -139,48 +141,72 @@ namespace Noir.Editor
                 Snapshot.LightUp(world, fixtures, paneBlock, hour, intensity);
                 fixtures.Lights.Reset();
 
-                // Standing in Northgate Avenue looking east, which is the view the game is
-                // actually played from and the only one that says whether this is a street.
-                // The avenue's centre line is y=75, so Unity z=-75.
-                // EVERY CAMERA STANDS IN A STREET. Northgate Avenue's corridor is y 60..90 and
-                // Second Street's is x 150..180; anywhere else is a sixty-metre block with a
-                // building on it, and Frame() puts the camera a long way BACK from its target -
-                // which is how the last set of these ended up inside a townhouse and inside the
-                // Meridian, photographing wallpaper.
-                Frame(camGo, new Vector3(70f, 1.6f, -75f), 36f, 3f, 90f);
+                // THE TOWN MOVED AND THESE DID NOT. Every camera below used to be aimed at the
+                // city when it sat in the map's north-west corner, so after Northgate was
+                // re-centred on 360..720 the whole set quietly went on photographing empty
+                // fields - a street view of a wheatfield, a "junction" with no junction in it.
+                // The stills said nothing was wrong because there was nothing in them.
+                //
+                // The town is now the middle: paved 360..600, with First Street at x=435,
+                // Second at x=525, Northgate Avenue at y=435 and Franklin at y=525.
+                //
+                // EVERY CAMERA STANDS IN A STREET, a car park or open ground. Frame() puts the
+                // camera a long way BACK from its target, which is how an earlier set ended up
+                // inside a townhouse and inside the Meridian, photographing wallpaper.
+
+                // Standing in Northgate Avenue looking east: the view the game is played from,
+                // and the only one that says whether this is a street.
+                Frame(camGo, new Vector3(470f, 1.6f, -435f), 36f, 3f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-street.png"));
 
-                // The whole city, to see the grid: nine blocks, four junctions.
-                Frame(camGo, new Vector3(120f, 0f, -120f), 265f, 38f, 30f);
+                // The whole town, to see the grid: nine blocks, four signalised junctions.
+                Frame(camGo, new Vector3(480f, 0f, -480f), 300f, 38f, 30f);
                 Capture(cam, Path.Combine(OutputDir, "city-block.png"));
 
                 // The terrace on the north side of Northgate, from the middle of the avenue.
-                Frame(camGo, new Vector3(120f, 1.5f, -62f), 30f, 8f, 20f);
+                Frame(camGo, new Vector3(480f, 1.5f, -420f), 30f, 8f, 0f);
                 Capture(cam, Path.Combine(OutputDir, "city-terrace.png"));
 
-                // Northgate Avenue meeting Second Street: the only place two four-lane arterials
-                // cross, with the Elevated over the top of it. Looking east along the avenue.
-                Frame(camGo, new Vector3(165f, 0f, -75f), 70f, 10f, 90f);
+                // Northgate Avenue meeting Second Street, looking east along the avenue: the
+                // only place two four-lane arterials cross.
+                Frame(camGo, new Vector3(525f, 0f, -435f), 70f, 10f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-corner.png"));
 
-                // Straight down on a junction, to read the lanes, the stop lines and the
-                // signals rather than admire the skyline.
-                Frame(camGo, new Vector3(75f, 0f, -75f), 55f, 45f, 90f);
+                // Straight down on a signalised junction, to read the lanes, the stop lines and
+                // the signals rather than admire the skyline.
+                Frame(camGo, new Vector3(435f, 0f, -435f), 55f, 45f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-junction.png"));
 
-                // Home Farm, from over the dirt track looking west at the yard. The house and
-                // yard are north of the track at y 262..293, the barn and silos south of it.
-                Frame(camGo, new Vector3(30f, 0f, -295f), 70f, 22f, 300f);
+                // A COUNTRY crossroads - westway meeting northway, and the pair that decides
+                // whether taking the lights off the farmland worked. There should be stop signs
+                // on the north-south arms, no signal heads, and no zebra painted on any of it.
+                Frame(camGo, new Vector3(255f, 0f, -255f), 65f, 35f, 90f);
+                Capture(cam, Path.Combine(OutputDir, "country-junction.png"));
+
+                // One stop sign, close, from the north. This is the check that a sign is a sign
+                // and not a plate half-buried in the verge, and that it faces the driver it is
+                // for rather than away from them.
+                Frame(camGo, new Vector3(241f, 1.4f, -238f), 13f, 6f, 180f);
+                Capture(cam, Path.Combine(OutputDir, "country-stop.png"));
+
+                // The precinct car park, which is the biggest of the five and the one with the
+                // cruisers in it.
+                Frame(camGo, new Vector3(467f, 0f, -580f), 75f, 32f, 45f);
+                Capture(cam, Path.Combine(OutputDir, "city-carpark.png"));
+
+                // Where the farm track meets First Street. THREE arms, not four: this junction
+                // used to be laid as a full crossroads with a fourth arm, kerbs and a stop line
+                // painted straight into the paddock.
+                Frame(camGo, new Vector3(435f, 0f, -660f), 75f, 50f, 270f);
+                Capture(cam, Path.Combine(OutputDir, "farm-track.png"));
+
+                // Home Farm, looking west across the yard from the near paddock.
+                Frame(camGo, new Vector3(390f, 0f, -638f), 70f, 22f, 270f);
                 Capture(cam, Path.Combine(OutputDir, "farm-yard.png"));
 
-                // The whole country: city top-left, fields east, farm south.
-                Frame(camGo, new Vector3(180f, 0f, -180f), 400f, 42f, 30f);
+                // The whole map: town in the middle, the ring roads out of it, country beyond.
+                Frame(camGo, new Vector3(480f, 0f, -480f), 700f, 42f, 30f);
                 Capture(cam, Path.Combine(OutputDir, "farm-country.png"));
-
-                // Where the track meets First Street - the edge of town, which is the whole
-                // point of having a country at all.
-                Frame(camGo, new Vector3(75f, 0f, -300f), 80f, 25f, 200f);
-                Capture(cam, Path.Combine(OutputDir, "farm-track.png"));
             }
             catch (Exception ex)
             {

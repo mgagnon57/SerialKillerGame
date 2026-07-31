@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
@@ -78,6 +78,16 @@ namespace Noir.Unity
         private double _tickAccumulator;
         private const int MaxTicksPerFrame = 24000;   // ~20 game minutes; stops a death spiral
 
+        /// <summary>
+        /// Whether the citizens are DRAWN. They are simulated regardless.
+        ///
+        /// Off while the city is being built out. Turning it back on is this one flag: nothing
+        /// downstream of it was deleted, and Sim, Population, the lit windows and the "who is
+        /// inside this building" panel all keep working with it off, because none of them ever
+        /// went through the figures.
+        /// </summary>
+        public static bool ShowPeople = false;
+
         private GameObject _village;
         private XRay _xray;
         private AgentMeshView _agentView;
@@ -150,6 +160,8 @@ namespace Noir.Unity
             var city = new GameObject("City");
             city.transform.SetParent(_village.transform, false);
             CityStreets.Build(World, city.transform);
+            CityParking.Build(World, city.transform);
+            CitySigns.Build(World, city.transform);
             CityBuildings.Build(World, city.transform);
             CityRail.Build(World, city.transform);
             CityFarm.Build(World, city.transform);
@@ -164,7 +176,13 @@ namespace Noir.Unity
             var signals = CitySignals.Create(World, transform);
             CityTraffic.Create(World, transform, signals);
             _xray = XRay.Create(World, _village);
-            _agentView = AgentMeshView.Create(this, transform);
+
+            // The people are SIMULATED either way - Sim ticks, they go to work, windows light
+            // from who is behind them, and clicking a building still says who is in it. This
+            // only decides whether they are DRAWN. Turned off while the city itself is being
+            // built out: a few hundred figures walking through a downtown that is still being
+            // laid is noise over the thing actually being looked at.
+            if (ShowPeople) _agentView = AgentMeshView.Create(this, transform);
             _rig = OrbitCamera.Create(this);
             _lighting = SunRig.Create(this, transform);
 
@@ -254,7 +272,7 @@ namespace Noir.Unity
                 int chunk = (int)Mathf.Min(_skipTicksRemaining, MaxTicksPerFrame);
                 Sim.Tick(chunk);
                 _skipTicksRemaining -= chunk;
-                _agentView.Refresh();
+                if (_agentView != null) _agentView.Refresh();
                 _rig.Tick();
                 return;
             }
@@ -272,7 +290,7 @@ namespace Noir.Unity
                 }
             }
 
-            _agentView.Refresh();
+            if (_agentView != null) _agentView.Refresh();
             _rig.Tick();
         }
 

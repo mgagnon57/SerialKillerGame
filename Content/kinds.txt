@@ -804,6 +804,31 @@ kind farmyard
   catchment no
   describe  yes
 
+# ---- the city, continued ----------------------------------------------------
+# A surface car park. Open ground, and its ground is PATH: it is hard-standing like
+# a farmyard, and saying so is what makes CityStreets leave it alone rather than
+# laying city flagstones and hanging street lamps round it. CityParking owns it and
+# lays the road kit's parking tiles over the top - see the note there about the five
+# Road_Parking pieces that had never been placed.
+#
+# Northgate had a hospital, a casino, a cinema, a school, a police station and a bank
+# and nowhere for a single car to stand still.
+kind carpark
+  words     carpark parking lot
+  form      open
+  ground    path
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
 kind copse
   words     copse wood spinney
   # Ground `wood`, which is the one terrain PropGenerator plants densely - a third

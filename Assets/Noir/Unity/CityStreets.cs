@@ -90,17 +90,42 @@ namespace Noir.Unity
         /// Chosen by REACH rather than by class, because the piece has to fit the junction
         /// tile: dropping a thirty-metre crossing on the ten-metre square where two tracks meet
         /// would overhang the fields by ten metres on every side.
+        ///
+        /// ZEBRAS ONLY WHERE THERE ARE PAVEMENTS. The main-road crossing has a crossing painted
+        /// on all four arms, which is what a signalised town junction looks like and is what
+        /// every junction on the map used to get - so there were pedestrian crossings, with stop
+        /// lines, at crossroads in the middle of a wheatfield with no pavement within four
+        /// hundred metres. Out of town the plain crossing is the honest piece.
         /// </summary>
-        private static string Cross(RoadClass widest, float reach)
+        private static string Cross(RoadClass widest, float reach, bool inTown)
         {
             if (reach < 8f) return Kit + "Road_Cross_10x10_City.prefab";
 
-            // A freeway crossing takes the wide piece; anything else takes the main-road
-            // crossing, which is the only junction in the kit with zebras painted on all four
-            // arms and so the one that reads as signalised.
-            return widest == RoadClass.Freeway
-                ? Kit + "Freeway_Cross_30x30_City.prefab"
-                : Kit + "Mainroad_Cross_Crosswalk_30x30_City.prefab";
+            if (widest == RoadClass.Freeway) return Kit + "Freeway_Cross_30x30_City.prefab";
+
+            return inTown
+                ? Kit + "Mainroad_Cross_Crosswalk_30x30_City.prefab"
+                : Kit + "Mainroad_Cross_30x30_City.prefab";
+        }
+
+        /// <summary>
+        /// The piece for a junction with only THREE arms.
+        ///
+        /// Every junction on the map used to be laid with a four-way crossing whether or not
+        /// there were four roads meeting at it. Both places where a dirt track dead-ends into a
+        /// through road got a full crossroads, so each had a fourth arm painted on it - kerbs,
+        /// stop line and all - running straight into a paddock.
+        ///
+        /// The through road decides the piece, because the through road is most of the tile.
+        /// </summary>
+        private static string Tee(RoadClass through, float reach, bool inTown)
+        {
+            if (reach < 8f) return Kit + "Road_T_10x10_City.prefab";
+            if (through == RoadClass.Freeway) return Kit + "Freeway_T_30x30_City.prefab";
+
+            return inTown
+                ? Kit + "Mainroad_T_Crosswalk_30x30_City.prefab"
+                : Kit + "Mainroad_T_30x30_City.prefab";
         }
 
         /// <summary>
@@ -219,15 +244,54 @@ namespace Noir.Unity
             int tiles = 0, dressing = 0;
 
             // 1. The junctions first, so the straights know which ground is already spoken for.
+            int tees = 0;
             foreach (var j in world.Roads.Junctions)
             {
-                var klass = j.NorthSouth.Class == RoadClass.Freeway || j.EastWest.Class == RoadClass.Freeway
-                    ? RoadClass.Freeway : RoadClass.Mainroad;
-
                 float reach = j.Reach;
-                if (Seat(root.transform, Cross(klass, reach),
-                         j.X - reach, j.Y - reach, reach * 2f, reach * 2f, 0f) != null) tiles++;
+                bool inTown = CitySignals.InTheTown(world, j);
 
+                // WHICH ARMS ACTUALLY EXIST. A road only reaches out of the junction on a side
+                // where its own declared run continues past it - so a track that dead-ends here
+                // contributes one arm, not two, and this is a three-way junction.
+                bool north = j.NorthSouth.From < j.Y - reach;
+                bool south = j.NorthSouth.To   > j.Y + reach;
+                bool west  = j.EastWest.From   < j.X - reach;
+                bool east  = j.EastWest.To     > j.X + reach;
+
+                int arms = (north ? 1 : 0) + (south ? 1 : 0) + (west ? 1 : 0) + (east ? 1 : 0);
+
+                string piece;
+                float yaw = 0f;
+
+                if (arms == 3)
+                {
+                    // The through road is the one with both of its arms; the stem is the odd one.
+                    bool throughIsNorthSouth = north && south;
+                    var through = throughIsNorthSouth ? j.NorthSouth : j.EastWest;
+                    piece = Tee(through.Class, reach, inTown);
+
+                    // The tile is drawn with its through road along x and its stem toward +z,
+                    // which is village NORTH because village y runs into Unity -z. Yaw turns +z
+                    // toward +x, so the yaw simply IS the compass direction of the stem.
+                    yaw = throughIsNorthSouth
+                        ? (west ? 270f : 90f)
+                        : (north ? 0f : 180f);
+                    tees++;
+                }
+                else
+                {
+                    var klass = j.NorthSouth.Class == RoadClass.Freeway
+                             || j.EastWest.Class == RoadClass.Freeway
+                        ? RoadClass.Freeway : RoadClass.Mainroad;
+                    piece = Cross(klass, reach, inTown);
+
+                    if (arms < 3)
+                        Debug.LogWarning($"[streets] the junction at {j.X},{j.Y} has {arms} arms "
+                                       + "and is being laid as a crossing anyway.");
+                }
+
+                if (Seat(root.transform, piece,
+                         j.X - reach, j.Y - reach, reach * 2f, reach * 2f, yaw) != null) tiles++;
             }
 
             // 2. The carriageways.
@@ -239,7 +303,8 @@ namespace Noir.Unity
             dressing += Dress(root.transform, world);
 
             Debug.Log($"[streets] {tiles} road tiles on {world.Roads.Lines.Count} roads and "
-                    + $"{world.Roads.Junctions.Count} junctions, {dressing} pieces of furniture, "
+                    + $"{world.Roads.Junctions.Count} junctions ({tees} of them three-way), "
+                    + $"{dressing} pieces of furniture, "
                     + $"{root.GetComponentsInChildren<Renderer>().Length} renderers.");
 #endif
             return root;
@@ -286,7 +351,11 @@ namespace Noir.Unity
                     { inJunction = true; break; }
                 if (inJunction) continue;
 
-                // Next to a crossing? Then this is where the zebra and the stop line go.
+                // Next to a crossing? Then this is where the zebra and the stop line go - but
+                // ONLY IN THE TOWN. The crosswalk tile paints a pedestrian crossing and a stop
+                // line, and laying it at every junction put both at crossroads in open fields,
+                // where there is no pavement for a pedestrian to cross from and nothing is
+                // required to stop. See CitySignals.InTheTown.
                 bool atCrossing = false;
                 foreach (var j in world.Roads.Junctions)
                 {
@@ -294,7 +363,11 @@ namespace Noir.Unity
                     if (!line.IsNorthSouth && Mathf.Abs(j.Y - line.Centre) > 0.5f) continue;
 
                     float gap = line.IsNorthSouth ? Mathf.Abs(cy - j.Y) : Mathf.Abs(cx - j.X);
-                    if (gap < module * 1.5f) { atCrossing = true; break; }
+                    if (gap >= module * 1.5f) continue;
+                    if (!CitySignals.InTheTown(world, j)) continue;
+
+                    atCrossing = true;
+                    break;
                 }
 
                 string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
@@ -357,7 +430,13 @@ namespace Noir.Unity
             var lamps = Catalogue(CityProps + "/Lamps City", "Lamp_Sidewalk");
             var play = Catalogue(CityProps + "/Playground City", null);
             var skate = Catalogue(CityProps + "/SkatePark City", "Skate_");
-            var signs = Catalogue(CityProps + "/Signs City", "Sign_");
+
+            // ROAD SIGNS ARE NOT KERB DRESSING and are no longer scattered from here. See
+            // CitySigns: this used to catalogue everything beginning with "Sign_", which is two
+            // different kits - the mounted sign AND the bare plate meant to go on a post - and
+            // drop one every fourth cell at a fixed offset facing a fixed direction. Half of
+            // them were discs sunk to their equator in the pavement, and the half that stood up
+            // said "deer crossing" outside the bank.
 
             // What actually stands on a pavement, as against one bin every seventh cell. Each of
             // these is a role rather than a prefab, so the pack's own variants get used: there
@@ -451,7 +530,7 @@ namespace Noir.Unity
                                       || Is(cx, cy + 1, Noir.Core.World.Terrain.Road);
 
                     if (besideAStreet)
-                        n += Kerb(parent, cx, cy, vx, vy, lamps, kerbside, signs, streetTrees);
+                        n += Kerb(parent, cx, cy, vx, vy, lamps, kerbside, streetTrees);
                     // Behind the buildings. Bins, crates, pallets, tyres, and the pipework that
                     // runs up an alley wall.
                     else if (alley.Count > 0 && Materials3D.Scatter(cx, cy, 653) % 3 == 0)
@@ -514,7 +593,7 @@ namespace Noir.Unity
         /// </summary>
         private static int Kerb(Transform parent, int cx, int cy, float vx, float vy,
                                 List<string> lamps, List<List<string>> kerbside,
-                                List<string> signs, List<string> trees)
+                                List<string> trees)
         {
             int n = 0;
 
@@ -545,9 +624,6 @@ namespace Noir.Unity
             if (trees.Count > 0 && Materials3D.Scatter(cx, cy, 641) % 2 == 0)
                 if (Put(parent, Pick(trees, cx, cy, 643), vx + 5f, vy + 5f,
                         Materials3D.Scatter(cx, cy, 647) % 4 * 90f) != null) n++;
-
-            if (signs.Count > 0 && Materials3D.Scatter(cx, cy, 233) % 4 == 0)
-                if (Put(parent, Pick(signs, cx, cy, 239), vx + 8.5f, vy + 1.5f, 180f) != null) n++;
 
             return n;
         }
@@ -617,6 +693,13 @@ namespace Noir.Unity
             switch (KindAt(world, cx, cy))
             {
                 case "farmyard": case "cornfield": case "paddock": case "orchard":
+                    return true;
+
+                // A car park is hard-standing, and its ground is authored as path for exactly
+                // the same reason the farmyard's is. Without this the lots would be paved with
+                // city flagstones and then have street lamps, hydrants and a phone box hung
+                // round their kerbs. See CityParking.
+                case "carpark":
                     return true;
                 default:
                     return false;

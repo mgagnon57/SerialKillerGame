@@ -205,8 +205,8 @@ place restroom 582,390 14x8 "the public conveniences"
   door 588,397
   human Council-green tile and a door that does not lock.
 
-place newsstand 570,410 7x3 "the stand"
-  door 573,412
+place newsstand 545,410 7x3 "the stand"
+  door 548,412
   human Papers, cigarettes, and the man who knows who bought which.
 
 # ---- block WM: the parade ------------------------------------------------
@@ -301,6 +301,34 @@ place cinema 485,565 22x35 "the Rialto"
 place casino 545,545 35x46 "the Regency Rooms"
   door 562,545
   human Open all night, and the carpet is loud enough that nobody notices the hour.
+
+# ---- where the cars stand still -------------------------------------------
+#
+# Northgate had a hospital, a casino, a cinema, a police station, a school and a
+# bank, and not one parking space. The road kit ships five parking tiles and a
+# main road with a parking entrance cut into it, and none of them had ever been
+# placed - so the city's only cars were the ones driving through it.
+#
+# Every lot below is in the LEFTOVER GROUND of a block: the town is nine 60m
+# blocks between corridors at x/y 420..449 and 510..539, and each of these fills a
+# piece of block that no building stands on. They are laid out to be found from
+# the street rather than to be efficient, which is what a surface lot in a small
+# downtown looks like.
+
+place carpark 452,565 30x30 "the precinct lot"
+  human Cruisers nose-in against the fence and everything else parked wherever.
+
+place carpark 540,499 50x10 "the hospital lot"
+  human Full at visiting hours and never emptier than half.
+
+place carpark 580,540 20x50 "behind the Regency"
+  human Nobody parks here who wants to be seen arriving.
+
+place carpark 364,489 50x20 "the Savings lot"
+  human Painted bays, and everybody parks across two of them.
+
+place carpark 562,390 20x30 "the school lot"
+  human Empty by four, apart from whoever is waiting.
 
 # ---- the elevated railway: TAKEN OUT FOR NOW ------------------------------
 # Uncomment to put it back. Nothing else has to change - CityRail walks the map
