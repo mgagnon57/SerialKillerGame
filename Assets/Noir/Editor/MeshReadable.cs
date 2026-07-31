@@ -52,6 +52,7 @@ namespace Noir.Editor
                 CityBuildings.Build(world, probe.transform);
                 CityDistrict.Build(world, probe.transform);
                 CitySuburb.Build(world, probe.transform);
+                CityStory.Build(world, probe.transform);
                 CityRail.Build(world, probe.transform);
                 CityFarm.Build(world, probe.transform);
                 CityPowerlines.Build(world, probe.transform);

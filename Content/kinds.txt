@@ -831,6 +831,60 @@ kind district
   catchment no
   describe  yes
 
+# ---- the places in the country where something happened ---------------------
+# The Survival folder is 174 prefabs and none had ever been placed. It was held
+# back deliberately and the reason was right: where a bear trap goes is a story
+# decision, not a scatter rule. So each of these is AUTHORED, with its own name
+# and its own sentence, which also makes it clickable and describable - a prop
+# rolled onto a tile is none of those things. See CityStory.
+kind memorial
+  words     memorial cross
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind standing
+  words     standing hide treestand
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+kind camp
+  words     camp pitch
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
 # A suburb cell. The same sixty-metre block as a district and a completely
 # different place, because what makes a suburb is not the size of the block - it is
 # the setback and the spacing. CitySuburb stands houses back from the corridor
