@@ -232,6 +232,13 @@ namespace Noir.Unity
         /// bounds. A car is modelled nose-along-z, so its width is its x extent - and if a
         /// prefab turns out not to be, the fallback below is still wider than the 2.8m that was
         /// being used for every vehicle in the pack regardless of what it was.
+        ///
+        /// `sharedMesh.bounds` is in the MESH's own local space, untouched by any transform, so
+        /// it has to be scaled by the mesh filter's OWN lossy scale before it can be added to
+        /// `off` - which is a world-space offset and already carries the scale of every ancestor,
+        /// root included. Skipping this half of the scale left a car's own half-width frozen at
+        /// scale 1 while its offset from the root scaled normally, so a scaled-up prefab measured
+        /// as wider than the original but not as wide as it actually was.
         /// </summary>
         private static float Width(string path)
         {
@@ -244,9 +251,10 @@ namespace Noir.Unity
                 {
                     if (mf.sharedMesh == null) continue;
                     float off = mf.transform.position.x - prefab.transform.position.x;
+                    float scale = mf.transform.lossyScale.x;
                     var b = mf.sharedMesh.bounds;
-                    lo = Mathf.Min(lo, b.min.x + off);
-                    hi = Mathf.Max(hi, b.max.x + off);
+                    lo = Mathf.Min(lo, b.min.x * scale + off);
+                    hi = Mathf.Max(hi, b.max.x * scale + off);
                 }
 
             return _wide[path] = hi > lo ? hi - lo : 3.2f;
