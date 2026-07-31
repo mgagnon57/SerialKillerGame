@@ -226,6 +226,36 @@
   .mark input { accent-color: var(--sodium); width: .95rem; height: .95rem; cursor: pointer; }
 
   /* ---- pull quote ---- */
+  /* ---- worked instructions inside a card ---- */
+  .step {
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--sodium); font-weight: 600;
+    margin: 1.4rem 0 .5rem; padding-top: .9rem; border-top: 1px solid var(--rule);
+  }
+  .scroll { overflow-x: auto; margin: 0 0 1rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  th {
+    font-family: var(--mono); font-size: .66rem; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--muted); font-weight: 600;
+    text-align: left; padding: .35rem .7rem .35rem 0; border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  td {
+    padding: .42rem .7rem .42rem 0; border-bottom: 1px solid var(--rule);
+    vertical-align: top; color: var(--muted);
+  }
+  td strong { color: var(--ink); }
+  tbody tr:last-child td { border-bottom: 0; }
+  .ip {
+    font-family: var(--mono); font-size: .6rem; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--sodium); white-space: nowrap;
+    border: 1px solid var(--sodium); border-radius: 2px; padding: .04rem .28rem;
+    margin-left: .3rem;
+  }
+  ol.steps { margin: 0 0 1rem; padding-left: 1.2rem; font-size: .93rem; }
+  ol.steps li { margin-bottom: .35rem; }
+  ol.steps::marker, ol.steps li::marker { font-family: var(--mono); color: var(--sodium); }
+
   .pull {
     font-family: var(--serif); font-size: 1.2rem; line-height: 1.5;
     border-left: 3px solid var(--sodium);
@@ -331,13 +361,102 @@
     <div class="body">
       <p>
         The pack ships <strong>zero animations and zero animator controllers</strong>. It doesn't
-        need to — a Humanoid rig retargets, so any Mixamo clip drops onto our people. Walk, idle,
-        sit, carry, and the handful of one-shots the day planner wants.
+        need to — a Humanoid rig retargets, so any clip from
+        <a href="https://www.mixamo.com">mixamo.com</a> drops onto our people. That's why the paid
+        animated-people packs are rejected below.
       </p>
+      <p>
+        <strong>There is no bulk download</strong> — Adobe removed pack downloads years ago, so you
+        pick clips one at a time. Fine, because the list is about a dozen rather than hundreds.
+      </p>
+
+      <h4 class="step">Settings on every download</h4>
+      <p>
+        Upload one of our own characters first — any <code>.fbx</code> from
+        <code>Meshes/People</code> — so the preview shows <em>our</em> proportions rather than
+        Mixamo's mannequin. Then per clip:
+      </p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Format</td><td><code>FBX for Unity</code></td><td>not the .dae, not the .glb</td></tr>
+            <tr><td>Skin</td><td><strong>Without Skin</strong></td><td>we have our own characters</td></tr>
+            <tr><td>In&nbsp;Place</td><td><strong>ON</strong></td><td>not a preference — see below</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <dl class="note">
-        <dt>Why it matters</dt>
-        <dd>This solves the whole animation problem for nothing, and it's why the paid
-        animated-people packs are rejected below.</dd>
+        <dt>In Place</dt>
+        <dd><code>Simulation</code> decides where everybody is by pathfinding and
+        <code>AgentMeshView</code> draws them there. A clip with root motion drives the transform
+        <em>itself</em>, so <strong>animation and simulation would fight over the same number</strong>
+        and people would walk off their own paths. Same reasoning as <code>CityTraffic</code> moving
+        a car along its lane coordinate.</dd>
+      </dl>
+
+      <h4 class="step">What to download</h4>
+      <p>
+        Named for the thirteen states in <code>Activity</code>. The mapping is already written into
+        <code>AgentAnimation.cs</code>, and <strong>the code asks for Mixamo's own clip names
+        verbatim</strong> — so name the Animator state exactly what Mixamo called the clip and
+        there's no translation step.
+      </p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Clip</th><th>Covers</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Walking</strong> <span class="ip">in place</span></td><td><code>Walking</code>, <code>TravellingTo</code> — the workhorse</td></tr>
+            <tr><td><strong>Standing Idle</strong></td><td>the fallback for everything, and <code>AtWork</code></td></tr>
+            <tr><td><strong>Running</strong> <span class="ip">in place</span></td><td><code>AtThePlayground</code>, and nothing else</td></tr>
+            <tr><td><strong>Talking</strong></td><td><code>Talking</code></td></tr>
+            <tr><td><strong>Drinking</strong></td><td><code>AtThePub</code></td></tr>
+            <tr><td><strong>Looking Around</strong></td><td><code>Shopping</code></td></tr>
+            <tr><td><strong>Digging</strong></td><td><code>OnTheAllotment</code></td></tr>
+            <tr><td><strong>Sitting Idle</strong></td><td><code>AtChurch</code>, <code>AtSchool</code>, <code>AtHome</code>, <code>Visiting</code></td></tr>
+            <tr><td>a 2nd and 3rd <strong>idle</strong></td><td>so a street isn't a row of identical statues</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <code>Asleep</code> needs nothing — they're indoors, behind a wall, in the dark, and the
+        only thing that shows it is the window not being lit.
+      </p>
+      <p>
+        <strong>Running is the child at play and nobody else.</strong> An adult jogging across
+        Northgate reads as <em>fleeing</em>, which is a story event rather than a commute, and the
+        game shouldn't say that by accident. <code>AgentAnimation</code> enforces it.
+      </p>
+
+      <h4 class="step">Into Unity</h4>
+      <p>Drop the FBXs in <code>Assets/Noir/Animations/</code>, then per file:</p>
+      <ol class="steps">
+        <li><strong>Rig</strong> tab → Animation Type <strong>Humanoid</strong>, Avatar Definition
+        <strong>Create From This Model</strong>, Apply.</li>
+        <li><strong>Animation</strong> tab → tick <strong>Loop Time</strong> on the cycles; leave it
+        off for one-shots.</li>
+        <li>No materials to sort out, because you downloaded without skin.</li>
+      </ol>
+      <p>
+        Mecanim retargets through the Humanoid abstraction, so a clip authored on Mixamo's skeleton
+        plays correctly on our people despite a different height and build.
+        <strong>No scaling needed.</strong>
+      </p>
+
+      <dl class="note">
+        <dt>Know first</dt>
+        <dd>The <strong>player</strong> probably doesn't need Mixamo at all — Starter Assets ships
+        its own locomotion. Mixamo is for the <em>townspeople's</em> activity states.</dd>
+        <dt>Gotcha</dt>
+        <dd><strong>One of the 79 characters isn't Humanoid.</strong> It will silently fail to
+        retarget until its import setting is changed — worth knowing so it reads as a settings
+        problem rather than a broken clip.</dd>
+        <dt>Lands in</dt>
+        <dd><code>AgentAnimation.Drive</code>, already wired and inert: it returns immediately on a
+        null Animator, a missing controller, or a state that doesn't exist. <strong>The city keeps
+        running while the set is half imported</strong>, which is what makes importing one clip at
+        a time possible.</dd>
       </dl>
     </div>
     <label class="mark"><input type="checkbox" data-id="mixamo"> Reviewed</label>

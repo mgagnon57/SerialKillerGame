@@ -1,5 +1,6 @@
 using UnityEngine;
 using Noir.Core.Contracts;
+using Noir.Core.People;
 
 namespace Noir.Unity
 {
@@ -196,6 +197,20 @@ namespace Noir.Unity
                 }
 
                 _figures[i].Pose(ground, _yaw[i], _phase[i], _swing[i], agent.Carrying);
+
+                // WHERE THE BOUGHT ANIMATION WILL LAND. The primitive figure above swings its own
+                // legs off `_phase` and needs none of this; a rigged character does, and the
+                // simulation state it needs - what this person is doing, and whether they are on
+                // the move - is only assembled here. So the call is made now, against whatever
+                // Animator a figure may or may not have, and AgentAnimation.Drive returns
+                // immediately when there is nothing to drive. Costs a null check per person per
+                // frame until the clips exist, and means importing them is a download rather than
+                // a refactor. See docs/ASSETS.md.
+                //
+                // Running is the child at play and nothing else: an adult jogging across
+                // Northgate reads as fleeing, which is a story event rather than a commute.
+                AgentAnimation.Drive(_figures[i].Animator, agent.Doing, walking,
+                                     hurrying: agent.Doing == Activity.AtThePlayground);
             }
         }
 

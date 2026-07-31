@@ -47,12 +47,86 @@ AND SOUND, not surface detail.
   street level and WASD. What is actually missing today is a visible BODY, an animated walk and a
   camera that follows it - which is exactly what this is.
 
-- [ ] **Mixamo animations** — free (Adobe account).
+- [ ] **Mixamo animations** — free (Adobe account), [mixamo.com](https://www.mixamo.com).
 
   The pack ships **zero animations and zero animator controllers**. It does not need to: a Humanoid
-  rig retargets, so any Mixamo clip drops onto our people. Walk, idle, sit, carry, and the handful
-  of one-shots the day planner would want. This is the whole animation problem solved for nothing,
-  and it is why the paid animated-people packs are in DO NOT BUY.
+  rig retargets, so any Mixamo clip drops onto our people. This is the whole animation problem
+  solved for nothing, and it is why the paid animated-people packs are in DO NOT BUY.
+
+  **There is no bulk download.** Adobe removed pack downloads years ago; you pick clips one at a
+  time. That is fine, because the list below is about a dozen rather than hundreds.
+
+  ### Three settings on every download
+
+  Upload one of our own characters first - any `.fbx` from `Meshes/People` - so the preview shows
+  OUR proportions rather than Mixamo's mannequin. Then per clip:
+
+  | setting | value | why |
+  |---|---|---|
+  | Format | `FBX for Unity (.fbx)` | not the .dae, not the .glb |
+  | Skin | **Without Skin** | we have our own characters; the skin is weight for nothing |
+  | **In Place** | **ON** for anything locomotive | see below - this one is not a preference |
+
+  **WHY IN PLACE IS NOT OPTIONAL HERE.** `Simulation` decides where everybody is by pathfinding and
+  `AgentMeshView` draws them at the position it computed. A clip carrying root motion drives the
+  transform ITSELF, so the animation and the simulation would fight over the same number and people
+  would walk off their own paths. In-place clips animate the legs and leave position to the sim.
+  Same reasoning as `CityTraffic` moving a car along its lane coordinate rather than letting
+  anything else push it about.
+
+  ### What to download
+
+  Named for the thirteen states in `Activity` (see `Core/People/DayPlan.cs`), and the mapping is
+  already written down in `Assets/Noir/Unity/AgentAnimation.cs` - **the code asks for Mixamo's own
+  clip names verbatim**, so there is no translation step between what you downloaded and what it
+  wants. Name the Animator state exactly what Mixamo called the clip.
+
+  | clip | covers |
+  |---|---|
+  | **Walking** (in place) | `Walking`, `TravellingTo` - the workhorse |
+  | **Standing Idle** | the fallback for everything, and `AtWork` |
+  | **Running** (in place) | `AtThePlayground`, and NOTHING else - see the note below |
+  | **Talking** | `Talking` |
+  | **Drinking** | `AtThePub` |
+  | **Looking Around** | `Shopping` |
+  | **Digging** | `OnTheAllotment` |
+  | **Sitting Idle** | `AtChurch`, `AtSchool`, `AtHome`, `Visiting` |
+  | a second and third **idle** | so a street is not a row of identical statues |
+
+  `Asleep` needs nothing. They are indoors, behind a wall, in the dark, and the only thing that
+  ever shows it is the window not being lit.
+
+  RUNNING IS THE CHILD AT PLAY AND NOBODY ELSE. An adult jogging across Northgate reads as
+  fleeing, which is a story event rather than a commute, and this game should not say that by
+  accident. `AgentAnimation` enforces it.
+
+  ### Into Unity
+
+  Drop the FBXs in `Assets/Noir/Animations/`, then per file:
+
+  1. **Rig** tab -> Animation Type **Humanoid**, Avatar Definition **Create From This Model**, Apply.
+  2. **Animation** tab -> tick **Loop Time** on the cycles (walk, run, idle); leave it off for
+     one-shots.
+  3. No materials to sort out, because you downloaded without skin.
+
+  Mecanim retargets through the Humanoid abstraction, so a clip authored on Mixamo's skeleton plays
+  correctly on our people despite them being a different height and build. **No scaling needed.**
+
+  ### Two things to know before starting
+
+  - **The player probably does not need Mixamo at all.** Unity Starter Assets ships its own
+    walk/run/idle/jump already wired to a controller. Mixamo is for the TOWNSPEOPLE's activity
+    states, which is the thing Starter Assets cannot give you.
+  - **One of the 79 characters is not Humanoid.** 78 are `animationType: 3` and one is not.
+    Whichever it is will silently fail to retarget until its import setting is changed - worth
+    knowing so it reads as a settings problem rather than a broken clip.
+
+  ### Where it lands
+
+  Already wired and inert until the clips exist: `AgentAnimation.Drive` returns immediately on a
+  null Animator, a missing controller, or a state the controller does not have, and
+  `AgentFigure.Animator` is null for the primitive figures we draw today. So the city keeps running
+  while the set is half imported, which is what makes importing one clip at a time possible at all.
 
 ---
 

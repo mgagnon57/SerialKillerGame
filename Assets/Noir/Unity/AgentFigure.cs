@@ -201,6 +201,18 @@ namespace Noir.Unity
         /// <summary>The whole figure. Moved and turned once per frame; everything else is local.</summary>
         public Transform Root { get; private set; }
 
+        /// <summary>
+        /// The figure's Animator, or NULL - which is what a figure built from primitives has and
+        /// always will have.
+        ///
+        /// It exists so `AgentMeshView` can hand every person to `AgentAnimation.Drive` without
+        /// caring which sort of figure it is. A primitive swings its legs off a phase angle and
+        /// answers null here; a rigged character bought from the pack answers with its Animator
+        /// and gets a clip. The seam is one property rather than a branch in the render loop,
+        /// which is what makes swapping the body a swap rather than a rewrite.
+        /// </summary>
+        public Animator Animator { get; private set; }
+
         private Transform _legL, _legR, _armL, _armR, _bag;
         private GameObject _bagObject;
         private MeshRenderer _torsoRenderer, _legLRenderer, _legRRenderer, _armLRenderer, _armRRenderer;
