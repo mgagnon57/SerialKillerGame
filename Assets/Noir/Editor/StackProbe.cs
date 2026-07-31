@@ -103,6 +103,168 @@ namespace Noir.Editor
             return Rect.MinMaxRect(x0, y0, Mathf.Max(x0, x1), Mathf.Max(y0, y1));
         }
 
+        /// <summary>
+        /// A real residential frontage in the real city, close, at noon.
+        ///
+        /// The isolated stacks come out right, so whatever is wrong is something the city does
+        /// that building one on empty ground does not. This photographs an actual district block's
+        /// OUTWARD face - the side that gets a residential ground floor rather than a shopfront,
+        /// because the shopfronts face in towards town - from the middle of the ring road.
+        ///
+        ///   Unity.exe -batchmode -quit -projectPath . -executeMethod Noir.Editor.StackProbe.Frontage
+        /// </summary>
+        [MenuItem("Noir/Probe A Real Residential Frontage")]
+        public static void Frontage()
+        {
+            GameObject root = null, camGo = null, sunGo = null;
+            try
+            {
+                Directory.CreateDirectory(Out);
+
+                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
+                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
+                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+
+                root = new GameObject("CityProbe");
+                CityStreets.Build(world, root.transform);
+                CityBuildings.Build(world, root.transform);
+                CityDistrict.Build(world, root.transform);
+
+                sunGo = new GameObject("Sun");
+                var sun = sunGo.AddComponent<Light>();
+                sun.type = LightType.Directional;
+                sun.shadows = LightShadows.Soft;
+                sun.intensity = 1.15f;
+                sunGo.transform.rotation = Quaternion.Euler(52f, 150f, 0f);
+                RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+                RenderSettings.ambientLight = new Color(0.5f, 0.52f, 0.56f);
+                RenderSettings.fog = false;
+
+                camGo = new GameObject("Cam");
+                var cam = camGo.AddComponent<Camera>();
+                cam.fieldOfView = 55f;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = new Color(0.62f, 0.72f, 0.85f);
+                cam.farClipPlane = 800f;
+
+                // "Westway at Northway" is the block at 390,390. Its WEST face looks out at the
+                // ring road, so that side is residential. Stand on the ring and look at it.
+                camGo.transform.position = new Vector3(370f, 5f, -420f);
+                camGo.transform.LookAt(new Vector3(392f, 7f, -420f));
+                Shoot(cam, Path.Combine(Out, "probe-city-frontage.png"));
+
+                // And obliquely along the same run, which is where a mass standing proud of the
+                // wall separates from it.
+                camGo.transform.position = new Vector3(372f, 4f, -452f);
+                camGo.transform.LookAt(new Vector3(391f, 6f, -410f));
+                Shoot(cam, Path.Combine(Out, "probe-city-oblique.png"));
+
+                Debug.Log("[stack] wrote probe-city-frontage.png and probe-city-oblique.png");
+
+                // HOW FAR DOES ANYTHING STAND OUTSIDE ITS OWN BLOCK? A district lot is the block,
+                // and a perimeter building is seated with its FACED front on the block's edge - so
+                // nothing should reach past it by more than a cornice. Anything that reaches
+                // metres past is standing in the street.
+                var blocks = new List<TileRect>();
+                foreach (var pl in world.AllPlaces)
+                    if (PlaceKindTable.Current.Row(pl.Kind).Name == "district") blocks.Add(pl.Bounds);
+
+                float worst = 0f; string where = "nothing";
+                int over = 0;
+
+                var district = GameObject.Find("CityDistrict");
+                if (district != null)
+                foreach (Transform child in district.transform)
+                {
+                    var rends = child.GetComponentsInChildren<Renderer>();
+                    if (rends.Length == 0) continue;
+                    var b = rends[0].bounds;
+                    for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+                    // village coords
+                    float x0 = b.min.x, x1 = b.max.x, y0 = -b.max.z, y1 = -b.min.z;
+
+                    foreach (var blk in blocks)
+                    {
+                        // Only judge it against the block it belongs to.
+                        float cx = (x0 + x1) * 0.5f, cy = (y0 + y1) * 0.5f;
+                        if (cx < blk.X || cx > blk.X + blk.W || cy < blk.Y || cy > blk.Y + blk.H) continue;
+
+                        float outBy = Mathf.Max(
+                            Mathf.Max(blk.X - x0, x1 - (blk.X + blk.W)),
+                            Mathf.Max(blk.Y - y0, y1 - (blk.Y + blk.H)));
+
+                        if (outBy > 1.0f) over++;
+                        if (outBy > worst)
+                        {
+                            worst = outBy;
+                            where = $"{child.name} reaches {outBy:0.00}m outside block "
+                                  + $"{blk.X},{blk.Y}";
+                        }
+                        break;
+                    }
+                }
+
+                Debug.Log($"[outside] {over} buildings stand more than a metre outside their own "
+                        + $"block. Worst: {where}");
+
+                // IS THE BRICK ON THE BUILDING LINE, OR THE TAIL? For the west run of one block,
+                // measure both. If the faced front sits metres behind the block edge while the
+                // raw front sits on it, then Seat is aligning the unfaced tail after all.
+                int shown = 0;
+                if (district != null)
+                foreach (Transform child in district.transform)
+                {
+                    if (!child.name.StartsWith("Squarehouse_390_")
+                        && !child.name.StartsWith("Bayhouse_390_")) continue;
+                    if (shown++ >= 4) break;
+
+                    Bounds raw = default, faced = default;
+                    bool anyRaw = false, anyFaced = false;
+
+                    foreach (var mf in child.GetComponentsInChildren<MeshFilter>())
+                    {
+                        var mesh = mf.sharedMesh;
+                        var mr = mf.GetComponent<MeshRenderer>();
+                        if (mesh == null || mr == null) continue;
+                        var mats = mr.sharedMaterials;
+                        var verts = mesh.vertices;
+
+                        for (int s = 0; s < mesh.subMeshCount; s++)
+                        {
+                            var mat = s < mats.Length ? mats[s] : null;
+                            bool universal = mat == null ||
+                                mat.name.StartsWith("M_Universal_A", StringComparison.Ordinal);
+
+                            foreach (var idx in mesh.GetTriangles(s))
+                            {
+                                var w = mf.transform.TransformPoint(verts[idx]);
+                                if (!anyRaw) { raw = new Bounds(w, Vector3.zero); anyRaw = true; }
+                                else raw.Encapsulate(w);
+                                if (universal) continue;
+                                if (!anyFaced) { faced = new Bounds(w, Vector3.zero); anyFaced = true; }
+                                else faced.Encapsulate(w);
+                            }
+                        }
+                    }
+                    if (!anyRaw) continue;
+
+                    Debug.Log($"[line] {child.name}: block edge x=390, "
+                            + $"raw front x={raw.min.x:0.00}, faced front x={faced.min.x:0.00}, "
+                            + $"tail stands {faced.min.x - raw.min.x:0.00}m proud of the brick");
+                }
+            }
+            catch (Exception ex) { Debug.LogError("[stack] FAILED: " + ex); }
+            finally
+            {
+                if (camGo != null) UnityEngine.Object.DestroyImmediate(camGo);
+                if (sunGo != null) UnityEngine.Object.DestroyImmediate(sunGo);
+                if (root != null) UnityEngine.Object.DestroyImmediate(root);
+            }
+
+            if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
         [MenuItem("Noir/Probe One Townhouse Stack")]
         public static void Run()
         {
