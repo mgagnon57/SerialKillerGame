@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northgate — assets worth buying</title>
+<style>*,*::before,*::after{box-sizing:border-box}</style>
+</head>
+<body>
+
+<style>
+  :root {
+    --paper:  #E9EBEF;
+    --card:   #FCFDFE;
+    --ink:    #141922;
+    --muted:  #5C6675;
+    --rule:   #CFD5DD;
+    --sodium: #B46813;
+    --brick:  #9E3936;
+    --moss:   #2C6B50;
+    --shadow: 0 1px 2px rgba(20,25,34,.06), 0 8px 24px rgba(20,25,34,.05);
+
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono:  ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:  #12151A;
+      --card:   #191E26;
+      --ink:    #E7EAEE;
+      --muted:  #97A1AF;
+      --rule:   #2A313B;
+      --sodium: #F0A64A;
+      --brick:  #D4635F;
+      --moss:   #62B98B;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:  #12151A;
+    --card:   #191E26;
+    --ink:    #E7EAEE;
+    --muted:  #97A1AF;
+    --rule:   #2A313B;
+    --sodium: #F0A64A;
+    --brick:  #D4635F;
+    --moss:   #62B98B;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+
+  :root[data-theme="light"] {
+    --paper:  #E9EBEF;
+    --card:   #FCFDFE;
+    --ink:    #141922;
+    --muted:  #5C6675;
+    --rule:   #CFD5DD;
+    --sodium: #B46813;
+    --brick:  #9E3936;
+    --moss:   #2C6B50;
+    --shadow: 0 1px 2px rgba(20,25,34,.06), 0 8px 24px rgba(20,25,34,.05);
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 1.25rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 45rem; margin: 0 auto; }
+
+  /* ---- masthead ---- */
+  .top { padding: 4rem 0 2rem; border-bottom: 1px solid var(--rule); }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--sodium);
+    margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.1rem, 6vw, 3rem);
+    line-height: 1.1;
+    letter-spacing: -.015em;
+    text-wrap: balance;
+    margin: 0 0 1rem;
+  }
+  .standfirst {
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0;
+    max-width: 34rem;
+  }
+
+  /* ---- section headings ---- */
+  h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.6rem;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+    margin: 3.5rem 0 .35rem;
+  }
+  .sub { color: var(--muted); font-size: .95rem; margin: 0 0 1.5rem; max-width: 34rem; }
+
+  p { margin: 0 0 1rem; }
+  a { color: var(--sodium); text-underline-offset: .18em; }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--sodium); outline-offset: 3px; border-radius: 2px;
+  }
+  code, .mono { font-family: var(--mono); font-size: .87em; }
+
+  /* ---- the four gates ---- */
+  .gates { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+  .gate {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1rem 1.1rem;
+  }
+  .gate h3 {
+    font-family: var(--mono);
+    font-size: .74rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--sodium);
+    margin: 0 0 .45rem;
+    font-weight: 600;
+  }
+  .gate p { font-size: .9rem; margin: 0; color: var(--muted); }
+  .gate strong { color: var(--ink); font-weight: 600; }
+
+  /* ---- filter bar ---- */
+  .bar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px);
+    padding: .8rem 0;
+    margin: 2.5rem 0 1.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar .lbl {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); margin-right: .35rem;
+  }
+  .bar button {
+    font-family: var(--mono); font-size: .74rem; letter-spacing: .04em;
+    color: var(--muted); background: transparent;
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: .3rem .7rem; cursor: pointer;
+  }
+  .bar button:hover { color: var(--ink); border-color: var(--muted); }
+  .bar button[aria-pressed="true"] {
+    color: var(--paper); background: var(--ink); border-color: var(--ink);
+  }
+  .count { margin-left: auto; font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+
+  /* ---- item cards ---- */
+  .item {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--stripe, var(--rule));
+    border-radius: 3px;
+    padding: 1.15rem 1.3rem;
+    margin: 0 0 .75rem;
+    box-shadow: var(--shadow);
+  }
+  .item[data-verdict="free"]   { --stripe: var(--moss); }
+  .item[data-verdict="buy"]    { --stripe: var(--sodium); }
+  .item[data-verdict="maybe"]  { --stripe: var(--muted); }
+  .item[data-verdict="no"]     { --stripe: var(--brick); }
+  .item.hide { display: none; }
+  .item.done { opacity: .5; }
+
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; }
+  .name {
+    font-family: var(--serif); font-size: 1.16rem; font-weight: 400;
+    margin: 0; flex: 1 1 14rem; letter-spacing: -.005em;
+  }
+  .item[data-verdict="no"] .name { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--muted); }
+  .price {
+    font-family: var(--mono); font-size: .82rem; font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+  .chip {
+    font-family: var(--mono); font-size: .64rem; letter-spacing: .11em;
+    text-transform: uppercase; font-weight: 600;
+    padding: .18rem .5rem; border-radius: 2px; white-space: nowrap;
+    color: var(--paper); background: var(--stripe);
+  }
+  .body { margin-top: .7rem; font-size: .95rem; }
+  .body p:last-child { margin-bottom: 0; }
+  .body strong { font-weight: 600; }
+
+  .note {
+    display: grid; grid-template-columns: 6.5rem 1fr; gap: .2rem .8rem;
+    margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--rule);
+    font-size: .87rem;
+  }
+  .note dt {
+    font-family: var(--mono); font-size: .67rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding-top: .22rem;
+  }
+  .note dd { margin: 0; color: var(--muted); }
+  .note dd strong { color: var(--ink); }
+
+  .mark {
+    display: inline-flex; align-items: center; gap: .45rem;
+    margin-top: .9rem; font-family: var(--mono); font-size: .7rem;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+    cursor: pointer; user-select: none;
+  }
+  .mark input { accent-color: var(--sodium); width: .95rem; height: .95rem; cursor: pointer; }
+
+  /* ---- pull quote ---- */
+  .pull {
+    font-family: var(--serif); font-size: 1.2rem; line-height: 1.5;
+    border-left: 3px solid var(--sodium);
+    padding: .2rem 0 .2rem 1.25rem; margin: 2rem 0;
+    color: var(--ink);
+  }
+  .pull span { color: var(--muted); display: block; font-size: .95rem; margin-top: .5rem; }
+
+  .foot {
+    margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule);
+    font-size: .87rem; color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .item { transition: opacity .18s ease; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">Northgate · researched 31 July 2026</p>
+    <h1>Assets worth buying</h1>
+    <p class="standfirst">
+      Nothing here has been bought and nothing here is a commitment. The rejected half is the
+      useful half — it is where the reasons are.
+    </p>
+  </header>
+
+  <h2>The four filters</h2>
+  <p class="sub">
+    Every suggestion has been through these, and they are why several obvious-looking assets are
+    in the rejected list rather than the recommended one.
+  </p>
+
+  <div class="gates">
+    <div class="gate">
+      <h3>URP, Unity 6</h3>
+      <p>The project is on <strong>Unity 6000.3</strong> with the Universal Render Pipeline. An
+      HDRP-only or Built-in-only asset is not a candidate whatever else it does.</p>
+    </div>
+    <div class="gate">
+      <h3>Survives the chunker</h3>
+      <p><code>CityChunker</code> combines about <strong>51,000 renderers into 5,200</strong> and
+      does it by destroying the originals. Anything needing a live script on a piece of scenery
+      does not survive. Camera effects, audio and controllers are fine.</p>
+    </div>
+    <div class="gate">
+      <h3>Doesn't replace ours</h3>
+      <p><code>CityTraffic</code>, <code>LaneGraph</code>, <code>SunRig</code> and
+      <code>CityDistrict</code> are covered by the PlayMode suite. Buying over the top trades
+      <strong>tested code for untested code</strong>.</p>
+    </div>
+    <div class="gate">
+      <h3>Stylised, not photoreal</h3>
+      <p>The whole city is mapped onto one flat-colour swatch atlas. A photoreal material next to
+      that reads as a mistake, not as detail. What sells this world is
+      <strong>light, weather, motion and sound</strong>.</p>
+    </div>
+  </div>
+
+  <nav class="bar" aria-label="Filter by verdict">
+    <span class="lbl">Show</span>
+    <button data-f="all" aria-pressed="true">Everything</button>
+    <button data-f="free" aria-pressed="false">Free</button>
+    <button data-f="buy" aria-pressed="false">Recommended</button>
+    <button data-f="maybe" aria-pressed="false">Consider</button>
+    <button data-f="no" aria-pressed="false">Rejected</button>
+    <span class="count" id="count"></span>
+  </nav>
+
+  <h2>Do these first — they cost nothing</h2>
+
+  <article class="item" data-verdict="free">
+    <div class="head">
+      <h3 class="name">Unity Starter Assets — ThirdPerson</h3>
+      <span class="price">free</span>
+      <span class="chip">Free</span>
+    </div>
+    <div class="body">
+      <p>
+        The controllable person. The reason to start here rather than with a paid controller is
+        measured: <strong>78 of our 79 characters are already imported as Humanoid rigs</strong>,
+        and Starter Assets drives any Humanoid. It should be walking around Northgate in an
+        afternoon, and it brings a Cinemachine third-person camera with it.
+      </p>
+      <dl class="note">
+        <dt>Touches</dt>
+        <dd>A controllable agent alongside <code>OrbitCamera</code>, which already does Tab to
+        street level and WASD. What's actually missing is <strong>a visible body, an animated walk
+        and a camera that follows it</strong>.</dd>
+      </dl>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="starter"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="free">
+    <div class="head">
+      <h3 class="name">Mixamo animations</h3>
+      <span class="price">free</span>
+      <span class="chip">Free</span>
+    </div>
+    <div class="body">
+      <p>
+        The pack ships <strong>zero animations and zero animator controllers</strong>. It doesn't
+        need to — a Humanoid rig retargets, so any Mixamo clip drops onto our people. Walk, idle,
+        sit, carry, and the handful of one-shots the day planner wants.
+      </p>
+      <dl class="note">
+        <dt>Why it matters</dt>
+        <dd>This solves the whole animation problem for nothing, and it's why the paid
+        animated-people packs are rejected below.</dd>
+      </dl>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="mixamo"> Reviewed</label>
+  </article>
+
+  <h2>Atmosphere</h2>
+  <p class="sub">The biggest gain per pound, because it works with the art style instead of against it.</p>
+
+  <article class="item" data-verdict="buy">
+    <div class="head">
+      <h3 class="name">HAZE — Volumetric Fog &amp; Lighting for URP</h3>
+      <span class="price">~$40</span>
+      <span class="chip">Top pick</span>
+    </div>
+    <div class="body">
+      <p>
+        Light shafts under the street lamps. We have just replaced the cylinder-and-box lamp posts
+        with the pack's own <code>Lamp_Street_*</code>, each carrying a real point light, and
+        <strong>a wet street at 22:00 with cones of light down it</strong> is the single biggest
+        mood gain available to this project.
+      </p>
+      <dl class="note">
+        <dt>Watch for</dt>
+        <dd>It composites with <code>PostFx</code> — check the two aren't both grading the image.</dd>
+      </dl>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="haze"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="buy">
+    <div class="head">
+      <h3 class="name">COZY: Stylized Weather 3</h3>
+      <span class="price">~$60</span>
+      <span class="chip">Recommended</span>
+    </div>
+    <div class="body">
+      <p>
+        Rain, snow, seasons — and explicitly <em>stylised</em>, which is why it sits above Enviro.
+        Rain on the asphalt at night is most of the look for very little work.
+      </p>
+      <dl class="note">
+        <dt>Watch for</dt>
+        <dd>It wants to own time of day. <code>SunRig</code> already drives sun angle, fog colour
+        and ambient off <code>Sim.Clock</code>, deliberately, so that how fast the day passes is a
+        property of the game. <strong>Give COZY the weather and keep the clock ours.</strong></dd>
+      </dl>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="cozy"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="maybe">
+    <div class="head">
+      <h3 class="name">Altos — Volumetric Clouds, Skybox &amp; Weather</h3>
+      <span class="price">~$50</span>
+      <span class="chip">Consider</span>
+    </div>
+    <div class="body">
+      <p>
+        Volumetric clouds, which now have <strong>270 metres of open country on every side</strong>
+        to be seen over. Overlaps COZY on weather — pick one, not both.
+      </p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="altos"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="no">
+    <div class="head">
+      <h3 class="name">Enviro 3 — Sky and Weather</h3>
+      <span class="price">~$80</span>
+      <span class="chip">Rejected</span>
+    </div>
+    <div class="body">
+      <p>
+        The most complete of the four, and the one I would not take: it wants to replace
+        <code>SunRig</code> wholesale. <code>SunRig</code> is what lights the windows when somebody
+        is home, glows the lamp lenses, and is wired to the simulation clock.
+      </p>
+      <dl class="note">
+        <dt>Revisit if</dt>
+        <dd>We ever want its whole system rather than a piece of it.</dd>
+      </dl>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="enviro"> Reviewed</label>
+  </article>
+
+  <h2>Audio</h2>
+  <p class="sub">There is currently none at all — <code>OVERNIGHT.md</code> has said so since the beginning.</p>
+
+  <article class="item" data-verdict="buy">
+    <div class="head">
+      <h3 class="name">Footsteps Pack</h3>
+      <span class="price">~$30</span>
+      <span class="chip">Recommended</span>
+    </div>
+    <div class="body">
+      <p>
+        3,011 samples across concrete, grass, mud, gravel, water, metal and snow.
+      </p>
+      <dl class="note">
+        <dt>Nearly free</dt>
+        <dd>The map already knows the terrain of every tile, so
+        <code>world.Grid.TerrainAt</code> picks the surface and the sample follows.
+        <strong>Every other game has to author that mapping by hand.</strong></dd>
+      </dl>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="steps"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="buy">
+    <div class="head">
+      <h3 class="name">Ambient Sounds — Interactive Soundscapes</h3>
+      <span class="price">~$45</span>
+      <span class="chip">Recommended</span>
+    </div>
+    <div class="body">
+      <p>
+        Global, 1D, 2D and 3D zones — which maps straight onto what the map already is: downtown,
+        the suburb ring, the country frame, and the individual places inside them.
+      </p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="ambient"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="maybe">
+    <div class="head">
+      <h3 class="name">City Ambience Sound</h3>
+      <span class="price">~$20</span>
+      <span class="chip">Consider</span>
+    </div>
+    <div class="body">
+      <p>Raw material for the zones above, if the soundscape tool needs feeding.</p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="cityamb"> Reviewed</label>
+  </article>
+
+  <h2>People</h2>
+  <p class="sub">
+    79 rigged humanoids, of which about 22 are in register for an ordinary town — ten Slavic, nine
+    Steampunk, two Farm, four of the film crew.
+  </p>
+
+  <article class="item" data-verdict="maybe">
+    <div class="head">
+      <h3 class="name">PolyActors — Modular City People</h3>
+      <span class="price">~$50</span>
+      <span class="chip">Consider</span>
+    </div>
+    <div class="body">
+      <p>
+        Same publisher, so the style will match. The only people pack worth considering — and
+        <strong>not for variety</strong>, which is already solved. Buy this if the Slavic and
+        Steampunk register bothers you once there are figures on screen and you want ordinary
+        modern clothes: suits, overalls, shop coats.
+      </p>
+      <dl class="note">
+        <dt>Nothing fixes</dt>
+        <dd>There is <strong>no elderly figure anywhere in the pack</strong>, so
+        <code>AgeBand</code> expresses adult and child and nothing else whatever we buy.</dd>
+      </dl>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="polyactors"> Reviewed</label>
+  </article>
+
+  <blockquote class="pull">
+    A person's coat colour is a UV coordinate, not a texture.
+    <span>
+      <code>Universal_A_Alb</code> is a labelled swatch grid — each row a role (primary, secondary,
+      tertiary, hair, skin, hide), each row a ramp of about sixteen shades.
+      <code>Man_Slavic_Summer_Hair</code> puts 2,841 vertices on 27 cells across 10 roles. Moving
+      one along its own row recolours that garment and nothing else. Four roles at sixteen shades
+      is 65,536 looks from one prefab, against a population of 365 — so no two people ever match,
+      and it costs nothing.
+    </span>
+  </blockquote>
+
+  <h2>Rejected, and why</h2>
+  <p class="sub">The half worth reading twice.</p>
+
+  <article class="item" data-verdict="no">
+    <div class="head">
+      <h3 class="name">Crowd &amp; pedestrian systems</h3>
+      <span class="price">various</span>
+      <span class="chip">Rejected</span>
+    </div>
+    <div class="body">
+      <p>
+        These simulate <strong>wandering</strong>. Our people don't wander — they have day plans and
+        go to named places, and <code>Agent.At</code> is a <code>PlaceId</code>. A crowd system
+        would fight the simulation rather than serve it. What we need is locomotion animation, which
+        is free, and a NavMesh, which is built in.
+      </p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="crowd"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="no">
+    <div class="head">
+      <h3 class="name">Traffic systems</h3>
+      <span class="price">various</span>
+      <span class="chip">Rejected</span>
+    </div>
+    <div class="body">
+      <p>
+        <code>CityTraffic</code> and <code>LaneGraph</code> are ours and are covered by the PlayMode
+        suite. The give-way and junction-claim work landed on 31 July after four wrong theories.
+        <strong>Replacing tested code with untested code is a bad trade at any price.</strong>
+      </p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="traffic"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="no">
+    <div class="head">
+      <h3 class="name">Low Poly Animated People</h3>
+      <span class="price">~$30</span>
+      <span class="chip">Rejected</span>
+    </div>
+    <div class="body">
+      <p>
+        120 rigged characters with animations, but <strong>500–1,000 vertices against our
+        ~2,800</strong> — they won't stand next to the Universal people. And we don't need the
+        animations: our rigs are Humanoid and Mixamo is free.
+      </p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="lpap"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="no">
+    <div class="head">
+      <h3 class="name">Low Poly Ultimate Pack</h3>
+      <span class="price">~$150</span>
+      <span class="chip">Rejected</span>
+    </div>
+    <div class="body">
+      <p>Heavy overlap with Poly Universal, which we already have.</p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="lpup"> Reviewed</label>
+  </article>
+
+  <article class="item" data-verdict="no">
+    <div class="head">
+      <h3 class="name">Photoreal environment &amp; material packs</h3>
+      <span class="price">various</span>
+      <span class="chip">Rejected</span>
+    </div>
+    <div class="body">
+      <p>See the fourth filter. They would make this world look <em>worse</em>, not better.</p>
+    </div>
+    <label class="mark"><input type="checkbox" data-id="photoreal"> Reviewed</label>
+  </article>
+
+  <h2>If you only buy three</h2>
+  <p>
+    <strong>HAZE</strong> for the light under the new lamps, <strong>Footsteps Pack</strong> because
+    the terrain data to drive it already exists, and <strong>COZY 3</strong> for weather that
+    doesn't fight the art style. Comfortably under $150 together, and every one drops in without
+    authoring anything in a scene — which matters here, because content authored in an editor
+    window is content <code>MapAudit</code> and the PlayMode tests cannot see.
+  </p>
+  <p>
+    And before any of it: <strong>Unity Starter Assets, free.</strong> Walk around Northgate at eye
+    height with a real body first. Half of what looks worth buying from a list stops looking worth
+    it once you've stood in the street.
+  </p>
+
+  <p class="foot">
+    Companion to <code>docs/ASSETS.md</code>, which is the tickable version. Prices indicative and
+    correct when written. Strike a line out when it turns out wrong for us, and say why, so nobody
+    researches it twice.
+  </p>
+
+</div>
+
+<script>
+  (function () {
+    var items = Array.prototype.slice.call(document.querySelectorAll('.item'));
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.bar button'));
+    var count = document.getElementById('count');
+
+    function apply(which) {
+      var shown = 0;
+      items.forEach(function (el) {
+        var ok = which === 'all' || el.dataset.verdict === which;
+        el.classList.toggle('hide', !ok);
+        if (ok) shown++;
+      });
+      count.textContent = shown + (shown === 1 ? ' item' : ' items');
+      buttons.forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.f === which));
+      });
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () { apply(b.dataset.f); });
+    });
+
+    // Reviewed marks, kept between visits so the list can be worked through slowly.
+    var store = null;
+    try { store = window.localStorage; } catch (e) { store = null; }
+
+    document.querySelectorAll('.mark input').forEach(function (box) {
+      var key = 'northgate.asset.' + box.dataset.id;
+      if (store && store.getItem(key) === '1') {
+        box.checked = true;
+        box.closest('.item').classList.add('done');
+      }
+      box.addEventListener('change', function () {
+        box.closest('.item').classList.toggle('done', box.checked);
+        if (!store) return;
+        if (box.checked) store.setItem(key, '1'); else store.removeItem(key);
+      });
+    });
+
+    apply('all');
+  }());
+</script>
+
+</body>
+</html>
