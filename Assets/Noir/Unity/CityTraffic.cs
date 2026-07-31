@@ -45,8 +45,18 @@ namespace Noir.Unity
         /// <summary>Slower round a corner, as anybody is.</summary>
         private const float TurnSpeed = 5f;
 
-        /// <summary>How far ahead a car looks for the car in front, and how wide that look is.</summary>
-        private const float LookAhead = 8f, LookWide = 2.4f;
+        /// <summary>
+        /// The gap a driver keeps beyond the two vehicles' own half-lengths, and how far off the
+        /// centre line another vehicle still counts as being in this lane.
+        ///
+        /// THIS USED TO BE A FLAT EIGHT METRES from centre to centre, measured when the longest
+        /// thing on the road was a hatchback. An articulated lorry is longer than eight metres by
+        /// itself, so a car could be fully inside one and register nothing - which is exactly
+        /// what NoTwoVehiclesOccupyTheSameSpace caught: a sports car and a sleeper-cab artic at
+        /// 0.00m. Adding both half-lengths makes a lorry keep a lorry's distance and a hatchback
+        /// a hatchback's, without either number being typed.
+        /// </summary>
+        private const float Headway = 3.5f, LookWide = 2.4f;
 
         /// <summary>Where a car begins easing off for a red light.</summary>
         private const float Braking = 14f;
@@ -96,6 +106,10 @@ namespace Noir.Unity
             public int Turn = -1;      // >= 0 while it is crossing a junction
             public float T;            // 0..1 through the turn
             public Vector3 Forward = Vector3.forward;
+
+            /// <summary>Half this vehicle's MEASURED length, nose to tail.</summary>
+            public float Reach = 2.2f;
+
             public int Choices;        // bumped each junction, so its route is not a loop
         }
 
@@ -241,7 +255,13 @@ namespace Noir.Unity
                 var car = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
                 car.transform.SetParent(transform, false);
 
-                var mover = new Mover { What = car.transform, Segment = segment.Index, S = s };
+                var mover = new Mover
+                {
+                    What = car.transform,
+                    Segment = segment.Index,
+                    S = s,
+                    Reach = Length(car) * 0.5f,
+                };
                 _movers.Add(mover);
                 Seat(mover);
             }
@@ -577,6 +597,25 @@ namespace Noir.Unity
             me.Turn = -1;
         }
 
+        /// <summary>
+        /// A vehicle's length nose to tail, off the mesh.
+        ///
+        /// These are modelled facing +z, so the length is the z extent. Measured once as the car
+        /// is created rather than every frame, which is why it is on the Mover.
+        /// </summary>
+        private static float Length(GameObject car)
+        {
+            float lo = float.MaxValue, hi = float.MinValue;
+            foreach (var mf in car.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null) continue;
+                var b = mf.sharedMesh.bounds;
+                lo = Mathf.Min(lo, b.min.z);
+                hi = Mathf.Max(hi, b.max.z);
+            }
+            return hi > lo ? hi - lo : 4.4f;
+        }
+
         /// <summary>Put the car where its position says it is, pointing where it is going.</summary>
         private void Seat(Mover me)
         {
@@ -625,7 +664,8 @@ namespace Noir.Unity
                 var gap = other.What.position - here;
 
                 float ahead = Vector3.Dot(gap, me.Forward);
-                if (ahead <= 0f || ahead > LookAhead) continue;          // behind, or far off
+                if (ahead <= 0f) continue;                               // behind me
+                if (ahead > me.Reach + other.Reach + Headway) continue;   // far enough off
 
                 float side = Vector3.Cross(me.Forward, gap).magnitude;
                 if (side > LookWide) continue;                           // not in my lane

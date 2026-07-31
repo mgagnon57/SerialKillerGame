@@ -12,6 +12,8 @@ done or delete the line when it turns out to be a bad idea.
 
 ## Traffic
 
+- [ ] **A car crossing a junction ignores every other vehicle.** `Blocked()` is only called from `RunSegment`; `CrossJunction` has no check at all, so a turning car drives through anything on the lane it is entering. This is what `NoTwoVehiclesOccupyTheSameSpace` catches at 0.00m, and the look-ahead fix does not touch it. — *2026-07-30*
+- [ ] `NoJunctionEverShowsGreenBothWays` tests an invariant that no longer holds. `MayEnter` returns true on BOTH axes at a priority junction by design - the separation moved into `NothingCrossing`. The test should assert the new rule: signalised junctions never both green, priority junctions have exactly one axis with priority. — *2026-07-30*
 - [ ] Vehicle look-ahead is a constant 8m, tuned when the longest thing on the road was a hatchback. It should come from the vehicle's own measured length, so an articulated lorry keeps a lorry's distance. — *2026-07-30*
 - [ ] No colliders on any vehicle: `CityTraffic` avoids by RULES (signals, give-way, look-ahead box), never by intersection test, so where a rule has no case cars pass through each other. Probably right for AI-vs-AI; needs revisiting the moment the player can drive. — *2026-07-30*
 - [ ] Jams appeared after the fleet went 97 -> 243. Suspect the give-way gap check starves a minor-road car forever once traffic is dense, blocking everyone behind it. — *2026-07-30*
