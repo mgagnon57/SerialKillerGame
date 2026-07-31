@@ -8,6 +8,8 @@ done or delete the line when it turns out to be a bad idea.
 
 ## Env
 
+- [ ] We need to add elevation at some point. — *2026-07-31*
+
 - [x] ~~Power lines down the country roads.~~ DONE - `Assets/Noir/Unity/CityPowerlines.cs`, 394 poles and 284 spans down 18 roads. USED THE FARM SET, NOT THE CITY ONE: measuring both showed there are two internally-consistent pairs that must not be mixed, because the wire has to end where the pole does - `Pole_Electric_A_City` is 6.88m with its wire hanging 6.13-6.81, and `Pole_Electric_Old` is 7.37m with `Wire_20m_Tri` at 6.08-7.22. The old timber one belongs on a country road, and the note above only knew about the concrete city pair. Span is 20m because that is the wire's own measured length (z -20.02..0.18, drawn BACKWARD along -z), so a wire placed at a pole facing the previous one lands on both tops - not a spacing anybody picked. WHERE THEY GO IS ASKED, NOT DECLARED: each candidate spot asks the map what its ground is, and only grass, field or wood takes a pole, so the line stops itself where the fields stop rather than at a hardcoded town boundary that has already moved four times. Junctions exclude themselves for free (a crossing road's tile is Road, not grass) and so does anything inside a place, so no pole stands in a farmyard or a paddock. A wire is only hung when the previous spot also took a pole, so a line that reaches the edge of town ends cleanly instead of throwing a span across the gap. `country-poles.png` added to the CityShot set. MapAudit clean on all eight. — *2026-07-31*
 
 ## Roads
