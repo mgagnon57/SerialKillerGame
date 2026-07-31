@@ -1,5 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Noir.Unity
 {
@@ -46,6 +50,10 @@ namespace Noir.Unity
         /// <summary>Building depth, and so how far the back of a frontage reaches into the block.</summary>
         private const int Depth = 9;
 
+        private const string City = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/";
+        private const string CityProps = City + "Props City/";
+        private const string Cars = "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars/Cars City";
+
         /// <summary>Where the middle of downtown is, in village coordinates.</summary>
         private const float TownX = 525f, TownY = 525f;
 
@@ -55,7 +63,7 @@ namespace Noir.Unity
             root.transform.SetParent(parent, false);
 
 #if UNITY_EDITOR
-            int blocks = 0, buildings = 0, towers = 0, pieces = 0;
+            int blocks = 0, buildings = 0, towers = 0, pieces = 0, yard = 0;
 
             foreach (var place in world.AllPlaces)
             {
@@ -75,10 +83,12 @@ namespace Noir.Unity
                 int built = Perimeter(root.transform, place, lot, rank, out int p);
                 buildings += built;
                 pieces += p;
+                yard += Interior(root.transform, lot);
             }
 
             Debug.Log($"[district] {blocks} blocks: {towers} towers, {buildings} buildings, "
-                    + $"{pieces} sections, {root.GetComponentsInChildren<Renderer>().Length} renderers.");
+                    + $"{pieces} sections, {yard} things in the back yards, "
+                    + $"{root.GetComponentsInChildren<Renderer>().Length} renderers.");
 #endif
             return root;
         }
@@ -213,6 +223,130 @@ namespace Noir.Unity
             }
 
             return built;
+        }
+
+        /// <summary>
+        /// What is behind the frontage.
+        ///
+        /// A block was a ring of buildings round a rectangle of fresh paving, which is the one
+        /// view of a city nobody ever has from the street and every view has from above - and
+        /// this game is played from above as often as not. The middle of a real block is where
+        /// the bins go, where the delivery van reverses in, where somebody keeps a lock-up: the
+        /// part of a city that is not for show, which is exactly the part a game about what
+        /// people do when they think nobody is looking wants.
+        ///
+        /// LAID ON A LATTICE, one thing to a cell, and every piece measured to fit inside one:
+        /// the garage is 6.10 x 6.66 and a car is 5.5 at its longest, so nothing in a seven-metre
+        /// cell can reach its neighbour. That is what makes this safe to scatter without a
+        /// clearance check - the same guarantee the parking bays now get, arrived at the same
+        /// way, by knowing how big the thing actually is before deciding where it goes.
+        ///
+        /// One column is left clear the whole way through, because a yard nothing can drive into
+        /// is a courtyard, and these have to be reachable from the street.
+        /// </summary>
+        private static int Interior(Transform parent, TileRect lot)
+        {
+            const int Cell = 7;
+
+            int span = Mathf.Min(lot.W, lot.H) - Depth * 2;
+            int cells = span / Cell;
+            if (cells < 2) return 0;                 // nothing worth calling a yard
+
+            // NO LOCK-UPS, and it was tried. `Squarehouse_Garage_City` is the pack's only low
+            // outbuilding, and almost all of it is on the universal atlas - the same sand
+            // colour behind the tan slab that used to face every street - so from above, which
+            // is how this game is looked at half the time, a yard of them is a yard of
+            // featureless cream boxes. Blank placeholder geometry is a worse answer than the
+            // bare paving it was meant to fix, so the yards are bins, boxes and vehicles: all
+            // things that read as themselves from directly overhead.
+            _skips ??= Catalogue(CityProps + "Garbage Props", "Container_");
+            _boxes ??= Catalogue(CityProps + "Garbage Props", "Box_");
+            _yardCars ??= Catalogue(Cars, "Car_");
+
+            int lane = cells / 2;                    // the way in, kept clear end to end
+            int n = 0;
+
+            for (int i = 0; i < cells; i++)
+            for (int j = 0; j < cells; j++)
+            {
+                if (i == lane) continue;
+
+                float cx = lot.X + Depth + i * Cell + Cell * 0.5f;
+                float cy = lot.Y + Depth + j * Cell + Cell * 0.5f;
+
+                uint roll = Materials3D.Scatter(lot.X + i * 13, lot.Y + j * 17, 3301) % 100;
+
+                // Empty more often than not. A yard packed to its edges reads as a car park.
+                if (roll < 44) continue;
+
+                if (roll < 64 && _yardCars.Count > 0)
+                {
+                    // Left facing up or down the lane, as anything reversed into a yard is.
+                    float yaw = (roll & 1) == 0 ? 0f : 180f;
+                    if (Put(parent, Pick(_yardCars, lot.X + i, lot.Y + j, 3313), cx, cy, yaw) != null) n++;
+                }
+                else if (roll < 84 && _skips.Count > 0)
+                {
+                    // Bins and skips come in twos and threes against a wall, not one to a yard.
+                    int many = 1 + (int)(Materials3D.Scatter(lot.X + j, lot.Y + i, 3319) % 3);
+                    for (int k = 0; k < many; k++)
+                    {
+                        float ox = (k - 1) * 1.9f;
+                        if (Put(parent, Pick(_skips, lot.X + i + k, lot.Y + j, 3323),
+                                cx + ox, cy, 90f) != null) n++;
+                    }
+                }
+                else if (_boxes.Count > 0)
+                {
+                    // A stack of boxes nobody has taken in yet.
+                    int many = 2 + (int)(Materials3D.Scatter(lot.X + i, lot.Y + j * 3, 3329) % 3);
+                    for (int k = 0; k < many; k++)
+                    {
+                        float ox = (Materials3D.Scatter(lot.X + i + k, lot.Y + j, 3331) % 30) / 10f - 1.5f;
+                        float oz = (Materials3D.Scatter(lot.X + i, lot.Y + j + k, 3337) % 30) / 10f - 1.5f;
+                        if (Put(parent, Pick(_boxes, lot.X + i + k * 3, lot.Y + j, 3343),
+                                cx + ox, cy + oz,
+                                Materials3D.Scatter(lot.X + k, lot.Y + j, 3347) % 4 * 90f) != null) n++;
+                    }
+                }
+            }
+
+            return n;
+        }
+
+        private static List<string> _skips, _boxes, _yardCars;
+
+        private static List<string> Catalogue(string folder, string prefix)
+        {
+            var found = new List<string>();
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { folder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.IndexOf("Collider", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                string file = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (prefix != null && !file.StartsWith(prefix, System.StringComparison.Ordinal)) continue;
+                found.Add(path);
+            }
+            found.Sort(System.StringComparer.Ordinal);   // stable, so a yard looks the same twice
+            return found;
+        }
+
+        private static string Pick(List<string> from, int x, int y, int salt) =>
+            from[(int)(Materials3D.Scatter(x, y, salt) % (uint)from.Count)];
+
+        /// <summary>A yard piece, by its own base, at a point in village coordinates.</summary>
+        private static GameObject Put(Transform parent, string path, float vx, float vy, float yaw)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) return null;
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetParent(parent, false);
+            // On the paving rather than in it: CityStreets lays the block's ground at 0.12.
+            go.transform.position = new Vector3(vx, 0.12f, -vy);
+            go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            return go;
         }
 
         /// <summary>

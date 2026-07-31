@@ -205,6 +205,12 @@ namespace Noir.Editor
                 Frame(camGo, new Vector3(500f, 0f, -915f), 40f, 12f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "country-poles.png"));
 
+                // Down into the middle of a block - the yards, the lock-ups and the lane through
+                // them. Looking IN over the roofs rather than along the street, because the back
+                // of a block is the one part of a city no street-level camera can be shown.
+                Frame(camGo, new Vector3(390f, 0f, -660f), 78f, 72f, 20f);
+                Capture(cam, Path.Combine(OutputDir, "block-yard.png"));
+
                 // The precinct car park, which is the biggest of the five and the one with the
                 // cruisers in it.
                 Frame(camGo, new Vector3(467f, 0f, -580f), 75f, 32f, 45f);
