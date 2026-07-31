@@ -27,12 +27,19 @@ namespace Noir.Unity
     /// answer follows the map, so when the downtown grows outward its new junctions signalise
     /// themselves and nothing here has to be edited.
     ///
-    /// THE PACK'S LIGHT CANNOT CHANGE COLOUR. Its head is one mesh whose lens colours are baked
-    /// into the atlas UVs, so it is a permanently red light: overriding either of its two glass
-    /// submeshes does nothing, and overriding all of them turns the whole post that colour. So
-    /// the bought post stays as the thing that reads as a traffic light, and the STATE is shown
-    /// by a lens of our own mounted on its head - an unlit emissive sphere, plus a small point
-    /// light so it still says something at three in the morning.
+    /// THE PACK'S LIGHT CAN CHANGE COLOUR AFTER ALL, and everything this file used to say about
+    /// that was wrong because it had been said about the wrong prefab. Traffic_Light_A_City is
+    /// the HEAD - one metre of it, y -0.05..1.09, meant to be mounted on something - and it was
+    /// being stood on the pavement with a primitive sphere glued to the top to show the state.
+    /// A signal head lying on the ground with a glowing ball on it.
+    ///
+    /// Light_A_City is the actual signal: six metres of mast, a four-metre arm out over the
+    /// carriageway, and its three lenses on THEIR OWN SUBMESHES with their own material slots.
+    /// So the state is shown by lighting the pack's own lamps - one lit, two dark, which is what
+    /// a signal is and is something a single sphere could never show. The earlier conclusion
+    /// that the glass could not be driven came from tinting the SHARED material, which is the
+    /// same glass every window in Northgate uses; the fix is a material of our own in the three
+    /// lens slots, not a different prefab.
     ///
     /// Built OUTSIDE the node CityChunker bakes: a combined mesh cannot change colour.
     /// </summary>
@@ -63,9 +70,21 @@ namespace Noir.Unity
         private static readonly Color AmberLens = new Color(3.0f, 1.30f, 0.05f);
         private static readonly Color GreenLens = new Color(0.10f, 2.60f, 0.30f);
 
+        /// <summary>A lens that is not showing. Dark glass, not black - it still catches the sun.</summary>
+        private static readonly Color DeadLens = new Color(0.06f, 0.06f, 0.07f);
+
         private sealed class Head
         {
-            public Renderer Lens;
+            public Renderer Lamps;
+
+            /// <summary>
+            /// The submesh index of each lens on <see cref="Lamps"/>, found by height: on a
+            /// signal the red is on top, the amber in the middle and the green at the bottom.
+            /// Found rather than typed, because the three Light_ variants order their submeshes
+            /// differently and a number read off one of them is wrong on the other two.
+            /// </summary>
+            public int Red = -1, Amber = -1, Green = -1;
+
             public UnityEngine.Light Lamp;
             public bool NorthSouth;      // which flow this head governs
             public Light Showing = (Light)(-1);
@@ -231,7 +250,7 @@ namespace Noir.Unity
 
             var post = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/polyperfect/Poly Universal Pack/Prefabs/City/TrafficLights City/"
-                + "Traffic_Light_A_City.prefab");
+                + "Light_A_City.prefab");
             var lensMaterial = LensMaterial();
 
             int heads = 0, signalised = 0;
@@ -312,11 +331,24 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// One post and its lens.
+        /// One signal, standing on the kerb with its arm out over the carriageway.
         ///
-        /// The lens is seated on the MEASURED top of the bought head rather than at a typed
-        /// height, because the three Traffic_Light variants are different heights and a number
-        /// picked off one of them floats above the other two.
+        /// IT WAS THE WRONG PREFAB, AND IT HAD NO POST. Traffic_Light_A_City measures
+        /// y -0.05..1.09 - it is the HEAD, one metre of it, meant to be mounted on something -
+        /// and it was being set down on the pavement at kerb height with a primitive sphere
+        /// glued to the top for the state. That is the same fault as the road signs, in the
+        /// same folder, and it is what a junction actually looked like: a signal head lying on
+        /// the ground with a glowing ball on it.
+        ///
+        /// Light_A_City is the real thing. Six metres of mast, a four-metre arm reaching out
+        /// over the road, pivot at the base, and THREE LENSES ON THEIR OWN SUBMESHES - so the
+        /// state is shown by lighting the pack's own lamp rather than by adding geometry. The
+        /// sphere is gone.
+        ///
+        /// WHICH LENS IS WHICH IS MEASURED, not typed. On a signal the red is on top, the amber
+        /// in the middle and the green at the bottom, so sorting the glass submeshes by height
+        /// names all three - and it keeps naming them correctly on the B and C variants, whose
+        /// submeshes are not in the same order.
         /// </summary>
         private Head Mount(GameObject post, Material lensMaterial,
                            float vx, float vy, Vector2 travel, bool northSouth)
@@ -327,49 +359,84 @@ namespace Noir.Unity
             go.transform.SetParent(transform, false);
             go.transform.position = new Vector3(vx, 0f, -vy);
 
-            // Face the car that is arriving. The head's lens faces +z at rest, and a car
-            // travelling `travel` in village space moves along (travel.x, -travel.y) in Unity,
-            // so the head must look back down that.
-            var facing = new Vector3(-travel.x, 0f, travel.y);
-            go.transform.rotation = Quaternion.LookRotation(facing, Vector3.up);
+            // The lenses face -x at rest and the arm reaches out along +z, so the yaw that puts
+            // the lamps in front of an arriving car is the one that turns +x onto its direction
+            // of travel. That also swings the arm out over the carriageway and leaves the mast
+            // on the kerb to the car's right, which is where it belongs on a road driven on the
+            // right - the two follow from each other and neither is a separate decision.
+            var along = new Vector3(travel.x, 0f, -travel.y);
+            go.transform.rotation =
+                Quaternion.Euler(0f, Mathf.Atan2(-along.z, along.x) * Mathf.Rad2Deg, 0f);
 
-            var rends = go.GetComponentsInChildren<Renderer>();
-            if (rends.Length == 0) return null;
-            var b = rends[0].bounds;
-            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+            var mf = FindLamps(go);
+            if (mf == null) { Debug.LogWarning("[signals] no lamps on " + post.name); return null; }
 
-            var lens = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            lens.name = "Lens_Emission";       // 'Emission' keeps CityChunker's hands off it
-            Object.DestroyImmediate(lens.GetComponent<Collider>());
-            lens.transform.SetParent(go.transform, false);
-            lens.transform.localScale = Vector3.one * 0.3f;
+            var mr = mf.GetComponent<MeshRenderer>();
+            var mesh = mf.sharedMesh;
 
-            // On the face of the head, measured: the top of the post less a tenth of its height
-            // is the lamp cluster, and half the post's depth puts the lens proud of the front
-            // of it rather than buried inside. Typing a height instead would only fit whichever
-            // of the three Traffic_Light variants it was measured from.
-            float depth = Mathf.Max(b.size.x, b.size.z);
-            lens.transform.position =
-                new Vector3(b.center.x, b.max.y - b.size.y * 0.10f, b.center.z)
-                + facing * (depth * 0.5f + 0.05f);
+            // The glass submeshes, tallest first.
+            var glass = new List<(int index, float y)>();
+            var slots = mr.sharedMaterials;
+            for (int i = 0; i < mesh.subMeshCount && i < slots.Length; i++)
+            {
+                if (slots[i] == null) continue;
+                if (slots[i].name.IndexOf("Glass", System.StringComparison.Ordinal) < 0) continue;
+                glass.Add((i, mesh.GetSubMesh(i).bounds.center.y));
+            }
+            glass.Sort((a, b) => b.y.CompareTo(a.y));
+            if (glass.Count < 3) { Debug.LogWarning("[signals] " + post.name + " has "
+                                                  + glass.Count + " lenses"); return null; }
 
-            var lr = lens.GetComponent<Renderer>();
-            lr.sharedMaterial = lensMaterial;
-            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var head = new Head
+            {
+                Lamps = mr,
+                Red = glass[0].index,
+                Amber = glass[1].index,
+                Green = glass[2].index,
+                NorthSouth = northSouth,
+            };
 
-            var lampGo = new GameObject("Lamp");
-            lampGo.transform.SetParent(lens.transform, false);
+            // Our own unlit material in the three lens slots. The pack's glass is a shared
+            // material used by every window in the city, so tinting it in place would turn every
+            // pane in Northgate red - which is how the first attempt at this concluded, wrongly,
+            // that the lenses could not be driven at all.
+            for (int i = 0; i < 3; i++)
+                slots[i == 0 ? head.Red : i == 1 ? head.Amber : head.Green] = lensMaterial;
+            mr.sharedMaterials = slots;
+
+            // A small lamp at the lens end of the arm, for the pool of colour on the tarmac.
+            // Only the junctions nearest the camera keep theirs - see Nearest().
+            var lampGo = new GameObject("Lamp_Emission");
+            lampGo.transform.SetParent(go.transform, false);
+            lampGo.transform.localPosition = mesh.GetSubMesh(head.Amber).bounds.center;
+
             var lamp = lampGo.AddComponent<UnityEngine.Light>();
             lamp.type = LightType.Point;
-            lamp.range = 9f;
-            lamp.intensity = 1.6f;
+            lamp.range = 11f;
+            lamp.intensity = 2.2f;
             lamp.shadows = LightShadows.None;
+            head.Lamp = lamp;
 
-            return new Head { Lens = lr, Lamp = lamp, NorthSouth = northSouth };
+            return head;
+        }
+
+        /// <summary>The renderer carrying the lamp cluster: the one with glass on it.</summary>
+        private static MeshFilter FindLamps(GameObject go)
+        {
+            foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+            {
+                var mr = mf.GetComponent<MeshRenderer>();
+                if (mr == null || mf.sharedMesh == null) continue;
+
+                foreach (var m in mr.sharedMaterials)
+                    if (m != null && m.name.IndexOf("Glass", System.StringComparison.Ordinal) >= 0)
+                        return mf;
+            }
+            return null;
         }
 
         /// <summary>
-        /// An unlit material for the lens, so it reads as lit in daylight too.
+        /// An unlit material for the lenses, so they read as lit in daylight too.
         ///
         /// Unlit rather than emissive-Lit: at noon a Lit surface with emission is washed out by
         /// the sun and the signal cannot be read, which defeats the point of showing it.
@@ -466,19 +533,30 @@ namespace Noir.Unity
                     if (want == head.Showing) continue;      // only touch it when it changes
                     head.Showing = want;
 
-                    var colour = want == Light.Green ? GreenLens
-                               : want == Light.Amber ? AmberLens
-                               : RedLens;
-
-                    if (head.Lens != null)
+                    if (head.Lamps != null)
                     {
-                        _block.SetColor("_BaseColor", colour);
-                        _block.SetColor("_Color", colour);
-                        head.Lens.SetPropertyBlock(_block);
+                        // One lamp lit and the other two dark, which is what a signal is. The
+                        // sphere this replaced could only ever be one colour at a time and so
+                        // could not show the other two lenses at all.
+                        Paint(head.Lamps, head.Red, want == Light.Red ? RedLens : DeadLens);
+                        Paint(head.Lamps, head.Amber, want == Light.Amber ? AmberLens : DeadLens);
+                        Paint(head.Lamps, head.Green, want == Light.Green ? GreenLens : DeadLens);
                     }
-                    if (head.Lamp != null) head.Lamp.color = colour;
+
+                    if (head.Lamp != null)
+                        head.Lamp.color = want == Light.Green ? GreenLens
+                                        : want == Light.Amber ? AmberLens : RedLens;
                 }
             }
         }
+
+        private void Paint(Renderer r, int submesh, Color colour)
+        {
+            if (submesh < 0) return;
+            _block.SetColor("_BaseColor", colour);
+            _block.SetColor("_Color", colour);
+            r.SetPropertyBlock(_block, submesh);
+        }
+
     }
 }

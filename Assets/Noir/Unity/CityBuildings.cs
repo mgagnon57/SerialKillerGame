@@ -593,6 +593,17 @@ namespace Noir.Unity
 
             var b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+            // SEATED ON ITS OWN MEASURED BOTTOM, NOT ON ITS PIVOT. Most sections in the kit
+            // start at y=0 and for those this changes nothing - but Skyscraper_B_Base_City
+            // begins at y=1.00, so stacking it by its pivot left the whole tower hanging a metre
+            // in the air AND put the next section a metre inside it, because the height returned
+            // below is the section's extent and not the distance to its top. Same lesson as the
+            // road tiles: measure the mesh, never the pivot.
+            float sits = parent.position.y + y;
+            if (Mathf.Abs(b.min.y - sits) > 0.001f)
+                go.transform.position += Vector3.up * (sits - b.min.y);
+
             return b.size.y;
         }
 

@@ -78,6 +78,23 @@ namespace Noir.Editor
             })
                 One(n + ".prefab", System.IO.Path.GetFileNameWithoutExtension(n));
 
+            // THE SIGNAL HEADS. CitySignals places Traffic_Light_A_City and then glues a
+            // primitive sphere on it for the state, because that one prefab's lenses are baked
+            // into the atlas. There are FIFTEEN prefabs in the folder and only that one has ever
+            // been looked at - four of them are called Light_*, which does not sound like a post.
+            Debug.Log("=== TRAFFIC LIGHTS (fifteen of them; one has ever been used) ===");
+            const string Sig = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/TrafficLights City/";
+            foreach (var n in new[]
+            {
+                "Traffic_Light_A_City", "Traffic_Light_B_City", "Traffic_Light_C_City",
+                "Traffic_Light_Middle_A_City",
+                "Traffic_Light_Simple_A_City", "Traffic_Light_Simple_B_City",
+                "Traffic_Light_Simple_C_City", "Traffic_Light_Simple_D_City",
+                "Light_A_City", "Light_B_City", "Light_C_City", "Light_Pedestrian_City",
+                "Lamp_Light_A_City",
+            })
+                One(Sig + n + ".prefab", n);
+
             // WHAT A DOWNTOWN BLOCK IS MADE OF. The terraces are stacked from Bottom + Entrance
             // + Mid + Roof and every tower is one of three WHOLE prefabs, so Northgate has
             // exactly three building heights. Base/Floor/Roof stack to any height, and the seven

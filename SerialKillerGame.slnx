@@ -5,6 +5,7 @@
   <Project Path="Polyperfect.Crafting.Integration.csproj" />
   <Project Path="Polyperfect.Crafting.Editor.csproj" />
   <Project Path="Polyperfect.Crafting.Demo.csproj" />
+  <Project Path="Noir.Editor.csproj" />
   <Project Path="Polyperfect.Common.csproj" />
   <Project Path="Noir.Core.Sim.csproj" />
   <Project Path="Polyperfect.Crafting.Placement.csproj" />
@@ -14,7 +15,6 @@
   <Project Path="Noir.PlayTests.csproj" />
   <Project Path="Polyperfect.Crafting.Integration.Tests.PlayMode.csproj" />
   <Project Path="Polyperfect.Common.Editor.csproj" />
-  <Project Path="Noir.Editor.csproj" />
   <Project Path="Noir.Core.Observation.csproj" />
   <Project Path="Polyperfect.Universal.csproj" />
   <Project Path="Polyperfect.Crafting.Framework.Tests.csproj" />

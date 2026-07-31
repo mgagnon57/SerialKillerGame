@@ -225,6 +225,27 @@ namespace Noir.Unity
         /// returns Rocks Winter. And the pack's Trees folder is the whole world in one drawer:
         /// baobab, mangrove, acacia, jungle and six palms, none of which grow here.
         /// </summary>
+        /// <summary>
+        /// Does this prefab's geometry reach the ground it would be planted on?
+        ///
+        /// A quarter of a metre of clearance is modelling; more than that is a mounting point,
+        /// and a thing with a mounting point is a component rather than an object.
+        /// </summary>
+        private static bool Grounded(string path)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) return false;
+
+            float lo = float.MaxValue;
+            foreach (var mf in prefab.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null) continue;
+                float off = mf.transform.position.y - prefab.transform.position.y;
+                lo = Mathf.Min(lo, mf.sharedMesh.bounds.min.y + off);
+            }
+            return lo == float.MaxValue || lo <= 0.25f;
+        }
+
         private static List<string> All(string folder)
         {
             string[] wrong =
@@ -244,6 +265,14 @@ namespace Noir.Unity
                     if (path.IndexOf(word, System.StringComparison.OrdinalIgnoreCase) >= 0)
                     { skip = true; break; }
                 if (skip) continue;
+
+                // AND ANYTHING THAT DOES NOT REACH THE GROUND, which is a measurement rather
+                // than another word on the list above. Nature/Hedges holds two ARCHES that
+                // begin two metres up because they are meant to span a gateway; planted as
+                // topiary they would hang in the air over the lawn. Asking the mesh catches
+                // those and every other piece of the same sort without anybody having to
+                // notice it first. See Noir/Audit Prefab Mounting.
+                if (!Grounded(path)) continue;
 
                 found.Add(path);
             }
