@@ -64,8 +64,8 @@ done or delete the line when it turns out to be a bad idea.
   MEASURED at `c1afb0c`, which the note asked for and nobody had taken: 31,814 renderers -> 4,462
   baked over 30 materials; the 27 district blocks are 8,228 of that, so **a block costs ~305
   renderers** and downtown is 26% of the city. — *2026-07-31*
-- [ ] `Modular Parts/Rails` is a 6-piece GROUND-LEVEL tram kit (1/3/5/10m plus turns), unused and quite separate from the elevated railway that is commented out in city.txt. — *2026-07-30*
-- [ ] `Racetrack` is 152 prefabs - 25 road pieces, 91 fences, a control gate, an overpass - plus 79 racing cars excluded from traffic because there is nowhere to race them. Needs land. — *2026-07-30*
+- [ ] `Modular Parts/Rails` is a 6-piece GROUND-LEVEL tram kit (1/3/5/10m plus turns), unused and quite separate from the elevated railway that is commented out in city.txt. **NO LONGER BLOCKED ON LAND** after the 1290 re-lay. What it needs is a ROUTE, and that is a decision about where people go rather than about where there is room - the lane graph is public on `CityTraffic.Graph` for exactly this. — *2026-07-30*
+- [ ] `Racetrack` is 152 prefabs - 25 road pieces, 91 fences, a control gate, an overpass - plus 79 racing cars excluded from traffic because there is nowhere to race them. **THE LAND EXISTS NOW**: the 1290 map's north-east corner is 270x270 with no road through it, which is exactly what this was waiting on. What it still needs is a track BUILDER - the kit is 25 modular pieces, so laying one is a CityDistrict-sized job rather than a placement, and it was left out of the outer city deliberately for that reason rather than forgotten. — *2026-07-30*
 
 ## Traffic
 
@@ -185,7 +185,18 @@ done or delete the line when it turns out to be a bad idea.
 
 ## Story
 
-- [ ] `Survival` is 174 prefabs and nothing has ever placed one: `Tree_Stand`, `Bear_Trap`, `Cross_Wood` for a roadside memorial, `Road_Flare`, abandoned suitcases, bedrolls, storm lanterns. The best-matched folder in the pack for this game, held back deliberately because where they go is a story decision. — *2026-07-30*
+- [x] ~~`Survival` is 174 prefabs and nothing has ever placed one.~~ DONE - `Assets/Noir/Unity/CityStory.cs`,
+  six sites and nineteen pieces. AUTHORED, NOT SCATTERED, which is the whole of it: the note above
+  was right that where a bear trap goes is a story decision, so each site is a `place` in city.txt
+  with its own name and its own sentence, exactly like a shop. That also makes every one of them
+  clickable, describable and something the simulation can refer to - which a prop rolled onto a
+  tile is not. Three new kinds: `memorial`, `standing`, `camp`. The register is the roadside and
+  the treeline rather than a horror set - two crosses on verges, two platforms overlooking fields,
+  two camps with the fire out. A cross faces the ROAD, and which road is asked of the network
+  rather than authored, so it keeps facing the traffic if a road is ever moved. The seat above
+  Wicker End looks at the orchard and at the back of the house, which is a choice somebody made.
+  Still unplaced from that folder: the radio transceiver, the signposts and the explosive barrels,
+  none of which have a story yet. — *2026-07-31*
 
 - [ ] Deduction as recipes: a corkboard where pinning evidence in a *shape* produces a lead. The Crafting System's `TableRecipe` is already position-aware rather than only contents-aware, and `ISatisfier` is the "do these inputs match this pattern" abstraction. Build it in Core against `particulars.txt`. — *2026-07-30*
 
