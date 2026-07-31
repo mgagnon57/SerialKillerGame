@@ -78,6 +78,31 @@ namespace Noir.Editor
             })
                 One(n + ".prefab", System.IO.Path.GetFileNameWithoutExtension(n));
 
+            // WHAT A DOWNTOWN BLOCK IS MADE OF. The terraces are stacked from Bottom + Entrance
+            // + Mid + Roof and every tower is one of three WHOLE prefabs, so Northgate has
+            // exactly three building heights. Base/Floor/Roof stack to any height, and the seven
+            // Market pieces are shopfront ground floors - all of it unused. Before any of it can
+            // be stacked, the pieces have to line up: a Market that is not the same width and
+            // depth as a Bottom would come out as a ragged terrace.
+            Debug.Log("=== BUILDINGS MODULAR (the downtown kit, mostly unused) ===");
+            const string Mod = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings Modular City/";
+            const string Bld = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings City/";
+            foreach (var n in new[]
+            {
+                Mod + "Squarehouse_Bottom_A_AS_City", Mod + "Squarehouse_Floor_A_Mid_AS_City",
+                Mod + "Squarehouse_Roof_A_City",
+                Mod + "Squarehouse_Market_A_City", Mod + "Squarehouse_Market_B_City",
+                Mod + "Squarehouse_Market_G_City", Mod + "Squarehouse_Garage_City",
+                Mod + "Bayhouse_Bottom_A_AS_City", Mod + "Bayhouse_Roof_A_City",
+                Bld + "Skyscraper_A_Base_City", Bld + "Skyscraper_A_Floor_City",
+                Bld + "Skyscraper_A_Roof_City", Bld + "Skyscraper_A_City",
+                Bld + "Skyscraper_B_Base_City", Bld + "Skyscraper_B_Floor_City",
+                Bld + "Skyscraper_B_Roof_City",
+                Bld + "Skyscraper_C_Base_City", Bld + "Skyscraper_C_Floor_City",
+                Bld + "Skyscraper_C_Roof_City",
+            })
+                One(n + ".prefab", System.IO.Path.GetFileNameWithoutExtension(n));
+
             Debug.Log("=== ROADS FARM (the dirt track kit) ===");
             const string Farm = "Assets/polyperfect/Poly Universal Pack/Prefabs/Farm/Roads Farm/";
             foreach (var n in new[]

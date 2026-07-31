@@ -209,7 +209,34 @@ namespace Noir.Unity
         /// </summary>
         private static int Townhouse(Transform parent, Place place, TileRect lot, bool end, float yaw)
         {
-            string family = SquareAt(lot) ? "Squarehouse" : "Bayhouse";
+            int n = Stack(parent, place, lot, yaw, StoreysAt(lot), false, out var house);
+            Record(place, house);        // after the roof, or the terrace picks up short
+            return n;
+        }
+
+        /// <summary>
+        /// One stacked building on a lot: ground floor, entrance floor, storeys, roof.
+        ///
+        /// Public because a DISTRICT lays out a whole block of these and has no business
+        /// knowing how one is assembled - which family the lot takes, which face variant is
+        /// safe, how tall a section is, where the glass lives. See CityDistrict.
+        /// </summary>
+        /// <param name="market">
+        /// Put a SHOPFRONT on the ground floor instead of a residential bottom. Squarehouse_
+        /// Market_A..G are seven ground-floor pieces, measured at 6.1 x 6.15 and exactly three
+        /// metres tall - the same footprint and the same height as Squarehouse_Bottom - so they
+        /// drop straight in underneath an ordinary stack. All seven had been sitting unused,
+        /// which is why every block in Northgate had housing at street level and the downtown
+        /// read as tall flats rather than as a downtown.
+        ///
+        /// Only Squarehouse has them, so a market lot is a Squarehouse whatever the lot rolled:
+        /// Bayhouse is seven metres deep against Squarehouse's nine, and a market ground floor
+        /// under Bayhouse storeys would step in and out at the first floor.
+        /// </param>
+        public static int Stack(Transform parent, Place place, TileRect lot, float yaw,
+                                int storeys, bool market, out GameObject house)
+        {
+            string family = market || SquareAt(lot) ? "Squarehouse" : "Bayhouse";
 
             // All-sides everywhere, not front-only for the interior of a terrace.
             //
@@ -219,21 +246,24 @@ namespace Noir.Unity
             // holding 6.1m buildings on a grid with cross streets, so flanks ARE seen; the
             // saving was never real here and the failure is the loudest thing in the frame.
             const string face = "AS";
-            int storeys = StoreysAt(lot);
 
             // Every section of one house goes under a single node, which is then turned to face
             // the street and slid so the house sits on its lot. Placing each section by its own
             // pivot instead put a Bayhouse and a Squarehouse at different depths - the pivot is
             // not centred and the two families are 7m and 9m deep - so a terrace of mixed
             // families came out staggered like a broken tooth line.
-            var house = new GameObject($"{family}_{lot.X}_{lot.Y}");
+            house = new GameObject($"{family}_{lot.X}_{lot.Y}");
             house.transform.SetParent(parent, false);
             house.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
             int n = 0;
             float y = 0f;
 
-            var bottom = Place(house.transform, $"{City}{family}_Bottom_A_{face}_City.prefab", y);
+            string ground = market
+                ? $"{City}Squarehouse_Market_{"ABCDEFG"[(int)(Materials3D.Scatter(lot.X, lot.Y, 6151) % 7)]}_City.prefab"
+                : $"{City}{family}_Bottom_A_{face}_City.prefab";
+
+            var bottom = Place(house.transform, ground, y);
             if (bottom > 0f) { y += bottom; n++; }
 
             var entrance = Place(house.transform, $"{City}{family}_Floor_A_Entrance_{face}_City.prefab", y);
@@ -253,7 +283,45 @@ namespace Noir.Unity
             Glazing(house, place);
             n += Roof(house, lot);
             n += Shopfront(house, lot, yaw);
-            Record(place, house);        // after the roof, or the terrace picks up short
+            return n;
+        }
+
+        /// <summary>
+        /// A skyscraper stacked to a stated height, rather than one of the three whole prefabs.
+        ///
+        /// Skyscraper_A_City is a single 76-metre model, and B and C are their own fixed
+        /// heights, so a city built from them has exactly THREE building heights in it and a
+        /// skyline that repeats. The pack also ships each of the three as Base + Floor + Roof,
+        /// and a Floor is a fifteen-metre five-storey section, so a tower can be any height at
+        /// all: A comes out at 17 + 15n metres. Those nine modules had never been placed.
+        ///
+        /// Measured, as ever - the sections are stacked by the height each one reports rather
+        /// than by fifteen, because the base and the roof are neither of them fifteen and the
+        /// three families differ.
+        /// </summary>
+        public static int Tower(Transform parent, Place place, TileRect lot, char family, int floors)
+        {
+            var tower = new GameObject($"Skyscraper_{family}_{lot.X}_{lot.Y}");
+            tower.transform.SetParent(parent, false);
+
+            int n = 0;
+            float y = 0f;
+
+            var b = Place(tower.transform, $"{Whole}Skyscraper_{family}_Base_City.prefab", y);
+            if (b > 0f) { y += b; n++; }
+
+            for (int i = 0; i < floors; i++)
+            {
+                var f = Place(tower.transform, $"{Whole}Skyscraper_{family}_Floor_City.prefab", y);
+                if (f <= 0f) break;
+                y += f;
+                n++;
+            }
+
+            if (Place(tower.transform, $"{Whole}Skyscraper_{family}_Roof_City.prefab", y) > 0f) n++;
+
+            Seat(tower, lot, 0f);
+            Glazing(tower, place);
             return n;
         }
 

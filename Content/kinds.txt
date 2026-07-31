@@ -804,6 +804,33 @@ kind farmyard
   catchment no
   describe  yes
 
+# A downtown block, filled rather than authored building by building.
+#
+# Open ground with `path` for its surface, which is what it already is - the town
+# is paved - so stamping it changes nothing and CityStreets still lays the
+# pavement and walks the kerb round it. What CityDistrict adds is what stands ON
+# the block: a perimeter of stacked buildings facing the street, shopfronts at
+# ground level where the street warrants them, and a middle.
+#
+# It is a PLACE and not a hole in the road grid because it has a name, it can be
+# clicked, and "Second at Franklin" has to be somewhere the map can talk about
+# when that is where somebody was last seen.
+kind district
+  words     district block downtown
+  form      open
+  ground    path
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
 # ---- the city, continued ----------------------------------------------------
 # A surface car park. Open ground, and its ground is PATH: it is hard-standing like
 # a farmyard, and saying so is what makes CityStreets leave it alone rather than

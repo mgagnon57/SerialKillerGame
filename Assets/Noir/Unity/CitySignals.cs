@@ -15,12 +15,10 @@ namespace Noir.Unity
     /// which for a game about finding out who was where at what time is not a small thing. The
     /// city's own traffic has to obey its own rules or the player cannot reason about it.
     ///
-    /// SIGNALS ARE FOR THE TOWN AND NOTHING ELSE. Every one of the thirty-eight junctions used
-    /// to be signalised, which is a hundred and fifty-two posts and a hundred and fifty-two
-    /// real-time point lights, and only FOUR of those junctions are in the built-up area. The
-    /// other thirty-four are crossroads in open farmland - two of them where the dirt track to
-    /// the big barn meets a road, so there were traffic lights on the farm track with one head
-    /// facing an empty paddock. Out there a junction now works the way a country junction
+    /// SIGNALS ARE FOR THE TOWN AND NOTHING ELSE. Every junction on the map used to be
+    /// signalised, including the crossroads in open farmland - two of them where the dirt track
+    /// to the big barn meets a road, so there were traffic lights on the farm track with one
+    /// head facing an empty paddock. Out there a junction now works the way a country junction
     /// actually works: the bigger road runs through and the smaller one gives way, said out
     /// loud by a stop sign rather than by a light. See <see cref="CitySigns"/>.
     ///
@@ -384,7 +382,74 @@ namespace Noir.Unity
         }
 #endif
 
-        private void Update() => Refresh();
+        /// <summary>
+        /// How many junctions have a live lamp on their heads at any moment.
+        ///
+        /// A downtown signalises every intersection, which is correct and which is also
+        /// forty-nine junctions and a hundred and ninety-six point lights - more than the whole
+        /// rest of the city put together, and every one of them rendering whether or not it is
+        /// within a mile of the camera. The LENS is unlit, so a signal reads at any hour with no
+        /// light at all; the lamp only adds the pool of colour on the tarmac, which is worth
+        /// having and is worth having ONLY where somebody can see it.
+        ///
+        /// Six junctions is the length of a street you can see down.
+        /// </summary>
+        private const int LitJunctions = 6;
+
+        /// <summary>Seconds between working out which those six are. It is not a per-frame question.</summary>
+        private const float ReassignInterval = 0.4f;
+
+        private float _assignedAt = -99f;
+        private float[] _best;
+
+        private void Update()
+        {
+            Refresh();
+            Nearest();
+        }
+
+        /// <summary>Give the live lamps to the junctions nearest the camera, and nobody else.</summary>
+        private void Nearest()
+        {
+            if (Time.unscaledTime - _assignedAt < ReassignInterval) return;
+            _assignedAt = Time.unscaledTime;
+
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            var eye = cam.transform.position;
+
+            // The cutoff distance, kept as a running shortlist rather than by sorting: this runs
+            // several times a second over every junction on the map, and the shortlist is six
+            // long.
+            _best ??= new float[LitJunctions];
+            for (int i = 0; i < LitJunctions; i++) _best[i] = float.MaxValue;
+
+            foreach (var node in _nodes)
+            {
+                if (node.Heads.Count == 0) continue;
+                float d = (new Vector3(node.X, 0f, -node.Y) - eye).sqrMagnitude;
+
+                for (int i = 0; i < LitJunctions; i++)
+                {
+                    if (d >= _best[i]) continue;
+                    for (int j = LitJunctions - 1; j > i; j--) _best[j] = _best[j - 1];
+                    _best[i] = d;
+                    break;
+                }
+            }
+
+            float cut = _best[LitJunctions - 1];
+
+            foreach (var node in _nodes)
+            {
+                if (node.Heads.Count == 0) continue;
+                bool on = (new Vector3(node.X, 0f, -node.Y) - eye).sqrMagnitude <= cut;
+
+                foreach (var head in node.Heads)
+                    if (head.Lamp != null && head.Lamp.enabled != on) head.Lamp.enabled = on;
+            }
+        }
 
         /// <summary>Bring every head into line with the phase its junction is in.</summary>
         private void Refresh()

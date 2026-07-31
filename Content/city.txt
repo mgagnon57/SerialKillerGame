@@ -53,18 +53,18 @@ size 960 960
 # tiles a tree and field gives 0.4%, and on 900,000 tiles that difference is nine
 # thousand objects against three. Grass and paving only where the town is.
 terrain field 0,0 960x960
-terrain grass 360,360 360x360
-terrain path  360,360 240x240
+terrain grass 210,210 600x600
+terrain path  255,255 540x540
 
 # Pastures cut into the arable, so the country is a patchwork rather than one
 # enormous prairie. Field/grass boundaries are what the prop generator turns into
 # hedgerows and post-and-rail.
 terrain grass 40,140 170x130
-terrain grass 150,560 160x150
+terrain grass 60,560 150x150
 terrain grass 30,760 190x140
 terrain grass 760,120 150x120
 terrain grass 830,430 110x150
-terrain grass 760,760 170x140
+terrain grass 810,760 120x140
 terrain grass 420,60 160x110
 terrain grass 400,840 170x100
 
@@ -97,6 +97,29 @@ road first 30 435,0 435,959
 road second 30 525,0 525,959
   class freeway
 
+# ---- the rest of the downtown grid ---------------------------------------
+# Six more, at ninety-metre centres, which with a thirty-metre corridor makes a
+# sixty-metre block - the same block the town already had. Northgate and Second
+# stay the arterials; these are ordinary downtown streets and carry one lane
+# each way.
+road market 30 345,0 345,959
+  class mainroad
+
+road third 30 615,0 615,959
+  class mainroad
+
+road fourth 30 705,0 705,959
+  class mainroad
+
+road bishop 30 0,345 959,345
+  class mainroad
+
+road hale 30 0,615 959,615
+  class mainroad
+
+road merrow 30 0,705 959,705
+  class mainroad
+
 # ---- the inner ring ------------------------------------------------------
 road westway 30 255,0 255,959
   class freeway
@@ -128,10 +151,10 @@ road southbound 30 0,915 959,915
 # what a farm track does. A junction only forms where one road's centre line
 # falls INSIDE the other's declared run.
 
-road hometrack 10 360,660 436,660
+road hometrack 10 100,165 200,165
   class track
 
-road backtrack 10 510,678 665,678
+road backtrack 10 340,845 450,845
   class track
 
 # ==========================================================================
@@ -343,101 +366,209 @@ place carpark 562,390 20x30 "the school lot"
 # place railway 510,360 30x240 "the Elevated"
 #   human It goes over the top of everything and you hear it before you see it.
 
+
+# ==========================================================================
+#  DOWNTOWN
+#
+#  THE TOWN IS THE INNER RING, not nine blocks in the middle of it. Northgate
+#  used to be a 3x3 grid of sixty-metre blocks sitting alone inside five hundred
+#  metres of arterial road, which reads as a village with a motorway network
+#  bolted round it. The streets at 345, 615 and 705 close the grid up: with the
+#  four that were already there, the square between the ring roads is now SIX
+#  block-bands each way - thirty-six blocks of sixty metres, which is the scale
+#  of a small city's walkable core rather than a hamlet's.
+#
+#  Nine of those blocks are the town as it was and are authored building by
+#  building above. The other twenty-seven are `district`: an open place that
+#  CityDistrict fills with a block - a perimeter of stacked buildings facing the
+#  street, shopfronts at ground level where the street is busy enough to want
+#  them, and whatever the middle of the block turns out to be.
+#
+#  A district is authored rather than worked out from the road grid because a
+#  block is a PLACE. It has a name, it can be clicked on, it can be told apart
+#  from its neighbours, and when one of them is where somebody was last seen it
+#  has to be something the map knows about rather than a gap between four roads.
+# ==========================================================================
+
+place district 270,270 60x60 "Westway at Northway"
+  human The last block before the ring road, and half of it is still hoardings.
+
+place district 360,270 60x60 "Market at Northway"
+  human Wholesalers, and nothing open after six.
+
+place district 450,270 60x60 "First at Northway"
+  human The good end of the north side, which is not saying a great deal.
+
+place district 540,270 60x60 "Second at Northway"
+  human Offices above, and a shop below that has been three different shops this year.
+
+place district 630,270 60x60 "Third at Northway"
+  human Where the buses turn round.
+
+place district 720,270 60x60 "Fourth at Northway"
+  human Backs onto the ring road and gets the noise of it all night.
+
+place district 270,360 60x60 "Westway at Bishop"
+  human Rooming houses. Nobody signs a lease here for a year.
+
+place district 630,360 60x60 "Third at Bishop"
+  human Trade counters, and a yard nobody locks.
+
+place district 720,360 60x60 "Fourth at Bishop"
+  human The far side, and the streetlights on it have been out since spring.
+
+place district 270,450 60x60 "Westway at Northgate"
+  human Cheap frontage on an expensive street, which tells you what happened here.
+
+place district 630,450 60x60 "Third at Northgate"
+  human Two floors of anything and a top floor of nothing.
+
+place district 720,450 60x60 "Fourth at Northgate"
+  human You can see the fields from the upper windows.
+
+place district 270,540 60x60 "Westway at Franklin"
+  human The laundry, the pawn shop and the place that cashes cheques.
+
+place district 630,540 60x60 "Third at Franklin"
+  human Quiet in a way the middle of town never is.
+
+place district 720,540 60x60 "Fourth at Franklin"
+  human Half-let, and the half that is let keeps odd hours.
+
+place district 270,630 60x60 "Westway at Hale"
+  human Built all at once and all the same, and it has not aged evenly.
+
+place district 360,630 60x60 "Market at Hale"
+  human The south-west corner, and the wind comes straight up it.
+
+place district 450,630 60x60 "First at Hale"
+  human Where people live who work in the middle.
+
+place district 540,630 60x60 "Second at Hale"
+  human Shopfronts with flats over them and a bar at the end.
+
+place district 630,630 60x60 "Third at Hale"
+  human Somebody keeps a light on all night on the third floor.
+
+place district 720,630 60x60 "Fourth at Hale"
+  human The edge of it. After this there are fields.
+
+place district 270,720 60x60 "Westway at Merrow"
+  human The southern limit, and it looks it.
+
+place district 360,720 60x60 "Market at Merrow"
+  human Lock-ups, mostly. A few of them are not lock-ups.
+
+place district 450,720 60x60 "First at Merrow"
+  human Terraces facing the ring road with their backs to each other.
+
+place district 540,720 60x60 "Second at Merrow"
+  human A block you could park on all night and nobody would ask.
+
+place district 630,720 60x60 "Third at Merrow"
+  human The last of the paving, and the kerbs give out halfway along.
+
+place district 720,720 60x60 "Fourth at Merrow"
+  human The corner nobody has any reason to come to.
+
+
 # ==========================================================================
 #  THE COUNTRY
 #
-#  Every lot below is the pack's own measured footprint rounded up.
-#  House_Farm_British is 13.8 x 15.1 and gets 15x16; Barn_Farm_Scandinavian is
-#  17.1 x 37.9 and gets 18x39; Silo_Grain_Old is 6.7 x 6 and gets 7x7.
+#  IT MOVED, because downtown grew into it. Home Farm, its yard, the big barn,
+#  the paddocks, the fields and the shelter belt all stood between 360 and 720,
+#  which is now the middle of the city. Every one of them is still here with its
+#  name and its sentence intact; they are on the far side of the ring roads
+#  instead, strung down the western strip where the map has room.
+#
+#  The strip is what is left between the north-south corridors: x 120..240 is a
+#  hundred and twenty metres wide, runs the height of the map, and is broken into
+#  cells by the east-west roads. A farm laid down a lane like that is not a
+#  compromise - it is what a farm beside a road actually looks like.
+#
+#  Every lot is the pack's own measured footprint rounded up. House_Farm_British
+#  is 13.8 x 15.1 and gets 15x16; Barn_Farm_Scandinavian is 17.1 x 37.9 and gets
+#  18x39; Silo_Grain_Old is 6.7 x 6 and gets 7x7.
 #
 #  There is not an animal anywhere in this pack, so a paddock is fenced, gated
 #  and troughed and stands empty. See the note in kinds.txt.
 # ==========================================================================
 
-# ---- the east fields -----------------------------------------------------
-# Northgate Avenue's corridor is y 60..89 and Franklin's is y 150..179, so the
-# fields go in the bands between them. A field laid across a road would stamp
-# its own ground over the carriageway and quietly erase it.
+# ---- HOME FARM, west of the outer ring -----------------------------------
+# The track runs east-west at y 160..170: the house and the yard are north of it
+# and the barn and the silos south, which is how a farm is laid out - you do not
+# walk through the machinery to get to the front door.
 
-place cornfield 610,364 76x52 "the top field"
-  human Forty acres, and the tractor lines run out of true where the ground dips.
-
-place cornfield 610,455 76x52 "the long field"
-  human It floods at the bottom corner every spring and nobody has ever drained it.
-
-place orchard 610,546 76x50 "the orchard"
-  human Planted in rows by somebody who is dead now.
-
-# A shelter belt along the east edge. Woodland is the one ground the prop
-# generator plants densely, so this is where actual trees go - scattering them
-# across the fields instead made the whole country read as forest.
-# BROKEN WHERE THE ROADS CROSS IT. This is one shelter belt in three pieces, because
-# Northgate's corridor is y 420..449 and Franklin's is y 510..539 and a copse laid
-# across them stamps WOODLAND over the carriageway - and woodland is the one ground
-# the prop generator plants at a third of its tiles, so the avenues came up with
-# trees growing across them.
-place copse 692,364 26x56 "the east belt"
-  human Planted as a windbreak and never thinned. You cannot see through it.
-
-place copse 692,450 26x60 "the east belt, middle"
-  human The stretch between the two avenues, and the darkest of the three.
-
-place copse 692,540 26x54 "the east belt, south"
-  human It gives out where the ground turns wet.
-
-# ---- HOME FARM - south-west, on the dirt track ---------------------------
-# First Street's corridor is x 60..89, so the farm buildings sit west of it in
-# the strip x 0..59. The track runs east-west at y 295..304: the house and yard
-# are north of it and the barn and silos south, which is how a farm is laid out
-# - you do not walk through the machinery to get to the front door.
-
-place farm 365,622 15x16 "Home Farm"
-  door 372,637
+place farm 130,130 15x16 "Home Farm"
+  door 137,145
   human The kitchen light is on at half past four and the radio is never off.
 
-place farmyard 384,624 30x28 "the yard"
+place farmyard 150,128 30x28 "the yard"
   human Mud, diesel and forty years of things that might come in useful.
 
-place barn 365,672 18x39 "the big barn"
-  door 374,672
+place barn 130,180 18x39 "the big barn"
+  door 139,180
   human Big enough to lose a car in, and dark enough at noon that you would.
 
-place silo 388,675 7x7 "the near silo"
+place silo 155,185 7x7 "the near silo"
   human It booms when you knock on it.
 
-place silo 398,675 7x7 "the far silo"
+place silo 165,185 7x7 "the far silo"
   human Empty since the wet year, and the ladder up the side is still sound.
 
-# The paddocks go in the strip between First Street and Second, x 90..149.
-place paddock 455,610 50x40 "the near paddock"
+# ---- the land, down the western strip ------------------------------------
+# One cell per band between the east-west corridors.
+
+place paddock 125,275 110x50 "the near paddock"
   human Cropped flat and empty. The gate has been open for a while.
 
-place paddock 455,660 50x50 "the far paddock"
+place paddock 125,365 110x50 "the far paddock"
   human You cannot see this one from the road, or the road from it.
 
-# And the big field east of Second Street, x 180..239.
-place cornfield 545,605 50x68 "the bottom field"
+place cornfield 125,455 110x50 "the top field"
+  human Forty acres, and the tractor lines run out of true where the ground dips.
+
+place cornfield 125,545 110x50 "the long field"
+  human It floods at the bottom corner every spring and nobody has ever drained it.
+
+place cornfield 125,635 110x50 "the bottom field"
   human The corn is over head height by August and the rows run away from the track.
 
-# The other side of the track. Split for the same reason as the belt: a field laid
-# across a road stamps its own ground over the road.
-place cornfield 545,683 50x27 "the bottom field, far side"
-  human A thin strip nobody bothers to turn the machine round in.
+place orchard 125,725 110x50 "the orchard"
+  human Planted in rows by somebody who is dead now.
 
-# ---- the back place - south-east ----------------------------------------
-# Reached only by the back track, which comes off Second Street at y 313..322.
-# Nothing else goes near it.
+# ---- the shelter belt, on the map's western edge -------------------------
+# Woodland is the one ground the prop generator plants densely, so this is where
+# the actual trees go - scattering them across the fields instead made the whole
+# country read as forest. It is in three pieces because a copse laid across a
+# road stamps WOODLAND over the carriageway, and woodland grows a tree on a third
+# of its tiles.
 
-place farm 660,630 15x16 "Wicker End"
-  door 667,645
+place copse 10,455 75x50 "the west belt"
+  human Planted as a windbreak and never thinned. You cannot see through it.
+
+place copse 10,545 75x50 "the west belt, middle"
+  human The stretch between the two roads, and the darkest of the three.
+
+place copse 10,635 75x50 "the west belt, south"
+  human It gives out where the ground turns wet.
+
+# ---- the back place, south of everything ---------------------------------
+# Reached only by the back track. Nothing else goes near it.
+
+place farm 365,820 15x16 "Wicker End"
+  door 372,835
   human Nobody has farmed it for years. Somebody is living in it.
 
-place barn 622,622 11x14 "the old barn"
-  door 627,635
+place barn 390,820 11x14 "the old barn"
+  door 395,833
   human Half the roof is down and the half that is not is worse.
 
-place orchard 622,686 96x30 "the old orchard"
+place orchard 455,815 50x80 "the old orchard"
   human Gone to scrub. The fruit falls and nobody picks it up.
 
-place copse 656,600 52x20 "the far spinney"
+place copse 545,815 50x80 "the far spinney"
   human Too small to be worth clearing and too thick to walk through quickly.
+
+place cornfield 635,815 50x80 "the far field"
+  human Nobody watches this one from anywhere.

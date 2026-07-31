@@ -79,6 +79,7 @@ namespace Noir.Editor
                 CityParking.Build(world, city.transform);
                 CitySigns.Build(world, city.transform);
                 CityBuildings.Build(world, city.transform);
+                CityDistrict.Build(world, city.transform);
                 CityRail.Build(world, city.transform);
                 CityFarm.Build(world, city.transform);
                 CityGreenery.Build(world, city.transform);
