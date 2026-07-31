@@ -24,7 +24,36 @@ done or delete the line when it turns out to be a bad idea.
 - [x] ~~`NoJunctionEverShowsGreenBothWays` tests an invariant that no longer holds.~~ FIXED: the test now skips unsignalised junctions in both assertions. `MayEnter` returns true on BOTH axes at a priority junction by design - the separation moved into `NothingCrossing`. The test should assert the new rule: signalised junctions never both green, priority junctions have exactly one axis with priority. — *2026-07-30*
 - [x] ~~Vehicle look-ahead is a constant 8m~~ — done in 4724abf: it is now both vehicles' measured half-lengths plus a headway. Did NOT fix the failing test; see the junction item above. — *2026-07-30*
 - [ ] No colliders on any vehicle: `CityTraffic` avoids by RULES (signals, give-way, look-ahead box), never by intersection test, so where a rule has no case cars pass through each other. Probably right for AI-vs-AI; needs revisiting the moment the player can drive. — *2026-07-30*
-- [ ] Jams appeared after the fleet went 97 -> 243. Suspect the give-way gap check starves a minor-road car forever once traffic is dense, blocking everyone behind it. — *2026-07-30*
+- [ ] Jams appeared after the fleet went 97 -> 243. CONFIRMED, both halves of it, by direct reproduction on the live city - and a fix was tried and reverted, because it traded starvation for an actual collision.
+
+  ROOT CAUSE: `NothingCrossing` (give-way) and `NothingComing` (left turn) both wait for zero
+  traffic within a fixed distance (`Crossing`=35m, `Oncoming`=22m), and a busy two-lane road can
+  relay-hand that gap from one car to the next with no frame ever clear - not a jam, not a
+  stopped queue, just continuous alternating arrivals. Watched it happen: a give-way car held
+  station for 235 of a 240-second window, and a left-turner for the full length of a 60-second
+  test, neither with a single frame of clearance.
+
+  THE FIX TRIED: a `Patience` timeout (15s) that lets a car commit anyway once it has waited too
+  long, leaning on `Blocked()` - already called every frame of `CrossJunction`, already checking
+  every heading once a car is inside the junction - as the real-time safety net. Isolated reruns
+  of `NoTwoVehiclesOccupyTheSameSpace` passed clean (5/5). The FULL SUITE did not: every PlayMode
+  test shares one continuously-running city, so by the time that test runs the traffic has been
+  live for several times longer than an isolated run ever exercises, and twice in a row it found
+  an actual 0.00m collision (`Car_Truck_Modern_Dump`, same spot both times). Isolated short reruns
+  were not a valid safety check for this - full-suite is.
+
+  A SECOND BUG SURFACED ALONG THE WAY: `Blocked()`'s same-heading filter is only dropped when
+  `me.Turn >= 0` (the turning car watches everyone), never when `other.Turn >= 0` (nobody watches
+  a turning car back). That was fine while a turn only ever started with the crossing lane
+  measured clear 35m/22m out, which gave the turning car's own check a long lead time - and
+  stopped being fine the moment Patience removed that precondition. Making the filter symmetric
+  did not stop the collision on its own either.
+
+  REVERTED rather than shipped: a mechanism that can put two vehicles in the same space is worse
+  than one that occasionally makes a car wait. NEXT STEP is not another bypass - it is either a
+  graduated reduction of `Crossing`/`Oncoming` toward a conservative, empirically-verified floor
+  (never zero), or gap acceptance based on actual closing speed rather than fixed distance -
+  proven safe over several FULL-SUITE repeats, not isolated ones, before it ships. — *2026-07-30*
 
 ## City
 
