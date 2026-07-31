@@ -36,9 +36,22 @@ namespace Noir.Editor
                 var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
 
+                // EVERY RENDERER THAT PLACES A BOUGHT MODEL, or the ones left out get missed and
+                // stay unbaked for ever. Four were: CityParking, CitySigns and CityDistrict have
+                // been placing the road kit's parking tiles, the whole sign set and the seven
+                // Squarehouse_Market shopfronts since they were written, and none of those meshes
+                // was ever made readable - so the chunker quietly left several thousand renderers
+                // alone and nobody noticed, because a chunker that skips something still succeeds.
+                //
+                // CitySuburb is the fourth and is what exposed it: two thousand hedge pieces are
+                // hard to miss in a renderer count where a few hundred parking tiles were not.
                 probe = new GameObject("ReadableProbe");
                 CityStreets.Build(world, probe.transform);
+                CityParking.Build(world, probe.transform);
+                CitySigns.Build(world, probe.transform);
                 CityBuildings.Build(world, probe.transform);
+                CityDistrict.Build(world, probe.transform);
+                CitySuburb.Build(world, probe.transform);
                 CityRail.Build(world, probe.transform);
                 CityFarm.Build(world, probe.transform);
                 CityPowerlines.Build(world, probe.transform);

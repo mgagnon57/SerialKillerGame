@@ -1,185 +1,187 @@
-﻿# ============================================================================
+# ============================================================================
 #  NORTHGATE
 #
-#  360 x 360 tiles, one tile = one metre. The city fills the north-west quadrant
-#  exactly as it did; the other three are country.
+#  1290 x 1290 tiles, one tile = one metre. A town in the middle of a country,
+#  which is what the 960 map could not be: see the note on the rings below.
 #
-#      0                       240                 360
-#  0   +--------------------------+-------------------+
-#      |                          |                   |
-#      |     T H E   C I T Y      |   the east fields |
-#      |     nine 60m blocks      |   and the orchard |
-#      |     four junctions       |                   |
-#  240 +--------------------------+-------------------+
-#      |  HOME FARM               |  the back place   |
-#      |  and the cornfields      |  no made road     |
-#  360 +--------------------------+-------------------+
+#      0        285                              1005      1290
+#  0   +---------+----------------------------------+---------+
+#      |                    the north country                  |
+#  285 +---------+----------------------------------+---------+
+#      |         |          S U B U R B S           |         |
+#  375 |         |   +--------------------------+   |         |
+#      |  west   |   |                          |   |  east   |
+#      | country |   |    D O W N T O W N       |   | country |
+#      |         |   |    six blocks square     |   |         |
+#  915 |         |   +--------------------------+   |         |
+#      |         |                                  |         |
+# 1005 +---------+----------------------------------+---------+
+#      |                    the south country                  |
+# 1290 +---------+----------------------------------+---------+
 #
-#  THE ROAD KIT DECIDES THE GRID, not taste. Prefabs/City/Roads City is built at
-#  thirty metres, so a through-road is a THIRTY-METRE CORRIDOR and the plan snaps
-#  to thirty. What differs between an arterial and a main road is not the corridor
-#  - both are thirty - but how much of it is asphalt:
+#  THE GRID IS A NINETY-METRE PITCH and everything follows from it: a thirty-
+#  metre corridor and a sixty-metre block, so roads land at 15 + 90k and N blocks
+#  span 90N + 30. Fourteen blocks a side is 1290, which is why the map is that
+#  number and not a round one.
+#
+#  THE MAP GREW BECAUSE THE COUNTRY HAD NOWHERE TO GO. On the 960 map the road
+#  grid was not centred - the outer ring sat at 105 and 915, whose midpoint is
+#  510 against a map centre of 480 - so outside it there was ninety metres on two
+#  sides and THIRTY on the other two. Thirty metres is one corridor. There was no
+#  version of that map with suburbs in it that still had a countryside, only a
+#  version with the farm evicted for a second time. At fourteen blocks the frame
+#  is 270m deep on every side and symmetric about the centre, which also puts
+#  Second Street and Franklin Street dead through the middle at 645.
+#
+#  EVERYTHING THAT WAS ALREADY BUILT MOVED BY +120, by script, so every internal
+#  relationship survived intact. Not half the growth: the town was centred on 525
+#  in the old map, and 645 - 525 = 120. Taking it from the map size would have
+#  pushed the whole city 45m off centre and quietly reintroduced the asymmetry
+#  this re-lay exists to remove.
+#
+#  THE ROAD GRID STOPS AT THE SUBURB RING - nine roads each way, at 285 through
+#  1005, and that is a traffic decision rather than a taste one. A full fifteen by
+#  fifteen grid would be some two hundred junctions and would treble the lane
+#  graph. The country gets the arterials running out through it and two farm
+#  tracks, which is what country roads are.
 #
 #    freeway    30m corridor, 24m asphalt, two lanes each way, orange centre
 #    mainroad   30m corridor, 12m asphalt, one lane each way
 #    street     10m corridor,  6m asphalt, unmarked
 #    track      10m corridor,  7m of dirt, no kerb and no markings
 #
-#  Because width alone cannot tell a freeway from a mainroad, the class is said
-#  outright on an indented `class` line rather than inferred.
-#
-#  A ROAD IS TILED BETWEEN THE POINTS IT IS DECLARED BETWEEN. The four city roads
-#  are declared edge to edge and so cross the whole map; a farm track is declared
-#  from a map edge to the road it joins, and stops there. Declaring a track that
-#  stops in a field would leave traffic driving off the end of it.
-#
-#  THE GROUND: grass everywhere, then the city paved over the top of it. Trees,
-#  hedges and bushes are scattered by Prop.ScatterOn, which fires on grass, field,
-#  wood and churchyard and on NOTHING else - so paving the city is what stops a
-#  hedge growing down the middle of the avenue, and leaving the country unpaved is
-#  what lets it grow anywhere at all.
+#  A ROAD IS TILED BETWEEN THE POINTS IT IS DECLARED BETWEEN. The arterials are
+#  declared edge to edge; a farm track is declared from its farm to the road it
+#  joins and stops there. A junction forms only where one road's centre line falls
+#  INSIDE the other's declared run, which is why the tracks below overshoot the
+#  road they meet by five metres.
 #
 #  Painted in order: terrain, then roads over terrain, then places over roads. An
 #  open place STAMPS ITS GROUND, so a place laid over a road must have road for
-#  its ground or it quietly erases the street - which is what the Elevated did to
-#  Second Street in an earlier plan.
+#  its ground or it quietly erases the street.
 # ============================================================================
 
 village Northgate
-size 960 960
+size 1290 1290
 
 # ---- the ground ----------------------------------------------------------
 # Field first, over the whole map: it is the cheap ground. Grass gives 1.2% of its
-# tiles a tree and field gives 0.4%, and on 900,000 tiles that difference is nine
-# thousand objects against three. Grass and paving only where the town is.
-terrain field 0,0 960x960
-terrain grass 210,210 600x600
-terrain path  255,255 540x540
+# tiles a tree and field gives 0.4%, and on 1.66 million tiles that difference is
+# the whole budget. Grass under the town and the suburbs, paving over downtown.
+terrain field 0,0 1290x1290
+terrain grass 270,270 750x750
+terrain path  375,375 540x540
 
 # Pastures cut into the arable, so the country is a patchwork rather than one
 # enormous prairie. Field/grass boundaries are what the prop generator turns into
-# hedgerows and post-and-rail.
-terrain grass 40,140 170x130
-terrain grass 60,560 150x150
-terrain grass 30,760 190x140
-terrain grass 760,120 150x120
-terrain grass 830,430 110x150
-terrain grass 810,760 120x140
-terrain grass 420,60 160x110
-terrain grass 400,840 170x100
+# hedgerows and post-and-rail, so these are what make the country read as farmed.
+terrain grass 30,300 220x120
+terrain grass 30,600 220x150
+terrain grass 30,900 220x140
+terrain grass 1040,200 220x150
+terrain grass 1040,560 220x160
+terrain grass 1040,950 220x140
+terrain grass 400,60 200x140
+terrain grass 400,1100 220x120
+terrain grass 700,80 180x120
 
 # ==========================================================================
 #  THE ROAD SYSTEM
 #
-#  THE TOWN IS THE MIDDLE OF THE MAP AND THE ROADS COME OUT OF IT. Northgate
-#  used to sit in a corner with a grid bolted on beside it, which reads as two
-#  places rather than one - a town, and separately some roads. Everything built
-#  now occupies the centre square, 360..720, and the network radiates from it:
-#  the town's own two pairs at the middle, then a ring at 255 and 795, then the
-#  outer at 105 and 915.
-#
-#  The rings are not perfectly mirrored about the centre. They cannot be: the
-#  farm, its fields and the shelter belt sit south and east of the town and reach
-#  to 720, so the ring on that side has to run wider than the one on the west.
-#  A road placed for symmetry would have been laid through the big barn.
+#  Nine each way, on the 15 + 90k grid, symmetric about the centre at 645. The
+#  seven inner ones bound the six downtown blocks; the outer pair at 285 and 1005
+#  bound the suburb ring. All of them run edge to edge, so the arterials carry on
+#  out through the country the way a main road out of a town does.
 # ==========================================================================
 
-# ---- the town's own, running the full width and height -------------------
-road northgate 30 0,435 959,435
+# ---- the suburb ring -----------------------------------------------------
+road westbound 30 285,0 285,1289
+  class mainroad
+
+road eastbound 30 1005,0 1005,1289
+  class mainroad
+
+road northbound 30 0,285 1289,285
+  class mainroad
+
+road southbound 30 0,1005 1289,1005
+  class mainroad
+
+# ---- the roads that bound downtown ---------------------------------------
+road westway 30 375,0 375,1289
   class freeway
 
-road franklin 30 0,525 959,525
-  class mainroad
-
-road first 30 435,0 435,959
-  class mainroad
-
-road second 30 525,0 525,959
+road eastway 30 915,0 915,1289
   class freeway
 
-# ---- the rest of the downtown grid ---------------------------------------
-# Six more, at ninety-metre centres, which with a thirty-metre corridor makes a
-# sixty-metre block - the same block the town already had. Northgate and Second
-# stay the arterials; these are ordinary downtown streets and carry one lane
-# each way.
-road market 30 345,0 345,959
-  class mainroad
-
-road third 30 615,0 615,959
-  class mainroad
-
-road fourth 30 705,0 705,959
-  class mainroad
-
-road bishop 30 0,345 959,345
-  class mainroad
-
-road hale 30 0,615 959,615
-  class mainroad
-
-road merrow 30 0,705 959,705
-  class mainroad
-
-# ---- the inner ring ------------------------------------------------------
-road westway 30 255,0 255,959
+road northway 30 0,375 1289,375
   class freeway
 
-road eastway 30 795,0 795,959
+road southway 30 0,915 1289,915
   class freeway
 
-road northway 30 0,255 959,255
+# ---- downtown's own ------------------------------------------------------
+road market 30 465,0 465,1289
+  class mainroad
+
+road first 30 555,0 555,1289
+  class mainroad
+
+road second 30 645,0 645,1289
   class freeway
 
-road southway 30 0,795 959,795
+road third 30 735,0 735,1289
+  class mainroad
+
+road fourth 30 825,0 825,1289
+  class mainroad
+
+road bishop 30 0,465 1289,465
+  class mainroad
+
+road northgate 30 0,555 1289,555
   class freeway
 
-# ---- the outer ----------------------------------------------------------
-road westbound 30 105,0 105,959
+road franklin 30 0,645 1289,645
   class mainroad
 
-road eastbound 30 915,0 915,959
+road hale 30 0,735 1289,735
   class mainroad
 
-road northbound 30 0,105 959,105
-  class mainroad
-
-road southbound 30 0,915 959,915
+road merrow 30 0,825 1289,825
   class mainroad
 
 # ---- the dirt tracks -----------------------------------------------------
-# Each runs from the farm to the made road it joins and stops there, which is
-# what a farm track does. A junction only forms where one road's centre line
-# falls INSIDE the other's declared run.
+# Each runs from its farm to the made road it joins and overshoots it by five
+# metres, so the road's centre line falls strictly inside the track's run and a
+# junction actually forms. Declaring one that stops in a field would leave traffic
+# driving off the end of it.
 
-road hometrack 10 100,165 200,165
+road hometrack 10 100,165 290,165
   class track
 
-road backtrack 10 340,845 450,845
+road backtrack 10 1000,1060 1150,1060
   class track
 
 # ==========================================================================
-#  THE CITY - north-west quadrant, unchanged
+#  THE CITY - the six-by-six core, moved +120 and otherwise untouched
 # ==========================================================================
 
-# ---- block WN: the depot corner ------------------------------------------
-place carwash 362,364 10x13 "the wash"
-  door 366,376
+place carwash 482,484 10x13 "the wash"
+  door 486,496
   human A place people leave a car and walk away from for ten minutes.
-
-place gasstation 398,364 20x11 "the pumps"
-  door 417,369
+place gasstation 518,484 20x11 "the pumps"
+  door 537,489
   human Somebody is always sitting in a car here not buying anything.
-
-place firestation 362,390 28x27 "Engine 9"
-  door 376,416
+place firestation 482,510 28x27 "Engine 9"
+  door 496,536
   human The doors are open in all weather and the crew watch the street from inside them.
-
-place green 393,380 24x37 "the depot yard"
+place green 513,500 24x37 "the depot yard"
   human Grass that grew because nobody got round to paving it.
 
 # ---- block CN: the north tower and the terrace ---------------------------
-place tower 456,364 48x39 "the Hallam Building"
-  door 456,383
+place tower 576,484 48x39 "the Hallam Building"
+  door 576,503
   human Forty floors of offices and a lobby nobody is ever turned away from.
 
 # SIX FLATS TO A BLOCK. These are four-storey townhouses, not cottages, and a
@@ -187,142 +189,135 @@ place tower 456,364 48x39 "the Hallam Building"
 # neighbours real - people who share a roof and a front path and notice each
 # other - and it is also what the traffic budget counts, so it is the difference
 # between empty roads and a town.
-place apartment 455,412 6x8 "1 Northgate"
-  door 458,419
+place apartment 575,532 6x8 "1 Northgate"
+  door 578,539
   units 6
-place apartment 461,412 6x8 "3 Northgate"
-  door 464,419
+place apartment 581,532 6x8 "3 Northgate"
+  door 584,539
   units 6
-place apartment 467,412 6x8 "5 Northgate"
-  door 470,419
+place apartment 587,532 6x8 "5 Northgate"
+  door 590,539
   units 6
-place apartment 473,412 6x8 "7 Northgate"
-  door 476,419
+place apartment 593,532 6x8 "7 Northgate"
+  door 596,539
   units 6
-place apartment 479,412 6x8 "9 Northgate"
-  door 482,419
+place apartment 599,532 6x8 "9 Northgate"
+  door 602,539
   units 6
-place apartment 485,412 6x8 "11 Northgate"
-  door 488,419
+place apartment 605,532 6x8 "11 Northgate"
+  door 608,539
   units 6
-place apartment 491,412 6x8 "13 Northgate"
-  door 494,419
+place apartment 611,532 6x8 "13 Northgate"
+  door 614,539
   units 6
-place apartment 497,412 6x8 "15 Northgate"
-  door 500,419
+place apartment 617,532 6x8 "15 Northgate"
+  door 620,539
   units 6
-place apartment 503,412 6x8 "17 Northgate"
-  door 506,419
+place apartment 623,532 6x8 "17 Northgate"
+  door 626,539
   units 6
 
 # ---- block EN: the school corner -----------------------------------------
-place school2 545,364 47x18 "Northgate Elementary"
-  door 568,381
+place school2 665,484 47x18 "Northgate Elementary"
+  door 688,501
   human Painted every summer and scuffed back to the undercoat by October.
-
-place icecream 545,390 16x11 "Bruno's"
-  door 552,400
+place icecream 665,510 16x11 "Bruno's"
+  door 672,520
   human Shut half the year, and the queue at Easter goes round the corner.
-
-place restroom 582,390 14x8 "the public conveniences"
-  door 588,397
+place restroom 702,510 14x8 "the public conveniences"
+  door 708,517
   human Council-green tile and a door that does not lock.
-
-place newsstand 545,410 7x3 "the stand"
-  door 548,412
+place newsstand 665,530 7x3 "the stand"
+  door 668,532
   human Papers, cigarettes, and the man who knows who bought which.
 
 # ---- block WM: the parade ------------------------------------------------
-place apartment 362,450 6x8 "2 Northgate"
-  door 365,450
+place apartment 482,570 6x8 "2 Northgate"
+  door 485,570
   units 6
-place apartment 368,450 6x8 "4 Northgate"
-  door 371,450
+place apartment 488,570 6x8 "4 Northgate"
+  door 491,570
   units 6
-place apartment 374,450 6x8 "6 Northgate"
-  door 377,450
+place apartment 494,570 6x8 "6 Northgate"
+  door 497,570
   units 6
-place apartment 380,450 6x8 "8 Northgate"
-  door 383,450
+place apartment 500,570 6x8 "8 Northgate"
+  door 503,570
   units 6
-place apartment 386,450 6x8 "10 Northgate"
-  door 389,450
+place apartment 506,570 6x8 "10 Northgate"
+  door 509,570
   units 6
-place apartment 392,450 6x8 "12 Northgate"
-  door 395,450
+place apartment 512,570 6x8 "12 Northgate"
+  door 515,570
   units 6
-place apartment 398,450 6x8 "14 Northgate"
-  door 401,450
+place apartment 518,570 6x8 "14 Northgate"
+  door 521,570
   units 6
-place apartment 404,450 6x8 "16 Northgate"
-  door 407,450
+place apartment 524,570 6x8 "16 Northgate"
+  door 527,570
   units 6
-place apartment 410,450 6x8 "18 Northgate"
-  door 413,450
+place apartment 530,570 6x8 "18 Northgate"
+  door 533,570
   units 6
-
-place bank 362,465 29x23 "Northgate Savings"
-  door 376,465
+place bank 482,585 29x23 "Northgate Savings"
+  door 496,585
   human Marble that was meant to look permanent.
-
-place diner 396,465 20x11 "the Northgate Diner"
-  door 405,465
+place diner 516,585 20x11 "the Northgate Diner"
+  door 525,585
   human Open before anyone needs it to be, and the same four faces are in it at six.
 
 # ---- block CM: downtown --------------------------------------------------
-place tower 455,460 46x37 "the Meridian"
-  door 478,460
+place tower 575,580 46x37 "the Meridian"
+  door 598,580
   human A hundred and eleven metres of it, and the top four floors have been empty for a year.
 
 # ---- block EM: the hospital ----------------------------------------------
-place apartment 542,450 6x8 "20 Northgate"
-  door 545,450
+place apartment 662,570 6x8 "20 Northgate"
+  door 665,570
   units 6
-place apartment 548,450 6x8 "22 Northgate"
-  door 551,450
+place apartment 668,570 6x8 "22 Northgate"
+  door 671,570
   units 6
-place apartment 554,450 6x8 "24 Northgate"
-  door 557,450
+place apartment 674,570 6x8 "24 Northgate"
+  door 677,570
   units 6
-place apartment 560,450 6x8 "26 Northgate"
-  door 563,450
+place apartment 680,570 6x8 "26 Northgate"
+  door 683,570
   units 6
-place apartment 566,450 6x8 "28 Northgate"
-  door 569,450
+place apartment 686,570 6x8 "28 Northgate"
+  door 689,570
   units 6
-place apartment 572,450 6x8 "30 Northgate"
-  door 575,450
+place apartment 692,570 6x8 "30 Northgate"
+  door 695,570
   units 6
-place apartment 578,450 6x8 "32 Northgate"
-  door 581,450
+place apartment 698,570 6x8 "32 Northgate"
+  door 701,570
   units 6
-place apartment 584,450 6x8 "34 Northgate"
-  door 587,450
+place apartment 704,570 6x8 "34 Northgate"
+  door 707,570
   units 6
-place apartment 590,450 6x8 "36 Northgate"
-  door 593,450
+place apartment 710,570 6x8 "36 Northgate"
+  door 713,570
   units 6
-
-place hospital 545,470 40x27 "Northgate General"
-  door 565,470
+place hospital 665,590 40x27 "Northgate General"
+  door 685,590
   human The only lit windows on this street at four in the morning.
 
 # ---- block WS: the park --------------------------------------------------
-place green 360,540 60x60 "Franklin Park"
+place green 480,660 60x60 "Franklin Park"
   human Grass worn to earth along the line everyone actually walks.
 
 # ---- block CS: the precinct and the picture house ------------------------
-place precinct 455,542 35x18 "Northgate Precinct"
-  door 472,542
+place precinct 575,662 35x18 "Northgate Precinct"
+  door 592,662
   human The light in the front office never goes off, which is not the same as somebody being awake.
-
-place cinema 485,565 22x35 "the Rialto"
-  door 495,565
+place cinema 605,685 22x35 "the Rialto"
+  door 615,685
   human Two screens, one of which has been showing the same film since spring.
 
 # ---- block ES: the casino ------------------------------------------------
-place casino 545,545 35x46 "the Regency Rooms"
-  door 562,545
+place casino 665,665 35x46 "the Regency Rooms"
+  door 682,665
   human Open all night, and the carpet is loud enough that nobody notices the hour.
 
 # ---- where the cars stand still -------------------------------------------
@@ -337,20 +332,15 @@ place casino 545,545 35x46 "the Regency Rooms"
 # piece of block that no building stands on. They are laid out to be found from
 # the street rather than to be efficient, which is what a surface lot in a small
 # downtown looks like.
-
-place carpark 452,565 30x30 "the precinct lot"
+place carpark 572,685 30x30 "the precinct lot"
   human Cruisers nose-in against the fence and everything else parked wherever.
-
-place carpark 540,499 50x10 "the hospital lot"
+place carpark 660,619 50x10 "the hospital lot"
   human Full at visiting hours and never emptier than half.
-
-place carpark 580,540 20x50 "behind the Regency"
+place carpark 700,660 20x50 "behind the Regency"
   human Nobody parks here who wants to be seen arriving.
-
-place carpark 364,489 50x20 "the Savings lot"
+place carpark 484,609 50x20 "the Savings lot"
   human Painted bays, and everybody parks across two of them.
-
-place carpark 562,390 20x30 "the school lot"
+place carpark 682,510 20x30 "the school lot"
   human Empty by four, apart from whoever is waiting.
 
 # ---- the elevated railway: TAKEN OUT FOR NOW ------------------------------
@@ -397,112 +387,85 @@ place carpark 562,390 20x30 "the school lot"
 #  Before it existed the traffic budget counted households, a district had none,
 #  and twenty-seven new blocks added not one car to the roads.
 # ==========================================================================
-
-place district 270,270 60x60 "Westway at Northway"
+place district 390,390 60x60 "Westway at Northway"
   human The last block before the ring road, and half of it is still hoardings.
   units 29
-
-place district 360,270 60x60 "Market at Northway"
+place district 480,390 60x60 "Market at Northway"
   human Wholesalers, and nothing open after six.
   units 29
-
-place district 450,270 60x60 "First at Northway"
+place district 570,390 60x60 "First at Northway"
   human The good end of the north side, which is not saying a great deal.
   units 29
-
-place district 540,270 60x60 "Second at Northway"
+place district 660,390 60x60 "Second at Northway"
   human Offices above, and a shop below that has been three different shops this year.
   units 29
-
-place district 630,270 60x60 "Third at Northway"
+place district 750,390 60x60 "Third at Northway"
   human Where the buses turn round.
   units 29
-
-place district 720,270 60x60 "Fourth at Northway"
+place district 840,390 60x60 "Fourth at Northway"
   human Backs onto the ring road and gets the noise of it all night.
   units 29
-
-place district 270,360 60x60 "Westway at Bishop"
+place district 390,480 60x60 "Westway at Bishop"
   human Rooming houses. Nobody signs a lease here for a year.
   units 29
-
-place district 630,360 60x60 "Third at Bishop"
+place district 750,480 60x60 "Third at Bishop"
   human Trade counters, and a yard nobody locks.
   units 29
-
-place district 720,360 60x60 "Fourth at Bishop"
+place district 840,480 60x60 "Fourth at Bishop"
   human The far side, and the streetlights on it have been out since spring.
   units 29
-
-place district 270,450 60x60 "Westway at Northgate"
+place district 390,570 60x60 "Westway at Northgate"
   human Cheap frontage on an expensive street, which tells you what happened here.
   units 29
-
-place district 630,450 60x60 "Third at Northgate"
+place district 750,570 60x60 "Third at Northgate"
   human Two floors of anything and a top floor of nothing.
   units 29
-
-place district 720,450 60x60 "Fourth at Northgate"
+place district 840,570 60x60 "Fourth at Northgate"
   human You can see the fields from the upper windows.
   units 29
-
-place district 270,540 60x60 "Westway at Franklin"
+place district 390,660 60x60 "Westway at Franklin"
   human The laundry, the pawn shop and the place that cashes cheques.
   units 29
-
-place district 630,540 60x60 "Third at Franklin"
+place district 750,660 60x60 "Third at Franklin"
   human Quiet in a way the middle of town never is.
   units 29
-
-place district 720,540 60x60 "Fourth at Franklin"
+place district 840,660 60x60 "Fourth at Franklin"
   human Half-let, and the half that is let keeps odd hours.
   units 29
-
-place district 270,630 60x60 "Westway at Hale"
+place district 390,750 60x60 "Westway at Hale"
   human Built all at once and all the same, and it has not aged evenly.
   units 29
-
-place district 360,630 60x60 "Market at Hale"
+place district 480,750 60x60 "Market at Hale"
   human The south-west corner, and the wind comes straight up it.
   units 29
-
-place district 450,630 60x60 "First at Hale"
+place district 570,750 60x60 "First at Hale"
   human Where people live who work in the middle.
   units 29
-
-place district 540,630 60x60 "Second at Hale"
+place district 660,750 60x60 "Second at Hale"
   human Shopfronts with flats over them and a bar at the end.
   units 29
-
-place district 630,630 60x60 "Third at Hale"
+place district 750,750 60x60 "Third at Hale"
   human Somebody keeps a light on all night on the third floor.
   units 29
-
-place district 720,630 60x60 "Fourth at Hale"
+place district 840,750 60x60 "Fourth at Hale"
   human The edge of it. After this there are fields.
   units 29
-
-place district 270,720 60x60 "Westway at Merrow"
+place district 390,840 60x60 "Westway at Merrow"
   human The southern limit, and it looks it.
   units 29
-
-place district 360,720 60x60 "Market at Merrow"
+place district 480,840 60x60 "Market at Merrow"
   human Lock-ups, mostly. A few of them are not lock-ups.
   units 29
-
-place district 450,720 60x60 "First at Merrow"
+place district 570,840 60x60 "First at Merrow"
   human Terraces facing the ring road with their backs to each other.
   units 29
-
-place district 540,720 60x60 "Second at Merrow"
+place district 660,840 60x60 "Second at Merrow"
   human A block you could park on all night and nobody would ask.
   units 29
-
-place district 630,720 60x60 "Third at Merrow"
+place district 750,840 60x60 "Third at Merrow"
   human The last of the paving, and the kerbs give out halfway along.
   units 29
-
-place district 720,720 60x60 "Fourth at Merrow"
+place district 840,840 60x60 "Fourth at Merrow"
   human The corner nobody has any reason to come to.
   units 29
 
@@ -534,6 +497,149 @@ place district 720,720 60x60 "Fourth at Merrow"
 # and the barn and the silos south, which is how a farm is laid out - you do not
 # walk through the machinery to get to the front door.
 
+# ==========================================================================
+#  THE SUBURBS
+#
+#  Twenty-eight cells: the eight-by-eight ring less the six-by-six downtown
+#  core. Same sixty-metre block as everything else, because the pitch is the
+#  pitch - what makes a suburb is not the size of the block, it is the SETBACK
+#  AND THE SPACING.
+#
+#  THERE IS NO SUBURBAN HOUSE IN THE PACK. All ~6,000 prefabs were searched:
+#  two farmhouses, both already standing as Home Farm and Wicker End, one
+#  summer-camp cabin, and the Fantasy set. A street of detached houses built out
+#  of what exists would be forty copies of Home Farm - the same failure as the
+#  yard of cream garages CityDistrict.Interior rejects in its own comments.
+#
+#  It does not need one. The townhouse modules ship in three face variants and
+#  CityBuildings.Stack already uses the ALL-SIDES one, so a freestanding house is
+#  buildable out of the kit the terraces are stacked from. CitySuburb takes
+#  Bayhouse rather than Squarehouse and the reason is measured: Squarehouse_
+#  Bottom_A carries three metres of unfaced universal atlas past the end of its
+#  brick and Bayhouse about one, and on a detached house that tail sits in the
+#  BACK GARDEN where it can be seen rather than inside a terrace where it cannot.
+#
+#  `units` is how many households live in the cell - one to a house, unlike a
+#  district where it is flats. See WorldModel.DeclaredHouseholds.
+# ==========================================================================
+
+place suburb 300,300 60x60 "Beechwood Rise"
+  human Built all at once in the good year, and every third house has the same door.
+  units 10
+place suburb 390,300 60x60 "The Larches"
+  human Nobody has cut down the tree it was named after, which is something.
+  units 10
+place suburb 480,300 60x60 "Coronation Avenue"
+  human Bunting in the summer and nothing at all the rest of the year.
+  units 10
+place suburb 570,300 60x60 "Northbound Gardens"
+  human Backs onto the ring road, and they all put the shed at that end.
+  units 10
+place suburb 660,300 60x60 "Elm Grove"
+  human Dutch elm took the elms in the seventies and the name stayed.
+  units 10
+place suburb 750,300 60x60 "Priory Close"
+  human There was never a priory. There was a man selling houses.
+  units 10
+place suburb 840,300 60x60 "Kingfisher Way"
+  human The stream it is named for runs in a pipe under the third garden.
+  units 10
+place suburb 930,300 60x60 "The Paddocks"
+  human It was, until nineteen sixty-eight.
+  units 10
+
+place suburb 300,390 60x60 "Willow Bank"
+  human The gardens flood at the bottom and everybody planted willows about it.
+  units 10
+place suburb 930,390 60x60 "Hawthorn Drive"
+  human A cul-de-sac, so the only cars on it belong to somebody who lives there.
+  units 10
+
+place suburb 300,480 60x60 "Saint Cuthbert's Park"
+  human The church sold the glebe and this is what went on it.
+  units 10
+place suburb 930,480 60x60 "Meadow Vale"
+  human Neither a meadow nor a vale, and the estate agent knew it.
+  units 10
+
+place suburb 300,570 60x60 "Chestnut Avenue"
+  human Wide enough for two cars to pass, which on this side of town is a boast.
+  units 10
+place suburb 930,570 60x60 "Sycamore Close"
+  human Somebody keeps a boat on a trailer here and has never once moved it.
+  units 10
+
+place suburb 300,660 60x60 "The Beeches"
+  human Bay windows, and net curtains in every one of them.
+  units 10
+place suburb 930,660 60x60 "Fairfield Road"
+  human The long way round to everywhere, which is why it is quiet.
+  units 10
+
+place suburb 300,750 60x60 "Orchard Way"
+  human Built on one. Two of the old apple trees are still in back gardens.
+  units 10
+place suburb 930,750 60x60 "Cedar Crescent"
+  human It curves for no reason anybody can now remember.
+  units 10
+
+place suburb 300,840 60x60 "Lavender Hill"
+  human It is not a hill either.
+  units 10
+place suburb 930,840 60x60 "Rowan Court"
+  human The newest of them, and the gardens have not grown into themselves yet.
+  units 10
+
+place suburb 300,930 60x60 "Southbound Gardens"
+  human The corner plot has a caravan on it and has had for eleven years.
+  units 10
+place suburb 390,930 60x60 "Mill Race"
+  human Named after a watercourse three miles away.
+  units 10
+place suburb 480,930 60x60 "Apple Tree Lane"
+  human A lane once. It has kerbs and a turning head now.
+  units 10
+place suburb 570,930 60x60 "Greenacres"
+  human Somebody has painted their front door a colour the rest have opinions about.
+  units 10
+place suburb 660,930 60x60 "Hillside Close"
+  human You can see the fields from the upstairs back windows.
+  units 10
+place suburb 750,930 60x60 "The Spinney"
+  human Two rows of houses and the last of the wood behind them.
+  units 10
+place suburb 840,930 60x60 "Fern Bank"
+  human The quiet end, and the streetlight outside number twelve has been out since spring.
+  units 10
+place suburb 930,930 60x60 "Woodland Rise"
+  human The last of it. After this there are fields.
+  units 10
+
+
+# ==========================================================================
+#  THE COUNTRY
+#
+#  A 270-metre frame on every side, which is the whole reason the map grew. The
+#  west and east strips run the height of the map uncut by any north-south road,
+#  and the four corners are 270m square and road-free - which is why the farm is
+#  in one of them and the back place is in another.
+#
+#  Every lot is the pack's own measured footprint rounded up. House_Farm_British
+#  is 13.8 x 15.1 and gets 15x16; Barn_Farm_Scandinavian is 17.1 x 37.9 and gets
+#  18x39; Silo_Grain_Old is 6.7 x 6 and gets 7x7.
+#
+#  There is not an animal anywhere in this pack, so a paddock is fenced, gated
+#  and troughed and stands empty. See the note in kinds.txt.
+# ==========================================================================
+
+# ---- HOME FARM, in the north-west corner ---------------------------------
+# It did NOT move with the town. The +120 shift would have put the yard and both
+# silos inside the suburb ring corridor, so the farm goes where there is room for
+# it instead - the corner, which no road touches. The track runs east-west at
+# y 160..170 with the house and the yard north of it and the barn and the silos
+# south, which is how a farm is laid out: you do not walk through the machinery
+# to get to the front door.
+
 place farm 130,130 15x16 "Home Farm"
   door 137,145
   human The kitchen light is on at half past four and the radio is never off.
@@ -552,58 +658,86 @@ place silo 165,185 7x7 "the far silo"
   human Empty since the wet year, and the ladder up the side is still sound.
 
 # ---- the land, down the western strip ------------------------------------
-# One cell per band between the east-west corridors.
+# One cell per band between the east-west corridors. The strip is x 0..270 and no
+# north-south road crosses it, so a field only has to fit between two of the
+# east-west roads - sixty metres, and a fifty-metre field leaves five each side.
 
-place paddock 125,275 110x50 "the near paddock"
+place paddock 125,305 110x50 "the near paddock"
   human Cropped flat and empty. The gate has been open for a while.
 
-place paddock 125,365 110x50 "the far paddock"
+place paddock 125,395 110x50 "the far paddock"
   human You cannot see this one from the road, or the road from it.
 
-place cornfield 125,455 110x50 "the top field"
+place cornfield 125,485 110x50 "the top field"
   human Forty acres, and the tractor lines run out of true where the ground dips.
 
-place cornfield 125,545 110x50 "the long field"
+place cornfield 125,575 110x50 "the long field"
   human It floods at the bottom corner every spring and nobody has ever drained it.
 
-place cornfield 125,635 110x50 "the bottom field"
+place cornfield 125,665 110x50 "the bottom field"
   human The corn is over head height by August and the rows run away from the track.
 
-place orchard 125,725 110x50 "the orchard"
+place orchard 125,755 110x50 "the orchard"
   human Planted in rows by somebody who is dead now.
+
+place cornfield 125,845 110x50 "the far acre"
+  human The last field before the road, and the one nobody bothers to walk.
 
 # ---- the shelter belt, on the map's western edge -------------------------
 # Woodland is the one ground the prop generator plants densely, so this is where
 # the actual trees go - scattering them across the fields instead made the whole
-# country read as forest. It is in three pieces because a copse laid across a
-# road stamps WOODLAND over the carriageway, and woodland grows a tree on a third
-# of its tiles.
+# country read as forest. It is in pieces because a copse laid across a road
+# stamps WOODLAND over the carriageway, and woodland grows a tree on a third of
+# its tiles.
 
-place copse 10,455 75x50 "the west belt"
+place copse 10,485 75x50 "the west belt"
   human Planted as a windbreak and never thinned. You cannot see through it.
 
-place copse 10,545 75x50 "the west belt, middle"
+place copse 10,575 75x50 "the west belt, middle"
   human The stretch between the two roads, and the darkest of the three.
 
-place copse 10,635 75x50 "the west belt, south"
+place copse 10,665 75x50 "the west belt, south"
   human It gives out where the ground turns wet.
 
-# ---- the back place, south of everything ---------------------------------
-# Reached only by the back track. Nothing else goes near it.
+place copse 10,755 75x50 "the west belt, end"
+  human Somebody has been cutting firewood out of this one.
 
-place farm 365,820 15x16 "Wicker End"
-  door 372,835
+# ---- the back place, in the south-east corner ----------------------------
+# Reached only by the back track. Nothing else goes near it, and in a corner
+# nothing else has any reason to.
+
+place farm 1040,1030 15x16 "Wicker End"
+  door 1047,1045
   human Nobody has farmed it for years. Somebody is living in it.
 
-place barn 390,820 11x14 "the old barn"
-  door 395,833
+place barn 1065,1030 11x14 "the old barn"
+  door 1070,1043
   human Half the roof is down and the half that is not is worse.
 
-place orchard 455,815 50x80 "the old orchard"
+place orchard 1040,1075 50x80 "the old orchard"
   human Gone to scrub. The fruit falls and nobody picks it up.
 
-place copse 545,815 50x80 "the far spinney"
+place copse 1100,1075 50x80 "the far spinney"
   human Too small to be worth clearing and too thick to walk through quickly.
 
-place cornfield 635,815 50x80 "the far field"
+place cornfield 1160,1075 50x80 "the far field"
   human Nobody watches this one from anywhere.
+
+# ---- the eastern strip ---------------------------------------------------
+# The mirror of the west, and emptier on purpose: the farm is one place and a map
+# with two of them has neither.
+
+place cornfield 1050,300 110x50 "the top of the hill"
+  human It catches the weather first and everything here is a week behind.
+
+place cornfield 1050,480 110x50 "the middle field"
+  human Split by a hedge somebody grubbed out and never finished.
+
+place copse 1180,575 100x50 "the east wood"
+  human Older than the town, and the boundary bank round it is older still.
+
+place copse 1180,665 100x50 "the east wood, lower"
+  human The same wood, on the other side of the road that was put through it.
+
+place paddock 1050,755 110x50 "the long acre"
+  human Fenced for horses that were sold years ago.

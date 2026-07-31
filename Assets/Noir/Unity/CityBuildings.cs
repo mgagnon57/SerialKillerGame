@@ -233,10 +233,21 @@ namespace Noir.Unity
         /// Bayhouse is seven metres deep against Squarehouse's nine, and a market ground floor
         /// under Bayhouse storeys would step in and out at the first floor.
         /// </param>
+        /// <param name="only">
+        /// Force one family rather than letting the lot roll for it. CitySuburb passes
+        /// "Bayhouse" and the reason is measured rather than aesthetic: `Squarehouse_Bottom_A`
+        /// carries three metres of unfaced `M_Universal_A` past the end of its brick and
+        /// `Bayhouse_Bottom_A` about one. `Seat(dressedOnly: true)` puts the brick on the
+        /// building line, which sends that tail out of the BACK - invisible in a terrace, where
+        /// the block interior is built over it, and three metres of blank cream in a back garden,
+        /// which is the one thing a suburb is mostly made of. Bayhouse is also 7m deep against 9
+        /// and has a bay front, which is the register anyway.
+        /// </param>
         public static int Stack(Transform parent, Place place, TileRect lot, float yaw,
-                                int storeys, bool market, out GameObject house)
+                                int storeys, bool market, out GameObject house,
+                                string only = null)
         {
-            string family = market || SquareAt(lot) ? "Squarehouse" : "Bayhouse";
+            string family = only ?? (market || SquareAt(lot) ? "Squarehouse" : "Bayhouse");
 
             // All-sides everywhere, not front-only for the interior of a terrace.
             //

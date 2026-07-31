@@ -12,9 +12,37 @@ done or delete the line when it turns out to be a bad idea.
 
 ## Roads
 
-- [ ] The outer city. **THE FORK IS SETTLED — the map grows to 1290** and the design is written up
-  at `docs/superpowers/specs/2026-07-31-the-outer-city-design.md`. Not started, and deliberately
-  QUEUED BEHIND THE JAMS ITEM below: 28 suburb cells is ~450 households against the 945 declared
+- [x] ~~The outer city.~~ **BUILT.** Map 960 -> 1290, downtown 6x6 untouched, a suburb ring of 28
+  cells, and 270m of country on every side. `Assets/Noir/Unity/CitySuburb.cs`: **272 houses, 179
+  garages, 102 cars on drives, 2,016 lengths of hedge** across the 28 cells. Everything already
+  built moved +120 by script - not half the growth, because the town was centred on 525 and the new
+  map's centre is 645. 83 junctions against 84 before, which is the flat junction count the road
+  grid was stopped at the suburb ring to get.
+
+  THREE THINGS THE BUILD FOUND THAT NOTHING WAS WATCHING FOR:
+
+  `CityDistrict.TownX` was `const 525f` and went silently wrong the moment the town moved. Nothing
+  failed - blocks still built, they just ranked against a point 120m away, so storeys fell off
+  towards the wrong edge and shopfronts faced the wrong way. 662 buildings became 580 and four
+  towers became seven, with no error anywhere. It is asked of the map now.
+
+  `MeshReadable` was missing FOUR renderers - CityParking, CitySigns, CityDistrict and the new
+  CitySuburb - so the parking tiles, every road sign and all seven market shopfronts had never
+  been made readable and the chunker had been silently leaving them alone. Adding them took the
+  bake from **13,791 renderers to 5,206**. The 960 map baked to 4,462, so the entire outer city
+  costs +17% renderers for +81% area.
+
+  MapAudit caught two of my own eastern-strip lots straddling an east-west corridor - the east
+  strip is cut by those roads and the west strip is not - and it caught them by EXITING 1, which
+  it could not have done this morning.
+
+  Fleet 236 -> 306 and the traffic is unmoved: median wait 15.8s against 17.0s on the old map, p90
+  24.6s against 22.7s, worst 53.9s against 53.6s. `units 10` on a suburb cell is measured (272
+  houses over 28 cells), not liked. PlayMode 11/11, Core 163/165, MapAudit clean on all eight.
+  Three new stills: `suburb-street`, `suburb-block`, `suburb-edge`. — *2026-07-31*
+
+- [ ] ~~The outer city, superseded note kept for the reasoning.~~ The fork was settled at
+  `docs/superpowers/specs/2026-07-31-the-outer-city-design.md` and was QUEUED BEHIND THE JAMS ITEM: 28 suburb cells is ~450 households against the 945 declared
   now, which grows the fleet 236 -> ~350, and holding the fleet flat is the entire reason
   `CarsOutPerHousehold` is 0.25. Building it on an unfixed give-way fault makes a reproduced defect
   worse and muddies the evidence for whether any fix worked.

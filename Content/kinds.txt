@@ -831,6 +831,36 @@ kind district
   catchment no
   describe  yes
 
+# A suburb cell. The same sixty-metre block as a district and a completely
+# different place, because what makes a suburb is not the size of the block - it is
+# the setback and the spacing. CitySuburb stands houses back from the corridor
+# behind a garden instead of on the building line shoulder to shoulder.
+#
+# GROUND IS GRASS, and that is the one column that really separates it from a
+# district. A district stamps `path` and is paved kerb to kerb; a suburb is lawn
+# and hedge with a driveway cut into it, so the prop generator's greenery is
+# welcome here rather than something to be paved over.
+#
+# It is not a home in its own right - it has no rooms and nobody is housed in it
+# one by one - so like a district it feeds WorldModel.DeclaredHouseholds and not
+# the simulated population. `units` on the place says how many live there, one to
+# a house rather than a district's flats.
+kind suburb
+  words     suburb estate
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
 # ---- the city, continued ----------------------------------------------------
 # A surface car park. Open ground, and its ground is PATH: it is hard-standing like
 # a farmyard, and saying so is what makes CityStreets leave it alone rather than

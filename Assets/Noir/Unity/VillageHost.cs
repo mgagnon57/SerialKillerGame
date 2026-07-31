@@ -164,6 +164,7 @@ namespace Noir.Unity
             CitySigns.Build(World, city.transform);
             CityBuildings.Build(World, city.transform);
             CityDistrict.Build(World, city.transform);
+            CitySuburb.Build(World, city.transform);
             CityRail.Build(World, city.transform);
             CityFarm.Build(World, city.transform);
             CityPowerlines.Build(World, city.transform);

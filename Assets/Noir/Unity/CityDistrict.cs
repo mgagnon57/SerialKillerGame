@@ -54,13 +54,30 @@ namespace Noir.Unity
         private const string CityProps = City + "Props City/";
         private const string Cars = "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars/Cars City";
 
-        /// <summary>Where the middle of downtown is, in village coordinates.</summary>
-        private const float TownX = 525f, TownY = 525f;
+        /// <summary>
+        /// Where the middle of downtown is, in village coordinates - ASKED OF THE MAP, not typed.
+        ///
+        /// This was `const float TownX = 525f` and it was silently wrong the moment the map was
+        /// re-laid at 1290 and the town moved to 645. Nothing failed. The blocks still built; they
+        /// just ranked themselves against a point a hundred and twenty metres away, so storeys
+        /// fell off towards the wrong edge and the shopfronts faced the wrong way - 662 buildings
+        /// became 580 and four towers became seven, with no error anywhere. That is the whole
+        /// argument for deriving it: a wrong constant here does not break, it just quietly makes a
+        /// worse city, which is the kind of fault that survives for months.
+        ///
+        /// The town is centred on the map by construction - that is what the +120 re-lay was for -
+        /// so the map's own middle is the answer and it stays the answer whatever the map does
+        /// next.
+        /// </summary>
+        private static float _townX = 525f, _townY = 525f;
 
         public static GameObject Build(WorldModel world, Transform parent)
         {
             var root = new GameObject("CityDistrict");
             root.transform.SetParent(parent, false);
+
+            _townX = world.Width * 0.5f;
+            _townY = world.Height * 0.5f;
 
 #if UNITY_EDITOR
             int blocks = 0, buildings = 0, towers = 0, pieces = 0, yard = 0;
@@ -102,7 +119,7 @@ namespace Noir.Unity
         private static float RankOf(TileRect lot)
         {
             float cx = lot.X + lot.W * 0.5f, cy = lot.Y + lot.H * 0.5f;
-            return Mathf.Max(Mathf.Abs(cx - TownX), Mathf.Abs(cy - TownY)) / 90f;
+            return Mathf.Max(Mathf.Abs(cx - _townX), Mathf.Abs(cy - _townY)) / 90f;
         }
 
         /// <summary>
@@ -193,8 +210,8 @@ namespace Noir.Unity
 
             // Which sides face the middle of town, and so get the shopfronts.
             float cx = lot.X + lot.W * 0.5f, cy = lot.Y + lot.H * 0.5f;
-            bool shopNorth = cy > TownY, shopSouth = cy < TownY;
-            bool shopWest = cx > TownX, shopEast = cx < TownX;
+            bool shopNorth = cy > _townY, shopSouth = cy < _townY;
+            bool shopWest = cx > _townX, shopEast = cx < _townX;
 
             // North and south: full width, facing -y and +y.
             for (int x = lot.X; x + Pitch <= lot.X + lot.W; x += Pitch)
