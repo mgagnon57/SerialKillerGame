@@ -76,6 +76,14 @@ done or delete the line when it turns out to be a bad idea.
 - [x] ~~**A car crossing a junction ignores every other vehicle.**~~ FIXED: CrossJunction now calls Blocked(), and inside a junction the same-heading filter is dropped because a turning car crosses the others rather than following them. `Blocked()` is only called from `RunSegment`; `CrossJunction` has no check at all, so a turning car drives through anything on the lane it is entering. This is what `NoTwoVehiclesOccupyTheSameSpace` catches at 0.00m, and the look-ahead fix does not touch it. — *2026-07-30*
 - [x] ~~`NoJunctionEverShowsGreenBothWays` tests an invariant that no longer holds.~~ FIXED: the test now skips unsignalised junctions in both assertions. `MayEnter` returns true on BOTH axes at a priority junction by design - the separation moved into `NothingCrossing`. The test should assert the new rule: signalised junctions never both green, priority junctions have exactly one axis with priority. — *2026-07-30*
 - [x] ~~Vehicle look-ahead is a constant 8m~~ — done in 4724abf: it is now both vehicles' measured half-lengths plus a headway. Did NOT fix the failing test; see the junction item above. — *2026-07-30*
+- [ ] **The eastbound ring road at x=1008 is the one junction that starves.** Every run of
+  `NoCarWaitsForeverAtTheHeadOfAClearQueue` puts its worst wait at the same place - 83.9s and
+  86.5s on consecutive runs, against a fleet p90 of 22-25s - so it is a property of that junction
+  and not of the load. It is a left turn across two lanes of through traffic on the busiest road
+  on the map, and `NothingComing` wants 22m of clear road before it will go. The gate has been
+  widened to three signal cycles so it stops flapping, which hides nothing: the number to watch
+  is the p90, and this is recorded so the tail is not mistaken for noise later. Worth either a
+  filter lane, a signal, or letting a car that has waited two cycles take a smaller gap. — *2026-07-31*
 - [ ] Semi trailers drive the freeway with no cab. `Car_Truck_Trailer_Modern`,
   `Car_Truck_Trailer_Container_Large` (+B..F) and `Car_Truck_Trailer_Car_Modern` are BARE TRAILERS
   - checked the prefabs, they have rear wheels and no steering wheel - and `CityTraffic.Everyday`

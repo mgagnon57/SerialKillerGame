@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.People;
@@ -103,6 +104,12 @@ namespace Noir.Unity
             if (sim == null) return;
 
             float dt = Time.unscaledDeltaTime;
+
+            // Simulation steps to a real second, so a per-tick distance becomes a real speed.
+            // Paused it is zero, which stops the walk dead rather than leaving it treadmilling.
+            float perSecond = GameClock.TicksPerSecond
+                            * VillageHost.Speeds[Mathf.Clamp(_host.SpeedIndex, 0,
+                                                             VillageHost.Speeds.Length - 1)];
 
             // Paused, the stride is left exactly where it was caught. Legs folding themselves
             // back to attention the moment you hit space would say "the simulation stopped",
@@ -220,9 +227,25 @@ namespace Noir.Unity
                 //
                 // Running is the child at play and nothing else: an adult jogging across
                 // Northgate reads as fleeing, which is a story event rather than a commute.
+                //
+                // The pace handed over is metres per REAL second, which is the speed the eye sees
+                // the person travel at and the only speed a stride can honestly be matched to. At
+                // 10x the town moves ten times faster than anybody walks, so it is deliberately
+                // not the walking speed the simulation believes in - AgentAnimation clamps the
+                // ratio, and beyond about twice speed the legs stop trying and say so.
+                //
+                // Taken from the SIMULATION's step and not from ground covered since the last
+                // rendered frame, for the same reason the leg swing above is. The sim runs at a
+                // fixed 20 Hz and the renderer does not: at 1x on a quick machine most frames
+                // advance the clock by no ticks at all, so a per-frame delta reads zero nine
+                // frames in ten and would peg the playback rate to its floor while the person is
+                // visibly walking. Per tick times ticks a second times the clock's multiplier is
+                // the same number, and it is the same on every machine.
                 AgentAnimation.Drive(_figures[i].Animator, agent.Doing, walking,
                                      hurrying: agent.Doing == Activity.AtThePlayground,
-                                     who: _host.People.Get(new CitizenId(i)).Key.Value);
+                                     who: _host.People.Get(new CitizenId(i)).Key.Value,
+                                     pace: Mathf.Sqrt((agent.Position - agent.PreviousPosition)
+                                                          .LengthSquared) * perSecond);
             }
         }
 
@@ -240,6 +263,101 @@ namespace Noir.Unity
         /// </summary>
         private static float Sampled(float stride, float perSample) =>
             Mathf.Clamp01((stride / Mathf.Max(perSample, 0.0001f) - 1f) * 0.5f);
+
+        /// <summary>
+        /// What the town is doing and what it is playing, for the diagnostics.
+        ///
+        /// The question "do people animate" cannot be answered from outside: it needs the
+        /// simulation's idea of who is on the move lined up against the Animator's idea of what
+        /// they are playing, and only this class holds both. A person WALKING while their animator
+        /// sits in the idle state is the whole of the gliding fault, and it is invisible in either
+        /// number on its own.
+        /// </summary>
+        public struct Census
+        {
+            public int People, Animated, Moving, Wrong;
+
+            /// <summary>
+            /// The rate the walk is playing at, averaged over everybody on the move.
+            ///
+            /// The AVERAGE and not the extremes, because a person whose last simulation step
+            /// happened to land on zero - one who has just been given a path, or who is a frame
+            /// from stopping - reads as 0.00x for that frame and is not a fault. One such person
+            /// ruins a minimum and moves an average of forty by nothing.
+            /// </summary>
+            public float Rate;
+            public float Slowest, Fastest;
+            public string Wanted;
+
+            public override string ToString() =>
+                $"{People} people, {Animated} with an animator, {Moving} on the move, "
+              + $"{Wrong} of those NOT in the state they should be. "
+              + (Moving > 0 ? $"Walk playing at {Rate:0.00}x "
+                            + $"({Slowest:0.00}-{Fastest:0.00}). " : "")
+              + $"Wanted: {Wanted}";
+        }
+
+        public Census Report()
+        {
+            var sim = _host.Sim;
+            if (sim == null) return new Census { Wanted = "no simulation" };
+
+            int walking = 0, walkingAndIdle = 0, animated = 0, rated = 0;
+            float slowest = float.MaxValue, fastest = 0f, rates = 0f;
+            var states = new Dictionary<string, int>();
+
+            for (int i = 0; i < _figures.Length; i++)
+            {
+                var agent = sim.GetAgent(i);
+                bool moves = agent.Heading.X != 0f || agent.Heading.Y != 0f;
+                if (moves) walking++;
+
+                var animator = _figures[i].Animator;
+                if (animator == null || animator.runtimeAnimatorController == null) continue;
+                animated++;
+
+                string want = AgentAnimation.ClipFor(
+                    agent.Doing, moves,
+                    hurrying: agent.Doing == Activity.AtThePlayground,
+                    who: _host.People.Get(new CitizenId(i)).Key.Value) ?? "(nothing)";
+
+                states[want] = states.TryGetValue(want, out int n) ? n + 1 : 1;
+
+                if (!moves) continue;
+
+                // MID-CROSSFADE COUNTS AS RIGHT. While a transition runs, the current state is
+                // still the one being left - so somebody who has just started walking and is a
+                // frame into the quarter-second fade INTO the walk reads as being in the idle,
+                // which is the opposite of the truth. Asking where they are going as well as
+                // where they are turns a false alarm back into a pass.
+                int wanted = Animator.StringToHash(want);
+                bool right = animator.GetCurrentAnimatorStateInfo(0).shortNameHash == wanted
+                          || (animator.IsInTransition(0)
+                              && animator.GetNextAnimatorStateInfo(0).shortNameHash == wanted);
+                if (!right) walkingAndIdle++;
+
+                // The rate the walk is being played at, which is the number that decides whether
+                // the feet plant or skate. Read only off people who are moving: everybody standing
+                // still is on 1.00x by definition and would flatten the span into meaninglessness.
+                slowest = Mathf.Min(slowest, animator.speed);
+                fastest = Mathf.Max(fastest, animator.speed);
+                rates += animator.speed;
+                rated++;
+            }
+
+            var parts = new List<string>();
+            foreach (var s in states) parts.Add($"{s.Key}={s.Value}");
+            parts.Sort(System.StringComparer.Ordinal);
+
+            return new Census
+            {
+                People = _figures.Length, Animated = animated,
+                Moving = walking, Wrong = walkingAndIdle,
+                Rate = rated > 0 ? rates / rated : 0f,
+                Slowest = slowest == float.MaxValue ? 0f : slowest, Fastest = fastest,
+                Wanted = string.Join(", ", parts),
+            };
+        }
 
         /// <summary>
         /// Move the selection colour. Repainting is the one thing here that touches renderers, so

@@ -163,6 +163,14 @@ namespace Noir.Unity
 
             // ---- their own clothes ----
             var skin = go.GetComponentInChildren<SkinnedMeshRenderer>();
+
+            // WHERE THE MESH CAME FROM, read BEFORE it is replaced. The avatar lives beside the
+            // mesh as a sub-asset of the same .fbx, and once sharedMesh points at our own clone
+            // there is no longer anything on this object that knows which model it came from.
+            string model = skin != null && skin.sharedMesh != null
+                ? AssetDatabase.GetAssetPath(skin.sharedMesh)
+                : null;
+
             if (skin != null && skin.sharedMesh != null)
                 skin.sharedMesh = Dressed(skin.sharedMesh, who.Key);
             body._skin = skin;
@@ -174,10 +182,25 @@ namespace Noir.Unity
             _controller ??= AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Controller);
             if (_controller != null) animator.runtimeAnimatorController = _controller;
 
+            // NO AVATAR MEANS NO RETARGETING, AND IT FAILS SILENTLY. A humanoid clip played
+            // through an animator with no avatar does not throw and does not warn - the figure
+            // simply stands in its bind pose and slides about, which looks exactly like a person
+            // who has not been told to walk. Seventy-four of the 365 arrived this way, because
+            // not every prefab in the pack carries an Animator of its own and one added here has
+            // nothing on it. The avatar is a sub-asset of the model, so it is fetched from there.
+            if (animator.avatar == null && model != null) animator.avatar = AvatarFor(model);
+
             // The clips are in place by design, so the animator must never move anybody: the
             // simulation decides where people are and this would fight it for the same number.
             animator.applyRootMotion = false;
-            animator.cullingMode = AnimatorCullingMode.CullCompletely;
+
+            // NOT CullCompletely, WHICH STOPS THEM DEAD. That disables the animator outright when
+            // its renderers are not judged visible - and a disabled animator does not update the
+            // bounds that decide visibility, so a figure that falls out of view can stay stopped.
+            // Measured with it on: of forty animators watched over a whole second, forty had not
+            // advanced their clip by a single frame. CullUpdateTransforms keeps the state machine
+            // running and only skips writing the bones, which is the saving actually wanted.
+            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
             body.Animator = animator;
             return body;
@@ -260,6 +283,25 @@ namespace Noir.Unity
             found.Sort(System.StringComparer.Ordinal);   // stable, so a crowd looks the same twice
             return found;
         }
+
+        /// <summary>
+        /// The avatar that belongs to a model, cached by path - there are about twenty distinct
+        /// characters behind three hundred and sixty-five people.
+        /// </summary>
+        private static Avatar AvatarFor(string model)
+        {
+            if (_avatars.TryGetValue(model, out var had)) return had;
+
+            Avatar found = null;
+            foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(model))
+                if (asset is Avatar avatar) { found = avatar; break; }
+
+            _avatars[model] = found;
+            return found;
+        }
+
+        private static readonly Dictionary<string, Avatar> _avatars =
+            new Dictionary<string, Avatar>(System.StringComparer.Ordinal);
 
         private static ulong Mix(ulong v, ulong salt)
         {

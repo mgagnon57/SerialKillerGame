@@ -29,11 +29,19 @@
 # ---- moving --------------------------------------------------------------
 # Movement beats activity. Somebody on the way to the pub is walking, not
 # drinking: at fifty metres the eye reads the gait and never the errand.
-moving          Walking
+#
+# THE `m/s` IS THE SPEED THE CLIP WAS ANIMATED AT, and it is what stops the feet
+# sliding. A Mixamo walk is a stride of a particular length at a particular rate;
+# play it while moving the person at any other speed and the feet skate, which is
+# the "gliding across the ground" fault exactly. Given the figure, the clip is
+# played at the ratio between it and the ground actually covered, so at 1x the
+# feet plant. Above about twice speed the clamp gives up and admits it - no clip
+# can show a stride at 10x. Omit the figure on a row that is not locomotion.
+moving          1.4m/s  Walking
 # Running is the child at the playground and NOBODY else. An adult jogging across
 # Northgate reads as fleeing, which is a story event rather than a commute, and
 # this game should not say that by accident.
-hurrying        Running
+hurrying        3.6m/s  Running
 
 # ---- standing still, by what they are there for --------------------------
 talking         Talking

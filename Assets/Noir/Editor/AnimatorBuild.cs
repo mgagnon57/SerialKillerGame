@@ -69,10 +69,19 @@ namespace Noir.Editor
             }
 
             AnimatorState fallback = null;
+            int placed = 0;
 
             foreach (var pair in clips)
             {
-                var state = machine.AddState(pair.Key);
+                // Laid out on a grid rather than added blind. AddState with no position drops
+                // every state on the same spot, which is invisible at nine and is a single
+                // illegible pile at four hundred - and four hundred is what a bulk download of
+                // Mixamo's library comes to. Twenty to a column, alphabetical down and across, so
+                // a named state can be found by eye without a search box.
+                var state = machine.AddState(pair.Key, new Vector3(
+                    (placed / 20) * 260f, (placed % 20) * 60f, 0f));
+                placed++;
+
                 state.motion = pair.Value;
                 state.writeDefaultValues = false;
                 if (pair.Key == Default) fallback = state;

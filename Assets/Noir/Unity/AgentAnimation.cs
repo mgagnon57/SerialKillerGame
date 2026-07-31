@@ -38,6 +38,21 @@ namespace Noir.Unity
         public const string Moving = "moving", Hurrying = "hurrying";
 
         private static Dictionary<string, string[]> _rows;
+        private static Dictionary<string, float> _paces;
+
+        /// <summary>
+        /// How far above the speed it was animated at a clip may be pushed.
+        ///
+        /// Beyond this the legs blur and the eye stops resolving a stride at all, which is worse
+        /// than the sliding the match was meant to cure. The town's clock runs to 300x, so this is
+        /// reached routinely and ON PURPOSE: the honest answer at sixty times speed is that no clip
+        /// can show it, and the same admission is already made for the primitive figures' swing.
+        ///
+        /// THERE IS DELIBERATELY NO FLOOR. A slow walk played slowly is correct - that is a person
+        /// dawdling, and clamping it up would put the skate back in for exactly the people it is
+        /// easiest to watch. Zero is correct too: a paused town should freeze, not treadmill.
+        /// </summary>
+        private const float Fastest = 2f;
 
         /// <summary>
         /// The table, read once.
@@ -52,6 +67,7 @@ namespace Noir.Unity
             {
                 if (_rows != null) return _rows;
                 _rows = new Dictionary<string, string[]>(System.StringComparer.OrdinalIgnoreCase);
+                _paces = new Dictionary<string, float>(System.StringComparer.OrdinalIgnoreCase);
 
                 string text = null;
                 try { text = ContentLoader.Read("animations.txt"); }
@@ -73,6 +89,22 @@ namespace Noir.Unity
                     int gap = line.IndexOfAny(new[] { ' ', '\t' });
                     string what = gap < 0 ? line : line.Substring(0, gap);
                     string rest = gap < 0 ? "" : line.Substring(gap).Trim();
+
+                    // An optional `1.4m/s` before the clips: the speed the clip was ANIMATED at,
+                    // which is what lets the playback rate be matched to the ground the person
+                    // actually covers. Written with the unit on it rather than as a bare number
+                    // on purpose - Mixamo ships clips called "180 Turn", and a bare leading number
+                    // would silently eat one.
+                    _paces[what] = 0f;
+                    int unit = rest.IndexOf("m/s", System.StringComparison.OrdinalIgnoreCase);
+                    if (unit > 0 && float.TryParse(rest.Substring(0, unit).Trim(),
+                                                   System.Globalization.NumberStyles.Float,
+                                                   System.Globalization.CultureInfo.InvariantCulture,
+                                                   out float pace) && pace > 0f)
+                    {
+                        _paces[what] = pace;
+                        rest = rest.Substring(unit + 3).Trim();
+                    }
 
                     var clips = new List<string>();
                     foreach (var piece in rest.Split(','))
@@ -103,14 +135,7 @@ namespace Noir.Unity
         public static string ClipFor(Activity doing, bool moving, bool hurrying = false,
                                      ulong who = 0)
         {
-            string row = moving ? (hurrying ? Hurrying : Moving)
-                                : doing.ToString().ToLowerInvariant();
-
-            var clips = Pick(row);
-
-            // A situation with no row of its own falls through - but a row that exists and names
-            // nothing, like `asleep`, means nothing ON PURPOSE and must not fall through.
-            if (clips == null) clips = Pick(Default);
+            var clips = Pick(Resolve(doing, moving, hurrying));
             if (clips == null || clips.Length == 0) return null;
 
             if (clips.Length == 1) return clips[0];
@@ -120,8 +145,32 @@ namespace Noir.Unity
             return clips[(int)(Mix(who) % (ulong)clips.Length)];
         }
 
+        /// <summary>
+        /// Which row this situation actually lands on, once falling through is taken into account.
+        ///
+        /// A situation with no row of its own falls through to `default` - but a row that EXISTS
+        /// and names nothing, like `asleep`, means nothing on purpose and must not. The distinction
+        /// is the whole reason this is a lookup rather than a null check.
+        /// </summary>
+        private static string Resolve(Activity doing, bool moving, bool hurrying)
+        {
+            string row = moving ? (hurrying ? Hurrying : Moving)
+                                : doing.ToString().ToLowerInvariant();
+            return Rows.ContainsKey(row) ? row : Default;
+        }
+
         private static string[] Pick(string row) =>
             Rows.TryGetValue(row, out var clips) ? clips : null;
+
+        /// <summary>
+        /// The speed the clips on a row were animated at, in metres a second, or 0 for "this is
+        /// not locomotion - play it at the rate it was made".
+        /// </summary>
+        public static float PaceOf(string row)
+        {
+            _ = Rows;                                    // the table builds both dictionaries
+            return _paces.TryGetValue(row, out float p) ? p : 0f;
+        }
 
         private static ulong Mix(ulong v)
         {
@@ -142,12 +191,24 @@ namespace Noir.Unity
         /// half imported, or nobody will ever import it a few clips at a time.
         /// </summary>
         public static void Drive(Animator animator, Activity doing, bool moving,
-                                 bool hurrying = false, ulong who = 0)
+                                 bool hurrying = false, ulong who = 0, float pace = -1f)
         {
             if (animator == null || animator.runtimeAnimatorController == null) return;
 
+            string row = Resolve(doing, moving, hurrying);
             string clip = ClipFor(doing, moving, hurrying, who);
             if (string.IsNullOrEmpty(clip)) return;
+
+            // THE CURE FOR SLIDING FEET, and it is arithmetic rather than an asset. A walk cycle
+            // is animated at one speed; the simulation moves people at another, and at 1x the gap
+            // between the two IS the skate. Playing the clip at the ratio closes it exactly.
+            //
+            // Set before the early return below, because the state does not change while somebody
+            // walks the length of a street and their pace does.
+            float made = PaceOf(row);
+            animator.speed = made > 0f && pace >= 0f
+                ? Mathf.Min(pace / made, Fastest)
+                : 1f;
 
             int state = Animator.StringToHash(clip);
             if (!animator.HasState(0, state)) return;

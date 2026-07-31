@@ -76,12 +76,39 @@ AND SOUND, not surface detail.
   | Skin | **Without Skin** | we have our own characters; the skin is weight for nothing |
   | **In Place** | **ON** for anything locomotive | see below - this one is not a preference |
 
-  **WHY IN PLACE IS NOT OPTIONAL HERE.** `Simulation` decides where everybody is by pathfinding and
-  `AgentMeshView` draws them at the position it computed. A clip carrying root motion drives the
-  transform ITSELF, so the animation and the simulation would fight over the same number and people
-  would walk off their own paths. In-place clips animate the legs and leave position to the sim.
-  Same reasoning as `CityTraffic` moving a car along its lane coordinate rather than letting
-  anything else push it about.
+  **WHY IN PLACE MATTERS HERE.** `Simulation` decides where everybody is by pathfinding and
+  `AgentMeshView` draws them at the position it computed. A clip carrying root motion wants to
+  drive the transform ITSELF, which would be the animation and the simulation fighting over the
+  same number. Same reasoning as `CityTraffic` moving a car along its lane coordinate rather than
+  letting anything else push it about.
+
+  Belt and braces: `AgentBody` sets `applyRootMotion = false`, so a clip that does carry root
+  motion has it discarded rather than applied, and a bulk download made without ticking the box
+  will not send anybody walking through a wall. `Noir/Check The Animations` still reports them,
+  because a discarded root is a clip whose stride was authored for a travel we then throw away -
+  the rate match below has nothing true to work from, and In Place is the clean fix.
+
+  ### Matching the clip to the pace, so the feet do not skate
+
+  A walk cycle is a stride of a particular length at a particular rate. Play it while moving the
+  person at any OTHER speed and the feet plant and are then dragged along the ground - which is
+  the "gliding" fault, and it survives every animator setting being correct.
+
+  So `Content/animations.txt` carries the speed each locomotive row was animated at, and the clip
+  is played at the ratio between that and the ground the person actually covers:
+
+  ```
+  moving          1.4m/s  Walking
+  hurrying        3.6m/s  Running
+  ```
+
+  Omit the figure on a row that is not locomotion and it plays at its natural rate. The ratio is
+  capped at 2x - above that the legs blur and no clip can honestly show the speed, which is the
+  same admission the primitive figures' leg swing already makes. There is deliberately no floor:
+  a slow walk played slowly is a person dawdling, which is correct.
+
+  **If feet still skate, that number is the one to tune.** It is the clip's speed, not the
+  simulation's - lowering it to match the sim would put the skate straight back in.
 
   ### What to download
 
