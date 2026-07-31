@@ -28,8 +28,9 @@ namespace Noir.Unity
     /// WHERE THE BAYS ARE IS NOT MEASURABLE. Road_Parking_10x10_City is one submesh of asphalt
     /// with the bay markings in the atlas, so unlike the road tiles there is no geometry to read
     /// a lane position off. The rows below are therefore laid to standard dimensions - a five
-    /// metre bay, a six metre aisle, cars at 2.8m centres - and left deliberately unfull, which
-    /// reads as parking whether or not it lands on the paint.
+    /// metre bay and a six metre aisle - and left deliberately unfull, which reads as parking
+    /// whether or not it lands on the paint. What is NOT invented is how much room a car takes:
+    /// that is measured off the vehicle, one at a time. See Width.
     ///
     /// Static, so this goes inside the node CityChunker bakes.
     /// </summary>
@@ -41,8 +42,19 @@ namespace Noir.Unity
         /// <summary>A bay is this deep, and two rows stand back to back with an aisle between.</summary>
         private const float Bay = 5f, Aisle = 6f;
 
-        /// <summary>Car centres along a row.</summary>
-        private const float Pitch = 2.8f;
+        /// <summary>
+        /// The gap left between one parked car and the next.
+        ///
+        /// THE PITCH IS MEASURED, NOT TYPED. It used to be a flat 2.8m between centres, which is
+        /// a number I made up and never checked against a single vehicle - and the pack's cars
+        /// are wider than that, so every car in every row was buried halfway into its neighbour,
+        /// identically, all the way down. Exactly the fault the traffic light and the sign plate
+        /// both were: a figure that should have come off the mesh, guessed instead.
+        ///
+        /// Now each car advances the row by ITS OWN measured width plus this, which also stops a
+        /// cargo van being given the same bay as a hatchback.
+        /// </summary>
+        private const float Gap = 0.7f;
 
         /// <summary>
         /// How full a lot is. Not 1: a lot parked to capacity reads as a model of a lot rather
@@ -138,24 +150,34 @@ namespace Noir.Unity
                 int half = facingUp ? 1 : 0;
                 row++;
 
-                for (float at = 2f; at <= length - 2f; at += Pitch)
+                int slot = 0;
+                for (float at = 1f; at < length - 1f; slot++)
                 {
-                    uint roll = Materials3D.Scatter(
-                        Mathf.RoundToInt(at * 4f), row * 2 + half, 449);
-                    if (roll % 100 >= Fill * 100) continue;      // a space, not a car
-
-                    float vx = alongX ? lot.X + at : lot.X + across;
-                    float vy = alongX ? lot.Y + across : lot.Y + at;
-
-                    // Nose-in: the car points ACROSS the row, out of its bay.
-                    float yaw = alongX
-                        ? (facingUp ? 0f : 180f)          // rows run east-west: face north/south
-                        : (facingUp ? 270f : 90f);        // rows run north-south: face west/east
-
                     var path = fleet[(int)(Materials3D.Scatter(
                         Mathf.RoundToInt(at), row * 2 + half, 457) % (uint)fleet.Count)];
 
-                    if (Put(parent, path, vx, vy, yaw) != null) n++;
+                    // How much of the row this one takes. Measured off the prefab, so a cargo
+                    // van is given a van's bay and a hatchback a hatchback's.
+                    float wide = Width(path);
+                    if (at + wide > length - 1f) break;
+
+                    uint roll = Materials3D.Scatter(slot, row * 2 + half, 449);
+                    if (roll % 100 < Fill * 100)
+                    {
+                        // Nose-in: the car points ACROSS the row, out of its bay, so its WIDTH
+                        // is what the row has to find room for.
+                        float yaw = alongX
+                            ? (facingUp ? 0f : 180f)      // rows run east-west: face north/south
+                            : (facingUp ? 270f : 90f);    // rows run north-south: face west/east
+
+                        float mid = at + wide * 0.5f;
+                        float vx = alongX ? lot.X + mid : lot.X + across;
+                        float vy = alongX ? lot.Y + across : lot.Y + mid;
+
+                        if (Put(parent, path, vx, vy, yaw) != null) n++;
+                    }
+
+                    at += wide + Gap;
                 }
             }
             return n;
@@ -199,6 +221,35 @@ namespace Noir.Unity
             }
             found.Sort(System.StringComparer.Ordinal);    // stable, so the lot looks the same twice
             return found;
+        }
+
+        private static readonly Dictionary<string, float> _wide = new Dictionary<string, float>();
+
+        /// <summary>
+        /// How wide this vehicle is across its own body, in metres.
+        ///
+        /// Off the mesh, not off the renderer: an unspawned prefab has no meaningful renderer
+        /// bounds. A car is modelled nose-along-z, so its width is its x extent - and if a
+        /// prefab turns out not to be, the fallback below is still wider than the 2.8m that was
+        /// being used for every vehicle in the pack regardless of what it was.
+        /// </summary>
+        private static float Width(string path)
+        {
+            if (_wide.TryGetValue(path, out float known)) return known;
+
+            float lo = float.MaxValue, hi = float.MinValue;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab != null)
+                foreach (var mf in prefab.GetComponentsInChildren<MeshFilter>())
+                {
+                    if (mf.sharedMesh == null) continue;
+                    float off = mf.transform.position.x - prefab.transform.position.x;
+                    var b = mf.sharedMesh.bounds;
+                    lo = Mathf.Min(lo, b.min.x + off);
+                    hi = Mathf.Max(hi, b.max.x + off);
+                }
+
+            return _wide[path] = hi > lo ? hi - lo : 3.2f;
         }
 
         /// <summary>A tile seated so its measured footprint covers the patch. As CityStreets.</summary>

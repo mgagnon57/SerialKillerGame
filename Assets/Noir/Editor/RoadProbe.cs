@@ -106,7 +106,9 @@ namespace Noir.Editor
             const string Bld = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings City/";
             foreach (var n in new[]
             {
-                Mod + "Squarehouse_Bottom_A_AS_City", Mod + "Squarehouse_Floor_A_Mid_AS_City",
+                Mod + "Squarehouse_Bottom_A_AS_City",
+                Mod + "Squarehouse_Bottom_A_F_City", Mod + "Squarehouse_Bottom_A_FB_City",
+                Mod + "Squarehouse_Floor_A_Entrance_AS_City", Mod + "Squarehouse_Floor_A_Mid_AS_City",
                 Mod + "Squarehouse_Roof_A_City",
                 Mod + "Squarehouse_Market_A_City", Mod + "Squarehouse_Market_B_City",
                 Mod + "Squarehouse_Market_G_City", Mod + "Squarehouse_Garage_City",
