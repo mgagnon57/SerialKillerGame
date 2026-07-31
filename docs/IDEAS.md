@@ -53,7 +53,20 @@ done or delete the line when it turns out to be a bad idea.
   than one that occasionally makes a car wait. NEXT STEP is not another bypass - it is either a
   graduated reduction of `Crossing`/`Oncoming` toward a conservative, empirically-verified floor
   (never zero), or gap acceptance based on actual closing speed rather than fixed distance -
-  proven safe over several FULL-SUITE repeats, not isolated ones, before it ships. — *2026-07-30*
+  proven safe over several FULL-SUITE repeats, not isolated ones, before it ships.
+
+  SEEN LIVE, not just in a test: a screenshot from an actual Play session showed
+  `Car_Truck_Modern_Garbage` and `Car_Truck_Modern_Cistern` stopped nose-to-tail at a SIGNALISED
+  city junction with a GREEN light showing - not a give-way case at all. Instrumented
+  `NothingComing` directly and confirmed it: both trucks turn up in the block log within the same
+  run, the garbage truck held by oncoming traffic and the cistern truck (queued behind it) along
+  for the ride via ordinary follow distance. So this is not a country-priority-junction-only
+  problem - `NothingComing`'s left-turn gap wait hits ordinary signalised city traffic too, on a
+  green light, which is exactly the case the class-level comment already calls out as "the one
+  conflict signals never resolve on their own." Whatever fix is designed for `NothingCrossing`
+  needs to cover this case too, and be checked against it the same way: full-suite, repeated,
+  watching for both the wait (`NothingComing` never clearing) and the crash (two vehicles at
+  0.00m), not one or the other. — *2026-07-30*
 
 ## City
 
