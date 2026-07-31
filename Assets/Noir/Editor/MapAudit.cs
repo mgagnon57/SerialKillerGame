@@ -169,6 +169,16 @@ namespace Noir.Editor
                 }
                 faults += Say("roads crossing without a junction", missed);
 
+                // ---- 8. two parked cars in the same bay --------------------------------
+                //
+                // The seven checks above are arithmetic on the AUTHORED layout, and a parked
+                // car is not in the layout - it is a prefab CityParking works out the position
+                // of at build time. So an overlap in a car park is invisible to every one of
+                // them, which is how "cars sharing a bay" got reported twice from screenshots
+                // with the audit clean both times. This one builds the lots and measures what
+                // actually ends up standing in them.
+                faults += Say("parked cars in the same space", ParkedCarClashes(world));
+
                 Debug.Log(faults == 0
                     ? "[audit] VERDICT: nothing found."
                     : $"[audit] VERDICT: {faults} kinds of fault, listed above.");
@@ -179,6 +189,66 @@ namespace Noir.Editor
             }
 
             if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
+        /// <summary>
+        /// Every pair of parked cars whose bodies actually intersect, measured off the built
+        /// lots rather than worked out from the same arithmetic that placed them.
+        ///
+        /// Renderer bounds are axis-aligned, which would normally overstate a rotated object -
+        /// but a parked car is only ever turned by a right angle here, so its box stays square
+        /// to the world and an intersection is a real one.
+        /// </summary>
+        private static List<string> ParkedCarClashes(WorldModel world)
+        {
+            var found = new List<string>();
+            GameObject probe = null;
+
+            try
+            {
+                probe = new GameObject("ParkingProbe");
+                var node = CityParking.Build(world, probe.transform);
+
+                var parked = new List<(string name, Bounds box)>();
+                foreach (Transform child in node.transform)
+                {
+                    // The lots lay tarmac AND cars under one node; only the cars can clash.
+                    if (!child.name.StartsWith("Car", StringComparison.Ordinal)) continue;
+
+                    var rends = child.GetComponentsInChildren<Renderer>();
+                    if (rends.Length == 0) continue;
+
+                    var box = rends[0].bounds;
+                    for (int i = 1; i < rends.Length; i++) box.Encapsulate(rends[i].bounds);
+                    parked.Add((child.name, box));
+                }
+
+                for (int a = 0; a < parked.Count; a++)
+                for (int b = a + 1; b < parked.Count; b++)
+                {
+                    var one = parked[a].box;
+                    var two = parked[b].box;
+                    if (!one.Intersects(two)) continue;
+
+                    // How far one is INTO the other on the ground plane. Bumpers that merely
+                    // touch are not a fault; a car buried in its neighbour is.
+                    float ox = Math.Min(one.max.x, two.max.x) - Math.Max(one.min.x, two.min.x);
+                    float oz = Math.Min(one.max.z, two.max.z) - Math.Max(one.min.z, two.min.z);
+                    float bite = Math.Min(ox, oz);
+                    if (bite < 0.05f) continue;
+
+                    found.Add($"'{parked[a].name}' and '{parked[b].name}' overlap by {bite:0.00}m "
+                            + $"near {one.center.x:0}, {-one.center.z:0}");
+                }
+
+                Debug.Log($"[audit] measured {parked.Count} parked cars.");
+            }
+            finally
+            {
+                if (probe != null) UnityEngine.Object.DestroyImmediate(probe);
+            }
+
+            return found;
         }
 
         /// <summary>
