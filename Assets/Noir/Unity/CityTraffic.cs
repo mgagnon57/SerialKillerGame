@@ -76,15 +76,34 @@ namespace Noir.Unity
         private const float Creep = 2f;
 
         /// <summary>
-        /// How close two turn arcs have to pass before they are treated as conflicting.
+        /// How close two turn arcs have to pass before they are treated as the same ground.
         ///
-        /// The pack's widest vehicle is about 2.6m across, so two of them at three metres centre
-        /// to centre are touching. Four and a half leaves a margin without marking the whole
-        /// junction as one conflict: opposing straight-ahead movements sit at least six metres
-        /// apart even on the narrowest main road, so they stay independent and a junction can pass
-        /// two streams at once, which is the entire point of having lanes.
+        /// THIS IS A PATH-IDENTITY THRESHOLD, NOT A VEHICLE CLEARANCE, and the difference matters
+        /// because the first guess at it was the second thing. It was 4.5m, reasoned from the
+        /// pack's widest vehicle being 2.6m across - which sounds careful and is asking the wrong
+        /// question: whether two cars would touch is decided by how far apart the paths are, and
+        /// what this has to decide is whether two paths are the SAME path.
+        ///
+        /// MEASURED, over all 5,946 candidate pairs on the 84 junctions:
+        ///
+        ///     0-1m  2408    3-4m    17    6-8m  1639
+        ///     1-2m   260    4-5m   162    8-12m  247
+        ///     2-3m     0    5-6m   230    12+    983
+        ///
+        /// The geometry is bimodal and there is a CLEAN EMPTY BAND at two to three metres. Arcs
+        /// either genuinely intersect, or they clear each other by three metres and more; nothing
+        /// in this city lands in between. So any value in [2, 3] marks exactly the same 2,668
+        /// pairs, and the constant is insensitive across a full metre rather than being a number
+        /// somebody chose. The midpoint is taken for that reason.
+        ///
+        /// WHAT THE OLD 4.5m COST was 179 pairs that do not cross at all, and they were all one
+        /// thing: opposing LEFT turns, lane 0 to lane 0, whose arcs pass 4.24m apart. Two cars
+        /// turning left past each other from opposite arms is an ordinary simultaneous movement
+        /// at a real junction, and 4.24m of separation is 1.6m of daylight for the widest pair of
+        /// vehicles in the pack. Forbidding it made left turns - already the movement that waits
+        /// for a gap - queue behind each other as well.
         /// </summary>
-        private const float Clearance = 4.5f;
+        private const float Clearance = 2.5f;
 
         /// <summary>
         /// Half a lane, for deciding when a turning car is clear of somebody else's lane rather
@@ -355,7 +374,13 @@ namespace Noir.Unity
             }
 
             var found = new List<int>[n];
-            int pairs = 0;
+            int pairs = 0, considered = 0;
+
+            // How close every candidate pair actually comes, so the threshold above can be
+            // checked against the geometry instead of being asserted. See the log line below.
+            var bands = new int[9];
+            float tightest = float.MaxValue;
+            string closest = "nothing";
 
             foreach (var list in byJunction.Values)
             for (int x = 0; x < list.Count; x++)
@@ -364,12 +389,34 @@ namespace Noir.Unity
                 int p = list[x], q = list[y];
 
                 // CARS LEAVING THE SAME LANE ARE IN SINGLE FILE and following distance already
-                // holds them apart. Calling those a conflict would make every car wait for the
-                // whole junction to empty before the one behind it could set off, which is a
-                // worse jam than the one being fixed.
+                // holds them apart - inside the junction as well as outside it, since Blocked()
+                // keeps a car off the back of the one on the same arc in front. Calling those a
+                // conflict would make every car wait for the whole junction to empty before the
+                // one behind it could set off, which is a worse jam than the one being fixed.
                 if (Graph.Turns[p].From == Graph.Turns[q].From) continue;
 
-                if (!Crosses(path[p], path[q])) continue;
+                considered++;
+                float apart = Separation(path[p], path[q]);
+                bands[Band(apart)]++;
+
+                if (apart >= Clearance)
+                {
+                    // The tightest pair anywhere in the city that is allowed to move at the same
+                    // time. This is the safety number the threshold actually buys, and it is
+                    // worth printing every run: if it ever drops towards a vehicle's width, two
+                    // cars are being waved through the same piece of road.
+                    if (apart < tightest)
+                    {
+                        tightest = apart;
+                        var tp = Graph.Turns[p];
+                        var tq = Graph.Turns[q];
+                        closest = $"{tp.Kind} lane {Graph.Segments[tp.From].Lane}"
+                                + $"->{Graph.Segments[tp.To].Lane} beside "
+                                + $"{tq.Kind} lane {Graph.Segments[tq.From].Lane}"
+                                + $"->{Graph.Segments[tq.To].Lane}";
+                    }
+                    continue;
+                }
 
                 (found[p] ??= new List<int>()).Add(q);
                 (found[q] ??= new List<int>()).Add(p);
@@ -379,17 +426,30 @@ namespace Noir.Unity
             for (int t = 0; t < n; t++)
                 _conflicts[t] = found[t] != null ? found[t].ToArray() : System.Array.Empty<int>();
 
-            Debug.Log($"[traffic] {pairs} conflicting turn pairs over {byJunction.Count} junctions "
-                    + $"and {n} turns.");
+            Debug.Log($"[traffic] {pairs} conflicting turn pairs of {considered} considered, over "
+                    + $"{byJunction.Count} junctions and {n} turns (threshold {Clearance}m).\n"
+                    + $"[traffic] how close pairs come, in metres: "
+                    + $"0-1:{bands[0]} 1-2:{bands[1]} 2-3:{bands[2]} 3-4:{bands[3]} 4-5:{bands[4]} "
+                    + $"5-6:{bands[5]} 6-8:{bands[6]} 8-12:{bands[7]} 12+:{bands[8]}\n"
+                    + $"[traffic] tightest pair allowed to move together: {tightest:0.00}m "
+                    + $"({closest}).");
         }
 
-        /// <summary>Do these two arcs pass close enough to be treated as the same ground?</summary>
-        private static bool Crosses(Vector3[] a, Vector3[] b)
+        private static int Band(float d) =>
+            d < 1f ? 0 : d < 2f ? 1 : d < 3f ? 2 : d < 4f ? 3 : d < 5f ? 4
+          : d < 6f ? 5 : d < 8f ? 6 : d < 12f ? 7 : 8;
+
+        /// <summary>The closest these two arcs come to each other, in metres.</summary>
+        private static float Separation(Vector3[] a, Vector3[] b)
         {
+            float closest = float.MaxValue;
             for (int i = 0; i < a.Length; i++)
             for (int j = 0; j < b.Length; j++)
-                if ((a[i] - b[j]).sqrMagnitude < Clearance * Clearance) return true;
-            return false;
+            {
+                float d = (a[i] - b[j]).sqrMagnitude;
+                if (d < closest) closest = d;
+            }
+            return Mathf.Sqrt(closest);
         }
 
 #if UNITY_EDITOR
