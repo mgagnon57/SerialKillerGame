@@ -89,10 +89,17 @@ namespace Noir.Unity
                                   lastX, ref pieces, ref garages, ref cars);
                 }
 
-                for (int y = lot.Y + Pitch; y + Pitch <= lot.Y + lot.H - Pitch; y += Pitch)
+                // THE CORNERS BELONG TO THE NORTH AND SOUTH RUNS. Those stand at lot.Y + Setback
+                // and are Depth deep, so the side runs have to begin past Setback + Depth - not
+                // past Pitch, which is what this said and which put the first house of the east
+                // run inside the last house of the north run on every cell. The footprint check
+                // found it on four; the same arithmetic error is why three garages ended up in a
+                // neighbour's front room.
+                int inset = Setback + Depth;
+                for (int y = lot.Y + inset; y + Pitch <= lot.Y + lot.H - inset; y += Pitch)
                 {
                     int i = (y - lot.Y) / Pitch;
-                    bool lastY = y + Pitch * 2 > lot.Y + lot.H - Pitch;
+                    bool lastY = y + Pitch * 2 > lot.Y + lot.H - inset;
                     houses += One(root.transform, place, lot, i + 80,
                                   new TileRect(lot.X + Setback, y, Depth, Pitch), 90f, lastY,
                                   ref pieces, ref garages, ref cars);

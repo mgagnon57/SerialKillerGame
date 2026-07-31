@@ -55,6 +55,15 @@ namespace Noir.Unity
 
             public readonly List<int> Lamps = new List<int>();
             public readonly List<MeshRenderer> Lanterns = new List<MeshRenderer>();
+
+            /// <summary>
+            /// Which submesh of each lantern is the lens.
+            ///
+            /// A bought lamp is one renderer carrying the post AND the glass, so the glow has to
+            /// be applied to a submesh rather than to the whole thing - otherwise the ironwork
+            /// lights up as brightly as the lamp does.
+            /// </summary>
+            public readonly List<int> LanternGlass = new List<int>();
             public readonly List<int> Windows = new List<int>();
             public readonly List<PlaceId> WindowPlaces = new List<PlaceId>();
             public readonly List<MeshRenderer> Panes = new List<MeshRenderer>();
@@ -339,33 +348,100 @@ namespace Noir.Unity
 
                 var ground = Space3D.ToWorld(new Tile(x, y));
 
-                // A lamp needs a lamp POST. Light appearing from nothing five metres up reads
-                // as a bug in daylight, and at night you lose the thing that makes a lit street
-                // feel like a street: the silhouette of the column under the glow.
-                var column = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                column.name = $"lamppost:{x},{y}";
-                column.transform.SetParent(parent, false);
-                column.transform.position = ground + Vector3.up * 2.1f;
-                column.transform.localScale = new Vector3(0.16f, 2.1f, 0.16f);
-                Discard(column.GetComponent<Collider>());
-                column.GetComponent<MeshRenderer>().sharedMaterial = Materials3D.Ironwork;
+                // A BOUGHT LAMP POST, not a cylinder with a box on top.
+                //
+                // This used to be exactly that - PrimitiveType.Cylinder for the column and
+                // PrimitiveType.Cube for the lantern - which was the right answer while Ashcombe
+                // had no pack behind it and the alternative was light appearing out of nothing
+                // five metres up. The pack ships sixteen lamps in `Lamps City`, four of them the
+                // tall `Lamp_Street` sort meant for a carriageway, and not one had ever been
+                // placed: `CityStreets` only ever catalogued the short `Lamp_Sidewalk` kind as
+                // pavement dressing. So the city had bought lamps on its pavements and a grey box
+                // on a stick over its roads.
+                //
+                // The pack's lamp carries its own lens on a second submesh - M_Universal_Glass_
+                // Night - so it reads as lit without anything being added to it, and the glow
+                // below drives that submesh alone rather than tinting the whole post.
+                var post = Lamp(x, y);
+                if (post == null) continue;
 
-                var lantern = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                lantern.name = "lantern";
-                lantern.transform.SetParent(parent, false);
-                lantern.transform.position = ground + Vector3.up * 4.35f;
-                lantern.transform.localScale = new Vector3(0.42f, 0.5f, 0.42f);
-                Discard(lantern.GetComponent<Collider>());
+                post.name = $"lamppost:{x},{y}";
+                post.transform.SetParent(parent, false);
+                post.transform.position = ground;
+                post.transform.rotation = Quaternion.Euler(0f, Facing(world, x, y), 0f);
 
-                var glass = lantern.GetComponent<MeshRenderer>();
-                glass.sharedMaterial = Materials3D.LampGlass;
-                glass.shadowCastingMode = ShadowCastingMode.Off;
-                into.Lanterns.Add(glass);
+                var lamp = post.GetComponentInChildren<MeshRenderer>();
+                if (lamp == null) continue;
 
-                into.Lamps.Add(into.Lights.Add(ground + Vector3.up * 4.2f,
+                // Where the light hangs, and how tall this lamp actually is - measured off the
+                // model rather than assumed, because the four street lamps are not all one
+                // height and the sidewalk ones are shorter again.
+                float head = lamp.bounds.max.y - 0.35f;
+
+                int glass = -1;
+                var slots = lamp.sharedMaterials;
+                for (int s = 0; s < slots.Length; s++)
+                    if (slots[s] != null && slots[s].name.Contains("Glass")) { glass = s; break; }
+
+                if (glass >= 0) { into.Lanterns.Add(lamp); into.LanternGlass.Add(glass); }
+
+                into.Lamps.Add(into.Lights.Add(new Vector3(ground.x, head, ground.z),
                                                new Color(1.00f, 0.85f, 0.60f), 14f,
                                                LampKey(x, y)));
             }
+        }
+
+        /// <summary>
+        /// One of the pack's street lamps, chosen stably by where it stands.
+        ///
+        /// `Lamp_Street_*` rather than `Lamp_Sidewalk_*`: the street ones are the tall sort with
+        /// the arm over the carriageway, which is what a lamp on a thirteen-metre spacing down a
+        /// main road is. The short pavement ones are already used as kerb dressing by CityStreets
+        /// and would read as a garden lamp lighting a dual carriageway.
+        /// </summary>
+        private static GameObject Lamp(int x, int y)
+        {
+#if UNITY_EDITOR
+            if (_lamps == null)
+            {
+                _lamps = new List<string>();
+                foreach (var guid in UnityEditor.AssetDatabase.FindAssets("t:Prefab", new[]
+                         { "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Lamps City" }))
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                    string file = System.IO.Path.GetFileNameWithoutExtension(path);
+                    if (!file.StartsWith("Lamp_Street", System.StringComparison.Ordinal)) continue;
+                    _lamps.Add(path);
+                }
+                _lamps.Sort(System.StringComparer.Ordinal);   // stable, so a street looks the same twice
+            }
+
+            if (_lamps.Count == 0) return null;
+
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                _lamps[(int)(Materials3D.Scatter(x, y, 8221) % (uint)_lamps.Count)]);
+            return prefab == null
+                ? null
+                : (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab);
+#else
+            return null;
+#endif
+        }
+
+        private static List<string> _lamps;
+
+        /// <summary>
+        /// Which way a lamp faces: across its own carriageway, so the arm reaches over the road
+        /// rather than over the shopfronts behind it. Asked of the road network, like the class
+        /// check above, so it keeps being right when a road moves.
+        /// </summary>
+        private static float Facing(WorldModel world, int x, int y)
+        {
+            var road = world.Roads.At(x + 0.5f, y + 0.5f);
+            if (road == null) return 0f;
+
+            if (road.IsNorthSouth) return x + 0.5f < road.Centre ? 90f : 270f;
+            return y + 0.5f < road.Centre ? 180f : 0f;
         }
 
         /// <summary>
@@ -528,8 +604,9 @@ namespace Noir.Unity
             _glowMinute = minute;
 
             if (_lanternBlock == null) _lanternBlock = new MaterialPropertyBlock();
-            foreach (var lantern in _fixtures.Lanterns)
-                SetLanternGlow(lantern, _lanternBlock, level);
+            for (int i = 0; i < _fixtures.Lanterns.Count; i++)
+                SetLanternGlow(_fixtures.Lanterns[i], _lanternBlock, level,
+                               i < _fixtures.LanternGlass.Count ? _fixtures.LanternGlass[i] : -1);
 
             if (_paneBlock == null) _paneBlock = new MaterialPropertyBlock();
             for (int i = 0; i < _fixtures.Panes.Count; i++)
@@ -576,7 +653,8 @@ namespace Noir.Unity
         /// added to the pipeline every lamp post in the village had a glare around it in full
         /// sunlight. Glass is only bright when there is something behind it.
         /// </summary>
-        public static void SetLanternGlow(MeshRenderer lantern, MaterialPropertyBlock block, float glow)
+        public static void SetLanternGlow(MeshRenderer lantern, MaterialPropertyBlock block,
+                                          float glow, int submesh = -1)
         {
             // Fixtures are collected BEFORE CityChunker bakes and used after it, and the bake
             // combines away most of what it finds - so by the time this runs a lantern may be a
@@ -587,10 +665,16 @@ namespace Noir.Unity
 
             var warm = new Color(1.00f, 0.82f, 0.50f);
 
-            lantern.GetPropertyBlock(block);
+            // ON THE LENS ONLY where the lamp is a bought model. Its post and its glass are two
+            // submeshes of one renderer, so glowing the renderer glows the ironwork too.
+            if (submesh >= 0) lantern.GetPropertyBlock(block, submesh);
+            else lantern.GetPropertyBlock(block);
+
             block.SetColor(PaneEmissionId, warm * (glow * 1.35f));
             block.SetColor(PaneBaseId, Color.Lerp(new Color(0.34f, 0.35f, 0.33f), warm, glow));
-            lantern.SetPropertyBlock(block);
+
+            if (submesh >= 0) lantern.SetPropertyBlock(block, submesh);
+            else lantern.SetPropertyBlock(block);
         }
 
         public static void SetPaneGlow(MeshRenderer pane, MaterialPropertyBlock block, float glow)

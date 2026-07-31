@@ -226,8 +226,16 @@ namespace Noir.Unity
                              shopSouth, ref pieces);
             }
 
-            // East and west: what is left between the two corner runs.
-            for (int y = lot.Y + Depth; y + Pitch <= lot.Y + lot.H - Depth; y += Pitch)
+            // East and west: what is left between the two corner runs, AND A METRE CLEAR OF THEM.
+            //
+            // This used to run from exactly lot.Y + Depth to exactly lot.Y + lot.H - Depth, which
+            // is right to the millimetre in LOT terms and wrong in geometry: the modules are 6.10
+            // across on a 6m pitch, so a building overhangs its own lot by 5cm at each end, and
+            // the bottom section carries its tail back the full Depth. Abutting the end run
+            // therefore meant overlapping it, and the last house of the west run stood through the
+            // first house of the south run on every block. One metre is more than both.
+            const int Clear = 1;
+            for (int y = lot.Y + Depth + Clear; y + Pitch <= lot.Y + lot.H - Depth - Clear; y += Pitch)
             {
                 int i = (y - lot.Y) / Pitch;
 

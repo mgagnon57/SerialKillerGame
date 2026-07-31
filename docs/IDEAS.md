@@ -176,6 +176,31 @@ done or delete the line when it turns out to be a bad idea.
 
 ## City
 
+- [x] ~~Two buildings standing on the same ground, at every block corner.~~ FIXED, and it was the
+  same arithmetic slip in two files. A block's end runs take the full width and are `Depth` deep;
+  its side runs have to begin past that. `CityDistrict` began them exactly AT `lot.Y + Depth`,
+  which is right to the millimetre in lot terms and wrong in geometry - the modules are 6.10 across
+  on a 6m pitch, so a building overhangs its own lot by 5cm at each end and the bottom section
+  carries its tail back the full depth, and abutting therefore meant overlapping. `CitySuburb` was
+  worse: it began them past `Pitch` (14) when the end runs occupy `Setback..Setback + Depth`
+  (12..19), so the first house of every side run stood inside the last house of the end run, and
+  three garages ended up in a neighbour's front room for the same reason. **298 overlapping pairs
+  -> 0, over 3,798 buildings.** Found by `StackProbe.Overlaps`, which builds the city and compares
+  real footprints - MapAudit cannot, because its checks are arithmetic on the AUTHORED layout and a
+  district or suburb building is decided at build time. Same blind spot that let overlapping parked
+  cars be reported twice with the audit clean both times. — *2026-07-31*
+
+- [x] ~~The street lamps are a cylinder with a box on top.~~ FIXED - `SunRig.BuildStreetLamps` now
+  places the pack's own `Lamp_Street_*`. It was `PrimitiveType.Cylinder` for the column and
+  `PrimitiveType.Cube` for the lantern, which was the right answer while Ashcombe had no pack
+  behind it and the alternative was light appearing out of nothing five metres up. The pack ships
+  SIXTEEN lamps in `Lamps City` and none of the four tall `Lamp_Street` ones had ever been placed -
+  `CityStreets` only catalogued the short `Lamp_Sidewalk` kind as pavement dressing, so the city had
+  bought lamps on its pavements and a grey box on a stick over its roads. The bought lamp carries
+  its lens on a second submesh (`M_Universal_Glass_Night`), so the night glow now drives that
+  submesh alone rather than tinting the ironwork with it. Which way a lamp faces is asked of the
+  road network so the arm reaches over the carriageway. — *2026-07-31*
+
 - [x] ~~**The front steps stop a metre short of the front door.**~~ FIXED, and it was in `Place`,
   not anywhere the four earlier theories looked. `Place` returned the section's total vertical
   EXTENT and stacked the next storey on it. For four of the kit's five pieces that is the same
