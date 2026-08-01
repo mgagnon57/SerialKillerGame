@@ -160,6 +160,16 @@ namespace Noir.Unity
                 }
                 if (pts.Count < 2) continue;
 
+                // SMOOTHED FOR DRAWING ONLY. A real survey way is a sparse set of straight-line
+                // vertices - a few points every hundred metres - which is honest data and reads
+                // as a slightly kinked series of straight segments the moment it is drawn at any
+                // zoom closer than the whole town. The real line does not have those corners; the
+                // survey just did not sample it any finer. Smoothing between the same vertices
+                // (not moving or discarding a single one) is cosmetic, and confined to the one
+                // feature this actually reads as wrong for - a river or a field ditch kinking is
+                // unremarkable, a railroad doing it looks like an error.
+                if (kind == "rail" || kind == "oldrail") pts = Smoothed(pts);
+
                 (Color colour, float weight, bool closed) = kind switch
                 {
                     "rail"    => (new Color(1.00f, 0.95f, 0.80f), 2.6f, false),   // the CSX line
@@ -190,6 +200,47 @@ namespace Noir.Unity
                 n++;
             }
             return n;
+        }
+
+        /// <summary>Sub-divisions inserted between each pair of real vertices - four turns a
+        /// dozen-point survey way into a curve with no single straight-line segment longer than
+        /// a fraction of the gap between real points, without moving any of those points.</summary>
+        private const int SmoothSteps = 4;
+
+        /// <summary>
+        /// Catmull-Rom through the real vertices, unchanged - every original point is still on
+        /// the curve exactly where it was, only the straight segments between them are replaced
+        /// by an arc. The end points are their own neighbour (clamped), which is the standard fix
+        /// for a spline with nothing before its first or after its last control point.
+        /// </summary>
+        private static List<Vector2> Smoothed(List<Vector2> pts)
+        {
+            if (pts.Count < 3) return pts;
+
+            var out_ = new List<Vector2> { pts[0] };
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                var p0 = pts[Mathf.Max(i - 1, 0)];
+                var p1 = pts[i];
+                var p2 = pts[i + 1];
+                var p3 = pts[Mathf.Min(i + 2, pts.Count - 1)];
+
+                for (int s = 1; s <= SmoothSteps; s++)
+                {
+                    float t = (float)s / SmoothSteps;
+                    out_.Add(CatmullRom(p0, p1, p2, p3, t));
+                }
+            }
+            return out_;
+        }
+
+        private static Vector2 CatmullRom(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
+        {
+            float t2 = t * t, t3 = t2 * t;
+            return 0.5f * ((2f * p1)
+                + (-p0 + p2) * t
+                + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2
+                + (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
         }
 
         /// <summary>
