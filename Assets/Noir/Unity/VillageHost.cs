@@ -229,7 +229,14 @@ namespace Noir.Unity
             // AFTER the bake and OUTSIDE the node it bakes: a combined mesh cannot move or
             // change colour, so anything that drives - or that goes red and green - has to be
             // built once the static city is already frozen.
-            if (!ShowBuildings) CityOutlines.Build(World, transform);
+            if (!ShowBuildings)
+            {
+                CityOutlines.Build(World, transform);
+
+                // The names, without which the drawing is anonymous: every line in it is right
+                // and none of it is legible to somebody standing in the street.
+                PlanLabels.Create(this, transform);
+            }
 
             var signals = CitySignals.Create(World, transform);
             CityTraffic.Create(World, transform, signals);
@@ -244,7 +251,6 @@ namespace Noir.Unity
             // So everything is built exactly as it always was and the renderers are switched
             // off. Same distinction ShowPeople has always drawn: simulated either way, this only
             // decides whether they are on screen.
-            if (!ShowBuildings) HideActors();
             _xray = XRay.Create(World, _village);
 
             // The people are SIMULATED either way - Sim ticks, they go to work, windows light
@@ -253,6 +259,13 @@ namespace Noir.Unity
             // built out: a few hundred figures walking through a downtown that is still being
             // laid is noise over the thing actually being looked at.
             if (ShowPeople) _agentView = AgentMeshView.Create(this, transform);
+
+            // AFTER the people exist, which is the whole of the bug this line used to have. It
+            // sat above CityTraffic.Create's block, where _agentView is still null - so it hid
+            // the vehicles and left a thousand rigged figures walking about on a survey drawing.
+            // Nothing failed and nothing logged; the plan simply had a crowd on it.
+            if (!ShowBuildings) HideActors();
+
             _rig = OrbitCamera.Create(this);
 
             // P drops you into the town at eye height with a body, and P again lifts you back
@@ -345,17 +358,19 @@ namespace Noir.Unity
         /// </summary>
         private void HideActors()
         {
+            // FOUND BY TYPE, not off fields, so this cannot silently half-work again if the
+            // build order moves. A field that happens to be null at the moment this is called
+            // hides nothing and says nothing about it.
             int off = 0;
-            foreach (var node in new[] { _agentView != null ? _agentView.gameObject : null,
-                                         GetComponentInChildren<CityTraffic>()?.gameObject })
-            {
-                if (node == null) continue;
-                foreach (var r in node.GetComponentsInChildren<Renderer>(true))
-                {
-                    r.enabled = false;
-                    off++;
-                }
-            }
+            foreach (var view in GetComponentsInChildren<AgentMeshView>(true))
+                foreach (var r in view.GetComponentsInChildren<Renderer>(true)) { r.enabled = false; off++; }
+
+            foreach (var traffic in GetComponentsInChildren<CityTraffic>(true))
+                foreach (var r in traffic.GetComponentsInChildren<Renderer>(true)) { r.enabled = false; off++; }
+
+            if (off == 0)
+                Debug.LogWarning("[plan] nothing was hidden - people and traffic will be drawn "
+                               + "on the plan. Has the build order moved?");
             Debug.Log($"[plan] {off} renderers hidden - people and traffic still running.");
         }
 
