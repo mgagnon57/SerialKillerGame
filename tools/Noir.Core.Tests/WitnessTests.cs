@@ -1,6 +1,8 @@
 using System;
 using NUnit.Framework;
 using Noir.Core.Contracts;
+using Noir.Core.Observation;
+using Noir.Core.People;
 using Noir.Core.Witness;
 
 namespace Noir.Core.Tests
@@ -35,6 +37,60 @@ namespace Noir.Core.Tests
             var ex = Assert.Throws<ArgumentException>(
                 () => track.Record(99, new Tile(10, 20), Visibly.Nothing));
             Assert.That(ex.Message, Does.Contain("forwards"));
+        }
+
+        private static Citizen Villager(byte sociability, Beat beats = Beat.None) =>
+            new Citizen(new CitizenId(7), "Ada", "Reed", 44, LifeStage.Adult, Occupation.Shopkeeper,
+                        new HouseholdId(3), new PlaceId(1), new PlaceId(2), 0,
+                        0, 128, sociability, new int[0], beats, male: false);
+
+        [Test]
+        public void CloseAndInDaylightIsAClearLook()
+        {
+            var look = Sightlines.HowGoodALook(new Tile(0, 0), new Tile(5, 0), 12 * 60,
+                                               Villager(128));
+            Assert.That(look, Is.EqualTo(SightingClarity.Clear));
+        }
+
+        [Test]
+        public void TheSameLookAtNightIsWorse()
+        {
+            var look = Sightlines.HowGoodALook(new Tile(0, 0), new Tile(5, 0), 2 * 60,
+                                               Villager(128));
+            Assert.That(look, Is.EqualTo(SightingClarity.Partial));
+        }
+
+        [Test]
+        public void BeyondSixtyTilesNobodySeesAnything()
+        {
+            var watcher = new Tile(0, 0);
+            var subject = new Tile(61, 0);
+            var look = Sightlines.HowGoodALook(watcher, subject, 12 * 60, Villager(128));
+            Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject), Is.False);
+        }
+
+        [Test]
+        public void TheManWhoLingersSeesMoreThanTheManWhoDoesNot()
+        {
+            var watcher = new Tile(0, 0);
+            var subject = new Tile(20, 0);   // the Partial band in daylight
+
+            var ordinary = Sightlines.HowGoodALook(watcher, subject, 12 * 60, Villager(128));
+            var lingerer = Sightlines.HowGoodALook(watcher, subject, 12 * 60,
+                                                   Villager(128, Beat.Lingers));
+
+            Assert.That(ordinary, Is.EqualTo(SightingClarity.Partial));
+            Assert.That(lingerer, Is.EqualTo(SightingClarity.Clear));
+        }
+
+        [Test]
+        public void SomebodyWhoKeepsHisHeadDownSeesLess()
+        {
+            var watcher = new Tile(0, 0);
+            var subject = new Tile(20, 0);
+
+            var withdrawn = Sightlines.HowGoodALook(watcher, subject, 12 * 60, Villager(32));
+            Assert.That(withdrawn, Is.EqualTo(SightingClarity.Glimpsed));
         }
     }
 }
