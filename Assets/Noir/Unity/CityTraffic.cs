@@ -180,6 +180,18 @@ namespace Noir.Unity
             /// <summary>Seconds held at this stop line. See <see cref="Rethink"/>.</summary>
             public float Waited;
 
+            /// <summary>
+            /// Seconds held WITHOUT the reset that <see cref="Rethink"/> performs, so it keeps
+            /// counting across a change of mind about which way to go.
+            ///
+            /// Waited cannot express real impatience because it is zeroed every twelve seconds
+            /// by the rethink, so it never reads higher than twelve however long the car has
+            /// actually been sitting there. This is the number that says "this driver has been
+            /// at this stop line for a minute and a half", and a minute and a half is a driver
+            /// who takes the gap briskly. See <see cref="TurnPace"/>.
+            /// </summary>
+            public float Held;
+
             /// <summary>What stopped it last frame. Instrumentation; nothing steers by it.</summary>
             public Hold Why;
         }
@@ -469,15 +481,46 @@ namespace Noir.Unity
 
             var counted = new Dictionary<RoadClass, int>();
 
-            for (int n = 0; n < budget; n++)
+            // WHERE THE CARS START, weighted the same way the driving is.
+            //
+            // Spreading evenly over segments hands each class traffic in proportion to how many
+            // LANE SEGMENTS it has, which is not the same thing as how busy it should be: a
+            // village has two main roads and sixteen residential streets, so an even spread put
+            // one car on the highway and a hundred on the side streets. The driving now corrects
+            // that over a few minutes, but a town should look right in the first frame rather
+            // than settle into looking right, so the start is drawn from the same weights.
+            var pitch = new List<int>();
+            for (int i = 0; i < Graph.Segments.Count; i++)
             {
-                // Spread over the whole graph rather than queued at the edges, so the city has
-                // traffic in it the moment it appears rather than thirty seconds later.
-                var segment = Graph.Segments[n * 7919 % Graph.Segments.Count];
+                var klass = world.Roads.Lines[Graph.Segments[i].Line].Class;
+                int weight = klass switch
+                {
+                    RoadClass.Freeway => 12, RoadClass.Mainroad => 8,
+                    RoadClass.Street => 2, _ => 1,
+                };
+                for (int w = 0; w < weight; w++) pitch.Add(i);
+            }
+
+            // ONE CAR TO A SEGMENT, WHICH THE WEIGHTING NEARLY THREW AWAY. The even spread got
+            // this for free: 7919 is prime against the segment count, so it visited each segment
+            // once. A weighted pitch lists a main road eight times over, so the same walk lands
+            // on the same segment repeatedly - and two cars seated on one segment are not merely
+            // close, they can be at 0.00m, which is the exact collision this suite already
+            // caught once from Reintroduce. Sampling WITHOUT replacement keeps the weighting and
+            // keeps the invariant: the busiest roads simply get picked first.
+            var taken = new HashSet<int>();
+
+            for (int n = 0, step = 0; n < budget && step < pitch.Count * 3; step++)
+            {
+                var segment = Graph.Segments[pitch[step * 7919 % pitch.Count]];
+                if (!taken.Add(segment.Index)) continue;
+
                 var onClass = world.Roads.Lines[segment.Line].Class;
 
                 var cars = fleets[onClass];
                 if (cars.Count == 0) continue;
+
+                n++;
 
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                     cars[(int)(Materials3D.Scatter(n, 0, 811) % (uint)cars.Count)]);
@@ -729,9 +772,10 @@ namespace Noir.Unity
                     // turn on this frame and the movement MayCross just validated is not the
                     // one that will be acted on.
                     me.Waited += dt;
+                    me.Held += dt;
                     if (me.Waited > Rethink) { me.Choices++; me.Waited = 0f; }
                 }
-                else me.Waited = 0f;
+                else { me.Waited = 0f; me.Held = 0f; }
             }
 
             if (Blocked(index)) { step = 0f; me.Why = Hold.Following; }
@@ -795,7 +839,12 @@ namespace Noir.Unity
             // exactly what NoTwoVehiclesOccupyTheSameSpace reported at 0.00m.
             if (Blocked(index)) return;
 
-            me.T += TurnSpeed * dt / length;
+            // THE SAME PACE THE GAP WAS JUDGED ON. WhenClear let this car out on the promise that
+            // it would cross at TurnPace; crossing any slower than that turns the promise into a
+            // collision with the traffic that was let through on it. Held is not cleared until
+            // the arc is finished, three lines down, so the whole manoeuvre runs at the speed the
+            // decision was made with.
+            me.T += TurnPace(me) * dt / length;
             if (me.T < 1f) return;
 
             var to = Graph.Segments[turn.To];
@@ -803,6 +852,10 @@ namespace Noir.Unity
             me.S = to.FromS;
             me.Turn = -1;
             me.T = 0f;
+
+            // Through, and patient again. Cleared HERE rather than on entering the junction so
+            // the arc is driven at the pace the gap was granted on.
+            me.Held = 0f;
         }
 
         /// <summary>
@@ -935,7 +988,37 @@ namespace Noir.Unity
                 if (off <= LaneHalf) last = t;
             }
 
-            return (TurnLength(Graph.Turns[turn]) * last + me.Reach) / TurnSpeed;
+            return (TurnLength(Graph.Turns[turn]) * last + me.Reach) / TurnPace(me);
+        }
+
+        /// <summary>
+        /// How briskly THIS car will take a junction, given how long it has been sitting at the
+        /// line.
+        ///
+        /// THE POINT IS THAT IT IS NOT A CHEAT. A give-way car needs a gap long enough to be out
+        /// of the way before the other one arrives, and on a road with continuous traffic that
+        /// gap may simply never come - a car starved at Ross and Attica for 111 of the 120
+        /// seconds it was watched, which is not queuing, it is a driver who will die there.
+        ///
+        /// The obvious fix is to let it go anyway after a while, and that fix has been tried
+        /// here and REVERTED: it produced a real 0.00m collision, because "go anyway" is exactly
+        /// "enter the junction in front of a car that is still coming". This says something
+        /// different and true: a driver who has waited gets impatient and LAUNCHES HARDER, so
+        /// the manoeuvre genuinely takes less time and therefore genuinely needs a smaller gap.
+        /// The safety condition - be clear before they arrive - is not relaxed by one inch. It is
+        /// simply easier to satisfy, because the car really does move faster.
+        ///
+        /// Which is why this is used by <see cref="WhenClear"/> AND by the motion itself. Using
+        /// it in only one of the two would be the cheat: claim a fast crossing to win the gap,
+        /// then dawdle across in front of the traffic that was let through on that promise.
+        ///
+        /// Capped at the open-road speed. Nobody takes a corner faster than they drive.
+        /// </summary>
+        private static float TurnPace(Mover me)
+        {
+            const float Patience = 25f;      // seconds of waiting to reach the brisk end
+            float eager = Mathf.Clamp01(me.Held / Patience);
+            return Mathf.Lerp(TurnSpeed, Speed, eager);
         }
 
         /// <summary>Do these two turns cross? See <see cref="_conflicts"/>.</summary>
@@ -1027,13 +1110,63 @@ namespace Noir.Unity
             var options = Graph.TurnsFrom(segment.Index);
             if (options.Count == 0) return -1;
 
-            uint roll = Materials3D.Scatter(segment.Index, me.Choices, 907) % 100;
-            var want = roll < 60 ? TurnKind.Straight : roll < 80 ? TurnKind.Right : TurnKind.Left;
+            // WEIGHTED BY THE ROAD BEING ENTERED, not just by which way the wheel turns.
+            //
+            // This was a flat 60 straight / 20 right / 20 left whatever road you were on, and
+            // the consequence only showed up once the map became a village: a car on Route 1
+            // turned off it two junctions in five, so through traffic dissolved into the side
+            // streets and the steady state was every lane equally busy. Northgate reported one
+            // vehicle on the main road and a hundred and five on residential streets, which is
+            // the exact opposite of a small town on a state highway.
+            //
+            // Scoring the destination's class fixes it from the map rather than from a table of
+            // road names: on a main road, going straight scores 8x3 against 2 for a turn into a
+            // street, so about six cars in seven carry on through - which is what a highway IS.
+            // Coming the other way, off a street onto the highway, the turn outscores straight
+            // on, so local traffic feeds the main road instead of circulating. Reclassify a
+            // street in content and the pattern moves with it.
+            int total = 0;
+            for (int i = 0; i < options.Count; i++) total += Appeal(options[i]);
+            if (total <= 0) return options[0];
 
-            foreach (int t in options)
-                if (Graph.Turns[t].Kind == want) return t;
+            // The SAME roll as before, so the answer is still stable between the frame it is
+            // asked on approach and the frame it is acted on - which is what stops a car
+            // re-deciding mid-junction and cutting a corner it had already committed to.
+            int roll = (int)(Materials3D.Scatter(segment.Index, me.Choices, 907) % (uint)total);
+            for (int i = 0; i < options.Count; i++)
+            {
+                roll -= Appeal(options[i]);
+                if (roll < 0) return options[i];
+            }
+            return options[options.Count - 1];
+        }
 
-            return options[(int)(roll % (uint)options.Count)];
+        /// <summary>
+        /// How attractive a turn is: how big a road it leads onto, times how ordinary the
+        /// manoeuvre is.
+        ///
+        /// Straight on is three times a turn because most traffic at most junctions goes
+        /// straight on - that much was right in the flat version and is kept. What is new is the
+        /// class, and the numbers are ORDERED rather than tuned: a track is a farm entrance, a
+        /// street is somewhere people live, a main road is the way through town, and each step
+        /// up is meant to dominate the one below when both are on offer.
+        /// </summary>
+        private int Appeal(int turn)
+        {
+            var into = Graph.Segments[Graph.Turns[turn].To];
+            var klass = _world != null && into.Line >= 0 && into.Line < _world.Roads.Lines.Count
+                ? _world.Roads.Lines[into.Line].Class
+                : RoadClass.Street;
+
+            int road = klass switch
+            {
+                RoadClass.Freeway  => 12,
+                RoadClass.Mainroad => 8,
+                RoadClass.Street   => 2,
+                _                  => 1,      // a track is where the tractor goes
+            };
+
+            return road * (Graph.Turns[turn].Kind == TurnKind.Straight ? 3 : 1);
         }
 
         /// <summary>
