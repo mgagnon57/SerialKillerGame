@@ -111,5 +111,73 @@ namespace Noir.Core.Tests
             Assert.That(look, Is.EqualTo(SightingClarity.Glimpsed));
             Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject), Is.True);
         }
+
+        private const ulong TestSeed = 1979UL;
+
+        private static PersonDescription Describe(SightingClarity clarity, CitizenKey witness,
+                                                  int minute = 500) =>
+            Degradation.WhatRegistered(clarity, Visibly.Carrying, true, 40, 185, 2,
+                                       witness, minute, TestSeed);
+
+        [Test]
+        public void AGlimpseRegistersAlmostNothing()
+        {
+            var seen = Describe(SightingClarity.Glimpsed, new CitizenKey(11));
+            Assert.That(seen.NoticedCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AClearLookRegistersMost()
+        {
+            var seen = Describe(SightingClarity.Clear, new CitizenKey(11));
+            Assert.That(seen.NoticedCount, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void TheSameWitnessRemembersTheSameThingTwice()
+        {
+            var once = Describe(SightingClarity.Partial, new CitizenKey(11));
+            var twice = Describe(SightingClarity.Partial, new CitizenKey(11));
+            Assert.That(once, Is.EqualTo(twice));
+        }
+
+        [Test]
+        public void TwoWitnessesToTheSameMomentRememberDifferently()
+        {
+            var one = Describe(SightingClarity.Partial, new CitizenKey(11));
+            var other = Describe(SightingClarity.Partial, new CitizenKey(9999));
+            Assert.That(one, Is.Not.EqualTo(other),
+                "Two witnesses at the same clarity registering identical bands means the shuffle " +
+                "is not keyed on the witness, and every statement in the village will be a copy.");
+        }
+
+        [Test]
+        public void AClearLookNeverGetsTheSexWrong()
+        {
+            for (int minute = 0; minute < 400; minute++)
+            {
+                var seen = Degradation.WhatRegistered(SightingClarity.Clear, Visibly.Nothing,
+                                                      true, 40, 185, 2,
+                                                      new CitizenKey(11), minute, TestSeed);
+                if (seen.Sex != ApparentSex.Unnoticed)
+                    Assert.That(seen.Sex, Is.EqualTo(ApparentSex.Man),
+                                "wrong at minute " + minute + ", in a clear look");
+            }
+        }
+
+        [Test]
+        public void AGlimpseSometimesGetsTheSexWrong()
+        {
+            int wrong = 0;
+            for (int minute = 0; minute < 2000; minute++)
+            {
+                var seen = Degradation.WhatRegistered(SightingClarity.Glimpsed, Visibly.Nothing,
+                                                      true, 40, 185, 2,
+                                                      new CitizenKey(11), minute, TestSeed);
+                if (seen.Sex == ApparentSex.Woman) wrong++;
+            }
+            Assert.That(wrong, Is.GreaterThan(0),
+                "A witness who never mistakes a man for a woman in the dark is not a witness.");
+        }
     }
 }
