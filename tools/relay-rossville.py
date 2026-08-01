@@ -69,7 +69,41 @@ NS = [                             # north-south streets: (east offset, name, al
     (+580, "grove",      None),
     (+750, "goodwine",   "Creative Avenue"),
 ]
-RAILROAD = +900                    # Railroad Avenue, down the east side with the CSX line
+# THE REAL CSX LINE, from OpenStreetMap (way 332489882, "CSX Woodland Subdivision"),
+# converted to the same metres-about-the-crossing frame as everything else. This is
+# NOT the straight line the map used to assume: the real track runs diagonally,
+# crossing only about 130-200m east of Chicago Street up at the north end of the
+# village and opening out to 900m-plus well south of it. A single vertical
+# "Railroad Avenue" can never be correct everywhere - the engine's roads are
+# axis-aligned only - so RAILROAD below is a single representative crossing (at
+# Attica's own latitude) for siding/elevator placement, and RAIL_X below is the
+# real thing every BLOCK gets measured against so nothing is platted across it.
+#
+# Found by rendering the plan straight down after the parcels' own rotation was
+# fixed: 120 of 469 houses - a quarter of the town - turned out to be beyond the
+# real track for their row, "408 Holmes Ave" among them, 61m past it. The houses
+# were never wrong; the assumed 900m of clearance before the tracks was.
+RAIL = [
+    (2112.1, 2553.2), (2004.1, 2393.3), (1803.0, 2095.5), (1541.4, 1708.0),
+    (1489.4, 1628.3), (1441.8, 1559.5), (1357.7, 1435.8), (1306.1, 1357.5),
+    (1294.4, 1339.7), (1205.3, 1209.6), (1122.7, 1088.6), (1074.3, 1014.7),
+    (1034.6, 957.5), (958.3, 843.3), (839.3, 662.9), (775.7, 551.2),
+    (734.6, 467.8), (692.8, 366.4), (659.2, 272.5), (631.1, 175.8),
+    (611.8, 86.7), (594.0, -13.2), (584.2, -122.1),
+]
+RAIL_MARGIN = 25    # metres of clearance from the centreline - real right-of-way plus a verge
+
+def rail_x_at(y):
+    """The real track's x at a given map y, or None north/south of the surveyed line."""
+    for i in range(len(RAIL) - 1):
+        x1, y1 = RAIL[i]
+        x2, y2 = RAIL[i + 1]
+        if (y1 - y) * (y2 - y) <= 0 and y1 != y2:
+            t = (y - y1) / (y2 - y1)
+            return x1 + t * (x2 - x1)
+    return None
+
+RAILROAD = round(rail_x_at(CY) - CX)    # the real crossing at Attica's latitude - not a guess
 
 XS = [CX + o for o, _, _ in NS]
 YS = [CY - e[0] for e in EW]    # game y increases southward
@@ -104,6 +138,21 @@ def blocks():
             top, bot = pad(ys[j], CY), pad(ys[j + 1], CY)
             x, y = xs[i] + lft, ys[j] + top
             bw, bh = xs[i + 1] - xs[i] - lft - rgt, ys[j + 1] - ys[j] - top - bot
+
+            # CLIPPED AGAINST THE REAL TRACK, not the schematic Railroad Avenue. The rail
+            # is diagonal, so take the tighter (more restrictive) of the two boundaries at
+            # the top and bottom of this block rather than one sample at its centre - a
+            # block can straddle enough latitude for the real line to cross it diagonally
+            # without either edge's own y giving the worst case.
+            top_safe = rail_x_at(y)
+            bot_safe = rail_x_at(y + bh)
+            safe_edges = [s - RAIL_MARGIN for s in (top_safe, bot_safe) if s is not None]
+            if safe_edges:
+                safe_x = min(safe_edges)
+                if x >= safe_x:
+                    continue                       # the whole block is past the tracks
+                bw = min(bw, safe_x - x)
+
             if bw >= 26 and bh >= 26:
                 got.append((x, y, bw, bh, number, east,
                             byY.get(ys[j]), byY.get(ys[j + 1])))
@@ -188,13 +237,22 @@ for o, name, alias, _s in EW:
     w_(f"road {name} 10 {X0},{y} {X1},{y}   # {o:+d}m" + (f", {alias} west of Route 1" if alias else ""))
     w_("  class street")
 w_()
-w_("# ---- the CSX line and the section roads -----------------------------------")
-w_("# Railroad Avenue runs down the east side, which is where the line is. The country")
-w_("# is surveyed on a mile grid and the gravel roads follow the section lines. Each")
-w_("# crosses a main road, so none is an island - an isolated road has lanes and no")
-w_("# junction at either end, and its traffic drives off the tarmac and out of the world.")
-w_(f"road railroad 10 {CX+RAILROAD},{Y0} {CX+RAILROAD},{Y1}")
-w_("  class track")
+w_("# ---- the section roads -----------------------------------------------------")
+w_("# NO SIMULATED RAILROAD AVENUE. The real CSX line is diagonal - it crosses barely")
+w_("# 130m east of Chicago Street up at York and opens past 1,100m by Earlcourt - and")
+w_("# the engine's roads are axis-aligned only, so any single vertical line drawn for")
+w_("# it is wrong for most of the town's latitude by construction. It used to be a")
+w_("# flat +900m guess, and a quarter of the village's houses turned out to be on the")
+w_("# wrong side of the real track for their row because of it. The real alignment is")
+w_("# drawn instead as a `rail` feature in features.txt, pulled from OpenStreetMap,")
+w_("# which CAN follow the real diagonal because it is decoration and not a road a")
+w_("# person or a car is simulated walking on. RAILROAD the constant survives, for the")
+w_("# elevator's siting below, but nothing paves a road along it any more.")
+w_("#")
+w_("# The country is surveyed on a mile grid and the gravel section roads follow the")
+w_("# section lines. Each crosses a main road, so none is an island - an isolated road")
+w_("# has lanes and no junction at either end, and its traffic drives off the tarmac")
+w_("# and out of the world.")
 for n, y in enumerate([220, H - 220]):
     w_(f"road section{n} 10 0,{y} {W-1},{y}")
     w_("  class track")
@@ -394,6 +452,16 @@ homes = [b for b in rest if b not in used_civic]
 PITCH, LOTW, LOTH, SETBACK = 26, 13, 7, 8
 built = 0
 skipped = 0
+
+# 408 HOLMES AVE IS PROTECTED. Real Holmes Avenue's 400 block runs almost onto the
+# real CSX line - the block survives clipping with room for exactly one lot, and that
+# lot is the one the stable vacant-lot hash happens to skip. Rather than let a fixed
+# story anchor disappear because of where a modulus landed, the first safe lot in
+# Holmes' 400 block is reserved for it outright, address forced to 408 regardless of
+# the rank arithmetic or the vacancy roll. Everything else in the town still goes
+# through the ordinary rules.
+holmes_408_done = False
+
 for b in homes:
     bx0, by0, bw, bh, hundred, east, north_st, south_st = b
     runs = []
@@ -413,9 +481,14 @@ for b in homes:
             number = hundred + (2 * rank if parity == "even" else 2 * rank - 1)
             lx = bx0 + k * PITCH + (PITCH - LOTW) // 2
 
+            reserved_for_408 = (street == "holmes" and hundred == 400
+                                and not holmes_408_done)
+            if reserved_for_408:
+                number = 408
+                holmes_408_done = True
             # A gap every so often, stable per lot so the same houses are missing
-            # every time the map is built.
-            if (lx * 7919 + ly * 104729) % 20 < 3:
+            # every time the map is built - unless this lot was just claimed above.
+            elif (lx * 7919 + ly * 104729) % 20 < 3:
                 skipped += 1
                 continue
 
@@ -425,6 +498,13 @@ for b in homes:
             # reads to turn the house round to face its own road.
             w_(f"  door {lx + LOTW // 2},{ly if parity == 'even' else ly + LOTH - 1}")
             built += 1
+
+if not holmes_408_done:
+    # Nothing in Holmes' 400 block survived clipping at all - the real track must run
+    # closer than expected. Not silently losing the killer's address: report it loudly
+    # so a person decides where it goes, rather than the town quietly relocating him.
+    print("WARNING: 408 Holmes Ave could not be placed - the 400 block did not survive "
+          "the rail clip. Fix this before using the output.")
 w_()
 w_("# " + "=" * 74)
 w_("#  THE COUNTRY - corn, beans, and about seven people to the square mile")
@@ -449,8 +529,11 @@ for n in range(64):
 
 # Every corridor a country lot has to keep out of: (vertical?, centre, half-width+verge).
 # The section roads and Route 1 run the whole way across the country, and a field laid
-# over one of them is a cornfield growing in the carriageway.
-CORRIDORS = ([(True, CX, 15 + 4), (False, CY, 15 + 4), (True, CX + RAILROAD, 5 + 4)]
+# over one of them is a cornfield growing in the carriageway. No entry for the railroad
+# here any more - it is not a road (see above) - so a field can still land on the real
+# diagonal `rail` feature out in the country. Rarer out there than in the platted town,
+# and a corn field over a rail corridor is a much smaller lie than a house over one.
+CORRIDORS = ([(True, CX, 15 + 4), (False, CY, 15 + 4)]
              + [(False, y, 5 + 4) for y in (220, H - 220)]
              + [(True, x, 5 + 4) for x in (220, W - 220)])
 

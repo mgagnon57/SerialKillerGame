@@ -281,7 +281,12 @@ namespace Noir.Editor
 
                 // 408 HOLMES AVE. The killer's house, from the middle of Holmes Avenue looking
                 // at its front door. If this view is wrong nothing else matters.
-                Frame(camGo, new Vector3(1247f, 1.6f, -1218f), 26f, 4f, 0f);
+                //
+                // Moved with the address: the 400 block of Holmes ran almost onto the real CSX
+                // line once the town was checked against it (see relay-rossville.py), so the
+                // house itself moved to the block's one safe lot. Same relative framing - door
+                // plus 6m east, 7m north - just off the corrected door position.
+                Frame(camGo, new Vector3(1175f, 1.6f, -1218f), 26f, 4f, 0f);
                 Capture(cam, Path.Combine(OutputDir, "city-corner.png"));
 
                 // Straight down on the one signal, to read lanes, stop lines and heads.
