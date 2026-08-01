@@ -81,12 +81,13 @@ namespace Noir.Unity
         /// <summary>
         /// Whether the citizens are DRAWN. They are simulated regardless.
         ///
-        /// Off while the city is being built out. Turning it back on is this one flag: nothing
-        /// downstream of it was deleted, and Sim, Population, the lit windows and the "who is
-        /// inside this building" panel all keep working with it off, because none of them ever
-        /// went through the figures.
+        /// Off while the city is being built out, and off again now while the focus is the town
+        /// layout and the lot data rather than who lives where - turning it back on is this one
+        /// flag: nothing downstream of it was deleted, and Sim, Population, the lit windows and
+        /// the "who is inside this building" panel all keep working with it off, because none of
+        /// them ever went through the figures.
         /// </summary>
-        public static bool ShowPeople = true;
+        public static bool ShowPeople = false;
 
         /// <summary>
         /// Whether to raise the bought building models, or draw the town as a survey plan.
@@ -246,6 +247,10 @@ namespace Noir.Unity
                 // The names, without which the drawing is anonymous: every line in it is right
                 // and none of it is legible to somebody standing in the street.
                 PlanLabels.Create(this, transform);
+
+                // The one thing a baked mesh cannot do for itself - a selection changes on
+                // every click, and CityOutlines is built once and frozen.
+                SelectionHighlight.Create(this, transform);
             }
 
             var signals = CitySignals.Create(World, transform);

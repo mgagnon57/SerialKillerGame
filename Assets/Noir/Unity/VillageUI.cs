@@ -252,13 +252,13 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// What a building is, and who is in it.
+        /// What a plot is: the address, its size, and whatever was authored about it.
         ///
-        /// Almost all of this was already written down and had never been shown to anybody: the
-        /// authored `human` line, the opening hours, the staffing, the household. The one piece
-        /// that is not authored is the last one, and it is the reason this panel matters for a
-        /// game about who was where - the simulation knows which agents are inside a place at
-        /// this minute, so the panel can simply ask it.
+        /// Deliberately not who lives or works there this round - the household, staffing and
+        /// "who is inside" sections all read the simulation, and the current pass is about the
+        /// town layout and the lot data, not the population sitting on top of it. Set
+        /// VillageHost.ShowPeople back to true and restore those sections together when that
+        /// becomes the question again; nothing downstream of either was deleted.
         /// </summary>
         private void DrawPlaceInspector(Place place)
         {
@@ -267,10 +267,10 @@ namespace Noir.Unity
             GUI.Box(rect, GUIContent.none, _panel);
             GUILayout.BeginArea(new Rect(rect.x + 14, rect.y + 12, rect.width - 28, rect.height - 24));
 
-            var world = _host.World;
             var sim = _host.Sim;
             var kind = PlaceKindTable.Current.Row(place.Kind);
 
+            // The name IS the address - see relay-rossville.py and Content/parcels.txt.
             GUILayout.Label(place.Name, _title);
             GUILayout.Label($"{Article(kind.Name)}   ·   {LotSize(place)}", _small);
             GUILayout.Space(10);
@@ -298,66 +298,10 @@ namespace Noir.Unity
                 GUILayout.Space(10);
             }
 
-            // ---- who belongs to it ----
-            var household = _host.People.HouseholdAt(place.Id);
-            if (household.IsValid)
-            {
-                var home = _host.People.GetHousehold(household);
-                GUILayout.Label($"<color=#8a8a86>home to</color>  the {home.Surname} household"
-                              + (home.Size > 1 ? $", {home.Size} people" : ""), _label);
-            }
             if (place.Units > 1)
                 GUILayout.Label($"<color=#8a8a86>{place.Units} separate homes</color>", _small);
-
-            var workers = _host.People.WorkersAt(place.Id);
-            if (workers.Count > 0)
-                GUILayout.Label($"<color=#8a8a86>worked by</color>  {workers.Count} "
-                              + (workers.Count == 1 ? "person" : "people"), _label);
-            else if (place.JobSlots > 0)
-                GUILayout.Label($"<color=#8a8a86>{place.JobSlots} jobs, nobody in them</color>", _small);
-
-            GUILayout.Space(10);
-
-            // ---- who is inside RIGHT NOW ----
-            //
-            // The whole reason a detective wants to click a building.
-            _inside.Clear();
-            for (int i = 0; i < sim.AgentCount; i++)
-            {
-                var agent = sim.GetAgent(i);
-                if (agent.Travelling || !agent.At.IsValid) continue;
-                if (agent.At.Value != place.Id.Value) continue;
-                _inside.Add(i);
-            }
-
-            if (_inside.Count == 0)
-            {
-                GUILayout.Label("<color=#75736e>nobody inside</color>", _label);
-            }
-            else
-            {
-                GUILayout.Label($"<b>inside now</b>  ·  {_inside.Count}", _label);
-                _placeScroll = GUILayout.BeginScrollView(_placeScroll, GUILayout.MaxHeight(260));
-                foreach (int i in _inside)
-                {
-                    // An agent's index IS its citizen id - Simulation.GetAgent(CitizenId) is
-                    // a straight lookup into the same array.
-                    var agent = sim.GetAgent(i);
-                    var citizen = _host.People.Get(new CitizenId(i));
-                    if (citizen == null) continue;
-
-                    GUILayout.BeginHorizontal();
-                    if (GUILayout.Button(citizen.FullName, _button, GUILayout.Height(22)))
-                    {
-                        _host.Selected = citizen.Id;
-                        _host.SelectedPlace = PlaceId.None;
-                    }
-                    GUILayout.Label($"<color=#8a8a86>{Verb(agent.Doing)}</color>", _small,
-                                    GUILayout.Width(96));
-                    GUILayout.EndHorizontal();
-                }
-                GUILayout.EndScrollView();
-            }
+            if (place.JobSlots > 0)
+                GUILayout.Label($"<color=#8a8a86>{place.JobSlots} job slots</color>", _small);
 
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
@@ -365,10 +309,6 @@ namespace Noir.Unity
 
             GUILayout.EndArea();
         }
-
-        private readonly System.Collections.Generic.List<int> _inside =
-            new System.Collections.Generic.List<int>();
-        private Vector2 _placeScroll;
 
         private const float MetresToFeet = 3.28084f;
 
