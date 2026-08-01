@@ -147,7 +147,6 @@ namespace Noir.Unity
                 case "chicago": return "CHICAGO ST  ·  ILLINOIS 1";
                 case "attica":  return "ATTICA ST";
                 case "holmes":  return "HOLMES AVE";
-                case "railroad": return "RAILROAD AVE";
             }
             if (name.StartsWith("section") || name.StartsWith("crossroad")) return "SECTION RD";
             return name.ToUpperInvariant() + " ST";

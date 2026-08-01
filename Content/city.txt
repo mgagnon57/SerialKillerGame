@@ -242,7 +242,9 @@ place apartment 768,1510 8x6 "Chicago Street Chambers, 4"
 
 # ---- the school, the firehouse, the elevator, the water tower --------------
 # The fire station is at the north end because Rossville's new one is. The elevator
-# stands on Railroad Avenue because that is where the CSX line runs.
+# stands near where the real CSX line runs - there is no simulated road for the
+# tracks any more, see RAILROAD above, only the siting constant and the decorative
+# `rail` feature in features.txt.
 
 place firestation 694,737 28x27 "Engine 9"
   door 708,763

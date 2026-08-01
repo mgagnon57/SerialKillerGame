@@ -67,8 +67,7 @@ namespace Noir.Unity
         private static Mesh BuildMesh(Place place)
         {
             var b = place.Bounds;
-            var centre = new Vector2(b.X + b.W / 2f, b.Y + b.H / 2f);
-            var parcel = ParcelIndex.Find(centre);
+            var parcel = ParcelIndex.FindFor(place);
             if (parcel.HasValue) return BuildMesh(parcel.Value);
 
             // No county record under this place - the footprint itself is the only boundary
@@ -101,20 +100,8 @@ namespace Noir.Unity
             return mesh;
         }
 
-        private static void Edge(List<Vector3> verts, List<int> tris, Vector2 a, Vector2 b)
-        {
-            var along = b - a;
-            float len = along.magnitude;
-            if (len < 0.01f) return;
-
-            var side = new Vector2(-along.y, along.x) / len * (Stroke * 0.5f);
-            int n = verts.Count;
-            foreach (var p in new[] { a - side, b - side, b + side, a + side })
-                verts.Add(Space3D.ToWorld(new Vec2(p.x, p.y), Lift));
-
-            tris.Add(n); tris.Add(n + 2); tris.Add(n + 1);
-            tris.Add(n); tris.Add(n + 3); tris.Add(n + 2);
-        }
+        private static void Edge(List<Vector3> verts, List<int> tris, Vector2 a, Vector2 b) =>
+            Ribbon.Edge(verts, tris, a, b, Stroke, Lift);
 
         private static Material Paint()
         {

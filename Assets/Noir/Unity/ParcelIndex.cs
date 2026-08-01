@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
+using Noir.Core.World;
 
 namespace Noir.Unity
 {
@@ -16,6 +17,12 @@ namespace Noir.Unity
     {
         public readonly struct Parcel
         {
+            /// <summary>Its line number in Content/parcels.txt (0-based, comments and blank lines
+            /// not counted). Stable across loads as long as the file itself keeps its order -
+            /// nothing in this project resorts it - which is what lets ParcelNotes key authored
+            /// text and hand-drawn footprints to a parcel without the parcel needing a name.</summary>
+            public readonly int Id;
+
             /// <summary>The ring, for anyone who needs the real shape rather than its box.</summary>
             public readonly Vector2[] Points;
 
@@ -23,13 +30,34 @@ namespace Noir.Unity
             /// of a degree, since the plan's own rotation fix. See Content/parcels.txt.</summary>
             public readonly Rect Bounds;
 
-            public Parcel(Vector2[] points, Rect bounds) { Points = points; Bounds = bounds; }
+            public Parcel(int id, Vector2[] points, Rect bounds)
+            {
+                Id = id; Points = points; Bounds = bounds;
+            }
         }
 
         private static List<Parcel> _all;
 
         /// <summary>Every parcel, parsed once. Empty rather than null if the content is missing.</summary>
         public static IReadOnlyList<Parcel> All { get { Load(); return _all; } }
+
+        public static Parcel? ById(int id)
+        {
+            Load();
+            return id >= 0 && id < _all.Count ? _all[id] : (Parcel?)null;
+        }
+
+        /// <summary>
+        /// The real parcel under a place's own centre - the "which real lot is this generated
+        /// footprint standing on" question, asked identically by VillageUI's lot-size and
+        /// household lookups and by SelectionHighlight's outline. All three used to compute the
+        /// centre inline; one drifting out of step with the others was only a matter of time.
+        /// </summary>
+        public static Parcel? FindFor(Place place)
+        {
+            var b = place.Bounds;
+            return Find(new Vector2(b.X + b.W / 2f, b.Y + b.H / 2f));
+        }
 
         /// <summary>
         /// The parcel whose ring actually contains a point, not merely whose box does - two lots
@@ -79,7 +107,7 @@ namespace Noir.Unity
                     if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
                     if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
                 }
-                _all.Add(new Parcel(pts.ToArray(), Rect.MinMaxRect(minX, minY, maxX, maxY)));
+                _all.Add(new Parcel(_all.Count, pts.ToArray(), Rect.MinMaxRect(minX, minY, maxX, maxY)));
             }
         }
 

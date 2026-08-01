@@ -82,9 +82,15 @@ namespace Noir.Unity
             return NearestOwned(world, hit);
         }
 
-        /// <summary>How far off a direct hit is still "this property" rather than the empty
-        /// street beside it - a fraction of a typical Rossville lot, not the whole block.</summary>
-        private const float NearbyRadius = 18f;
+        /// <summary>
+        /// How far off a direct hit is still "this property" rather than the empty street
+        /// beside it. Has to clear a real lot's own half-diagonal - median parcel 26m x 51m, so
+        /// corner to centre is ~29m - or a click near the corner of a large real lot falls
+        /// through to OrbitCamera's ParcelIndex fallback and reports the lot as undeveloped even
+        /// though a house sits on it. The first value here (18m) was sized off the footprint's
+        /// own dimensions and never checked against the real lot it was meant to cover.
+        /// </summary>
+        private const float NearbyRadius = 35f;
 
         private static PlaceId NearestOwned(WorldModel world, Vector3 hit)
         {

@@ -389,7 +389,9 @@ w_()
 
 w_("# ---- the school, the firehouse, the elevator, the water tower --------------")
 w_("# The fire station is at the north end because Rossville's new one is. The elevator")
-w_("# stands on Railroad Avenue because that is where the CSX line runs.")
+w_("# stands near where the real CSX line runs - there is no simulated road for the")
+w_("# tracks any more, see RAILROAD above, only the siting constant and the decorative")
+w_("# `rail` feature in features.txt.")
 w_()
 made = {
     "elevator": dict(kind="elevator", w=24, h=34, name="the Rossville elevator", door=None,
