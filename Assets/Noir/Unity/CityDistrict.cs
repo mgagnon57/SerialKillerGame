@@ -131,9 +131,28 @@ namespace Noir.Unity
         /// </summary>
         private static int StoreysFor(TileRect lot, float rank, int index)
         {
-            int tall = Mathf.RoundToInt(Mathf.Lerp(6f, 2f, Mathf.InverseLerp(1f, 2.6f, rank)));
+            // FOUR NEAR THE MIDDLE, NOT SIX. Northgate holds about a thousand people, and a
+            // thousand people do not fill six storeys of frontage on twenty-seven blocks - the
+            // downtown that came out of it read as a city of a quarter of a million with nobody
+            // in it, which is the opposite of the thing being built. Downtown is still where the
+            // town GOES rather than where it lives, so it stays denser than the ring; it just
+            // stops pretending to a population that does not exist.
+            int tall = Mathf.RoundToInt(Mathf.Lerp(4f, 2f, Mathf.InverseLerp(1f, 2.6f, rank)));
             return Mathf.Max(1, tall + (int)(Materials3D.Scatter(lot.X + index, lot.Y, 5309) % 3) - 1);
         }
+
+        /// <summary>
+        /// Whether a block may raise a tower of its own.
+        ///
+        /// OFF. Four generated towers stood downtown on top of the two authored ones, and six
+        /// skyscrapers is the skyline of a city of hundreds of thousands - Northgate holds about
+        /// a thousand. The two in city.txt stay, because a small city does have one or two tall
+        /// things and they are landmarks, which is precisely what an AUTHORED place is for.
+        ///
+        /// A field rather than a const so the rest of IsTower stays live code: the rule below is
+        /// worth keeping intact and readable for whenever downtown is meant to grow again.
+        /// </summary>
+        private static readonly bool GeneratedTowers = false;
 
         /// <summary>
         /// Is this block a tower rather than a terrace?
@@ -151,6 +170,7 @@ namespace Noir.Unity
         /// </summary>
         private static bool IsTower(WorldModel world, TileRect lot, float rank)
         {
+            if (!GeneratedTowers) return false;
             if (rank >= 2.0f) return false;
 
             foreach (var line in world.Roads.Lines)

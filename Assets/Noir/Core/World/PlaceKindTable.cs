@@ -233,6 +233,32 @@ namespace Noir.Core.World
         /// <summary>How many kinds there are, which is also one past the highest kind value.</summary>
         public int Count => _rows.Length;
 
+        /// <summary>
+        /// The kind with this canonical name, or false if the table has never heard of it.
+        ///
+        /// A kind the PlaceKind enum knows can be named in C# as PlaceKind.Pub. A kind only
+        /// kinds.txt knows - which is every city kind, numbered past the enum's members - cannot
+        /// be, and that is not a small gap: it meant the day planner's whole errand list was a
+        /// VILLAGE's list running in a city, offering shops and greens while the cinema, the
+        /// casino and the diner stood open with nobody ever walking into them.
+        ///
+        /// False rather than an exception, because content decides what exists: asking for a
+        /// diner on a map that has none is an ordinary answer, not a fault.
+        /// </summary>
+        public bool TryNamed(string name, out PlaceKind kind)
+        {
+            for (int i = 0; i < _rows.Length; i++)
+            {
+                if (_rows[i] == null) continue;
+                if (!string.Equals(_rows[i].Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+                kind = (PlaceKind)i;
+                return true;
+            }
+
+            kind = default;
+            return false;
+        }
+
         public PlaceKindRow Row(PlaceKind kind)
         {
             int i = (int)kind;

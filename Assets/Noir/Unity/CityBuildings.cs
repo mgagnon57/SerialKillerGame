@@ -38,6 +38,34 @@ namespace Noir.Unity
         private static int StoreysAt(TileRect lot) =>
             2 + (int)(Materials3D.Scatter(lot.X, lot.Y, 7717) % 3);   // 2, 3 or 4
 
+        /// <summary>
+        /// The kinds built as a stack of modules on their own lot, rather than as a bought model.
+        ///
+        /// A PARADE IS A TERRACE THAT SELLS THINGS. The pack has no shop, pub, post office or
+        /// community hall as a whole building - it has a bank, a diner, a cinema and a casino,
+        /// which are landmarks, and then the modular shopfront sections that downtown's six
+        /// hundred buildings are made of. A corner shop IS one of those sections: ground floor
+        /// glazed to the street, a flat or two over it, sharing its side walls with the next unit
+        /// along. So these go through the same Stack the apartments do, and a row of them authored
+        /// at adjacent x becomes a parade for free, because HasNeighbour already reads adjacency
+        /// off the lots.
+        ///
+        /// The kinds differ in what the SIMULATION does with them - opening hours, a counter, a
+        /// shopkeeper to employ - and not in how they are built, which is the right place for the
+        /// difference to live.
+        /// </summary>
+        private static bool Stacked(string kind)
+        {
+            switch (kind)
+            {
+                case "apartment":
+                case "shop": case "pub": case "postoffice": case "villagehall":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         /// <summary>Which townhouse family, again stable per lot.</summary>
         private static bool SquareAt(TileRect lot) =>
             Materials3D.Scatter(lot.X, lot.Y, 4441) % 2 == 0;
@@ -54,7 +82,7 @@ namespace Noir.Unity
             // so only the ends need a finished flank.
             var lots = new List<Place>();
             foreach (var place in world.AllPlaces)
-                if (KindOf(place) == "apartment") lots.Add(place);
+                if (Stacked(KindOf(place))) lots.Add(place);
 
             int pieces = 0;
             foreach (var place in lots)
@@ -150,6 +178,7 @@ namespace Noir.Unity
             switch (KindOf(place))
             {
                 case "apartment":
+                case "shop": case "pub": case "postoffice": case "villagehall":
                 case "diner": case "precinct": case "school2": case "hospital":
                 case "firestation": case "cinema": case "bank": case "casino":
                 case "gasstation": case "icecream": case "carwash":

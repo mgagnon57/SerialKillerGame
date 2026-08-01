@@ -236,20 +236,37 @@ namespace Noir.Core.People
             }
 
             // ---- discretionary time, until bed ----
-            int errands = ErrandCount(who, weekend, rng);
+            int errands = ErrandCount(who, weekend, bed - cursor, rng);
             for (int e = 0; e < errands && cursor < bed - 40; e++)
             {
+                // SPREAD ACROSS WHAT IS LEFT, NOT STACKED AT THE FRONT.
+                //
+                // The gap was a flat 15-90 minutes, which meant every errand was taken as early
+                // as it possibly could be: somebody with no job woke at seven, did both errands
+                // before eleven, and then sat indoors for eleven hours. A census through a driven
+                // day caught it exactly - 51 people out at nine in the morning, nine at eleven,
+                // and at three in the afternoon NOBODY on the street in a town of 970.
+                //
+                // Dividing the remaining window by the errands remaining puts each one somewhere
+                // in its own share of the day, so a free afternoon has something in it.
+                int slice = (bed - 40 - cursor) / Math.Max(1, errands - e);
                 // The gap is drawn BEFORE choosing where to go, so the place can be tested
                 // against the hour they will actually arrive. Previously it was tested at a
                 // fixed cursor+30 while the real start landed anywhere from +15 to +104, so
                 // the tested instant matched the real one about one draw in ninety - people
                 // walked to shops that had shut an hour earlier.
-                int gap = 15 + rng.NextInt(90);
+                int gap = 15 + rng.NextInt(Math.Max(1, slice));
                 int start = cursor + gap;
                 if (start > bed - 40) break;
 
+                // ONE REFUSAL NO LONGER ENDS THE DAY. This was `break`, so a single errand that
+                // could not be placed - everything of that kind shut at that hour, or the map
+                // having none at all - sent the person home until bedtime. That is how a city
+                // with two greens and no shops came out with 238 of 365 indoors at three in the
+                // afternoon: the first empty list stopped everything behind it. Trying the next
+                // slot instead costs one wasted draw and the loop still ends, because `e` counts.
                 var chosen = ChooseErrand(world, who, dayOfWeek, start, bed, rng);
-                if (!chosen.HasValue) break;
+                if (!chosen.HasValue) continue;
 
                 var (place, activity, duration) = chosen.Value;
                 int end = start + duration;
@@ -407,12 +424,29 @@ namespace Noir.Core.People
         private static float ChurchChance(Citizen who) =>
             who.Stage == LifeStage.Elder ? 0.7f : who.IsChild ? 0.35f : 0.3f;
 
-        private static int ErrandCount(Citizen who, bool weekend, IRng rng)
+        /// <summary>
+        /// How many errands this person has in them today.
+        ///
+        /// <paramref name="free"/> is the discretionary window in minutes - what is left after
+        /// work, school and church. IT HAS TO COUNT, and it did not: the answer was one or two
+        /// whether the person had two hours to fill or fourteen, so the retired and the
+        /// unemployed - the large majority of Northgate, and the only people about during the
+        /// working day - did their shopping before eleven and then sat at home until bed. A town
+        /// whose streets are empty every afternoon is not a quiet town, it is an unfinished one.
+        ///
+        /// One more errand per four free hours, so a working day out ends up with four or five
+        /// things in it and a short evening still has one.
+        /// </summary>
+        private static int ErrandCount(Citizen who, bool weekend, int free, IRng rng)
         {
             float social = who.Sociability / 255f;
             int n = rng.Chance(0.35f + social * 0.4f) ? 2 : 1;
             if (weekend && rng.Chance(0.4f)) n++;
             if (who.IsChild) n = rng.Chance(0.7f) ? 1 : 0;
+
+            // Drawn AFTER the rolls above so none of them shift, for the same reason the errand
+            // list is appended to rather than inserted into.
+            if (!who.IsChild && free > 0) n += Math.Min(4, free / 240);
             return n;
         }
 
@@ -441,6 +475,15 @@ namespace Noir.Core.People
 
             void Consider(PlaceKind kind, Activity act, int minutes, int weight) =>
                 ConsiderThese(world.PlacesOfKind(kind), act, minutes, weight);
+
+            // The same thing for a kind only kinds.txt knows. A city kind is numbered past the
+            // enum's members, so it has no C# name to pass to the line above, and every one of
+            // Northgate's own amenities was therefore unreachable from here.
+            void ConsiderNamed(string name, Activity act, int minutes, int weight)
+            {
+                if (!PlaceKindTable.Current.TryNamed(name, out var kind)) return;
+                ConsiderThese(world.PlacesOfKind(kind), act, minutes, weight);
+            }
 
             void ConsiderThese(IReadOnlyList<PlaceId> ids, Activity act, int minutes, int weight)
             {
@@ -514,6 +557,29 @@ namespace Noir.Core.People
                           25 + rng.NextInt(35),
                           who.IsChild ? (int)(3 + 9 * social)
                                       : (int)(3 + 12 * social) + (who.Stage == LifeStage.Elder ? 6 : 0));
+
+            // ---- what Northgate has that Ashcombe never did ----
+            //
+            // A cinema, a casino, a diner and a newspaper shop, all standing open, all lit, and
+            // before this NOBODY HAD EVER WALKED INTO ONE. They are kinds the enum has never
+            // heard of, so nothing above could name them, and the errand list was a village's
+            // list running in a city.
+            //
+            // Added below the neighbour draw rather than beside their nearest village equivalent
+            // so that every roll above keeps the value it has always had - the same reason the
+            // neighbour draw itself went last.
+            ConsiderNamed("diner", Activity.AtThePub, 40, 26);
+            ConsiderNamed("newsstand", Activity.Shopping, 10, 20);
+
+            if (!who.IsChild)
+            {
+                // Both are evening places, and the casino is the one that is open when nothing
+                // else is - which is the whole reason to have one on a map about a killer.
+                ConsiderNamed("cinema", Activity.Visiting, 110,
+                              from >= evening - 180 ? (int)(12 + 26 * social) : 4);
+                ConsiderNamed("casino", Activity.AtThePub, 80 + rng.NextInt(70),
+                              from >= evening ? (int)(8 + 22 * social) : 3);
+            }
 
             if (options.Count == 0) return null;
 

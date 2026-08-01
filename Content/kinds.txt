@@ -899,9 +899,30 @@ kind camp
 # one by one - so like a district it feeds WorldModel.DeclaredHouseholds and not
 # the simulated population. `units` on the place says how many live there, one to
 # a house rather than a district's flats.
+# A suburb cell: sixty metres of detached houses, drives, garages and hedge, laid
+# out by CitySuburb rather than authored one house at a time.
+#
+# `home yes` IS THE WHOLE POPULATION OF THE RING. Two hundred and twenty-eight
+# houses stood on this map with nobody in any of them, because a household is
+# made per UNIT of a place whose kind says people live there - and this kind did
+# not say so. Every one of Northgate's 365 people lived in the twenty-seven
+# apartment buildings downtown; the suburbs were scenery.
+#
+# Every cell already declared `units 10` in city.txt and had done all along. The
+# ring was one word away from being lived in: 28 cells x 10 = 280 households
+# against downtown's 162, which takes Northgate from 365 people to about 995.
+#
+# It is deliberately the CELL that is the home and not the house. WorldModel's
+# place array is fixed at load, so a generator cannot register a place, and the
+# houses are generated - so ten households share the cell's centre as their
+# doorstep instead of having ten front doors. At sixty metres that is under the
+# width of one block for errand distance and invisible for anything else. Giving
+# each house its own address means dumping CitySuburb's own layout into city.txt
+# as authored dwellings; that is the right end state and a bigger job than this.
 kind suburb
   words     suburb estate
   form      open
+  home      yes
   ground    grass
   rooms     none
   roof      no

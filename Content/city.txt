@@ -771,3 +771,179 @@ place camp 1150,590 5x5 "the pitch in the east wood"
 
 place camp 1160,1170 5x5 "the far pitch"
   human A bedroll, a case left open, and no track in or out that anybody has found.
+
+# ==========================================================================
+#  SOMEWHERE TO GO
+#
+#  Northgate had nowhere. The day planner offers nine kinds of errand - shop,
+#  post office, green, allotments, hall, pub, playground, churchyard, calling on
+#  a neighbour - and of those the city contained TWO GREENS. Every other
+#  Consider() found an empty list and returned, and because the errand loop
+#  breaks on the first refusal, one empty list ended the day: people got up,
+#  went to work or did not, came home, and sat there. A census through a driven
+#  day found 238 of 365 sitting indoors at three in the afternoon and NOBODY on
+#  the street. That is not a quiet town, it is a town with the doors painted on.
+#
+#  So this is the amenity that was missing, and it is placed the way a town
+#  actually grows rather than spread evenly over the map:
+#
+#  DOWNTOWN GETS INFILL. The core is full - the blocks between Fourth and
+#  Seventh are landmarks and towers with metres to spare, not empty ground - so
+#  what goes in is what fits in the gaps: a parade under the south tower, a pub
+#  behind the bank, a post office beside the school.
+#
+#  THE SUBURB RING GETS PARADES. A corner shop, a pub and a post office at the
+#  end of a residential street is how a suburb is served, and the free blocks
+#  immediately outside the ring are exactly where such a parade stands. They
+#  also sit where the houses are, which matters: Locality.ChooseNearby weights
+#  an errand by how far it is, so a shop across the city is one nobody walks to.
+#
+#  Sited in the free blocks flanking the ring, checked against every other plot
+#  by MapAudit. The jobs come with them - about sixty more, which is sixty more
+#  people with a reason to cross town in the morning.
+# ==========================================================================
+
+# ---- downtown infill ------------------------------------------------------
+
+# The parade under the south tower. Four units in the strip the tower leaves.
+place shop 572,619 13x10 "Vance & Son"
+  door 578,628
+  human Ironmongery, and a man who can find the one screw you need in a minute.
+place shop 587,619 13x10 "the corner grocer"
+  door 593,628
+  human Everything a fortnight from its date and nobody has ever complained.
+place shop 602,619 13x10 "Meacham's"
+  door 608,628
+  human A tailor who has outlived three fashions and expects to outlive a fourth.
+place shop 617,619 11x10 "the chemist"
+  door 622,628
+  human The window has not changed since the coronation and neither has the smell.
+
+# Behind the bank, which is where a bank's pub always is.
+place pub 516,596 22x12 "the Weighhouse"
+  door 527,607
+  human Four o'clock and the same men are in it who were in it at noon.
+
+# Beside the school, on the side the parents already walk.
+place postoffice 702,520 16x14 "Northgate Post Office"
+  door 710,533
+  human A queue that moves at the speed of one conversation at a time.
+
+# The shop the precinct's night shift buys its breakfast from.
+place shop 611,662 18x20 "Ellery's"
+  door 620,681
+  human Open at five, which is either a service or an accusation.
+
+# The pitch between the carwash and the pumps.
+place shop 493,484 24x14 "the Fourth Street market"
+  door 505,497
+  human Fruit stacked to a geometry that survives being sold from.
+
+# ---- the west parade, off the Bishop road ---------------------------------
+#
+# PINCHED, AND THE SHAPE FOLLOWS FROM IT. The paddocks and cornfields on this
+# side are 110m wide - they run from x=125 to x=235, out of their own block and
+# over the one next to it - which leaves a 35m strip between the last furrow and
+# the road. So the west parade stacks UP that strip instead of spreading across
+# it, one unit above the next, the way a row of shops on a lane actually stands.
+# MapAudit caught this: ten overlaps, every one of them a shop laid on a field.
+
+place shop 240,394 16x12 "Halliwell's"
+  door 248,405
+  human A general store, which out here means it stocks what the last person asked for.
+place shop 240,408 16x12 "the west bakery"
+  door 248,419
+  human Sells out by ten and does not bake more, on principle.
+place pub 240,422 22x14 "the Drovers"
+  door 251,435
+  human The car park is bigger than the pub and on Fridays it is not big enough.
+place green 238,438 30x12 "the west common"
+  human Cut twice a year whether it needs it or not.
+
+place playground 238,662 30x28 "the Bishop road swings"
+  human One swing has been chained up since April and nobody remembers why.
+place shop 240,692 16x12 "the paper shop"
+  door 248,703
+  human Papers, sweets, and a bell that has never once been oiled.
+place shop 240,706 16x12 "Trewin's"
+  door 248,717
+  human A hardware shop that also does keys, shoes, and advice.
+
+place allotments 238,755 30x40 "the west allotments"
+  human Thirty plots, four of them worked properly and the rest an argument.
+
+# NO CHURCH. The pack has none - graveyard walls and a gate, and no building to
+# put behind them - and an authored place with no model is a hole in the street.
+# The burial ground stays, because it is an errand the elders take and it needs
+# no building to be one.
+place churchyard 238,306 30x24 "the old burial ground"
+  human Older than anything still standing, and the names have gone off the stones.
+
+# ---- the east parade, off the county line ---------------------------------
+
+place shop 1024,394 16x12 "the east grocer"
+  door 1032,405
+  human Run by a family who have never agreed on the opening hours.
+place shop 1042,394 16x12 "Ottery's"
+  door 1050,405
+  human Wool, thread, and a cat that is not for sale.
+place shop 1060,394 16x12 "the east bakery"
+  door 1068,405
+  human The smell reaches the county line on a west wind.
+place pub 1024,412 22x14 "the Wheatsheaf"
+  door 1035,425
+  human Older than the road, and it shows in the floor.
+place villagehall 1050,412 26x16 "the Wicker End rooms"
+  door 1063,427
+  human Bingo, inquests, and the annual meeting about the verge.
+place green 1024,432 50x16 "the east common"
+  human A cricket square somebody still rolls.
+
+place playground 1025,665 40x30 "the county line swings"
+  human The roundabout goes faster than it should and always has.
+place shop 1025,700 16x12 "the county stores"
+  door 1033,711
+  human The last shop before the county line and it knows it.
+place postoffice 1043,700 16x12 "the east sub-office"
+  door 1051,711
+  human One window, one clerk, and a scale that has been condemned twice.
+
+place allotments 1025,845 50x40 "the east allotments"
+  human Sheds built from doors, and every one of them locked.
+
+# ---- the north parade -----------------------------------------------------
+
+place shop 574,214 16x12 "the north dairy"
+  door 582,225
+  human Milk, eggs, and a slate for people who are good for it.
+place shop 592,214 16x12 "Kerrow's"
+  door 600,225
+  human A greengrocer who tells you what not to buy this week.
+place shop 610,214 16x12 "the north hardware"
+  door 618,225
+  human Paint mixed by eye and it has never once been wrong.
+place pub 574,232 22x14 "the Northway Arms"
+  door 585,245
+  human The first pub on the road in and the last one out.
+place playground 574,250 40x18 "the Northway swings"
+  human Gravel, which everybody agrees was a mistake.
+
+# ---- the south parade -----------------------------------------------------
+
+place shop 574,1024 16x12 "the south grocer"
+  door 582,1035
+  human Open latest of any of them, which is not saying much.
+place shop 592,1024 16x12 "Lanyon's"
+  door 600,1035
+  human A fishmonger a very long way from any sea.
+place shop 610,1024 16x12 "the south chemist"
+  door 618,1035
+  human The only one that opens on a Sunday, and only until eleven.
+place pub 574,1042 22x14 "the Plough"
+  door 585,1055
+  human A back room that is booked every night of the week by somebody.
+place villagehall 600,1042 26x16 "the south rooms"
+  door 613,1057
+  human Scout hut, polling station, and where the inquest was held.
+place allotments 574,1062 50x14 "the south allotments"
+  human The best soil in Northgate and everybody knows it.
