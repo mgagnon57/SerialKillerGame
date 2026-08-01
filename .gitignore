@@ -67,3 +67,9 @@ docs/film/*.png
 # it should be vendored (see docs/superpowers/specs/2026-07-29-poly-universal-pack-integration-design.md).
 Assets/polyperfect/
 Assets/polyperfect.meta
+
+# llama.cpp's native binaries, which LLMUnity downloads on demand: every backend for every
+# platform, ~4GB, of which this machine runs exactly one. LLMUnity fetches them again from
+# LlamaLib when they are missing, so they are a working-copy asset like the art above.
+Assets/StreamingAssets/
+Assets/StreamingAssets.meta
