@@ -55,7 +55,18 @@ namespace Noir.PlayTests
             // one day, and a test that pins the number fails every time the city grows without
             // ever having found a fault.
             Assert.That(host.World.Width, Is.GreaterThan(100));
-            Assert.That(host.World.Height, Is.EqualTo(host.World.Width), "the map is square");
+
+            // NOT SQUARE ANY MORE, and it should not be. This asserted Height == Width, which
+            // was true of every map the project had had and stopped being true the moment the
+            // town became a real one: Rossville runs 1,481m north to south and 1,004m east to
+            // west, because it grew along Route 1. Pinning the shape of the map was the same
+            // mistake as pinning its size, one dimension later. What is worth asserting is that
+            // both dimensions are sane and the aspect is not absurd.
+            Assert.That(host.World.Height, Is.GreaterThan(100));
+            float aspect = host.World.Width / (float)host.World.Height;
+            Assert.That(aspect, Is.GreaterThan(0.25f).And.LessThan(4f),
+                        $"the map is {host.World.Width}x{host.World.Height}, which is a corridor "
+                      + "rather than a map - did a size get typed in wrong?");
             Assert.That(host.World.Roads.Junctions.Count, Is.GreaterThan(0), "no junctions");
             Assert.That(host.World.Households, Is.GreaterThan(host.World.Homes.Count),
                         "homes hold more than one household each");

@@ -58,7 +58,7 @@ namespace Noir.Unity
         {
             switch (kind)
             {
-                case "apartment":
+                case "apartment": case "dwelling":
                 case "shop": case "pub": case "postoffice": case "villagehall":
                     return true;
                 default:
@@ -188,7 +188,7 @@ namespace Noir.Unity
         {
             switch (KindOf(place))
             {
-                case "apartment":
+                case "apartment": case "dwelling":
                 case "shop": case "pub": case "postoffice": case "villagehall":
                 case "diner": case "precinct": case "school2": case "hospital":
                 case "firestation": case "cinema": case "bank": case "casino":

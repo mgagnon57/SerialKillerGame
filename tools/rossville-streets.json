@@ -1,0 +1,39 @@
+{
+ "origin": [
+  40.3793,
+  -87.66897
+ ],
+ "ew": {
+  "York": 40.384755,
+  "Henderson": 40.383704,
+  "Green": 40.38248,
+  "Benton": 40.381301,
+  "Holmes": 40.38043,
+  "Attica": 40.3793,
+  "Maple": 40.378088,
+  "Park Place": 40.377944,
+  "Perry": 40.377139,
+  "Gilbert": 40.376992,
+  "Stewart": 40.375969,
+  "Stufflebeam": 40.375663,
+  "McKibben": 40.374794,
+  "McKibbin": 40.374476,
+  "Dale": 40.373579,
+  "Greenwood": 40.373007,
+  "Thompson": 40.372481,
+  "Earl Court": 40.371422
+ },
+ "ns": {
+  "Goodwine": -87.659772,
+  "Creative": -87.660475,
+  "Grove": -87.662128,
+  "Summit": -87.664264,
+  "Church": -87.666463,
+  "Harrison": -87.667743,
+  "Chicago": -87.66897,
+  "Ann": -87.669609,
+  "Smith": -87.669847,
+  "Watson": -87.670256,
+  "Abner": -87.671614
+ }
+}

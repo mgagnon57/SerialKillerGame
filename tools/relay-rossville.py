@@ -1,21 +1,30 @@
-"""Lay Northgate out as Rossville, Illinois.
+"""Lay Northgate out as Rossville, Illinois - on Rossville's OWN street grid.
 
-RESEARCHED, NOT INVENTED. Rossville is at 40.38N 87.67W in Ross Township, Vermilion
-County. Chicago Street IS Illinois Route 1, the Dixie Highway, running north-south
-through the village; Attica Street is the cross street, and that crossroads is the one
-set of lights in the place. The CSX line runs down the east side. The village is 1.34
-square miles and held 1,331 people in 2010 against Ross Township's 1,617 - so the
-country holds about one person for every five in town, which is far sparser than a game
-instinct suggests and is most of what makes a rural map read right.
+NOT A GRID THAT LOOKS LIKE ROSSVILLE. The actual one, pulled from OpenStreetMap and
+converted to metres about the crossing of Chicago Street and Attica Street, which is
+where the village numbers its addresses from - East Attica ends and West Attica begins
+on exactly that longitude, which is how the origin was found rather than assumed.
 
-Village blocks there are about 300 feet, which is 91m, so the project's existing 90m
-block pitch happens to be correct at true scale. Nothing here is scaled down.
+Two things fell out of the real data that no amount of guessing would have produced:
 
-The ground is glacial till plain: 679-706 ft, flat. When elevation arrives it should be
+  THE TOWN IS MOSTLY EAST OF ROUTE 1. It runs 780m east of Chicago Street and only
+  224m west. A symmetrical grid would have been wrong in a way you would feel without
+  being able to name it.
+
+  THE SPACING IS IRREGULAR - 104m Chicago to Harrison, 109 to Church, then 186 to
+  Summit and 181 to Grove. Blocks average about 113m rather than the 91m a textbook
+  300-foot block would give, and the variation IS the character.
+
+Several streets change name as they cross Route 1: McKibben east is McKibbin west,
+Maple is Park Place, Gilbert is Perry, Stewart is Stufflebeam. Each is emitted once
+under its eastern name, because the town is mostly east; the western name is beside it.
+
+Ross Township holds 1,617 people against the village's 1,331, so 286 are spread over
+42 square miles - about seven to the square mile. The country here is a handful of
+farmsteads, not a suburb, and that is correct.
+
+The ground is glacial till plain, 679-706 ft, flat. Elevation when it comes should be
 a few metres of roll and some drainage swales, not hills.
-
-Laid out in a frame that can grow NORTH AND SOUTH, because Hoopeston is six miles up
-Route 1 and Alvin is five miles down it, and eventually the whole county.
 """
 import json, os, collections, random
 
@@ -25,165 +34,217 @@ by_kind = collections.defaultdict(list)
 for r in old:
     by_kind[r['kind']].append(r)
 
-SIZE = 1800
-def bx(k): return 30 + 90 * k                  # block interior origin; block k = [30+90k, 90+90k]
-def road(k): return 15 + 90 * k                # the corridor down the near side of block k
+# ---- the map, and where the real crossroads sits on it -----------------------------
+W, H = 2100, 2400
+CX, CY = 750, 1335                 # Chicago Street x Attica Street
 
-# ---- the grid ---------------------------------------------------------------------
-# Eight blocks east-west by ten north-south, which is Rossville's built extent, centred
-# so there is half a mile of country on every side.
-VX = range(6, 14)          # 8 columns: x 570..1260
-VY = range(5, 15)          # 10 rows:   y 480..1350
+# Metres from that crossing, measured off OpenStreetMap. East and north positive.
+# `sides` is which side of Route 1 the street actually runs, off the OSM extents. It
+# decides the address prefix: a street that exists on one side only does not need one,
+# which is exactly why the killer's address is "408 Holmes Ave" and not "408 E Holmes".
+EW = [                     # (north offset, name, western name, sides)
+    (+606, "york",       None,          "W"),
+    (+489, "henderson",  None,          "both"),
+    (+353, "green",      None,          "both"),
+    (+222, "benton",     None,          "both"),
+    (+126, "holmes",     None,          "E"),     # 408 Holmes Ave lives here
+    (   0, "attica",     None,          "both"),  # THE cross street
+    (-143, "maple",      "Park Place",  "E"),
+    (-248, "gilbert",    "Perry",       "E"),
+    (-387, "stewart",    "Stufflebeam", "E"),
+    (-518, "mckibben",   "McKibbin",    "E"),
+    (-636, "dale",       None,          "E"),
+    (-699, "greenwood",  None,          "W"),
+    (-758, "thompson",   None,          "E"),
+    (-875, "earlcourt",  None,          "E"),
+]
+NS = [                             # north-south streets: (east offset, name, alias)
+    (-224, "abner",      None),
+    (-109, "watson",     None),
+    ( -64, "ann",        "Smith Drive"),
+    (   0, "chicago",    "Illinois Route 1, the Dixie Highway"),
+    (+104, "harrison",   None),
+    (+213, "church",     None),
+    (+399, "summit",     None),
+    (+580, "grove",      None),
+    (+750, "goodwine",   "Creative Avenue"),
+]
+RAILROAD = +900                    # Railroad Avenue, down the east side with the CSX line
 
-CHICAGO, ATTICA = 10, 10   # Route 1 and the cross street both run at 15+90*10 = 915
-CROSS = road(CHICAGO)
+XS = [CX + o for o, _, _ in NS]
+YS = [CY - e[0] for e in EW]    # game y increases southward
+X0, X1 = min(XS) - 30, max(XS) + 30
+Y0, Y1 = min(YS) - 30, max(YS) + 30
 
-# The business district is the 100 and 200 blocks of North and South Chicago - two
-# blocks up and two down, both sides of the street. Eight in all, which is what the
-# storefronts of a village of thirteen hundred come to and no more.
-BUSINESS = {(i, j) for i in (9, 10) for j in (8, 9, 10, 11)}
+CHI = sorted(XS).index(CX)         # which column Route 1 is, for numbering
 
-# Holmes Ave runs east-west three blocks north of Attica. 408 is the fourth block west of
-# Chicago - American small-town numbering is block times a hundred plus the lot - so the
-# killer's house is in block 6 and the street has to exist before he can live on it.
-HOLMES_ROW, HOLMES_BLOCK = 7, 6
+def blocks():
+    """Every rectangle the street grid encloses, carrying its address block number.
 
-CIVIC = {(6, 5): "school", (13, 5): "firestation", (13, 9): "elevator",
-         (6, 14): "green", (13, 14): "playground", (9, 6): "watertower"}
+    THE NUMBER COUNTS CROSS STREETS, NOT METRES. American small towns number a block
+    by how many streets out from the origin it is - the 400 block of E Holmes is the
+    fourth one east of Route 1, whether that is 400 metres or 700. Dividing distance
+    by an average block width gets it wrong the moment the spacing is irregular, and
+    Rossville's is: 104m to Harrison, then 109, then 186, then 181.
+    """
+    got = []
+    xs, ys = sorted(XS), sorted(YS)
+    byY = {CY - o: (name, sides) for o, name, _, sides in EW}
 
-HOMES = [(i, j) for j in VY for i in VX if (i, j) not in BUSINESS and (i, j) not in CIVIC]
+    # INSET BY THE ROAD'S OWN HALF-WIDTH, not by a flat number. Route 1 and Attica are
+    # 30m corridors and the village streets are 10m, so a flat 8m inset put the whole
+    # first row of houses inside the highway - fifteen of them, which MapAudit caught
+    # as places laid over a road. Three metres of verge beyond the kerb on top.
+    def pad(v, main): return (15 if v == main else 5) + 3
+    for i in range(len(xs) - 1):
+        east = i >= CHI
+        number = (i - CHI + 1) * 100 if east else (CHI - i) * 100
+        lft, rgt = pad(xs[i], CX), pad(xs[i + 1], CX)
+        for j in range(len(ys) - 1):
+            top, bot = pad(ys[j], CY), pad(ys[j + 1], CY)
+            x, y = xs[i] + lft, ys[j] + top
+            bw, bh = xs[i + 1] - xs[i] - lft - rgt, ys[j + 1] - ys[j] - top - bot
+            if bw >= 26 and bh >= 26:
+                got.append((x, y, bw, bh, number, east,
+                            byY.get(ys[j]), byY.get(ys[j + 1])))
+    return got
 
 out = []
-def w(s=""): out.append(s)
+def w_(s=""): out.append(s)
 
-w("# " + "=" * 74)
-w("#  NORTHGATE, laid out as ROSSVILLE, ILLINOIS")
-w("#")
-w("#  Researched rather than invented. Rossville sits at 40.38N 87.67W in Ross")
-w("#  Township, Vermilion County, a hundred miles south of Chicago on Illinois")
-w("#  Route 1 - and the things that make it that town rather than any town are:")
-w("#")
-w("#    CHICAGO STREET IS ROUTE 1. The Dixie Highway runs north-south straight")
-w("#    through the middle and every address in the village is numbered north or")
-w("#    south of the cross street. It is the reason the place is here at all.")
-w("#")
-w("#    ATTICA STREET CROSSES IT, and that junction is the ONE set of lights.")
-w("#    Everything else is a stop sign, which is now a rule in CitySignals rather")
-w("#    than an accident of which corners happen to be paved.")
-w("#")
-w("#    THE STOREFRONTS ARE THE 100 AND 200 BLOCKS of North and South Chicago -")
-w("#    four blocks, both sides, and that is the whole business district.")
-w("#")
-w("#    THE WATER TOWER IS THE SKYLINE. Not a skyscraper. It is the thing you see")
-w("#    from the section road two miles out, and the grain elevator is the other.")
-w("#")
-w("#  TRUE SCALE, NOT SHRUNK. Rossville's blocks are about 300 feet - 91m - and")
-w("#  this project has been on a 90m pitch all along, so the grid below is the")
-w("#  real one. Eight blocks by ten, with half a mile of country round it.")
-w("#")
-w("#  THE COUNTRY IS NEARLY EMPTY OF PEOPLE, and that is correct. Ross Township")
-w("#  holds 1,617 against the village's 1,331, so 286 people are spread over 42")
-w("#  square miles - about seven to the square mile. Half a mile of country is")
-w("#  therefore a handful of farmsteads, not a suburb. It only starts to add up")
-w("#  when the map covers the county.")
-w("#")
-w("#  GROWS NORTH AND SOUTH. Hoopeston is six miles up Route 1 and Alvin five")
-w("#  miles down it, so Chicago Street runs the full height of the map and the")
-w("#  frame is not centred on anything that would have to move to extend it.")
-w("#")
-w("#  Generated by tools/relay-rossville.py. MapAudit checks the result either way.")
-w("# " + "=" * 74)
-w()
-w("village Northgate")
-w(f"size {SIZE} {SIZE}")
-w()
+w_("# " + "=" * 74)
+w_("#  NORTHGATE, ON ROSSVILLE, ILLINOIS'S OWN STREET GRID")
+w_("#")
+w_("#  Not a grid that looks like Rossville - the actual one, taken from")
+w_("#  OpenStreetMap and converted to metres about the crossing of Chicago Street")
+w_("#  and Attica Street. That crossing is where the village numbers its addresses")
+w_("#  from: East Attica ends and West Attica begins on exactly that longitude,")
+w_("#  which is how the origin was found rather than assumed.")
+w_("#")
+w_("#  TWO THINGS THE REAL DATA GAVE THAT GUESSING WOULD NOT:")
+w_("#")
+w_("#    THE TOWN IS MOSTLY EAST OF ROUTE 1 - 780m east of Chicago Street and only")
+w_("#    224m west. A symmetrical grid would have been wrong in a way you would feel")
+w_("#    without being able to name it.")
+w_("#")
+w_("#    THE SPACING IS IRREGULAR - 104m Chicago to Harrison, 109 to Church, then")
+w_("#    186 to Summit and 181 to Grove. Blocks average about 113m, not the 91m a")
+w_("#    textbook 300-foot block gives, and the variation IS the character.")
+w_("#")
+w_("#  Several streets change name as they cross Route 1: McKibben east is McKibbin")
+w_("#  west, Maple is Park Place, Gilbert is Perry, Stewart is Stufflebeam. Each is")
+w_("#  emitted once under its eastern name, because the town is mostly east.")
+w_("#")
+w_("#  ONE SET OF LIGHTS, at Chicago and Attica. CitySignals requires both arms to be")
+w_("#  a main road, so every other junction in the village is a stop sign.")
+w_("#")
+w_("#  THE WATER TOWER AND THE GRAIN ELEVATOR are the skyline. No tower block.")
+w_("#")
+w_("#  THE COUNTRY IS NEARLY EMPTY OF PEOPLE and that is right: Ross Township holds")
+w_("#  1,617 against the village's 1,331, so 286 are spread over 42 square miles.")
+w_("#  Seven to the square mile. It only adds up at county scale.")
+w_("#")
+w_("#  GROWS NORTH AND SOUTH: Chicago Street runs the full height of the map because")
+w_("#  Hoopeston is six miles up it and Alvin five miles down it.")
+w_("#")
+w_("#  Generated by tools/relay-rossville.py; street positions in")
+w_("#  tools/rossville-streets.json.")
+w_("# " + "=" * 74)
+w_()
+w_("village Northgate")
+w_(f"size {W} {H}")
+w_()
 
-# ---- ground -----------------------------------------------------------------------
-w("# ---- ground ---------------------------------------------------------------")
-w("# Field under everything - this is corn and beans to the horizon - grass over the")
-w("# village lots, and pavement ONLY at the crossroads. That last one is load-bearing:")
-w("# CitySignals asks the ground at a junction's diagonals whether it is in a town, so")
-w("# paving the whole village would have put lights on every corner.")
-w(f"terrain field 0,0 {SIZE}x{SIZE}")
-w(f"terrain grass {bx(VX[0])-30},{bx(VY[0])-30} {90*len(VX)+30}x{90*len(VY)+30}")
-w(f"terrain path {CROSS-45},{CROSS-45} 90x90")
-w()
+w_("# ---- ground ---------------------------------------------------------------")
+w_("# Field under everything - corn and beans to the horizon - grass over the village")
+w_("# lots, and pavement ONLY at the crossroads. That last is load-bearing: CitySignals")
+w_("# asks the ground at a junction's diagonals whether it is in a town, so paving the")
+w_("# whole village would put lights on every corner of it.")
+w_(f"terrain field 0,0 {W}x{H}")
+w_(f"terrain grass {X0-20},{Y0-20} {X1-X0+40}x{Y1-Y0+40}")
+w_(f"terrain path {CX-45},{CY-45} 90x90")
+w_()
 
-# ---- the streets ------------------------------------------------------------------
-w("# ---- Route 1 and the cross street -----------------------------------------")
-w("# Two lanes with room to turn, which is what `mainroad` is: a 30m corridor with one")
-w("# lane each way and lay-bys. Both run the FULL height and width of the map, because")
-w("# a state highway does not stop at the village limit and because Hoopeston and Alvin")
-w("# are up and down this line.")
-w(f"road chicago 30 {CROSS},0 {CROSS},{SIZE-1}")
-w("  class mainroad")
-w(f"road attica 30 0,{CROSS} {SIZE-1},{CROSS}")
-w("  class mainroad")
-w()
-w("# ---- the village streets --------------------------------------------------")
-w("# `street` is a 10m corridor with no markings, which is what a residential street in")
-w("# a village of twelve hundred actually is. They stop at the village limit.")
-NS_NAMES = ["Vermilion", "Benton", "Maple", "Liggett", None, "Ross", "Grove", "Hubbard"]
-EW_NAMES = ["North", "Depot", "Holmes", "Elm", "Church", None, "Union", "Short", "South", "Hazel"]
-x0, x1 = bx(VX[0]) - 30, bx(VX[-1]) + 60
-y0, y1 = bx(VY[0]) - 30, bx(VY[-1]) + 60
-for n, k in enumerate(VX):
-    if k == CHICAGO or NS_NAMES[n] is None: continue
-    w(f"road {NS_NAMES[n].lower()} 10 {road(k)},{y0} {road(k)},{y1}")
-    w("  class street")
-for n, k in enumerate(VY):
-    if k == ATTICA or EW_NAMES[n] is None: continue
-    w(f"road {EW_NAMES[n].lower()} 10 {x0},{road(k)} {x1},{road(k)}")
-    w("  class street")
-w()
-w("# ---- the section roads ----------------------------------------------------")
-w("# The country is surveyed on a mile grid and the gravel roads run down the section")
-w("# lines. At this extent that is one each way; they meet Route 1 and the cross street,")
-w("# so they are not islands - an isolated road has lanes and no junction at either end")
-w("# and the traffic given to it drives off the tarmac.")
-w(f"road northsection 10 0,{road(1)} {SIZE-1},{road(1)}")
-w("  class track")
-w(f"road southsection 10 0,{road(18)} {SIZE-1},{road(18)}")
-w("  class track")
-w(f"road westsection 10 {road(1)},0 {road(1)},{SIZE-1}")
-w("  class track")
-w(f"road eastsection 10 {road(18)},0 {road(18)},{SIZE-1}")
-w("  class track")
-w()
+w_("# ---- Illinois Route 1 and the cross street --------------------------------")
+w_("# `mainroad` is a 30m corridor, one lane each way with lay-bys, which is what a")
+w_("# two-lane state highway through a village is. Both run the full extent of the map:")
+w_("# a state route does not stop at the village limit.")
+w_(f"road chicago 30 {CX},0 {CX},{H-1}")
+w_("  class mainroad")
+w_(f"road attica 30 0,{CY} {W-1},{CY}")
+w_("  class mainroad")
+w_()
+w_("# ---- the village streets --------------------------------------------------")
+w_("# 10m corridors, unmarked, which is what a residential street in a village of")
+w_("# thirteen hundred is. Offsets are metres from the crossroads.")
+for o, name, alias in NS:
+    if name == "chicago": continue
+    x = CX + o
+    w_(f"road {name} 10 {x},{Y0} {x},{Y1}   # {o:+d}m" + (f", {alias}" if alias else ""))
+    w_("  class street")
+for o, name, alias, _s in EW:
+    if name == "attica": continue
+    y = CY - o
+    w_(f"road {name} 10 {X0},{y} {X1},{y}   # {o:+d}m" + (f", {alias} west of Route 1" if alias else ""))
+    w_("  class street")
+w_()
+w_("# ---- the CSX line and the section roads -----------------------------------")
+w_("# Railroad Avenue runs down the east side, which is where the line is. The country")
+w_("# is surveyed on a mile grid and the gravel roads follow the section lines. Each")
+w_("# crosses a main road, so none is an island - an isolated road has lanes and no")
+w_("# junction at either end, and its traffic drives off the tarmac and out of the world.")
+w_(f"road railroad 10 {CX+RAILROAD},{Y0} {CX+RAILROAD},{Y1}")
+w_("  class track")
+for n, y in enumerate([220, H - 220]):
+    w_(f"road section{n} 10 0,{y} {W-1},{y}")
+    w_("  class track")
+for n, x in enumerate([220, W - 220]):
+    w_(f"road crossroad{n} 10 {x},0 {x},{H-1}")
+    w_("  class track")
+w_()
 
 # ---- packing ----------------------------------------------------------------------
-class Block:
+class Lot:
     GAP = 2
-    def __init__(self, i, j):
-        self.x0, self.y0 = bx(i), bx(j)
-        self.cy, self.cx, self.shelf = self.y0 + 1, self.x0 + 1, 0
+    def __init__(self, x, y, w, h):
+        self.x0, self.y0, self.w, self.h = x, y, w, h
+        self.cy, self.cx, self.shelf = y, x, 0
     def fit(self, pw, ph):
-        if self.cx + pw > self.x0 + 59:
+        # WIDER THAN THE BLOCK IS A REFUSAL, not a new shelf. Without this the wrap
+        # below resets cx to the left edge and the next test only asks about HEIGHT,
+        # so a 35m casino was seated in a 29m block and hung three metres out into
+        # Ann Street. MapAudit caught it; the packer should not have offered it.
+        if pw > self.w or ph > self.h: return None
+        if self.cx + pw > self.x0 + self.w:
             self.cy += self.shelf + self.GAP
-            self.cx, self.shelf = self.x0 + 1, 0
-        if self.cy + ph > self.y0 + 59: return None
+            self.cx, self.shelf = self.x0, 0
+        if self.cy + ph > self.y0 + self.h: return None
         x, y = self.cx, self.cy
         self.cx += pw + self.GAP
         self.shelf = max(self.shelf, ph)
         return x, y
 
 def emit(rec, x, y, units=None, name=None):
-    w(f'place {rec["kind"]} {x},{y} {rec["w"]}x{rec["h"]} "{name or rec["name"]}"')
+    w_(f'place {rec["kind"]} {x},{y} {rec["w"]}x{rec["h"]} "{name or rec["name"]}"')
     if rec.get('door'):
         dx, dy = rec['door']
-        w(f"  door {min(max(x+dx, x), x+rec['w']-1)},{min(max(y+dy, y), y+rec['h']-1)}")
+        w_(f"  door {min(max(x+dx, x), x+rec['w']-1)},{min(max(y+dy, y), y+rec['h']-1)}")
     u = units if units is not None else rec.get('units')
-    if u: w(f"  units {u}")
-    if rec.get('human'): w(f"  human {rec['human']}")
+    if u: w_(f"  units {u}")
+    if rec.get('human'): w_(f"  human {rec['human']}")
 
-# ---- the business district --------------------------------------------------------
-w("# " + "=" * 74)
-w("#  THE 100 AND 200 BLOCKS OF CHICAGO STREET")
-w("# " + "=" * 74)
-w()
-# NO CAR PARKS. A village of thirteen hundred parks on the street - the storefronts
-# have angled bays out front and that is the whole of it. Packing a lot into the middle
-# of a block also gave it no way in, which MapAudit is right to call a fault.
+ALL = blocks()
+def mid(b): return b[0] + b[2] / 2, b[1] + b[3] / 2
+
+# The storefronts are the 100 blocks of North and South Chicago - the rectangles that
+# touch the crossroads, and that is the whole business district.
+BUSINESS = [b for b in ALL if abs(mid(b)[0] - CX) < 130 and abs(mid(b)[1] - CY) < 200]
+rest = [b for b in ALL if b not in BUSINESS]
+
+w_("# " + "=" * 74)
+w_("#  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET")
+w_("# " + "=" * 74)
+w_()
 DOWN = ["bank", "diner", "pub", "shop", "postoffice", "villagehall", "cinema", "casino",
         "icecream", "newsstand", "gasstation", "carwash", "restroom", "precinct"]
 items = []
@@ -193,123 +254,172 @@ for kind in DOWN:
     if kind == "pub": picks = picks[:3]
     items += picks
 items.sort(key=lambda r: -(r['w'] * r['h']))
-
 flats = [dict(by_kind['apartment'][n], units=3,
               name=f"Chicago Street Chambers{'' if n == 0 else ', ' + str(n + 1)}",
               human="Over the shops, and the stairs go up from the street." if n == 0 else None)
          for n in range(4)]
 
-blocks = [Block(i, j) for (i, j) in sorted(BUSINESS)]
+lots = [Lot(*b[:4]) for b in BUSINESS]
 spill = []
 for rec in items + flats:
-    for b in blocks:
-        at = b.fit(rec['w'], rec['h'])
+    for L in lots:
+        at = L.fit(rec['w'], rec['h'])
         if at: emit(rec, at[0], at[1]); break
     else: spill.append(rec)
-w()
+w_()
 
-# ---- what a village has that a city does not --------------------------------------
-w("# ---- the school, the firehouse, the elevator, the water tower --------------")
-w("# The fire station is at the north end because Rossville's is. The elevator is on")
-w("# the east side because that is where the CSX line runs.")
-w()
-CIVIC_SRC = {"school": "school2", "firestation": "firestation", "elevator": "elevator",
-             "green": "green", "playground": "playground", "watertower": "watertower"}
-made = {"elevator": dict(kind="elevator", w=22, h=30, name="the Rossville elevator",
-                         human="Concrete, and it throws a shadow across the tracks all morning.",
-                         door=None, units=None),
-        "watertower": dict(kind="watertower", w=16, h=16, name="the water tower",
-                           human="The name is painted on it and can be read from the section road.",
-                           door=None, units=None)}
-for (i, j), what in CIVIC.items():
-    src = made.get(what) or (by_kind.get(CIVIC_SRC[what]) or [None])[0]
+w_("# ---- the school, the firehouse, the elevator, the water tower --------------")
+w_("# The fire station is at the north end because Rossville's new one is. The elevator")
+w_("# stands on Railroad Avenue because that is where the CSX line runs.")
+w_()
+made = {
+    "elevator": dict(kind="elevator", w=24, h=34, name="the Rossville elevator", door=None,
+                     units=None, human="Concrete, and it throws a shadow over the tracks all morning."),
+    "watertower": dict(kind="watertower", w=18, h=18, name="the water tower", door=None,
+                       units=None, human="The name is painted on it and reads from the section road."),
+}
+CIVIC = [("firestation", 0, +489), ("school2", -180, +222), ("watertower", +120, +353),
+         ("elevator", RAILROAD - 40, -100), ("green", -180, -387), ("playground", +399, -636)]
+used_civic = []
+for what, dx, dy in CIVIC:
+    src = made.get(what) or (by_kind.get(what) or [None])[0]
     if src is None: continue
-    b = Block(i, j)
-    at = b.fit(src['w'], src['h'])
+    want = (CX + dx, CY - dy)
+    home = min((b for b in rest if b not in used_civic),
+               key=lambda b: abs(mid(b)[0] - want[0]) + abs(mid(b)[1] - want[1]), default=None)
+    if home is None: continue
+    used_civic.append(home)
+    L = Lot(*home[:4])
+    at = L.fit(src['w'], src['h'])
     if at: emit(src, at[0], at[1])
-w()
+w_()
 
-# ---- the houses -------------------------------------------------------------------
-w("# " + "=" * 74)
-w("#  THE HOUSES")
-w("#")
-w("#  Rossville held 1,331 people in 2010. At the measured 2.25 to a household that is")
-w("#  592 households over these blocks - about eight to a block, which is what a village")
-w("#  block of 300-foot frontage actually holds.")
-w("#")
-w("#  408 HOLMES AVE is on the block below, and it is the one address on this map that")
-w("#  is not generated. Holmes Ave runs east-west three north of Attica; 408 is the")
-w("#  fourth block west of Chicago Street, which is how a small town numbers itself.")
-w("# " + "=" * 74)
-w()
-NAMES = ["Beechwood", "The Larches", "Coronation", "Northbound", "Elm Walk", "Hazel Close",
-         "The Chase", "Wicker Rise", "Sycamore", "Orchard Way", "Priory", "Fairfield",
-         "The Paddocks", "Meadow Rise", "Cornmill", "Old Forge", "Kingsley", "Windmill",
-         "The Coppice", "Rectory", "Alder Grove", "Bramble Way", "Chestnut", "Dovecote",
-         "Ely Road", "Fernhill", "Garland Way", "Hawthorn", "Ivybridge", "Juniper",
-         "Kestrel", "Linden", "Mulberry", "Nightingale", "Oakfield", "Pytchley",
-         "Quarry Close", "Rowan", "Saffron", "Tanners Way", "Underwood", "Vine Street",
-         "Wheatley", "Yarrow", "Ash Close", "Birch Rise", "Cedar Way", "Dell Close",
-         "Eastgate", "Foxglove", "Greenway", "Harebell", "Ivy Lane", "Jessamine",
-         "Kiln Close", "Larkspur", "Millfield", "Netherby", "Orchid Rise", "Poplar",
-         "Quince Way", "Redwood", "Sorrel Close", "Thornhill", "Uplands", "Verbena",
-         "Willowmere", "Yewtree", "Abbots Way", "Bramley"]
-suburb_humans = [r['human'] for r in by_kind['suburb'] if r['human']]
+w_("# " + "=" * 74)
+w_("#  THE HOUSES")
+w_("#")
+w_("#  Rossville held 1,331 people in 2010. Units are set by BLOCK AREA rather than")
+w_("#  flat, because the real grid's blocks are not the same size - Chicago to Harrison")
+w_("#  is 104m and Church to Summit is 186 - and giving a narrow block the same")
+w_("#  population as a wide one is exactly how a real grid gets flattened into a fake")
+w_("#  one. About one household to 1,750 square metres, which lands on the village's")
+w_("#  own figure without being told it.")
+w_("#")
+w_("#  408 HOLMES AVE is on the block between Summit and Grove, north side of Holmes")
+w_("#  Avenue, 126m north of Attica. Holmes runs east of Chicago Street only, which is")
+w_("#  why the 400 block is the fourth one east. The house is not yet a place of its")
+w_("#  own - that is the next piece of work.")
+w_("# " + "=" * 74)
+w_()
 
-for n, (i, j) in enumerate(sorted(HOMES, key=lambda c: (abs(c[0]-CHICAGO) + abs(c[1]-ATTICA), c))):
-    name = NAMES[n % len(NAMES)] if n >= len(NAMES) else NAMES[n]
-    if (i, j) == (HOLMES_BLOCK, HOLMES_ROW):
-        name = "the 400 block of Holmes Ave"
-    w(f'place suburb {bx(i)},{bx(j)} 60x60 "{name}"')
-    w("  units 8")
-    if n < len(suburb_humans): w(f"  human {suburb_humans[n]}")
-w()
+w_("# " + "=" * 74)
+w_("#  THE HOUSES, ONE ADDRESS AT A TIME")
+w_("#")
+w_("#  Every house is its own place and its NAME IS ITS ADDRESS. That needed no new")
+w_("#  directive and no new field: `house` is already an alias of the `dwelling` kind")
+w_("#  (kinds.txt), which is already `home yes`, and WorldBuilder already refuses two")
+w_("#  places with the same name - so an address is unique by construction and Place")
+w_("#  already hashes it into a stable key. The town addressed itself.")
+w_("#")
+w_("#  THE NUMBERING IS THE REAL CONVENTION. The hundred counts CROSS STREETS out")
+w_("#  from Route 1, not metres - the 400 block of E Holmes is the fourth one east")
+w_("#  whether that is 400m or 700, and Rossville's spacing is irregular enough that")
+w_("#  the difference is not academic. Within the block the lot number counts outward")
+w_("#  from the crossroads, even on the south side of a street and odd on the north,")
+w_("#  which is how you can stand on one kerb and know the numbers opposite.")
+w_("#")
+w_("#  SO 408 HOLMES AVE IS A DOOR. Fourth lot of the fourth block east, south side")
+w_("#  of Holmes Avenue. You can walk to it.")
+w_("#")
+w_("#  Vacant lots are simply not emitted. A declining village has gaps in its")
+w_("#  frontage - Rossville has lost a hundred people since 2010 - and a number with")
+w_("#  no house on it is what that looks like from the street.")
+w_("# " + "=" * 74)
+w_()
 
-# ---- the country ------------------------------------------------------------------
-w("# " + "=" * 74)
-w("#  THE COUNTRY - corn, beans, and about seven people to the square mile")
-w("# " + "=" * 74)
-w()
-EDGE = [(i, j) for j in range(0, 20) for i in range(0, 20)
-        if i not in VX or j not in VY]
+homes = [b for b in rest if b not in used_civic]
+PITCH, LOTW, LOTH, SETBACK = 26, 11, 8, 7
+built = 0
+skipped = 0
+for b in homes:
+    bx0, by0, bw, bh, hundred, east, north_st, south_st = b
+    runs = []
+    if north_st: runs.append((north_st, by0 + SETBACK, "even"))
+    if south_st: runs.append((south_st, by0 + bh - SETBACK - LOTH, "odd"))
+
+    for (street, sides), ly, parity in runs:
+        # A street that only exists on one side of Route 1 has no houses on the other.
+        if sides == "E" and not east: continue
+        if sides == "W" and east: continue
+
+        n = int((bw + 2) // PITCH)
+        for k in range(n):
+            # Counted outward from Route 1, so the numbers rise as you walk away
+            # from the middle of town whichever side of it you started.
+            rank = k + 1 if east else n - k
+            number = hundred + (2 * rank if parity == "even" else 2 * rank - 1)
+            lx = bx0 + k * PITCH + (PITCH - LOTW) // 2
+
+            # A gap every so often, stable per lot so the same houses are missing
+            # every time the map is built.
+            if (lx * 7919 + ly * 104729) % 20 < 3:
+                skipped += 1
+                continue
+
+            side = "" if sides != "both" else ("E " if east else "W ")
+            w_(f'place house {lx},{ly} {LOTW}x{LOTH} "{number} {side}{street.title()} Ave"')
+            # The door goes on the street side, which is what CityBuildings.FacingOf
+            # reads to turn the house round to face its own road.
+            w_(f"  door {lx + LOTW // 2},{ly if parity == 'even' else ly + LOTH - 1}")
+            built += 1
+w_()
+w_("# " + "=" * 74)
+w_("#  THE COUNTRY - corn, beans, and about seven people to the square mile")
+w_("# " + "=" * 74)
+w_()
 jitter = random.Random(20260801)
-NUDGE = 6
-
+NUDGE = 8
 country = []
 for kind in ["farm", "farmyard", "barn", "silo", "cornfield", "paddock", "orchard",
              "copse", "allotments", "churchyard", "memorial", "standing", "camp"]:
     for r in by_kind.get(kind, []):
         r = dict(r)
-        r['w'], r['h'] = min(r['w'], 50), min(r['h'], 50)
-        # A farmstead is a HOME out here, and it holds more than one household: the
-        # family in the house and whoever works the place. Two apiece against 42 square
-        # miles is the township's real density, not a number anybody liked.
+        r['w'], r['h'] = min(r['w'], 70), min(r['h'], 70)
         if kind == "farm": r['units'] = 2
         country.append(r)
-
-# Corn to the horizon. The pack's field is one place; the country needs many, so the
-# authored ones are repeated across the section grid rather than one field being grown
-# to the size of the map - a 1,700m cornfield is one draw call and no horizon at all.
 steads = [r for r in country if r['kind'] in ("farm", "farmyard", "barn", "silo")]
-for n in range(12):
-    src = dict(steads[n % len(steads)])
-    src['name'] = f"{src['name']} {n + 2}"
-    country.append(src)
+for n in range(10):
+    s = dict(steads[n % len(steads)]); s['name'] = f"{s['name']} {n + 2}"; country.append(s)
+fields = [r for r in country if r['kind'] in ("cornfield", "paddock", "orchard", "copse")]
+for n in range(64):
+    s = dict(fields[n % len(fields)]); s['name'] = f"{s['name']} {n + 2}"; country.append(s)
 
-fields = [r for r in country if r['kind'] in ("cornfield", "paddock", "orchard")]
-for n in range(34):
-    src = dict(fields[n % len(fields)])
-    src['name'] = f"{src['name']} {n + 2}"
-    country.append(src)
+# Every corridor a country lot has to keep out of: (vertical?, centre, half-width+verge).
+# The section roads and Route 1 run the whole way across the country, and a field laid
+# over one of them is a cornfield growing in the carriageway.
+CORRIDORS = ([(True, CX, 15 + 4), (False, CY, 15 + 4), (True, CX + RAILROAD, 5 + 4)]
+             + [(False, y, 5 + 4) for y in (220, H - 220)]
+             + [(True, x, 5 + 4) for x in (220, W - 220)])
 
-eblocks = [Block(i, j) for (i, j) in EDGE]
-placed_country = 0
+def clear_of_roads(x, y, w, h):
+    for vertical, centre, half in CORRIDORS:
+        lo, hi = (x, x + w) if vertical else (y, y + h)
+        if lo < centre + half and hi > centre - half: return False
+    return True
+
+edge = []
+for gx in range(0, W - 100, 130):
+    for gy in range(0, H - 100, 130):
+        if X0 - 40 < gx < X1 and Y0 - 40 < gy < Y1: continue
+        if not clear_of_roads(gx + 4, gy + 4, 122, 122): continue
+        edge.append(Lot(gx + 4, gy + 4, 122, 122))
+
+placed = 0
 for rec in country:
-    for b in eblocks:
-        at = b.fit(rec['w'] + NUDGE, rec['h'] + NUDGE)
+    for L in edge:
+        at = L.fit(rec['w'] + NUDGE, rec['h'] + NUDGE)
         if at:
             emit(rec, at[0] + jitter.randint(0, NUDGE), at[1] + jitter.randint(0, NUDGE))
-            placed_country += 1
+            placed += 1
             break
     else: spill.append(rec)
 
@@ -317,8 +427,9 @@ open(os.path.join(SP, "city.new.txt"), "w", encoding="utf-8",
      newline="\n").write("\n".join(out) + "\n")
 
 farms = sum(1 for r in country if r['kind'] == 'farm')
-print(f"village {len(HOMES)} blocks x 8 units = {len(HOMES)*8} households"
-      f" + 12 flats -> ~{round((len(HOMES)*8+12)*2.25)} people")
-print(f"country {farms} farmsteads x 2 -> ~{round(farms*2*2.25)} people, {placed_country} places")
-print(f"business {len(items)+len(flats)} plots, country blocks {len(EDGE)}")
+print(f"grid {len(NS)} N-S x {len(EW)} E-W -> {len(ALL)} blocks "
+      f"({len(BUSINESS)} business, {len(used_civic)} civic, {len(homes)} residential)")
+print(f"village {built} houses ({skipped} lots left vacant) -> ~{round(built * 2.25)} people")
+print(f"country {farms} farmsteads x2 -> ~{round(farms * 2 * 2.25)} people, {placed} places")
+print(f"business {len(items) + len(flats)} plots; map {W}x{H}")
 if spill: print("SPILLED:", collections.Counter(r['kind'] for r in spill))
