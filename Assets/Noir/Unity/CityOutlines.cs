@@ -41,7 +41,15 @@ namespace Noir.Unity
         /// </summary>
         private const float Lift = 0.06f;
 
-        public static GameObject Build(WorldModel world, Transform parent)
+        /// <summary>
+        /// showRoads and showFootprints default true so nothing outside VillageHost/CityShot -
+        /// an editor tool, a test fixture - silently loses the overlays it never asked to drop.
+        /// The game itself now passes both false: the county parcels read as a town on their
+        /// own, and a road grid drawn over them competed with the very thing it exists to
+        /// support, the same complaint as a place outline on a lot the parcel already draws.
+        /// </summary>
+        public static GameObject Build(WorldModel world, Transform parent,
+                                       bool showRoads = true, bool showFootprints = true)
         {
             var go = new GameObject("CityOutlines");
             go.transform.SetParent(parent, false);
@@ -54,27 +62,33 @@ namespace Noir.Unity
             int parcels = Parcels(verts, cols, tris);
 
             // ---- and the road corridors, in their own colour ----
-            int roads = Roads(world, verts, cols, tris);
+            int roads = showRoads ? Roads(world, verts, cols, tris) : 0;
 
             // ---- the railway, the water, the schools ----
             int features = Features(verts, cols, tris);
 
-            var kinds = PlaceKindTable.Current;
-
-            foreach (var place in world.AllPlaces)
+            int footprints = 0;
+            if (showFootprints)
             {
-                if (place == null) continue;
+                var kinds = PlaceKindTable.Current;
 
-                var row = kinds.Row(place.Kind);
-                var colour = ColourOf(row.Name, row.IsHome);
-                var b = place.Bounds;
+                foreach (var place in world.AllPlaces)
+                {
+                    if (place == null) continue;
 
-                Outline(verts, cols, tris, b.X, b.Y, b.W, b.H, colour);
+                    var row = kinds.Row(place.Kind);
+                    var colour = ColourOf(row.Name, row.IsHome);
+                    var b = place.Bounds;
 
-                // A doorway is a gap in the line and a stub pointing into the plot, which is how
-                // a plan says which way a building faces. It is also the only way to tell, on a
-                // footprint, that 408 Holmes fronts Holmes Avenue rather than the alley behind.
-                if (row.IsBuilding) Door(verts, cols, tris, place, colour);
+                    Outline(verts, cols, tris, b.X, b.Y, b.W, b.H, colour);
+
+                    // A doorway is a gap in the line and a stub pointing into the plot, which is
+                    // how a plan says which way a building faces. It is also the only way to
+                    // tell, on a footprint, that 408 Holmes fronts Holmes Avenue rather than the
+                    // alley behind.
+                    if (row.IsBuilding) Door(verts, cols, tris, place, colour);
+                    footprints++;
+                }
             }
 
             var mesh = new Mesh { name = "CityOutlines", indexFormat = verts.Count > 65000
@@ -92,8 +106,8 @@ namespace Noir.Unity
             renderer.receiveShadows = false;
 
             Debug.Log($"[outlines] {parcels} county parcels, {roads} road corridors, "
-                    + $"{features} named features, {world.PlaceCount} places - "
-                    + $"{tris.Count / 3} triangles in one mesh.");
+                    + $"{features} named features, {footprints} of {world.PlaceCount} places "
+                    + $"outlined - {tris.Count / 3} triangles in one mesh.");
             return go;
         }
 
@@ -211,43 +225,33 @@ namespace Noir.Unity
         ///
         /// A missing file is survivable: the places still outline themselves and the town is
         /// merely less detailed, which is better than refusing to build.
+        ///
+        /// Parsed by ParcelIndex rather than here, so the same 794 rings back both this drawing
+        /// and PropertyInspector's lookup of what a click landed on - one parse, read twice,
+        /// rather than two parsers that could quietly drift apart.
         /// </summary>
         private static int Parcels(List<Vector3> verts, List<Color> cols, List<int> tris)
         {
-            string text;
-            try { text = ContentLoader.Read("parcels.txt"); }
-            catch { Debug.LogWarning("[outlines] no Content/parcels.txt - lot lines are missing."); return 0; }
+            var all = ParcelIndex.All;
+            if (all.Count == 0)
+            {
+                Debug.LogWarning("[outlines] no Content/parcels.txt - lot lines are missing.");
+                return 0;
+            }
 
             // Pale rather than chalk-white: at full brightness a lot line reads exactly as
             // strongly as the cyan road corridors, and the eye has nothing to sort first from
             // second. Dimmed so the roads - the skeleton the property lines hang off - are what
             // you see before you see anything else.
             var lot = new Color(0.55f, 0.56f, 0.60f);
-            int n = 0;
 
-            foreach (var raw in text.Split('\n'))
+            foreach (var parcel in all)
             {
-                var line = raw.Trim();
-                if (line.Length == 0 || line[0] == '#') continue;
-
-                var pts = new List<Vector2>();
-                foreach (var piece in line.Split(' '))
-                {
-                    int comma = piece.IndexOf(',');
-                    if (comma <= 0) continue;
-                    if (float.TryParse(piece.Substring(0, comma), System.Globalization.NumberStyles.Float,
-                                       System.Globalization.CultureInfo.InvariantCulture, out float x)
-                     && float.TryParse(piece.Substring(comma + 1), System.Globalization.NumberStyles.Float,
-                                       System.Globalization.CultureInfo.InvariantCulture, out float y))
-                        pts.Add(new Vector2(x, y));
-                }
-                if (pts.Count < 3) continue;
-
-                for (int i = 0; i < pts.Count; i++)
-                    Edge(verts, cols, tris, pts[i], pts[(i + 1) % pts.Count], lot);
-                n++;
+                var pts = parcel.Points;
+                for (int i = 0; i < pts.Length; i++)
+                    Edge(verts, cols, tris, pts[i], pts[(i + 1) % pts.Length], lot);
             }
-            return n;
+            return all.Count;
         }
 
         /// <summary>

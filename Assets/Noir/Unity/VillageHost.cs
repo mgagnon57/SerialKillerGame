@@ -103,6 +103,16 @@ namespace Noir.Unity
         /// </summary>
         public static bool ShowBuildings = false;
 
+        /// <summary>
+        /// The road corridors and the place-footprint rectangles CityOutlines draws on top of
+        /// the county parcels. Off by default: the parcels read as a town on their own, and the
+        /// road grid and a redundant footprint on every lot the parcel already outlines competed
+        /// with the very thing they were meant to support. Set true for the comparison, same as
+        /// ShowBuildings.
+        /// </summary>
+        public static bool ShowPlanRoads = false;
+        public static bool ShowPlanFootprints = false;
+
         private GameObject _village;
         private XRay _xray;
         private AgentMeshView _agentView;
@@ -231,7 +241,7 @@ namespace Noir.Unity
             // built once the static city is already frozen.
             if (!ShowBuildings)
             {
-                CityOutlines.Build(World, transform);
+                CityOutlines.Build(World, transform, ShowPlanRoads, ShowPlanFootprints);
 
                 // The names, without which the drawing is anonymous: every line in it is right
                 // and none of it is legible to somebody standing in the street.

@@ -272,7 +272,7 @@ namespace Noir.Unity
             var kind = PlaceKindTable.Current.Row(place.Kind);
 
             GUILayout.Label(place.Name, _title);
-            GUILayout.Label($"{Article(kind.Name)}   ·   {place.Bounds.W}x{place.Bounds.H}m", _small);
+            GUILayout.Label($"{Article(kind.Name)}   ·   {LotSize(place)}", _small);
             GUILayout.Space(10);
 
             // The line somebody wrote about this building when they put it in the map.
@@ -369,6 +369,42 @@ namespace Noir.Unity
         private readonly System.Collections.Generic.List<int> _inside =
             new System.Collections.Generic.List<int>();
         private Vector2 _placeScroll;
+
+        private const float MetresToFeet = 3.28084f;
+
+        /// <summary>
+        /// The real lot, not the model's footprint. Rossville's houses are cardboard boxes
+        /// standing in for an Illinois frame house the asset pack does not own (see
+        /// CityOutlines) - their generated Bounds is a placeholder's size, not the address's.
+        /// The county's own parcel, underfoot, is the actual answer to "how big is this lot",
+        /// so this looks there first and only falls back to the footprint for places the parcel
+        /// data does not cover - open ground, the railway corridor, anything off 794 records.
+        ///
+        /// This is America: feet, not metres, and the player never sees the conversion happen.
+        /// </summary>
+        private static string LotSize(Place place)
+        {
+            var b = place.Bounds;
+            var centre = new Vector2(b.X + b.W / 2f, b.Y + b.H / 2f);
+            var parcel = ParcelIndex.Find(centre);
+
+            float wFt, hFt;
+            string what;
+            if (parcel.HasValue)
+            {
+                wFt = parcel.Value.Bounds.width * MetresToFeet;
+                hFt = parcel.Value.Bounds.height * MetresToFeet;
+                what = "lot";
+            }
+            else
+            {
+                wFt = b.W * MetresToFeet;
+                hFt = b.H * MetresToFeet;
+                what = "footprint";
+            }
+
+            return $"{Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft {what}";
+        }
 
         /// <summary>"a diner", "an apartment" - the kind's own name, read out loud.</summary>
         private static string Article(string kind)

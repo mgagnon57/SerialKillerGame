@@ -56,7 +56,8 @@ namespace Noir.Editor
 
                 root = new GameObject("CityGround");
                 VillageMesh.Build(world, root.transform);
-                CityOutlines.Build(world, root.transform);
+                CityOutlines.Build(world, root.transform,
+                                   VillageHost.ShowPlanRoads, VillageHost.ShowPlanFootprints);
 
                 camGo = new GameObject("PlanCam");
                 var cam = camGo.AddComponent<Camera>();
@@ -162,7 +163,9 @@ namespace Noir.Editor
 
                 // After the bake, for the same reason the signals are: the chunker destroys what
                 // it combines, and the plan has to survive it.
-                if (!VillageHost.ShowBuildings) CityOutlines.Build(world, root.transform);
+                if (!VillageHost.ShowBuildings)
+                    CityOutlines.Build(world, root.transform,
+                                       VillageHost.ShowPlanRoads, VillageHost.ShowPlanFootprints);
 
                 // Outside the baked node, as in the game: these move and change colour, and a
                 // combined mesh can do neither. Without them the junctions photograph unlit and
