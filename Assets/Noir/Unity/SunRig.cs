@@ -137,7 +137,7 @@ namespace Noir.Unity
             RenderSettings.sun = _sun;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogDensity = 0.0012f;
+            RenderSettings.fogDensity = 1.4f / Reach();
 
             // URP's shadow distance defaults to 50 metres. The village is 170 across and the
             // camera sits about 90 out, so at the default almost nothing was within shadow
@@ -468,10 +468,17 @@ namespace Noir.Unity
 
             RenderSettings.fogColor = FogAt(colour, intensity, ambient);
 
-            // Density is an order of magnitude lower than it was. Fog should say "there is air
-            // between us", not "somebody has put tracing paper over the far half of the map" -
-            // and at the old values the whole top of the frame was washed to grey.
-            RenderSettings.fogDensity = Mathf.Lerp(0.0022f, 0.0010f, Mathf.Clamp01(intensity));
+            // FOG IS A FRACTION OF THE MAP, NOT A CONSTANT. These were 0.0022 and 0.0010, tuned
+            // by eye on a village 960 metres across - and on a map of 2,400 the same numbers put
+            // tracing paper over everything past the next street. Exponential-squared fog is
+            // about 85% opaque at 1.3/density, so a fixed figure means the further you can see,
+            // the less you can see, which is exactly backwards as a town grows.
+            //
+            // Tied to the map's longest side, the horizon stays a constant fraction of the town
+            // however big the town gets: the far edge is hazy, the far side of downtown is not.
+            // At 960 this returns almost exactly the old values, so nothing that looked right
+            // before has changed.
+            RenderSettings.fogDensity = Mathf.Lerp(2.1f, 0.95f, Mathf.Clamp01(intensity)) / Reach();
 
             // Dim the whole sky at night rather than leaving a bright daylight dome overhead.
             if (_sky != null && _sky.HasProperty("_Exposure"))
@@ -741,6 +748,20 @@ namespace Noir.Unity
         /// Public for the offline snapshot renderer, which has to fade its distance to the same
         /// colour the game does or the pictures are of somewhere else.
         /// </summary>
+        /// <summary>
+        /// How far the town reaches, in metres, for anything that has to scale with it.
+        ///
+        /// Asked of the map rather than typed in, because this map has been 240, 960, 1290, 840
+        /// and 2,400 across and every constant tuned against one of those was silently wrong on
+        /// the next. Falls back to the old village's size when there is no world yet - during
+        /// the very first frames of a build - so nothing divides by zero.
+        /// </summary>
+        private static float Reach()
+        {
+            var world = VillageHost.Instance != null ? VillageHost.Instance.World : null;
+            return world == null ? 960f : Mathf.Max(600f, Mathf.Max(world.Width, world.Height));
+        }
+
         public static Color FogAt(Color sun, float intensity, Color ambient)
         {
             float daylight = Mathf.Clamp01(intensity);

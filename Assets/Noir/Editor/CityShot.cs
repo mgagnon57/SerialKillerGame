@@ -78,9 +78,14 @@ namespace Noir.Editor
                 CityStreets.Build(world, city.transform);
                 CityParking.Build(world, city.transform);
                 CitySigns.Build(world, city.transform);
-                CityBuildings.Build(world, city.transform);
-                CityDistrict.Build(world, city.transform);
-                CitySuburb.Build(world, city.transform);
+                // The still follows the game: plan by default, models only if asked.
+                if (VillageHost.ShowBuildings)
+                {
+                    CityBuildings.Build(world, city.transform);
+                    CityDistrict.Build(world, city.transform);
+                    CitySuburb.Build(world, city.transform);
+                }
+
                 CityStory.Build(world, city.transform);
                 CityRail.Build(world, city.transform);
                 CityFarm.Build(world, city.transform);
@@ -93,6 +98,10 @@ namespace Noir.Editor
                 var fixtures = SunRig.BuildFixtures(world, city.transform);
                 var paneBlock = new MaterialPropertyBlock();
                 CityChunker.Bake(city);
+
+                // After the bake, for the same reason the signals are: the chunker destroys what
+                // it combines, and the plan has to survive it.
+                if (!VillageHost.ShowBuildings) CityOutlines.Build(world, root.transform);
 
                 // Outside the baked node, as in the game: these move and change colour, and a
                 // combined mesh can do neither. Without them the junctions photograph unlit and
@@ -137,7 +146,10 @@ namespace Noir.Editor
                 sunGo.transform.rotation = SunRig.SunRotation(hour);
                 RenderSettings.ambientLight = ambient;
                 RenderSettings.fogColor = SunRig.FogAt(colour, intensity, ambient);
-                RenderSettings.fogDensity = Mathf.Lerp(0.0022f, 0.0010f, Mathf.Clamp01(intensity));
+                // Scaled to the map, exactly as SunRig does it in game - a still taken at a
+                // fixed density on a 2,400m map photographs a wall of haze.
+                RenderSettings.fogDensity = Mathf.Lerp(2.1f, 0.95f, Mathf.Clamp01(intensity))
+                                          / Mathf.Max(600f, Mathf.Max(world.Width, world.Height));
                 sun.enabled = intensity > 0.01f;
                 if (sky != null && sky.HasProperty("_Exposure"))
                     sky.SetFloat("_Exposure", Mathf.Lerp(0.18f, 1.15f, Mathf.Clamp01(intensity)));

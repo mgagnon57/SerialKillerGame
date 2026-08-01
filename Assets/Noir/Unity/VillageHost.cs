@@ -88,6 +88,21 @@ namespace Noir.Unity
         /// </summary>
         public static bool ShowPeople = true;
 
+        /// <summary>
+        /// Whether to raise the bought building models, or draw the town as a survey plan.
+        ///
+        /// OFF, on purpose, and not as a stopgap to be embarrassed about. The pack has two house
+        /// families and both are Chicago brownstones; a Rossville street built from them is not a
+        /// near miss. The plan draws what we actually know - the county's own 794 lot boundaries
+        /// and the real street grid - and says nothing it cannot back up, which is the honest
+        /// position until there is a kit that can build an Illinois frame house.
+        ///
+        /// Set this true before Play to raise the models again. It is deliberately NOT a key:
+        /// showing both means building both, and the brick town is four thousand renderers to
+        /// keep hidden in case somebody wants to look at it.
+        /// </summary>
+        public static bool ShowBuildings = false;
+
         private GameObject _village;
         private XRay _xray;
         private AgentMeshView _agentView;
@@ -162,9 +177,26 @@ namespace Noir.Unity
             CityStreets.Build(World, city.transform);
             CityParking.Build(World, city.transform);
             CitySigns.Build(World, city.transform);
-            var authored = CityBuildings.Build(World, city.transform);
-            var blocks = CityDistrict.Build(World, city.transform);
-            var estates = CitySuburb.Build(World, city.transform);
+            // BUILDINGS OFF, LOT LINES ON. The Universal Pack holds exactly two house families
+            // and both are Chicago brownstones - bay fronts, stoops, fire escapes - so a village
+            // street built out of it is a street of the wrong country, not a rough approximation.
+            // Until there is a kit that can build an Illinois frame house, the town draws its
+            // FOOTPRINTS instead: 794 cadastral parcels from Vermilion County's own records, the
+            // real lot lines, which is the half of the information we actually have.
+            //
+            // It is also the only way to judge the geometry. Whether the blocks are the right
+            // size and the setbacks read as a street is answerable from a plan and unanswerable
+            // from behind a wall of the wrong building.
+            GameObject authored = null, blocks = null, estates = null;
+            if (ShowBuildings)
+            {
+                authored = CityBuildings.Build(World, city.transform);
+                blocks = CityDistrict.Build(World, city.transform);
+                estates = CitySuburb.Build(World, city.transform);
+            }
+            // Built AFTER the bake and outside it, further down - CityChunker combines every
+            // renderer under `city` into a handful of meshes and destroys the originals, and a
+            // plan that has been merged into the terrain is a plan you cannot see.
             CityStory.Build(World, city.transform);
             CityRail.Build(World, city.transform);
             CityFarm.Build(World, city.transform);
@@ -183,6 +215,8 @@ namespace Noir.Unity
             // AFTER the bake and OUTSIDE the node it bakes: a combined mesh cannot move or
             // change colour, so anything that drives - or that goes red and green - has to be
             // built once the static city is already frozen.
+            if (!ShowBuildings) CityOutlines.Build(World, transform);
+
             var signals = CitySignals.Create(World, transform);
             CityTraffic.Create(World, transform, signals);
             _xray = XRay.Create(World, _village);
