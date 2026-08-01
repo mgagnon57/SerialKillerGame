@@ -32,8 +32,14 @@ namespace Noir.Core.Witness
 
             int light = LightAt(minuteOfDay);   // 2 day, 1 dusk, 0 night
 
-            // The table in the plan, as arithmetic. Band 2 is Clear, 1 Partial, 0 Glimpsed,
-            // below 0 is nothing at all — which the caller detects via SawAnythingAtAll.
+            // The table in the plan, as arithmetic — with one deliberate divergence. Band 2 is
+            // Clear, 1 Partial, 0 Glimpsed, and below 0 is nothing at all, which the caller
+            // detects via SawAnythingAtAll. THE DIVERGENCE: the plan's table says a night
+            // sighting past 30 tiles is nothing, but the clamp below floors it at Glimpsed and
+            // the range check knows nothing about light, so at 45 tiles in the dark a witness
+            // still has something to say. That is pinned by a test and left open on purpose:
+            // whether it is right is a question about how much thin night testimony the town
+            // should produce, and the statement census answers it with numbers.
             int band = distance <= Near ? 2 : distance <= Middling ? 1 : 0;
             if (light == 0) band -= 1;
 

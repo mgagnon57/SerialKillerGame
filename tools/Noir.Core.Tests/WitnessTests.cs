@@ -92,5 +92,24 @@ namespace Noir.Core.Tests
             var withdrawn = Sightlines.HowGoodALook(watcher, subject, 12 * 60, Villager(32));
             Assert.That(withdrawn, Is.EqualTo(SightingClarity.Glimpsed));
         }
+
+        [Test]
+        public void AtNightBeyondThirtyTilesThereIsStillAGlimpse()
+        {
+            // The plan's table says this cell is nothing at all; the arithmetic says Glimpsed,
+            // because range alone decides whether there was a statement and range does not know
+            // about light. The behaviour is pinned here rather than corrected because which of
+            // the two is right is a question about how much thin night testimony the town should
+            // produce, and the statement census answers that with numbers. If the census shows a
+            // flood of night glimpses, change Sightlines.SawAnythingAtAll to take the minute and
+            // shorten the range after dark — and change this test with it, deliberately.
+            var watcher = new Tile(0, 0);
+            var subject = new Tile(45, 0);
+
+            var look = Sightlines.HowGoodALook(watcher, subject, 2 * 60, Villager(128));
+
+            Assert.That(look, Is.EqualTo(SightingClarity.Glimpsed));
+            Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject), Is.True);
+        }
     }
 }
