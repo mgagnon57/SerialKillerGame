@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Noir.Core.Contracts;
 using Noir.Core.Observation;
@@ -144,11 +145,20 @@ namespace Noir.Core.Tests
         [Test]
         public void TwoWitnessesToTheSameMomentRememberDifferently()
         {
-            var one = Describe(SightingClarity.Partial, new CitizenKey(11));
-            var other = Describe(SightingClarity.Partial, new CitizenKey(9999));
-            Assert.That(one, Is.Not.EqualTo(other),
-                "Two witnesses at the same clarity registering identical bands means the shuffle " +
-                "is not keyed on the witness, and every statement in the village will be a copy.");
+            // A single pair of keys proves nothing: two witnesses can agree by chance, and a
+            // shuffle keyed on nothing at all would still pass one lucky comparison. What has to
+            // be true is that the TOWN disagrees — that a moment seen by many people yields many
+            // different accounts, which is the only reason interviewing more than one of them is
+            // worth doing.
+            var accounts = new HashSet<PersonDescription>();
+            for (ulong key = 1; key <= 200; key++)
+                accounts.Add(Describe(SightingClarity.Partial, new CitizenKey(key)));
+
+            Assert.That(accounts.Count, Is.GreaterThan(10),
+                "Two hundred witnesses to the same moment produced " + accounts.Count +
+                " distinct accounts. They are all remembering the same thing, which means the " +
+                "shuffle is not keyed on the witness — check that witness.Value reaches " +
+                "Rolls.Int as the subject argument rather than a constant.");
         }
 
         [Test]
