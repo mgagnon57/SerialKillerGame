@@ -5,6 +5,8 @@ using Noir.Core.Contracts;
 using Noir.Core.Observation;
 using Noir.Core.People;
 using Noir.Core.Witness;
+using Noir.Sim;
+using Noir.Core.World;
 
 namespace Noir.Core.Tests
 {
@@ -188,6 +190,90 @@ namespace Noir.Core.Tests
             }
             Assert.That(wrong, Is.GreaterThan(0),
                 "A witness who never mistakes a man for a woman in the dark is not a witness.");
+        }
+
+        /// <summary>The authored village, once, so these tests see the same world as the harness.</summary>
+        private static VillageContext Village() => VillageContext.Load();
+
+        /// <summary>A track that parks the player on one citizen's doorstep all afternoon.</summary>
+        private static PlayerTrack TrackOutside(VillageContext v, Citizen who, int day,
+                                                Visibly looked = Visibly.Carrying)
+        {
+            var plan = DayPlanner.Plan(v.World, v.People, who, day, v.Seed);
+            var track = new PlayerTrack();
+            for (int m = 0; m < Sighting.MinutesPerDay; m++)
+            {
+                Tile door = v.World.GetPlace(plan.At(m).Where).Door;
+                track.Record(day * Sighting.MinutesPerDay + m, door, looked);
+            }
+            return track;
+        }
+
+        [Test]
+        public void AManStoodOnYourDoorstepAllDayIsRemembered()
+        {
+            var v = Village();
+            Citizen who = v.People.Citizens[0];
+            var track = TrackOutside(v, who, 3);
+
+            Sighting[] said = Recollection.WhatTheySaw(v.World, v.People, who, 3, track, v.Seed);
+
+            Assert.That(said.Length, Is.GreaterThan(0),
+                "Somebody standing on the doorstep for a whole day and being remembered by " +
+                "nobody means no sighting is ever produced, and the census will be empty.");
+        }
+
+        [Test]
+        public void ARunOfMinutesIsOneThingRemembered()
+        {
+            var v = Village();
+            Citizen who = v.People.Citizens[0];
+            var track = TrackOutside(v, who, 3);
+
+            Sighting[] said = Recollection.WhatTheySaw(v.World, v.People, who, 3, track, v.Seed);
+
+            Assert.That(said.Length, Is.LessThan(60),
+                "A figure in sight for hours produced one sighting a minute. A witness remembers " +
+                "a visit, not a frame count.");
+        }
+
+        [Test]
+        public void TheSameQuestionTwiceGetsTheSameAnswer()
+        {
+            var v = Village();
+            Citizen who = v.People.Citizens[0];
+            var track = TrackOutside(v, who, 3);
+
+            Sighting[] once = Recollection.WhatTheySaw(v.World, v.People, who, 3, track, v.Seed);
+            Sighting[] twice = Recollection.WhatTheySaw(v.World, v.People, who, 3, track, v.Seed);
+
+            Assert.That(twice.Length, Is.EqualTo(once.Length));
+            for (int i = 0; i < once.Length; i++)
+            {
+                Assert.That(twice[i].Minute, Is.EqualTo(once[i].Minute), "minute at " + i);
+                Assert.That(twice[i].Clarity, Is.EqualTo(once[i].Clarity), "clarity at " + i);
+                Assert.That(twice[i].Description, Is.EqualTo(once[i].Description), "description at " + i);
+                Assert.That(twice[i].Where, Is.EqualTo(once[i].Where), "place at " + i);
+            }
+        }
+
+        [Test]
+        public void TestimonyCannotTellWhyHeWasThere()
+        {
+            var v = Village();
+            Citizen who = v.People.Citizens[0];
+
+            // The same movements, twice. Whatever the player was "doing" is not an input to any
+            // of this, so if these two ever differ, something is reading intent.
+            var innocent = TrackOutside(v, who, 3, Visibly.Carrying);
+            var guilty = TrackOutside(v, who, 3, Visibly.Carrying);
+
+            Sighting[] a = Recollection.WhatTheySaw(v.World, v.People, who, 3, innocent, v.Seed);
+            Sighting[] b = Recollection.WhatTheySaw(v.World, v.People, who, 3, guilty, v.Seed);
+
+            Assert.That(b.Length, Is.EqualTo(a.Length));
+            for (int i = 0; i < a.Length; i++)
+                Assert.That(b[i].Description, Is.EqualTo(a[i].Description), "at " + i);
         }
     }
 }

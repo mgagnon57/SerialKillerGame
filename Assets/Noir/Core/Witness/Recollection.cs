@@ -1,4 +1,8 @@
+using System.Collections.Generic;
+using Noir.Core.Contracts;
 using Noir.Core.Observation;
+using Noir.Core.People;
+using Noir.Core.World;
 
 // ---------------------------------------------------------------------------------------------
 //  THE PRODUCER SIDE OF THE FIREWALL.
@@ -30,5 +34,78 @@ namespace Noir.Core.Witness
 {
     public static class Recollection
     {
+        public const int MinutesPerDay = Sighting.MinutesPerDay;
+
+        /// <summary>
+        /// Everything one villager could tell you about the player, for one day.
+        ///
+        /// Nothing is stored and nothing is stepped: the citizen's day is replayed from
+        /// DayPlanner, which is a pure function of (seed, citizen, day), and the player's track
+        /// is the only history consulted. Ask about a day from a fortnight ago and it costs the
+        /// same as asking about yesterday.
+        ///
+        /// STATIONARY WITNESSES ONLY, and this is the honest limit of the first version. A
+        /// citizen's position comes from the door of the place their plan has them at. While
+        /// they are TravellingTo, nobody knows where they are — there is no stored route — and
+        /// interpolating between two doors would invent a path and then treat it as evidence.
+        /// So the witnesses here are the man at his gate and the woman behind the counter.
+        /// Walking witnesses need routing and are a later piece of work; the gap is deliberate.
+        /// </summary>
+        public static Sighting[] WhatTheySaw(WorldModel world, Population population,
+                                             Citizen who, int day, PlayerTrack track, ulong seed)
+        {
+            DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
+            var found = new List<Sighting>();
+
+            bool inSight = false;
+
+            for (int minuteOfDay = 0; minuteOfDay < MinutesPerDay; minuteOfDay++)
+            {
+                int minute = day * MinutesPerDay + minuteOfDay;
+
+                if (!track.TryGet(minute, out Step step)) { inSight = false; continue; }
+
+                Block block = plan.At(minuteOfDay);
+                if (block.What == Activity.TravellingTo) { inSight = false; continue; }
+                if (!block.Where.IsValid) { inSight = false; continue; }
+
+                Tile watcher = world.GetPlace(block.Where).Door;
+
+                SightingClarity clarity = Sightlines.HowGoodALook(watcher, step.Where,
+                                                                  minuteOfDay, who);
+                if (!Sightlines.SawAnythingAtAll(clarity, watcher, step.Where))
+                {
+                    inSight = false;
+                    continue;
+                }
+
+                // One visit, not one frame a minute. A figure who stays in sight is a single
+                // thing a witness remembers, stamped at the moment they first noticed him.
+                if (inSight) continue;
+                inSight = true;
+
+                PersonDescription seen = Degradation.WhatRegistered(
+                    clarity, step.Looked,
+                    subjectIsMale: true, subjectAge: 35, heightCm: 178, buildIndex: 1,
+                    who.Key, minute, seed);
+
+                found.Add(new Sighting(new ObserverId(found.Count),
+                                       BlurredMinute(minute, clarity),
+                                       watcher, clarity, seen));
+            }
+
+            return found.ToArray();
+        }
+
+        /// <summary>
+        /// "About half seven." Nobody reports a minute, and a consumer given one would trust it.
+        /// The worse the look, the coarser the memory of when it was.
+        /// </summary>
+        private static int BlurredMinute(int minute, SightingClarity clarity)
+        {
+            int to = clarity == SightingClarity.Clear ? 1
+                   : clarity == SightingClarity.Partial ? 5 : 15;
+            return minute / to * to;
+        }
     }
 }
