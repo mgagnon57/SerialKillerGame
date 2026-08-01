@@ -1,4 +1,5 @@
 using System.IO;
+using Noir.Unity;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -64,6 +65,36 @@ namespace Noir.Editor
             if (clips.Count == 0)
             {
                 Debug.LogError($"[animator] no clips in {Folder}.");
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                return;
+            }
+
+            // ---- only the clips something actually asks for ----
+            //
+            // A state per downloaded clip is right at nine and wrong at two thousand, which is
+            // what a bulk Mixamo pull comes to: the controller becomes a multi-megabyte asset
+            // full of states nothing will ever crossfade to, every one of which Unity loads and
+            // keeps resident. AgentAnimation.Drive only ever names a clip that a row in
+            // Content/animations.txt mentions, so anything else is dead weight by construction.
+            //
+            // Downloading more than you use is the CORRECT workflow - you cannot tell whether a
+            // clip is right until you have it - so this filters at build time rather than
+            // asking anybody to prune a folder.
+            AgentAnimation.Reload();
+            var wanted = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+            foreach (var row in AgentAnimation.Rows)
+            foreach (var name in row.Value) wanted.Add(name);
+            wanted.Add(Default);
+
+            int ignored = 0;
+            foreach (var name in new System.Collections.Generic.List<string>(clips.Keys))
+                if (!wanted.Contains(name)) { clips.Remove(name); ignored++; }
+
+            if (clips.Count == 0)
+            {
+                Debug.LogError($"[animator] {ignored} clips in {Folder} and not one of them is "
+                             + "named by Content/animations.txt, so the controller would be "
+                             + "empty. Add a row before building.");
                 if (Application.isBatchMode) EditorApplication.Exit(1);
                 return;
             }
