@@ -1,30 +1,38 @@
-# Terrain Pipeline: Multi-Agent Orchestration Design
+# Terrain Pipeline: Multi-Agent Orchestration Design — CONTINUATION
 
 **Date:** 2026-08-01  
 **Project:** Serial Killer Game (Noir detective/investigation game)  
-**Goal:** Build accurate hometown terrain with real geodata, visual accuracy, and in-editor refinement
+**Current State:** Rossville terrain with USGS NED elevation (30m sampling, just resampled 2026-08-01)
 
-## Success Criteria
+## What's Already Done
 
-The terrain pipeline is done when:
+✅ **Phase 1 (Geodata):** Real USGS elevation data loaded via `Content/elevation.txt` (71×81 samples, 30m spacing)  
+✅ **Phase 2 (Terrain Gen):** Countryside system generates LOD'd terrain meshes; city/farm systems place features  
+✅ **Base playability:** 960×960 map, 112+ people, traffic, buildings
 
-1. **Real geodata imported** — elevation and map data from actual sources (USGS, OpenStreetMap, etc.) loaded into the game
-2. **Visually accurate to hometown** — terrain mesh matches real geography (hills, valleys, rivers, general shape)
-3. **Editable in Unity** — sculpt/paint tools allow local refinement (streets, buildings, details)
+## Remaining Work: The Four Question Marks
 
-Performance, texturing, and game mechanics support are lower priority and follow after this foundation is solid.
+This workflow tackles the four remaining gaps when you say "do this":
+
+1. **Detail/Refinement** — In-editor sculpt/paint tools to fix specific terrain spots without resampling
+2. **Texturing** — Ground materials (grass, dirt, rock, water) that match actual terrain type
+3. **Features** — Rivers, landmarks, road accuracy verification
+4. **Performance** — Terrain running at 60fps with acceptable draw calls (baseline measurement + optimization)
+
+These run in parallel phases with fast-model iteration + expensive-model verification (same Approach 3 as before).
 
 ## Design Approach: Single Pipeline with Review Gates
 
-**Core Strategy:** Fast models iterate and write code for each phase; expensive models verify correctness before moving on. Parallelism via review gates—expensive model can review Phase N while fast model starts Phase N+1.
+**Core Strategy:** Fast models iterate and write code for each workstream; expensive models verify correctness before moving on. Parallelism via review gates—expensive model can review Stream N while fast model starts Stream N+1.
 
-### Work Decomposition: Three Phases
+### Work Decomposition: Four Workstreams (Parallel)
 
-| Phase | Fast Agent Role | Task | Expensive Agent Role | Verification Gate |
+| Workstream | Fast Agent Role | Task | Expensive Agent Role | Verification Gate |
 |-------|-----------------|------|----------------------|-------------------|
-| **Phase 1: Geodata Ingestion** | Implementer | Download/parse real elevation data for hometown; write C# loaders; handle coordinate transforms (lat/lon → Unity world space); basic error handling | Verifier | Review data format correctness, coordinate math (especially datum mismatches), edge cases (missing tiles, coordinate wrap), loader robustness |
-| **Phase 2: Terrain Generation** | Implementer | Convert geodata to Unity terrain meshes; sampling strategy; LOD/chunking if needed; real-time visualization in editor | Verifier | Validate mesh accuracy vs. source data; check visual fidelity matches real geography; baseline performance; integration with Unity terrain system |
-| **Phase 3: Editor Tools** | Implementer | Sculpt/paint for local refinement; undo/redo; brush sizes & falloffs; real-time preview; smooth integration with generated terrain | Verifier | Check tool responsiveness (no sculpt lag), data consistency, undo/redo correctness, integration with Phase 2 terrain, edge case handling (terrain boundaries, brush limits) |
+| **Stream 1: Sculpt/Paint** | Implementer | In-editor brush tool to paint height delta on terrain without resampling base data; undo/redo; real-time preview in game view; data persistence | Verifier | Tool responsiveness (no frame drops while painting), undo correctness, height-delta isolation from base elevation grid, integration with ElevationGrid queries |
+| **Stream 2: Texturing** | Implementer | Ground material system: detect terrain slope/elevation to pick grass/dirt/rock/water; blend textures; apply to Countryside/ground meshes; realistic appearance | Verifier | Visual match to real-world terrain types; performance baseline; seamless blending across LOD transitions; no texture swim or UV stretch |
+| **Stream 3: Features** | Implementer | Identify + implement major features (rivers, landmarks, road overlay accuracy); verify against real map; author as overlays or mesh deformations | Verifier | Feature placement correctness vs. real geography; visual accuracy; integration with existing terrain without hard-breaking |
+| **Stream 4: Performance** | Implementer | Baseline current performance (FPS, draw calls, memory); profile terrain systems; propose + implement optimization (mesh reduction, occlusion, LOD tweaks) | Verifier | 60fps baseline achieved; draw call reduction measured; no visual regression; memory footprint within target |
 
 ### Model Allocation Strategy
 
@@ -41,37 +49,39 @@ Performance, texturing, and game mechanics support are lower priority and follow
 - Triggered: After each phase's working implementation
 - Feedback loop: Finds issues → Fast model fixes → Expensive re-verifies
 
-### Detailed Per-Phase Workflow
+### Detailed Per-Workstream Workflow
+
+All four workstreams run in parallel. Each follows the same loop:
 
 ```
-START PHASE N
+START WORKSTREAM N
 │
 ├─ [1] Fast Model: Implement
-│       Prompt: "Build a C# solution for [Phase N task].
+│       Prompt: "Build a C# solution for [Workstream N task].
 │                Write complete, tested code.
-│                Use [existing APIs/libraries].
+│                Integrate with existing systems (ElevationGrid, Countryside, etc.).
 │                No TODOs or placeholders."
-│       Output: Code files, unit tests, README
+│       Output: Code files, unit tests, integration guide
 │
 ├─ [2] You: Test locally
-│       Run the code in Unity editor or console
+│       Run the code in Unity editor
 │       ├─ Works? → Go to [3]
 │       └─ Broken? → Report error to Fast Model
 │           Fast Model fixes → Loop back to [2]
 │
 ├─ [3] Expensive Model: Code Review
-│       Prompt: "Review this [Phase N] implementation.
+│       Prompt: "Review this [Workstream N] implementation.
 │                Check:
 │                - Correctness vs. success criteria
-│                - Edge cases & error handling
-│                - Integration with prior phases
 │                - Performance implications
-│                - What's missing or fragile?
+│                - Integration with other workstreams
+│                - Edge cases & robustness
+│                - What's fragile or missing?
 │                Suggest fixes."
 │       Output: Review with findings + recommendations
 │
 ├─ [4] Fast Model: Address Findings
-│       Prompt: "Fix these issues from review: [list].
+│       Prompt: "Fix these issues: [list].
 │                Keep the working core, harden the edges."
 │       Output: Updated code
 │
@@ -82,10 +92,10 @@ START PHASE N
 │       Prompt: "Verify fixes are sound. Check no regressions."
 │       Output: Sign-off or more findings
 │
-└─ Phase approved → Move to Phase N+1
+└─ Workstream approved → Ready for integration
 ```
 
-**Parallelism:** While you're testing Phase 1, Expensive can review Phase 1, and Fast can start Phase 2 scoping. No idle time.
+**Parallelism:** While you're testing Stream 1, Expensive can review Stream 1, Fast can implement Stream 2, and Expensive can review Stream 2. All four streams advance independently.
 
 ### Data Flow & Integration Points
 
@@ -101,45 +111,74 @@ START PHASE N
 
 ### Review Gate Sign-Off Criteria
 
-**Phase 1: Geodata Ingestion**
-- ✓ Coordinate math verified correct (spot-check 3+ points vs. real-world map)
-- ✓ Data loads without crashes or missing tile errors
-- ✓ Edge cases handled gracefully (wrapping, datum mismatches, incomplete tiles)
-- ✓ Loaders have basic error messages for debugging
+**Stream 1: Sculpt/Paint Tool**
+- ✓ Brush is responsive (no frame drops, paints in real-time)
+- ✓ Painted deltas persist on save and reload
+- ✓ Undo/redo works correctly (sculpt changes revert; base elevation grid unchanged)
+- ✓ Integrates cleanly with ElevationGrid (queries return base + delta)
+- ✓ No crashes at terrain boundaries or with rapid undo spam
 
-**Phase 2: Terrain Generation**
-- ✓ Mesh elevation accuracy within 1-2 meters of source data (or your stated tolerance)
-- ✓ Visual fidelity confirmed—terrain visually matches your hometown when viewed in-game
-- ✓ Performance baseline met (define: e.g., "60 fps on local hardware," "under 5k draw calls")
-- ✓ Integrates cleanly with Phase 1 output; no coordinate mismatches
+**Stream 2: Texturing**
+- ✓ Ground materials applied based on slope/elevation (grass on gentle, rock on steep, water in low spots)
+- ✓ Visual match to real Rossville terrain appearance
+- ✓ Textures blend smoothly across LOD transitions (no visible seams at Countryside edges)
+- ✓ No texture swim or UV stretch under camera movement
+- ✓ Performance baseline met (no draw call spike from texturing system)
 
-**Phase 3: Editor Tools**
-- ✓ Sculpt/paint tools are responsive (no frame drops while painting)
-- ✓ Undo/redo preserves all data correctly (sculpted changes revert, generated base persists)
-- ✓ Integrates seamlessly with Phase 2 terrain (brushes respect terrain boundaries)
-- ✓ No edge-case crashes (brush at map edge, rapid undo spam, etc.)
+**Stream 3: Features**
+- ✓ Major features (rivers, landmarks) identified and implemented
+- ✓ Feature placement matches real geography (spot-check vs. satellite imagery)
+- ✓ Integration with terrain is clean (no hard breaks in mesh or painting)
+- ✓ Features visible at gameplay scales (game camera perspective, not top-down only)
+
+**Stream 4: Performance**
+- ✓ Current baseline established (FPS, draw calls, memory on target hardware)
+- ✓ 60fps achieved with full terrain/city loaded
+- ✓ Draw calls reduced by at least 10% (or target met if already optimal)
+- ✓ No visual regression from optimization (shadows, LOD, occlusion working correctly)
 
 If any criterion fails → Fast model fixes → Expensive re-reviews → repeat until sign-off.
 
 ## Implementation Timeline
 
-- **Phase 1 (Geodata):** Fast writes loaders (~4-6 hrs of work), Expensive reviews, fixes
-- **Phase 2 (Terrain Gen):** Starts while Phase 1 review is happening; Fast writes mesh gen, Expensive reviews
-- **Phase 3 (Editor Tools):** Starts while Phase 2 review is happening; Fast writes sculpt/paint, Expensive reviews
+All four workstreams run in parallel:
 
-**Estimated total:** 2-3 evenings of focused work (your 20X budget resets allow parallel review + implementation)
+- **Stream 1 (Sculpt/Paint):** Fast writes brush tool (~6-8 hrs), Expensive reviews, fixes in parallel
+- **Stream 2 (Texturing):** Fast writes material system (~4-6 hrs), happens while Stream 1 is testing
+- **Stream 3 (Features):** Fast implements rivers/landmarks (~4-6 hrs), happens while Streams 1-2 review
+- **Stream 4 (Performance):** Fast profiles + optimizes (~3-4 hrs), happens in parallel
+
+**Estimated total:** 1-2 evenings of focused 20X budget work (four agents running in parallel means you don't hit sequential bottlenecks)
 
 ## Success Checkpoint
 
-When all three phases are approved by the Expensive model and you can:
-1. Load real geodata
-2. See your hometown rendered in-game
-3. Sculpt local details in the editor
+When all four workstreams are approved by the Expensive model and you can:
+1. ✓ Paint terrain refinements in the editor
+2. ✓ See realistic ground texturing (grass/dirt/rock matching actual terrain)
+3. ✓ See rivers and landmarks in the right places
+4. ✓ Run at 60fps with optimal draw calls
 
-...the pipeline is **done**. Texturing, performance optimization, and game-mechanic integration follow after.
+...the terrain pipeline is **done**. You can then say "the terrain is accurate" and move on to gameplay/investigation layer.
 
-## Notes
+## Data Flow & Integration
 
-- **Coordinate systems:** Document your chosen coordinate transform (lat/lon/elevation → Unity world space) early. This is the #1 source of Phase 1→2 integration bugs.
-- **Data source:** Decide on your geodata source early (USGS NED for elevation, OSM for map data, etc.). Fast model can help select based on accuracy + ease of parsing.
-- **Playability:** Aim to have Phase 1 working by end of first evening so you can see terrain in-game, even if rough.
+**ElevationGrid ← Sculpt Tool ← Texturing:**
+- Base elevation from `Content/elevation.txt` (USGS NED, 71×81 at 30m)
+- Sculpt tool adds delta layer (separate data, persisted independently)
+- Height queries: `ElevationGrid.HeightAt(x, y)` returns base + delta
+- Texturing system reads combined height for material selection
+
+**Countryside + City + Farm ← Texturing:**
+- Existing mesh systems respect texture overlay (don't replace, blend)
+- Material assignment by elevation slope (existing terrain analysis can be reused)
+
+**All systems ← Feature overlays:**
+- Rivers/landmarks implemented as separate systems (not replacing base terrain)
+- Can be toggled/debugged independently
+
+## Notes & Constraints
+
+- **Existing coordinate system:** Origin locked at Chicago St × Attica St (750, 1335). Do NOT change.
+- **Resampling:** Elevation just went 60m → 30m (2026-08-01). Matches real USGS 10m source well enough; do not resample again without reason.
+- **Integration risk:** Texturing system must respect LOD transitions in Countryside. Test visual seams at distance LOD boundaries (120m, 190m, 380m).
+- **Playability:** Aim to have Stream 1 (sculpt tool) working first, so you can refine terrain interactively while testing Streams 2-4.
