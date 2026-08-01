@@ -160,6 +160,11 @@ namespace Noir.Unity
                     "ditch"   => (new Color(0.28f, 0.50f, 0.78f), 1.2f, false),
                     "water"   => (new Color(0.35f, 0.72f, 1.00f), 2.0f, true),    // the ponds
                     "school"  => (new Color(0.95f, 0.45f, 0.85f), 2.4f, true),
+
+                    // A short tick across the rail, at the four OSM-tagged level crossings only
+                    // (Henderson, Green, Benton, Attica) - not every street reaches the far side.
+                    // Warning amber, the same colour a real crossbuck is lit.
+                    "crossing" => (new Color(1.00f, 0.75f, 0.10f), 3.4f, false),
                     _         => (Color.gray, 1f, false),
                 };
 

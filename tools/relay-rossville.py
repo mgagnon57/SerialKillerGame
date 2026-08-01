@@ -42,13 +42,20 @@ CX, CY = 750, 1335                 # Chicago Street x Attica Street
 # `sides` is which side of Route 1 the street actually runs, off the OSM extents. It
 # decides the address prefix: a street that exists on one side only does not need one,
 # which is exactly why the killer's address is "408 Holmes Ave" and not "408 E Holmes".
+# RR CROSSINGS. Only four of these streets actually cross the CSX line at grade in reality -
+# Henderson, Green, Benton and Attica, each confirmed against OpenStreetMap's own
+# railway=level_crossing nodes (see Content/features.txt, the `crossing` entries). Every other
+# street east of the tracks - Holmes, Maple, Gilbert, Stewart, McKibben, Dale, Greenwood,
+# Thompson, Earlcourt - simply does not reach the far side in reality, whatever this map's own
+# roads (axis-aligned, and none of them clipped at the tracks yet) currently draw. Load-bearing
+# for whenever a train is simulated: gate crossing behaviour to those four streets and no others.
 EW = [                     # (north offset, name, western name, sides)
     (+606, "york",       None,          "W"),
-    (+489, "henderson",  None,          "both"),
-    (+353, "green",      None,          "both"),
-    (+222, "benton",     None,          "both"),
-    (+126, "holmes",     None,          "E"),     # 408 Holmes Ave lives here
-    (   0, "attica",     None,          "both"),  # THE cross street
+    (+489, "henderson",  None,          "both"),  # real level crossing
+    (+353, "green",      None,          "both"),  # real level crossing
+    (+222, "benton",     None,          "both"),  # real level crossing
+    (+126, "holmes",     None,          "E"),     # 408 Holmes Ave lives here - no real crossing
+    (   0, "attica",     None,          "both"),  # THE cross street - real level crossing
     (-143, "maple",      "Park Place",  "E"),
     (-248, "gilbert",    "Perry",       "E"),
     (-387, "stewart",    "Stufflebeam", "E"),

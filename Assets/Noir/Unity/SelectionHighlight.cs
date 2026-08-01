@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
@@ -27,7 +28,8 @@ namespace Noir.Unity
 
         private VillageHost _host;
         private MeshFilter _mf;
-        private PlaceId _shown = PlaceId.None;
+        private PlaceId _shownPlace = PlaceId.None;
+        private Rect? _shownParcel;
 
         public static SelectionHighlight Create(VillageHost host, Transform parent)
         {
@@ -47,38 +49,51 @@ namespace Noir.Unity
         private void Update()
         {
             var id = _host.SelectedPlace;
-            if (id.Value == _shown.Value) return;
-            _shown = id;
+            var parcel = _host.SelectedParcel;
+
+            if (id.Value == _shownPlace.Value
+                && Nullable.Equals(BoundsOf(parcel), _shownParcel)) return;
+
+            _shownPlace = id;
+            _shownParcel = BoundsOf(parcel);
 
             var place = id.IsValid ? _host.World?.GetPlace(id) : null;
-            _mf.sharedMesh = place != null ? BuildMesh(place) : null;
+            if (place != null) { _mf.sharedMesh = BuildMesh(place); return; }
+            _mf.sharedMesh = parcel.HasValue ? BuildMesh(parcel.Value) : null;
         }
+
+        private static Rect? BoundsOf(ParcelIndex.Parcel? p) => p?.Bounds;
 
         private static Mesh BuildMesh(Place place)
         {
-            var verts = new List<Vector3>();
-            var tris = new List<int>();
-
             var b = place.Bounds;
             var centre = new Vector2(b.X + b.W / 2f, b.Y + b.H / 2f);
             var parcel = ParcelIndex.Find(centre);
+            if (parcel.HasValue) return BuildMesh(parcel.Value);
 
-            if (parcel.HasValue)
-            {
-                var pts = parcel.Value.Points;
-                for (int i = 0; i < pts.Length; i++)
-                    Edge(verts, tris, pts[i], pts[(i + 1) % pts.Length]);
-            }
-            else
-            {
-                // No county record under this place - the footprint itself is the only
-                // boundary there is, so trace that rather than showing no selection at all.
-                Edge(verts, tris, new Vector2(b.X, b.Y), new Vector2(b.X + b.W, b.Y));
-                Edge(verts, tris, new Vector2(b.X + b.W, b.Y), new Vector2(b.X + b.W, b.Y + b.H));
-                Edge(verts, tris, new Vector2(b.X + b.W, b.Y + b.H), new Vector2(b.X, b.Y + b.H));
-                Edge(verts, tris, new Vector2(b.X, b.Y + b.H), new Vector2(b.X, b.Y));
-            }
+            // No county record under this place - the footprint itself is the only boundary
+            // there is, so trace that rather than showing no selection at all.
+            var verts = new List<Vector3>();
+            var tris = new List<int>();
+            Edge(verts, tris, new Vector2(b.X, b.Y), new Vector2(b.X + b.W, b.Y));
+            Edge(verts, tris, new Vector2(b.X + b.W, b.Y), new Vector2(b.X + b.W, b.Y + b.H));
+            Edge(verts, tris, new Vector2(b.X + b.W, b.Y + b.H), new Vector2(b.X, b.Y + b.H));
+            Edge(verts, tris, new Vector2(b.X, b.Y + b.H), new Vector2(b.X, b.Y));
+            return Finish(verts, tris);
+        }
 
+        private static Mesh BuildMesh(ParcelIndex.Parcel parcel)
+        {
+            var verts = new List<Vector3>();
+            var tris = new List<int>();
+            var pts = parcel.Points;
+            for (int i = 0; i < pts.Length; i++)
+                Edge(verts, tris, pts[i], pts[(i + 1) % pts.Length]);
+            return Finish(verts, tris);
+        }
+
+        private static Mesh Finish(List<Vector3> verts, List<int> tris)
+        {
             var mesh = new Mesh { name = "SelectionHighlight" };
             mesh.SetVertices(verts);
             mesh.SetTriangles(tris, 0);

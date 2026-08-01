@@ -45,6 +45,18 @@ namespace Noir.Unity
             SelectedPlace.IsValid ? World?.GetPlace(SelectedPlace) : null;
 
         /// <summary>
+        /// A real county parcel with no place on it, if that is what got clicked.
+        ///
+        /// Only 326 of the town's 794 real lots have a house or a business generated on them -
+        /// the rest are simply land nobody built on, which is most of what a plan actually shows.
+        /// Before this, a click that missed every generated place found nothing at all: most of
+        /// the visible town was not clickable, which reads as the picker being broken rather
+        /// than as most of the plan being undeveloped. Set by OrbitCamera as the last resort
+        /// after a person and a place have both failed to match; cleared by selecting either.
+        /// </summary>
+        public ParcelIndex.Parcel? SelectedParcel { get; set; }
+
+        /// <summary>
         /// One seed for the whole village. It was previously written as two separate literals -
         /// one for the population, one for the simulation - which meant a typo in either would
         /// give you people generated from one world and day plans from another. Nothing would

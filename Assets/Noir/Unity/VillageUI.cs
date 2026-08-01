@@ -93,7 +93,8 @@ namespace Noir.Unity
             // Let the camera know not to treat a click on the panel as a click on the village.
             var mouse = Event.current.mousePosition;
             PointerOverUI = mouse.y < BarHeight ||
-                            ((_host.Selected.IsValid || _host.SelectedPlace.IsValid)
+                            ((_host.Selected.IsValid || _host.SelectedPlace.IsValid
+                              || _host.SelectedParcel.HasValue)
                              && mouse.x > Screen.width - PanelWidth);
         }
 
@@ -310,6 +311,36 @@ namespace Noir.Unity
             GUILayout.EndArea();
         }
 
+        /// <summary>
+        /// A real county lot with no address on it - most of the plan. 468 of Rossville's 794
+        /// surveyed parcels never got a house or a business generated on them; before this a
+        /// click there found nothing, which is most of what's visible on the plan reading as
+        /// unclickable rather than as undeveloped land.
+        /// </summary>
+        private void DrawParcelInspector(ParcelIndex.Parcel parcel)
+        {
+            var rect = new Rect(Screen.width - PanelWidth, BarHeight + 8, PanelWidth - 12,
+                                Screen.height - BarHeight - 20);
+            GUI.Box(rect, GUIContent.none, _panel);
+            GUILayout.BeginArea(new Rect(rect.x + 14, rect.y + 12, rect.width - 28, rect.height - 24));
+
+            float wFt = parcel.Bounds.width * MetresToFeet;
+            float hFt = parcel.Bounds.height * MetresToFeet;
+
+            GUILayout.Label("Undeveloped lot", _title);
+            GUILayout.Label($"no address on file   ·   {Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft",
+                            _small);
+            GUILayout.Space(10);
+            GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "
+                           + "built on it.</color>", _label);
+
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
+                _host.SelectedParcel = null;
+
+            GUILayout.EndArea();
+        }
+
         private const float MetresToFeet = 3.28084f;
 
         /// <summary>
@@ -359,6 +390,8 @@ namespace Noir.Unity
             var place = _host.SelectedPlaceModel;
             if (place != null) { DrawPlaceInspector(place); return; }
 
+            if (_host.SelectedParcel.HasValue) { DrawParcelInspector(_host.SelectedParcel.Value); return; }
+
             var citizen = _host.SelectedCitizen;
             if (citizen == null)
             {
@@ -367,7 +400,7 @@ namespace Noir.Unity
                   + "<b>R</b>/<b>Shift+F</b> tilt   ·   <b>WASD</b> move   ·   wheel zoom", _small);
                 GUI.Label(new Rect(16, Screen.height - 40, 900, 22),
                     "<b>Space</b> pause   ·   <b>[</b> <b>]</b> speed   ·   <b>1</b>–<b>6</b> skip to hour   ·   "
-                  + "click anyone or any building   ·   <b>F</b> follow   ·   <b>H</b> for help", _small);
+                  + "click anyone, any building, or any lot   ·   <b>F</b> follow   ·   <b>H</b> for help", _small);
                 return;
             }
 

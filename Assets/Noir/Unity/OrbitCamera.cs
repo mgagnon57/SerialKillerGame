@@ -282,6 +282,7 @@ namespace Noir.Unity
                 {
                     _host.Selected = picked;
                     _host.SelectedPlace = Noir.Core.Contracts.PlaceId.None;
+                    _host.SelectedParcel = null;
                     return;
                 }
             }
@@ -291,8 +292,23 @@ namespace Noir.Unity
             // PlacePicker.
             _host.Selected = Noir.Core.Contracts.CitizenId.None;
             _host.Following = false;
-            _host.SelectedPlace = PlacePicker.Pick(_host.World, ray);
+            var place = PlacePicker.Pick(_host.World, ray);
+            _host.SelectedPlace = place;
+
+            if (place.IsValid) { _host.SelectedParcel = null; return; }
+
+            // LAST RESORT: no person, no place - most of the real plan is not one. 468 of the
+            // 794 real lots never got a house or a business generated on them, and until now a
+            // click there found nothing at all, which reads as "clicking is broken" rather than
+            // "this lot is undeveloped". Same ground point PlacePicker's own fallback uses.
+            _host.SelectedParcel = ground.Raycast(ray, out float groundHit)
+                ? ParcelIndex.Find(GroundPoint(ray.GetPoint(groundHit)))
+                : null;
         }
+
+        /// <summary>Village space is x,-z of the world point - see Space3D.</summary>
+        private static Vector2 GroundPoint(Vector3 worldPoint) =>
+            new Vector2(worldPoint.x, -worldPoint.z);
 
         private void HandleFollow()
         {
