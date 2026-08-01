@@ -9,10 +9,36 @@ done or delete the line when it turns out to be a bad idea.
 ## Env
 
 - [ ] We need to add elevation at some point. — *2026-07-31*
+  SCOPED 2026-08-01. Everything in the game is on one plane and the plane is
+  assumed, not stored: `Space3D.ToWorld(pos, 0f)` is how every person, vehicle,
+  building and prop gets its height, and the argument is a literal zero at every
+  call site. So elevation is not a terrain feature, it is a change to the single
+  function that answers "how high is here", plus a height field for it to read.
+  What has to follow it: CityCollision's ground slab (one flat box today, would
+  become a mesh), CityStreets seating tiles by bounds, CityBuildings' Storey
+  stacking which measures from a base Y, CityTraffic moving cars along a lane
+  coordinate with no Y at all, and the follow camera. The cheap first version is
+  a gentle height field OUTSIDE the road grid only - the green edge and the
+  country - which leaves every system that assumes flatness untouched, because
+  roads and buildings all sit inside the grid. That is probably the right first
+  step and it is worth doing on its own.
 
 - [x] ~~Power lines down the country roads.~~ DONE - `Assets/Noir/Unity/CityPowerlines.cs`, 394 poles and 284 spans down 18 roads. USED THE FARM SET, NOT THE CITY ONE: measuring both showed there are two internally-consistent pairs that must not be mixed, because the wire has to end where the pole does - `Pole_Electric_A_City` is 6.88m with its wire hanging 6.13-6.81, and `Pole_Electric_Old` is 7.37m with `Wire_20m_Tri` at 6.08-7.22. The old timber one belongs on a country road, and the note above only knew about the concrete city pair. Span is 20m because that is the wire's own measured length (z -20.02..0.18, drawn BACKWARD along -z), so a wire placed at a pole facing the previous one lands on both tops - not a spacing anybody picked. WHERE THEY GO IS ASKED, NOT DECLARED: each candidate spot asks the map what its ground is, and only grass, field or wood takes a pole, so the line stops itself where the fields stop rather than at a hardcoded town boundary that has already moved four times. Junctions exclude themselves for free (a crossing road's tile is Road, not grass) and so does anything inside a place, so no pole stands in a farmyard or a paddock. A wire is only hung when the previous spot also took a pole, so a line that reaches the edge of town ends cleanly instead of throwing a span across the gap. `country-poles.png` added to the CityShot set. MapAudit clean on all eight. — *2026-07-31*
 
 ## Roads
+
+- [ ] **Curved roads on the outer parts - the map is too square.** The pack HAS the
+  pieces: `Road_Turn_20x20_City`, `Road_Turn_Shift_20x20_City` (an S-bend), and
+  `Road_Dirt_A/B_Turn_20x20m` for lanes, all found and unused. The blocker is not
+  art, it is the lane graph. `RoadLine` already stores a POLYLINE (`Points`) and
+  computes `IsStraight` from it, so a bent road can be authored today - but
+  `LaneGraph` skips any line where `!IsStraight` (LaneGraph.cs:164) and junctions
+  only form between axis-aligned N-S and E-W straights (RoadNetwork.cs:195-200).
+  So a curved road would be DRAWN and carry no traffic and meet nothing. Work is:
+  lanes along a polyline, junction detection that is not axis-aligned, and
+  CityStreets walking the points to drop turn tiles at the corners. Worth doing
+  for the country lanes first, where the traffic is thinnest and the squareness
+  is most obvious. — *2026-08-01*
 
 - [x] ~~The outer city.~~ **BUILT.** Map 960 -> 1290, downtown 6x6 untouched, a suburb ring of 28
   cells, and 270m of country on every side. `Assets/Noir/Unity/CitySuburb.cs`: **272 houses, 179
