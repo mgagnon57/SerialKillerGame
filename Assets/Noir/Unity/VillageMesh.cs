@@ -41,18 +41,29 @@ namespace Noir.Unity
     /// </summary>
     public static class VillageMesh
     {
-        public static GameObject Build(WorldModel world, Transform parent)
+        /// <summary>
+        /// showDressing defaults true so nothing outside VillageHost/CityShot loses scenery it
+        /// never asked to drop. The ground is unconditional either way - a plan still needs
+        /// something under it to dim to near-black - but walls, furniture, props, roofs,
+        /// frontage planting and the farmland scatter are all statements about how the town was
+        /// BUILT, the same argument CityOutlines already makes for roads, and the plan draws
+        /// none of them.
+        /// </summary>
+        public static GameObject Build(WorldModel world, Transform parent, bool showDressing = true)
         {
             var root = new GameObject("Village");
             root.transform.SetParent(parent, false);
 
             BuildGround(world, root.transform);
-            BuildWalls(world, root.transform);
-            BuildFurniture(world, root.transform);
-            BuildProps(world, root.transform);
-            RoofBuilder.Build(world, root.transform);
-            Frontage.Build(world, root.transform);
-            Countryside.Build(world, root.transform);
+            if (showDressing)
+            {
+                BuildWalls(world, root.transform);
+                BuildFurniture(world, root.transform);
+                BuildProps(world, root.transform);
+                RoofBuilder.Build(world, root.transform);
+                Frontage.Build(world, root.transform);
+                Countryside.Build(world, root.transform);
+            }
 
             // Reported AFTER building, not before. Textures load lazily when the first
             // material asks for them, so reporting first always printed "0 loaded" whether

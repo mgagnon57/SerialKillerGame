@@ -112,6 +112,20 @@ namespace Noir.Unity
         }
 
         /// <summary>
+        /// The lamp posts, panes and glazing meshes - drawn or not, the lights behind them keep
+        /// running exactly as VillageHost.HideActors leaves the traffic and the people simulated.
+        /// A lamp post standing over an empty plan is the same complaint as a signal head over
+        /// an empty road corridor; this is that fix for the fixtures SunRig itself owns.
+        /// </summary>
+        public void HideFixtureRenderers()
+        {
+            if (_fixtures == null) return;
+            foreach (var r in _fixtures.Lanterns) if (r != null) r.enabled = false;
+            foreach (var r in _fixtures.Panes) if (r != null) r.enabled = false;
+            foreach (var r in _fixtures.Glazing) if (r != null) r.enabled = false;
+        }
+
+        /// <summary>
         /// A real sky and distance fog.
         ///
         /// Cheapest atmosphere in the project by a wide margin. A procedural skybox gives an

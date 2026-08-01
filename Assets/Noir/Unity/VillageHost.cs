@@ -177,7 +177,7 @@ namespace Noir.Unity
                 return;
             }
 
-            _village = VillageMesh.Build(World, transform);
+            _village = VillageMesh.Build(World, transform, ShowBuildings);
 
             // The ground, roads and props are still drawn by the village renderer; only the
             // BUILDINGS are bought models. Nothing happens here for a map that has no city
@@ -270,12 +270,6 @@ namespace Noir.Unity
             // laid is noise over the thing actually being looked at.
             if (ShowPeople) _agentView = AgentMeshView.Create(this, transform);
 
-            // AFTER the people exist, which is the whole of the bug this line used to have. It
-            // sat above CityTraffic.Create's block, where _agentView is still null - so it hid
-            // the vehicles and left a thousand rigged figures walking about on a survey drawing.
-            // Nothing failed and nothing logged; the plan simply had a crowd on it.
-            if (!ShowBuildings) HideActors();
-
             _rig = OrbitCamera.Create(this);
 
             // P drops you into the town at eye height with a body, and P again lifts you back
@@ -283,6 +277,13 @@ namespace Noir.Unity
             // street costs nothing to nobody who never asks for it.
             Player.Create(this, transform);
             _lighting = SunRig.Create(this, transform);
+
+            // AFTER the people AND the lights exist, which is the whole of the bug this line
+            // used to have. It sat above CityTraffic.Create's block, where _agentView was still
+            // null, and hid nothing of SunRig's lamp posts because SunRig did not exist yet
+            // either - so the plan had a crowd on it once, and lamp posts standing over an
+            // empty road corridor after that.
+            if (!ShowBuildings) HideActors();
 
             PostFx.Create(transform);
             PostFx.EnableOn(Camera.main);
@@ -377,6 +378,25 @@ namespace Noir.Unity
 
             foreach (var traffic in GetComponentsInChildren<CityTraffic>(true))
                 foreach (var r in traffic.GetComponentsInChildren<Renderer>(true)) { r.enabled = false; off++; }
+
+            // The signal heads and their posts. Simulated either way - the lights still cycle,
+            // which is what CityTraffic reads to decide who has right of way - but a lamp post
+            // standing over an empty road corridor is exactly the kind of thing this plan is
+            // supposed to have removed.
+            foreach (var signals in GetComponentsInChildren<CitySignals>(true))
+            {
+                foreach (var r in signals.GetComponentsInChildren<Renderer>(true)) { r.enabled = false; off++; }
+
+                // The "Lamp_Emission" point light at each head, for the pool of colour it throws
+                // on the tarmac - a renderer disables the mesh but not this, so the red and
+                // green pools kept glowing over an otherwise empty road corridor.
+                foreach (var light in signals.GetComponentsInChildren<Light>(true)) { light.enabled = false; off++; }
+            }
+
+            // Lamp posts, window panes and glazing - SunRig's own fixtures, which draw
+            // regardless of ShowBuildings because the night-lighting test needs them whether or
+            // not anybody is looking at a built town. A plan has no use for a lamp post.
+            if (_lighting != null) _lighting.HideFixtureRenderers();
 
             if (off == 0)
                 Debug.LogWarning("[plan] nothing was hidden - people and traffic will be drawn "

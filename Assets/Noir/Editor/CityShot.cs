@@ -55,7 +55,7 @@ namespace Noir.Editor
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
 
                 root = new GameObject("CityGround");
-                VillageMesh.Build(world, root.transform);
+                VillageMesh.Build(world, root.transform, showDressing: false);
                 CityOutlines.Build(world, root.transform,
                                    VillageHost.ShowPlanRoads, VillageHost.ShowPlanFootprints);
 
@@ -126,9 +126,12 @@ namespace Noir.Editor
                 foreach (var warning in report.Warnings) Debug.LogWarning("city.txt: " + warning);
 
                 // The ground, roads and props still come from the old renderer - only the
-                // BUILDINGS are bought models. That is the point of the slice.
+                // BUILDINGS are bought models. That is the point of the slice. Dressing off in
+                // plan mode for the same reason CityOutlines drops roads and footprints: trees,
+                // hedges and street furniture are scenery ON TOP of the thing a plan is meant to
+                // let you read.
                 root = new GameObject("CityGround");
-                VillageMesh.Build(world, root.transform);
+                VillageMesh.Build(world, root.transform, VillageHost.ShowBuildings);
 
                 city = new GameObject("CityAll");
                 if (VillageHost.ShowBuildings)
@@ -156,8 +159,10 @@ namespace Noir.Editor
 
                 // The lighting rig's own fixtures, exactly as Snapshot does it. Without these
                 // the still has no window panes, no lamps and no lit glass - which is to say it
-                // cannot show whether the night lighting works at all.
-                var fixtures = SunRig.BuildFixtures(world, city.transform);
+                // cannot show whether the night lighting works at all. Skipped on a plan: there
+                // are no walls for a window to sit in without ShowBuildings, and a lamp post is
+                // exactly the standing 3D clutter the plan is meant to have none of.
+                var fixtures = VillageHost.ShowBuildings ? SunRig.BuildFixtures(world, city.transform) : null;
                 var paneBlock = new MaterialPropertyBlock();
                 CityChunker.Bake(city);
 
@@ -173,6 +178,18 @@ namespace Noir.Editor
                 // worth taking to check.
                 var signals = CitySignals.Create(world, root.transform);
                 if (VillageHost.ShowBuildings) CityTraffic.Create(world, root.transform, signals);
+
+                // A signal head standing over an otherwise empty road corridor is exactly the
+                // kind of thing a plan is supposed to have removed - see VillageHost.HideActors,
+                // which does the same thing for the game itself. CityShot builds its own scene
+                // and never runs that method, so the still needs its own copy of the hide -
+                // renderers for the mesh, and the "Lamp_Emission" point lights too, or the red
+                // and green pools of colour keep glowing on the tarmac with nothing above them.
+                if (!VillageHost.ShowBuildings)
+                {
+                    foreach (var r in signals.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                    foreach (var l in signals.GetComponentsInChildren<Light>(true)) l.enabled = false;
+                }
 
                 if (pipeline != null) pipeline.shadowDistance = 320f;
 
@@ -218,8 +235,11 @@ namespace Noir.Editor
                 if (sky != null && sky.HasProperty("_Exposure"))
                     sky.SetFloat("_Exposure", Mathf.Lerp(0.18f, 1.15f, Mathf.Clamp01(intensity)));
 
-                Snapshot.LightUp(world, fixtures, paneBlock, hour, intensity);
-                fixtures.Lights.Reset();
+                if (fixtures != null)
+                {
+                    Snapshot.LightUp(world, fixtures, paneBlock, hour, intensity);
+                    fixtures.Lights.Reset();
+                }
 
                 // THE TOWN MOVED AND THESE DID NOT. Every camera below used to be aimed at the
                 // city when it sat in the map's north-west corner, so after Northgate was

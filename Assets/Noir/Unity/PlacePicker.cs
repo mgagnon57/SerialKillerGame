@@ -64,7 +64,52 @@ namespace Noir.Unity
             // ground. This is what catches everything the city renderer never built a model
             // for - Ashcombe's own buildings, and any place that is simply a patch of land.
             var ground = new Plane(Vector3.up, Vector3.zero);
-            return ground.Raycast(ray, out float enter) ? At(world, ray.GetPoint(enter)) : PlaceId.None;
+            if (!ground.Raycast(ray, out float enter)) return PlaceId.None;
+
+            var hit = ray.GetPoint(enter);
+            var direct = At(world, hit);
+            if (direct.IsValid) return direct;
+
+            // ON THE PLAN, THE VISIBLE LOT IS THE COUNTY PARCEL AND NOT THIS. A house's real
+            // frontage is 26m by 51m; the tile footprint WorldBuilder actually claimed for it -
+            // the synthetic block layout's own house, 11m by 7m - sits somewhere inside that
+            // real lot but rarely fills it. With the footprint rectangle no longer drawn (see
+            // CityOutlines' showFootprints flag), a click anywhere in the visible property that
+            // is not directly over that small claimed patch used to find nothing and open
+            // nothing, which reads as "clicking does not work" rather than "you missed by three
+            // metres". So a direct miss now widens into the nearest owned tile close by, which
+            // is what the plan's own visible boundary implies should be clickable.
+            return NearestOwned(world, hit);
+        }
+
+        /// <summary>How far off a direct hit is still "this property" rather than the empty
+        /// street beside it - a fraction of a typical Rossville lot, not the whole block.</summary>
+        private const float NearbyRadius = 18f;
+
+        private static PlaceId NearestOwned(WorldModel world, Vector3 hit)
+        {
+            int cx = Mathf.FloorToInt(hit.x), cy = Mathf.FloorToInt(-hit.z);
+            int r = Mathf.CeilToInt(NearbyRadius);
+
+            PlaceId best = PlaceId.None;
+            float bestDist = float.MaxValue;
+
+            for (int dy = -r; dy <= r; dy++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                int x = cx + dx, y = cy + dy;
+                if (x < 0 || y < 0 || x >= world.Width || y >= world.Height) continue;
+
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                if (dist > NearbyRadius || dist >= bestDist) continue;
+
+                var id = world.Grid.PlaceAt(x, y);
+                if (!id.IsValid) continue;
+
+                bestDist = dist;
+                best = id;
+            }
+            return best;
         }
 
         /// <summary>How high this place reaches. Open ground is a whisker above nothing.</summary>
