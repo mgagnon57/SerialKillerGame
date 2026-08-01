@@ -89,11 +89,14 @@ namespace Noir.Editor
                     CitySuburb.Build(world, city.transform);
                 }
 
-                CityStory.Build(world, city.transform);
-                CityRail.Build(world, city.transform);
-                CityFarm.Build(world, city.transform);
-                CityPowerlines.Build(world, city.transform);
-                CityGreenery.Build(world, city.transform);
+                if (VillageHost.ShowBuildings)
+                {
+                    CityStory.Build(world, city.transform);
+                    CityRail.Build(world, city.transform);
+                    CityFarm.Build(world, city.transform);
+                    CityPowerlines.Build(world, city.transform);
+                    CityGreenery.Build(world, city.transform);
+                }
 
                 // The lighting rig's own fixtures, exactly as Snapshot does it. Without these
                 // the still has no window panes, no lamps and no lit glass - which is to say it
@@ -111,7 +114,7 @@ namespace Noir.Editor
                 // the streets photograph empty - which is exactly the pair of things a still is
                 // worth taking to check.
                 var signals = CitySignals.Create(world, root.transform);
-                CityTraffic.Create(world, root.transform, signals);
+                if (VillageHost.ShowBuildings) CityTraffic.Create(world, root.transform, signals);
 
                 if (pipeline != null) pipeline.shadowDistance = 320f;
 

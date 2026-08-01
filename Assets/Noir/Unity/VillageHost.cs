@@ -204,11 +204,18 @@ namespace Noir.Unity
             // Built AFTER the bake and outside it, further down - CityChunker combines every
             // renderer under `city` into a handful of meshes and destroys the originals, and a
             // plan that has been merged into the terrain is a plan you cannot see.
-            CityStory.Build(World, city.transform);
-            CityRail.Build(World, city.transform);
-            CityFarm.Build(World, city.transform);
-            CityPowerlines.Build(World, city.transform);
-            CityGreenery.Build(World, city.transform);
+            // EVERYTHING THAT DRESSES THE TOWN comes out with the buildings. Trees, poles,
+            // farm clutter and the story props are all scenery, and scenery on a plan is
+            // scenery ON TOP OF the thing you are trying to read - a block of forty trees
+            // hides forty lot boundaries.
+            if (ShowBuildings)
+            {
+                CityStory.Build(World, city.transform);
+                CityRail.Build(World, city.transform);
+                CityFarm.Build(World, city.transform);
+                CityPowerlines.Build(World, city.transform);
+                CityGreenery.Build(World, city.transform);
+            }
 
             // BEFORE the bake, because it measures the buildings the bake is about to destroy,
             // and parented outside the node the bake touches so it survives. Nothing else in the
@@ -226,6 +233,18 @@ namespace Noir.Unity
 
             var signals = CitySignals.Create(World, transform);
             CityTraffic.Create(World, transform, signals);
+
+            // DRAWN OR NOT, THEY STILL EXIST. Gating CityTraffic.Create itself on the plan flag
+            // was the obvious way to keep cars off a survey drawing and it was wrong twice over:
+            // the flag is read inside Awake, so a test cannot set it in time and eight of the
+            // thirteen simply hung waiting for a CityTraffic that was never coming - and more
+            // importantly the traffic is a SIMULATION. Signals cycle, lanes are walked, jams
+            // happen, whether or not anybody is drawing a van.
+            //
+            // So everything is built exactly as it always was and the renderers are switched
+            // off. Same distinction ShowPeople has always drawn: simulated either way, this only
+            // decides whether they are on screen.
+            if (!ShowBuildings) HideActors();
             _xray = XRay.Create(World, _village);
 
             // The people are SIMULATED either way - Sim ticks, they go to work, windows light
@@ -315,6 +334,30 @@ namespace Noir.Unity
         }
 
         private int _speedBeforePause = 5;
+
+        /// <summary>
+        /// Turn off every renderer on the things that move, leaving them running underneath.
+        ///
+        /// Cheaper and far safer than not building them: a hidden car still drives its lane, is
+        /// still counted by the jam instrument, and still occupies the space in front of the car
+        /// behind it, so nothing about the town's behaviour changes when you switch the drawing
+        /// off. A plan is a way of LOOKING at Northgate, not a different Northgate.
+        /// </summary>
+        private void HideActors()
+        {
+            int off = 0;
+            foreach (var node in new[] { _agentView != null ? _agentView.gameObject : null,
+                                         GetComponentInChildren<CityTraffic>()?.gameObject })
+            {
+                if (node == null) continue;
+                foreach (var r in node.GetComponentsInChildren<Renderer>(true))
+                {
+                    r.enabled = false;
+                    off++;
+                }
+            }
+            Debug.Log($"[plan] {off} renderers hidden - people and traffic still running.");
+        }
 
         private void Update()
         {

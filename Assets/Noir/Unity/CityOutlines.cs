@@ -56,6 +56,9 @@ namespace Noir.Unity
             // ---- and the road corridors, in their own colour ----
             int roads = Roads(world, verts, cols, tris);
 
+            // ---- the railway, the water, the schools ----
+            int features = Features(verts, cols, tris);
+
             var kinds = PlaceKindTable.Current;
 
             foreach (var place in world.AllPlaces)
@@ -89,8 +92,69 @@ namespace Noir.Unity
             renderer.receiveShadows = false;
 
             Debug.Log($"[outlines] {parcels} county parcels, {roads} road corridors, "
-                    + $"{world.PlaceCount} places - {tris.Count / 3} triangles in one mesh.");
+                    + $"{features} named features, {world.PlaceCount} places - "
+                    + $"{tris.Count / 3} triangles in one mesh.");
             return go;
+        }
+
+        /// <summary>
+        /// The things that are neither a road nor a lot: the railway, the water, the schools.
+        ///
+        /// Content/features.txt, from OpenStreetMap. These are the landmarks somebody who grew up
+        /// in the place navigates BY - the CSX line down the east side, the North Fork Vermilion
+        /// out west, the ponds behind the school - and a plan without them is a grid of
+        /// rectangles that could be any town on the survey.
+        ///
+        /// Each is drawn heavier than a lot line and in its own colour, because they are the
+        /// features you should be able to find without looking for them.
+        /// </summary>
+        private static int Features(List<Vector3> verts, List<Color> cols, List<int> tris)
+        {
+            string text;
+            try { text = ContentLoader.Read("features.txt"); }
+            catch { return 0; }
+
+            int n = 0;
+            foreach (var raw in text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line[0] == '#') continue;
+
+                int gap = line.IndexOf(' ');
+                if (gap <= 0) continue;
+                string kind = line.Substring(0, gap);
+
+                var pts = new List<Vector2>();
+                foreach (var piece in line.Substring(gap).Split(' '))
+                {
+                    int comma = piece.IndexOf(',');
+                    if (comma <= 0) continue;
+                    if (float.TryParse(piece.Substring(0, comma), System.Globalization.NumberStyles.Float,
+                                       System.Globalization.CultureInfo.InvariantCulture, out float x)
+                     && float.TryParse(piece.Substring(comma + 1), System.Globalization.NumberStyles.Float,
+                                       System.Globalization.CultureInfo.InvariantCulture, out float y))
+                        pts.Add(new Vector2(x, y));
+                }
+                if (pts.Count < 2) continue;
+
+                (Color colour, float weight, bool closed) = kind switch
+                {
+                    "rail"    => (new Color(1.00f, 0.95f, 0.80f), 2.6f, false),   // the CSX line
+                    "oldrail" => (new Color(0.62f, 0.58f, 0.48f), 1.6f, false),   // lifted, still a scar
+                    "river"   => (new Color(0.30f, 0.60f, 1.00f), 3.0f, false),
+                    "stream"  => (new Color(0.32f, 0.66f, 0.98f), 2.0f, false),
+                    "ditch"   => (new Color(0.28f, 0.50f, 0.78f), 1.2f, false),
+                    "water"   => (new Color(0.35f, 0.72f, 1.00f), 2.0f, true),    // the ponds
+                    "school"  => (new Color(0.95f, 0.45f, 0.85f), 2.4f, true),
+                    _         => (Color.gray, 1f, false),
+                };
+
+                int last = closed ? pts.Count : pts.Count - 1;
+                for (int i = 0; i < last; i++)
+                    Edge(verts, cols, tris, pts[i], pts[(i + 1) % pts.Count], colour, Stroke * weight);
+                n++;
+            }
+            return n;
         }
 
         /// <summary>

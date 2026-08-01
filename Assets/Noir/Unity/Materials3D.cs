@@ -32,6 +32,43 @@ namespace Noir.Unity
         private static Shader LitShader =>
             Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
 
+        /// <summary>
+        /// How far the ground is taken towards black when the town is drawn as a plan.
+        ///
+        /// A plan is read off its LINES, and a line has to win against what is behind it. Against
+        /// the ordinary daylight palette - 0x8E grass, 0xB0 field - a chalk lot boundary is one
+        /// pale thing on another and the whole drawing turns to mush at any distance. Taken down
+        /// to a tenth, the ground becomes the paper and the colours become the drawing.
+        ///
+        /// Not pure black: the terrain kinds still have to be told apart, so grass stays greener
+        /// than field and water stays blue. It is a night-vision version of the same palette
+        /// rather than a different one.
+        /// </summary>
+        private const float PlanGround = 0.11f;
+
+        /// <summary>
+        /// Take a ground material down to plan brightness, AFTER its texture has been applied.
+        ///
+        /// It has to be after, and that is the whole subtlety: SurfaceTextures.Apply sets
+        /// _BaseColor to WHITE so the texture carries the colour on its own. Dimming inside
+        /// Make - which is the obvious place, and where this was first written - is therefore
+        /// wiped one line later by the texture, and the ground comes out full daylight green
+        /// while every constant says it should be nearly black.
+        ///
+        /// (Which also means the comment beside that Apply call is wrong: the palette does NOT
+        /// still govern the look once a texture loads. Left alone here; it is a separate thing.)
+        /// </summary>
+        private static Material Plan(Material m)
+        {
+            if (VillageHost.ShowBuildings || m == null) return m;
+
+            var dim = new Color(PlanGround, PlanGround, PlanGround, 1f);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", dim);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", dim);
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            return m;
+        }
+
         private static Material Make(string name, Color colour, float smoothness, float metallic = 0f)
         {
             var m = new Material(LitShader) { name = name };
@@ -68,6 +105,7 @@ namespace Noir.Unity
             // A texture multiplies the base colour, so the palette above still governs the look
             // and a greyscale or bought texture set inherits it rather than fighting it.
             SurfaceTextures.Apply(m, texture);
+            Plan(m);
 
             _byTerrain[t] = m;
             return m;
@@ -89,6 +127,7 @@ namespace Noir.Unity
                 if (_pasture != null) return _pasture;
                 _pasture = Make("Pasture", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f);
                 SurfaceTextures.Apply(_pasture, "grass", 21f);
+                Plan(_pasture);
                 return _pasture;
             }
         }
