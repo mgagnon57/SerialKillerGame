@@ -1,0 +1,19 @@
+{
+    "name": "Noir.Core.Witness",
+    "rootNamespace": "Noir.Core.Witness",
+    "references": [
+        "Noir.Core.Contracts",
+        "Noir.Core.World",
+        "Noir.Core.People",
+        "Noir.Core.Observation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
