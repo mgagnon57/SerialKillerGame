@@ -218,7 +218,11 @@ namespace Noir.Unity
             try { text = ContentLoader.Read("parcels.txt"); }
             catch { Debug.LogWarning("[outlines] no Content/parcels.txt - lot lines are missing."); return 0; }
 
-            var lot = new Color(0.94f, 0.95f, 0.98f);      // chalk, and it has to read at 500m
+            // Pale rather than chalk-white: at full brightness a lot line reads exactly as
+            // strongly as the cyan road corridors, and the eye has nothing to sort first from
+            // second. Dimmed so the roads - the skeleton the property lines hang off - are what
+            // you see before you see anything else.
+            var lot = new Color(0.55f, 0.56f, 0.60f);
             int n = 0;
 
             foreach (var raw in text.Split('\n'))
@@ -342,8 +346,11 @@ namespace Noir.Unity
                     return new Color(0.45f, 0.85f, 0.45f);      // land - green
             }
 
-            return home ? new Color(1.00f, 0.98f, 0.92f)        // somebody lives here - chalk
-                        : new Color(0.70f, 0.70f, 0.74f);       // everything else - grey
+            // Homes still read a touch brighter than a bare lot line - that is the one thing
+            // this tier of the palette needs to say - but dimmed to match the county parcels
+            // below, so the two together sit under the road cyan rather than over it.
+            return home ? new Color(0.74f, 0.72f, 0.66f)        // somebody lives here - warm pale
+                        : new Color(0.52f, 0.52f, 0.55f);       // everything else - dim grey
         }
 
         /// <summary>

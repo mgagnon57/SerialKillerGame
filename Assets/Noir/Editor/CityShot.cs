@@ -38,6 +38,61 @@ namespace Noir.Editor
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "..", "docs", "snapshots"));
 
+        /// <summary>
+        /// Straight down, orthographic, the whole map in one frame - no perspective to make an
+        /// aligned grid look skewed or a skewed one look aligned. This is the shot to audit the
+        /// plan by; the angled cameras below are for atmosphere, not for measuring against.
+        /// </summary>
+        [MenuItem("Noir/Render Plan (top-down, orthographic)")]
+        public static void RenderPlanTopDown()
+        {
+            GameObject root = null, camGo = null;
+            try
+            {
+                Directory.CreateDirectory(OutputDir);
+                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
+                var layout = VillageParser.Parse(ContentLoader.Read("city.txt"));
+                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+
+                root = new GameObject("CityGround");
+                VillageMesh.Build(world, root.transform);
+                CityOutlines.Build(world, root.transform);
+
+                camGo = new GameObject("PlanCam");
+                var cam = camGo.AddComponent<Camera>();
+                cam.orthographic = true;
+                cam.orthographicSize = Mathf.Max(world.Width, world.Height) / 2f + 20f;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = Color.black;
+                cam.nearClipPlane = 1f;
+                cam.farClipPlane = 5000f;
+                camGo.transform.position = new Vector3(world.Width / 2f, 500f, -world.Height / 2f);
+                camGo.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+                var rt = new RenderTexture(2048, 2048, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
+                cam.targetTexture = rt;
+                cam.Render();
+                RenderTexture.active = rt;
+                var shot = new Texture2D(2048, 2048, TextureFormat.RGB24, false);
+                shot.ReadPixels(new Rect(0, 0, 2048, 2048), 0, 0);
+                shot.Apply();
+                File.WriteAllBytes(Path.Combine(OutputDir, "plan-top-down.png"), shot.EncodeToPNG());
+                cam.targetTexture = null;
+                RenderTexture.active = null;
+                UnityEngine.Object.DestroyImmediate(shot);
+                rt.Release();
+                UnityEngine.Object.DestroyImmediate(rt);
+                Debug.Log("[cityshot] wrote plan-top-down.png");
+            }
+            catch (Exception ex) { Debug.LogError("[cityshot] plan top-down FAILED: " + ex); }
+            finally
+            {
+                if (root != null) UnityEngine.Object.DestroyImmediate(root);
+                if (camGo != null) UnityEngine.Object.DestroyImmediate(camGo);
+            }
+            if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
         [MenuItem("Noir/Render City Block")]
         public static void Render()
         {
