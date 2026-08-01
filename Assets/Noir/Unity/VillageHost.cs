@@ -56,6 +56,10 @@ namespace Noir.Unity
         /// </summary>
         public ParcelIndex.Parcel? SelectedParcel { get; set; }
 
+        /// <summary>Null outside plan mode - there is nothing to draw a house shape onto when
+        /// the real building models are up. See VillageHost.Awake.</summary>
+        public FootprintDrawer Footprint { get; private set; }
+
         /// <summary>
         /// One seed for the whole village. It was previously written as two separate literals -
         /// one for the population, one for the simulation - which meant a typo in either would
@@ -263,6 +267,12 @@ namespace Noir.Unity
                 // The one thing a baked mesh cannot do for itself - a selection changes on
                 // every click, and CityOutlines is built once and frozen.
                 SelectionHighlight.Create(this, transform);
+
+                // What somebody who grew up here can add: who lived on a lot, and the shape of
+                // the house if they can still picture it. AuthoredFootprints shows every one
+                // that has been drawn; Footprint is the pen for drawing the next.
+                AuthoredFootprints.Create(transform);
+                Footprint = FootprintDrawer.Create(transform);
             }
 
             var signals = CitySignals.Create(World, transform);

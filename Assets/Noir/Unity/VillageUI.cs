@@ -24,6 +24,10 @@ namespace Noir.Unity
         private Vector2 _scroll;
         private bool _showPlan = true;
 
+        // ---- the note editor, shared by the place panel and the bare-parcel panel ----
+        private int _noteDraftFor = int.MinValue;
+        private string _noteDraft = "";
+
         private const float PanelWidth = 340f;
         private const float BarHeight = 48f;
 
@@ -304,11 +308,203 @@ namespace Noir.Unity
             if (place.JobSlots > 0)
                 GUILayout.Label($"<color=#8a8a86>{place.JobSlots} job slots</color>", _small);
 
+            int parcelId = ParcelIndex.FindFor(place)?.Id ?? -1;
+            DrawNoteEditor(parcelId);
+
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
                 _host.SelectedPlace = PlaceId.None;
 
             GUILayout.EndArea();
+        }
+
+        /// <summary>
+        /// Who lived on a lot, how many of them, what they were like, and the house shape if it
+        /// is still clear in memory - everything the county's own data cannot know. Shared by the
+        /// place panel and the bare-parcel panel, keyed to the real parcel under either. See
+        /// ParcelNotes for why an address is not what this is filed under, and for the file
+        /// format a saved household is written as.
+        /// </summary>
+        private int _editingNoteFor = int.MinValue;
+        private string _draftCharacter = "", _draftNames = "";
+        private int _draftAdults, _draftKids;
+
+        private void DrawNoteEditor(int parcelId)
+        {
+            if (parcelId < 0) return;
+            GUILayout.Space(10);
+
+            var drawer = _host.Footprint;
+            bool drawingHere = drawer != null && drawer.Active && drawer.TargetParcelId == parcelId;
+            var saved = ParcelNotes.For(parcelId);
+            bool editing = _editingNoteFor == parcelId;
+
+            GUILayout.Label("<color=#8a8a86>household</color>", _small);
+
+            if (!editing)
+            {
+                if (saved == null || (saved.Adults == 0 && saved.Kids == 0
+                                       && string.IsNullOrWhiteSpace(saved.Names)))
+                {
+                    GUILayout.Label("<color=#75736e>nobody on file</color>", _label);
+                }
+                else
+                {
+                    GUILayout.Label(HouseholdSummary(saved.Adults, saved.Kids), _label);
+                    if (!string.IsNullOrWhiteSpace(saved.Names))
+                        GUILayout.Label($"<color=#8a8a86>{saved.Names.Replace("\n", ", ")}</color>", _small);
+                }
+                if (saved != null && !string.IsNullOrWhiteSpace(saved.Character))
+                {
+                    GUILayout.Space(4);
+                    GUILayout.Label(saved.Character, _label);
+                }
+
+                GUILayout.Space(4);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("edit", _button, GUILayout.Width(70), GUILayout.Height(24)))
+                {
+                    _editingNoteFor = parcelId;
+                    _draftAdults = saved?.Adults ?? 0;
+                    _draftKids = saved?.Kids ?? 0;
+                    _draftNames = saved?.Names ?? "";
+                    _draftCharacter = saved?.Character ?? "";
+                }
+                if (GUILayout.Button("randomize", _button, GUILayout.Width(90), GUILayout.Height(24)))
+                {
+                    RandomizeHousehold(out _draftAdults, out _draftKids, out _draftNames, out _draftCharacter);
+                    ParcelNotes.Save(parcelId, new ParcelNotes.Note
+                    {
+                        Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
+                        Character = _draftCharacter, Footprint = saved?.Footprint
+                    });
+                }
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("adults", _small, GUILayout.Width(50));
+                if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftAdults = Mathf.Max(0, _draftAdults - 1);
+                GUILayout.Label(_draftAdults.ToString(), _label, GUILayout.Width(20));
+                if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftAdults++;
+                GUILayout.Space(10);
+                GUILayout.Label("kids", _small, GUILayout.Width(34));
+                if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftKids = Mathf.Max(0, _draftKids - 1);
+                GUILayout.Label(_draftKids.ToString(), _label, GUILayout.Width(20));
+                if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftKids++;
+                GUILayout.EndHorizontal();
+
+                GUILayout.Space(4);
+                GUILayout.Label("<color=#8a8a86>names, one per line</color>", _small);
+                _draftNames = GUILayout.TextArea(_draftNames, GUILayout.Height(50));
+
+                GUILayout.Space(4);
+                GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
+                _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(60));
+
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("save", _button, GUILayout.Height(24)))
+                {
+                    ParcelNotes.Save(parcelId, new ParcelNotes.Note
+                    {
+                        Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
+                        Character = _draftCharacter, Footprint = saved?.Footprint
+                    });
+                    _editingNoteFor = int.MinValue;
+                }
+                if (GUILayout.Button("randomize", _button, GUILayout.Height(24)))
+                    RandomizeHousehold(out _draftAdults, out _draftKids, out _draftNames, out _draftCharacter);
+                if (GUILayout.Button("cancel", _button, GUILayout.Height(24)))
+                    _editingNoteFor = int.MinValue;
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.Space(6);
+
+            if (!drawingHere)
+            {
+                bool hasShape = saved?.Footprint != null;
+                if (GUILayout.Button(hasShape ? "redraw house" : "draw house", _button, GUILayout.Height(24)))
+                    drawer?.Begin(parcelId, saved?.Footprint);
+            }
+            else
+            {
+                GUILayout.Label($"<color=#c9b98a>drawing - click the ground to place a corner "
+                               + $"({drawer.Points.Count} so far)</color>", _small);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("undo point", _button, GUILayout.Height(24)))
+                    drawer.UndoLast();
+                if (GUILayout.Button("finish", _button, GUILayout.Height(24)))
+                    drawer.Finish(parcelId);
+                if (GUILayout.Button("cancel", _button, GUILayout.Height(24)))
+                    drawer.Cancel();
+                GUILayout.EndHorizontal();
+            }
+        }
+
+        private static string HouseholdSummary(int adults, int kids)
+        {
+            if (adults == 0 && kids == 0) return "<color=#75736e>nobody on file</color>";
+            string a = adults == 1 ? "1 adult" : $"{adults} adults";
+            if (kids == 0) return a;
+            string k = kids == 1 ? "1 kid" : $"{kids} kids";
+            return $"{a}, {k}";
+        }
+
+        private static NameTable _names;
+
+        /// <summary>
+        /// A plausible household for a lot nobody remembers, using the same names.txt and
+        /// particulars.txt every generated citizen already draws from - a randomized family
+        /// should read as one more Rossville household, not as a different kind of content.
+        /// </summary>
+        private void RandomizeHousehold(out int adults, out int kids, out string names, out string character)
+        {
+            if (_names == null)
+            {
+                try { _names = NameTable.Parse(ContentLoader.Read("names.txt")); }
+                catch { _names = null; }
+            }
+
+            var rng = new System.Random();
+            adults = rng.NextDouble() < 0.3 ? 1 : 2;
+            double kidRoll = rng.NextDouble();
+            kids = kidRoll < 0.4 ? 0 : kidRoll < 0.7 ? 1 : kidRoll < 0.9 ? 2 : 3;
+
+            var lines = new System.Collections.Generic.List<string>();
+            character = "";
+            if (_names != null && _names.Surnames.Count > 0
+                && _names.Male.Count > 0 && _names.Female.Count > 0)
+            {
+                string surname = _names.Surnames[rng.Next(_names.Surnames.Count)];
+                string headFirst = null;
+                bool headIsMale = rng.NextDouble() < 0.5;
+                for (int i = 0; i < adults; i++)
+                {
+                    // The second adult is the opposite sex of the first - not a rule this town
+                    // enforces elsewhere, just the common case for a randomized guess.
+                    bool male = i == 0 ? headIsMale : !headIsMale;
+                    string first = male ? _names.Male[rng.Next(_names.Male.Count)]
+                                        : _names.Female[rng.Next(_names.Female.Count)];
+                    if (i == 0) headFirst = first;
+                    lines.Add($"{first} {surname}");
+                }
+                for (int i = 0; i < kids; i++)
+                {
+                    string first = rng.NextDouble() < 0.5
+                        ? _names.Male[rng.Next(_names.Male.Count)]
+                        : _names.Female[rng.Next(_names.Female.Count)];
+                    lines.Add($"{first} {surname}");
+                }
+
+                if (_host?.Particulars != null && _host.Particulars.Count > 0 && lines.Count > 0)
+                {
+                    int idx = rng.Next(_host.Particulars.Count);
+                    character = _host.Particulars.Sentence(headFirst ?? lines[0].Split(' ')[0], idx);
+                }
+            }
+            names = string.Join("\n", lines);
         }
 
         /// <summary>
@@ -326,13 +522,18 @@ namespace Noir.Unity
 
             float wFt = parcel.Bounds.width * MetresToFeet;
             float hFt = parcel.Bounds.height * MetresToFeet;
+            var centre = new Vector2(parcel.Bounds.x + parcel.Bounds.width / 2f,
+                                     parcel.Bounds.y + parcel.Bounds.height / 2f);
+            string approx = StreetAddressing.Estimate(_host.World, centre);
 
-            GUILayout.Label("Undeveloped lot", _title);
-            GUILayout.Label($"no address on file   ·   {Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft",
-                            _small);
+            GUILayout.Label(approx ?? "Undeveloped lot", _title);
+            GUILayout.Label($"{(approx != null ? "no house built" : "no address on file")}   ·   "
+                          + $"{Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft", _small);
             GUILayout.Space(10);
             GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "
                            + "built on it.</color>", _label);
+
+            DrawNoteEditor(parcel.Id);
 
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
@@ -356,8 +557,7 @@ namespace Noir.Unity
         private static string LotSize(Place place)
         {
             var b = place.Bounds;
-            var centre = new Vector2(b.X + b.W / 2f, b.Y + b.H / 2f);
-            var parcel = ParcelIndex.Find(centre);
+            var parcel = ParcelIndex.FindFor(place);
 
             float wFt, hFt;
             string what;
