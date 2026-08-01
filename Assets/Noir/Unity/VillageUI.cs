@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -328,6 +329,10 @@ namespace Noir.Unity
         private int _editingNoteFor = int.MinValue;
         private string _draftCharacter = "", _draftNames = "";
         private int _draftAdults, _draftKids;
+        private ParcelNotes.Zoning _draftZoning;
+        private ParcelNotes.HousingType _draftHousing;
+        private int _draftStories;
+        private bool _draftBasement;
 
         private void DrawNoteEditor(int parcelId)
         {
@@ -360,6 +365,20 @@ namespace Noir.Unity
                     GUILayout.Label(saved.Character, _label);
                 }
 
+                if (saved != null && (saved.Zoning != ParcelNotes.Zoning.Unset || saved.Stories != 0
+                                       || saved.Basement || saved.Housing != ParcelNotes.HousingType.Unset))
+                {
+                    GUILayout.Space(6);
+                    var bits = new List<string> { Pretty(saved.Zoning) };
+                    if (saved.Zoning == ParcelNotes.Zoning.Residential
+                        && saved.Housing != ParcelNotes.HousingType.Unset)
+                        bits.Add(Pretty(saved.Housing));
+                    if (saved.Stories > 0)
+                        bits.Add(saved.Stories == 1 ? "1 story" : $"{saved.Stories} stories");
+                    if (saved.Basement) bits.Add("basement");
+                    GUILayout.Label($"<color=#8a8a86>{string.Join(" · ", bits)}</color>", _small);
+                }
+
                 GUILayout.Space(4);
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("edit", _button, GUILayout.Width(70), GUILayout.Height(24)))
@@ -369,6 +388,10 @@ namespace Noir.Unity
                     _draftKids = saved?.Kids ?? 0;
                     _draftNames = saved?.Names ?? "";
                     _draftCharacter = saved?.Character ?? "";
+                    _draftZoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset;
+                    _draftHousing = saved?.Housing ?? ParcelNotes.HousingType.Unset;
+                    _draftStories = saved?.Stories ?? 0;
+                    _draftBasement = saved?.Basement ?? false;
                 }
                 if (GUILayout.Button("randomize", _button, GUILayout.Width(90), GUILayout.Height(24)))
                 {
@@ -376,7 +399,10 @@ namespace Noir.Unity
                     ParcelNotes.Save(parcelId, new ParcelNotes.Note
                     {
                         Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
-                        Character = _draftCharacter, Footprint = saved?.Footprint
+                        Character = _draftCharacter, Footprint = saved?.Footprint,
+                        Zoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset,
+                        Housing = saved?.Housing ?? ParcelNotes.HousingType.Unset,
+                        Stories = saved?.Stories ?? 0, Basement = saved?.Basement ?? false
                     });
                 }
                 GUILayout.EndHorizontal();
@@ -403,13 +429,39 @@ namespace Noir.Unity
                 GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
                 _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(60));
 
+                GUILayout.Space(8);
+                GUILayout.Label("<color=#8a8a86>zoning</color>", _small);
+                if (GUILayout.Button(Pretty(_draftZoning), _button, GUILayout.Height(24)))
+                    _draftZoning = Cycle(_draftZoning);
+
+                GUILayout.Space(4);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("stories", _small, GUILayout.Width(50));
+                if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftStories = Mathf.Max(0, _draftStories - 1);
+                GUILayout.Label(_draftStories.ToString(), _label, GUILayout.Width(20));
+                if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftStories++;
+                GUILayout.Space(10);
+                if (GUILayout.Button(_draftBasement ? "basement: yes" : "basement: no", _button))
+                    _draftBasement = !_draftBasement;
+                GUILayout.EndHorizontal();
+
+                if (_draftZoning == ParcelNotes.Zoning.Residential)
+                {
+                    GUILayout.Space(4);
+                    GUILayout.Label("<color=#8a8a86>housing type</color>", _small);
+                    if (GUILayout.Button(Pretty(_draftHousing), _button, GUILayout.Height(24)))
+                        _draftHousing = Cycle(_draftHousing);
+                }
+
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("save", _button, GUILayout.Height(24)))
                 {
                     ParcelNotes.Save(parcelId, new ParcelNotes.Note
                     {
                         Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
-                        Character = _draftCharacter, Footprint = saved?.Footprint
+                        Character = _draftCharacter, Footprint = saved?.Footprint,
+                        Zoning = _draftZoning, Housing = _draftHousing,
+                        Stories = _draftStories, Basement = _draftBasement
                     });
                     _editingNoteFor = int.MinValue;
                 }
@@ -440,6 +492,42 @@ namespace Noir.Unity
                 if (GUILayout.Button("cancel", _button, GUILayout.Height(24)))
                     drawer.Cancel();
                 GUILayout.EndHorizontal();
+            }
+        }
+
+        /// <summary>Steps an enum's field on to its next value, wrapping round - a click-to-cycle
+        /// button in place of a dropdown IMGUI does not have. Unset is always index 0, so cycling
+        /// all the way round doubles as a way to clear the field.</summary>
+        private static T Cycle<T>(T current) where T : struct, System.Enum
+        {
+            var values = (T[])System.Enum.GetValues(typeof(T));
+            int idx = System.Array.IndexOf(values, current);
+            return values[(idx + 1) % values.Length];
+        }
+
+        private static string Pretty(ParcelNotes.Zoning z)
+        {
+            switch (z)
+            {
+                case ParcelNotes.Zoning.Residential: return "residential";
+                case ParcelNotes.Zoning.Commercial: return "commercial";
+                case ParcelNotes.Zoning.Industrial: return "industrial";
+                case ParcelNotes.Zoning.Civic: return "civic";
+                case ParcelNotes.Zoning.Agricultural: return "agricultural";
+                case ParcelNotes.Zoning.Vacant: return "vacant";
+                default: return "not zoned";
+            }
+        }
+
+        private static string Pretty(ParcelNotes.HousingType h)
+        {
+            switch (h)
+            {
+                case ParcelNotes.HousingType.SingleFamily: return "single-family";
+                case ParcelNotes.HousingType.Duplex: return "duplex";
+                case ParcelNotes.HousingType.Apartment: return "apartment";
+                case ParcelNotes.HousingType.ApartmentComplex: return "apartment complex";
+                default: return "unspecified";
             }
         }
 

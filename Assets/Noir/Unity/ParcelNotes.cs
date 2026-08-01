@@ -8,10 +8,12 @@ namespace Noir.Unity
 {
     /// <summary>
     /// What a person knows about a real parcel that the county's own data cannot: who lived
-    /// there, how many of them, what they were like, and the shape of the house if it's still
-    /// clear in memory. Keyed by ParcelIndex's stable per-parcel Id rather than by address - most
-    /// of these 794 lots have no address at all, and the whole point is that somebody who grew up
-    /// here knows who lived on a lot whether or not it was ever numbered.
+    /// there, how many of them, what they were like, the shape of the house if it's still clear
+    /// in memory, and what the lot itself is - zoned residential or otherwise, how many stories,
+    /// a basement or not, and for a house, what form it takes. Keyed by ParcelIndex's stable
+    /// per-parcel Id rather than by address - most of these 794 lots have no address at all, and
+    /// the whole point is that somebody who grew up here knows who lived on a lot whether or not
+    /// it was ever numbered.
     ///
     /// Content/parcel-notes.txt is the one Content file this project writes to at runtime rather
     /// than only reading - hand-editable like every other, but also a save file. Rewritten whole
@@ -20,6 +22,16 @@ namespace Noir.Unity
     /// </summary>
     public static class ParcelNotes
     {
+        /// <summary>What the lot is zoned for. Independent of whether a Place was ever generated
+        /// on it - most of Rossville's 794 parcels never got one, and a lot can be categorized
+        /// long before (or without) anything being built there.</summary>
+        public enum Zoning { Unset, Residential, Commercial, Industrial, Civic, Agricultural, Vacant }
+
+        /// <summary>The housing FORM, distinct from how tall it is or whether it has a basement
+        /// - those are Stories/Basement below, and apply to any zoning, not just this one. Only
+        /// meaningful when Zoning is Residential.</summary>
+        public enum HousingType { Unset, SingleFamily, Duplex, Apartment, ApartmentComplex }
+
         public sealed class Note
         {
             /// <summary>What the family is like - the seed for behaviour, not just flavour text.
@@ -36,6 +48,16 @@ namespace Noir.Unity
             public string Names = "";
 
             public Vector2[] Footprint;    // null if nobody has drawn one
+
+            /// <summary>What kind of plot this is, and - for Residential - what form the housing
+            /// takes. See Zoning and HousingType above.</summary>
+            public Zoning Zoning;
+            public HousingType Housing;
+
+            /// <summary>0 means not recorded, not "no stories" - a real building always has at
+            /// least one.</summary>
+            public int Stories;
+            public bool Basement;
         }
 
         private static Dictionary<int, Note> _byId;
@@ -59,6 +81,8 @@ namespace Noir.Unity
                       || (string.IsNullOrWhiteSpace(note.Character)
                        && string.IsNullOrWhiteSpace(note.Names)
                        && note.Adults == 0 && note.Kids == 0
+                       && note.Zoning == Zoning.Unset && note.Housing == HousingType.Unset
+                       && note.Stories == 0 && !note.Basement
                        && (note.Footprint == null || note.Footprint.Length < 3));
 
             if (empty) _byId.Remove(parcelId);
@@ -111,6 +135,20 @@ namespace Noir.Unity
                         note.Kids = k;
                     }
                 }
+                else if (rest.StartsWith("zoning "))
+                {
+                    if (System.Enum.TryParse(rest.Substring(7), true, out Zoning z)) note.Zoning = z;
+                }
+                else if (rest.StartsWith("building "))
+                {
+                    var nums = rest.Substring(9).Split(' ');
+                    if (nums.Length >= 3 && int.TryParse(nums[0], out int st))
+                    {
+                        note.Stories = st;
+                        note.Basement = nums[1] == "1";
+                        if (System.Enum.TryParse(nums[2], true, out HousingType h)) note.Housing = h;
+                    }
+                }
                 else if (rest.StartsWith("shape "))
                 {
                     var pts = new List<Vector2>();
@@ -133,8 +171,8 @@ namespace Noir.Unity
         {
             var sb = new StringBuilder();
             sb.AppendLine("# ============================================================================");
-            sb.AppendLine("#  AUTHORED PARCEL NOTES - who lived here, the household, and the house shape");
-            sb.AppendLine("#  if it's known.");
+            sb.AppendLine("#  AUTHORED PARCEL NOTES - who lived here, the household, the house shape if");
+            sb.AppendLine("#  it's known, and what the lot is - zoning, stories, basement, housing type.");
             sb.AppendLine("#");
             sb.AppendLine("#  Keyed by parcel id, which is that parcel's line number in parcels.txt (0-");
             sb.AppendLine("#  based, comments and blanks not counted) - NOT an address, because most of");
@@ -157,6 +195,11 @@ namespace Noir.Unity
                     sb.AppendLine($"parcel {id} household {note.Adults} {note.Kids}");
                 if (!string.IsNullOrWhiteSpace(note.Names))
                     sb.AppendLine($"parcel {id} names \"{Quote(note.Names.Replace("\n", "|"))}\"");
+                if (note.Zoning != Zoning.Unset)
+                    sb.AppendLine($"parcel {id} zoning {note.Zoning.ToString().ToLowerInvariant()}");
+                if (note.Stories != 0 || note.Basement || note.Housing != HousingType.Unset)
+                    sb.AppendLine($"parcel {id} building {note.Stories} {(note.Basement ? 1 : 0)} "
+                                + $"{note.Housing.ToString().ToLowerInvariant()}");
                 if (note.Footprint != null && note.Footprint.Length >= 3)
                 {
                     sb.Append($"parcel {id} shape");
