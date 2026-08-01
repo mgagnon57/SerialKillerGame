@@ -648,6 +648,46 @@ kind newsstand
   catchment no
   describe  yes
 
+# The water tower. THE thing you see before you see the town - a village's name is
+# painted on one of these and it is visible from the section road two miles out,
+# which is exactly the job a downtown skyscraper was doing badly.
+#
+# Open rather than building: it is a tank on four legs, nobody works in it, and
+# giving it rooms would have the interior generator lay out a kitchen in the sky.
+kind watertower
+  words     watertower tower_water
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+# The grain elevator, which is the other thing on the skyline and the reason the
+# railway came. Open ground with the bins standing on it.
+kind elevator
+  words     elevator grainelevator
+  form      open
+  ground    path
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     06:00-18:00
+  jobs      4
+  roles     clerk
+  shifts    one
+  catchment no
+  describe  yes
+
 kind tower
   words     tower highrise
   form      building

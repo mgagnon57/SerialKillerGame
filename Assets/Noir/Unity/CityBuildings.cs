@@ -117,6 +117,17 @@ namespace Noir.Unity
                     "newsstand"   => Whole + "Newspaper_Shop_City.prefab",
                     "tower"       => Skyscraper(place.Bounds),
 
+                    // The two things on a village skyline, and the FARM tower is the right one
+                    // however wrong that sounds. `Water_Tower_City` lives under Props City/Roof
+                    // Props and is a tank that sits ON a roof - a few metres of cistern, which
+                    // is a city thing. `Tower_Water_Farm` is the tank on four legs standing in
+                    // its own ground, which is what a village puts its name on and what you see
+                    // from the section road two miles out. Measured by where the pack files
+                    // them, not by what they are called.
+                    "watertower"  => Land + "Tower_Water_Farm.prefab",
+                    "elevator"    => BestFit(Land, new[]
+                                     { "Silo_Grain_New", "Silo_Grain_Old" }, place.Bounds),
+
                     // The country. `farm` is the kind Ashcombe already had, so the farmhouse
                     // needs no new row in the table - only a model.
                     "farm"        => Land + "House_Farm_British.prefab",
@@ -183,6 +194,7 @@ namespace Noir.Unity
                 case "firestation": case "cinema": case "bank": case "casino":
                 case "gasstation": case "icecream": case "carwash":
                 case "restroom": case "newsstand": case "tower":
+                case "watertower": case "elevator":
                 case "farm": case "barn": case "silo":
                     return true;
                 default:

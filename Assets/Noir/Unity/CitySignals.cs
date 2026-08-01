@@ -257,7 +257,22 @@ namespace Noir.Unity
             for (int i = 0; i < world.Roads.Junctions.Count; i++)
             {
                 var j = world.Roads.Junctions[i];
-                bool town = InTheTown(world, j);
+
+                // A LIGHT WHERE TWO MAIN ROADS CROSS, AND A STOP SIGN EVERYWHERE ELSE.
+                //
+                // "In the town" on its own is the rule for a downtown grid, and it is the wrong
+                // rule for a village: it signalises every corner whose diagonal happens to hold
+                // a shopfront, so a place with one junction that deserves lights got eight. A
+                // village has ONE set, where the route through town meets the cross street, and
+                // the rest are stop signs on the smaller arm - which is what GiveWayAxisOf below
+                // already works out and what CitySigns already erects.
+                //
+                // Both arms have to be a main road. That makes the answer follow the map: class
+                // a second street up to Mainroad in city.txt and it earns its own lights, with
+                // nothing here to change.
+                bool crossroads = j.NorthSouth.Class >= RoadClass.Mainroad
+                               && j.EastWest.Class >= RoadClass.Mainroad;
+                bool town = crossroads && InTheTown(world, j);
 
                 // EVERY junction gets a node, signalised or not. LaneSegment.ToJunction indexes
                 // world.Roads.Junctions directly, so skipping the country ones here would slide
