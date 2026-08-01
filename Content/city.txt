@@ -47,7 +47,7 @@ size 2100 2400
 # whole village would put lights on every corner of it.
 terrain field 0,0 2100x2400
 terrain grass 476,679 1074x1581
-terrain path 705,1290 90x90
+terrain path 724,1309 52x52
 
 # ---- Illinois Route 1 and the cross street --------------------------------
 # `mainroad` is a 30m corridor, one lane each way with lay-bys, which is what a
@@ -124,111 +124,111 @@ road crossroad1 10 1880,0 1880,2399
 #  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET
 # ==========================================================================
 
-place casino 694,1121 35x46 "the Regency Rooms"
-  door 711,1121
+place casino 710,1282 22x35 "the Regency Rooms"
+  door 731,1299
   human Open all night, and the carpet is loud enough that nobody notices the hour.
-place cinema 649,1121 22x35 "the Rialto"
-  door 659,1121
+place cinema 710,1258 22x22 "the Rialto"
+  door 731,1269
   human Two screens, one of which has been showing the same film since spring.
-place bank 649,1158 29x23 "Northgate Savings"
-  door 663,1158
+place bank 710,1227 22x29 "Northgate Savings"
+  door 731,1241
   human Marble that was meant to look permanent.
-place precinct 694,1169 35x18 "Northgate Precinct"
-  door 711,1169
+place precinct 714,1166 18x35 "Northgate Precinct"
+  door 731,1183
   human The light in the front office never goes off, which is not the same as somebody being awake.
-place villagehall 649,1183 26x16 "the Wicker End rooms"
-  door 662,1198
+place villagehall 716,1138 16x26 "the Wicker End rooms"
+  door 731,1151
   human Bingo, inquests, and the annual meeting about the verge.
-place villagehall 649,1217 26x16 "the south rooms"
-  door 662,1232
+place villagehall 768,1291 16x26 "the south rooms"
+  door 768,1304
   human Scout hut, polling station, and where the inquest was held.
-place shop 649,1235 18x20 "Ellery's"
-  door 658,1254
+place shop 768,1271 20x18 "Ellery's"
+  door 768,1280
   human Open at five, which is either a service or an accusation.
-place shop 649,1257 24x14 "the Fourth Street market"
-  door 661,1270
+place shop 768,1245 14x24 "the Fourth Street market"
+  door 768,1257
   human Fruit stacked to a geometry that survives being sold from.
-place pub 649,1273 22x14 "the Drovers"
-  door 660,1286
+place pub 768,1221 14x22 "the Drovers"
+  door 768,1232
   human The car park is bigger than the pub and on Fridays it is not big enough.
-place pub 649,1289 22x14 "the Wheatsheaf"
-  door 660,1302
+place pub 768,1179 14x22 "the Wheatsheaf"
+  door 768,1190
   human Older than the road, and it shows in the floor.
-place pub 649,1305 22x12 "the Weighhouse"
-  door 660,1316
+place pub 768,1155 12x22 "the Weighhouse"
+  door 768,1166
   human Four o'clock and the same men are in it who were in it at noon.
-place postoffice 649,1353 16x14 "Northgate Post Office"
-  door 657,1366
+place postoffice 768,1137 14x16 "Northgate Post Office"
+  door 768,1145
   human A queue that moves at the speed of one conversation at a time.
-place diner 649,1369 20x11 "the Northgate Diner"
-  door 658,1369
+place diner 721,1353 11x20 "the Northgate Diner"
+  door 731,1363
   human Open before anyone needs it to be, and the same four faces are in it at six.
-place gasstation 649,1382 20x11 "the pumps"
-  door 668,1387
+place gasstation 721,1375 11x20 "the pumps"
+  door 731,1385
   human Somebody is always sitting in a car here not buying anything.
-place shop 649,1395 16x12 "Halliwell's"
-  door 657,1406
+place shop 720,1397 12x16 "Halliwell's"
+  door 731,1405
   human A general store, which out here means it stocks what the last person asked for.
-place shop 649,1409 16x12 "the west bakery"
-  door 657,1420
+place shop 720,1415 12x16 "the west bakery"
+  door 731,1423
   human Sells out by ten and does not bake more, on principle.
-place shop 649,1423 16x12 "the paper shop"
-  door 657,1434
+place shop 720,1433 12x16 "the paper shop"
+  door 731,1441
   human Papers, sweets, and a bell that has never once been oiled.
-place shop 649,1437 16x12 "Trewin's"
-  door 657,1448
+place shop 720,1451 12x16 "Trewin's"
+  door 731,1459
   human A hardware shop that also does keys, shoes, and advice.
-place shop 649,1451 16x12 "the east grocer"
-  door 657,1462
+place shop 720,1486 12x16 "the east grocer"
+  door 731,1494
   human Run by a family who have never agreed on the opening hours.
-place shop 649,1486 16x12 "Ottery's"
-  door 657,1497
+place shop 720,1504 12x16 "Ottery's"
+  door 731,1512
   human Wool, thread, and a cat that is not for sale.
-place shop 649,1500 16x12 "the east bakery"
-  door 657,1511
+place shop 720,1522 12x16 "the east bakery"
+  door 731,1530
   human The smell reaches the county line on a west wind.
-place shop 649,1514 16x12 "the county stores"
-  door 657,1525
+place shop 720,1540 12x16 "the county stores"
+  door 731,1548
   human The last shop before the county line and it knows it.
-place postoffice 649,1528 16x12 "the east sub-office"
-  door 657,1539
+place postoffice 720,1558 12x16 "the east sub-office"
+  door 731,1566
   human One window, one clerk, and a scale that has been condemned twice.
-place icecream 649,1542 16x11 "Bruno's"
-  door 656,1552
+place icecream 768,1353 11x16 "Bruno's"
+  door 768,1361
   human Shut half the year, and the queue at Easter goes round the corner.
-place shop 649,1555 13x10 "Vance & Son"
-  door 655,1564
+place shop 768,1371 10x13 "Vance & Son"
+  door 768,1377
   human Ironmongery, and a man who can find the one screw you need in a minute.
-place shop 664,1555 13x10 "the corner grocer"
-  door 670,1564
+place shop 768,1386 10x13 "the corner grocer"
+  door 768,1392
   human Everything a fortnight from its date and nobody has ever complained.
-place shop 694,1189 13x10 "Meacham's"
-  door 700,1198
+place shop 768,1401 10x13 "Meacham's"
+  door 768,1407
   human A tailor who has outlived three fashions and expects to outlive a fourth.
-place carwash 694,1217 10x13 "the wash"
-  door 698,1229
+place carwash 768,1416 13x10 "the wash"
+  door 768,1421
   human A place people leave a car and walk away from for ten minutes.
-place restroom 649,1567 14x8 "the public conveniences"
-  door 655,1574
+place restroom 768,1428 8x14 "the public conveniences"
+  door 768,1435
   human Council-green tile and a door that does not lock.
-place shop 709,1189 11x10 "the chemist"
-  door 714,1198
+place shop 768,1444 10x11 "the chemist"
+  door 768,1449
   human The window has not changed since the coronation and neither has the smell.
-place newsstand 649,1465 7x3 "the stand"
-  door 652,1467
+place newsstand 768,1457 3x7 "the stand"
+  door 768,1460
   human Papers, cigarettes, and the man who knows who bought which.
-place apartment 665,1567 6x8 "Chicago Street Chambers"
-  door 668,1574
+place apartment 768,1486 8x6 "Chicago Street Chambers"
+  door 768,1489
   units 3
   human Over the shops, and the stairs go up from the street.
-place apartment 722,1189 6x8 "Chicago Street Chambers, 2"
-  door 725,1196
+place apartment 768,1494 8x6 "Chicago Street Chambers, 2"
+  door 768,1497
   units 3
-place apartment 706,1217 6x8 "Chicago Street Chambers, 3"
-  door 709,1224
+place apartment 768,1502 8x6 "Chicago Street Chambers, 3"
+  door 768,1505
   units 3
-place apartment 714,1217 6x8 "Chicago Street Chambers, 4"
-  door 717,1224
+place apartment 768,1510 8x6 "Chicago Street Chambers, 4"
+  door 768,1513
   units 3
 
 # ---- the school, the firehouse, the elevator, the water tower --------------
@@ -290,938 +290,944 @@ place playground 1157,1979 30x28 "the Bishop road swings"
 #  no house on it is what that looks like from the street.
 # ==========================================================================
 
-place house 541,744 11x8 "306 York Ave"
-  door 546,744
-place house 567,744 11x8 "304 York Ave"
-  door 572,744
-place house 593,744 11x8 "302 York Ave"
-  door 598,744
-place house 541,823 11x8 "305 W Henderson Ave"
-  door 546,830
-place house 593,823 11x8 "301 W Henderson Ave"
-  door 598,830
-place house 541,861 11x8 "306 W Henderson Ave"
-  door 546,861
-place house 593,861 11x8 "302 W Henderson Ave"
-  door 598,861
-place house 541,959 11x8 "305 W Green Ave"
-  door 546,966
-place house 567,959 11x8 "303 W Green Ave"
-  door 572,966
-place house 593,959 11x8 "301 W Green Ave"
-  door 598,966
-place house 541,997 11x8 "306 W Green Ave"
-  door 546,997
-place house 567,997 11x8 "304 W Green Ave"
-  door 572,997
-place house 541,1090 11x8 "305 W Benton Ave"
-  door 546,1097
-place house 567,1090 11x8 "303 W Benton Ave"
-  door 572,1097
-place house 593,1090 11x8 "301 W Benton Ave"
-  door 598,1097
-place house 541,1302 11x8 "305 W Attica Ave"
-  door 546,1309
-place house 567,1302 11x8 "303 W Attica Ave"
-  door 572,1309
-place house 593,1302 11x8 "301 W Attica Ave"
-  door 598,1309
-place house 541,1360 11x8 "306 W Attica Ave"
-  door 546,1360
-place house 567,1360 11x8 "304 W Attica Ave"
-  door 572,1360
-place house 593,1360 11x8 "302 W Attica Ave"
-  door 598,1360
-place house 541,2011 11x8 "305 Greenwood Ave"
-  door 546,2018
-place house 567,2011 11x8 "303 Greenwood Ave"
-  door 572,2018
-place house 593,2011 11x8 "301 Greenwood Ave"
-  door 598,2018
-place house 567,2049 11x8 "304 Greenwood Ave"
-  door 572,2049
-place house 593,2049 11x8 "302 Greenwood Ave"
-  door 598,2049
-place house 656,823 11x8 "201 W Henderson Ave"
-  door 661,830
-place house 656,861 11x8 "202 W Henderson Ave"
-  door 661,861
-place house 656,959 11x8 "201 W Green Ave"
-  door 661,966
-place house 656,997 11x8 "202 W Green Ave"
-  door 661,997
-place house 656,1090 11x8 "201 W Benton Ave"
-  door 661,1097
-place house 656,2011 11x8 "201 Greenwood Ave"
-  door 661,2018
-place house 656,2049 11x8 "202 Greenwood Ave"
-  door 661,2049
-place house 701,861 11x8 "102 W Henderson Ave"
-  door 706,861
-place house 701,959 11x8 "101 W Green Ave"
-  door 706,966
-place house 701,997 11x8 "102 W Green Ave"
-  door 706,997
-place house 701,1090 11x8 "101 W Benton Ave"
-  door 706,1097
-place house 701,2011 11x8 "101 Greenwood Ave"
-  door 706,2018
-place house 775,823 11x8 "101 E Henderson Ave"
-  door 780,830
-place house 801,823 11x8 "103 E Henderson Ave"
-  door 806,830
-place house 775,861 11x8 "102 E Henderson Ave"
-  door 780,861
-place house 801,861 11x8 "104 E Henderson Ave"
-  door 806,861
-place house 775,959 11x8 "101 E Green Ave"
-  door 780,966
-place house 801,959 11x8 "103 E Green Ave"
-  door 806,966
-place house 827,959 11x8 "105 E Green Ave"
-  door 832,966
-place house 775,997 11x8 "102 E Green Ave"
-  door 780,997
-place house 801,997 11x8 "104 E Green Ave"
-  door 806,997
-place house 827,997 11x8 "106 E Green Ave"
-  door 832,997
-place house 775,1090 11x8 "101 E Benton Ave"
-  door 780,1097
-place house 801,1090 11x8 "103 E Benton Ave"
-  door 806,1097
-place house 827,1090 11x8 "105 E Benton Ave"
-  door 832,1097
-place house 775,1598 11x8 "102 Gilbert Ave"
-  door 780,1598
-place house 827,1598 11x8 "106 Gilbert Ave"
-  door 832,1598
-place house 775,1699 11x8 "101 Stewart Ave"
-  door 780,1706
-place house 801,1699 11x8 "103 Stewart Ave"
-  door 806,1706
-place house 827,1699 11x8 "105 Stewart Ave"
-  door 832,1706
-place house 775,1737 11x8 "102 Stewart Ave"
-  door 780,1737
-place house 801,1737 11x8 "104 Stewart Ave"
-  door 806,1737
-place house 827,1737 11x8 "106 Stewart Ave"
-  door 832,1737
-place house 775,1830 11x8 "101 Mckibben Ave"
-  door 780,1837
-place house 801,1830 11x8 "103 Mckibben Ave"
-  door 806,1837
-place house 827,1830 11x8 "105 Mckibben Ave"
-  door 832,1837
-place house 775,1868 11x8 "102 Mckibben Ave"
-  door 780,1868
-place house 801,1868 11x8 "104 Mckibben Ave"
-  door 806,1868
-place house 827,1868 11x8 "106 Mckibben Ave"
-  door 832,1868
-place house 775,1948 11x8 "101 Dale Ave"
-  door 780,1955
-place house 801,1948 11x8 "103 Dale Ave"
-  door 806,1955
-place house 827,1948 11x8 "105 Dale Ave"
-  door 832,1955
-place house 775,1986 11x8 "102 Dale Ave"
-  door 780,1986
-place house 801,1986 11x8 "104 Dale Ave"
-  door 806,1986
-place house 827,1986 11x8 "106 Dale Ave"
-  door 832,1986
-place house 775,2070 11x8 "101 Thompson Ave"
-  door 780,2077
-place house 801,2070 11x8 "103 Thompson Ave"
-  door 806,2077
-place house 827,2070 11x8 "105 Thompson Ave"
-  door 832,2077
-place house 775,2108 11x8 "102 Thompson Ave"
-  door 780,2108
-place house 801,2108 11x8 "104 Thompson Ave"
-  door 806,2108
-place house 827,2108 11x8 "106 Thompson Ave"
-  door 832,2108
-place house 775,2187 11x8 "101 Earlcourt Ave"
-  door 780,2194
-place house 827,2187 11x8 "105 Earlcourt Ave"
-  door 832,2194
-place house 869,823 11x8 "201 E Henderson Ave"
-  door 874,830
-place house 895,823 11x8 "203 E Henderson Ave"
-  door 900,830
-place house 921,823 11x8 "205 E Henderson Ave"
-  door 926,830
-place house 895,861 11x8 "204 E Henderson Ave"
-  door 900,861
-place house 921,861 11x8 "206 E Henderson Ave"
-  door 926,861
-place house 895,959 11x8 "203 E Green Ave"
-  door 900,966
-place house 921,959 11x8 "205 E Green Ave"
-  door 926,966
-place house 869,1128 11x8 "202 E Benton Ave"
-  door 874,1128
-place house 895,1128 11x8 "204 E Benton Ave"
-  door 900,1128
-place house 921,1128 11x8 "206 E Benton Ave"
-  door 926,1128
-place house 869,1186 11x8 "201 Holmes Ave"
-  door 874,1193
-place house 895,1186 11x8 "203 Holmes Ave"
-  door 900,1193
-place house 921,1186 11x8 "205 Holmes Ave"
-  door 926,1193
-place house 869,1224 11x8 "202 Holmes Ave"
-  door 874,1224
-place house 921,1224 11x8 "206 Holmes Ave"
-  door 926,1224
-place house 869,1302 11x8 "201 E Attica Ave"
-  door 874,1309
-place house 895,1302 11x8 "203 E Attica Ave"
-  door 900,1309
-place house 921,1302 11x8 "205 E Attica Ave"
-  door 926,1309
-place house 869,1360 11x8 "202 E Attica Ave"
-  door 874,1360
-place house 895,1360 11x8 "204 E Attica Ave"
-  door 900,1360
-place house 921,1360 11x8 "206 E Attica Ave"
-  door 926,1360
-place house 869,1455 11x8 "201 Maple Ave"
-  door 874,1462
-place house 921,1455 11x8 "205 Maple Ave"
-  door 926,1462
-place house 869,1493 11x8 "202 Maple Ave"
-  door 874,1493
-place house 921,1493 11x8 "206 Maple Ave"
-  door 926,1493
-place house 869,1560 11x8 "201 Gilbert Ave"
-  door 874,1567
-place house 895,1560 11x8 "203 Gilbert Ave"
-  door 900,1567
-place house 921,1560 11x8 "205 Gilbert Ave"
-  door 926,1567
-place house 869,1598 11x8 "202 Gilbert Ave"
-  door 874,1598
-place house 895,1598 11x8 "204 Gilbert Ave"
-  door 900,1598
-place house 895,1699 11x8 "203 Stewart Ave"
-  door 900,1706
-place house 921,1699 11x8 "205 Stewart Ave"
-  door 926,1706
-place house 869,1737 11x8 "202 Stewart Ave"
-  door 874,1737
-place house 895,1737 11x8 "204 Stewart Ave"
-  door 900,1737
-place house 921,1737 11x8 "206 Stewart Ave"
-  door 926,1737
-place house 895,1830 11x8 "203 Mckibben Ave"
-  door 900,1837
-place house 921,1830 11x8 "205 Mckibben Ave"
-  door 926,1837
-place house 869,1868 11x8 "202 Mckibben Ave"
-  door 874,1868
-place house 895,1868 11x8 "204 Mckibben Ave"
-  door 900,1868
-place house 921,1868 11x8 "206 Mckibben Ave"
-  door 926,1868
-place house 869,1948 11x8 "201 Dale Ave"
-  door 874,1955
-place house 895,1948 11x8 "203 Dale Ave"
-  door 900,1955
-place house 921,1948 11x8 "205 Dale Ave"
-  door 926,1955
-place house 869,1986 11x8 "202 Dale Ave"
-  door 874,1986
-place house 895,1986 11x8 "204 Dale Ave"
-  door 900,1986
-place house 921,1986 11x8 "206 Dale Ave"
-  door 926,1986
-place house 895,2070 11x8 "203 Thompson Ave"
-  door 900,2077
-place house 921,2070 11x8 "205 Thompson Ave"
-  door 926,2077
-place house 869,2108 11x8 "202 Thompson Ave"
-  door 874,2108
-place house 895,2108 11x8 "204 Thompson Ave"
-  door 900,2108
-place house 921,2108 11x8 "206 Thompson Ave"
-  door 926,2108
-place house 869,2187 11x8 "201 Earlcourt Ave"
-  door 874,2194
-place house 895,2187 11x8 "203 Earlcourt Ave"
-  door 900,2194
-place house 978,823 11x8 "301 E Henderson Ave"
-  door 983,830
-place house 1004,823 11x8 "303 E Henderson Ave"
-  door 1009,830
-place house 1030,823 11x8 "305 E Henderson Ave"
-  door 1035,830
-place house 1056,823 11x8 "307 E Henderson Ave"
-  door 1061,830
-place house 1082,823 11x8 "309 E Henderson Ave"
-  door 1087,830
-place house 1108,823 11x8 "311 E Henderson Ave"
-  door 1113,830
-place house 978,861 11x8 "302 E Henderson Ave"
-  door 983,861
-place house 1004,861 11x8 "304 E Henderson Ave"
-  door 1009,861
-place house 1030,861 11x8 "306 E Henderson Ave"
-  door 1035,861
-place house 1056,861 11x8 "308 E Henderson Ave"
-  door 1061,861
-place house 1082,861 11x8 "310 E Henderson Ave"
-  door 1087,861
-place house 978,959 11x8 "301 E Green Ave"
-  door 983,966
-place house 1004,959 11x8 "303 E Green Ave"
-  door 1009,966
-place house 1056,959 11x8 "307 E Green Ave"
-  door 1061,966
-place house 1082,959 11x8 "309 E Green Ave"
-  door 1087,966
-place house 1108,959 11x8 "311 E Green Ave"
-  door 1113,966
-place house 978,997 11x8 "302 E Green Ave"
-  door 983,997
-place house 1004,997 11x8 "304 E Green Ave"
-  door 1009,997
-place house 1030,997 11x8 "306 E Green Ave"
-  door 1035,997
-place house 1056,997 11x8 "308 E Green Ave"
-  door 1061,997
-place house 1082,997 11x8 "310 E Green Ave"
-  door 1087,997
-place house 1108,997 11x8 "312 E Green Ave"
-  door 1113,997
-place house 978,1090 11x8 "301 E Benton Ave"
-  door 983,1097
-place house 1004,1090 11x8 "303 E Benton Ave"
-  door 1009,1097
-place house 1056,1090 11x8 "307 E Benton Ave"
-  door 1061,1097
-place house 1082,1090 11x8 "309 E Benton Ave"
-  door 1087,1097
-place house 978,1128 11x8 "302 E Benton Ave"
-  door 983,1128
-place house 1004,1128 11x8 "304 E Benton Ave"
-  door 1009,1128
-place house 1056,1128 11x8 "308 E Benton Ave"
-  door 1061,1128
-place house 1082,1128 11x8 "310 E Benton Ave"
-  door 1087,1128
-place house 1108,1128 11x8 "312 E Benton Ave"
-  door 1113,1128
-place house 978,1186 11x8 "301 Holmes Ave"
-  door 983,1193
-place house 1004,1186 11x8 "303 Holmes Ave"
-  door 1009,1193
-place house 1030,1186 11x8 "305 Holmes Ave"
-  door 1035,1193
-place house 1056,1186 11x8 "307 Holmes Ave"
-  door 1061,1193
-place house 1082,1186 11x8 "309 Holmes Ave"
-  door 1087,1193
-place house 1108,1186 11x8 "311 Holmes Ave"
-  door 1113,1193
-place house 978,1224 11x8 "302 Holmes Ave"
-  door 983,1224
-place house 1004,1224 11x8 "304 Holmes Ave"
-  door 1009,1224
-place house 1030,1224 11x8 "306 Holmes Ave"
-  door 1035,1224
-place house 1082,1224 11x8 "310 Holmes Ave"
-  door 1087,1224
-place house 1108,1224 11x8 "312 Holmes Ave"
-  door 1113,1224
-place house 1004,1302 11x8 "303 E Attica Ave"
-  door 1009,1309
-place house 1030,1302 11x8 "305 E Attica Ave"
-  door 1035,1309
-place house 1082,1302 11x8 "309 E Attica Ave"
-  door 1087,1309
-place house 1108,1302 11x8 "311 E Attica Ave"
-  door 1113,1309
-place house 1004,1360 11x8 "304 E Attica Ave"
-  door 1009,1360
-place house 1030,1360 11x8 "306 E Attica Ave"
-  door 1035,1360
-place house 1056,1360 11x8 "308 E Attica Ave"
-  door 1061,1360
-place house 1082,1360 11x8 "310 E Attica Ave"
-  door 1087,1360
-place house 1108,1360 11x8 "312 E Attica Ave"
-  door 1113,1360
-place house 978,1455 11x8 "301 Maple Ave"
-  door 983,1462
-place house 1004,1455 11x8 "303 Maple Ave"
-  door 1009,1462
-place house 1030,1455 11x8 "305 Maple Ave"
-  door 1035,1462
-place house 1056,1455 11x8 "307 Maple Ave"
-  door 1061,1462
-place house 1082,1455 11x8 "309 Maple Ave"
-  door 1087,1462
-place house 1108,1455 11x8 "311 Maple Ave"
-  door 1113,1462
-place house 978,1493 11x8 "302 Maple Ave"
-  door 983,1493
-place house 1004,1493 11x8 "304 Maple Ave"
-  door 1009,1493
-place house 1030,1493 11x8 "306 Maple Ave"
-  door 1035,1493
-place house 1082,1493 11x8 "310 Maple Ave"
-  door 1087,1493
-place house 1108,1493 11x8 "312 Maple Ave"
-  door 1113,1493
-place house 1004,1560 11x8 "303 Gilbert Ave"
-  door 1009,1567
-place house 1030,1560 11x8 "305 Gilbert Ave"
-  door 1035,1567
-place house 1056,1560 11x8 "307 Gilbert Ave"
-  door 1061,1567
-place house 1082,1560 11x8 "309 Gilbert Ave"
-  door 1087,1567
-place house 1108,1560 11x8 "311 Gilbert Ave"
-  door 1113,1567
-place house 978,1598 11x8 "302 Gilbert Ave"
-  door 983,1598
-place house 1004,1598 11x8 "304 Gilbert Ave"
-  door 1009,1598
-place house 1030,1598 11x8 "306 Gilbert Ave"
-  door 1035,1598
-place house 1056,1598 11x8 "308 Gilbert Ave"
-  door 1061,1598
-place house 1108,1598 11x8 "312 Gilbert Ave"
-  door 1113,1598
-place house 978,1699 11x8 "301 Stewart Ave"
-  door 983,1706
-place house 1004,1699 11x8 "303 Stewart Ave"
-  door 1009,1706
-place house 1056,1699 11x8 "307 Stewart Ave"
-  door 1061,1706
-place house 1082,1699 11x8 "309 Stewart Ave"
-  door 1087,1706
-place house 1108,1699 11x8 "311 Stewart Ave"
-  door 1113,1706
-place house 978,1737 11x8 "302 Stewart Ave"
-  door 983,1737
-place house 1004,1737 11x8 "304 Stewart Ave"
-  door 1009,1737
-place house 1030,1737 11x8 "306 Stewart Ave"
-  door 1035,1737
-place house 1056,1737 11x8 "308 Stewart Ave"
-  door 1061,1737
-place house 1082,1737 11x8 "310 Stewart Ave"
-  door 1087,1737
-place house 1108,1737 11x8 "312 Stewart Ave"
-  door 1113,1737
-place house 978,1830 11x8 "301 Mckibben Ave"
-  door 983,1837
-place house 1004,1830 11x8 "303 Mckibben Ave"
-  door 1009,1837
-place house 1056,1830 11x8 "307 Mckibben Ave"
-  door 1061,1837
-place house 1082,1830 11x8 "309 Mckibben Ave"
-  door 1087,1837
-place house 978,1868 11x8 "302 Mckibben Ave"
-  door 983,1868
-place house 1004,1868 11x8 "304 Mckibben Ave"
-  door 1009,1868
-place house 1056,1868 11x8 "308 Mckibben Ave"
-  door 1061,1868
-place house 1082,1868 11x8 "310 Mckibben Ave"
-  door 1087,1868
-place house 1108,1868 11x8 "312 Mckibben Ave"
-  door 1113,1868
-place house 978,1948 11x8 "301 Dale Ave"
-  door 983,1955
-place house 1004,1948 11x8 "303 Dale Ave"
-  door 1009,1955
-place house 1056,1948 11x8 "307 Dale Ave"
-  door 1061,1955
-place house 1082,1948 11x8 "309 Dale Ave"
-  door 1087,1955
-place house 1108,1948 11x8 "311 Dale Ave"
-  door 1113,1955
-place house 978,1986 11x8 "302 Dale Ave"
-  door 983,1986
-place house 1004,1986 11x8 "304 Dale Ave"
-  door 1009,1986
-place house 1030,1986 11x8 "306 Dale Ave"
-  door 1035,1986
-place house 1056,1986 11x8 "308 Dale Ave"
-  door 1061,1986
-place house 1082,1986 11x8 "310 Dale Ave"
-  door 1087,1986
-place house 1108,1986 11x8 "312 Dale Ave"
-  door 1113,1986
-place house 978,2070 11x8 "301 Thompson Ave"
-  door 983,2077
-place house 1004,2070 11x8 "303 Thompson Ave"
-  door 1009,2077
-place house 1056,2070 11x8 "307 Thompson Ave"
-  door 1061,2077
-place house 1082,2070 11x8 "309 Thompson Ave"
-  door 1087,2077
-place house 978,2108 11x8 "302 Thompson Ave"
-  door 983,2108
-place house 1004,2108 11x8 "304 Thompson Ave"
-  door 1009,2108
-place house 1056,2108 11x8 "308 Thompson Ave"
-  door 1061,2108
-place house 1082,2108 11x8 "310 Thompson Ave"
-  door 1087,2108
-place house 1108,2108 11x8 "312 Thompson Ave"
-  door 1113,2108
-place house 978,2187 11x8 "301 Earlcourt Ave"
-  door 983,2194
-place house 1004,2187 11x8 "303 Earlcourt Ave"
-  door 1009,2194
-place house 1030,2187 11x8 "305 Earlcourt Ave"
-  door 1035,2194
-place house 1056,2187 11x8 "307 Earlcourt Ave"
-  door 1061,2194
-place house 1108,2187 11x8 "311 Earlcourt Ave"
-  door 1113,2194
-place house 1164,823 11x8 "401 E Henderson Ave"
-  door 1169,830
-place house 1190,823 11x8 "403 E Henderson Ave"
-  door 1195,830
-place house 1216,823 11x8 "405 E Henderson Ave"
-  door 1221,830
-place house 1242,823 11x8 "407 E Henderson Ave"
-  door 1247,830
-place house 1268,823 11x8 "409 E Henderson Ave"
-  door 1273,830
-place house 1294,823 11x8 "411 E Henderson Ave"
-  door 1299,830
-place house 1164,861 11x8 "402 E Henderson Ave"
-  door 1169,861
-place house 1190,861 11x8 "404 E Henderson Ave"
-  door 1195,861
-place house 1216,861 11x8 "406 E Henderson Ave"
-  door 1221,861
-place house 1242,861 11x8 "408 E Henderson Ave"
-  door 1247,861
-place house 1294,861 11x8 "412 E Henderson Ave"
-  door 1299,861
-place house 1164,959 11x8 "401 E Green Ave"
-  door 1169,966
-place house 1216,959 11x8 "405 E Green Ave"
-  door 1221,966
-place house 1242,959 11x8 "407 E Green Ave"
-  door 1247,966
-place house 1268,959 11x8 "409 E Green Ave"
-  door 1273,966
-place house 1294,959 11x8 "411 E Green Ave"
-  door 1299,966
-place house 1164,997 11x8 "402 E Green Ave"
-  door 1169,997
-place house 1190,997 11x8 "404 E Green Ave"
-  door 1195,997
-place house 1216,997 11x8 "406 E Green Ave"
-  door 1221,997
-place house 1242,997 11x8 "408 E Green Ave"
-  door 1247,997
-place house 1268,997 11x8 "410 E Green Ave"
-  door 1273,997
-place house 1294,997 11x8 "412 E Green Ave"
-  door 1299,997
-place house 1164,1090 11x8 "401 E Benton Ave"
-  door 1169,1097
-place house 1216,1090 11x8 "405 E Benton Ave"
-  door 1221,1097
-place house 1242,1090 11x8 "407 E Benton Ave"
-  door 1247,1097
-place house 1294,1090 11x8 "411 E Benton Ave"
-  door 1299,1097
-place house 1164,1128 11x8 "402 E Benton Ave"
-  door 1169,1128
-place house 1216,1128 11x8 "406 E Benton Ave"
-  door 1221,1128
-place house 1242,1128 11x8 "408 E Benton Ave"
-  door 1247,1128
-place house 1268,1128 11x8 "410 E Benton Ave"
-  door 1273,1128
-place house 1294,1128 11x8 "412 E Benton Ave"
-  door 1299,1128
-place house 1164,1186 11x8 "401 Holmes Ave"
-  door 1169,1193
-place house 1190,1186 11x8 "403 Holmes Ave"
-  door 1195,1193
-place house 1216,1186 11x8 "405 Holmes Ave"
-  door 1221,1193
-place house 1242,1186 11x8 "407 Holmes Ave"
-  door 1247,1193
-place house 1268,1186 11x8 "409 Holmes Ave"
-  door 1273,1193
-place house 1164,1224 11x8 "402 Holmes Ave"
-  door 1169,1224
-place house 1190,1224 11x8 "404 Holmes Ave"
-  door 1195,1224
-place house 1242,1224 11x8 "408 Holmes Ave"
-  door 1247,1224
-place house 1268,1224 11x8 "410 Holmes Ave"
-  door 1273,1224
-place house 1164,1302 11x8 "401 E Attica Ave"
-  door 1169,1309
-place house 1190,1302 11x8 "403 E Attica Ave"
-  door 1195,1309
-place house 1242,1302 11x8 "407 E Attica Ave"
-  door 1247,1309
-place house 1268,1302 11x8 "409 E Attica Ave"
-  door 1273,1309
-place house 1294,1302 11x8 "411 E Attica Ave"
-  door 1299,1309
-place house 1164,1360 11x8 "402 E Attica Ave"
-  door 1169,1360
-place house 1190,1360 11x8 "404 E Attica Ave"
-  door 1195,1360
-place house 1216,1360 11x8 "406 E Attica Ave"
-  door 1221,1360
-place house 1242,1360 11x8 "408 E Attica Ave"
-  door 1247,1360
-place house 1268,1360 11x8 "410 E Attica Ave"
-  door 1273,1360
-place house 1294,1360 11x8 "412 E Attica Ave"
-  door 1299,1360
-place house 1164,1455 11x8 "401 Maple Ave"
-  door 1169,1462
-place house 1190,1455 11x8 "403 Maple Ave"
-  door 1195,1462
-place house 1216,1455 11x8 "405 Maple Ave"
-  door 1221,1462
-place house 1242,1455 11x8 "407 Maple Ave"
-  door 1247,1462
-place house 1268,1455 11x8 "409 Maple Ave"
-  door 1273,1462
-place house 1164,1493 11x8 "402 Maple Ave"
-  door 1169,1493
-place house 1190,1493 11x8 "404 Maple Ave"
-  door 1195,1493
-place house 1242,1493 11x8 "408 Maple Ave"
-  door 1247,1493
-place house 1268,1493 11x8 "410 Maple Ave"
-  door 1273,1493
-place house 1294,1493 11x8 "412 Maple Ave"
-  door 1299,1493
-place house 1164,1560 11x8 "401 Gilbert Ave"
-  door 1169,1567
-place house 1190,1560 11x8 "403 Gilbert Ave"
-  door 1195,1567
-place house 1216,1560 11x8 "405 Gilbert Ave"
-  door 1221,1567
-place house 1242,1560 11x8 "407 Gilbert Ave"
-  door 1247,1567
-place house 1268,1560 11x8 "409 Gilbert Ave"
-  door 1273,1567
-place house 1294,1560 11x8 "411 Gilbert Ave"
-  door 1299,1567
-place house 1164,1598 11x8 "402 Gilbert Ave"
-  door 1169,1598
-place house 1190,1598 11x8 "404 Gilbert Ave"
-  door 1195,1598
-place house 1216,1598 11x8 "406 Gilbert Ave"
-  door 1221,1598
-place house 1268,1598 11x8 "410 Gilbert Ave"
-  door 1273,1598
-place house 1294,1598 11x8 "412 Gilbert Ave"
-  door 1299,1598
-place house 1164,1699 11x8 "401 Stewart Ave"
-  door 1169,1706
-place house 1216,1699 11x8 "405 Stewart Ave"
-  door 1221,1706
-place house 1242,1699 11x8 "407 Stewart Ave"
-  door 1247,1706
-place house 1268,1699 11x8 "409 Stewart Ave"
-  door 1273,1706
-place house 1294,1699 11x8 "411 Stewart Ave"
-  door 1299,1706
-place house 1164,1737 11x8 "402 Stewart Ave"
-  door 1169,1737
-place house 1190,1737 11x8 "404 Stewart Ave"
-  door 1195,1737
-place house 1216,1737 11x8 "406 Stewart Ave"
-  door 1221,1737
-place house 1242,1737 11x8 "408 Stewart Ave"
-  door 1247,1737
-place house 1268,1737 11x8 "410 Stewart Ave"
-  door 1273,1737
-place house 1294,1737 11x8 "412 Stewart Ave"
-  door 1299,1737
-place house 1164,1830 11x8 "401 Mckibben Ave"
-  door 1169,1837
-place house 1216,1830 11x8 "405 Mckibben Ave"
-  door 1221,1837
-place house 1242,1830 11x8 "407 Mckibben Ave"
-  door 1247,1837
-place house 1294,1830 11x8 "411 Mckibben Ave"
-  door 1299,1837
-place house 1164,1868 11x8 "402 Mckibben Ave"
-  door 1169,1868
-place house 1216,1868 11x8 "406 Mckibben Ave"
-  door 1221,1868
-place house 1242,1868 11x8 "408 Mckibben Ave"
-  door 1247,1868
-place house 1268,1868 11x8 "410 Mckibben Ave"
-  door 1273,1868
-place house 1294,1868 11x8 "412 Mckibben Ave"
-  door 1299,1868
-place house 1164,1948 11x8 "401 Dale Ave"
-  door 1169,1955
-place house 1216,1948 11x8 "405 Dale Ave"
-  door 1221,1955
-place house 1242,1948 11x8 "407 Dale Ave"
-  door 1247,1955
-place house 1268,1948 11x8 "409 Dale Ave"
-  door 1273,1955
-place house 1294,1948 11x8 "411 Dale Ave"
-  door 1299,1955
-place house 1164,2070 11x8 "401 Thompson Ave"
-  door 1169,2077
-place house 1216,2070 11x8 "405 Thompson Ave"
-  door 1221,2077
-place house 1242,2070 11x8 "407 Thompson Ave"
-  door 1247,2077
-place house 1294,2070 11x8 "411 Thompson Ave"
-  door 1299,2077
-place house 1164,2108 11x8 "402 Thompson Ave"
-  door 1169,2108
-place house 1216,2108 11x8 "406 Thompson Ave"
-  door 1221,2108
-place house 1242,2108 11x8 "408 Thompson Ave"
-  door 1247,2108
-place house 1268,2108 11x8 "410 Thompson Ave"
-  door 1273,2108
-place house 1294,2108 11x8 "412 Thompson Ave"
-  door 1299,2108
-place house 1164,2187 11x8 "401 Earlcourt Ave"
-  door 1169,2194
-place house 1190,2187 11x8 "403 Earlcourt Ave"
-  door 1195,2194
-place house 1216,2187 11x8 "405 Earlcourt Ave"
-  door 1221,2194
-place house 1268,2187 11x8 "409 Earlcourt Ave"
-  door 1273,2194
-place house 1294,2187 11x8 "411 Earlcourt Ave"
-  door 1299,2194
-place house 1371,823 11x8 "503 E Henderson Ave"
-  door 1376,830
-place house 1397,823 11x8 "505 E Henderson Ave"
-  door 1402,830
-place house 1423,823 11x8 "507 E Henderson Ave"
-  door 1428,830
-place house 1449,823 11x8 "509 E Henderson Ave"
-  door 1454,830
-place house 1475,823 11x8 "511 E Henderson Ave"
-  door 1480,830
-place house 1345,861 11x8 "502 E Henderson Ave"
-  door 1350,861
-place house 1371,861 11x8 "504 E Henderson Ave"
-  door 1376,861
-place house 1397,861 11x8 "506 E Henderson Ave"
-  door 1402,861
-place house 1423,861 11x8 "508 E Henderson Ave"
-  door 1428,861
-place house 1475,861 11x8 "512 E Henderson Ave"
-  door 1480,861
-place house 1345,959 11x8 "501 E Green Ave"
-  door 1350,966
-place house 1397,959 11x8 "505 E Green Ave"
-  door 1402,966
-place house 1423,959 11x8 "507 E Green Ave"
-  door 1428,966
-place house 1475,959 11x8 "511 E Green Ave"
-  door 1480,966
-place house 1345,997 11x8 "502 E Green Ave"
-  door 1350,997
-place house 1397,997 11x8 "506 E Green Ave"
-  door 1402,997
-place house 1423,997 11x8 "508 E Green Ave"
-  door 1428,997
-place house 1449,997 11x8 "510 E Green Ave"
-  door 1454,997
-place house 1475,997 11x8 "512 E Green Ave"
-  door 1480,997
-place house 1345,1090 11x8 "501 E Benton Ave"
-  door 1350,1097
-place house 1371,1090 11x8 "503 E Benton Ave"
-  door 1376,1097
-place house 1397,1090 11x8 "505 E Benton Ave"
-  door 1402,1097
-place house 1423,1090 11x8 "507 E Benton Ave"
-  door 1428,1097
-place house 1475,1090 11x8 "511 E Benton Ave"
-  door 1480,1097
-place house 1345,1128 11x8 "502 E Benton Ave"
-  door 1350,1128
-place house 1397,1128 11x8 "506 E Benton Ave"
-  door 1402,1128
-place house 1423,1128 11x8 "508 E Benton Ave"
-  door 1428,1128
-place house 1449,1128 11x8 "510 E Benton Ave"
-  door 1454,1128
-place house 1475,1128 11x8 "512 E Benton Ave"
-  door 1480,1128
-place house 1345,1186 11x8 "501 Holmes Ave"
-  door 1350,1193
-place house 1371,1186 11x8 "503 Holmes Ave"
-  door 1376,1193
-place house 1397,1186 11x8 "505 Holmes Ave"
-  door 1402,1193
-place house 1423,1186 11x8 "507 Holmes Ave"
-  door 1428,1193
-place house 1449,1186 11x8 "509 Holmes Ave"
-  door 1454,1193
-place house 1475,1186 11x8 "511 Holmes Ave"
-  door 1480,1193
-place house 1345,1224 11x8 "502 Holmes Ave"
-  door 1350,1224
-place house 1371,1224 11x8 "504 Holmes Ave"
-  door 1376,1224
-place house 1397,1224 11x8 "506 Holmes Ave"
-  door 1402,1224
-place house 1423,1224 11x8 "508 Holmes Ave"
-  door 1428,1224
-place house 1449,1224 11x8 "510 Holmes Ave"
-  door 1454,1224
-place house 1345,1302 11x8 "501 E Attica Ave"
-  door 1350,1309
-place house 1371,1302 11x8 "503 E Attica Ave"
-  door 1376,1309
-place house 1423,1302 11x8 "507 E Attica Ave"
-  door 1428,1309
-place house 1449,1302 11x8 "509 E Attica Ave"
-  door 1454,1309
-place house 1475,1302 11x8 "511 E Attica Ave"
-  door 1480,1309
-place house 1345,1493 11x8 "502 Maple Ave"
-  door 1350,1493
-place house 1371,1493 11x8 "504 Maple Ave"
-  door 1376,1493
-place house 1423,1493 11x8 "508 Maple Ave"
-  door 1428,1493
-place house 1449,1493 11x8 "510 Maple Ave"
-  door 1454,1493
-place house 1345,1560 11x8 "501 Gilbert Ave"
-  door 1350,1567
-place house 1371,1560 11x8 "503 Gilbert Ave"
-  door 1376,1567
-place house 1397,1560 11x8 "505 Gilbert Ave"
-  door 1402,1567
-place house 1423,1560 11x8 "507 Gilbert Ave"
-  door 1428,1567
-place house 1449,1560 11x8 "509 Gilbert Ave"
-  door 1454,1567
-place house 1475,1560 11x8 "511 Gilbert Ave"
-  door 1480,1567
-place house 1345,1598 11x8 "502 Gilbert Ave"
-  door 1350,1598
-place house 1371,1598 11x8 "504 Gilbert Ave"
-  door 1376,1598
-place house 1397,1598 11x8 "506 Gilbert Ave"
-  door 1402,1598
-place house 1423,1598 11x8 "508 Gilbert Ave"
-  door 1428,1598
-place house 1449,1598 11x8 "510 Gilbert Ave"
-  door 1454,1598
-place house 1475,1598 11x8 "512 Gilbert Ave"
-  door 1480,1598
-place house 1345,1699 11x8 "501 Stewart Ave"
-  door 1350,1706
-place house 1397,1699 11x8 "505 Stewart Ave"
-  door 1402,1706
-place house 1423,1699 11x8 "507 Stewart Ave"
-  door 1428,1706
-place house 1475,1699 11x8 "511 Stewart Ave"
-  door 1480,1706
-place house 1345,1737 11x8 "502 Stewart Ave"
-  door 1350,1737
-place house 1397,1737 11x8 "506 Stewart Ave"
-  door 1402,1737
-place house 1423,1737 11x8 "508 Stewart Ave"
-  door 1428,1737
-place house 1449,1737 11x8 "510 Stewart Ave"
-  door 1454,1737
-place house 1475,1737 11x8 "512 Stewart Ave"
-  door 1480,1737
-place house 1345,1830 11x8 "501 Mckibben Ave"
-  door 1350,1837
-place house 1371,1830 11x8 "503 Mckibben Ave"
-  door 1376,1837
-place house 1397,1830 11x8 "505 Mckibben Ave"
-  door 1402,1837
-place house 1423,1830 11x8 "507 Mckibben Ave"
-  door 1428,1837
-place house 1475,1830 11x8 "511 Mckibben Ave"
-  door 1480,1837
-place house 1345,1868 11x8 "502 Mckibben Ave"
-  door 1350,1868
-place house 1397,1868 11x8 "506 Mckibben Ave"
-  door 1402,1868
-place house 1423,1868 11x8 "508 Mckibben Ave"
-  door 1428,1868
-place house 1449,1868 11x8 "510 Mckibben Ave"
-  door 1454,1868
-place house 1475,1868 11x8 "512 Mckibben Ave"
-  door 1480,1868
-place house 1345,1948 11x8 "501 Dale Ave"
-  door 1350,1955
-place house 1397,1948 11x8 "505 Dale Ave"
-  door 1402,1955
-place house 1423,1948 11x8 "507 Dale Ave"
-  door 1428,1955
-place house 1449,1948 11x8 "509 Dale Ave"
-  door 1454,1955
-place house 1475,1948 11x8 "511 Dale Ave"
-  door 1480,1955
-place house 1345,1986 11x8 "502 Dale Ave"
-  door 1350,1986
-place house 1371,1986 11x8 "504 Dale Ave"
-  door 1376,1986
-place house 1397,1986 11x8 "506 Dale Ave"
-  door 1402,1986
-place house 1423,1986 11x8 "508 Dale Ave"
-  door 1428,1986
-place house 1449,1986 11x8 "510 Dale Ave"
-  door 1454,1986
-place house 1475,1986 11x8 "512 Dale Ave"
-  door 1480,1986
-place house 1345,2070 11x8 "501 Thompson Ave"
-  door 1350,2077
-place house 1371,2070 11x8 "503 Thompson Ave"
-  door 1376,2077
-place house 1397,2070 11x8 "505 Thompson Ave"
-  door 1402,2077
-place house 1423,2070 11x8 "507 Thompson Ave"
-  door 1428,2077
-place house 1475,2070 11x8 "511 Thompson Ave"
-  door 1480,2077
-place house 1345,2108 11x8 "502 Thompson Ave"
-  door 1350,2108
-place house 1397,2108 11x8 "506 Thompson Ave"
-  door 1402,2108
-place house 1423,2108 11x8 "508 Thompson Ave"
-  door 1428,2108
-place house 1449,2108 11x8 "510 Thompson Ave"
-  door 1454,2108
-place house 1475,2108 11x8 "512 Thompson Ave"
-  door 1480,2108
-place house 1345,2187 11x8 "501 Earlcourt Ave"
-  door 1350,2194
-place house 1371,2187 11x8 "503 Earlcourt Ave"
-  door 1376,2194
-place house 1397,2187 11x8 "505 Earlcourt Ave"
-  door 1402,2194
-place house 1449,2187 11x8 "509 Earlcourt Ave"
-  door 1454,2194
-place house 1475,2187 11x8 "511 Earlcourt Ave"
-  door 1480,2194
+place house 540,745 13x7 "306 York Ave"
+  door 546,745
+place house 566,745 13x7 "304 York Ave"
+  door 572,745
+place house 592,745 13x7 "302 York Ave"
+  door 598,745
+place house 540,823 13x7 "305 W Henderson Ave"
+  door 546,829
+place house 592,823 13x7 "301 W Henderson Ave"
+  door 598,829
+place house 540,862 13x7 "306 W Henderson Ave"
+  door 546,862
+place house 566,862 13x7 "304 W Henderson Ave"
+  door 572,862
+place house 592,862 13x7 "302 W Henderson Ave"
+  door 598,862
+place house 540,959 13x7 "305 W Green Ave"
+  door 546,965
+place house 566,959 13x7 "303 W Green Ave"
+  door 572,965
+place house 592,959 13x7 "301 W Green Ave"
+  door 598,965
+place house 566,998 13x7 "304 W Green Ave"
+  door 572,998
+place house 592,998 13x7 "302 W Green Ave"
+  door 598,998
+place house 540,1090 13x7 "305 W Benton Ave"
+  door 546,1096
+place house 566,1090 13x7 "303 W Benton Ave"
+  door 572,1096
+place house 592,1090 13x7 "301 W Benton Ave"
+  door 598,1096
+place house 540,1302 13x7 "305 W Attica Ave"
+  door 546,1308
+place house 566,1302 13x7 "303 W Attica Ave"
+  door 572,1308
+place house 592,1302 13x7 "301 W Attica Ave"
+  door 598,1308
+place house 540,1361 13x7 "306 W Attica Ave"
+  door 546,1361
+place house 566,1361 13x7 "304 W Attica Ave"
+  door 572,1361
+place house 592,1361 13x7 "302 W Attica Ave"
+  door 598,1361
+place house 540,2011 13x7 "305 Greenwood Ave"
+  door 546,2017
+place house 566,2011 13x7 "303 Greenwood Ave"
+  door 572,2017
+place house 592,2011 13x7 "301 Greenwood Ave"
+  door 598,2017
+place house 540,2050 13x7 "306 Greenwood Ave"
+  door 546,2050
+place house 566,2050 13x7 "304 Greenwood Ave"
+  door 572,2050
+place house 592,2050 13x7 "302 Greenwood Ave"
+  door 598,2050
+place house 655,745 13x7 "202 York Ave"
+  door 661,745
+place house 655,823 13x7 "201 W Henderson Ave"
+  door 661,829
+place house 655,862 13x7 "202 W Henderson Ave"
+  door 661,862
+place house 655,959 13x7 "201 W Green Ave"
+  door 661,965
+place house 655,998 13x7 "202 W Green Ave"
+  door 661,998
+place house 655,1090 13x7 "201 W Benton Ave"
+  door 661,1096
+place house 655,2011 13x7 "201 Greenwood Ave"
+  door 661,2017
+place house 655,2050 13x7 "202 Greenwood Ave"
+  door 661,2050
+place house 700,862 13x7 "102 W Henderson Ave"
+  door 706,862
+place house 700,959 13x7 "101 W Green Ave"
+  door 706,965
+place house 700,1090 13x7 "101 W Benton Ave"
+  door 706,1096
+place house 700,2011 13x7 "101 Greenwood Ave"
+  door 706,2017
+place house 700,2050 13x7 "102 Greenwood Ave"
+  door 706,2050
+place house 774,823 13x7 "101 E Henderson Ave"
+  door 780,829
+place house 800,823 13x7 "103 E Henderson Ave"
+  door 806,829
+place house 774,862 13x7 "102 E Henderson Ave"
+  door 780,862
+place house 800,862 13x7 "104 E Henderson Ave"
+  door 806,862
+place house 826,862 13x7 "106 E Henderson Ave"
+  door 832,862
+place house 774,959 13x7 "101 E Green Ave"
+  door 780,965
+place house 800,959 13x7 "103 E Green Ave"
+  door 806,965
+place house 826,959 13x7 "105 E Green Ave"
+  door 832,965
+place house 774,998 13x7 "102 E Green Ave"
+  door 780,998
+place house 826,998 13x7 "106 E Green Ave"
+  door 832,998
+place house 774,1090 13x7 "101 E Benton Ave"
+  door 780,1096
+place house 800,1090 13x7 "103 E Benton Ave"
+  door 806,1096
+place house 826,1090 13x7 "105 E Benton Ave"
+  door 832,1096
+place house 774,1599 13x7 "102 Gilbert Ave"
+  door 780,1599
+place house 800,1599 13x7 "104 Gilbert Ave"
+  door 806,1599
+place house 826,1599 13x7 "106 Gilbert Ave"
+  door 832,1599
+place house 774,1699 13x7 "101 Stewart Ave"
+  door 780,1705
+place house 800,1699 13x7 "103 Stewart Ave"
+  door 806,1705
+place house 826,1699 13x7 "105 Stewart Ave"
+  door 832,1705
+place house 774,1738 13x7 "102 Stewart Ave"
+  door 780,1738
+place house 826,1738 13x7 "106 Stewart Ave"
+  door 832,1738
+place house 774,1830 13x7 "101 Mckibben Ave"
+  door 780,1836
+place house 800,1830 13x7 "103 Mckibben Ave"
+  door 806,1836
+place house 826,1830 13x7 "105 Mckibben Ave"
+  door 832,1836
+place house 774,1869 13x7 "102 Mckibben Ave"
+  door 780,1869
+place house 826,1869 13x7 "106 Mckibben Ave"
+  door 832,1869
+place house 774,1948 13x7 "101 Dale Ave"
+  door 780,1954
+place house 800,1948 13x7 "103 Dale Ave"
+  door 806,1954
+place house 826,1948 13x7 "105 Dale Ave"
+  door 832,1954
+place house 774,1987 13x7 "102 Dale Ave"
+  door 780,1987
+place house 800,1987 13x7 "104 Dale Ave"
+  door 806,1987
+place house 826,1987 13x7 "106 Dale Ave"
+  door 832,1987
+place house 774,2070 13x7 "101 Thompson Ave"
+  door 780,2076
+place house 800,2070 13x7 "103 Thompson Ave"
+  door 806,2076
+place house 826,2070 13x7 "105 Thompson Ave"
+  door 832,2076
+place house 774,2109 13x7 "102 Thompson Ave"
+  door 780,2109
+place house 826,2109 13x7 "106 Thompson Ave"
+  door 832,2109
+place house 774,2187 13x7 "101 Earlcourt Ave"
+  door 780,2193
+place house 800,2187 13x7 "103 Earlcourt Ave"
+  door 806,2193
+place house 826,2187 13x7 "105 Earlcourt Ave"
+  door 832,2193
+place house 868,823 13x7 "201 E Henderson Ave"
+  door 874,829
+place house 894,823 13x7 "203 E Henderson Ave"
+  door 900,829
+place house 920,823 13x7 "205 E Henderson Ave"
+  door 926,829
+place house 868,862 13x7 "202 E Henderson Ave"
+  door 874,862
+place house 894,862 13x7 "204 E Henderson Ave"
+  door 900,862
+place house 920,862 13x7 "206 E Henderson Ave"
+  door 926,862
+place house 868,959 13x7 "201 E Green Ave"
+  door 874,965
+place house 894,959 13x7 "203 E Green Ave"
+  door 900,965
+place house 920,959 13x7 "205 E Green Ave"
+  door 926,965
+place house 868,1129 13x7 "202 E Benton Ave"
+  door 874,1129
+place house 894,1129 13x7 "204 E Benton Ave"
+  door 900,1129
+place house 868,1186 13x7 "201 Holmes Ave"
+  door 874,1192
+place house 920,1186 13x7 "205 Holmes Ave"
+  door 926,1192
+place house 868,1225 13x7 "202 Holmes Ave"
+  door 874,1225
+place house 894,1225 13x7 "204 Holmes Ave"
+  door 900,1225
+place house 920,1225 13x7 "206 Holmes Ave"
+  door 926,1225
+place house 868,1302 13x7 "201 E Attica Ave"
+  door 874,1308
+place house 894,1302 13x7 "203 E Attica Ave"
+  door 900,1308
+place house 920,1302 13x7 "205 E Attica Ave"
+  door 926,1308
+place house 894,1361 13x7 "204 E Attica Ave"
+  door 900,1361
+place house 920,1361 13x7 "206 E Attica Ave"
+  door 926,1361
+place house 868,1455 13x7 "201 Maple Ave"
+  door 874,1461
+place house 920,1455 13x7 "205 Maple Ave"
+  door 926,1461
+place house 868,1494 13x7 "202 Maple Ave"
+  door 874,1494
+place house 894,1494 13x7 "204 Maple Ave"
+  door 900,1494
+place house 920,1494 13x7 "206 Maple Ave"
+  door 926,1494
+place house 868,1560 13x7 "201 Gilbert Ave"
+  door 874,1566
+place house 894,1560 13x7 "203 Gilbert Ave"
+  door 900,1566
+place house 868,1599 13x7 "202 Gilbert Ave"
+  door 874,1599
+place house 894,1599 13x7 "204 Gilbert Ave"
+  door 900,1599
+place house 920,1599 13x7 "206 Gilbert Ave"
+  door 926,1599
+place house 868,1699 13x7 "201 Stewart Ave"
+  door 874,1705
+place house 894,1699 13x7 "203 Stewart Ave"
+  door 900,1705
+place house 920,1699 13x7 "205 Stewart Ave"
+  door 926,1705
+place house 868,1738 13x7 "202 Stewart Ave"
+  door 874,1738
+place house 894,1738 13x7 "204 Stewart Ave"
+  door 900,1738
+place house 894,1830 13x7 "203 Mckibben Ave"
+  door 900,1836
+place house 920,1830 13x7 "205 Mckibben Ave"
+  door 926,1836
+place house 868,1869 13x7 "202 Mckibben Ave"
+  door 874,1869
+place house 894,1869 13x7 "204 Mckibben Ave"
+  door 900,1869
+place house 868,1948 13x7 "201 Dale Ave"
+  door 874,1954
+place house 894,1948 13x7 "203 Dale Ave"
+  door 900,1954
+place house 920,1948 13x7 "205 Dale Ave"
+  door 926,1954
+place house 868,1987 13x7 "202 Dale Ave"
+  door 874,1987
+place house 894,1987 13x7 "204 Dale Ave"
+  door 900,1987
+place house 920,1987 13x7 "206 Dale Ave"
+  door 926,1987
+place house 894,2070 13x7 "203 Thompson Ave"
+  door 900,2076
+place house 920,2070 13x7 "205 Thompson Ave"
+  door 926,2076
+place house 868,2109 13x7 "202 Thompson Ave"
+  door 874,2109
+place house 894,2109 13x7 "204 Thompson Ave"
+  door 900,2109
+place house 868,2187 13x7 "201 Earlcourt Ave"
+  door 874,2193
+place house 894,2187 13x7 "203 Earlcourt Ave"
+  door 900,2193
+place house 920,2187 13x7 "205 Earlcourt Ave"
+  door 926,2193
+place house 977,823 13x7 "301 E Henderson Ave"
+  door 983,829
+place house 1003,823 13x7 "303 E Henderson Ave"
+  door 1009,829
+place house 1029,823 13x7 "305 E Henderson Ave"
+  door 1035,829
+place house 1055,823 13x7 "307 E Henderson Ave"
+  door 1061,829
+place house 1081,823 13x7 "309 E Henderson Ave"
+  door 1087,829
+place house 1003,862 13x7 "304 E Henderson Ave"
+  door 1009,862
+place house 1029,862 13x7 "306 E Henderson Ave"
+  door 1035,862
+place house 1055,862 13x7 "308 E Henderson Ave"
+  door 1061,862
+place house 1081,862 13x7 "310 E Henderson Ave"
+  door 1087,862
+place house 1107,862 13x7 "312 E Henderson Ave"
+  door 1113,862
+place house 977,959 13x7 "301 E Green Ave"
+  door 983,965
+place house 1003,959 13x7 "303 E Green Ave"
+  door 1009,965
+place house 1055,959 13x7 "307 E Green Ave"
+  door 1061,965
+place house 1081,959 13x7 "309 E Green Ave"
+  door 1087,965
+place house 1107,959 13x7 "311 E Green Ave"
+  door 1113,965
+place house 977,998 13x7 "302 E Green Ave"
+  door 983,998
+place house 1003,998 13x7 "304 E Green Ave"
+  door 1009,998
+place house 1029,998 13x7 "306 E Green Ave"
+  door 1035,998
+place house 1055,998 13x7 "308 E Green Ave"
+  door 1061,998
+place house 1107,998 13x7 "312 E Green Ave"
+  door 1113,998
+place house 977,1090 13x7 "301 E Benton Ave"
+  door 983,1096
+place house 1003,1090 13x7 "303 E Benton Ave"
+  door 1009,1096
+place house 1055,1090 13x7 "307 E Benton Ave"
+  door 1061,1096
+place house 1081,1090 13x7 "309 E Benton Ave"
+  door 1087,1096
+place house 1107,1090 13x7 "311 E Benton Ave"
+  door 1113,1096
+place house 977,1129 13x7 "302 E Benton Ave"
+  door 983,1129
+place house 1003,1129 13x7 "304 E Benton Ave"
+  door 1009,1129
+place house 1029,1129 13x7 "306 E Benton Ave"
+  door 1035,1129
+place house 1055,1129 13x7 "308 E Benton Ave"
+  door 1061,1129
+place house 1107,1129 13x7 "312 E Benton Ave"
+  door 1113,1129
+place house 977,1186 13x7 "301 Holmes Ave"
+  door 983,1192
+place house 1003,1186 13x7 "303 Holmes Ave"
+  door 1009,1192
+place house 1029,1186 13x7 "305 Holmes Ave"
+  door 1035,1192
+place house 1055,1186 13x7 "307 Holmes Ave"
+  door 1061,1192
+place house 1081,1186 13x7 "309 Holmes Ave"
+  door 1087,1192
+place house 1107,1186 13x7 "311 Holmes Ave"
+  door 1113,1192
+place house 977,1225 13x7 "302 Holmes Ave"
+  door 983,1225
+place house 1029,1225 13x7 "306 Holmes Ave"
+  door 1035,1225
+place house 1055,1225 13x7 "308 Holmes Ave"
+  door 1061,1225
+place house 1081,1225 13x7 "310 Holmes Ave"
+  door 1087,1225
+place house 1107,1225 13x7 "312 Holmes Ave"
+  door 1113,1225
+place house 1003,1302 13x7 "303 E Attica Ave"
+  door 1009,1308
+place house 1029,1302 13x7 "305 E Attica Ave"
+  door 1035,1308
+place house 1055,1302 13x7 "307 E Attica Ave"
+  door 1061,1308
+place house 1081,1302 13x7 "309 E Attica Ave"
+  door 1087,1308
+place house 1107,1302 13x7 "311 E Attica Ave"
+  door 1113,1308
+place house 977,1361 13x7 "302 E Attica Ave"
+  door 983,1361
+place house 1003,1361 13x7 "304 E Attica Ave"
+  door 1009,1361
+place house 1055,1361 13x7 "308 E Attica Ave"
+  door 1061,1361
+place house 1081,1361 13x7 "310 E Attica Ave"
+  door 1087,1361
+place house 977,1455 13x7 "301 Maple Ave"
+  door 983,1461
+place house 1003,1455 13x7 "303 Maple Ave"
+  door 1009,1461
+place house 1029,1455 13x7 "305 Maple Ave"
+  door 1035,1461
+place house 1081,1455 13x7 "309 Maple Ave"
+  door 1087,1461
+place house 1107,1455 13x7 "311 Maple Ave"
+  door 1113,1461
+place house 977,1494 13x7 "302 Maple Ave"
+  door 983,1494
+place house 1003,1494 13x7 "304 Maple Ave"
+  door 1009,1494
+place house 1029,1494 13x7 "306 Maple Ave"
+  door 1035,1494
+place house 1055,1494 13x7 "308 Maple Ave"
+  door 1061,1494
+place house 1081,1494 13x7 "310 Maple Ave"
+  door 1087,1494
+place house 1107,1494 13x7 "312 Maple Ave"
+  door 1113,1494
+place house 977,1560 13x7 "301 Gilbert Ave"
+  door 983,1566
+place house 1003,1560 13x7 "303 Gilbert Ave"
+  door 1009,1566
+place house 1029,1560 13x7 "305 Gilbert Ave"
+  door 1035,1566
+place house 1055,1560 13x7 "307 Gilbert Ave"
+  door 1061,1566
+place house 1081,1560 13x7 "309 Gilbert Ave"
+  door 1087,1566
+place house 1107,1560 13x7 "311 Gilbert Ave"
+  door 1113,1566
+place house 977,1599 13x7 "302 Gilbert Ave"
+  door 983,1599
+place house 1003,1599 13x7 "304 Gilbert Ave"
+  door 1009,1599
+place house 1055,1599 13x7 "308 Gilbert Ave"
+  door 1061,1599
+place house 1081,1599 13x7 "310 Gilbert Ave"
+  door 1087,1599
+place house 1107,1599 13x7 "312 Gilbert Ave"
+  door 1113,1599
+place house 977,1699 13x7 "301 Stewart Ave"
+  door 983,1705
+place house 1003,1699 13x7 "303 Stewart Ave"
+  door 1009,1705
+place house 1055,1699 13x7 "307 Stewart Ave"
+  door 1061,1705
+place house 1081,1699 13x7 "309 Stewart Ave"
+  door 1087,1705
+place house 1107,1699 13x7 "311 Stewart Ave"
+  door 1113,1705
+place house 977,1738 13x7 "302 Stewart Ave"
+  door 983,1738
+place house 1003,1738 13x7 "304 Stewart Ave"
+  door 1009,1738
+place house 1029,1738 13x7 "306 Stewart Ave"
+  door 1035,1738
+place house 1055,1738 13x7 "308 Stewart Ave"
+  door 1061,1738
+place house 1107,1738 13x7 "312 Stewart Ave"
+  door 1113,1738
+place house 977,1830 13x7 "301 Mckibben Ave"
+  door 983,1836
+place house 1003,1830 13x7 "303 Mckibben Ave"
+  door 1009,1836
+place house 1055,1830 13x7 "307 Mckibben Ave"
+  door 1061,1836
+place house 1081,1830 13x7 "309 Mckibben Ave"
+  door 1087,1836
+place house 1107,1830 13x7 "311 Mckibben Ave"
+  door 1113,1836
+place house 977,1869 13x7 "302 Mckibben Ave"
+  door 983,1869
+place house 1003,1869 13x7 "304 Mckibben Ave"
+  door 1009,1869
+place house 1029,1869 13x7 "306 Mckibben Ave"
+  door 1035,1869
+place house 1055,1869 13x7 "308 Mckibben Ave"
+  door 1061,1869
+place house 1107,1869 13x7 "312 Mckibben Ave"
+  door 1113,1869
+place house 977,1948 13x7 "301 Dale Ave"
+  door 983,1954
+place house 1003,1948 13x7 "303 Dale Ave"
+  door 1009,1954
+place house 1029,1948 13x7 "305 Dale Ave"
+  door 1035,1954
+place house 1055,1948 13x7 "307 Dale Ave"
+  door 1061,1954
+place house 1081,1948 13x7 "309 Dale Ave"
+  door 1087,1954
+place house 1107,1948 13x7 "311 Dale Ave"
+  door 1113,1954
+place house 977,1987 13x7 "302 Dale Ave"
+  door 983,1987
+place house 1029,1987 13x7 "306 Dale Ave"
+  door 1035,1987
+place house 1055,1987 13x7 "308 Dale Ave"
+  door 1061,1987
+place house 1107,1987 13x7 "312 Dale Ave"
+  door 1113,1987
+place house 977,2070 13x7 "301 Thompson Ave"
+  door 983,2076
+place house 1003,2070 13x7 "303 Thompson Ave"
+  door 1009,2076
+place house 1055,2070 13x7 "307 Thompson Ave"
+  door 1061,2076
+place house 1081,2070 13x7 "309 Thompson Ave"
+  door 1087,2076
+place house 1107,2070 13x7 "311 Thompson Ave"
+  door 1113,2076
+place house 977,2109 13x7 "302 Thompson Ave"
+  door 983,2109
+place house 1003,2109 13x7 "304 Thompson Ave"
+  door 1009,2109
+place house 1029,2109 13x7 "306 Thompson Ave"
+  door 1035,2109
+place house 1055,2109 13x7 "308 Thompson Ave"
+  door 1061,2109
+place house 1107,2109 13x7 "312 Thompson Ave"
+  door 1113,2109
+place house 977,2187 13x7 "301 Earlcourt Ave"
+  door 983,2193
+place house 1029,2187 13x7 "305 Earlcourt Ave"
+  door 1035,2193
+place house 1055,2187 13x7 "307 Earlcourt Ave"
+  door 1061,2193
+place house 1107,2187 13x7 "311 Earlcourt Ave"
+  door 1113,2193
+place house 1163,823 13x7 "401 E Henderson Ave"
+  door 1169,829
+place house 1189,823 13x7 "403 E Henderson Ave"
+  door 1195,829
+place house 1215,823 13x7 "405 E Henderson Ave"
+  door 1221,829
+place house 1241,823 13x7 "407 E Henderson Ave"
+  door 1247,829
+place house 1293,823 13x7 "411 E Henderson Ave"
+  door 1299,829
+place house 1163,862 13x7 "402 E Henderson Ave"
+  door 1169,862
+place house 1189,862 13x7 "404 E Henderson Ave"
+  door 1195,862
+place house 1215,862 13x7 "406 E Henderson Ave"
+  door 1221,862
+place house 1241,862 13x7 "408 E Henderson Ave"
+  door 1247,862
+place house 1267,862 13x7 "410 E Henderson Ave"
+  door 1273,862
+place house 1293,862 13x7 "412 E Henderson Ave"
+  door 1299,862
+place house 1163,959 13x7 "401 E Green Ave"
+  door 1169,965
+place house 1215,959 13x7 "405 E Green Ave"
+  door 1221,965
+place house 1241,959 13x7 "407 E Green Ave"
+  door 1247,965
+place house 1267,959 13x7 "409 E Green Ave"
+  door 1273,965
+place house 1293,959 13x7 "411 E Green Ave"
+  door 1299,965
+place house 1163,998 13x7 "402 E Green Ave"
+  door 1169,998
+place house 1189,998 13x7 "404 E Green Ave"
+  door 1195,998
+place house 1215,998 13x7 "406 E Green Ave"
+  door 1221,998
+place house 1267,998 13x7 "410 E Green Ave"
+  door 1273,998
+place house 1293,998 13x7 "412 E Green Ave"
+  door 1299,998
+place house 1163,1090 13x7 "401 E Benton Ave"
+  door 1169,1096
+place house 1215,1090 13x7 "405 E Benton Ave"
+  door 1221,1096
+place house 1241,1090 13x7 "407 E Benton Ave"
+  door 1247,1096
+place house 1267,1090 13x7 "409 E Benton Ave"
+  door 1273,1096
+place house 1293,1090 13x7 "411 E Benton Ave"
+  door 1299,1096
+place house 1163,1129 13x7 "402 E Benton Ave"
+  door 1169,1129
+place house 1189,1129 13x7 "404 E Benton Ave"
+  door 1195,1129
+place house 1215,1129 13x7 "406 E Benton Ave"
+  door 1221,1129
+place house 1267,1129 13x7 "410 E Benton Ave"
+  door 1273,1129
+place house 1293,1129 13x7 "412 E Benton Ave"
+  door 1299,1129
+place house 1163,1186 13x7 "401 Holmes Ave"
+  door 1169,1192
+place house 1189,1186 13x7 "403 Holmes Ave"
+  door 1195,1192
+place house 1215,1186 13x7 "405 Holmes Ave"
+  door 1221,1192
+place house 1241,1186 13x7 "407 Holmes Ave"
+  door 1247,1192
+place house 1267,1186 13x7 "409 Holmes Ave"
+  door 1273,1192
+place house 1189,1225 13x7 "404 Holmes Ave"
+  door 1195,1225
+place house 1215,1225 13x7 "406 Holmes Ave"
+  door 1221,1225
+place house 1241,1225 13x7 "408 Holmes Ave"
+  door 1247,1225
+place house 1267,1225 13x7 "410 Holmes Ave"
+  door 1273,1225
+place house 1293,1225 13x7 "412 Holmes Ave"
+  door 1299,1225
+place house 1163,1302 13x7 "401 E Attica Ave"
+  door 1169,1308
+place house 1189,1302 13x7 "403 E Attica Ave"
+  door 1195,1308
+place house 1215,1302 13x7 "405 E Attica Ave"
+  door 1221,1308
+place house 1241,1302 13x7 "407 E Attica Ave"
+  door 1247,1308
+place house 1267,1302 13x7 "409 E Attica Ave"
+  door 1273,1308
+place house 1293,1302 13x7 "411 E Attica Ave"
+  door 1299,1308
+place house 1163,1361 13x7 "402 E Attica Ave"
+  door 1169,1361
+place house 1215,1361 13x7 "406 E Attica Ave"
+  door 1221,1361
+place house 1241,1361 13x7 "408 E Attica Ave"
+  door 1247,1361
+place house 1293,1361 13x7 "412 E Attica Ave"
+  door 1299,1361
+place house 1163,1455 13x7 "401 Maple Ave"
+  door 1169,1461
+place house 1189,1455 13x7 "403 Maple Ave"
+  door 1195,1461
+place house 1241,1455 13x7 "407 Maple Ave"
+  door 1247,1461
+place house 1267,1455 13x7 "409 Maple Ave"
+  door 1273,1461
+place house 1163,1494 13x7 "402 Maple Ave"
+  door 1169,1494
+place house 1189,1494 13x7 "404 Maple Ave"
+  door 1195,1494
+place house 1215,1494 13x7 "406 Maple Ave"
+  door 1221,1494
+place house 1241,1494 13x7 "408 Maple Ave"
+  door 1247,1494
+place house 1267,1494 13x7 "410 Maple Ave"
+  door 1273,1494
+place house 1293,1494 13x7 "412 Maple Ave"
+  door 1299,1494
+place house 1163,1560 13x7 "401 Gilbert Ave"
+  door 1169,1566
+place house 1189,1560 13x7 "403 Gilbert Ave"
+  door 1195,1566
+place house 1215,1560 13x7 "405 Gilbert Ave"
+  door 1221,1566
+place house 1241,1560 13x7 "407 Gilbert Ave"
+  door 1247,1566
+place house 1267,1560 13x7 "409 Gilbert Ave"
+  door 1273,1566
+place house 1293,1560 13x7 "411 Gilbert Ave"
+  door 1299,1566
+place house 1163,1599 13x7 "402 Gilbert Ave"
+  door 1169,1599
+place house 1215,1599 13x7 "406 Gilbert Ave"
+  door 1221,1599
+place house 1241,1599 13x7 "408 Gilbert Ave"
+  door 1247,1599
+place house 1267,1599 13x7 "410 Gilbert Ave"
+  door 1273,1599
+place house 1293,1599 13x7 "412 Gilbert Ave"
+  door 1299,1599
+place house 1163,1699 13x7 "401 Stewart Ave"
+  door 1169,1705
+place house 1215,1699 13x7 "405 Stewart Ave"
+  door 1221,1705
+place house 1241,1699 13x7 "407 Stewart Ave"
+  door 1247,1705
+place house 1267,1699 13x7 "409 Stewart Ave"
+  door 1273,1705
+place house 1293,1699 13x7 "411 Stewart Ave"
+  door 1299,1705
+place house 1163,1738 13x7 "402 Stewart Ave"
+  door 1169,1738
+place house 1189,1738 13x7 "404 Stewart Ave"
+  door 1195,1738
+place house 1215,1738 13x7 "406 Stewart Ave"
+  door 1221,1738
+place house 1267,1738 13x7 "410 Stewart Ave"
+  door 1273,1738
+place house 1293,1738 13x7 "412 Stewart Ave"
+  door 1299,1738
+place house 1163,1830 13x7 "401 Mckibben Ave"
+  door 1169,1836
+place house 1215,1830 13x7 "405 Mckibben Ave"
+  door 1221,1836
+place house 1241,1830 13x7 "407 Mckibben Ave"
+  door 1247,1836
+place house 1267,1830 13x7 "409 Mckibben Ave"
+  door 1273,1836
+place house 1293,1830 13x7 "411 Mckibben Ave"
+  door 1299,1836
+place house 1163,1869 13x7 "402 Mckibben Ave"
+  door 1169,1869
+place house 1189,1869 13x7 "404 Mckibben Ave"
+  door 1195,1869
+place house 1215,1869 13x7 "406 Mckibben Ave"
+  door 1221,1869
+place house 1267,1869 13x7 "410 Mckibben Ave"
+  door 1273,1869
+place house 1293,1869 13x7 "412 Mckibben Ave"
+  door 1299,1869
+place house 1163,1948 13x7 "401 Dale Ave"
+  door 1169,1954
+place house 1189,1948 13x7 "403 Dale Ave"
+  door 1195,1954
+place house 1215,1948 13x7 "405 Dale Ave"
+  door 1221,1954
+place house 1241,1948 13x7 "407 Dale Ave"
+  door 1247,1954
+place house 1267,1948 13x7 "409 Dale Ave"
+  door 1273,1954
+place house 1293,1948 13x7 "411 Dale Ave"
+  door 1299,1954
+place house 1163,2070 13x7 "401 Thompson Ave"
+  door 1169,2076
+place house 1215,2070 13x7 "405 Thompson Ave"
+  door 1221,2076
+place house 1241,2070 13x7 "407 Thompson Ave"
+  door 1247,2076
+place house 1267,2070 13x7 "409 Thompson Ave"
+  door 1273,2076
+place house 1293,2070 13x7 "411 Thompson Ave"
+  door 1299,2076
+place house 1163,2109 13x7 "402 Thompson Ave"
+  door 1169,2109
+place house 1189,2109 13x7 "404 Thompson Ave"
+  door 1195,2109
+place house 1215,2109 13x7 "406 Thompson Ave"
+  door 1221,2109
+place house 1267,2109 13x7 "410 Thompson Ave"
+  door 1273,2109
+place house 1293,2109 13x7 "412 Thompson Ave"
+  door 1299,2109
+place house 1189,2187 13x7 "403 Earlcourt Ave"
+  door 1195,2193
+place house 1215,2187 13x7 "405 Earlcourt Ave"
+  door 1221,2193
+place house 1267,2187 13x7 "409 Earlcourt Ave"
+  door 1273,2193
+place house 1293,2187 13x7 "411 Earlcourt Ave"
+  door 1299,2193
+place house 1344,823 13x7 "501 E Henderson Ave"
+  door 1350,829
+place house 1370,823 13x7 "503 E Henderson Ave"
+  door 1376,829
+place house 1396,823 13x7 "505 E Henderson Ave"
+  door 1402,829
+place house 1422,823 13x7 "507 E Henderson Ave"
+  door 1428,829
+place house 1448,823 13x7 "509 E Henderson Ave"
+  door 1454,829
+place house 1474,823 13x7 "511 E Henderson Ave"
+  door 1480,829
+place house 1344,862 13x7 "502 E Henderson Ave"
+  door 1350,862
+place house 1370,862 13x7 "504 E Henderson Ave"
+  door 1376,862
+place house 1422,862 13x7 "508 E Henderson Ave"
+  door 1428,862
+place house 1448,862 13x7 "510 E Henderson Ave"
+  door 1454,862
+place house 1474,862 13x7 "512 E Henderson Ave"
+  door 1480,862
+place house 1344,959 13x7 "501 E Green Ave"
+  door 1350,965
+place house 1396,959 13x7 "505 E Green Ave"
+  door 1402,965
+place house 1422,959 13x7 "507 E Green Ave"
+  door 1428,965
+place house 1448,959 13x7 "509 E Green Ave"
+  door 1454,965
+place house 1474,959 13x7 "511 E Green Ave"
+  door 1480,965
+place house 1344,998 13x7 "502 E Green Ave"
+  door 1350,998
+place house 1370,998 13x7 "504 E Green Ave"
+  door 1376,998
+place house 1396,998 13x7 "506 E Green Ave"
+  door 1402,998
+place house 1448,998 13x7 "510 E Green Ave"
+  door 1454,998
+place house 1474,998 13x7 "512 E Green Ave"
+  door 1480,998
+place house 1344,1090 13x7 "501 E Benton Ave"
+  door 1350,1096
+place house 1396,1090 13x7 "505 E Benton Ave"
+  door 1402,1096
+place house 1422,1090 13x7 "507 E Benton Ave"
+  door 1428,1096
+place house 1474,1090 13x7 "511 E Benton Ave"
+  door 1480,1096
+place house 1344,1129 13x7 "502 E Benton Ave"
+  door 1350,1129
+place house 1370,1129 13x7 "504 E Benton Ave"
+  door 1376,1129
+place house 1396,1129 13x7 "506 E Benton Ave"
+  door 1402,1129
+place house 1422,1129 13x7 "508 E Benton Ave"
+  door 1428,1129
+place house 1448,1129 13x7 "510 E Benton Ave"
+  door 1454,1129
+place house 1474,1129 13x7 "512 E Benton Ave"
+  door 1480,1129
+place house 1344,1186 13x7 "501 Holmes Ave"
+  door 1350,1192
+place house 1370,1186 13x7 "503 Holmes Ave"
+  door 1376,1192
+place house 1396,1186 13x7 "505 Holmes Ave"
+  door 1402,1192
+place house 1422,1186 13x7 "507 Holmes Ave"
+  door 1428,1192
+place house 1448,1186 13x7 "509 Holmes Ave"
+  door 1454,1192
+place house 1370,1225 13x7 "504 Holmes Ave"
+  door 1376,1225
+place house 1396,1225 13x7 "506 Holmes Ave"
+  door 1402,1225
+place house 1422,1225 13x7 "508 Holmes Ave"
+  door 1428,1225
+place house 1448,1225 13x7 "510 Holmes Ave"
+  door 1454,1225
+place house 1474,1225 13x7 "512 Holmes Ave"
+  door 1480,1225
+place house 1344,1302 13x7 "501 E Attica Ave"
+  door 1350,1308
+place house 1370,1302 13x7 "503 E Attica Ave"
+  door 1376,1308
+place house 1422,1302 13x7 "507 E Attica Ave"
+  door 1428,1308
+place house 1448,1302 13x7 "509 E Attica Ave"
+  door 1454,1308
+place house 1474,1302 13x7 "511 E Attica Ave"
+  door 1480,1308
+place house 1370,1494 13x7 "504 Maple Ave"
+  door 1376,1494
+place house 1396,1494 13x7 "506 Maple Ave"
+  door 1402,1494
+place house 1422,1494 13x7 "508 Maple Ave"
+  door 1428,1494
+place house 1448,1494 13x7 "510 Maple Ave"
+  door 1454,1494
+place house 1474,1494 13x7 "512 Maple Ave"
+  door 1480,1494
+place house 1344,1560 13x7 "501 Gilbert Ave"
+  door 1350,1566
+place house 1370,1560 13x7 "503 Gilbert Ave"
+  door 1376,1566
+place house 1396,1560 13x7 "505 Gilbert Ave"
+  door 1402,1566
+place house 1422,1560 13x7 "507 Gilbert Ave"
+  door 1428,1566
+place house 1448,1560 13x7 "509 Gilbert Ave"
+  door 1454,1566
+place house 1474,1560 13x7 "511 Gilbert Ave"
+  door 1480,1566
+place house 1344,1599 13x7 "502 Gilbert Ave"
+  door 1350,1599
+place house 1396,1599 13x7 "506 Gilbert Ave"
+  door 1402,1599
+place house 1422,1599 13x7 "508 Gilbert Ave"
+  door 1428,1599
+place house 1448,1599 13x7 "510 Gilbert Ave"
+  door 1454,1599
+place house 1474,1599 13x7 "512 Gilbert Ave"
+  door 1480,1599
+place house 1344,1699 13x7 "501 Stewart Ave"
+  door 1350,1705
+place house 1396,1699 13x7 "505 Stewart Ave"
+  door 1402,1705
+place house 1422,1699 13x7 "507 Stewart Ave"
+  door 1428,1705
+place house 1448,1699 13x7 "509 Stewart Ave"
+  door 1454,1705
+place house 1474,1699 13x7 "511 Stewart Ave"
+  door 1480,1705
+place house 1344,1738 13x7 "502 Stewart Ave"
+  door 1350,1738
+place house 1370,1738 13x7 "504 Stewart Ave"
+  door 1376,1738
+place house 1396,1738 13x7 "506 Stewart Ave"
+  door 1402,1738
+place house 1448,1738 13x7 "510 Stewart Ave"
+  door 1454,1738
+place house 1474,1738 13x7 "512 Stewart Ave"
+  door 1480,1738
+place house 1344,1830 13x7 "501 Mckibben Ave"
+  door 1350,1836
+place house 1396,1830 13x7 "505 Mckibben Ave"
+  door 1402,1836
+place house 1422,1830 13x7 "507 Mckibben Ave"
+  door 1428,1836
+place house 1474,1830 13x7 "511 Mckibben Ave"
+  door 1480,1836
+place house 1344,1869 13x7 "502 Mckibben Ave"
+  door 1350,1869
+place house 1370,1869 13x7 "504 Mckibben Ave"
+  door 1376,1869
+place house 1396,1869 13x7 "506 Mckibben Ave"
+  door 1402,1869
+place house 1422,1869 13x7 "508 Mckibben Ave"
+  door 1428,1869
+place house 1448,1869 13x7 "510 Mckibben Ave"
+  door 1454,1869
+place house 1474,1869 13x7 "512 Mckibben Ave"
+  door 1480,1869
+place house 1344,1948 13x7 "501 Dale Ave"
+  door 1350,1954
+place house 1396,1948 13x7 "505 Dale Ave"
+  door 1402,1954
+place house 1422,1948 13x7 "507 Dale Ave"
+  door 1428,1954
+place house 1448,1948 13x7 "509 Dale Ave"
+  door 1454,1954
+place house 1474,1948 13x7 "511 Dale Ave"
+  door 1480,1954
+place house 1344,1987 13x7 "502 Dale Ave"
+  door 1350,1987
+place house 1370,1987 13x7 "504 Dale Ave"
+  door 1376,1987
+place house 1396,1987 13x7 "506 Dale Ave"
+  door 1402,1987
+place house 1448,1987 13x7 "510 Dale Ave"
+  door 1454,1987
+place house 1474,1987 13x7 "512 Dale Ave"
+  door 1480,1987
+place house 1344,2070 13x7 "501 Thompson Ave"
+  door 1350,2076
+place house 1396,2070 13x7 "505 Thompson Ave"
+  door 1402,2076
+place house 1422,2070 13x7 "507 Thompson Ave"
+  door 1428,2076
+place house 1474,2070 13x7 "511 Thompson Ave"
+  door 1480,2076
+place house 1344,2109 13x7 "502 Thompson Ave"
+  door 1350,2109
+place house 1370,2109 13x7 "504 Thompson Ave"
+  door 1376,2109
+place house 1396,2109 13x7 "506 Thompson Ave"
+  door 1402,2109
+place house 1422,2109 13x7 "508 Thompson Ave"
+  door 1428,2109
+place house 1448,2109 13x7 "510 Thompson Ave"
+  door 1454,2109
+place house 1474,2109 13x7 "512 Thompson Ave"
+  door 1480,2109
+place house 1344,2187 13x7 "501 Earlcourt Ave"
+  door 1350,2193
+place house 1370,2187 13x7 "503 Earlcourt Ave"
+  door 1376,2193
+place house 1396,2187 13x7 "505 Earlcourt Ave"
+  door 1402,2193
+place house 1448,2187 13x7 "509 Earlcourt Ave"
+  door 1454,2193
+place house 1474,2187 13x7 "511 Earlcourt Ave"
+  door 1480,2193
 
 # ==========================================================================
 #  THE COUNTRY - corn, beans, and about seven people to the square mile

@@ -162,7 +162,7 @@ w_("# asks the ground at a junction's diagonals whether it is in a town, so pavi
 w_("# whole village would put lights on every corner of it.")
 w_(f"terrain field 0,0 {W}x{H}")
 w_(f"terrain grass {X0-20},{Y0-20} {X1-X0+40}x{Y1-Y0+40}")
-w_(f"terrain path {CX-45},{CY-45} 90x90")
+w_(f"terrain path {CX-26},{CY-26} 52x52)".replace(")", ""))
 w_()
 
 w_("# ---- Illinois Route 1 and the cross street --------------------------------")
@@ -259,13 +259,67 @@ flats = [dict(by_kind['apartment'][n], units=3,
               human="Over the shops, and the stairs go up from the street." if n == 0 else None)
          for n in range(4)]
 
-lots = [Lot(*b[:4]) for b in BUSINESS]
+# THE STOREFRONTS FRONT CHICAGO STREET, which sounds too obvious to write down and
+# was not what happened. Shelf-packing filled the first block in the list before it
+# started the second, and `sorted(BUSINESS)` puts the lowest x first - so all
+# thirty-five businesses ended up in a strip on WATSON STREET, a hundred metres west
+# of Route 1, and the main street of the town had grass and trees on it. The render
+# is unambiguous and it is the whole of "it looked like crap".
+#
+# So the frontage is placed as a frontage: two runs down either side of Chicago from
+# the crossroads, shops shoulder to shoulder, doors on the street. Depth into the
+# block, width along it - a shop authored 16x12 becomes 12 deep and 16 wide, because
+# on a north-south street the frontage is measured along y.
+FRONT_DEPTH = 22
+west_edge = CX - 15 - 3 - FRONT_DEPTH      # back of the west run
+east_edge = CX + 15 + 3                     # front of the east run
+
+def frontage(rec, side, cursor):
+    """Seat one business on Chicago Street. Returns the new cursor along y."""
+    deep, wide = min(rec['h'], FRONT_DEPTH), rec['w']
+    x = west_edge + (FRONT_DEPTH - deep) if side < 0 else east_edge
+    y = cursor
+    r = dict(rec, w=deep, h=wide)
+    # The door is on the Chicago side, which is what FacingOf reads to turn the shop
+    # round so its front faces the highway rather than the back of the block.
+    r['door'] = (deep - 1, wide // 2) if side < 0 else (0, wide // 2)
+    emit(r, x, y)
+    return y + wide + 2
+
+# A RUN STOPS AT THE CORNER. The frontage used to march straight through the cross
+# streets - the Weighhouse stood ten metres into Holmes Avenue - because nothing told
+# it the block had ended. Storefronts stop at the junction and start again on the next
+# block, which is both what MapAudit demands and what a main street looks like.
+CROSS_Y = sorted(CY - o for o, name, _, _ in EW if name != "attica")
+
+def blocked(y, wide, pad=8):
+    for c in CROSS_Y:
+        if y < c + pad and y + wide > c - pad: return c
+    return None
+
 spill = []
-for rec in items + flats:
-    for L in lots:
-        at = L.fit(rec['w'], rec['h'])
-        if at: emit(rec, at[0], at[1]); break
-    else: spill.append(rec)
+# North of Attica up one side and down the other, then south of it, so all four corners
+# of the crossroads are built on and the junction reads as the middle of a town.
+runs = [(-1, CY - 18, -1), (+1, CY - 18, -1), (-1, CY + 18, +1), (+1, CY + 18, +1)]
+queue = list(items) + list(flats)
+LIMIT = 230
+for side, start, direction in runs:
+    cursor = start
+    while queue:
+        rec = queue[0]
+        wide = rec['w']
+        y = cursor - wide if direction < 0 else cursor
+        hit = blocked(y, wide)
+        if hit is not None:
+            # Step clear of the junction and try the same shop again on the far side.
+            cursor = hit - 8 if direction < 0 else hit + 8
+            if abs(cursor - CY) > LIMIT: break
+            continue
+        if abs(y - CY) > LIMIT: break
+        queue.pop(0)
+        frontage(rec, side, y)
+        cursor = y - 2 if direction < 0 else y + wide + 2
+spill += queue
 w_()
 
 w_("# ---- the school, the firehouse, the elevator, the water tower --------------")
@@ -337,7 +391,7 @@ w_("# " + "=" * 74)
 w_()
 
 homes = [b for b in rest if b not in used_civic]
-PITCH, LOTW, LOTH, SETBACK = 26, 11, 8, 7
+PITCH, LOTW, LOTH, SETBACK = 26, 13, 7, 8
 built = 0
 skipped = 0
 for b in homes:

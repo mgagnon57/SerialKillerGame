@@ -158,80 +158,71 @@ namespace Noir.Editor
                 // camera a long way BACK from its target, which is how an earlier set ended up
                 // inside a townhouse and inside the Meridian, photographing wallpaper.
 
-                // Standing in Northgate Avenue looking east: the view the game is played from,
-                // and the only one that says whether this is a street.
-                // EVERY CITY CAMERA MOVED +120 WITH THE TOWN. These are hardcoded points, not
-                // anything derived from the map, so the re-lay to 1290 aimed all of them a
-                // hundred and twenty metres off their subject until they were moved to match.
-                // The country ones moved further and by hand, because the farm did not travel
-                // with the town - it went to the north-west corner, which is the only ground
-                // wide enough for it that no road touches.
-                Frame(camGo, new Vector3(590f, 1.6f, -555f), 36f, 3f, 90f);
+                // ---- ROSSVILLE. Every camera is placed off the real street grid ----
+                //
+                // These used to be hardcoded points that had to be walked forward by hand every
+                // time the map moved - +120 for the 1290 re-lay, and wrong again the moment the
+                // town was re-laid on Rossville's own grid. They are now derived from the one
+                // fact the map is built about: Chicago Street crosses Attica Street at (750,
+                // 1335), and every street is a known offset from it. Move the town and the
+                // cameras follow.
+                const float cx = 750f, cy = 1335f;
+                Vector3 At(float east, float north) => new Vector3(cx + east, 0f, -(cy - north));
+
+                // THE CROSSROADS. Chicago and Attica, the only signalised junction in the
+                // village, from the middle of the road looking north up Route 1.
+                Frame(camGo, At(0f, 0f) + Vector3.up * 1.6f, 40f, 4f, 0f);
                 Capture(cam, Path.Combine(OutputDir, "city-street.png"));
 
-                // The whole downtown, to see the grid: six blocks square inside its ring.
-                Frame(camGo, new Vector3(645f, 0f, -645f), 420f, 38f, 30f);
+                // THE WHOLE VILLAGE from above, to read the grid: nine streets by fourteen,
+                // mostly east of Route 1, with the country round it.
+                Frame(camGo, At(280f, -130f), 1150f, 42f, 20f);
                 Capture(cam, Path.Combine(OutputDir, "city-block.png"));
 
-                // The terrace on the north side of Northgate, from the middle of the avenue.
-                Frame(camGo, new Vector3(600f, 1.5f, -540f), 30f, 8f, 0f);
+                // THE STOREFRONTS - the 100 block of North Chicago, from the pavement.
+                Frame(camGo, At(0f, 60f) + Vector3.up * 1.5f, 34f, 5f, 180f);
                 Capture(cam, Path.Combine(OutputDir, "city-terrace.png"));
 
-                // Northgate Avenue meeting Second Street, looking east along the avenue: the
-                // only place two four-lane arterials cross.
-                Frame(camGo, new Vector3(645f, 0f, -555f), 70f, 10f, 90f);
+                // 408 HOLMES AVE. The killer's house, from the middle of Holmes Avenue looking
+                // at its front door. If this view is wrong nothing else matters.
+                Frame(camGo, new Vector3(1247f, 1.6f, -1218f), 26f, 4f, 0f);
                 Capture(cam, Path.Combine(OutputDir, "city-corner.png"));
 
-                // Straight down on a signalised junction, to read the lanes, the stop lines and
-                // the signals rather than admire the skyline.
-                Frame(camGo, new Vector3(555f, 0f, -555f), 55f, 45f, 90f);
+                // Straight down on the one signal, to read lanes, stop lines and heads.
+                Frame(camGo, At(0f, 0f), 70f, 55f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "city-junction.png"));
 
-                // FROM THE DRIVER'S SEAT, held at the northbound stop line on First Street at
-                // Northgate Avenue. This is the only view that says whether a signal is facing
-                // the traffic it governs, and it is the view the complaint came from.
-                Frame(camGo, new Vector3(561f, 0f, -555f), 34f, -2f, 0f);
+                // From the driver's seat at the northbound stop line on Route 1.
+                Frame(camGo, At(0f, -30f) + Vector3.up * 1.2f, 30f, -1f, 0f);
                 Capture(cam, Path.Combine(OutputDir, "city-stopline.png"));
 
-                // A SUBURBAN STREET, which is the whole point of the outer city and the one view
-                // that says whether it reads as somewhere people live rather than as downtown
-                // with the buildings shortened. Looking at the front gardens of Beechwood Rise
-                // from the road: setback, hedge, driveway, a car on it.
-                Frame(camGo, new Vector3(330f, 1.6f, -300f), 48f, 6f, 0f);
+                // A RESIDENTIAL STREET - the 400 block of Holmes Ave from the kerb. The view
+                // that says whether this reads as somewhere people live.
+                Frame(camGo, new Vector3(1200f, 1.6f, -1209f), 55f, 5f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "suburb-street.png"));
 
-                // A whole suburb cell from above - the two rows back to back with their gardens
-                // between them, which is the shape a street of houses makes and a block does not.
-                Frame(camGo, new Vector3(330f, 0f, -330f), 150f, 55f, 30f);
+                // The houses from above, to see the lots, the gaps and the setbacks.
+                Frame(camGo, At(500f, 126f), 240f, 50f, 30f);
                 Capture(cam, Path.Combine(OutputDir, "suburb-block.png"));
 
-                // Where the suburbs give out and downtown begins, across the ring road: three
-                // storeys of house on one side and six of block on the other.
-                Frame(camGo, new Vector3(375f, 0f, -420f), 170f, 28f, 60f);
+                // Where the village stops and the corn starts.
+                Frame(camGo, At(780f, -400f), 190f, 22f, 250f);
                 Capture(cam, Path.Combine(OutputDir, "suburb-edge.png"));
 
-                // A COUNTRY crossroads - the ring meeting the ring, and the pair that decides
-                // whether taking the lights off the farmland worked. There should be stop signs
-                // on the north-south arms, no signal heads, and no zebra painted on any of it.
-                Frame(camGo, new Vector3(285f, 0f, -285f), 65f, 35f, 90f);
+                // The water tower, which is the skyline now.
+                Frame(camGo, At(120f, 353f), 120f, 12f, 200f);
                 Capture(cam, Path.Combine(OutputDir, "country-junction.png"));
 
-                // One stop sign, close, from the north. This is the check that a sign is a sign
-                // and not a plate half-buried in the verge, and that it faces the driver it is
-                // for rather than away from them.
-                Frame(camGo, new Vector3(271f, 1.4f, -268f), 13f, 6f, 180f);
+                // The grain elevator on Railroad Avenue.
+                Frame(camGo, At(860f, -100f), 130f, 14f, 250f);
                 Capture(cam, Path.Combine(OutputDir, "country-stop.png"));
 
-                // An arterial running out through the fields, with the poles and their wires -
-                // the only thing that makes a road through farmland look maintained rather than
-                // laid on a lawn. Aimed at the west strip, where the ground is still grass.
-                Frame(camGo, new Vector3(150f, 0f, -465f), 45f, 12f, 90f);
+                // Out on the section road, looking back at the town.
+                Frame(camGo, At(-500f, -100f), 220f, 10f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "country-poles.png"));
 
-                // Down into the middle of a block - the yards, the lock-ups and the lane through
-                // them. Looking IN over the roofs rather than along the street, because the back
-                // of a block is the one part of a city no street-level camera can be shown.
-                Frame(camGo, new Vector3(510f, 0f, -780f), 78f, 72f, 20f);
+                // A back yard on a residential block.
+                Frame(camGo, At(300f, 60f), 90f, 40f, 20f);
                 Capture(cam, Path.Combine(OutputDir, "block-yard.png"));
 
                 // The precinct car park, which is the biggest of the five and the one with the

@@ -87,6 +87,20 @@ namespace Noir.Unity
             int pieces = 0;
             foreach (var place in lots)
             {
+                // A HOUSE IS NOT A SHORT TOWNHOUSE. Everything on `lots` used to go through
+                // Townhouse, which stacks two to four storeys of the CITY module family - and
+                // the moment every dwelling in the village became its own lot, that put
+                // five-storey brick tenements with fire escapes down both sides of Holmes
+                // Avenue. A village street of them is the single worst thing this map has
+                // looked like, and it was one function call away from being right: CitySuburb
+                // had the recipe all along - Bayhouse, one storey or two - and nothing was
+                // reading it because suburbs used to be cells rather than places.
+                if (KindOf(place) == "dwelling")
+                {
+                    pieces += House(root.transform, place, place.Bounds, FacingOf(place));
+                    continue;
+                }
+
                 bool leftEnd = !HasNeighbour(lots, place, -1);
                 bool rightEnd = !HasNeighbour(lots, place, +1);
                 pieces += Townhouse(root.transform, place, place.Bounds, leftEnd || rightEnd, FacingOf(place));
@@ -248,6 +262,27 @@ namespace Noir.Unity
         /// One stacked townhouse, centred on its lot. Sections pivot at their own base, so the
         /// stack is nothing more cunning than adding the floor height each time.
         /// </summary>
+        /// <summary>
+        /// One detached house on its own lot, which is what a village is made of.
+        ///
+        /// Bayhouse and one storey or two, which is exactly what CitySuburb has always built -
+        /// the recipe is lifted rather than re-invented, because it was already right and the
+        /// only reason it was not being used is that a suburb used to be a 60x60 CELL that
+        /// generated its houses, and a house is now a PLACE with an address. `only: "Bayhouse"`
+        /// picks the family whose unfaced tail is about a metre rather than three, which on a
+        /// detached house is the difference between a back garden and a blank wall.
+        ///
+        /// A bungalow one time in four. An estate built over a decade is not all one height,
+        /// and a run of identical houses reads as a terrace even when they are ten metres apart.
+        /// </summary>
+        private static int House(Transform parent, Place place, TileRect lot, float yaw)
+        {
+            int storeys = Materials3D.Scatter(lot.X, lot.Y, 5179) % 4 == 0 ? 0 : 1;
+            int n = Stack(parent, place, lot, yaw, storeys, false, out var built, only: "Bayhouse");
+            Record(place, built);
+            return n;
+        }
+
         private static int Townhouse(Transform parent, Place place, TileRect lot, bool end, float yaw)
         {
             int n = Stack(parent, place, lot, yaw, StoreysAt(lot), false, out var house);
