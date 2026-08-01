@@ -174,9 +174,16 @@ namespace Noir.Unity
             // kinds in it, so Ashcombe still builds exactly as it did.
             var city = new GameObject("City");
             city.transform.SetParent(_village.transform, false);
-            CityStreets.Build(World, city.transform);
-            CityParking.Build(World, city.transform);
-            CitySigns.Build(World, city.transform);
+            // THE ROADS COME OUT TOO. Asphalt, kerbs, painted lanes, crossings, lay-bys and
+            // the parking bays are all statements about how a road was BUILT, and this drawing
+            // does not make those - it draws the corridor, which is the right of way, and lets
+            // that be the road. Half a plan and half a model reads as neither.
+            if (ShowBuildings)
+            {
+                CityStreets.Build(World, city.transform);
+                CityParking.Build(World, city.transform);
+                CitySigns.Build(World, city.transform);
+            }
             // BUILDINGS OFF, LOT LINES ON. The Universal Pack holds exactly two house families
             // and both are Chicago brownstones - bay fronts, stoops, fire escapes - so a village
             // street built out of it is a street of the wrong country, not a rough approximation.

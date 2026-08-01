@@ -53,6 +53,9 @@ namespace Noir.Unity
             // ---- the real lots, from the county's records ----
             int parcels = Parcels(verts, cols, tris);
 
+            // ---- and the road corridors, in their own colour ----
+            int roads = Roads(world, verts, cols, tris);
+
             var kinds = PlaceKindTable.Current;
 
             foreach (var place in world.AllPlaces)
@@ -85,10 +88,53 @@ namespace Noir.Unity
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
-            Debug.Log($"[outlines] {parcels} county parcels + {world.PlaceCount} places, "
-                    + $"{tris.Count / 3} triangles in one mesh.");
+            Debug.Log($"[outlines] {parcels} county parcels, {roads} road corridors, "
+                    + $"{world.PlaceCount} places - {tris.Count / 3} triangles in one mesh.");
             return go;
         }
+
+        /// <summary>
+        /// The edge of every road corridor, which on a plan is the thing everything else is
+        /// measured from.
+        ///
+        /// The CORRIDOR, not the asphalt. A road in this map is a width about a centreline -
+        /// thirty metres for Route 1, ten for a village street - and that full width is what a
+        /// plat drawing shows as the right of way. The carriageway inside it is a detail of how
+        /// the road was built, which is exactly the sort of claim this drawing is not making.
+        ///
+        /// Its own colour, and a heavier line than a lot boundary, because the street grid is
+        /// the skeleton: read it first and the property lines hang off it.
+        /// </summary>
+        private static int Roads(WorldModel world, List<Vector3> verts, List<Color> cols,
+                                 List<int> tris)
+        {
+            var kerb = new Color(0.30f, 0.86f, 1.00f);
+            int n = 0;
+
+            foreach (var line in world.Roads.Lines)
+            {
+                if (line == null || !line.IsStraight) continue;
+
+                float lo = line.Centre - line.HalfWidth, hi = line.Centre + line.HalfWidth;
+
+                // From and To bound the stretch that exists; Centre and HalfWidth bound its
+                // width. Which of those is x and which is y depends on the way it runs.
+                var a = line.IsNorthSouth ? new Vector2(lo, line.From) : new Vector2(line.From, lo);
+                var b = line.IsNorthSouth ? new Vector2(hi, line.To) : new Vector2(line.To, hi);
+
+                Wide(verts, cols, tris, new Vector2(a.x, a.y), new Vector2(b.x, a.y), kerb);
+                Wide(verts, cols, tris, new Vector2(a.x, b.y), new Vector2(b.x, b.y), kerb);
+                Wide(verts, cols, tris, new Vector2(a.x, a.y), new Vector2(a.x, b.y), kerb);
+                Wide(verts, cols, tris, new Vector2(b.x, a.y), new Vector2(b.x, b.y), kerb);
+                n++;
+            }
+            return n;
+        }
+
+        /// <summary>A road edge: the same ribbon as a lot line, drawn heavier.</summary>
+        private static void Wide(List<Vector3> verts, List<Color> cols, List<int> tris,
+                                 Vector2 a, Vector2 b, Color colour) =>
+            Edge(verts, cols, tris, a, b, colour, Stroke * 1.8f);
 
         /// <summary>
         /// Every lot line in the village, as the county surveyed it.
@@ -141,13 +187,13 @@ namespace Noir.Unity
         /// a lot line that is not square to the map, and almost none of them are.
         /// </summary>
         private static void Edge(List<Vector3> verts, List<Color> cols, List<int> tris,
-                                 Vector2 a, Vector2 b, Color colour)
+                                 Vector2 a, Vector2 b, Color colour, float stroke = Stroke)
         {
             var along = b - a;
             float len = along.magnitude;
             if (len < 0.01f) return;
 
-            var side = new Vector2(-along.y, along.x) / len * (Stroke * 0.5f);
+            var side = new Vector2(-along.y, along.x) / len * (stroke * 0.5f);
             int n = verts.Count;
 
             foreach (var p in new[] { a - side, b - side, b + side, a + side })
@@ -225,7 +271,7 @@ namespace Noir.Unity
 
                 case "school2": case "hospital": case "precinct": case "firestation":
                 case "villagehall": case "restroom": case "watertower": case "elevator":
-                    return new Color(0.35f, 0.78f, 1.00f);      // civic - blue
+                    return new Color(0.76f, 0.55f, 1.00f);      // civic - violet, so roads keep cyan
 
                 case "cornfield": case "paddock": case "orchard": case "copse":
                 case "green": case "playground": case "allotments": case "churchyard":

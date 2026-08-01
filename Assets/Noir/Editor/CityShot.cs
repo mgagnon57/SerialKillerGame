@@ -75,9 +75,12 @@ namespace Noir.Editor
                 VillageMesh.Build(world, root.transform);
 
                 city = new GameObject("CityAll");
-                CityStreets.Build(world, city.transform);
-                CityParking.Build(world, city.transform);
-                CitySigns.Build(world, city.transform);
+                if (VillageHost.ShowBuildings)
+                {
+                    CityStreets.Build(world, city.transform);
+                    CityParking.Build(world, city.transform);
+                    CitySigns.Build(world, city.transform);
+                }
                 // The still follows the game: plan by default, models only if asked.
                 if (VillageHost.ShowBuildings)
                 {
