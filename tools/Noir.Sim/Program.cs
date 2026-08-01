@@ -37,6 +37,7 @@ namespace Noir.Sim
                     case "vocab": return CmdVocab(args);
                     case "economy": return CmdEconomy(args);
                     case "ratio": return CmdRatio(args);
+                    case "testimony": return CmdTestimony(args);
 
                     case "tiles": return CmdTiles();
                     case "audio": return CmdAudio();
@@ -83,6 +84,8 @@ namespace Noir.Sim
                             "                   an index it reports one person you chose yourself. The\n" +
                             "                   watch length is pinned at fourteen days and there is no\n" +
                             "                   --days: the number is meaningless without it.\n" +
+                            "  testimony [days]  the statement census: what the whole town could say\n" +
+                            "                   about a fortnight of the player's movements.\n" +
                             "\n" +
                             "  tiles            regenerate Content/tiles/*.png\n" +
                             "  audio            regenerate Content/audio/*.wav");
@@ -318,6 +321,12 @@ namespace Noir.Sim
                 if (seeds.Count > 0) return seeds.ToArray();
             }
             return new[] { Seed(args, 1979) };
+        }
+
+        private static int CmdTestimony(string[] args)
+        {
+            int days = args.Length > 1 && int.TryParse(args[1], out int d) ? d : 14;
+            return TestimonyReport.Run(days);
         }
 
         private static int CmdWatch(string[] args)

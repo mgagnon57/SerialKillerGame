@@ -114,3 +114,35 @@ Both run in `tools/Noir.Core.Tests`, next to `ObservationFirewallTests`.
 `ITownsfolkVoice` and its backends. The claim validator. Memory decay and contamination — a
 reconstructed memory has nowhere to keep a change, and giving it one is a later spec, not a
 field bolted onto `Sighting`. Any interrogation UI. Any detective.
+
+## What the census said
+
+`dotnet run --project tools/Noir.Sim -- testimony 14`, 158 people, the player walking a lap of
+the road network for 14 days:
+
+```
+TESTIMONY over 14 days, 158 people
+
+  statements      134386
+  witnesses       158 of 158
+  blank ('a figure') 0  (0%)
+
+  by clarity      glimpsed 91300   partial 31248   clear 11838
+  bands noticed   0:0  1:91300  2:0  3:31248  4:0  5:11838  6:0
+
+Usable. Most statements carry at least one band worth asking about.
+```
+
+Every citizen in the village produced at least one statement over the fortnight, and not one
+statement came back blank — the 0% figure means the stationary-witness limit is not biting as
+hard as the plan worried it might; a lap of the road network puts the player in front of enough
+doorsteps that nobody goes unseen entirely. The clarity mix is what tuning would predict:
+two-thirds glimpsed, the rest split between partial and clear, and the band count tracks it
+exactly (1 band at a glimpse, 3 at partial, 5 at clear — Degradation's gating is doing its job).
+
+The sampled lines read as testimony rather than a sensor log: "figure," "man, empty-handed,"
+"middle-aged man in dark clothing, empty-handed," "figure in mid-toned clothing." Different
+witnesses at the same hour hold different fragments of the same passer-by, which is the scatter
+the spec asked for — nobody's statement alone identifies anybody, and no two witnesses at the
+same clarity say quite the same thing. Verdict: usable as-is: no retuning of `Sightlines` or
+`Degradation` was needed before building the next layer on top of this.
