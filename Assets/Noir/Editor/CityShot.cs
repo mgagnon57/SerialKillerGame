@@ -314,7 +314,8 @@ namespace Noir.Editor
                 Frame(camGo, At(120f, 353f), 120f, 12f, 200f);
                 Capture(cam, Path.Combine(OutputDir, "country-junction.png"));
 
-                // The grain elevator on Railroad Avenue.
+                // The grain elevator, sited near the real CSX line (no simulated road for the
+                // tracks any more - see VillageHost.ShowPlanRoads and relay-rossville.py).
                 Frame(camGo, At(860f, -100f), 130f, 14f, 250f);
                 Capture(cam, Path.Combine(OutputDir, "country-stop.png"));
 

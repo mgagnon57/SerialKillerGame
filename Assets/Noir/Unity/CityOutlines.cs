@@ -5,16 +5,24 @@ using Noir.Core.World;
 namespace Noir.Unity
 {
     /// <summary>
-    /// The town as a survey plan: every plot's footprint painted on the ground, and no
-    /// buildings at all.
+    /// The town as a survey plan.
     ///
-    /// WHY THIS EXISTS. The Universal Pack contains exactly two house families, Bayhouse and
-    /// Squarehouse, and both are Chicago brownstones - bay fronts, stoops, fire escapes. There
-    /// is no clapboard, no porch and no gable roof anywhere in it. Rossville's houses cannot be
-    /// built out of what we own, and a street of brick tenements is not a near miss, it is a
-    /// different country. So until there is a kit that can build them, this draws the FOOTPRINT
-    /// and says nothing about the elevation - which is honest, and which is the half of the
-    /// information that was researched: the plot outlines are the real ones, off the real grid.
+    /// BY DEFAULT THIS DRAWS TWO THINGS ONLY: the 794 real county parcels (Parcels()) and the
+    /// named features - the railway, the water, the schools, the RR crossings (Features()). The
+    /// road corridors and the per-place footprint-with-door-and-colour-by-kind machinery below
+    /// both exist and both still work, but VillageHost.ShowPlanRoads and ShowPlanFootprints
+    /// default false - they read as a duplicate of the parcels once the county's own lot lines
+    /// are the thing on screen, not an addition to them. They stay for VillageHost.ShowBuildings'
+    /// comparison path and for anyone who wants the generated grid back rather than the real one.
+    ///
+    /// WHY THE FOOTPRINTS EXIST AT ALL. The Universal Pack contains exactly two house families,
+    /// Bayhouse and Squarehouse, and both are Chicago brownstones - bay fronts, stoops, fire
+    /// escapes. There is no clapboard, no porch and no gable roof anywhere in it. Rossville's
+    /// houses cannot be built out of what we own, and a street of brick tenements is not a near
+    /// miss, it is a different country. So until there is a kit that can build them, the
+    /// footprint pass draws the FOOTPRINT and says nothing about the elevation - honest, but a
+    /// generated 11m x 7m box standing in for a real 26m x 51m lot, which is why the parcels
+    /// became the default the moment the real data existed to draw instead.
     ///
     /// It is also the thing that makes the geometry judgeable. Walking a plan tells you whether
     /// the blocks are the right size, whether the setbacks look like a street, whether the town
@@ -25,8 +33,9 @@ namespace Noir.Unity
     /// rather than MeshTopology.Lines because a line has no width in URP - it is one pixel at
     /// any distance, which vanishes at fifty metres and aliases into a dashed mess at ten.
     ///
-    /// COLOURED BY WHAT THE PLOT IS, because a plan you cannot read is a plan. Homes, trade,
-    /// civic and land each get their own, so the shape of the town is legible from the air.
+    /// COLOURED BY WHAT THE PLOT IS, when the footprint pass runs at all - homes, trade, civic
+    /// and land each get their own. The parcels themselves are one dim colour; see ParcelNotes
+    /// and AuthoredFootprints for how an individual lot gets picked back out of that.
     /// </summary>
     public static class CityOutlines
     {
@@ -171,9 +180,57 @@ namespace Noir.Unity
                 int last = closed ? pts.Count : pts.Count - 1;
                 for (int i = 0; i < last; i++)
                     Edge(verts, cols, tris, pts[i], pts[(i + 1) % pts.Count], colour, Stroke * weight);
+
+                // TIES, for a real line, not just a coloured river with a different tint. A
+                // plain line reads as "some line" - the cross-ties are the one mark that reads
+                // as "railroad" on any survey drawing without needing the legend.
+                if (kind == "rail" || kind == "oldrail")
+                    Ties(verts, cols, tris, pts, colour);
+
                 n++;
             }
             return n;
+        }
+
+        /// <summary>
+        /// How far the tie spans across the line, in metres. Has to clear the rail line's own
+        /// drawn width (2.34m: Stroke 0.9 x weight 2.6) by enough to stick out visibly on both
+        /// sides - the first attempt at 2.6m overhung by 0.13m a side, which is sub-pixel at any
+        /// distance this plan is ever viewed from and simply vanished under the line it was
+        /// meant to mark.
+        /// </summary>
+        private const float TieWidth = 7f;
+
+        /// <summary>Centre to centre along the rail - close enough to read as continuous ties
+        /// without submitting one triangle pair per actual sleeper (every ~0.6m in reality).</summary>
+        private const float TieSpacing = 9f;
+
+        /// <summary>
+        /// A short bar across the line at regular intervals along its whole length, walked
+        /// continuously across every segment of the polyline so the spacing does not reset - and
+        /// therefore does not visibly bunch or gap - at each vertex.
+        /// </summary>
+        private static void Ties(List<Vector3> verts, List<Color> cols, List<int> tris,
+                                 List<Vector2> pts, Color colour)
+        {
+            float carry = 0f;
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                Vector2 a = pts[i], b = pts[i + 1];
+                Vector2 along = b - a;
+                float len = along.magnitude;
+                if (len < 0.01f) continue;
+                Vector2 dir = along / len;
+                Vector2 side = new Vector2(-dir.y, dir.x) * (TieWidth * 0.5f);
+
+                float t = TieSpacing - carry;
+                for (; t < len; t += TieSpacing)
+                {
+                    Vector2 p = a + dir * t;
+                    Edge(verts, cols, tris, p - side, p + side, colour, Stroke * 1.1f);
+                }
+                carry = t - len;
+            }
         }
 
         /// <summary>
@@ -261,25 +318,12 @@ namespace Noir.Unity
 
         /// <summary>
         /// One ribbon between two points, at any angle. The rectangle version below cannot draw
-        /// a lot line that is not square to the map, and almost none of them are.
+        /// a lot line that is not square to the map, and almost none of them are. See Ribbon for
+        /// the shared implementation - three other small renderers need exactly this shape.
         /// </summary>
         private static void Edge(List<Vector3> verts, List<Color> cols, List<int> tris,
-                                 Vector2 a, Vector2 b, Color colour, float stroke = Stroke)
-        {
-            var along = b - a;
-            float len = along.magnitude;
-            if (len < 0.01f) return;
-
-            var side = new Vector2(-along.y, along.x) / len * (stroke * 0.5f);
-            int n = verts.Count;
-
-            foreach (var p in new[] { a - side, b - side, b + side, a + side })
-                verts.Add(Space3D.ToWorld(new Core.Contracts.Vec2(p.x, p.y), Lift));
-            for (int i = 0; i < 4; i++) cols.Add(colour);
-
-            tris.Add(n); tris.Add(n + 2); tris.Add(n + 1);
-            tris.Add(n); tris.Add(n + 3); tris.Add(n + 2);
-        }
+                                 Vector2 a, Vector2 b, Color colour, float stroke = Stroke) =>
+            Ribbon.Edge(verts, cols, tris, a, b, colour, stroke, Lift);
 
         /// <summary>
         /// Four ribbons round a rectangle. Drawn as quads laid flat rather than as lines,

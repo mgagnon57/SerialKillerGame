@@ -28,7 +28,15 @@ namespace Noir.Unity
         private const float MinPitch = 12f;    // below this you are looking through the ground
         private const float MaxPitch = 89f;
         private const float MinDistance = 6f;
-        private const float MaxDistance = 220f;
+
+        /// <summary>
+        /// 220 was sized for a built town seen from a hill nearby - close enough to still read
+        /// as buildings. The plan is the point now (see VillageHost.ShowBuildings) and the town
+        /// itself is over 2,000m across; 220 could never step back far enough to see more than a
+        /// few blocks of it at once. 1,600 clears the whole map - see farClipPlane below - with
+        /// room to spare at a steep pitch.
+        /// </summary>
+        private const float MaxDistance = 1600f;
 
         private bool _orbiting;
         private Vector2 _lastMouse;
@@ -255,7 +263,10 @@ namespace Noir.Unity
             var flatForward = Vector3.ProjectOnPlane(_camera.transform.forward, Vector3.up).normalized;
             var flatRight = Vector3.ProjectOnPlane(_camera.transform.right, Vector3.up).normalized;
 
-            float speed = Mathf.Lerp(10f, 60f, _distance / MaxDistance);
+            // The top speed used to be reached at the old MaxDistance (220m) and crossing the
+            // whole 2,400m town at it would have taken 40 seconds - fine when 220m was as far
+            // out as you could go, not fine now that it is one seventh of the new range.
+            float speed = Mathf.Lerp(10f, 300f, _distance / MaxDistance);
             _target += (flatForward * move.z + flatRight * move.x).normalized
                      * speed * Time.unscaledDeltaTime;
         }
@@ -267,11 +278,23 @@ namespace Noir.Unity
             if (VillageUI.PointerOverUI) return;
 
             var ray = _camera.ScreenPointToRay(mouse.position.ReadValue());
+            var ground = new Plane(Vector3.up, Vector3.zero);
+
+            // DRAWING TAKES EVERY CLICK while it is active - a click is placing the next corner
+            // of a house, not selecting whatever happens to be under it. Nothing else below runs.
+            if (_host.Footprint != null && _host.Footprint.Active)
+            {
+                if (ground.Raycast(ray, out float onGround))
+                {
+                    var hit = ray.GetPoint(onGround);
+                    _host.Footprint.AddPoint(new Vector2(hit.x, -hit.z));
+                }
+                return;
+            }
 
             // PEOPLE FIRST: they are small, they move, and they are the harder thing to hit, so
             // a click that could mean either should mean the person. They stand on the ground,
             // so the flat projection is the right test for them.
-            var ground = new Plane(Vector3.up, Vector3.zero);
             var view = _host.GetComponentInChildren<AgentMeshView>();
 
             if (view != null && ground.Raycast(ray, out float enter))
