@@ -278,29 +278,26 @@ namespace Noir.Unity
             if (VillageUI.PointerOverUI) return;
 
             var ray = _camera.ScreenPointToRay(mouse.position.ReadValue());
-            var ground = new Plane(Vector3.up, Vector3.zero);
 
             // DRAWING TAKES EVERY CLICK while it is active - a click is placing the next corner
             // of a house, not selecting whatever happens to be under it. Nothing else below runs.
             if (_host.Footprint != null && _host.Footprint.Active)
             {
-                if (ground.Raycast(ray, out float onGround))
-                {
-                    var hit = ray.GetPoint(onGround);
+                if (Space3D.GroundHit(ray, out Vector3 hit))
                     _host.Footprint.AddPoint(new Vector2(hit.x, -hit.z));
-                }
                 return;
             }
 
             // PEOPLE FIRST: they are small, they move, and they are the harder thing to hit, so
             // a click that could mean either should mean the person. They stand on the ground,
-            // so the flat projection is the right test for them.
+            // so the flat projection is the right test for them - against the REAL ground now,
+            // not a flat plane a hillside walk would miss by metres.
             var view = _host.GetComponentInChildren<AgentMeshView>();
 
-            if (view != null && ground.Raycast(ray, out float enter))
+            if (view != null && Space3D.GroundHit(ray, out Vector3 groundPoint))
             {
                 float radius = Mathf.Max(1.5f, _distance * 0.03f);
-                var picked = view.Pick(ray.GetPoint(enter), radius);
+                var picked = view.Pick(groundPoint, radius);
                 if (picked.IsValid)
                 {
                     _host.Selected = picked;
@@ -324,8 +321,8 @@ namespace Noir.Unity
             // 794 real lots never got a house or a business generated on them, and until now a
             // click there found nothing at all, which reads as "clicking is broken" rather than
             // "this lot is undeveloped". Same ground point PlacePicker's own fallback uses.
-            _host.SelectedParcel = ground.Raycast(ray, out float groundHit)
-                ? ParcelIndex.Find(GroundPoint(ray.GetPoint(groundHit)))
+            _host.SelectedParcel = Space3D.GroundHit(ray, out Vector3 lastResort)
+                ? ParcelIndex.Find(GroundPoint(lastResort))
                 : null;
         }
 

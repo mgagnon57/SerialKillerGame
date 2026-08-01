@@ -58,7 +58,9 @@ namespace Noir.Unity
             }
 
             // Village y runs into Unity -z, as everywhere else in the renderers.
-            var centre = new Vector3(green.Centre.X, 0f, -green.Centre.Y);
+            var centre = new Vector3(green.Centre.X,
+                                     ElevationGrid.HeightAt(green.Centre.X, green.Centre.Y),
+                                     -green.Centre.Y);
             var origin = centre - new Vector3(PolyPackCottageBuilder.W / 2f, 0f,
                                               PolyPackCottageBuilder.D / 2f);
 

@@ -281,11 +281,13 @@ namespace Noir.Unity
 
                 float run = t1 - t0 + 0.5f;   // overlap the neighbour so there is no daylight
 
+                float ground = ElevationGrid.HeightAt(mid.x, mid.y);
+
                 if (drystone)
                 {
                     float tall = 1.05f + Roll(hx, hy, 587) * 0.25f;
                     made += Solid(chunks, PrimitiveType.Cube,
-                                  new Vector3(mid.x, tall * 0.5f, -mid.y),
+                                  new Vector3(mid.x, ground + tall * 0.5f, -mid.y),
                                   new Vector3(0.5f, tall, run), facing, Scenery.Stone);
                 }
                 else
@@ -293,7 +295,7 @@ namespace Noir.Unity
                     float tall = 1.35f + Roll(hx, hy, 521) * 0.85f;
                     float thick = 0.9f + Roll(hx, hy, 523) * 0.6f;
                     made += Solid(chunks, PrimitiveType.Cube,
-                                  new Vector3(mid.x, tall * 0.5f, -mid.y),
+                                  new Vector3(mid.x, ground + tall * 0.5f, -mid.y),
                                   new Vector3(thick, tall, run), facing, Scenery.Hedge);
                 }
 
@@ -316,7 +318,7 @@ namespace Noir.Unity
             {
                 if (OutsideBy(world, at.x, at.y) < Clearance) return 0;
                 return Solid(chunks, PrimitiveType.Cube,
-                             new Vector3(at.x, 0.65f, -at.y),
+                             new Vector3(at.x, ElevationGrid.HeightAt(at.x, at.y) + 0.65f, -at.y),
                              new Vector3(0.35f, 1.3f, 0.35f),
                              Quaternion.identity, Scenery.Stone);
             }
@@ -418,9 +420,10 @@ namespace Noir.Unity
             // cost its full vertex count to render something nobody can resolve. The seam that
             // remains is between two kinds of blur, which is not a seam anybody sees.
             float outside = OutsideBy(world, gx, gy);
+            float ground = ElevationGrid.HeightAt(gx, gy);
             if (outside <= Detail)
             {
-                _handedOver.Add(new Vector3(gx, 0f, -gy));
+                _handedOver.Add(new Vector3(gx, ground, -gy));
                 return 0;
             }
 
@@ -428,7 +431,7 @@ namespace Noir.Unity
             // also the widest one and a copse comes out as a neat little pyramid.
             float height = 6f + v * 5f;
             float canopy = 5f + Roll(hx + salt, hy, 883) * 4f;
-            var at = new Vector3(gx, 0f, -gy);
+            var at = new Vector3(gx, ground, -gy);
 
             // One of the four greens rather than the single Foliage colour. That palette exists
             // precisely because one green turns a copse into a solid mass with no separation
@@ -485,7 +488,7 @@ namespace Noir.Unity
                 // Sunk a little into the ground rather than resting on it, so there is never a
                 // strip of daylight under the treeline when the camera drops to eye level.
                 made += Crown(chunks,
-                                new Vector3(cx, tall * 0.42f, -cy),
+                                new Vector3(cx, ElevationGrid.HeightAt(cx, cy) + tall * 0.42f, -cy),
                                 new Vector3(spread, tall, spread),
                                 far, Scenery.CanopyFor(i, j, 937));
             }

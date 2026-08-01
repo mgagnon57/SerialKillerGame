@@ -50,23 +50,23 @@ namespace Noir.Unity
             {
                 var at = ray.GetPoint(t);
 
-                // Below the ground and still nothing: there is nothing further to hit.
-                if (at.y < -0.5f) break;
+                // Below the REAL ground here and still nothing: there is nothing further to
+                // hit. Used to check against a flat zero, which is wrong the instant the terrain
+                // under the ray is not at y=0 - a hillside would have ended this walk while the
+                // ray was still metres above the actual ground.
+                if (at.y < ElevationGrid.HeightAt(at.x, -at.z) - 0.5f) break;
 
                 var id = At(world, at);
                 if (!id.IsValid || id.Value == standingIn.Value) continue;
 
                 // Under this building's roof, or standing on flat ground that belongs to it.
-                if (at.y <= TopOf(id)) return id;
+                if (at.y <= TopOf(at, id)) return id;
             }
 
             // Nothing was struck on the way down, so fall back to where the ray meets the
             // ground. This is what catches everything the city renderer never built a model
             // for - Ashcombe's own buildings, and any place that is simply a patch of land.
-            var ground = new Plane(Vector3.up, Vector3.zero);
-            if (!ground.Raycast(ray, out float enter)) return PlaceId.None;
-
-            var hit = ray.GetPoint(enter);
+            if (!Space3D.GroundHit(ray, out Vector3 hit)) return PlaceId.None;
             var direct = At(world, hit);
             if (direct.IsValid) return direct;
 
@@ -118,15 +118,24 @@ namespace Noir.Unity
             return best;
         }
 
-        /// <summary>How high this place reaches. Open ground is a whisker above nothing.</summary>
-        private static float TopOf(PlaceId id) =>
-            CityBuildings.TryHeight(id, out float measured) ? measured : 0.4f;
+        /// <summary>
+        /// How high this place reaches, as an ABSOLUTE world Y. A recorded building height
+        /// already is one - CityBuildings measures real renderer bounds, and the renderer was
+        /// seated through the elevation-aware Space3D, so its top carries real terrain height
+        /// with it already. Open ground has no recorded height, and 0.4f was always meant as "a
+        /// whisker above whatever is under it" rather than above sea level, so THAT branch adds
+        /// the local ground back in - the one place here that still needs to ask for it.
+        /// </summary>
+        private static float TopOf(Vector3 at, PlaceId id) =>
+            CityBuildings.TryHeight(id, out float measured)
+                ? measured
+                : ElevationGrid.HeightAt(at.x, -at.z) + 0.4f;
 
         /// <summary>The place a point is inside the walls AND under the roof of, if any.</summary>
         private static PlaceId Inside(WorldModel world, Vector3 at)
         {
             var id = At(world, at);
-            return id.IsValid && at.y <= TopOf(id) ? id : PlaceId.None;
+            return id.IsValid && at.y <= TopOf(at, id) ? id : PlaceId.None;
         }
 
         /// <summary>The place owning the tile under a world point. Village y runs into -z.</summary>

@@ -303,7 +303,7 @@ namespace Noir.Unity
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(vx, 0.12f, -vy);
+            go.transform.position = new Vector3(vx, 0.12f + ElevationGrid.HeightAt(vx, vy), -vy);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return go;
         }

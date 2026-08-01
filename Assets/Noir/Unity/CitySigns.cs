@@ -369,7 +369,7 @@ namespace Noir.Unity
             // (travel.x, -travel.y) in Unity, so the sign must look back down that.
             var facing = new Vector3(-travel.x, 0f, travel.y);
             var rotation = Quaternion.LookRotation(facing, Vector3.up);
-            var ground = new Vector3(at.x, parent.position.y, -at.y);
+            var ground = new Vector3(at.x, parent.position.y + ElevationGrid.HeightAt(at.x, at.y), -at.y);
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);

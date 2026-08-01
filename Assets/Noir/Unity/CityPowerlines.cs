@@ -155,8 +155,9 @@ namespace Noir.Unity
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
-            // The pole pivots at its own base, so it sits on the ground with no offset at all.
-            go.transform.position = new Vector3(gx, 0f, -gy);
+            // The pole pivots at its own base, so it sits on the REAL ground with no offset at
+            // all beyond the terrain height under it.
+            go.transform.position = new Vector3(gx, ElevationGrid.HeightAt(gx, gy), -gy);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return go;
         }

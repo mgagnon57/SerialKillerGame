@@ -388,8 +388,9 @@ namespace Noir.Unity
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
-            // On the paving rather than in it: CityStreets lays the block's ground at 0.12.
-            go.transform.position = new Vector3(vx, 0.12f, -vy);
+            // On the paving rather than in it: CityStreets lays the block's ground at 0.12 over
+            // the real terrain here, not over world zero - a flat map never showed the gap.
+            go.transform.position = new Vector3(vx, 0.12f + ElevationGrid.HeightAt(vx, vy), -vy);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return go;
         }

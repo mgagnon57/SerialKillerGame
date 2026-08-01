@@ -342,10 +342,11 @@ namespace Noir.Unity
             var b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
 
+            float groundY = parent.position.y + ElevationGrid.HeightAt(x + w / 2f, y + h / 2f);
             var want = new Vector3(x + w / 2f, 0f, -(y + h / 2f));
             var drift = b.center - go.transform.position;
             go.transform.position =
-                new Vector3(want.x - drift.x, parent.position.y, want.z - drift.z);
+                new Vector3(want.x - drift.x, groundY, want.z - drift.z);
             return go;
         }
 
@@ -356,7 +357,8 @@ namespace Noir.Unity
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(vx, parent.position.y, -vy);
+            go.transform.position =
+                new Vector3(vx, parent.position.y + ElevationGrid.HeightAt(vx, vy), -vy);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return go;
         }

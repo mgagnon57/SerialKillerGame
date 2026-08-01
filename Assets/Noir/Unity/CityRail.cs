@@ -72,6 +72,13 @@ namespace Noir.Unity
             int sections = Mathf.Max(1, Mathf.FloorToInt(length / Span));
             int stationAt = sections / 3;
 
+            // Real terrain under a point given in this file's own Unity-space (x, z) terms -
+            // every position below used to assume y=0 was ground, which held while the whole map
+            // was flat and stopped holding the moment real elevation gave it 24m of relief. The
+            // pillars plant in whatever is actually underfoot and the deck (and the train riding
+            // it) stay the fixed 10m above THAT, not above sea level.
+            float Ground(float wx, float wz) => ElevationGrid.HeightAt(wx, -wz);
+
             for (int i = 0; i < sections; i++)
             {
                 // Distance along the line from its start.
@@ -89,6 +96,7 @@ namespace Noir.Unity
                 var at = northSouth
                     ? new Vector3(cx + DeckOffset, 0f, along)
                     : new Vector3(along, 0f, cz - DeckOffset);
+                at.y = Ground(at.x, at.z);
                 float yaw = northSouth ? 0f : 90f;
 
                 if (Put(parent, piece, at, yaw) != null) n++;
@@ -97,6 +105,7 @@ namespace Noir.Unity
                 var pillar = northSouth
                     ? new Vector3(cx + DeckOffset, 0f, along - Span / 2f)
                     : new Vector3(along + Span / 2f, 0f, cz - DeckOffset);
+                pillar.y = Ground(pillar.x, pillar.z);
                 if (!station && Put(parent, Rails + "Rails_Overground_Pillar_City.prefab", pillar, yaw) != null)
                     n++;
 
@@ -118,6 +127,7 @@ namespace Noir.Unity
                     var on = northSouth
                         ? new Vector3(cx, 10.05f, -c * 17f)
                         : new Vector3(-c * 17f, 10.05f, cz);
+                    on.y += Ground(on.x, on.z);
                     if (Put(train.transform, car, on, yaw) != null) n++;
                 }
 

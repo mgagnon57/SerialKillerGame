@@ -519,7 +519,7 @@ namespace Noir.Unity
             // Out from the door, away from the building, and turned to lie along the frontage.
             float yaw = FacingOf(place);
             var outward = Quaternion.Euler(0f, yaw, 0f) * Vector3.back;
-            var at = new Vector3(door.X, 0f, -door.Y) + outward * 4.5f;
+            var at = new Vector3(door.X, ElevationGrid.HeightAt(door.X, door.Y), -door.Y) + outward * 4.5f;
 
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(vehicle);
             if (prefab == null) { Debug.LogWarning("[city] missing " + vehicle); return 0; }
@@ -676,6 +676,13 @@ namespace Noir.Unity
                 pos.x += eastX - b.max.x;
             else
                 pos.x += (lot.X + lot.W / 2f) - b.center.x;
+
+            // SEATED ON THE REAL GROUND, not wherever the parent transform happened to be. Every
+            // building used to inherit y=0 from its GameObject's default local position and never
+            // have it touched again - Seat only ever moved x and z - so the whole town stood dead
+            // level regardless of what the terrain under it did. Sampled at the lot's own centre,
+            // which is what the building's footprint actually stands on.
+            pos.y = ElevationGrid.HeightAt(lot.X + lot.W / 2f, lot.Y + lot.H / 2f);
 
             house.transform.position = pos;
         }
@@ -927,10 +934,14 @@ namespace Noir.Unity
             b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
 
-            var want = new Vector3(lot.X + lot.W / 2f, 0f, -(lot.Y + lot.H / 2f));
+            // Ground level here is the REAL local terrain, not a literal zero - a landmark on a
+            // lot at the edge of the map's 24m of relief used to have its foundation floating or
+            // buried by however far that lot's real height differed from the crossing's.
+            float groundY = ElevationGrid.HeightAt(lot.X + lot.W / 2f, lot.Y + lot.H / 2f);
+            var want = new Vector3(lot.X + lot.W / 2f, groundY, -(lot.Y + lot.H / 2f));
             var drift = b.center - go.transform.position;
             go.transform.position = new Vector3(want.x - drift.x,
-                                                go.transform.position.y - (b.min.y - go.transform.position.y),
+                                                go.transform.position.y + (groundY - b.min.y),
                                                 want.z - drift.z);
             return go;
         }

@@ -404,13 +404,16 @@ namespace Noir.Unity
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
 
             // Where the middle of this tile is meant to end up. Only x and z are corrected: the
-            // height is the ROOT's, which is what lifts the asphalt clear of the ground plane.
-            // Writing a world y of zero here quietly cancelled that lift and put the carriageway
-            // back underneath the village.
+            // height is the ROOT's kerb lift PLUS the real terrain under this tile - the root
+            // alone used to be enough back when the whole map was one flat plane, but a road
+            // spanning real elevation needs its own ground sample under every tile, not one
+            // shared number for the entire network. Writing a world y of zero here quietly
+            // cancelled the lift entirely and put the carriageway back underneath the village.
+            float groundY = parent.position.y + ElevationGrid.HeightAt(x + w / 2f, y + h / 2f);
             var want = new Vector3(x + w / 2f, 0f, -(y + h / 2f));
             var drift = b.center - go.transform.position;
             go.transform.position =
-                new Vector3(want.x - drift.x, parent.position.y, want.z - drift.z);
+                new Vector3(want.x - drift.x, groundY, want.z - drift.z);
             return go;
         }
 
@@ -718,9 +721,11 @@ namespace Noir.Unity
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
 
-            // On the pavement, which is the root's height - not at world zero, which is the
-            // ground the pavement is laid on top of.
-            go.transform.position = new Vector3(vx, parent.position.y, -vy);
+            // On the pavement, which is the root's kerb lift over the REAL ground here - not at
+            // world zero, which is the ground the pavement is laid on top of, and not the root's
+            // lift alone, which by itself only holds for a flat map.
+            go.transform.position =
+                new Vector3(vx, parent.position.y + ElevationGrid.HeightAt(vx, vy), -vy);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return go;
         }

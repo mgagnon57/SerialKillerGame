@@ -29,13 +29,15 @@ namespace Noir.Unity
     public static class CityCollision
     {
         /// <summary>
-        /// Where the ground is, near enough.
+        /// Where the ground is, near enough, ABOVE the real terrain.
         ///
         /// The walking surfaces of this map are three, and MEASURED rather than assumed: village
-        /// ground at y=0, a road tile's asphalt at 0.02, and its pavement at 0.12 - the road kit
-        /// draws a tile as two planes and `CityStreets` lifts its root to 0.12 to keep the
-        /// carriageway clear of the ground plane. So the whole world is inside a twelve-centimetre
-        /// band, and one floor through the middle of it is never more than six centimetres out.
+        /// ground at y=0 (of its own LOCAL terrain height), a road tile's asphalt at 0.02, and its
+        /// pavement at 0.12 - the road kit draws a tile as two planes and `CityStreets` lifts its
+        /// root to 0.12 to keep the carriageway clear of the ground plane. So at any given point
+        /// the walking surfaces are within a twelve-centimetre band of each other, and one floor
+        /// through the middle of that band is never more than six centimetres out - but the BAND
+        /// ITSELF now rides the real elevation, which used to be nothing (see ElevationGrid).
         ///
         /// Six centimetres is under the CharacterController's own skin width and far under its
         /// step offset. Modelling the three properly would mean a collider per road corridor and
@@ -44,8 +46,12 @@ namespace Noir.Unity
         /// </summary>
         private const float Floor = 0.06f;
 
-        /// <summary>How thick the ground slab is. Enough that nothing tunnels through it.</summary>
-        private const float Bedrock = 4f;
+        /// <summary>
+        /// The ground slab's own grid spacing, in metres - matches ElevationGrid's native
+        /// resolution, so this samples the real data at exactly the density it was measured at
+        /// rather than inventing detail between samples or throwing detail away.
+        /// </summary>
+        private const float Step = 30f;
 
         public static GameObject Build(WorldModel world, Transform parent, params GameObject[] built)
         {
@@ -54,19 +60,19 @@ namespace Noir.Unity
 
             // ---- the ground ----
             //
-            // One slab, the whole map and a margin past it, so somebody who walks off the edge of
-            // Northgate is standing on the countryside rather than falling out of the world.
+            // One mesh, the whole map and a margin past it, so somebody who walks off the edge of
+            // Northgate is standing on the countryside rather than falling out of the world. USED
+            // TO BE A FLAT BOX: correct while the whole map was one flat plane, wrong the moment
+            // real elevation gave the map 24m of relief - a flat floor at y=0.06 would have had
+            // the player walking on stilts at one edge of town and buried at the other. A
+            // MeshCollider sampling the same ElevationGrid the visual ground uses keeps physics
+            // and what is drawn in agreement everywhere, not just at the crossing.
             const float Beyond = 200f;
-            float w = world.Width + Beyond * 2f, h = world.Height + Beyond * 2f;
 
             var ground = new GameObject("ground");
             ground.transform.SetParent(root.transform, false);
-            var slab = ground.AddComponent<BoxCollider>();
-            slab.size = new Vector3(w, Bedrock, h);
-            // Village y runs into -z, as everywhere. The slab's TOP is the walking surface.
-            slab.center = new Vector3(world.Width * 0.5f,
-                                      Floor - Bedrock * 0.5f,
-                                      -world.Height * 0.5f);
+            var mc = ground.AddComponent<MeshCollider>();
+            mc.sharedMesh = GroundMesh(world, Beyond);
 
             // ---- the buildings ----
             int walls = 0;
@@ -97,9 +103,60 @@ namespace Noir.Unity
                 }
             }
 
-            Debug.Log($"[collision] 1 ground slab and {walls} building boxes, "
-                    + $"floor at y={Floor:0.00}.");
+            Debug.Log($"[collision] 1 ground mesh and {walls} building boxes, "
+                    + $"floor {Floor:0.00}m above local terrain.");
             return root;
+        }
+
+        /// <summary>
+        /// A simple heightfield grid, ElevationGrid sampled directly rather than through
+        /// Space3D - this is LOCAL to the collider's own GameObject, and Space3D's automatic
+        /// elevation would double it up the moment this mesh's transform were ever moved off the
+        /// origin. Extends `beyond` past the map on every side, sampling ElevationGrid.HeightAt
+        /// there too - it clamps to the nearest real column past the edge of its own data, so the
+        /// ground you can walk on stays flush with the mapped town instead of stepping flat at
+        /// the boundary the way the old box did.
+        /// </summary>
+        private static Mesh GroundMesh(WorldModel world, float beyond)
+        {
+            float x0 = -beyond, x1 = world.Width + beyond;
+            float y0 = -beyond, y1 = world.Height + beyond;
+
+            int cols = Mathf.CeilToInt((x1 - x0) / Step) + 1;
+            int rows = Mathf.CeilToInt((y1 - y0) / Step) + 1;
+
+            var verts = new Vector3[cols * rows];
+            for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                float wx = x0 + c * Step;
+                float wy = y0 + r * Step;
+                verts[r * cols + c] = new Vector3(wx, Floor + ElevationGrid.HeightAt(wx, wy), -wy);
+            }
+
+            var tris = new int[(cols - 1) * (rows - 1) * 6];
+            int t = 0;
+            for (int r = 0; r < rows - 1; r++)
+            for (int c = 0; c < cols - 1; c++)
+            {
+                int v0 = r * cols + c, v1 = v0 + 1, v2 = v0 + cols, v3 = v2 + 1;
+                // Wound to face up, matching the ground renderer's own convention.
+                tris[t++] = v0; tris[t++] = v2; tris[t++] = v1;
+                tris[t++] = v1; tris[t++] = v2; tris[t++] = v3;
+            }
+
+            var mesh = new Mesh
+            {
+                name = "GroundCollision",
+                indexFormat = verts.Length > 65000
+                    ? UnityEngine.Rendering.IndexFormat.UInt32
+                    : UnityEngine.Rendering.IndexFormat.UInt16
+            };
+            mesh.SetVertices(verts);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateBounds();
+            mesh.RecalculateNormals();
+            return mesh;
         }
     }
 }

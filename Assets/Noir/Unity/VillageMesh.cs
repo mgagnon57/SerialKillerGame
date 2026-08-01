@@ -423,18 +423,23 @@ namespace Noir.Unity
                 int submesh = SubmeshFor(terrain);
 
                 // Small height differences keep surfaces from z-fighting and read as real:
-                // water sits in its channel, roads are worn slightly below the verge.
-                float y = HeightOf(terrain);
+                // water sits in its channel, roads are worn slightly below the verge. The real
+                // ground's own elevation is ADDED to that per corner rather than once for the
+                // whole quad - two neighbouring tiles of the same terrain share a world x,y at
+                // their common edge, so they sample the identical height there and the surface
+                // stays seamless. Only a terrain-TYPE boundary (below) still needs a riser; a
+                // smooth real slope needs none, because there is no gap for one to close.
+                float flat = HeightOf(terrain);
 
                 var into = chunks.At(gx, gy);
                 int v0 = into.Verts.Count;
                 float x0 = gx, x1 = gx + 1f;
                 float z0 = -gy, z1 = -(gy + 1f);
 
-                into.Verts.Add(new Vector3(x0, y, z0));
-                into.Verts.Add(new Vector3(x1, y, z0));
-                into.Verts.Add(new Vector3(x1, y, z1));
-                into.Verts.Add(new Vector3(x0, y, z1));
+                into.Verts.Add(new Vector3(x0, flat + ElevationGrid.HeightAt(x0, gy), z0));
+                into.Verts.Add(new Vector3(x1, flat + ElevationGrid.HeightAt(x1, gy), z0));
+                into.Verts.Add(new Vector3(x1, flat + ElevationGrid.HeightAt(x1, gy + 1f), z1));
+                into.Verts.Add(new Vector3(x0, flat + ElevationGrid.HeightAt(x0, gy + 1f), z1));
 
                 for (int i = 0; i < 4; i++) into.Normals.Add(Vector3.up);
 
@@ -559,11 +564,19 @@ namespace Noir.Unity
             void Surround(MeshChunk into, float ax, float bx, float az, float bz,
                           float y, int submesh)
             {
+                // Sampled once at the quad's own centre rather than per corner: this is the flat
+                // exterior skirt, and ElevationGrid clamps anything past the real data to its
+                // nearest edge column anyway, so a quad standing half in and half out of real
+                // coverage would get an oddly averaged tilt for no benefit. One sample keeps it
+                // flat and flush with the real ground at the boundary, which is all this owes -
+                // nobody stands on the pasture skirt to notice it stopped being real terrain.
+                float yy = y + ElevationGrid.HeightAt((ax + bx) * 0.5f, -(az + bz) * 0.5f);
+
                 int v = into.Verts.Count;
-                into.Verts.Add(new Vector3(ax, y, az));
-                into.Verts.Add(new Vector3(bx, y, az));
-                into.Verts.Add(new Vector3(bx, y, bz));
-                into.Verts.Add(new Vector3(ax, y, bz));
+                into.Verts.Add(new Vector3(ax, yy, az));
+                into.Verts.Add(new Vector3(bx, yy, az));
+                into.Verts.Add(new Vector3(bx, yy, bz));
+                into.Verts.Add(new Vector3(ax, yy, bz));
 
                 for (int i = 0; i < 4; i++) into.Normals.Add(Vector3.up);
                 for (int i = v; i < into.Verts.Count; i++)
@@ -594,11 +607,18 @@ namespace Noir.Unity
                     bx = sx; bz = sz;
                 }
 
+                // Sampled per end rather than once, so the riser stays flush with the ground
+                // tiles either side of it - they sample the same two world points at their own
+                // shared corners - while the LOCAL step it exists to close (low to high) stays
+                // exactly what it always was, wherever on the real slope it happens to stand.
+                float elevA = ElevationGrid.HeightAt(ax, -az);
+                float elevB = ElevationGrid.HeightAt(bx, -bz);
+
                 int v = into.Verts.Count;
-                into.Verts.Add(new Vector3(ax, low, az));
-                into.Verts.Add(new Vector3(bx, low, bz));
-                into.Verts.Add(new Vector3(bx, high, bz));
-                into.Verts.Add(new Vector3(ax, high, az));
+                into.Verts.Add(new Vector3(ax, low + elevA, az));
+                into.Verts.Add(new Vector3(bx, low + elevB, bz));
+                into.Verts.Add(new Vector3(bx, high + elevB, bz));
+                into.Verts.Add(new Vector3(ax, high + elevA, az));
 
                 for (int i = 0; i < 4; i++) into.Normals.Add(facing);
 

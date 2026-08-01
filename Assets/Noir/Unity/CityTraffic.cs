@@ -308,8 +308,8 @@ namespace Noir.Unity
             float cross = CrossOf(segment);
 
             return line.IsNorthSouth
-                ? new Vector3(cross, 0f, -along)
-                : new Vector3(along, 0f, -cross);
+                ? new Vector3(cross, ElevationGrid.HeightAt(cross, along), -along)
+                : new Vector3(along, ElevationGrid.HeightAt(along, cross), -cross);
         }
 
         /// <summary>
@@ -332,9 +332,12 @@ namespace Noir.Unity
             }
 
             // One lane holds x and the other holds z, so where they cross is simply one
-            // coordinate from each.
+            // coordinate from each. Height is not one coordinate from either - a and c already
+            // carry real terrain height from PointOn, and a corner between them is close enough
+            // to flat, over a single junction, that their average is the right ground for it.
             bool fromIsNorthSouth = _world.Roads.Lines[from.Line].IsNorthSouth;
-            b = fromIsNorthSouth ? new Vector3(a.x, 0f, c.z) : new Vector3(c.x, 0f, a.z);
+            float midY = (a.y + c.y) * 0.5f;
+            b = fromIsNorthSouth ? new Vector3(a.x, midY, c.z) : new Vector3(c.x, midY, a.z);
         }
 
         private static Vector3 Bezier(Vector3 a, Vector3 b, Vector3 c, float t)

@@ -382,7 +382,7 @@ namespace Noir.Unity
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(post);
             go.transform.SetParent(transform, false);
-            go.transform.position = new Vector3(vx, 0f, -vy);
+            go.transform.position = new Vector3(vx, ElevationGrid.HeightAt(vx, vy), -vy);
 
             // WHICH WAY THE LAMPS LOOK IS NOT DERIVABLE FROM THE BOUNDS, and this is the one
             // thing about this prefab that had to be found by looking. The lens plate measures
