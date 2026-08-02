@@ -22,9 +22,9 @@ touches.
 - **Base data is immutable.** `elevation.txt` is never written to, resampled, or re-rotated.
 - **Delta grid resolution matches the base grid** — 71×81 at the same 30m step. No independent
   finer grid.
-- Any code new code that crosses the `Noir.Unity` / `Noir.Editor` assembly boundary (there is no
-  `.asmdef` in `Assets/Noir`, so the `Editor` folder compiles into a separate default editor
-  assembly) must be `public` — `internal` is invisible across that boundary.
+- Any new code that crosses the `Noir.Unity` / `Noir.Editor` assembly boundary must be `public`
+  — `Assets/Noir/Editor` compiles into its own `Noir.Editor.asmdef` (referencing `Noir.Unity`),
+  so `internal` is invisible across it exactly as it would be under the folder-name convention.
 - Follow the project's existing doc-comment voice: explain *why*, not *what*, especially for any
   non-obvious constraint (see any file under `Assets/Noir/Unity` or `Assets/Noir/Editor` for the
   house style).
