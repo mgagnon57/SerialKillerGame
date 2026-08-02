@@ -177,6 +177,11 @@ namespace Noir.Editor
         {
             "token", "secret", "key", "credential", "bearer", "password", "passwd",
             "jwt", "cookie", "session", "auth", "email", "userid", "user_id", "guid",
+
+            // Named in full rather than matching a bare "id": "id" is a substring of Provider,
+            // Identifier and half the enum names in this package, and a filter that redacts the
+            // useful signal gets turned off, which protects nothing.
+            "orgid", "org_id", "organizationid", "accountid", "tenantid",
         };
 
         private static bool IsSecret(string name)
