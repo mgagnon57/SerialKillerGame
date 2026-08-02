@@ -139,8 +139,55 @@ namespace Noir.Editor
                 object v;
                 try { v = p.GetValue(state); }
                 catch (Exception e) { v = $"<threw {e.GetType().Name}>"; }
-                log.AppendLine($"     {field.Name}.{p.Name} = {Describe(v)}");
+                log.AppendLine($"     {field.Name}.{p.Name} = {Redacted(p.Name, v)}");
             }
+        }
+
+        /// <summary>
+        /// Names that must never reach the log.
+        ///
+        /// THIS IS NOT PRECAUTIONARY. Unity.AI.Toolkit.Accounts carries `public string
+        /// accessToken`, `organizationKey` and `userId`, and this probe walks every public
+        /// property of every account state and then recurses into whatever it finds. In batch
+        /// mode they come back null, because the session never resolves - which is exactly the
+        /// trap: the probe looks harmless in the only mode it was tested in, and the whole point
+        /// of running it in an INTERACTIVE editor is that the session resolves and those fields
+        /// fill in. A Unity Console is copied and pasted freely.
+        /// </summary>
+        private static readonly string[] Secrets =
+        {
+            "token", "secret", "key", "credential", "bearer", "password", "passwd",
+            "jwt", "cookie", "session", "auth", "email", "userid", "user_id", "guid",
+        };
+
+        private static bool IsSecret(string name)
+        {
+            var n = name.ToLowerInvariant();
+            foreach (var s in Secrets) if (n.Contains(s)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// What a value is, without saying what it holds. The TYPE and LENGTH of a token are the
+        /// useful part for a probe - "is it there and does it look populated" - and the value
+        /// itself never is.
+        ///
+        /// Long unbroken strings are masked whatever they are called, because the next release of
+        /// a pre-release package is free to invent a field name this list has never heard of, and
+        /// a credential does not stop being one because it was called something new.
+        /// </summary>
+        private static string Redacted(string name, object v)
+        {
+            if (v == null) return "null";
+            if (IsSecret(name))
+                return v is string s0
+                    ? $"<redacted {v.GetType().Name}, {s0.Length} chars>"
+                    : $"<redacted {v.GetType().Name}>";
+
+            if (v is string s && s.Length > 24 && !s.Contains(' '))
+                return $"<redacted long string, {s.Length} chars>";
+
+            return Describe(v);
         }
 
         private static void Report(System.Text.StringBuilder log, Type owner, string field, string member)
@@ -174,9 +221,15 @@ namespace Noir.Editor
             var t = v.GetType();
             if (t.IsPrimitive || v is string) return v.ToString();
 
+            // Through Redacted too - this is the recursion that would otherwise carry an
+            // accessToken out of a nested record after the top-level check had passed it.
             var parts = t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                          .Where(p => p.GetIndexParameters().Length == 0)
-                         .Select(p => { try { return $"{p.Name}={p.GetValue(v)}"; } catch { return $"{p.Name}=?"; } })
+                         .Select(p =>
+                         {
+                             try { return $"{p.Name}={Redacted(p.Name, p.GetValue(v))}"; }
+                             catch { return $"{p.Name}=?"; }
+                         })
                          .ToArray();
             return parts.Length == 0 ? v.ToString() : "{ " + string.Join(", ", parts) + " }";
         }
