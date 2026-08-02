@@ -35,6 +35,7 @@ namespace Noir.Editor
             try
             {
                 failures += CheckDeltaRoundTrip();
+                failures += CheckUndoStack();
                 failures += CheckSaveFormat(deltaPath);
             }
             catch (Exception ex)
@@ -113,6 +114,56 @@ namespace Noir.Editor
 
             ElevationGrid.SetDeltaCell(0, 0, 0f);
             Debug.Log("[sculptcheck] save format ok");
+            return failures;
+        }
+
+        private static int CheckUndoStack()
+        {
+            int failures = 0;
+            var stack = new SculptUndoStack();
+            var a = new float[,] { { 1f, 2f }, { 3f, 4f } };
+            var b = new float[,] { { 9f, 9f }, { 9f, 9f } };
+
+            if (stack.CanUndo || stack.CanRedo)
+            {
+                Debug.LogError("[sculptcheck] undo: fresh stack should have nothing to undo or redo");
+                failures++;
+            }
+
+            stack.RecordBeforeStroke(a);
+            if (!stack.CanUndo)
+            {
+                Debug.LogError("[sculptcheck] undo: CanUndo false after a stroke was recorded");
+                failures++;
+            }
+
+            var restored = stack.Undo(b);
+            if (restored != a)
+            {
+                Debug.LogError("[sculptcheck] undo: did not return the pre-stroke grid");
+                failures++;
+            }
+            if (!stack.CanRedo)
+            {
+                Debug.LogError("[sculptcheck] undo: CanRedo false immediately after an undo");
+                failures++;
+            }
+
+            var redone = stack.Redo(a);
+            if (redone != b)
+            {
+                Debug.LogError("[sculptcheck] undo: redo did not return the grid undo replaced");
+                failures++;
+            }
+
+            stack.RecordBeforeStroke(a);
+            if (stack.CanRedo)
+            {
+                Debug.LogError("[sculptcheck] undo: a new stroke should clear the redo stack");
+                failures++;
+            }
+
+            Debug.Log("[sculptcheck] undo stack ok");
             return failures;
         }
     }
