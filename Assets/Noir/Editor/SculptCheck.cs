@@ -38,6 +38,7 @@ namespace Noir.Editor
                 failures += CheckDeltaRoundTrip();
                 failures += CheckUndoStack();
                 failures += CheckBrushPaint();
+                failures += CheckPreviewBuild();
                 failures += CheckSaveFormat(deltaPath);
             }
             catch (Exception ex)
@@ -213,6 +214,47 @@ namespace Noir.Editor
             finally
             {
                 if (go != null) UnityEngine.Object.DestroyImmediate(go);
+            }
+
+            return failures;
+        }
+
+        private static int CheckPreviewBuild()
+        {
+            int failures = 0;
+            var preview = new SculptPreview();
+
+            try
+            {
+                preview.Build();
+
+                if (preview.Root == null)
+                {
+                    Debug.LogError("[sculptcheck] preview: Root is null after Build");
+                    failures++;
+                }
+                if (preview.World == null)
+                {
+                    Debug.LogError("[sculptcheck] preview: World is null after Build");
+                    failures++;
+                }
+                if (preview.Chunks.Count == 0)
+                {
+                    Debug.LogError("[sculptcheck] preview: no ground chunks were cached");
+                    failures++;
+                }
+
+                Debug.Log($"[sculptcheck] preview build ok ({preview.Chunks.Count} chunks)");
+            }
+            finally
+            {
+                preview.Teardown();
+            }
+
+            if (preview.Root != null)
+            {
+                Debug.LogError("[sculptcheck] preview: Root survived Teardown");
+                failures++;
             }
 
             return failures;

@@ -388,7 +388,7 @@ namespace Noir.Unity
 
         // ---------- ground ----------
 
-        private static void BuildGround(WorldModel world, Transform parent)
+        public static void BuildGround(WorldModel world, Transform parent)
         {
             var go = new GameObject("Ground");
             go.transform.SetParent(parent, false);
