@@ -628,8 +628,14 @@ namespace Noir.Unity
                     "Car_Truck_Modern_Logging", "Car_Truck_Modern_Garbage",
                     "Car_Truck_Modern_Concrete", "Car_Truck_Modern_Gritter",
                     "Car_Truck_Modern_Loadingplatform",
-                    "Car_Truck_Trailer_Modern", "Car_Truck_Trailer_Sleepercab_Modern",
-                    "Car_Truck_Trailer_Car_Modern", "Car_Truck_Trailer_Container_Large",
+                    // Only the ONE complete articulated unit. "Car_Truck_Trailer_Modern",
+                    // "Car_Truck_Trailer_Car_Modern" and "Car_Truck_Trailer_Container_Large"
+                    // were also in this list until they were checked against the pack directly:
+                    // all three are BARE TRAILERS - rear wheels, no cab, no steering wheel - so a
+                    // freeway that ran them span itself about one heavy in sixteen as a driverless
+                    // box gliding down the road. "Car_Truck_Trailer_Sleepercab_Modern" is the only
+                    // one of the four with a front axle and a windscreen.
+                    "Car_Truck_Trailer_Sleepercab_Modern",
                 });
             }
             else
