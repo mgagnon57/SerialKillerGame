@@ -21,7 +21,7 @@ namespace Noir.Editor
     /// </summary>
     public static class CityShot
     {
-        private const int Width = 1600, Height = 900;
+        internal const int Width = 1600, Height = 900;
 
         /// <summary>Set by Render06 / Render13; defaults to the hour the game opens at.</summary>
         private static float Hour = 6f;
@@ -35,7 +35,7 @@ namespace Noir.Editor
         [MenuItem("Noir/Render City Block (night, 22:00)")]
         public static void RenderNight() { Hour = 22f; Render(); }
 
-        private static string OutputDir =>
+        internal static string OutputDir =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "..", "docs", "snapshots"));
 
         /// <summary>
@@ -389,14 +389,14 @@ namespace Noir.Editor
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 
-        private static void Frame(GameObject camGo, Vector3 target, float dist, float pitch, float yaw)
+        internal static void Frame(GameObject camGo, Vector3 target, float dist, float pitch, float yaw)
         {
             var rotation = Quaternion.Euler(pitch, yaw, 0f);
             camGo.transform.position = target + Vector3.up * 2f - rotation * Vector3.forward * dist;
             camGo.transform.rotation = rotation;
         }
 
-        private static void Capture(Camera cam, string path)
+        internal static void Capture(Camera cam, string path)
         {
             var rt = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             var previousTarget = cam.targetTexture;

@@ -65,9 +65,14 @@ false`, and the traffic tests read transforms, not renderers — but it has not 
 with:
 
     Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform PlayMode \
-      -testResults <xml> -logFile <log>
+      -assemblyNames Noir.PlayTests -testResults <xml> -logFile <log>
 
 Expect **13/13**. Do NOT pass `-nographics` — two tests render and fail spuriously without it.
+
+**`-assemblyNames Noir.PlayTests` is not optional any more.** Without it the runner also discovers
+`LLMUnityTests.TestLLM`, whose constructor calls `LLMManager.DownloadModel`, and the run sits
+trying to fetch a language model off the network instead of testing the town — no results file,
+no error, just a process that never finishes.
 
 ## Next, in the order I would do it
 

@@ -49,6 +49,1027 @@ terrain field 0,0 2100x2400
 terrain grass 476,679 1074x1581
 terrain path 724,1309 52x52
 
+# ---- the real water --------------------------------------------------------
+# The North Fork Vermilion River and the three ponds behind the school campus,
+# rasterised from the SAME OpenStreetMap shapes in Content/features.txt that the
+# survey plan draws - so what you see traced on the plan is what is on the ground.
+# Generated, not authored: do not hand-edit these, change RIVER_W or features.txt
+# and re-run tools/relay-rossville.py.
+#
+# Water is not walkable and blocks sight, so it is stamped BEFORE the roads and the
+# places, both of which overwrite it - which is what keeps a road crossing the river
+# a crossing instead of a hole, and is why the country lots below refuse to sit on it.
+# 1009 rectangles over 44,866 tiles.
+terrain water 95,692 10x12
+terrain water 85,693 10x12
+terrain water 105,693 1x16
+terrain water 82,694 3x12
+terrain water 106,694 1x16
+terrain water 80,695 2x13
+terrain water 107,695 1x16
+terrain water 78,696 2x13
+terrain water 108,696 2x16
+terrain water 76,697 2x13
+terrain water 110,697 1x22
+terrain water 74,698 2x13
+terrain water 111,698 1x33
+terrain water 72,699 2x13
+terrain water 112,699 1x109
+terrain water 70,700 2x13
+terrain water 113,700 1x110
+terrain water 68,701 2x13
+terrain water 114,701 1x111
+terrain water 66,702 2x13
+terrain water 115,702 1x112
+terrain water 63,703 3x12
+terrain water 116,703 1x112
+terrain water 60,704 3x12
+terrain water 95,704 1x1
+terrain water 101,704 4x1
+terrain water 117,704 1x113
+terrain water 57,705 3x12
+terrain water 85,705 1x1
+terrain water 102,705 3x1
+terrain water 118,705 1x113
+terrain water 54,706 3x12
+terrain water 82,706 2x1
+terrain water 103,706 2x1
+terrain water 119,706 1x84
+terrain water 51,707 3x12
+terrain water 104,707 1x1
+terrain water 120,707 1x78
+terrain water 48,708 3x12
+terrain water 45,709 3x12
+terrain water 121,709 1x72
+terrain water 42,710 3x12
+terrain water 39,711 3x12
+terrain water 0,712 3x12
+terrain water 35,712 4x12
+terrain water 109,712 1x1
+terrain water 3,713 3x12
+terrain water 32,713 3x12
+terrain water 6,714 26x12
+terrain water 63,715 2x1
+terrain water 60,716 2x1
+terrain water 57,717 2x1
+terrain water 54,718 2x1
+terrain water 51,719 2x1
+terrain water 122,719 1x25
+terrain water 48,720 2x1
+terrain water 45,721 2x1
+terrain water 42,722 2x1
+terrain water 39,723 1x1
+terrain water 1,724 2x1
+terrain water 35,724 2x1
+terrain water 4,725 2x1
+terrain water 32,725 2x1
+terrain water 123,731 1x3
+terrain water 111,733 1x73
+terrain water 110,744 1x26
+terrain water 122,770 1x7
+terrain water 110,775 1x29
+terrain water 109,780 1x23
+terrain water 108,784 1x17
+terrain water 107,788 1x11
+terrain water 106,792 1x5
+terrain water 119,796 1x23
+terrain water 120,798 1x23
+terrain water 121,800 1x22
+terrain water 122,801 1x22
+terrain water 123,803 1x21
+terrain water 124,805 1x26
+terrain water 125,807 1x32
+terrain water 126,809 1x36
+terrain water 127,810 1x38
+terrain water 128,811 1x40
+terrain water 129,813 1x41
+terrain water 130,814 1x43
+terrain water 131,815 1x43
+terrain water 132,816 1x43
+terrain water 133,818 1x42
+terrain water 134,819 1x42
+terrain water 135,823 1x39
+terrain water 136,830 1x33
+terrain water 137,838 1x25
+terrain water 138,843 1x21
+terrain water 139,846 1x21
+terrain water 140,849 1x22
+terrain water 141,851 1x23
+terrain water 142,852 1x26
+terrain water 143,853 1x68
+terrain water 144,854 1x66
+terrain water 145,855 2x64
+terrain water 147,856 1x63
+terrain water 148,857 1x61
+terrain water 149,859 1x59
+terrain water 150,862 1x55
+terrain water 151,866 1x51
+terrain water 152,869 1x47
+terrain water 153,873 1x40
+terrain water 154,876 1x23
+terrain water 142,899 1x22
+terrain water 40,903 3x14
+terrain water 37,904 3x16
+terrain water 43,904 7x12
+terrain water 36,905 1x19
+terrain water 50,905 8x12
+terrain water 58,906 7x12
+terrain water 35,907 1x18
+terrain water 65,907 7x12
+terrain water 34,908 1x18
+terrain water 72,908 7x12
+terrain water 141,908 1x14
+terrain water 33,909 1x18
+terrain water 79,909 8x12
+terrain water 139,909 2x13
+terrain water 32,910 1x20
+terrain water 87,910 7x12
+terrain water 137,910 2x13
+terrain water 31,911 1x24
+terrain water 94,911 7x12
+terrain water 135,911 2x13
+terrain water 30,912 1x28
+terrain water 101,912 7x12
+terrain water 133,912 2x13
+terrain water 29,913 1x32
+terrain water 108,913 7x12
+terrain water 130,913 3x12
+terrain water 115,914 7x12
+terrain water 127,914 3x12
+terrain water 28,915 1x50
+terrain water 122,915 5x12
+terrain water 27,916 1x48
+terrain water 49,916 1x1
+terrain water 26,917 1x46
+terrain water 40,917 2x1
+terrain water 57,917 1x1
+terrain water 25,918 1x44
+terrain water 40,918 1x1
+terrain water 64,918 1x1
+terrain water 24,919 1x42
+terrain water 71,919 1x1
+terrain water 145,919 1x1
+terrain water 23,920 1x40
+terrain water 37,920 2x1
+terrain water 22,921 1x37
+terrain water 37,921 1x2
+terrain water 86,921 1x1
+terrain water 93,922 1x1
+terrain water 139,922 1x1
+terrain water 100,923 1x1
+terrain water 137,923 1x1
+terrain water 21,924 1x33
+terrain water 107,924 1x1
+terrain water 114,925 1x1
+terrain water 130,925 2x1
+terrain water 121,926 1x1
+terrain water 127,926 2x1
+terrain water 20,929 1x26
+terrain water 19,934 1x19
+terrain water 18,939 1x13
+terrain water 17,944 1x6
+terrain water 277,946 6x38
+terrain water 29,947 1x20
+terrain water 272,947 5x37
+terrain water 283,947 9x37
+terrain water 30,948 1x20
+terrain water 266,948 6x36
+terrain water 292,948 9x36
+terrain water 261,949 5x35
+terrain water 301,949 9x36
+terrain water 31,950 1x19
+terrain water 258,950 3x34
+terrain water 310,950 3x35
+terrain water 257,951 1x33
+terrain water 313,951 1x34
+terrain water 32,952 1x18
+terrain water 255,952 2x31
+terrain water 314,952 1x33
+terrain water 33,953 1x18
+terrain water 254,953 1x30
+terrain water 315,953 1x32
+terrain water 34,954 1x18
+terrain water 253,954 1x29
+terrain water 35,955 1x18
+terrain water 251,955 2x28
+terrain water 316,955 1x30
+terrain water 36,956 1x18
+terrain water 250,956 1x27
+terrain water 317,956 1x28
+terrain water 249,957 1x26
+terrain water 318,957 1x26
+terrain water 37,958 1x16
+terrain water 248,958 1x25
+terrain water 319,958 1x24
+terrain water 38,959 1x15
+terrain water 246,959 2x16
+terrain water 320,959 1x22
+terrain water 39,960 1x15
+terrain water 245,960 1x9
+terrain water 321,960 1x20
+terrain water 40,961 1x14
+terrain water 244,961 1x3
+terrain water 322,961 1x18
+terrain water 41,962 1x13
+terrain water 323,962 1x16
+terrain water 42,963 4x12
+terrain water 46,964 5x12
+terrain water 51,965 5x12
+terrain water 56,966 5x12
+terrain water 61,967 5x17
+terrain water 66,968 1x26
+terrain water 67,969 1x27
+terrain water 68,970 1x28
+terrain water 69,973 1x27
+terrain water 45,975 1x1
+terrain water 70,975 1x27
+terrain water 247,975 1x6
+terrain water 50,976 1x1
+terrain water 55,977 1x1
+terrain water 71,977 1x27
+terrain water 59,978 2x1
+terrain water 60,979 1x3
+terrain water 72,979 1x27
+terrain water 73,981 1x29
+terrain water 74,983 1x31
+terrain water 62,984 4x2
+terrain water 299,984 2x1
+terrain water 75,985 1x33
+terrain water 63,986 3x2
+terrain water 76,987 1x35
+terrain water 64,988 2x2
+terrain water 77,989 1x38
+terrain water 65,990 1x2
+terrain water 78,991 1x45
+terrain water 79,993 1x51
+terrain water 80,995 1x58
+terrain water 81,997 1x64
+terrain water 82,999 1x171
+terrain water 83,1001 1x180
+terrain water 84,1004 1x211
+terrain water 85,1008 1x206
+terrain water 86,1012 1x202
+terrain water 87,1016 1x105
+terrain water 313,1018 1x219
+terrain water 88,1020 1x94
+terrain water 312,1020 1x217
+terrain water 314,1022 1x214
+terrain water 311,1023 1x214
+terrain water 315,1025 1x209
+terrain water 310,1026 1x210
+terrain water 89,1027 1x79
+terrain water 316,1028 1x205
+terrain water 309,1029 1x207
+terrain water 317,1031 1x200
+terrain water 308,1032 1x203
+terrain water 318,1034 1x196
+terrain water 90,1035 1x64
+terrain water 307,1035 1x199
+terrain water 319,1037 1x191
+terrain water 306,1039 1x195
+terrain water 320,1040 1x187
+terrain water 305,1042 1x191
+terrain water 91,1043 1x49
+terrain water 321,1044 1x181
+terrain water 304,1045 1x188
+terrain water 322,1047 1x177
+terrain water 303,1048 1x184
+terrain water 323,1050 1x162
+terrain water 302,1051 1x181
+terrain water 92,1052 1x32
+terrain water 324,1053 1x29
+terrain water 301,1054 1x177
+terrain water 325,1056 1x23
+terrain water 300,1057 1x172
+terrain water 326,1059 1x16
+terrain water 93,1060 1x17
+terrain water 299,1060 1x167
+terrain water 327,1062 1x10
+terrain water 298,1064 1x161
+terrain water 328,1066 1x3
+terrain water 297,1067 1x156
+terrain water 296,1070 1x151
+terrain water 295,1073 1x146
+terrain water 81,1076 1x88
+terrain water 294,1076 1x141
+terrain water 293,1079 1x136
+terrain water 292,1082 1x131
+terrain water 80,1083 1x74
+terrain water 324,1083 1x118
+terrain water 291,1086 1x125
+terrain water 325,1087 1x113
+terrain water 290,1089 1x120
+terrain water 79,1091 1x60
+terrain water 289,1092 1x115
+terrain water 326,1092 1x107
+terrain water 288,1095 1x110
+terrain water 327,1097 1x101
+terrain water 78,1098 1x46
+terrain water 287,1098 1x105
+terrain water 286,1101 1x100
+terrain water 328,1101 1x96
+terrain water 285,1104 1x94
+terrain water 77,1105 1x33
+terrain water 329,1106 1x89
+terrain water 284,1107 1x89
+terrain water 283,1110 1x41
+terrain water 330,1111 1x23
+terrain water 76,1113 1x19
+terrain water 282,1113 1x36
+terrain water 331,1115 1x15
+terrain water 281,1116 1x30
+terrain water 280,1118 1x26
+terrain water 75,1120 1x5
+terrain water 332,1120 1x5
+terrain water 279,1121 1x20
+terrain water 87,1124 1x89
+terrain water 278,1124 1x14
+terrain water 277,1126 1x10
+terrain water 276,1129 1x4
+terrain water 88,1131 1x81
+terrain water 89,1137 1x73
+terrain water 330,1143 1x51
+terrain water 90,1144 1x63
+terrain water 331,1147 1x46
+terrain water 91,1150 1x54
+terrain water 332,1152 1x40
+terrain water 283,1153 1x41
+terrain water 333,1156 1x35
+terrain water 92,1157 1x44
+terrain water 334,1161 1x28
+terrain water 93,1163 1x35
+terrain water 282,1163 1x29
+terrain water 335,1166 1x22
+terrain water 94,1170 1x25
+terrain water 336,1170 1x17
+terrain water 281,1174 1x16
+terrain water 337,1175 1x11
+terrain water 338,1179 1x6
+terrain water 95,1180 1x12
+terrain water 280,1184 1x4
+terrain water 83,1190 1x25
+terrain water 82,1193 1x23
+terrain water 81,1196 1x20
+terrain water 80,1199 1x18
+terrain water 79,1202 1x16
+terrain water 78,1204 1x14
+terrain water 76,1205 2x14
+terrain water 75,1206 1x14
+terrain water 73,1207 2x14
+terrain water 71,1208 2x14
+terrain water 70,1209 1x14
+terrain water 68,1210 2x13
+terrain water 66,1211 2x14
+terrain water 64,1212 2x14
+terrain water 63,1213 1x14
+terrain water 61,1214 2x24
+terrain water 59,1215 2x58
+terrain water 58,1216 1x56
+terrain water 56,1217 2x54
+terrain water 54,1218 2x50
+terrain water 53,1219 1x45
+terrain water 52,1220 1x41
+terrain water 51,1223 1x34
+terrain water 68,1223 1x1
+terrain water 50,1238 1x16
+terrain water 61,1238 1x36
+terrain water 62,1252 1x23
+terrain water 63,1256 1x19
+terrain water 64,1259 1x17
+terrain water 65,1262 1x14
+terrain water 66,1263 1x14
+terrain water 67,1264 2x14
+terrain water 69,1265 2x14
+terrain water 71,1266 1x14
+terrain water 72,1267 2x14
+terrain water 55,1268 1x2
+terrain water 74,1268 2x14
+terrain water 76,1269 1x14
+terrain water 77,1270 2x14
+terrain water 57,1271 1x1
+terrain water 79,1271 2x14
+terrain water 81,1272 1x14
+terrain water 82,1273 2x14
+terrain water 84,1274 2x14
+terrain water 86,1275 1x14
+terrain water 87,1276 2x14
+terrain water 89,1277 2x14
+terrain water 91,1278 1x14
+terrain water 92,1279 2x14
+terrain water 94,1280 1x14
+terrain water 95,1281 2x14
+terrain water 97,1282 2x14
+terrain water 99,1283 1x14
+terrain water 100,1284 2x14
+terrain water 102,1285 2x14
+terrain water 104,1286 1x16
+terrain water 105,1287 2x17
+terrain water 107,1288 2x19
+terrain water 109,1289 1x21
+terrain water 110,1290 1x21
+terrain water 90,1291 1x1
+terrain water 111,1291 1x22
+terrain water 112,1292 1x23
+terrain water 113,1294 1x22
+terrain water 114,1295 1x23
+terrain water 115,1297 1x24
+terrain water 103,1299 1x1
+terrain water 116,1299 1x24
+terrain water 117,1300 1x26
+terrain water 118,1302 1x27
+terrain water 119,1303 1x28
+terrain water 106,1304 1x1
+terrain water 120,1305 1x29
+terrain water 121,1306 1x30
+terrain water 108,1307 1x1
+terrain water 122,1308 1x31
+terrain water 123,1310 1x31
+terrain water 124,1311 1x33
+terrain water 125,1313 1x34
+terrain water 126,1316 1x33
+terrain water 127,1319 1x33
+terrain water 128,1321 1x33
+terrain water 129,1324 1x32
+terrain water 130,1326 1x33
+terrain water 131,1329 1x32
+terrain water 132,1331 1x33
+terrain water 133,1334 1x32
+terrain water 134,1337 1x31
+terrain water 135,1339 1x32
+terrain water 136,1342 1x31
+terrain water 137,1344 1x32
+terrain water 138,1347 1x31
+terrain water 139,1349 1x32
+terrain water 140,1352 1x30
+terrain water 141,1354 1x29
+terrain water 142,1356 1x28
+terrain water 143,1359 1x26
+terrain water 144,1361 1x25
+terrain water 145,1364 1x23
+terrain water 146,1366 1x22
+terrain water 147,1368 1x21
+terrain water 148,1371 1x19
+terrain water 149,1373 1x18
+terrain water 150,1375 1x17
+terrain water 151,1376 1x17
+terrain water 152,1377 1x17
+terrain water 153,1378 1x17
+terrain water 154,1379 1x17
+terrain water 155,1380 1x17
+terrain water 156,1381 1x17
+terrain water 157,1382 1x17
+terrain water 158,1383 1x17
+terrain water 159,1384 1x17
+terrain water 160,1385 1x17
+terrain water 161,1386 1x17
+terrain water 162,1387 1x17
+terrain water 163,1388 1x17
+terrain water 164,1389 1x17
+terrain water 165,1390 1x17
+terrain water 166,1391 1x18
+terrain water 167,1392 1x18
+terrain water 168,1393 1x18
+terrain water 169,1394 1x18
+terrain water 170,1395 1x18
+terrain water 171,1396 1x18
+terrain water 172,1397 1x18
+terrain water 173,1399 1x17
+terrain water 174,1400 1x17
+terrain water 175,1401 1x17
+terrain water 176,1402 1x17
+terrain water 177,1403 1x17
+terrain water 178,1404 1x17
+terrain water 179,1405 1x17
+terrain water 180,1406 1x17
+terrain water 181,1407 1x17
+terrain water 182,1408 1x17
+terrain water 183,1409 1x17
+terrain water 184,1410 1x17
+terrain water 185,1411 1x17
+terrain water 186,1412 1x17
+terrain water 187,1413 1x16
+terrain water 188,1414 1x15
+terrain water 189,1415 1x15
+terrain water 190,1416 1x14
+terrain water 191,1417 1x14
+terrain water 192,1418 1x13
+terrain water 193,1419 3x13
+terrain water 196,1420 2x13
+terrain water 198,1421 2x13
+terrain water 200,1422 2x13
+terrain water 202,1423 2x13
+terrain water 204,1424 3x13
+terrain water 207,1425 2x13
+terrain water 209,1426 2x13
+terrain water 211,1427 2x13
+terrain water 213,1428 3x13
+terrain water 216,1429 2x13
+terrain water 218,1430 2x13
+terrain water 220,1431 2x13
+terrain water 195,1432 1x1
+terrain water 222,1432 2x13
+terrain water 197,1433 1x1
+terrain water 224,1433 3x13
+terrain water 227,1434 2x13
+terrain water 229,1435 2x13
+terrain water 231,1436 2x13
+terrain water 206,1437 1x1
+terrain water 233,1437 3x13
+terrain water 236,1438 2x13
+terrain water 238,1439 2x13
+terrain water 240,1440 2x13
+terrain water 215,1441 1x1
+terrain water 242,1441 3x14
+terrain water 217,1442 1x1
+terrain water 245,1442 2x17
+terrain water 247,1443 2x19
+terrain water 249,1444 1x22
+terrain water 250,1445 1x22
+terrain water 226,1446 1x1
+terrain water 251,1446 1x23
+terrain water 252,1448 1x22
+terrain water 376,1449 14x84
+terrain water 235,1450 1x1
+terrain water 253,1450 1x22
+terrain water 367,1450 9x67
+terrain water 390,1450 2x125
+terrain water 237,1451 1x1
+terrain water 254,1451 1x23
+terrain water 365,1451 2x62
+terrain water 392,1451 1x123
+terrain water 363,1452 2x57
+terrain water 393,1452 2x121
+terrain water 255,1453 1x22
+terrain water 361,1453 2x53
+terrain water 395,1453 2x119
+terrain water 256,1454 1x23
+terrain water 358,1454 3x47
+terrain water 397,1454 2x116
+terrain water 243,1455 2x1
+terrain water 356,1455 2x43
+terrain water 399,1455 2x114
+terrain water 244,1456 1x2
+terrain water 257,1456 1x22
+terrain water 354,1456 2x39
+terrain water 401,1456 1x112
+terrain water 258,1457 1x23
+terrain water 351,1457 3x33
+terrain water 402,1457 2x109
+terrain water 349,1458 2x29
+terrain water 404,1458 1x108
+terrain water 246,1459 1x2
+terrain water 259,1459 1x23
+terrain water 347,1459 2x23
+terrain water 405,1459 1x106
+terrain water 345,1460 2x13
+terrain water 406,1460 1x104
+terrain water 260,1461 1x22
+terrain water 343,1461 2x3
+terrain water 407,1461 1x103
+terrain water 248,1462 1x2
+terrain water 261,1462 1x23
+terrain water 408,1462 1x101
+terrain water 409,1463 1x99
+terrain water 262,1464 1x22
+terrain water 344,1464 1x4
+terrain water 263,1465 1x23
+terrain water 410,1465 1x96
+terrain water 411,1466 1x95
+terrain water 264,1467 1x22
+terrain water 412,1467 1x93
+terrain water 413,1468 1x22
+terrain water 265,1469 1x22
+terrain water 266,1470 1x23
+terrain water 267,1472 1x22
+terrain water 414,1472 1x15
+terrain water 268,1473 1x23
+terrain water 346,1473 1x5
+terrain water 269,1475 1x22
+terrain water 270,1476 1x23
+terrain water 415,1476 1x9
+terrain water 271,1478 1x49
+terrain water 416,1479 1x3
+terrain water 272,1480 1x73
+terrain water 273,1481 1x71
+terrain water 348,1482 1x3
+terrain water 274,1483 1x67
+terrain water 275,1484 1x65
+terrain water 276,1486 1x61
+terrain water 350,1487 1x2
+terrain water 277,1488 1x58
+terrain water 278,1489 1x55
+terrain water 352,1490 2x2
+terrain water 279,1491 1x52
+terrain water 280,1492 1x49
+terrain water 353,1492 1x1
+terrain water 413,1493 1x66
+terrain water 281,1494 1x46
+terrain water 355,1495 1x2
+terrain water 414,1495 1x63
+terrain water 282,1496 1x43
+terrain water 415,1496 1x33
+terrain water 357,1498 1x2
+terrain water 416,1498 1x29
+terrain water 417,1499 1x27
+terrain water 359,1501 2x2
+terrain water 418,1501 1x23
+terrain water 419,1502 1x21
+terrain water 360,1503 1x2
+terrain water 420,1504 1x18
+terrain water 362,1506 1x2
+terrain water 421,1507 1x13
+terrain water 364,1509 1x2
+terrain water 366,1513 1x2
+terrain water 368,1517 8x1
+terrain water 422,1517 1x2
+terrain water 369,1518 7x2
+terrain water 370,1520 6x2
+terrain water 371,1522 5x2
+terrain water 372,1524 4x2
+terrain water 373,1526 3x2
+terrain water 283,1527 1x9
+terrain water 374,1528 2x2
+terrain water 375,1530 1x2
+terrain water 415,1530 1x26
+terrain water 416,1532 1x22
+terrain water 271,1533 1x22
+terrain water 377,1533 13x4
+terrain water 417,1534 1x18
+terrain water 270,1535 1x21
+terrain water 269,1536 1x21
+terrain water 418,1536 1x14
+terrain water 378,1537 12x12
+terrain water 268,1538 1x21
+terrain water 419,1538 1x10
+terrain water 267,1539 1x21
+terrain water 337,1540 2x64
+terrain water 420,1540 1x6
+terrain water 266,1541 1x21
+terrain water 335,1541 2x62
+terrain water 339,1541 4x62
+terrain water 421,1541 1x4
+terrain water 265,1542 1x21
+terrain water 333,1542 2x59
+terrain water 343,1542 4x60
+terrain water 330,1543 3x57
+terrain water 347,1543 4x58
+terrain water 264,1544 1x21
+terrain water 328,1544 2x54
+terrain water 351,1544 4x56
+terrain water 263,1545 1x21
+terrain water 326,1545 2x52
+terrain water 355,1545 1x54
+terrain water 262,1546 1x22
+terrain water 323,1546 3x49
+terrain water 356,1546 1x53
+terrain water 321,1547 2x46
+terrain water 357,1547 2x50
+terrain water 261,1548 1x21
+terrain water 319,1548 2x43
+terrain water 359,1548 1x49
+terrain water 260,1549 1x22
+terrain water 316,1549 3x39
+terrain water 360,1549 1x47
+terrain water 379,1549 11x28
+terrain water 314,1550 2x35
+terrain water 361,1550 1x45
+terrain water 259,1551 1x23
+terrain water 312,1551 2x32
+terrain water 362,1551 1x44
+terrain water 258,1552 1x29
+terrain water 309,1552 3x28
+terrain water 363,1552 1x42
+terrain water 307,1553 2x25
+terrain water 364,1553 1x40
+terrain water 372,1553 7x31
+terrain water 257,1554 1x34
+terrain water 305,1554 2x16
+terrain water 365,1554 7x35
+terrain water 256,1555 1x40
+terrain water 304,1555 1x7
+terrain water 255,1557 1x46
+terrain water 254,1558 1x64
+terrain water 253,1560 1x117
+terrain water 252,1561 1x118
+terrain water 251,1563 1x118
+terrain water 250,1564 1x119
+terrain water 249,1565 1x120
+terrain water 402,1566 1x1
+terrain water 248,1567 1x121
+terrain water 306,1570 1x6
+terrain water 397,1570 1x1
+terrain water 247,1573 1x117
+terrain water 393,1573 1x1
+terrain water 390,1575 1x1
+terrain water 379,1577 9x1
+terrain water 308,1578 1x1
+terrain water 379,1578 8x1
+terrain water 379,1579 6x1
+terrain water 246,1580 1x112
+terrain water 310,1580 2x1
+terrain water 379,1580 5x1
+terrain water 311,1581 1x1
+terrain water 379,1581 3x1
+terrain water 379,1582 2x1
+terrain water 313,1583 1x1
+terrain water 372,1584 6x1
+terrain water 315,1585 1x2
+terrain water 372,1585 4x1
+terrain water 372,1586 3x1
+terrain water 245,1587 1x107
+terrain water 372,1587 1x1
+terrain water 317,1588 2x1
+terrain water 318,1589 1x1
+terrain water 365,1589 5x1
+terrain water 365,1590 4x1
+terrain water 320,1591 1x1
+terrain water 365,1591 2x1
+terrain water 365,1592 1x1
+terrain water 322,1593 1x1
+terrain water 244,1594 1x102
+terrain water 324,1595 2x1
+terrain water 327,1597 1x1
+terrain water 357,1597 1x1
+terrain water 329,1598 1x1
+terrain water 332,1600 1x1
+terrain water 351,1600 1x1
+terrain water 334,1601 1x1
+terrain water 347,1601 1x1
+terrain water 243,1602 1x96
+terrain water 343,1602 1x1
+terrain water 339,1603 2x1
+terrain water 242,1622 1x47
+terrain water 254,1669 1x5
+terrain water 242,1672 1x29
+terrain water 241,1674 1x29
+terrain water 240,1676 1x29
+terrain water 239,1678 1x29
+terrain water 238,1681 1x28
+terrain water 237,1683 1x28
+terrain water 236,1685 1x29
+terrain water 235,1687 1x29
+terrain water 234,1689 1x29
+terrain water 233,1691 1x29
+terrain water 232,1694 1x28
+terrain water 231,1696 1x27
+terrain water 230,1698 1x26
+terrain water 229,1700 1x24
+terrain water 228,1702 1x23
+terrain water 227,1704 1x22
+terrain water 226,1707 1x19
+terrain water 225,1709 1x18
+terrain water 224,1711 1x17
+terrain water 223,1713 1x15
+terrain water 221,1715 2x14
+terrain water 220,1716 1x14
+terrain water 218,1717 2x14
+terrain water 217,1718 1x14
+terrain water 215,1719 2x14
+terrain water 214,1720 1x14
+terrain water 212,1721 2x14
+terrain water 211,1722 1x14
+terrain water 209,1723 2x14
+terrain water 208,1724 1x14
+terrain water 206,1725 2x14
+terrain water 205,1726 1x17
+terrain water 203,1727 2x22
+terrain water 202,1728 1x34
+terrain water 200,1729 2x40
+terrain water 221,1729 1x1
+terrain water 199,1730 1x51
+terrain water 197,1731 2x52
+terrain water 218,1731 1x1
+terrain water 196,1732 1x54
+terrain water 195,1733 1x55
+terrain water 215,1733 1x1
+terrain water 194,1735 1x55
+terrain water 212,1735 1x1
+terrain water 209,1737 1x1
+terrain water 206,1739 1x1
+terrain water 193,1742 1x50
+terrain water 192,1748 1x46
+terrain water 203,1749 1x7
+terrain water 191,1755 1x41
+terrain water 190,1762 1x35
+terrain water 189,1768 1x31
+terrain water 200,1769 1x6
+terrain water 188,1775 1x26
+terrain water 187,1778 1x25
+terrain water 186,1780 1x25
+terrain water 185,1781 1x26
+terrain water 184,1783 1x26
+terrain water 197,1783 1x1
+terrain water 183,1785 1x26
+terrain water 182,1787 1x25
+terrain water 181,1789 1x25
+terrain water 180,1791 1x25
+terrain water 179,1793 1x25
+terrain water 178,1794 1x26
+terrain water 177,1796 1x26
+terrain water 176,1798 1x26
+terrain water 175,1800 1x25
+terrain water 174,1802 1x25
+terrain water 173,1804 1x25
+terrain water 172,1806 1x25
+terrain water 171,1808 1x25
+terrain water 170,1809 1x26
+terrain water 169,1811 1x26
+terrain water 168,1813 1x25
+terrain water 167,1815 1x25
+terrain water 166,1817 1x25
+terrain water 165,1819 1x25
+terrain water 164,1821 1x25
+terrain water 163,1822 1x26
+terrain water 162,1824 1x26
+terrain water 161,1826 1x25
+terrain water 160,1828 1x25
+terrain water 159,1830 1x25
+terrain water 158,1832 1x25
+terrain water 157,1834 1x25
+terrain water 156,1835 1x26
+terrain water 155,1837 1x26
+terrain water 154,1839 1x26
+terrain water 153,1841 1x25
+terrain water 152,1843 1x25
+terrain water 151,1845 1x25
+terrain water 150,1847 1x25
+terrain water 149,1848 1x26
+terrain water 148,1850 1x26
+terrain water 147,1852 1x26
+terrain water 146,1854 1x25
+terrain water 145,1856 1x25
+terrain water 144,1858 1x25
+terrain water 143,1860 1x25
+terrain water 142,1862 1x25
+terrain water 141,1863 1x26
+terrain water 140,1865 1x26
+terrain water 139,1867 1x25
+terrain water 138,1869 1x25
+terrain water 137,1871 1x25
+terrain water 136,1873 1x25
+terrain water 135,1875 1x25
+terrain water 134,1876 1x26
+terrain water 133,1878 1x26
+terrain water 132,1880 1x25
+terrain water 131,1882 1x25
+terrain water 130,1884 1x25
+terrain water 129,1886 1x25
+terrain water 128,1888 1x25
+terrain water 127,1889 1x26
+terrain water 126,1891 1x26
+terrain water 125,1893 1x26
+terrain water 124,1895 1x25
+terrain water 123,1897 1x25
+terrain water 122,1899 1x25
+terrain water 121,1901 1x24
+terrain water 120,1902 1x25
+terrain water 119,1904 1x24
+terrain water 118,1906 1x24
+terrain water 117,1908 1x24
+terrain water 116,1910 1x23
+terrain water 115,1912 1x23
+terrain water 114,1914 1x22
+terrain water 113,1915 1x23
+terrain water 112,1917 1x23
+terrain water 111,1919 1x22
+terrain water 110,1920 1x23
+terrain water 109,1922 1x22
+terrain water 108,1923 1x23
+terrain water 107,1925 1x23
+terrain water 106,1927 1x22
+terrain water 105,1928 1x24
+terrain water 104,1930 1x24
+terrain water 103,1931 1x26
+terrain water 102,1933 1x27
+terrain water 101,1935 1x27
+terrain water 100,1936 1x29
+terrain water 99,1938 1x29
+terrain water 98,1939 1x31
+terrain water 97,1941 1x32
+terrain water 96,1942 1x33
+terrain water 95,1944 1x34
+terrain water 94,1947 1x33
+terrain water 93,1950 1x33
+terrain water 92,1952 1x34
+terrain water 91,1955 1x33
+terrain water 90,1957 1x34
+terrain water 89,1960 1x33
+terrain water 88,1963 1x33
+terrain water 87,1965 1x34
+terrain water 86,1968 1x33
+terrain water 85,1970 1x34
+terrain water 84,1973 1x33
+terrain water 83,1976 1x33
+terrain water 82,1978 1x34
+terrain water 81,1981 1x33
+terrain water 80,1983 1x34
+terrain water 79,1986 1x33
+terrain water 78,1989 1x33
+terrain water 77,1991 1x34
+terrain water 76,1994 1x33
+terrain water 75,1996 1x34
+terrain water 74,1999 1x33
+terrain water 73,2002 1x33
+terrain water 72,2004 1x34
+terrain water 71,2007 1x33
+terrain water 70,2009 1x34
+terrain water 69,2012 1x33
+terrain water 68,2015 1x33
+terrain water 67,2017 1x34
+terrain water 66,2020 1x33
+terrain water 65,2022 1x34
+terrain water 64,2025 1x33
+terrain water 63,2028 1x33
+terrain water 62,2030 1x34
+terrain water 61,2033 1x33
+terrain water 60,2035 1x34
+terrain water 59,2038 1x33
+terrain water 58,2041 1x35
+terrain water 57,2043 1x41
+terrain water 56,2046 1x46
+terrain water 55,2048 1x52
+terrain water 54,2051 1x82
+terrain water 53,2054 1x77
+terrain water 52,2056 1x73
+terrain water 51,2059 1x68
+terrain water 50,2061 1x64
+terrain water 49,2064 1x59
+terrain water 48,2067 1x54
+terrain water 47,2069 1x49
+terrain water 46,2075 1x39
+terrain water 45,2083 1x28
+terrain water 44,2092 1x15
+terrain water 43,2100 1x3
+terrain water 55,2102 1x33
+terrain water 56,2105 1x80
+terrain water 57,2109 1x73
+terrain water 58,2113 1x66
+terrain water 59,2117 1x59
+terrain water 60,2118 1x55
+terrain water 61,2120 1x50
+terrain water 62,2122 1x45
+terrain water 63,2124 1x40
+terrain water 64,2126 1x35
+terrain water 65,2128 1x30
+terrain water 66,2130 1x25
+terrain water 67,2132 1x14
+terrain water 55,2146 1x42
+terrain water 54,2153 1x38
+terrain water 53,2156 1x38
+terrain water 52,2159 1x38
+terrain water 51,2162 1x38
+terrain water 50,2165 1x38
+terrain water 49,2168 1x38
+terrain water 48,2171 1x38
+terrain water 47,2174 1x38
+terrain water 46,2177 1x38
+terrain water 45,2180 1x38
+terrain water 44,2183 1x37
+terrain water 43,2186 1x35
+terrain water 42,2189 1x34
+terrain water 41,2192 1x33
+terrain water 40,2195 1x32
+terrain water 39,2198 1x30
+terrain water 38,2201 1x29
+terrain water 37,2204 1x28
+terrain water 36,2207 1x27
+terrain water 35,2210 1x26
+terrain water 34,2213 1x24
+terrain water 33,2215 1x24
+terrain water 32,2217 1x24
+terrain water 31,2218 1x25
+terrain water 30,2220 1x24
+terrain water 29,2222 1x24
+terrain water 28,2224 1x24
+terrain water 27,2225 1x25
+terrain water 26,2227 1x24
+terrain water 25,2229 1x24
+terrain water 24,2231 1x24
+terrain water 23,2232 1x25
+terrain water 22,2234 1x24
+terrain water 21,2236 1x24
+terrain water 20,2238 1x24
+terrain water 19,2239 1x25
+terrain water 18,2241 1x24
+terrain water 17,2243 1x24
+terrain water 16,2245 1x23
+terrain water 15,2246 1x23
+terrain water 14,2248 1x22
+terrain water 13,2250 1x21
+terrain water 12,2252 1x20
+terrain water 11,2254 1x19
+terrain water 10,2255 1x19
+terrain water 9,2257 1x18
+terrain water 8,2259 1x17
+terrain water 7,2260 1x17
+terrain water 6,2261 1x17
+terrain water 5,2262 1x17
+terrain water 4,2263 1x17
+terrain water 3,2264 1x17
+terrain water 2,2265 1x17
+terrain water 1,2266 1x17
+terrain water 0,2267 1x17
+
 # ---- Illinois Route 1 and the cross street --------------------------------
 # `mainroad` is a 30m corridor, one lane each way with lay-bys, which is what a
 # two-lane state highway through a village is. Both run the full extent of the map:
@@ -988,33 +2009,33 @@ place cornfield 7,456 70x50 "the far acre"
   human The last field before the road, and the one nobody bothers to walk.
 place cornfield 5,529 50x70 "the far field"
   human Nobody watches this one from anywhere.
-place cornfield 7,662 70x50 "the top of the hill"
+place cornfield 7,1442 70x50 "the top of the hill"
   human It catches the weather first and everything here is a week behind.
-place cornfield 7,714 70x50 "the middle field"
+place cornfield 7,1494 70x50 "the middle field"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 10,792 70x50 "the near paddock"
+place paddock 10,1572 70x50 "the near paddock"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 10,844 70x50 "the far paddock"
+place paddock 10,1624 70x50 "the far paddock"
   human You cannot see this one from the road, or the road from it.
-place paddock 6,915 70x50 "the long acre"
+place paddock 6,1695 70x50 "the long acre"
   human Fenced for horses that were sold years ago.
-place orchard 11,978 70x50 "the orchard"
+place orchard 11,1758 70x50 "the orchard"
   human Planted in rows by somebody who is dead now.
-place orchard 4,1049 50x70 "the old orchard"
+place orchard 264,9 50x70 "the old orchard"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 11,1180 70x50 "the west belt"
+place copse 271,270 70x50 "the west belt"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 10,1238 70x50 "the west belt, middle"
+place copse 270,328 70x50 "the west belt, middle"
   human The stretch between the two roads, and the darkest of the three.
-place copse 5,1440 70x50 "the west belt, south"
+place copse 265,400 70x50 "the west belt, south"
   human It gives out where the ground turns wet.
-place copse 11,1494 70x50 "the west belt, end"
+place copse 271,454 70x50 "the west belt, end"
   human Somebody has been cutting firewood out of this one.
-place copse 6,1569 50x70 "the far spinney"
+place copse 266,529 50x70 "the far spinney"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 11,1697 70x50 "the east wood"
+place copse 271,657 70x50 "the east wood"
   human Older than the town, and the boundary bank round it is older still.
-place copse 12,1755 70x50 "the east wood, lower"
+place copse 272,715 70x50 "the east wood, lower"
   human The same wood, on the other side of the road that was put through it.
 place allotments 4,79 30x40 "the west allotments"
   human Thirty plots, four of them worked properly and the rest an argument.
@@ -1026,171 +2047,171 @@ place churchyard 70,609 30x24 "the old burial ground"
   human Older than anything still standing, and the names have gone off the stones.
 place memorial 104,609 3x3 "the cross on the Bishop road"
   human Somebody replaces the flowers. Nobody has ever been seen doing it.
-place memorial 6,1128 3x3 "the cross at the county line"
+place memorial 266,88 3x3 "the cross at the county line"
   human It has been there longer than the road surface it stands on.
-place standing 25,1132 4x4 "the high seat"
+place standing 285,92 4x4 "the high seat"
   human A platform over the long field. Whoever built it did not build it for deer.
-place standing 35,1132 4x4 "the seat above Wicker End"
+place standing 295,92 4x4 "the seat above Wicker End"
   human It looks at the orchard and at the back of the house, which is a choice.
-place camp 51,1131 5x5 "the pitch in the east wood"
+place camp 311,91 5x5 "the pitch in the east wood"
   human The fire is out. How long it has been out is the question.
-place camp 63,1131 5x5 "the far pitch"
+place camp 323,91 5x5 "the far pitch"
   human A bedroll, a case left open, and no track in or out that anybody has found.
-place farm 80,1126 15x16 "Home Farm 2"
-  door 87,1141
+place farm 340,86 15x16 "Home Farm 2"
+  door 347,101
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 108,1126 15x16 "Wicker End 3"
-  door 115,1141
+place farm 368,86 15x16 "Wicker End 3"
+  door 375,101
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 11,1650 30x28 "the yard 4"
+place farmyard 271,610 30x28 "the yard 4"
   human Mud, diesel and forty years of things that might come in useful.
-place barn 89,1756 18x39 "the big barn 5"
-  door 98,1756
+place barn 349,716 18x39 "the big barn 5"
+  door 358,716
   human Big enough to lose a car in, and dark enough at noon that you would.
-place barn 46,1647 11x14 "the old barn 6"
-  door 51,1660
+place barn 306,607 11x14 "the old barn 6"
+  door 311,620
   human Half the roof is down and the half that is not is worse.
-place silo 10,1152 7x7 "the near silo 7"
+place silo 270,112 7x7 "the near silo 7"
   human It booms when you knock on it.
-place silo 24,1151 7x7 "the far silo 8"
+place silo 284,111 7x7 "the far silo 8"
   human Empty since the wet year, and the ladder up the side is still sound.
-place farm 66,1650 15x16 "Home Farm 9"
-  door 73,1665
+place farm 326,610 15x16 "Home Farm 9"
+  door 333,625
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 90,1648 15x16 "Wicker End 10"
-  door 97,1663
+place farm 350,608 15x16 "Wicker End 10"
+  door 357,623
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 12,1830 30x28 "the yard 11"
+place farmyard 272,790 30x28 "the yard 11"
   human Mud, diesel and forty years of things that might come in useful.
-place cornfield 50,1824 70x50 "the top field 2"
+place cornfield 310,784 70x50 "the top field 2"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 12,1887 70x50 "the long field 3"
+place cornfield 272,847 70x50 "the long field 3"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 6,1959 70x50 "the bottom field 4"
+place cornfield 266,1699 70x50 "the bottom field 4"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 8,2017 70x50 "the far acre 5"
+place cornfield 268,1757 70x50 "the far acre 5"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 8,2216 50x70 "the far field 6"
+place cornfield 268,1826 50x70 "the far field 6"
   human Nobody watches this one from anywhere.
-place cornfield 271,11 70x50 "the top of the hill 7"
+place cornfield 271,1961 70x50 "the top of the hill 7"
   human It catches the weather first and everything here is a week behind.
-place cornfield 269,72 70x50 "the middle field 8"
+place cornfield 269,2022 70x50 "the middle field 8"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 270,265 70x50 "the near paddock 9"
+place paddock 270,2215 70x50 "the near paddock 9"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 265,331 70x50 "the far paddock 10"
+place paddock 265,2281 70x50 "the far paddock 10"
   human You cannot see this one from the road, or the road from it.
-place paddock 270,400 70x50 "the long acre 11"
+place paddock 400,10 70x50 "the long acre 11"
   human Fenced for horses that were sold years ago.
-place orchard 269,460 70x50 "the orchard 12"
+place orchard 399,70 70x50 "the orchard 12"
   human Planted in rows by somebody who is dead now.
-place orchard 271,531 50x70 "the old orchard 13"
+place orchard 401,271 50x70 "the old orchard 13"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 272,656 70x50 "the west belt 14"
+place copse 402,396 70x50 "the west belt 14"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 264,717 70x50 "the west belt, middle 15"
+place copse 394,457 70x50 "the west belt, middle 15"
   human The stretch between the two roads, and the darkest of the three.
-place copse 267,785 70x50 "the west belt, south 16"
+place copse 397,525 70x50 "the west belt, south 16"
   human It gives out where the ground turns wet.
-place copse 268,848 70x50 "the west belt, end 17"
+place copse 398,588 70x50 "the west belt, end 17"
   human Somebody has been cutting firewood out of this one.
-place copse 269,922 50x70 "the far spinney 18"
+place copse 529,12 50x70 "the far spinney 18"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 269,1050 70x50 "the east wood 19"
+place copse 529,270 70x50 "the east wood 19"
   human Older than the town, and the boundary bank round it is older still.
-place copse 271,1112 70x50 "the east wood, lower 20"
+place copse 531,332 70x50 "the east wood, lower 20"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 270,1182 70x50 "the top field 21"
+place cornfield 530,402 70x50 "the top field 21"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 267,1236 70x50 "the long field 22"
+place cornfield 527,456 70x50 "the long field 22"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 264,1439 70x50 "the bottom field 23"
+place cornfield 524,529 70x50 "the bottom field 23"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 271,1500 70x50 "the far acre 24"
+place cornfield 531,590 70x50 "the far acre 24"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 267,1571 50x70 "the far field 25"
+place cornfield 787,11 50x70 "the far field 25"
   human Nobody watches this one from anywhere.
-place cornfield 267,1702 70x50 "the top of the hill 26"
+place cornfield 787,272 70x50 "the top of the hill 26"
   human It catches the weather first and everything here is a week behind.
-place cornfield 268,1758 70x50 "the middle field 27"
+place cornfield 788,328 70x50 "the middle field 27"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 272,1828 70x50 "the near paddock 28"
+place paddock 792,398 70x50 "the near paddock 28"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 266,1889 70x50 "the far paddock 29"
+place paddock 786,459 70x50 "the far paddock 29"
   human You cannot see this one from the road, or the road from it.
-place paddock 270,1956 70x50 "the long acre 30"
+place paddock 790,526 70x50 "the long acre 30"
   human Fenced for horses that were sold years ago.
-place orchard 269,2016 70x50 "the orchard 31"
+place orchard 789,586 70x50 "the orchard 31"
   human Planted in rows by somebody who is dead now.
-place orchard 271,2215 50x70 "the old orchard 32"
+place orchard 921,5 50x70 "the old orchard 32"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 401,6 70x50 "the west belt 33"
+place copse 921,266 70x50 "the west belt 33"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 401,64 70x50 "the west belt, middle 34"
+place copse 921,324 70x50 "the west belt, middle 34"
   human The stretch between the two roads, and the darkest of the three.
-place copse 398,264 70x50 "the west belt, south 35"
+place copse 918,394 70x50 "the west belt, south 35"
   human It gives out where the ground turns wet.
-place copse 400,329 70x50 "the west belt, end 36"
+place copse 920,459 70x50 "the west belt, end 36"
   human Somebody has been cutting firewood out of this one.
-place copse 401,399 50x70 "the far spinney 37"
+place copse 921,529 50x70 "the far spinney 37"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 402,531 70x50 "the east wood 38"
+place copse 1052,11 70x50 "the east wood 38"
   human Older than the town, and the boundary bank round it is older still.
-place copse 396,586 70x50 "the east wood, lower 39"
+place copse 1046,66 70x50 "the east wood, lower 39"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 397,661 70x50 "the top field 40"
+place cornfield 1047,271 70x50 "the top field 40"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 394,719 70x50 "the long field 41"
+place cornfield 1044,329 70x50 "the long field 41"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 400,788 70x50 "the bottom field 42"
+place cornfield 1050,398 70x50 "the bottom field 42"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 398,844 70x50 "the far acre 43"
+place cornfield 1048,454 70x50 "the far acre 43"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 398,914 50x70 "the far field 44"
+place cornfield 1048,524 50x70 "the far field 44"
   human Nobody watches this one from anywhere.
-place cornfield 400,1048 70x50 "the top of the hill 45"
+place cornfield 1180,8 70x50 "the top of the hill 45"
   human It catches the weather first and everything here is a week behind.
-place cornfield 397,1105 70x50 "the middle field 46"
+place cornfield 1177,65 70x50 "the middle field 46"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 399,1181 70x50 "the near paddock 47"
+place paddock 1179,271 70x50 "the near paddock 47"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 402,1236 70x50 "the far paddock 48"
+place paddock 1182,326 70x50 "the far paddock 48"
   human You cannot see this one from the road, or the road from it.
-place paddock 395,1439 70x50 "the long acre 49"
+place paddock 1175,399 70x50 "the long acre 49"
   human Fenced for horses that were sold years ago.
-place orchard 398,1498 70x50 "the orchard 50"
+place orchard 1178,458 70x50 "the orchard 50"
   human Planted in rows by somebody who is dead now.
-place orchard 394,1564 50x70 "the old orchard 51"
+place orchard 1174,524 50x70 "the old orchard 51"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 394,1697 70x50 "the west belt 52"
+place copse 1304,7 70x50 "the west belt 52"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 402,1760 70x50 "the west belt, middle 53"
+place copse 1312,70 70x50 "the west belt, middle 53"
   human The stretch between the two roads, and the darkest of the three.
-place copse 395,1832 70x50 "the west belt, south 54"
+place copse 1305,272 70x50 "the west belt, south 54"
   human It gives out where the ground turns wet.
-place copse 395,1889 70x50 "the west belt, end 55"
+place copse 1305,329 70x50 "the west belt, end 55"
   human Somebody has been cutting firewood out of this one.
-place copse 399,1958 50x70 "the far spinney 56"
+place copse 1309,398 50x70 "the far spinney 56"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 400,2220 70x50 "the east wood 57"
+place copse 1310,530 70x50 "the east wood 57"
   human Older than the town, and the boundary bank round it is older still.
-place copse 399,2280 70x50 "the east wood, lower 58"
+place copse 1309,590 70x50 "the east wood, lower 58"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 532,8 70x50 "the top field 59"
+place cornfield 1442,8 70x50 "the top field 59"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 527,72 70x50 "the long field 60"
+place cornfield 1437,72 70x50 "the long field 60"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 530,266 70x50 "the bottom field 61"
+place cornfield 1440,266 70x50 "the bottom field 61"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 524,325 70x50 "the far acre 62"
+place cornfield 1434,325 70x50 "the far acre 62"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 524,399 50x70 "the far field 63"
+place cornfield 1434,399 50x70 "the far field 63"
   human Nobody watches this one from anywhere.
-place cornfield 529,532 70x50 "the top of the hill 64"
+place cornfield 1439,532 70x50 "the top of the hill 64"
   human It catches the weather first and everything here is a week behind.
-place cornfield 528,585 70x50 "the middle field 65"
+place cornfield 1438,585 70x50 "the middle field 65"
   human Split by a hedge somebody grubbed out and never finished.

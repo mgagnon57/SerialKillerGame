@@ -242,6 +242,19 @@ namespace Noir.Core.World
             return false;
         }
 
+        /// <summary>
+        /// Whether this field tile is on the boundary of the field - which is what post-and-rail
+        /// is FOR: the line between one man's field and the next.
+        ///
+        /// WATER IS NOT A FIELD BOUNDARY, and saying so is the whole of this method's subtlety.
+        /// Until the real North Fork and the school ponds were laid into the map there was no
+        /// water out here at all, so "any neighbour that is not field" and "the next field starts
+        /// here" were the same test. They stopped being the same the moment a river ran through
+        /// the corn: every tile along both banks became an edge, and the first render showed each
+        /// pond ringed by an unbroken post-and-rail fence following every wiggle of the shoreline
+        /// - which is not what anybody fences, and read as a reservoir rather than a farm pond.
+        /// A watercourse is where a field STOPS, not where it meets another one.
+        /// </summary>
         private static bool OnFieldEdge(TileGrid grid, int x, int y)
         {
             for (int dy = -1; dy <= 1; dy++)
@@ -249,7 +262,7 @@ namespace Noir.Core.World
             {
                 if (dx == 0 && dy == 0) continue;
                 var t = grid.TerrainAt(x + dx, y + dy);
-                if (t != Terrain.Field && t != Terrain.Wall) return true;
+                if (t != Terrain.Field && t != Terrain.Wall && t != Terrain.Water) return true;
             }
             return false;
         }

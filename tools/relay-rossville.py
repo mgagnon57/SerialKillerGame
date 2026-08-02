@@ -34,8 +34,14 @@ a few metres of roll and some drainage swales, not hills.
 """
 import json, os, collections, random
 
-SP = os.path.expandvars(r"%TEMP%\claude\C--SerialKillerGame\89ed6c06-1630-4c00-9f29-186178415413\scratchpad")
-old = json.load(open(os.path.join(SP, "places.json")))
+# Everything this script reads and writes lives beside it or in Content/. It used to read
+# places.json out of a session scratchpad under %TEMP%, which worked for exactly as long as
+# that directory survived - and this script is load-bearing again now that the water is
+# generated rather than authored, so it may not depend on a temp folder nobody would think
+# to keep.
+HERE = os.path.dirname(os.path.abspath(__file__))
+CONTENT = os.path.join(HERE, "..", "Content")
+old = json.load(open(os.path.join(HERE, "rossville-places.json"), encoding="utf-8"))
 by_kind = collections.defaultdict(list)
 for r in old:
     by_kind[r['kind']].append(r)
@@ -43,6 +49,144 @@ for r in old:
 # ---- the map, and where the real crossroads sits on it -----------------------------
 W, H = 2100, 2400
 CX, CY = 750, 1335                 # Chicago Street x Attica Street
+
+# ---- the real water, off Content/features.txt --------------------------------------
+#
+# The North Fork Vermilion and the three ponds behind the school campus are real, surveyed
+# OpenStreetMap shapes, and until now the ONLY thing that read them was CityOutlines, which
+# paints them into the survey-plan view. There was not one `terrain water` tile anywhere on
+# the simulated map - so the river you can see traced correctly on the plan was not there
+# when you looked at the ground, and a path across the school field walked over open water.
+#
+# THEY ARE STAMPED HERE, INTO THE MAP, RATHER THAN DRAWN BY A NEW RENDERER. Terrain.Water is
+# already built out end to end - it sits the ground at -0.35m, has its own material, closes
+# its bank with a riser, blocks sight and is not walkable - and every bit of that was unused
+# purely because no tile said `water`. Generating the tiles costs no runtime code at all and
+# cannot drift from the plan view, because both are derived from the same features.txt.
+#
+# ORDER IS LOAD-BEARING. WorldBuilder stamps terrain patches first, then roads, then place
+# ground. So a road crossing the river wins and stays a crossing rather than becoming a hole
+# in the carriageway - 849 tiles of the real map are exactly that - and a place's own ground
+# would likewise win, which is why the country lots below now refuse to sit on water at all.
+#
+# THE ONE INVENTED NUMBER IN HERE IS THE WIDTH. OpenStreetMap gives the river as a
+# centreline way with no width on it, so 12m is a judgement about what the North Fork looks
+# like where it passes Rossville, not a measurement. It is the number to change if it reads
+# wrong on the ground - nothing else about the river's position or shape is guessed.
+RIVER_W = 12.0
+
+
+def _read_features():
+    shapes = []
+    try:
+        text = open(os.path.join(CONTENT, "features.txt"), encoding="utf-8-sig").read()
+    except OSError:
+        return shapes
+    for ln in text.splitlines():
+        ln = ln.strip()
+        if not ln or ln.startswith("#") or " " not in ln:
+            continue
+        kind, rest = ln.split(" ", 1)
+        pts = []
+        for piece in rest.split():
+            if "," not in piece:
+                continue
+            try:
+                x, y = piece.split(",")
+                pts.append((float(x), float(y)))
+            except ValueError:
+                continue
+        if len(pts) >= 2:
+            shapes.append((kind, pts))
+    return shapes
+
+
+def _wet_grid():
+    """One byte per tile: 1 where the real water is."""
+    wet = bytearray(W * H)
+
+    def poly(pts):
+        # Point in polygon over the shape's own bounding box only - the same "walk each
+        # shape's own box, test per tile" technique GroundZoning.EnsureGrid uses for parcels.
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        for y in range(max(0, int(min(ys))), min(H, int(max(ys)) + 1)):
+            for x in range(max(0, int(min(xs))), min(W, int(max(xs)) + 1)):
+                cx, cy, inside = x + 0.5, y + 0.5, False
+                for i in range(len(pts)):
+                    x1, y1 = pts[i]
+                    x2, y2 = pts[(i + 1) % len(pts)]
+                    if (y1 > cy) != (y2 > cy) and cx < (x2 - x1) * (cy - y1) / (y2 - y1) + x1:
+                        inside = not inside
+                if inside:
+                    wet[y * W + x] = 1
+
+    def corridor(pts, width):
+        # A centreline has no area, so every tile within half a width of the line is wet.
+        r = width / 2.0
+        for i in range(len(pts) - 1):
+            (x1, y1), (x2, y2) = pts[i], pts[i + 1]
+            dx, dy = x2 - x1, y2 - y1
+            L2 = dx * dx + dy * dy
+            for y in range(max(0, int(min(y1, y2) - r - 1)), min(H, int(max(y1, y2) + r + 2))):
+                for x in range(max(0, int(min(x1, x2) - r - 1)), min(W, int(max(x1, x2) + r + 2))):
+                    cx, cy = x + 0.5, y + 0.5
+                    t = 0.0 if L2 == 0 else max(0.0, min(1.0, ((cx - x1) * dx + (cy - y1) * dy) / L2))
+                    px, py = x1 + t * dx, y1 + t * dy
+                    if (cx - px) ** 2 + (cy - py) ** 2 <= r * r:
+                        wet[y * W + x] = 1
+
+    for kind, pts in _read_features():
+        if kind == "water":
+            poly(pts)
+        elif kind in ("river", "stream", "ditch"):
+            corridor(pts, RIVER_W)
+    return wet
+
+
+def _wet_rects(wet):
+    """Maximal rectangles over the wet tiles, so the map carries a few hundred `terrain
+    water` lines instead of forty-five thousand. Same greedy walk the ground mesher does:
+    take the first unclaimed tile, run right while it is still wet, then run down while the
+    whole row below matches."""
+    claimed = bytearray(W * H)
+    rects = []
+    for y in range(H):
+        row = y * W
+        for x in range(W):
+            if not wet[row + x] or claimed[row + x]:
+                continue
+            w = 1
+            while x + w < W and wet[row + x + w] and not claimed[row + x + w]:
+                w += 1
+            h = 1
+            while y + h < H:
+                base = (y + h) * W + x
+                if not all(wet[base + i] and not claimed[base + i] for i in range(w)):
+                    break
+                h += 1
+            for dy in range(h):
+                base = (y + dy) * W + x
+                for dx in range(w):
+                    claimed[base + dx] = 1
+            rects.append((x, y, w, h))
+    return rects
+
+
+WET = _wet_grid()
+WET_RECTS = _wet_rects(WET)
+
+
+def dry(x, y, w, h):
+    """True if this rectangle holds no water at all. Used to keep country lots off the
+    river: a place's ground is stamped AFTER terrain, so a cornfield laid over the river
+    would not sit beside the water, it would erase it."""
+    for yy in range(max(0, y), min(H, y + h)):
+        base = yy * W
+        for xx in range(max(0, x), min(W, x + w)):
+            if WET[base + xx]:
+                return False
+    return True
 
 # Metres from that crossing, measured off OpenStreetMap. East and north positive.
 # `sides` is which side of Route 1 the street actually runs, off the OSM extents. It
@@ -62,10 +206,10 @@ EW = [                     # (north offset, name, western name, sides, western n
     (+222, "benton",     None,          "both", False),  # real level crossing
     (+126, "holmes",     None,          "E",    False),  # 408 Holmes Ave - no real crossing
     (   0, "attica",     None,          "both", False),  # THE cross street - real level crossing
-    (-143, "maple",      "park",        "E",    True),   # confirmed: PARK, tax PropertyAddress
-    (-248, "gilbert",    "perry",       "E",    True),   # confirmed: PERRY, tax PropertyAddress
-    (-387, "stewart",    "stufflebeam", "E",    True),   # confirmed: STUFFLEBEAM, tax PropertyAddress
-    (-518, "mckibben",   "mckibbin",    "E",    False),  # unconfirmed - no addressed lot west of CX
+    (-143, "maple",      "Park Place",        "E",    True),   # confirmed: PARK, tax PropertyAddress
+    (-248, "gilbert",    "Perry",       "E",    True),   # confirmed: PERRY, tax PropertyAddress
+    (-387, "stewart",    "Stufflebeam", "E",    True),   # confirmed: STUFFLEBEAM, tax PropertyAddress
+    (-518, "mckibben",   "McKibbin",    "E",    False),  # unconfirmed - no addressed lot west of CX
     (-636, "dale",       None,          "E",    False),
     (-699, "greenwood",  None,          "W",    False),
     (-758, "thompson",   None,          "E",    False),
@@ -74,7 +218,7 @@ EW = [                     # (north offset, name, western name, sides, western n
 NS = [                             # north-south streets: (east offset, name, alias)
     (-224, "abner",      None),
     (-109, "watson",     None),
-    ( -64, "ann",        "smith"),   # Smith Drive north of Attica, Ann south - see split below
+    ( -64, "ann",        "Smith Drive"),   # Smith Drive north of Attica, Ann south - see split below
     (   0, "chicago",    "Illinois Route 1, the Dixie Highway"),
     (+104, "harrison",   None),
     (+213, "church",     None),
@@ -225,6 +369,21 @@ w_("# whole village would put lights on every corner of it.")
 w_(f"terrain field 0,0 {W}x{H}")
 w_(f"terrain grass {X0-20},{Y0-20} {X1-X0+40}x{Y1-Y0+40}")
 w_(f"terrain path {CX-26},{CY-26} 52x52)".replace(")", ""))
+w_()
+
+w_("# ---- the real water --------------------------------------------------------")
+w_("# The North Fork Vermilion River and the three ponds behind the school campus,")
+w_("# rasterised from the SAME OpenStreetMap shapes in Content/features.txt that the")
+w_("# survey plan draws - so what you see traced on the plan is what is on the ground.")
+w_("# Generated, not authored: do not hand-edit these, change RIVER_W or features.txt")
+w_("# and re-run tools/relay-rossville.py.")
+w_("#")
+w_("# Water is not walkable and blocks sight, so it is stamped BEFORE the roads and the")
+w_("# places, both of which overwrite it - which is what keeps a road crossing the river")
+w_("# a crossing instead of a hole, and is why the country lots below refuse to sit on it.")
+w_(f"# {len(WET_RECTS)} rectangles over {sum(WET):,} tiles.")
+for _x, _y, _w, _h in WET_RECTS:
+    w_(f"terrain water {_x},{_y} {_w}x{_h}")
 w_()
 
 w_("# ---- Illinois Route 1 and the cross street --------------------------------")
@@ -569,11 +728,35 @@ def clear_of_roads(x, y, w, h):
         if lo < centre + half and hi > centre - half: return False
     return True
 
+# The town, as a rectangle a country lot may not touch. It used to be tested as
+# `X0-40 < gx < X1 and Y0-40 < gy < Y1`, which asks whether the lot's own top-left CORNER
+# is inside the town - and a lot is 122m across, so one sitting just north or just west of
+# the boundary passed that test and then reached deep into the village anyway. It never
+# showed while the country places were filling the far west first and never reaching the
+# marginal lots; the moment the river took the west column out of service, placement spilled
+# into them and MapAudit found nine fields laid over Abner, York, Harrison and Church, and
+# three houses on the 300 block of York Ave standing inside a cornfield. This is a proper
+# rectangle overlap on the lot's whole extent.
+TOWN = (X0 - 40, Y0 - 40, X1, Y1)
+
+
+def off_town(x, y, w, h):
+    tx0, ty0, tx1, ty1 = TOWN
+    return not (x < tx1 and x + w > tx0 and y < ty1 and y + h > ty0)
+
+
 edge = []
 for gx in range(0, W - 100, 130):
     for gy in range(0, H - 100, 130):
-        if X0 - 40 < gx < X1 and Y0 - 40 < gy < Y1: continue
+        if not off_town(gx + 4, gy + 4, 122, 122): continue
         if not clear_of_roads(gx + 4, gy + 4, 122, 122): continue
+        # A whole lot is refused if ANY of it is wet, rather than trimming the lot to fit:
+        # a place's ground is stamped after terrain, so anything that lands on the river
+        # erases it, and the cheapest way to be certain nothing does is to never offer a
+        # lot that touches water. Before this, twenty-one country places - four copses,
+        # eight cornfields, three orchards, two paddocks and a farmstead - stood on the
+        # real river and quietly rubbed it out.
+        if not dry(gx + 4, gy + 4, 122, 122): continue
         edge.append(Lot(gx + 4, gy + 4, 122, 122))
 
 placed = 0
@@ -586,8 +769,8 @@ for rec in country:
             break
     else: spill.append(rec)
 
-open(os.path.join(SP, "city.new.txt"), "w", encoding="utf-8",
-     newline="\n").write("\n".join(out) + "\n")
+open(os.path.join(CONTENT, "city.txt"), "w", encoding="utf-8",
+     newline="\r\n").write("\n".join(out) + "\n")
 
 farms = sum(1 for r in country if r['kind'] == 'farm')
 print(f"grid {len(NS)} N-S x {len(EW)} E-W -> {len(ALL)} blocks "
