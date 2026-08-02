@@ -58,9 +58,41 @@ namespace Noir.Unity
         /// (Which also means the comment beside that Apply call is wrong: the palette does NOT
         /// still govern the look once a texture loads. Left alone here; it is a separate thing.)
         /// </summary>
+        /// <summary>
+        /// Draw the ground in its real colours even in plan mode.
+        ///
+        /// PLAN MODE DIMS THE GROUND TO NEAR-BLACK ON PURPOSE - it is a survey drawing, and the
+        /// lot lines and labels only read against a dark field. The cost is that everything
+        /// GroundZoning decides about a tile - kept grass, field, hard, rough, bank, all of it
+        /// driven by real county zoning and real USGS slope - is invisible while you are in it,
+        /// so ground work cannot be checked without turning the whole city on.
+        ///
+        /// A REAL GATE RATHER THAN A TEMPORARY EDIT. The obvious way to look is to comment the
+        /// dimming out and put it back afterwards, and that is how this was first done - which
+        /// leaves an uncommitted change in the tree that somebody has to remember, and which
+        /// already regenerated the committed snapshot in full colour once by accident. This sits
+        /// beside ShowBuildings and ShowPeople because it is the same kind of switch: a thing you
+        /// turn on to look at something, that costs nothing when it is off, and that no one has
+        /// to clean up.
+        ///
+        /// Toggle it from the Noir menu, then press Play.
+        ///
+        /// Backed by PlayerPrefs rather than a plain static, because a static resets on every
+        /// domain reload - which entering Play mode causes - so a menu item that set one would
+        /// appear to work and then quietly forget between the click and the run. Read only while
+        /// materials are being built, so the lookup costs nothing.
+        /// </summary>
+        public static bool ShowGroundColour
+        {
+            get => PlayerPrefs.GetInt(GroundColourKey, 0) == 1;
+            set { PlayerPrefs.SetInt(GroundColourKey, value ? 1 : 0); PlayerPrefs.Save(); }
+        }
+
+        private const string GroundColourKey = "noir.ground.colour";
+
         private static Material Plan(Material m)
         {
-            if (VillageHost.ShowBuildings || m == null) return m;
+            if (VillageHost.ShowBuildings || ShowGroundColour || m == null) return m;
 
             var dim = new Color(PlanGround, PlanGround, PlanGround, 1f);
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", dim);
