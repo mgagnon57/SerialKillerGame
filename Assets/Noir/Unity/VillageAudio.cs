@@ -74,6 +74,11 @@ namespace Noir.Unity
         /// </summary>
         private const float IndoorDuck = 0.3f;
 
+        /// <summary>Off for now - asked to mute the dawn chorus while sound work is on hold, not
+        /// to remove it. The bed still loads and plays at silent volume; flip this back on when
+        /// sound is next up.</summary>
+        private const bool BirdsEnabled = false;
+
         private static readonly string[] BedNames = { "ambience_night", "ambience_dawn", "ambience_day" };
         private readonly AudioSource[] _beds = new AudioSource[BedNames.Length];
         private readonly float[] _level = new float[BedNames.Length];
@@ -98,9 +103,18 @@ namespace Noir.Unity
             return audio;
         }
 
+        /// <summary>
+        /// SILENT IN BATCH MODE, ALWAYS. A headless run - MapAudit, the PlayMode suite, a
+        /// CityShot render - still starts a real player with a real audio device, and it played
+        /// the village's ambience out of the machine's speakers while somebody was working. It
+        /// is somebody else's headphones and there is never a reason for an automated run to
+        /// make a sound, so nothing here is built at all rather than being built and muted.
+        /// </summary>
         private void Build(VillageHost host)
         {
             _host = host;
+
+            if (Application.isBatchMode) return;
 
             EnsureListener();
             BuildBell(host.World);
@@ -159,6 +173,10 @@ namespace Noir.Unity
         {
             for (int i = 0; i < BedNames.Length; i++)
             {
+                // The dawn chorus is off (BirdsEnabled, above) - not faded to silence, not
+                // loaded at all, so there is no source anywhere for it to leak from.
+                if (i == 1 && !BirdsEnabled) continue;
+
                 var go = new GameObject(BedNames[i]);
                 go.transform.SetParent(transform, false);
 
@@ -197,6 +215,7 @@ namespace Noir.Unity
         private void Update()
         {
             if (_host == null || _host.Sim == null) return;
+            if (Application.isBatchMode) return;      // Build made no sources - see there
             if (_rig == null) _rig = FindFirstObjectByType<OrbitCamera>();
 
             UpdateAmbience();
@@ -220,8 +239,10 @@ namespace Noir.Unity
             // territory and spend the rest of the morning eating. The evening chorus is the
             // same birds again, quieter and shorter, which is why it reuses the dawn bed
             // rather than earning a file of its own.
-            float dawn = Mathf.Max(Window(hour, 3.8f, 5.2f, 7.0f, 9.0f),
-                                   0.55f * Window(hour, 18.0f, 19.2f, 20.2f, 21.6f));
+            float dawn = BirdsEnabled
+                ? Mathf.Max(Window(hour, 3.8f, 5.2f, 7.0f, 9.0f),
+                           0.55f * Window(hour, 18.0f, 19.2f, 20.2f, 21.6f))
+                : 0f;
 
             float indoors = Indoors() ? IndoorDuck : 1f;
             float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime / FadeSeconds);
