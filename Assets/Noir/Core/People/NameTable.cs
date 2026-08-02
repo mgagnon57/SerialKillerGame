@@ -12,11 +12,29 @@ namespace Noir.Core.People
     {
         private readonly List<string> _male = new List<string>();
         private readonly List<string> _female = new List<string>();
+        private readonly List<string> _maleChild = new List<string>();
+        private readonly List<string> _femaleChild = new List<string>();
         private readonly List<string> _surnames = new List<string>();
 
         public IReadOnlyList<string> Male => _male;
         public IReadOnlyList<string> Female => _female;
         public IReadOnlyList<string> Surnames => _surnames;
+
+        /// <summary>
+        /// Forenames for anyone born inside living memory of the game's present, rather than
+        /// across the whole ninety years the adult pools span.
+        ///
+        /// A FORENAME DATES A PERSON and drawing one without regard to age is a visible fault:
+        /// names.txt described these two lists, shipped fifty-one of them, and Parse silently
+        /// dropped every line - so children were drawn from the adult pool and the village had
+        /// seven-year-olds called Clarence and Mildred. The directives existed in content for a
+        /// long time before the parser learned the word.
+        ///
+        /// Falls back to the adult pool when a child list is empty, so a names file that has
+        /// never heard of cohorts behaves exactly as it did before.
+        /// </summary>
+        public IReadOnlyList<string> MaleChild => _maleChild.Count > 0 ? _maleChild : _male;
+        public IReadOnlyList<string> FemaleChild => _femaleChild.Count > 0 ? _femaleChild : _female;
 
         public static NameTable Parse(string text)
         {
@@ -37,6 +55,8 @@ namespace Noir.Core.People
                 {
                     case "male": table._male.Add(value); break;
                     case "female": table._female.Add(value); break;
+                    case "male-child": table._maleChild.Add(value); break;
+                    case "female-child": table._femaleChild.Add(value); break;
                     case "surname": table._surnames.Add(value); break;
                 }
             }

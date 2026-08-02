@@ -24,7 +24,18 @@ namespace Noir.Editor
         private const int Report = 8;      // examples per fault, so the log stays readable
 
         [MenuItem("Noir/Audit the Map")]
+        /// <summary>The audit as a batch entry point: run it, then leave, with the exit code
+        /// saying whether the map was clean. Kept separate from RunCore so the audit can also be
+        /// one step of a longer pass - see Preflight, which could not call this at all while the
+        /// exit lived inside the work.</summary>
         public static void Run()
+        {
+            int faults = RunCore();
+            if (Application.isBatchMode) EditorApplication.Exit(faults == 0 ? 0 : 1);
+        }
+
+        /// <summary>Every check, and how many things were wrong. Exits nothing.</summary>
+        public static int RunCore()
         {
             int faults = 0;
 
@@ -201,7 +212,7 @@ namespace Noir.Editor
             // A thrown exception counts as a fault too. An audit that fell over part way through
             // has not looked at the rest of the map, and reporting that as success is the same
             // lie in a different coat.
-            if (Application.isBatchMode) EditorApplication.Exit(faults == 0 ? 0 : 1);
+            return faults;
         }
 
         /// <summary>

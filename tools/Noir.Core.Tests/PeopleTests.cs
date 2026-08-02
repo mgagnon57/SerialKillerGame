@@ -758,7 +758,14 @@ namespace Noir.Core.Tests
                 Assert.That(first.What, Is.EqualTo(Activity.Asleep),
                     $"{citizen.FullName} does not begin day {day} asleep");
                 Assert.That(first.Where, Is.EqualTo(citizen.Home));
-                Assert.That(first.EndMinute, Is.GreaterThan(4 * 60 + 45),
+                // AT 04:45, NOT PAST IT. The earliest wake anybody can draw is exactly 285:
+                // WakeTime bottoms out at 05:00 for a farmer and Punctuality runs -15..+15, so
+                // 300-15 is reachable by construction. This read GreaterThan for a long time and
+                // passed on luck alone - no farmer in the old population happened to draw -15.
+                // Retuning names.txt for 1991 shifted the generator's stream, one of them drew
+                // it, and a boundary that was always legal finally turned up. The invariant the
+                // rollover window actually needs is "nobody is up BEFORE 04:45".
+                Assert.That(first.EndMinute, Is.GreaterThanOrEqualTo(4 * 60 + 45),
                     $"{citizen.FullName} is up at {first.EndMinute / 60:00}:{first.EndMinute % 60:00} "
                   + "on day " + day + " â€” earlier than the rollover window assumes");
             }

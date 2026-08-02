@@ -46,6 +46,14 @@ namespace Noir.Editor
         [MenuItem("Noir/Render Plan (top-down, orthographic)")]
         public static void RenderPlanTopDown()
         {
+            RenderPlanTopDownCore();
+            if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+
+        /// <summary>The render itself, without leaving afterwards, so it can be one step of a
+        /// longer batch pass rather than the last thing that ever happens. See Preflight.</summary>
+        public static void RenderPlanTopDownCore()
+        {
             GameObject root = null, camGo = null;
             try
             {
@@ -91,7 +99,6 @@ namespace Noir.Editor
                 if (root != null) UnityEngine.Object.DestroyImmediate(root);
                 if (camGo != null) UnityEngine.Object.DestroyImmediate(camGo);
             }
-            if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 
         [MenuItem("Noir/Render City Block")]

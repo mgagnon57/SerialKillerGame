@@ -32,6 +32,26 @@ namespace Noir.Unity
         private Vector2 _noteScroll;
 
         private const float PanelWidth = 340f;
+
+        /// <summary>
+        /// Where an inspector goes: a panel in the MIDDLE of the screen rather than a rail down
+        /// the right edge.
+        ///
+        /// The rail was 340px wide against a 5120px monitor, which put everything you were
+        /// reading a metre to the right of the thing you had clicked - and made the parcel
+        /// editor, which is now a long two-column form, scroll for no reason other than the
+        /// width it had been given. Centred, it lands where your eye already is.
+        ///
+        /// Sized against the window rather than fixed, and capped so it never fills a big screen
+        /// edge to edge: a dialog that covers the map is worse than one you have to look across.
+        /// </summary>
+        private static Rect PanelRect()
+        {
+            float w = Mathf.Min(760f, Screen.width - 80f);
+            float h = Mathf.Min(880f, Screen.height - BarHeight - 60f);
+            return new Rect((Screen.width - w) * 0.5f,
+                            BarHeight + (Screen.height - BarHeight - h) * 0.5f, w, h);
+        }
         private const float BarHeight = 48f;
 
         /// <summary>
@@ -98,11 +118,13 @@ namespace Noir.Unity
             DrawHelp();
 
             // Let the camera know not to treat a click on the panel as a click on the village.
+            // Tested against the panel's REAL rectangle now that it is centred - the old check
+            // was "anywhere right of 340px from the edge", which was only ever a stand-in for
+            // the rail's own bounds and would swallow half the map if it were left alone.
             var mouse = Event.current.mousePosition;
-            PointerOverUI = mouse.y < BarHeight ||
-                            ((_host.Selected.IsValid || _host.SelectedPlace.IsValid
-                              || _host.SelectedParcel.HasValue)
-                             && mouse.x > Screen.width - PanelWidth);
+            bool anyPanel = _host.Selected.IsValid || _host.SelectedPlace.IsValid
+                         || _host.SelectedParcel.HasValue;
+            PointerOverUI = mouse.y < BarHeight || (anyPanel && PanelRect().Contains(mouse));
         }
 
         private void DrawTopBar()
@@ -270,10 +292,9 @@ namespace Noir.Unity
         /// </summary>
         private void DrawPlaceInspector(Place place)
         {
-            var rect = new Rect(Screen.width - PanelWidth, BarHeight + 8, PanelWidth - 12,
-                                Screen.height - BarHeight - 20);
+            var rect = PanelRect();
             GUI.Box(rect, GUIContent.none, _panel);
-            GUILayout.BeginArea(new Rect(rect.x + 14, rect.y + 12, rect.width - 28, rect.height - 24));
+            GUILayout.BeginArea(new Rect(rect.x + 20, rect.y + 16, rect.width - 40, rect.height - 32));
 
             var sim = _host.Sim;
             var kind = PlaceKindTable.Current.Row(place.Kind);
@@ -419,7 +440,41 @@ namespace Noir.Unity
 
             _noteScroll = GUILayout.BeginScrollView(_noteScroll);
 
+            // TWO COLUMNS, because the panel is centred and 760 wide now rather than a 340px
+            // rail. WHO LIVES HERE on the left and WHAT THE BUILDING IS on the right: they are
+            // two separate questions about the same lot, and stacking them made a form you had
+            // to scroll past the people to reach the house.
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical(GUILayout.Width(330f));
+
             // ---- who lives here ----
+            //
+            // WHAT THE GENERATOR SAYS, until somebody authors something better. Households.For
+            // works a 1991 family out of the county's own record for this lot - owner-occupied
+            // or rented, over-65 exemption or not, how much dwelling is assessed - with the
+            // people themselves drawn from names.txt. Shown greyed and above the fields so it
+            // reads as a suggestion rather than as saved data; typing anything below replaces
+            // it for this parcel and nothing else.
+            var generated = Households.For(parcelId);
+            if (generated != null && string.IsNullOrWhiteSpace(_draftNames))
+            {
+                GUILayout.Label($"<color=#8a8a86>in {Households.Year}, {generated.Family} "
+                              + $"{(generated.Rented ? "rented here" : "lived here")}</color>", _small);
+                foreach (var person in generated.Members)
+                    GUILayout.Label($"<color=#75736e>   {person.Forename} {generated.Surname}, "
+                                  + $"{person.Age}</color>", _small);
+                if (GUILayout.Button("use this household", _button, GUILayout.Height(22)))
+                {
+                    var lines = new System.Text.StringBuilder();
+                    foreach (var person in generated.Members)
+                        lines.Append(person.Forename).Append(' ').Append(generated.Surname).Append('\n');
+                    _draftNames = lines.ToString().TrimEnd('\n');
+                    _draftAdults = generated.Adults;
+                    _draftKids = generated.Kids;
+                }
+                GUILayout.Space(6);
+            }
+
             GUILayout.Label("<color=#8a8a86>household</color>", _small);
             GUILayout.BeginHorizontal();
             GUILayout.Label("adults", _small, GUILayout.Width(50));
@@ -441,8 +496,11 @@ namespace Noir.Unity
             GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
             _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(60));
 
-            // ---- what the lot is ----
-            GUILayout.Space(8);
+            // ---- what the lot is: the right-hand column ----
+            GUILayout.EndVertical();
+            GUILayout.Space(24);
+            GUILayout.BeginVertical(GUILayout.Width(330f));
+
             GUILayout.Label("<color=#8a8a86>zoning</color>", _small);
             if (GUILayout.Button(Pretty(_draftZoning), _button, GUILayout.Height(24)))
                 _draftZoning = Cycle(_draftZoning);
@@ -496,6 +554,10 @@ namespace Noir.Unity
                               + $"county's ${countyNow.MarketValue:N0}"
                               + (odd ? " - outside what this town sells for" : "") + "</color>", _small);
             }
+
+            GUILayout.EndVertical();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
 
             GUILayout.EndScrollView();
 
@@ -701,10 +763,9 @@ namespace Noir.Unity
         /// </summary>
         private void DrawParcelInspector(ParcelIndex.Parcel parcel)
         {
-            var rect = new Rect(Screen.width - PanelWidth, BarHeight + 8, PanelWidth - 12,
-                                Screen.height - BarHeight - 20);
+            var rect = PanelRect();
             GUI.Box(rect, GUIContent.none, _panel);
-            GUILayout.BeginArea(new Rect(rect.x + 14, rect.y + 12, rect.width - 28, rect.height - 24));
+            GUILayout.BeginArea(new Rect(rect.x + 20, rect.y + 16, rect.width - 40, rect.height - 32));
 
             float wFt = parcel.Bounds.width * MetresToFeet;
             float hFt = parcel.Bounds.height * MetresToFeet;
@@ -842,9 +903,9 @@ namespace Noir.Unity
                 return;
             }
 
-            var rect = new Rect(Screen.width - PanelWidth, BarHeight + 8, PanelWidth - 12, Screen.height - BarHeight - 20);
+            var rect = PanelRect();
             GUI.Box(rect, GUIContent.none, _panel);
-            GUILayout.BeginArea(new Rect(rect.x + 14, rect.y + 12, rect.width - 28, rect.height - 24));
+            GUILayout.BeginArea(new Rect(rect.x + 20, rect.y + 16, rect.width - 40, rect.height - 32));
 
             var sim = _host.Sim;
             var agent = sim.GetAgent(citizen.Id);
