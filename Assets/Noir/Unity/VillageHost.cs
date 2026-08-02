@@ -114,11 +114,22 @@ namespace Noir.Unity
         /// and the real street grid - and says nothing it cannot back up, which is the honest
         /// position until there is a kit that can build an Illinois frame house.
         ///
-        /// Set this true before Play to raise the models again. It is deliberately NOT a key:
-        /// showing both means building both, and the brick town is four thousand renderers to
-        /// keep hidden in case somebody wants to look at it.
+        /// It is deliberately NOT a live key: showing both means building both, and the brick
+        /// town is four thousand renderers to keep hidden in case somebody wants to look at it.
+        /// Chosen BEFORE Play, though, it costs nothing - only one of the two is ever built - so
+        /// Bootstrap reads it from PlayerPrefs and Noir > Show The Built Town sets it. That
+        /// matters because everything that dresses the town is behind this flag: the buildings,
+        /// the streets, the greenery, the farm, the powerlines and the railroad. Somebody who
+        /// pressed Play to look at the new rail bed and found a dark survey plan had no way to
+        /// turn it on short of editing this line, which is what this key is for.
         /// </summary>
         public static bool ShowBuildings = false;
+
+        /// <summary>Where the built-town switch is remembered between sessions. Read once in
+        /// Bootstrap, before anything makes a material or a mesh - Materials3D.Plan asks
+        /// ShowBuildings while it is building the ground palette, so setting it later would dim
+        /// a ground that is about to be shown in full.</summary>
+        public const string BuiltTownKey = "noir.town.built";
 
         /// <summary>
         /// The road corridors and the place-footprint rectangles CityOutlines draws on top of
@@ -140,6 +151,24 @@ namespace Noir.Unity
         private static void Bootstrap()
         {
             if (Instance != null) return;
+
+            // Before the GameObject, and so before any mesh or material exists. The offline
+            // renderers (CityShot, GroundShot) never come through here - they set the field
+            // directly and put it back - so this cannot overwrite what a batch render asked for.
+            //
+            // NOT IN BATCH MODE, which is the same guard Materials3D.ShowGroundColour carries and
+            // for a sharper reason: the PlayMode suite bootstraps this host, so without it one
+            // developer's local tick would quietly decide whether the tests build a survey plan
+            // or four thousand renderers of brick town. A headless run is the same run on every
+            // machine or it is not a gate.
+            if (!Application.isBatchMode)
+                ShowBuildings = PlayerPrefs.GetInt(BuiltTownKey, 0) == 1;
+            Debug.Log(ShowBuildings
+                ? "[host] The built town is ON - buildings, streets, greenery, the farm and the "
+                + "railroad. Turn it off again in Noir > Show The Built Town."
+                : "[host] Survey plan (the default). Noir > Show The Built Town raises the "
+                + "buildings, the greenery and the CSX line instead.");
+
             var go = new GameObject("Ashcombe");
             DontDestroyOnLoad(go);
             go.AddComponent<VillageHost>();

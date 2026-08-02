@@ -152,7 +152,31 @@ namespace Noir.Editor
             new Shot("rail-town", 1100f, 1050f, 240f, 30f, 0f, 0f, true),
         });
 
-        private static void Run(string label, Shot[] shots)
+        /// <summary>
+        /// THE WHOLE DRESSED TOWN, exactly what pressing Play builds with Noir > Show The Built
+        /// Town ticked - buildings, streets, district, suburb, parking, signs, story props, both
+        /// railways, the farm, the powerlines and the greenery.
+        ///
+        /// It exists because the other two sets build ground and greenery only, so nothing had
+        /// actually stood the new water and the new rail bed up alongside the four thousand
+        /// renderers of brick town. "The parts I changed render fine on their own" is not the
+        /// same claim as "the thing the user is about to press Play on comes up".
+        /// </summary>
+        [MenuItem("Noir/Render The Built Town")]
+        public static void Town() => Run("town", new[]
+        {
+            // The whole place from above, which is the view Play opens on.
+            new Shot("town-overview", 750f, 1335f, 1150f, 42f, 20f),
+
+            // Chicago and Attica from the middle of the road - the one signalised junction, and
+            // street level, where ground texture is actually resolvable.
+            new Shot("town-street", 750f, 1335f, 40f, 4f, 0f, 1.6f),
+
+            // 408 Holmes Ave, the first fixed story anchor.
+            new Shot("town-holmes", 1175f, 1218f, 26f, 4f, 0f, 1.6f),
+        }, dressed: true);
+
+        private static void Run(string label, Shot[] shots, bool dressed = false)
         {
             GameObject root = null, camGo = null, sunGo = null;
             Material sky = null;
@@ -191,10 +215,27 @@ namespace Noir.Editor
                 // photographing it.
                 root = new GameObject("GroundShot");
                 VillageMesh.Build(world, root.transform, true);
-                CityRailBed.Build(world, root.transform);
 
                 var dressing = new GameObject("GroundShotDressing");
                 dressing.transform.SetParent(root.transform, false);
+
+                if (dressed)
+                {
+                    // The same list, in the same order, as VillageHost's own ShowBuildings block.
+                    // If these two ever drift, this stops being a preview of what Play does.
+                    CityStreets.Build(world, dressing.transform);
+                    CityParking.Build(world, dressing.transform);
+                    CitySigns.Build(world, dressing.transform);
+                    CityBuildings.Build(world, dressing.transform);
+                    CityDistrict.Build(world, dressing.transform);
+                    CitySuburb.Build(world, dressing.transform);
+                    CityStory.Build(world, dressing.transform);
+                    CityRail.Build(world, dressing.transform);
+                    CityFarm.Build(world, dressing.transform);
+                    CityPowerlines.Build(world, dressing.transform);
+                }
+
+                CityRailBed.Build(world, root.transform);
                 CityGreenery.Build(world, dressing.transform);
                 CityChunker.Bake(dressing);
 

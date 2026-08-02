@@ -74,6 +74,26 @@ Expect **13/13**. Do NOT pass `-nographics` — two tests render and fail spurio
 trying to fetch a language model off the network instead of testing the town — no results file,
 no error, just a process that never finishes.
 
+## Two switches, and one first-run step
+
+**`Noir > Show The Built Town`** raises the buildings, streets, greenery, farm, powerlines and
+the CSX rail bed. Without it, pressing Play gives the survey plan below — which is the right
+default and has a real reason, but it means everything that dresses the town is invisible and
+there was no way to turn it on short of editing `VillageHost.ShowBuildings`. The tick is
+remembered between sessions and read once at bootstrap, so it takes effect on the NEXT Play.
+It is ignored in batch mode on purpose: the PlayMode suite bootstraps the same host, and a
+local tick must not decide what the tests build.
+
+**`Noir > Show Ground Colour`** defeats the plan's dimming without raising the town, for
+looking at zoning and slope on their own.
+
+**Run `Noir > Make City Meshes Readable` once on a fresh clone.** `Assets/polyperfect/` is
+gitignored, so the pack's import settings are NOT in the repo, and Read/Write defaults to off —
+which means `CityChunker` silently cannot combine those models. Measured on 2026-08-02 with 53
+models needing it: the bake was **18,059 renderers, and 7,635 after**, with 11,002 warnings in
+the log before and none after. The chunker does tell you, once per prefab, but it is one line
+among thousands.
+
 ## Next, in the order I would do it
 
 1. **Verify the suite** (above). One run.
