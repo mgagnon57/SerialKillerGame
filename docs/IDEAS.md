@@ -107,8 +107,59 @@ against a standing project rule rather than being merely large or risky. Both ne
   to a different subsystem than the one being worked on, and it wants somebody to look at the plan
   from an angle after changing it. — *2026-08-02*
 
-- [ ] **There is no real river or ponds anywhere in the simulated town, despite having their real
-  coordinates.** `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one
+- [x] ~~**There is no real river or ponds anywhere in the simulated town, despite having their real
+  coordinates.**~~ DONE, and it took **no runtime code at all**. THE DECISION THIS ENTRY ASKED FOR
+  WENT TO "REAL TERRAIN KIND", by a route the entry did not consider: not a rasteriser in
+  `WorldBuilder`, and not a `GroundZoning` overlay, but `terrain water` tiles generated straight
+  into `Content/city.txt` by `tools/relay-rossville.py` - which is already the one place real OSM
+  and county data becomes the map. `Terrain.Water` was built out end to end and unused purely
+  because no tile said `water`, so generating the tiles lit up the ground at -0.35m, the material,
+  the bank riser, `BlocksSight` and un-walkability in one go. It cannot drift from the plan view
+  either, because both are derived from the same `features.txt`. **1,009 rectangles over 44,866
+  tiles** (greedy-merged the same way the ground mesh merges runs, or it would be 44,866 lines);
+  44,073 survive into the world, the difference being road crossings that correctly overwrite it.
+
+  FIVE THINGS THE WORK FOUND THAT NOTHING WAS WATCHING FOR:
+
+  **The order in `WorldBuilder` is what makes crossings free.** Terrain patches are stamped, then
+  roads, then place ground - so a road over the river stays a road. Measured on the real map:
+  four separate crossings (Attica 25m, section1 16m, crossroad0 twice), and **no road runs ALONG
+  the river**, which was the case that would have been ugly.
+
+  **Twenty-one country places stood on the river and would have erased it** - four copses, eight
+  cornfields, three orchards, two paddocks and a farmstead - because a place's ground is stamped
+  after terrain. The generator now refuses any country lot that touches water at all. Nothing
+  spilled; they moved east.
+
+  **Every pond came out ringed by an unbroken post-and-rail fence** following each wiggle of the
+  shoreline. `Prop.OnFieldEdge` counted ANY non-field neighbour as the edge of a field, which was
+  the same test as "the next field starts here" right up until there was water in the corn. A
+  watercourse is where a field STOPS. Fixed in Core; Release 183/185, the two being the known 2:1
+  gates.
+
+  **The country lot placer tested the wrong rectangle, and had done all along.** Whether a lot
+  was in the town was `X0-40 < gx < X1 and Y0-40 < gy < Y1` - the lot's top-left CORNER - and a
+  lot is 122m across, so one sitting just outside the boundary passed and then reached deep into
+  the village. It never showed because the country places filled the far west first and never got
+  as far as the marginal lots; taking the west column out of service for the river spilled them
+  straight in. MapAudit caught it by exiting 1: **nine fields laid over Abner, York, Harrison and
+  Church, and three houses on the 300 block of York Ave standing inside a cornfield.** It is a
+  proper rectangle overlap now. This is the second time a place-placement bug has been invisible
+  to everything until something forced placement down a path it had not taken before.
+
+  **A headless plan render cannot show any of this.** `Materials3D.ShowGroundColour` is
+  `!Application.isBatchMode && ...`, so it is hard-false in every batch run, and the committed
+  snapshot set is the dark survey plan. Verifying there would have used the one path that bypasses
+  the thing being verified. `WaterShot` forces `ShowBuildings` on for the duration and writes
+  `water-river`, `water-crossing`, `water-ponds` and `water-bank`.
+
+  STILL OPEN, deliberately: **the river's 12m width is the one invented number** - OSM gives a
+  centreline with no width - so it is `RIVER_W` in the generator and nothing else about the
+  river's course is guessed. **A road over the river is at-grade**, with no bridge deck or
+  parapet; the water simply stops square at the carriageway. And the shoreline is quantised to
+  1m tiles, which at eye level on the bank reads as a staircase. — *2026-08-02*
+
+- [ ] ~~**There is no real river or ponds, superseded note kept for the reasoning.**~~ `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one
   long real polyline) and the real school ponds (`water ...` closed polygons), pulled from
   OpenStreetMap - and `CityOutlines.Features()` is the ONLY thing that ever reads that file. It
   draws them as a flat painted line/fill in the survey-plan view (`CityOutlines.Build`, gated
@@ -482,6 +533,16 @@ against a standing project rule rather than being merely large or risky. Both ne
   the audit as one step of a longer pass and still inherit its exit code. Confirmed by reading
   the current file rather than assuming the note was still true - it wasn't. — *2026-07-31,
   closed 2026-08-02*
+
+- [ ] **The documented PlayMode command now hangs, and it is LLMUnity's tests, not ours.**
+  `-runTests -testPlatform PlayMode` with no filter discovers `LLMUnityTests.TestLLM`, whose
+  constructor calls `LLMManager.DownloadModel` - so the run sits there trying to pull a language
+  model off the network instead of testing the town, and never reaches a result file. It came in
+  with the LLMUnity package and the invocation written down in `docs/HANDOFF.md` predates it.
+  **Add `-assemblyNames Noir.PlayTests`**, which is what HANDOFF now says. Worth doing properly at
+  some point - either an assembly filter in a `.runsettings`, or excluding that package's tests -
+  because the next person to run the command as written will lose ten minutes to it the way I
+  did. — *2026-08-02*
 
 - [ ] Lift the Crafting System's UGUI inventory UI — drag-drop slots, transfer, tabs — rather than writing one. Tedious to build, and presentation belongs in Unity anyway. — *2026-07-30*
 - [ ] Evidence catalogue as `Content/items.txt` in the shape of `kinds.txt`, read by Core. NOT the Crafting System's ScriptableObjects: content authored in an editor window is content `MapAudit` and the PlayMode tests cannot see. — *2026-07-30*

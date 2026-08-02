@@ -1,0 +1,2315 @@
+[
+{
+"kind": "carwash",
+"x": 482,
+"y": 484,
+"w": 10,
+"h": 13,
+"name": "the wash",
+"human": "A place people leave a car and walk away from for ten minutes.",
+"door": [
+4,
+12
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "gasstation",
+"x": 518,
+"y": 484,
+"w": 20,
+"h": 11,
+"name": "the pumps",
+"human": "Somebody is always sitting in a car here not buying anything.",
+"door": [
+19,
+5
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "firestation",
+"x": 482,
+"y": 510,
+"w": 28,
+"h": 27,
+"name": "Engine 9",
+"human": "The doors are open in all weather and the crew watch the street from inside them.",
+"door": [
+14,
+26
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "green",
+"x": 513,
+"y": 500,
+"w": 24,
+"h": 37,
+"name": "the depot yard",
+"human": "Grass that grew because nobody got round to paving it.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "tower",
+"x": 576,
+"y": 484,
+"w": 48,
+"h": 39,
+"name": "the Hallam Building",
+"human": "Forty floors of offices and a lobby nobody is ever turned away from.",
+"door": [
+0,
+19
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 575,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "1 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 581,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "3 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 587,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "5 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 593,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "7 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 599,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "9 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 605,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "11 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 611,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "13 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 617,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "15 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 623,
+"y": 532,
+"w": 6,
+"h": 8,
+"name": "17 Northgate",
+"human": null,
+"door": [
+3,
+7
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "school2",
+"x": 665,
+"y": 484,
+"w": 47,
+"h": 18,
+"name": "Northgate Elementary",
+"human": "Painted every summer and scuffed back to the undercoat by October.",
+"door": [
+23,
+17
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "icecream",
+"x": 665,
+"y": 510,
+"w": 16,
+"h": 11,
+"name": "Bruno's",
+"human": "Shut half the year, and the queue at Easter goes round the corner.",
+"door": [
+7,
+10
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "restroom",
+"x": 702,
+"y": 510,
+"w": 14,
+"h": 8,
+"name": "the public conveniences",
+"human": "Council-green tile and a door that does not lock.",
+"door": [
+6,
+7
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "newsstand",
+"x": 665,
+"y": 530,
+"w": 7,
+"h": 3,
+"name": "the stand",
+"human": "Papers, cigarettes, and the man who knows who bought which.",
+"door": [
+3,
+2
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 482,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "2 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 488,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "4 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 494,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "6 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 500,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "8 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 506,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "10 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 512,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "12 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 518,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "14 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 524,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "16 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 530,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "18 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "bank",
+"x": 482,
+"y": 585,
+"w": 29,
+"h": 23,
+"name": "Northgate Savings",
+"human": "Marble that was meant to look permanent.",
+"door": [
+14,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "diner",
+"x": 516,
+"y": 585,
+"w": 20,
+"h": 11,
+"name": "the Northgate Diner",
+"human": "Open before anyone needs it to be, and the same four faces are in it at six.",
+"door": [
+9,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "tower",
+"x": 575,
+"y": 580,
+"w": 46,
+"h": 37,
+"name": "the Meridian",
+"human": "A hundred and eleven metres of it, and the top four floors have been empty for a year.",
+"door": [
+23,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 662,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "20 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 668,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "22 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 674,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "24 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 680,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "26 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 686,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "28 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 692,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "30 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 698,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "32 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 704,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "34 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "apartment",
+"x": 710,
+"y": 570,
+"w": 6,
+"h": 8,
+"name": "36 Northgate",
+"human": null,
+"door": [
+3,
+0
+],
+"units": 6,
+"extra": []
+},
+{
+"kind": "hospital",
+"x": 665,
+"y": 590,
+"w": 40,
+"h": 27,
+"name": "Northgate General",
+"human": "The only lit windows on this street at four in the morning.",
+"door": [
+20,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "green",
+"x": 480,
+"y": 660,
+"w": 60,
+"h": 60,
+"name": "Franklin Park",
+"human": "Grass worn to earth along the line everyone actually walks.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "precinct",
+"x": 575,
+"y": 662,
+"w": 35,
+"h": 18,
+"name": "Northgate Precinct",
+"human": "The light in the front office never goes off, which is not the same as somebody being awake.",
+"door": [
+17,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "cinema",
+"x": 605,
+"y": 685,
+"w": 22,
+"h": 35,
+"name": "the Rialto",
+"human": "Two screens, one of which has been showing the same film since spring.",
+"door": [
+10,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "casino",
+"x": 665,
+"y": 665,
+"w": 35,
+"h": 46,
+"name": "the Regency Rooms",
+"human": "Open all night, and the carpet is loud enough that nobody notices the hour.",
+"door": [
+17,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "carpark",
+"x": 572,
+"y": 685,
+"w": 30,
+"h": 30,
+"name": "the precinct lot",
+"human": "Cruisers nose-in against the fence and everything else parked wherever.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "carpark",
+"x": 660,
+"y": 619,
+"w": 50,
+"h": 10,
+"name": "the hospital lot",
+"human": "Full at visiting hours and never emptier than half.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "carpark",
+"x": 700,
+"y": 660,
+"w": 20,
+"h": 50,
+"name": "behind the Regency",
+"human": "Nobody parks here who wants to be seen arriving.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "carpark",
+"x": 484,
+"y": 609,
+"w": 50,
+"h": 20,
+"name": "the Savings lot",
+"human": "Painted bays, and everybody parks across two of them.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "carpark",
+"x": 682,
+"y": 510,
+"w": 20,
+"h": 30,
+"name": "the school lot",
+"human": "Empty by four, apart from whoever is waiting.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "district",
+"x": 390,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "Westway at Northway",
+"human": "The last block before the ring road, and half of it is still hoardings.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 480,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "Market at Northway",
+"human": "Wholesalers, and nothing open after six.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 570,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "First at Northway",
+"human": "The good end of the north side, which is not saying a great deal.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 660,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "Second at Northway",
+"human": "Offices above, and a shop below that has been three different shops this year.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 750,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "Third at Northway",
+"human": "Where the buses turn round.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 840,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "Fourth at Northway",
+"human": "Backs onto the ring road and gets the noise of it all night.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 390,
+"y": 480,
+"w": 60,
+"h": 60,
+"name": "Westway at Bishop",
+"human": "Rooming houses. Nobody signs a lease here for a year.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 750,
+"y": 480,
+"w": 60,
+"h": 60,
+"name": "Third at Bishop",
+"human": "Trade counters, and a yard nobody locks.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 840,
+"y": 480,
+"w": 60,
+"h": 60,
+"name": "Fourth at Bishop",
+"human": "The far side, and the streetlights on it have been out since spring.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 390,
+"y": 570,
+"w": 60,
+"h": 60,
+"name": "Westway at Northgate",
+"human": "Cheap frontage on an expensive street, which tells you what happened here.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 750,
+"y": 570,
+"w": 60,
+"h": 60,
+"name": "Third at Northgate",
+"human": "Two floors of anything and a top floor of nothing.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 840,
+"y": 570,
+"w": 60,
+"h": 60,
+"name": "Fourth at Northgate",
+"human": "You can see the fields from the upper windows.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 390,
+"y": 660,
+"w": 60,
+"h": 60,
+"name": "Westway at Franklin",
+"human": "The laundry, the pawn shop and the place that cashes cheques.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 750,
+"y": 660,
+"w": 60,
+"h": 60,
+"name": "Third at Franklin",
+"human": "Quiet in a way the middle of town never is.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 840,
+"y": 660,
+"w": 60,
+"h": 60,
+"name": "Fourth at Franklin",
+"human": "Half-let, and the half that is let keeps odd hours.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 390,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "Westway at Hale",
+"human": "Built all at once and all the same, and it has not aged evenly.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 480,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "Market at Hale",
+"human": "The south-west corner, and the wind comes straight up it.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 570,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "First at Hale",
+"human": "Where people live who work in the middle.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 660,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "Second at Hale",
+"human": "Shopfronts with flats over them and a bar at the end.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 750,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "Third at Hale",
+"human": "Somebody keeps a light on all night on the third floor.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 840,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "Fourth at Hale",
+"human": "The edge of it. After this there are fields.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 390,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "Westway at Merrow",
+"human": "The southern limit, and it looks it.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 480,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "Market at Merrow",
+"human": "Lock-ups, mostly. A few of them are not lock-ups.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 570,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "First at Merrow",
+"human": "Terraces facing the ring road with their backs to each other.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 660,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "Second at Merrow",
+"human": "A block you could park on all night and nobody would ask.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 750,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "Third at Merrow",
+"human": "The last of the paving, and the kerbs give out halfway along.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "district",
+"x": 840,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "Fourth at Merrow",
+"human": "The corner nobody has any reason to come to.",
+"door": null,
+"units": 29,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "Beechwood Rise",
+"human": "Built all at once in the good year, and every third house has the same door.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 390,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "The Larches",
+"human": "Nobody has cut down the tree it was named after, which is something.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 480,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "Coronation Avenue",
+"human": "Bunting in the summer and nothing at all the rest of the year.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 570,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "Northbound Gardens",
+"human": "Backs onto the ring road, and they all put the shed at that end.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 660,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "Elm Grove",
+"human": "Dutch elm took the elms in the seventies and the name stayed.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 750,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "Priory Close",
+"human": "There was never a priory. There was a man selling houses.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 840,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "Kingfisher Way",
+"human": "The stream it is named for runs in a pipe under the third garden.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 300,
+"w": 60,
+"h": 60,
+"name": "The Paddocks",
+"human": "It was, until nineteen sixty-eight.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "Willow Bank",
+"human": "The gardens flood at the bottom and everybody planted willows about it.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 390,
+"w": 60,
+"h": 60,
+"name": "Hawthorn Drive",
+"human": "A cul-de-sac, so the only cars on it belong to somebody who lives there.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 480,
+"w": 60,
+"h": 60,
+"name": "Saint Cuthbert's Park",
+"human": "The church sold the glebe and this is what went on it.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 480,
+"w": 60,
+"h": 60,
+"name": "Meadow Vale",
+"human": "Neither a meadow nor a vale, and the estate agent knew it.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 570,
+"w": 60,
+"h": 60,
+"name": "Chestnut Avenue",
+"human": "Wide enough for two cars to pass, which on this side of town is a boast.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 570,
+"w": 60,
+"h": 60,
+"name": "Sycamore Close",
+"human": "Somebody keeps a boat on a trailer here and has never once moved it.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 660,
+"w": 60,
+"h": 60,
+"name": "The Beeches",
+"human": "Bay windows, and net curtains in every one of them.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 660,
+"w": 60,
+"h": 60,
+"name": "Fairfield Road",
+"human": "The long way round to everywhere, which is why it is quiet.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "Orchard Way",
+"human": "Built on one. Two of the old apple trees are still in back gardens.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 750,
+"w": 60,
+"h": 60,
+"name": "Cedar Crescent",
+"human": "It curves for no reason anybody can now remember.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "Lavender Hill",
+"human": "It is not a hill either.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 840,
+"w": 60,
+"h": 60,
+"name": "Rowan Court",
+"human": "The newest of them, and the gardens have not grown into themselves yet.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 300,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "Southbound Gardens",
+"human": "The corner plot has a caravan on it and has had for eleven years.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 390,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "Mill Race",
+"human": "Named after a watercourse three miles away.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 480,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "Apple Tree Lane",
+"human": "A lane once. It has kerbs and a turning head now.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 570,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "Greenacres",
+"human": "Somebody has painted their front door a colour the rest have opinions about.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 660,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "Hillside Close",
+"human": "You can see the fields from the upstairs back windows.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 750,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "The Spinney",
+"human": "Two rows of houses and the last of the wood behind them.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 840,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "Fern Bank",
+"human": "The quiet end, and the streetlight outside number twelve has been out since spring.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "suburb",
+"x": 930,
+"y": 930,
+"w": 60,
+"h": 60,
+"name": "Woodland Rise",
+"human": "The last of it. After this there are fields.",
+"door": null,
+"units": 10,
+"extra": []
+},
+{
+"kind": "farm",
+"x": 130,
+"y": 130,
+"w": 15,
+"h": 16,
+"name": "Home Farm",
+"human": "The kitchen light is on at half past four and the radio is never off.",
+"door": [
+7,
+15
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "farmyard",
+"x": 150,
+"y": 128,
+"w": 30,
+"h": 28,
+"name": "the yard",
+"human": "Mud, diesel and forty years of things that might come in useful.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "barn",
+"x": 130,
+"y": 180,
+"w": 18,
+"h": 39,
+"name": "the big barn",
+"human": "Big enough to lose a car in, and dark enough at noon that you would.",
+"door": [
+9,
+0
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "silo",
+"x": 155,
+"y": 185,
+"w": 7,
+"h": 7,
+"name": "the near silo",
+"human": "It booms when you knock on it.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "silo",
+"x": 165,
+"y": 185,
+"w": 7,
+"h": 7,
+"name": "the far silo",
+"human": "Empty since the wet year, and the ladder up the side is still sound.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "paddock",
+"x": 125,
+"y": 305,
+"w": 110,
+"h": 50,
+"name": "the near paddock",
+"human": "Cropped flat and empty. The gate has been open for a while.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "paddock",
+"x": 125,
+"y": 395,
+"w": 110,
+"h": 50,
+"name": "the far paddock",
+"human": "You cannot see this one from the road, or the road from it.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "cornfield",
+"x": 125,
+"y": 485,
+"w": 110,
+"h": 50,
+"name": "the top field",
+"human": "Forty acres, and the tractor lines run out of true where the ground dips.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "cornfield",
+"x": 125,
+"y": 575,
+"w": 110,
+"h": 50,
+"name": "the long field",
+"human": "It floods at the bottom corner every spring and nobody has ever drained it.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "cornfield",
+"x": 125,
+"y": 665,
+"w": 110,
+"h": 50,
+"name": "the bottom field",
+"human": "The corn is over head height by August and the rows run away from the track.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "orchard",
+"x": 125,
+"y": 755,
+"w": 110,
+"h": 50,
+"name": "the orchard",
+"human": "Planted in rows by somebody who is dead now.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "cornfield",
+"x": 125,
+"y": 845,
+"w": 110,
+"h": 50,
+"name": "the far acre",
+"human": "The last field before the road, and the one nobody bothers to walk.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "copse",
+"x": 10,
+"y": 485,
+"w": 75,
+"h": 50,
+"name": "the west belt",
+"human": "Planted as a windbreak and never thinned. You cannot see through it.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "copse",
+"x": 10,
+"y": 575,
+"w": 75,
+"h": 50,
+"name": "the west belt, middle",
+"human": "The stretch between the two roads, and the darkest of the three.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "copse",
+"x": 10,
+"y": 665,
+"w": 75,
+"h": 50,
+"name": "the west belt, south",
+"human": "It gives out where the ground turns wet.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "copse",
+"x": 10,
+"y": 755,
+"w": 75,
+"h": 50,
+"name": "the west belt, end",
+"human": "Somebody has been cutting firewood out of this one.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "farm",
+"x": 1040,
+"y": 1030,
+"w": 15,
+"h": 16,
+"name": "Wicker End",
+"human": "Nobody has farmed it for years. Somebody is living in it.",
+"door": [
+7,
+15
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "barn",
+"x": 1065,
+"y": 1030,
+"w": 11,
+"h": 14,
+"name": "the old barn",
+"human": "Half the roof is down and the half that is not is worse.",
+"door": [
+5,
+13
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "orchard",
+"x": 1040,
+"y": 1075,
+"w": 50,
+"h": 80,
+"name": "the old orchard",
+"human": "Gone to scrub. The fruit falls and nobody picks it up.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "copse",
+"x": 1100,
+"y": 1075,
+"w": 50,
+"h": 80,
+"name": "the far spinney",
+"human": "Too small to be worth clearing and too thick to walk through quickly.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "cornfield",
+"x": 1160,
+"y": 1075,
+"w": 50,
+"h": 80,
+"name": "the far field",
+"human": "Nobody watches this one from anywhere.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "cornfield",
+"x": 1050,
+"y": 300,
+"w": 110,
+"h": 50,
+"name": "the top of the hill",
+"human": "It catches the weather first and everything here is a week behind.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "cornfield",
+"x": 1050,
+"y": 480,
+"w": 110,
+"h": 50,
+"name": "the middle field",
+"human": "Split by a hedge somebody grubbed out and never finished.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "copse",
+"x": 1180,
+"y": 575,
+"w": 100,
+"h": 50,
+"name": "the east wood",
+"human": "Older than the town, and the boundary bank round it is older still.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "copse",
+"x": 1180,
+"y": 665,
+"w": 100,
+"h": 50,
+"name": "the east wood, lower",
+"human": "The same wood, on the other side of the road that was put through it.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "paddock",
+"x": 1050,
+"y": 755,
+"w": 110,
+"h": 50,
+"name": "the long acre",
+"human": "Fenced for horses that were sold years ago.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "memorial",
+"x": 240,
+"y": 483,
+"w": 3,
+"h": 3,
+"name": "the cross on the Bishop road",
+"human": "Somebody replaces the flowers. Nobody has ever been seen doing it.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "memorial",
+"x": 700,
+"y": 1040,
+"w": 3,
+"h": 3,
+"name": "the cross at the county line",
+"human": "It has been there longer than the road surface it stands on.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "standing",
+"x": 245,
+"y": 600,
+"w": 4,
+"h": 4,
+"name": "the high seat",
+"human": "A platform over the long field. Whoever built it did not build it for deer.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "standing",
+"x": 1095,
+"y": 1040,
+"w": 4,
+"h": 4,
+"name": "the seat above Wicker End",
+"human": "It looks at the orchard and at the back of the house, which is a choice.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "camp",
+"x": 1150,
+"y": 590,
+"w": 5,
+"h": 5,
+"name": "the pitch in the east wood",
+"human": "The fire is out. How long it has been out is the question.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "camp",
+"x": 1160,
+"y": 1170,
+"w": 5,
+"h": 5,
+"name": "the far pitch",
+"human": "A bedroll, a case left open, and no track in or out that anybody has found.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 572,
+"y": 619,
+"w": 13,
+"h": 10,
+"name": "Vance & Son",
+"human": "Ironmongery, and a man who can find the one screw you need in a minute.",
+"door": [
+6,
+9
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 587,
+"y": 619,
+"w": 13,
+"h": 10,
+"name": "the corner grocer",
+"human": "Everything a fortnight from its date and nobody has ever complained.",
+"door": [
+6,
+9
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 602,
+"y": 619,
+"w": 13,
+"h": 10,
+"name": "Meacham's",
+"human": "A tailor who has outlived three fashions and expects to outlive a fourth.",
+"door": [
+6,
+9
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 617,
+"y": 619,
+"w": 11,
+"h": 10,
+"name": "the chemist",
+"human": "The window has not changed since the coronation and neither has the smell.",
+"door": [
+5,
+9
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "pub",
+"x": 516,
+"y": 596,
+"w": 22,
+"h": 12,
+"name": "the Weighhouse",
+"human": "Four o'clock and the same men are in it who were in it at noon.",
+"door": [
+11,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "postoffice",
+"x": 702,
+"y": 520,
+"w": 16,
+"h": 14,
+"name": "Northgate Post Office",
+"human": "A queue that moves at the speed of one conversation at a time.",
+"door": [
+8,
+13
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 611,
+"y": 662,
+"w": 18,
+"h": 20,
+"name": "Ellery's",
+"human": "Open at five, which is either a service or an accusation.",
+"door": [
+9,
+19
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 493,
+"y": 484,
+"w": 24,
+"h": 14,
+"name": "the Fourth Street market",
+"human": "Fruit stacked to a geometry that survives being sold from.",
+"door": [
+12,
+13
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 240,
+"y": 394,
+"w": 16,
+"h": 12,
+"name": "Halliwell's",
+"human": "A general store, which out here means it stocks what the last person asked for.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 240,
+"y": 408,
+"w": 16,
+"h": 12,
+"name": "the west bakery",
+"human": "Sells out by ten and does not bake more, on principle.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "pub",
+"x": 240,
+"y": 422,
+"w": 22,
+"h": 14,
+"name": "the Drovers",
+"human": "The car park is bigger than the pub and on Fridays it is not big enough.",
+"door": [
+11,
+13
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "green",
+"x": 238,
+"y": 438,
+"w": 30,
+"h": 12,
+"name": "the west common",
+"human": "Cut twice a year whether it needs it or not.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "playground",
+"x": 238,
+"y": 662,
+"w": 30,
+"h": 28,
+"name": "the Bishop road swings",
+"human": "One swing has been chained up since April and nobody remembers why.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 240,
+"y": 692,
+"w": 16,
+"h": 12,
+"name": "the paper shop",
+"human": "Papers, sweets, and a bell that has never once been oiled.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 240,
+"y": 706,
+"w": 16,
+"h": 12,
+"name": "Trewin's",
+"human": "A hardware shop that also does keys, shoes, and advice.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "allotments",
+"x": 238,
+"y": 755,
+"w": 30,
+"h": 40,
+"name": "the west allotments",
+"human": "Thirty plots, four of them worked properly and the rest an argument.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "churchyard",
+"x": 238,
+"y": 306,
+"w": 30,
+"h": 24,
+"name": "the old burial ground",
+"human": "Older than anything still standing, and the names have gone off the stones.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 1024,
+"y": 394,
+"w": 16,
+"h": 12,
+"name": "the east grocer",
+"human": "Run by a family who have never agreed on the opening hours.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 1042,
+"y": 394,
+"w": 16,
+"h": 12,
+"name": "Ottery's",
+"human": "Wool, thread, and a cat that is not for sale.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 1060,
+"y": 394,
+"w": 16,
+"h": 12,
+"name": "the east bakery",
+"human": "The smell reaches the county line on a west wind.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "pub",
+"x": 1024,
+"y": 412,
+"w": 22,
+"h": 14,
+"name": "the Wheatsheaf",
+"human": "Older than the road, and it shows in the floor.",
+"door": [
+11,
+13
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "villagehall",
+"x": 1050,
+"y": 412,
+"w": 26,
+"h": 16,
+"name": "the Wicker End rooms",
+"human": "Bingo, inquests, and the annual meeting about the verge.",
+"door": [
+13,
+15
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "green",
+"x": 1024,
+"y": 432,
+"w": 50,
+"h": 16,
+"name": "the east common",
+"human": "A cricket square somebody still rolls.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "playground",
+"x": 1025,
+"y": 665,
+"w": 40,
+"h": 30,
+"name": "the county line swings",
+"human": "The roundabout goes faster than it should and always has.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 1025,
+"y": 700,
+"w": 16,
+"h": 12,
+"name": "the county stores",
+"human": "The last shop before the county line and it knows it.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "postoffice",
+"x": 1043,
+"y": 700,
+"w": 16,
+"h": 12,
+"name": "the east sub-office",
+"human": "One window, one clerk, and a scale that has been condemned twice.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "allotments",
+"x": 1025,
+"y": 845,
+"w": 50,
+"h": 40,
+"name": "the east allotments",
+"human": "Sheds built from doors, and every one of them locked.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 574,
+"y": 214,
+"w": 16,
+"h": 12,
+"name": "the north dairy",
+"human": "Milk, eggs, and a slate for people who are good for it.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 592,
+"y": 214,
+"w": 16,
+"h": 12,
+"name": "Kerrow's",
+"human": "A greengrocer who tells you what not to buy this week.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 610,
+"y": 214,
+"w": 16,
+"h": 12,
+"name": "the north hardware",
+"human": "Paint mixed by eye and it has never once been wrong.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "pub",
+"x": 574,
+"y": 232,
+"w": 22,
+"h": 14,
+"name": "the Northway Arms",
+"human": "The first pub on the road in and the last one out.",
+"door": [
+11,
+13
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "playground",
+"x": 574,
+"y": 250,
+"w": 40,
+"h": 18,
+"name": "the Northway swings",
+"human": "Gravel, which everybody agrees was a mistake.",
+"door": null,
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 574,
+"y": 1024,
+"w": 16,
+"h": 12,
+"name": "the south grocer",
+"human": "Open latest of any of them, which is not saying much.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 592,
+"y": 1024,
+"w": 16,
+"h": 12,
+"name": "Lanyon's",
+"human": "A fishmonger a very long way from any sea.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "shop",
+"x": 610,
+"y": 1024,
+"w": 16,
+"h": 12,
+"name": "the south chemist",
+"human": "The only one that opens on a Sunday, and only until eleven.",
+"door": [
+8,
+11
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "pub",
+"x": 574,
+"y": 1042,
+"w": 22,
+"h": 14,
+"name": "the Plough",
+"human": "A back room that is booked every night of the week by somebody.",
+"door": [
+11,
+13
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "villagehall",
+"x": 600,
+"y": 1042,
+"w": 26,
+"h": 16,
+"name": "the south rooms",
+"human": "Scout hut, polling station, and where the inquest was held.",
+"door": [
+13,
+15
+],
+"units": null,
+"extra": []
+},
+{
+"kind": "allotments",
+"x": 574,
+"y": 1062,
+"w": 50,
+"h": 14,
+"name": "the south allotments",
+"human": "The best soil in Northgate and everybody knows it.",
+"door": null,
+"units": null,
+"extra": []
+}
+]

@@ -77,3 +77,8 @@ Assets/polyperfect.meta
 # LlamaLib when they are missing, so they are a working-copy asset like the art above.
 Assets/StreamingAssets/
 Assets/StreamingAssets.meta
+
+# The PlayMode test runner writes a throwaway bootstrap scene into Assets/ and does
+# not always clean it up. It is per-run (the GUID changes) so it is never worth keeping.
+Assets/InitTestScene*.unity
+Assets/InitTestScene*.unity.meta
