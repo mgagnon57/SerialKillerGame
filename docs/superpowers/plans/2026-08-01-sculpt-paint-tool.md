@@ -2,229 +2,63 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** An Edit-Mode-only in-editor brush that nudges terrain height at specific spots, without ever touching the real USGS elevation data underneath.
+**Goal:** An Edit-Mode brush that raises/lowers the visible ground in the Scene view, backed by an
+additive delta layer on `ElevationGrid` that never touches the real USGS base data.
 
-**Architecture:** `ElevationGrid` gains a second, additive `float[,]` delta layer (own file, `Content/elevation-delta.txt`) that every `HeightAt` caller in the project picks up automatically. A new `SculptTerrainWindow` EditorWindow builds a throwaway ground-only preview via the existing `VillageMesh.BuildGround`, paints by hooking `SceneView.duringSceneGui`, and patches only the mesh vertices a stroke actually touches — never a full rebuild. The brush's falloff math (`SculptBrush`) and the undo/redo stack (`SculptHistory`) are both pure, Scene-view-free classes so they can be checked headlessly; painting itself cannot be scripted headlessly (no way to drag a mouse across a Scene view in batch mode) and stays a manual check.
+**Architecture:** `ElevationGrid` grows a second 71×81 grid (`_delta`), added into `HeightAt`
+after the base sample. A new `Noir.Editor` toolset — `SculptPreview` (ground-only Edit-Mode
+scene), `SculptBrush` (pure cell + vertex math), `SculptUndoStack` (whole-grid snapshot undo) and
+`SculptTerrainWindow` (the `EditorWindow` that wires mouse painting to the other three) — never
+rebuilds the world on a stroke; it patches only the `Ground {col},{row}` chunk meshes the brush
+touches.
 
-**Tech Stack:** C#, Unity 6000.3.20f1 (6.3 LTS), UnityEditor `EditorWindow`/`SceneView`/`Handles` APIs. No new packages.
+**Tech Stack:** Unity 6000-series editor scripting (`UnityEditor.EditorWindow`,
+`SceneView.duringSceneGui`), C#, the project's existing plain-text `Content/` convention.
 
 ## Global Constraints
 
-- **Edit Mode only.** No Play-mode integration, no `CityCollision` `MeshCollider` patching — both explicitly out of scope per `docs/superpowers/specs/2026-08-01-sculpt-paint-tool-design.md`.
-- **The base elevation grid (`Content/elevation.txt`) is never written to.** Every mutation from this tool goes into the separate delta grid/file. Do not resample or touch `elevation.txt`.
-- **Determinism.** No `Random`/`DateTime.Now` anywhere in this plan's code — matches the rest of the project (`Materials3D.Scatter`-style seeded generation), and specifically matters here because the offline snapshot renderer compares builds byte-for-byte.
-- **`Assets/Noir/Editor/` compiles into `Noir.Editor` (`Noir.Editor.asmdef`), which already references `Noir.Unity` and the `Noir.Core.*` assemblies** — confirmed by reading the `.asmdef` files directly. Everything this plan adds to `Assets/Noir/Editor` can freely reference `Noir.Unity` types (`ElevationGrid`, `VillageMesh`, `Space3D`, `ContentLoader`, `VillageHost`, `PlaceKindTable`) with no assembly changes needed.
-- **Compile-check headlessly before claiming any step done:**
-  ```powershell
-  & "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-    -batchmode -quit -nographics -projectPath C:\SerialKillerGame -logFile C:\SerialKillerGame\.unity-build.log
-  ```
-  Then check the log for `error CS`:
-  ```powershell
-  Select-String -Path C:\SerialKillerGame\.unity-build.log -Pattern "error CS"
-  ```
-  This fails if the Unity Editor is open on this project — close it first. `Unity.exe` forks a child and the launching process returns immediately, so wait on the process (`Wait-Process`/poll `tasklist`), never on the log file appearing.
-- **No comments explaining WHAT code does — only WHY**, matching every existing file read for this plan (`ElevationGrid.cs`, `Countryside.cs`, `MeshChunks.cs`, `SmokeTest.cs`).
-- **Any probe that writes into `Content/` must leave the working tree exactly as it found it** — back up and restore, matching the project's existing "headless runs must be silent/non-destructive" convention.
+- **Edit Mode only.** No Play-mode painting, no live `MeshCollider` patching — confirmed design
+  choice, see `docs/superpowers/specs/2026-08-01-sculpt-paint-tool-design.md`.
+- **Base data is immutable.** `elevation.txt` is never written to, resampled, or re-rotated.
+- **Delta grid resolution matches the base grid** — 71×81 at the same 30m step. No independent
+  finer grid.
+- Any code new code that crosses the `Noir.Unity` / `Noir.Editor` assembly boundary (there is no
+  `.asmdef` in `Assets/Noir`, so the `Editor` folder compiles into a separate default editor
+  assembly) must be `public` — `internal` is invisible across that boundary.
+- Follow the project's existing doc-comment voice: explain *why*, not *what*, especially for any
+  non-obvious constraint (see any file under `Assets/Noir/Unity` or `Assets/Noir/Editor` for the
+  house style).
+- Headless verification commands follow the project's existing convention (see
+  `Assets/Noir/Editor/SmokeTest.cs`, `PlayCheck.cs`):
+  `Unity.exe -batchmode -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.<Class>.Run -logFile <log> -quit`
+- Per project memory: headless runs must stay silent (no audio) and windows this plan opens for
+  manual verification must not be launched maximized — restore/size explicitly. This plan's only
+  manual step (Task 5) opens a small utility `EditorWindow`, not a game window, so this mostly
+  doesn't apply, but don't maximize the Unity Editor window itself if you resize it.
 
 ---
 
-## File Structure
-
-| File | Status | Responsibility |
-|---|---|---|
-| `Assets/Noir/Unity/ElevationGrid.cs` | Modify | Adds the additive delta grid: load/save, per-cell get/set, snapshot copy/restore. `HeightAt` sums base + delta. |
-| `Assets/Noir/Unity/VillageMesh.cs` | Modify | `BuildGround` becomes a public entry point returning the `GameObject` it builds, so the sculpt window can call it directly instead of duplicating ~260 lines of tile/riser/skirt logic. |
-| `Assets/Noir/Editor/SculptHistory.cs` | Create | Pure undo/redo stack of whole-delta-grid snapshots. No `UnityEditor`/Scene-view dependency — testable headlessly. |
-| `Assets/Noir/Editor/SculptBrush.cs` | Create | Pure arithmetic: which delta cells a stroke at (x, y, radius) touches, and the smoothstep falloff weight each one gets. Testable headlessly. |
-| `Assets/Noir/Editor/SculptTerrainWindow.cs` | Create | The `EditorWindow`: builds/tears down the ground-only preview, hooks `SceneView.duringSceneGui` for painting, patches touched chunk vertices, wires up `ElevationGrid` + `SculptHistory` + `SculptBrush`, GUI controls, save-on-close prompt. |
-| `Assets/Noir/Editor/SculptProbe.cs` | Create, then modify twice | Headless verification, `Noir/Sculpt Probe` menu item, runnable via `-executeMethod Noir.Editor.SculptProbe.Run` — matches the existing `SmokeTest.cs`/`Elevations.cs` convention (no NUnit `EditMode` assembly exists in this project for `Noir.Unity`/`Noir.Editor`). Grows across Tasks 1, 3 and 4 as each pure piece lands. |
-
----
-
-### Task 1: ElevationGrid delta layer
+## Task 1: `ElevationGrid` delta layer
 
 **Files:**
 - Modify: `Assets/Noir/Unity/ElevationGrid.cs`
-- Create: `Assets/Noir/Editor/SculptProbe.cs`
+- Create: `Assets/Noir/Editor/SculptCheck.cs`
 
 **Interfaces:**
-- Produces: `ElevationGrid.DeltaCols`, `.DeltaRows`, `.DeltaStep` (`int`); `GetDeltaCell(int col, int row) : float`; `SetDeltaCell(int col, int row, float value) : void`; `CopyDelta() : float[,]`; `RestoreDelta(float[,] snapshot) : void`; `SaveDelta() : void`. `HeightAt(float, float)` keeps its existing signature but now includes the delta.
-- Consumes: `ContentLoader.Root`, `ContentLoader.Read(string)` (both already exist, unchanged).
+- Produces (used by every later task):
+  - `ElevationGrid.HeightAt(float worldX, float worldY)` — unchanged signature, now returns base
+    + delta.
+  - `ElevationGrid.DeltaCols`, `DeltaRows`, `DeltaStep` : `int` (editor-only, `#if UNITY_EDITOR`)
+  - `ElevationGrid.GetDeltaCell(int col, int row)` : `float`
+  - `ElevationGrid.SetDeltaCell(int col, int row, float value)` : `void`
+  - `ElevationGrid.SnapshotDelta()` : `float[,]` (a copy, safe to mutate)
+  - `ElevationGrid.RestoreDelta(float[,] snapshot)` : `void`
+  - `ElevationGrid.SaveDelta()` : `void` — writes `Content/elevation-delta.txt`
 
-- [ ] **Step 1: Write the (uncompilable) probe**
-
-Create `Assets/Noir/Editor/SculptProbe.cs`:
+- [ ] **Step 1: Replace the contents of `Assets/Noir/Unity/ElevationGrid.cs`**
 
 ```csharp
 using System;
-using System.Globalization;
-using System.IO;
-using UnityEditor;
-using UnityEngine;
-using Noir.Unity;
-
-namespace Noir.Editor
-{
-    /// <summary>
-    /// Headless checks for the sculpt tool's data layer - the slice of it that has no mouse or
-    /// Scene view in it, and so can run the same way SmokeTest and Elevations do:
-    ///   Unity.exe -batchmode -quit -projectPath . -executeMethod Noir.Editor.SculptProbe.Run
-    ///
-    /// Painting itself is not here - there is no headless way to drag a mouse across a Scene
-    /// view, so that stays a manual check against the checklist in the sculpt tool's design doc.
-    /// What IS here is everything a bug could hide in without ever touching a mouse: the delta
-    /// grid's arithmetic, its save/load round trip, and (once later tasks land) the brush's own
-    /// falloff math and the undo/redo stack.
-    /// </summary>
-    public static class SculptProbe
-    {
-        [MenuItem("Noir/Sculpt Probe")]
-        public static void Run()
-        {
-            int failures = 0;
-
-            try
-            {
-                if (!ContentLoader.Exists)
-                    throw new Exception($"content not found at {ContentLoader.Root}");
-
-                failures += CheckDeltaRoundTrip();
-                failures += CheckSaveLoadFormat();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("[sculpt-probe] FAILED: " + ex);
-                failures++;
-            }
-
-            Debug.Log(failures == 0 ? "--- SCULPT PROBE PASSED ---"
-                                     : $"--- SCULPT PROBE FAILED ({failures}) ---");
-
-            if (Application.isBatchMode) EditorApplication.Exit(failures == 0 ? 0 : 1);
-        }
-
-        /// <summary>SetDeltaCell followed by HeightAt at that exact grid point must show the
-        /// change - and only at that point, not smeared across the whole grid.</summary>
-        private static int CheckDeltaRoundTrip()
-        {
-            int failures = 0;
-            int col = 10, row = 10;
-            int step = ElevationGrid.DeltaStep;
-            float wx = col * step, wy = row * step;
-
-            float before = ElevationGrid.HeightAt(wx, wy);
-            float original = ElevationGrid.GetDeltaCell(col, row);
-
-            ElevationGrid.SetDeltaCell(col, row, original + 5f);
-            float after = ElevationGrid.HeightAt(wx, wy);
-
-            if (Mathf.Abs(after - before - 5f) > 0.01f)
-            {
-                Debug.LogError($"[sculpt-probe] delta round trip: expected +5.00m at ({wx},{wy}), "
-                              + $"got {after - before:0.00}m");
-                failures++;
-            }
-
-            // Restore, so this probe leaves the in-memory grid exactly as it found it.
-            ElevationGrid.SetDeltaCell(col, row, original);
-            float restored = ElevationGrid.HeightAt(wx, wy);
-            if (Mathf.Abs(restored - before) > 0.01f)
-            {
-                Debug.LogError("[sculpt-probe] delta round trip: did not restore cleanly");
-                failures++;
-            }
-
-            Debug.Log($"[sculpt-probe] delta round trip  +5.00m applied and reverted at "
-                    + $"({col},{row}), off by {Mathf.Abs(after - before - 5f):0.000}m");
-            return failures;
-        }
-
-        /// <summary>SaveDelta() writes a file this can parse back to the exact values that were
-        /// set, in the same "grid cols rows step" header format elevation.txt uses. Backs up and
-        /// restores whatever was on disk before, so running this probe never leaves a stray or
-        /// altered Content/elevation-delta.txt behind.</summary>
-        private static int CheckSaveLoadFormat()
-        {
-            int failures = 0;
-            string path = Path.Combine(ContentLoader.Root, "elevation-delta.txt");
-            string backup = File.Exists(path) ? File.ReadAllText(path) : null;
-
-            int col = 3, row = 4;
-            float original = ElevationGrid.GetDeltaCell(col, row);
-
-            try
-            {
-                ElevationGrid.SetDeltaCell(col, row, original + 2.5f);
-                ElevationGrid.SaveDelta();
-
-                if (!File.Exists(path))
-                {
-                    Debug.LogError("[sculpt-probe] SaveDelta did not write " + path);
-                    return failures + 1;
-                }
-
-                float parsed = ParseCell(File.ReadAllText(path), col, row);
-                if (Mathf.Abs(parsed - (original + 2.5f)) > 0.01f)
-                {
-                    Debug.LogError($"[sculpt-probe] save/load format: wrote {original + 2.5f:0.00} "
-                                  + $"at ({col},{row}), file has {parsed:0.00}");
-                    failures++;
-                }
-                else
-                {
-                    Debug.Log($"[sculpt-probe] save/load format  {path} round-trips cell "
-                            + $"({col},{row}) correctly");
-                }
-            }
-            finally
-            {
-                ElevationGrid.SetDeltaCell(col, row, original);
-                if (backup != null) File.WriteAllText(path, backup);
-                else if (File.Exists(path)) File.Delete(path);
-            }
-
-            return failures;
-        }
-
-        private static float ParseCell(string text, int col, int row)
-        {
-            var lines = text.Split('\n');
-            int dataRow = 0;
-            for (int i = 1; i < lines.Length; i++)   // line 0 is the "grid cols rows step" header
-            {
-                var line = lines[i].Trim();
-                if (line.Length == 0) continue;
-                if (dataRow == row)
-                {
-                    var vals = line.Split(' ');
-                    return float.Parse(vals[col], CultureInfo.InvariantCulture);
-                }
-                dataRow++;
-            }
-            throw new Exception($"row {row} not found in delta file");
-        }
-    }
-}
-```
-
-This will not compile yet — `ElevationGrid.DeltaStep`, `.GetDeltaCell`, `.SetDeltaCell` and `.SaveDelta` don't exist until Step 3.
-
-- [ ] **Step 2: Confirm it fails (compile error)**
-
-Run:
-```powershell
-& "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-  -batchmode -quit -nographics -projectPath C:\SerialKillerGame -logFile C:\SerialKillerGame\.unity-build.log
-Select-String -Path C:\SerialKillerGame\.unity-build.log -Pattern "error CS"
-```
-Expected: matches for `error CS0117` (or similar) naming `DeltaStep`/`GetDeltaCell`/`SetDeltaCell`/`SaveDelta` as missing members of `ElevationGrid`.
-
-- [ ] **Step 3: Implement the delta layer**
-
-Replace the full contents of `Assets/Noir/Unity/ElevationGrid.cs`:
-
-```csharp
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -243,18 +77,21 @@ namespace Noir.Unity
     /// everywhere else. Bilinear-sampled between grid points rather than snapped to the nearest
     /// one, so two buildings six metres apart do not stand on a visible step.
     ///
-    /// A SECOND grid, the delta, rides on top - same shape as the base, added in rather than
-    /// replacing it. The base float[,] is never written to; every place a human hand needs to
-    /// nudge the ground (the sculpt tool, and only the sculpt tool) writes the delta instead, so
-    /// the real, measured USGS data underneath stays exactly what it was fetched as.
+    /// A SECOND grid, the same shape as the first, layers hand-painted correction on top -
+    /// Content/elevation-delta.txt, written only by the sculpt tool
+    /// (Assets/Noir/Editor/SculptTerrainWindow.cs). It exists so a specific spot can be fixed
+    /// without resampling or overwriting the real measured data underneath it: HeightAt adds the
+    /// two together, but only the delta grid is ever written by anything in this project.
     /// </summary>
     public static class ElevationGrid
     {
-        private static float[,] _grid;   // [row, col], row 0 = north - the real, measured data
-        private static float[,] _delta;  // same shape - human-authored, additive, may be null
+        private static float[,] _grid;   // [row, col], row 0 = north
+        private static float[,] _delta;  // same shape as _grid; all zero until something paints it
         private static int _cols, _rows, _step;
         private static float _baseline;  // raw elevation at the crossing - the new "zero"
         private static bool _loaded;
+
+        private const string DeltaFileName = "elevation-delta.txt";
 
         /// <summary>Height in metres at a world (village-space) point, relative to the
         /// crossing. Zero if elevation.txt is missing - the flat map this project shipped with
@@ -263,83 +100,16 @@ namespace Noir.Unity
         {
             Load();
             if (_grid == null) return 0f;
-            float raw = Sample(_grid, worldX, worldY) - _baseline;
-            return _delta == null ? raw : raw + Sample(_delta, worldX, worldY);
+            return RawAt(worldX, worldY) - _baseline + DeltaAt(worldX, worldY);
         }
 
         public static float HeightAt(Vector2 world) => HeightAt(world.x, world.y);
 
-        // ---------- sculpt tool surface ----------
-        //
-        // Everything below is read by SculptTerrainWindow and nothing else - runtime code has no
-        // reason to touch a single cell or the save path, only the composed HeightAt above.
+        private static float RawAt(float worldX, float worldY) => Bilinear(_grid, worldX, worldY);
 
-        public static int DeltaCols { get { Load(); return _cols; } }
-        public static int DeltaRows { get { Load(); return _rows; } }
-        public static int DeltaStep { get { Load(); return _step; } }
+        private static float DeltaAt(float worldX, float worldY) => Bilinear(_delta, worldX, worldY);
 
-        public static float GetDeltaCell(int col, int row)
-        {
-            Load();
-            if (_delta == null) return 0f;
-            col = Mathf.Clamp(col, 0, _cols - 1);
-            row = Mathf.Clamp(row, 0, _rows - 1);
-            return _delta[row, col];
-        }
-
-        public static void SetDeltaCell(int col, int row, float value)
-        {
-            Load();
-            if (_delta == null) return;
-            if (col < 0 || col >= _cols || row < 0 || row >= _rows) return;
-            _delta[row, col] = value;
-        }
-
-        /// <summary>A copy of the whole delta grid, for the sculpt window's undo stack to hold
-        /// on to. A copy rather than the live array, so a snapshot from three strokes ago cannot
-        /// be mutated by the fourth.</summary>
-        public static float[,] CopyDelta()
-        {
-            Load();
-            return _delta == null ? null : (float[,])_delta.Clone();
-        }
-
-        /// <summary>Replaces the whole delta grid - how the sculpt window pops a snapshot back
-        /// in on undo. The snapshot must be the shape Load() produced; the window only ever
-        /// hands back what CopyDelta gave it, so a mismatch means a caller outside the sculpt
-        /// window and is ignored rather than trusted.</summary>
-        public static void RestoreDelta(float[,] snapshot)
-        {
-            Load();
-            if (_delta == null || snapshot == null) return;
-            if (snapshot.GetLength(0) != _rows || snapshot.GetLength(1) != _cols) return;
-            _delta = (float[,])snapshot.Clone();
-        }
-
-        /// <summary>Writes the delta grid to Content/elevation-delta.txt, in the same text
-        /// format elevation.txt itself uses. Explicit, not automatic - the sculpt window calls
-        /// this from its own Save button (and its close-with-unsaved-changes prompt).</summary>
-        public static void SaveDelta()
-        {
-            Load();
-            if (_delta == null) return;
-
-            var sb = new StringBuilder();
-            sb.Append("grid ").Append(_cols).Append(' ').Append(_rows).Append(' ').Append(_step).Append('\n');
-            for (int row = 0; row < _rows; row++)
-            {
-                for (int col = 0; col < _cols; col++)
-                {
-                    if (col > 0) sb.Append(' ');
-                    sb.Append(_delta[row, col].ToString("0.###", CultureInfo.InvariantCulture));
-                }
-                sb.Append('\n');
-            }
-
-            File.WriteAllText(Path.Combine(ContentLoader.Root, "elevation-delta.txt"), sb.ToString());
-        }
-
-        private static float Sample(float[,] grid, float worldX, float worldY)
+        private static float Bilinear(float[,] grid, float worldX, float worldY)
         {
             float gx = worldX / _step;
             float gy = worldY / _step;
@@ -401,20 +171,23 @@ namespace Noir.Unity
                 return;
             }
 
-            _baseline = Sample(_grid, 750f, 1335f);
+            _baseline = RawAt(750f, 1335f);
             LoadDelta();
         }
 
-        /// <summary>Content/elevation-delta.txt, same format as the base grid. Missing file ->
-        /// an all-zero delta the same shape as the base - flat until proven otherwise, the same
-        /// fallback the base loader itself uses for a missing elevation.txt.</summary>
+        /// <summary>
+        /// The painted correction layer. Same shape as the base grid by construction - it is
+        /// always sized _rows x _cols, whatever elevation-delta.txt says, so a shape mismatch is
+        /// a warning and a flat layer rather than an array that stops matching HeightAt's own
+        /// indexing.
+        /// </summary>
         private static void LoadDelta()
         {
             _delta = new float[_rows, _cols];
 
             string text;
-            try { text = ContentLoader.Read("elevation-delta.txt"); }
-            catch { return; }
+            try { text = ContentLoader.Read(DeltaFileName); }
+            catch { return; }   // no delta file yet - flat correction, same fallback as the base grid
 
             int row = 0;
             bool haveHeader = false;
@@ -426,15 +199,13 @@ namespace Noir.Unity
                 if (!haveHeader)
                 {
                     var parts = line.Split(' ');
-                    bool ok = parts.Length == 4 && parts[0] == "grid"
-                            && int.TryParse(parts[1], out int cols) && cols == _cols
-                            && int.TryParse(parts[2], out int rows) && rows == _rows
-                            && int.TryParse(parts[3], out int step) && step == _step;
-                    if (!ok)
+                    if (parts.Length != 4 || parts[0] != "grid"
+                        || int.Parse(parts[1], CultureInfo.InvariantCulture) != _cols
+                        || int.Parse(parts[2], CultureInfo.InvariantCulture) != _rows
+                        || int.Parse(parts[3], CultureInfo.InvariantCulture) != _step)
                     {
-                        Debug.LogWarning("[elevation] elevation-delta.txt does not match the base "
-                                        + $"grid's {_cols}x{_rows}@{_step}m shape - ignoring it "
-                                        + "rather than trusting a stale or partial delta.");
+                        Debug.LogWarning($"[elevation] {DeltaFileName}'s grid shape does not "
+                                        + "match elevation.txt - ignoring the delta file.");
                         return;
                     }
                     haveHeader = true;
@@ -449,199 +220,230 @@ namespace Noir.Unity
 
             if (row != _rows)
             {
-                Debug.LogWarning($"[elevation] elevation-delta.txt expected {_rows} rows, read "
-                                + $"{row} - ignoring it rather than trusting a partial one.");
+                Debug.LogWarning($"[elevation] {DeltaFileName}: expected {_rows} rows, read "
+                                + $"{row} - ignoring the delta file.");
                 _delta = new float[_rows, _cols];
             }
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor-only surface for the sculpt tool (Assets/Noir/Editor/SculptTerrainWindow.cs and
+        /// its helpers). Nothing at runtime calls any of this - the game only ever reads through
+        /// HeightAt.
+        /// </summary>
+
+        public static int DeltaCols { get { Load(); return _cols; } }
+        public static int DeltaRows { get { Load(); return _rows; } }
+        public static int DeltaStep { get { Load(); return _step; } }
+
+        public static float GetDeltaCell(int col, int row)
+        {
+            Load();
+            return _delta[row, col];
+        }
+
+        public static void SetDeltaCell(int col, int row, float value)
+        {
+            Load();
+            _delta[row, col] = value;
+        }
+
+        /// <summary>A copy of every delta cell - what the sculpt window's undo stack snapshots,
+        /// and what SaveDelta and RestoreDelta both work from.</summary>
+        public static float[,] SnapshotDelta()
+        {
+            Load();
+            var copy = new float[_rows, _cols];
+            Array.Copy(_delta, copy, _delta.Length);
+            return copy;
+        }
+
+        /// <summary>The undo stack's only write path back into the live grid.</summary>
+        public static void RestoreDelta(float[,] snapshot)
+        {
+            Load();
+            Array.Copy(snapshot, _delta, _delta.Length);
+        }
+
+        public static void SaveDelta()
+        {
+            Load();
+            var text = new StringBuilder();
+            text.Append("grid ").Append(_cols).Append(' ').Append(_rows).Append(' ')
+                .Append(_step).Append('\n');
+
+            for (int row = 0; row < _rows; row++)
+            {
+                for (int col = 0; col < _cols; col++)
+                {
+                    if (col > 0) text.Append(' ');
+                    text.Append(_delta[row, col].ToString("0.###", CultureInfo.InvariantCulture));
+                }
+                text.Append('\n');
+            }
+
+            File.WriteAllText(Path.Combine(ContentLoader.Root, DeltaFileName), text.ToString());
+        }
+#endif
+    }
+}
+```
+
+- [ ] **Step 2: Create `Assets/Noir/Editor/SculptCheck.cs`**
+
+```csharp
+using System;
+using System.Globalization;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+using Noir.Unity;
+
+namespace Noir.Editor
+{
+    /// <summary>
+    /// Headless checks for the sculpt tool's non-visual core - the delta layer, the brush's cell
+    /// and vertex math, the undo stack, and the preview scene. Nothing here drives a mouse; that
+    /// part can only be judged by hand in the Scene view (see SculptTerrainWindow's own doc
+    /// comment). Everything else is plain arithmetic and belongs in a probe.
+    ///
+    /// Every check restores whatever it touched - the in-memory delta grid via
+    /// ElevationGrid.RestoreDelta, and Content/elevation-delta.txt via a byte-for-byte rewrite -
+    /// so running this leaves the checked-in content and the running editor session exactly as
+    /// it found them.
+    ///
+    /// Run headlessly:
+    ///   Unity.exe -batchmode -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SculptCheck.Run -logFile <log> -quit
+    /// </summary>
+    public static class SculptCheck
+    {
+        [MenuItem("Noir/Sculpt Check")]
+        public static void Run()
+        {
+            int failures = 0;
+            var originalDelta = ElevationGrid.SnapshotDelta();
+            string deltaPath = Path.Combine(ContentLoader.Root, "elevation-delta.txt");
+            bool hadFile = File.Exists(deltaPath);
+            string originalText = hadFile ? File.ReadAllText(deltaPath) : null;
+
+            try
+            {
+                failures += CheckDeltaRoundTrip();
+                failures += CheckSaveFormat(deltaPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[sculptcheck] FAILED: " + ex);
+                failures++;
+            }
+            finally
+            {
+                ElevationGrid.RestoreDelta(originalDelta);
+                if (hadFile) File.WriteAllText(deltaPath, originalText);
+                else if (File.Exists(deltaPath)) File.Delete(deltaPath);
+            }
+
+            Debug.Log(failures == 0 ? "--- SCULPT CHECK PASSED ---" : $"--- SCULPT CHECK FAILED ({failures}) ---");
+            if (Application.isBatchMode) EditorApplication.Exit(failures == 0 ? 0 : 1);
+        }
+
+        private static int CheckDeltaRoundTrip()
+        {
+            int failures = 0;
+            int col = Mathf.Min(3, ElevationGrid.DeltaCols - 1);
+            int row = Mathf.Min(3, ElevationGrid.DeltaRows - 1);
+            float step = ElevationGrid.DeltaStep;
+
+            float baseline = ElevationGrid.HeightAt(col * step, row * step);
+            ElevationGrid.SetDeltaCell(col, row, 5f);
+            float raised = ElevationGrid.HeightAt(col * step, row * step);
+
+            if (Mathf.Abs(raised - baseline - 5f) > 0.001f)
+            {
+                Debug.LogError($"[sculptcheck] delta cell: expected +5m, got {raised - baseline:0.###}m");
+                failures++;
+            }
+
+            ElevationGrid.SetDeltaCell(col, row, 0f);
+            float restored = ElevationGrid.HeightAt(col * step, row * step);
+            if (Mathf.Abs(restored - baseline) > 0.001f)
+            {
+                Debug.LogError($"[sculptcheck] delta cell: did not return to baseline, off by {restored - baseline:0.###}m");
+                failures++;
+            }
+
+            Debug.Log("[sculptcheck] delta round trip ok");
+            return failures;
+        }
+
+        private static int CheckSaveFormat(string deltaPath)
+        {
+            int failures = 0;
+            ElevationGrid.SetDeltaCell(0, 0, 12.5f);
+            ElevationGrid.SaveDelta();
+
+            if (!File.Exists(deltaPath))
+            {
+                Debug.LogError("[sculptcheck] save: elevation-delta.txt was not written");
+                return failures + 1;
+            }
+
+            string[] lines = File.ReadAllText(deltaPath).Split('\n');
+            string header = lines[0].Trim();
+            string expectedHeader = $"grid {ElevationGrid.DeltaCols} {ElevationGrid.DeltaRows} {ElevationGrid.DeltaStep}";
+            if (header != expectedHeader)
+            {
+                Debug.LogError($"[sculptcheck] save: header '{header}' != expected '{expectedHeader}'");
+                failures++;
+            }
+
+            string[] firstRow = lines[1].Trim().Split(' ');
+            if (!float.TryParse(firstRow[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float written)
+                || Mathf.Abs(written - 12.5f) > 0.001f)
+            {
+                Debug.LogError($"[sculptcheck] save: expected cell (0,0) = 12.5, file has '{firstRow[0]}'");
+                failures++;
+            }
+
+            ElevationGrid.SetDeltaCell(0, 0, 0f);
+            Debug.Log("[sculptcheck] save format ok");
+            return failures;
         }
     }
 }
 ```
 
-Note the private `RawAt` method is renamed/generalized to `Sample(float[,] grid, ...)`, called for both `_grid` and `_delta`. `RawAt` was private and had exactly two call sites, both inside this file (confirmed by project-wide grep) — no other file references it.
+- [ ] **Step 3: Run the check and verify it passes**
 
-- [ ] **Step 4: Confirm it compiles and the probe passes**
+Run: `Unity.exe -batchmode -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SculptCheck.Run -logFile -`
+Expected: log ends with `--- SCULPT CHECK PASSED ---`, exit code 0. `Content/elevation-delta.txt`
+must not exist afterward (this task's check creates and then deletes it, since it didn't exist
+before).
 
-Run the same two commands as Step 2. Expected: no `error CS` matches, and:
-```powershell
-& "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-  -batchmode -quit -nographics -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SculptProbe.Run -logFile C:\SerialKillerGame\.unity-probe.log
-Select-String -Path C:\SerialKillerGame\.unity-probe.log -Pattern "sculpt-probe"
-```
-Expected: `--- SCULPT PROBE PASSED ---` and no `error`-tagged lines, and `Content/elevation-delta.txt` absent from `git status` afterward (the probe restores it).
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add Assets/Noir/Unity/ElevationGrid.cs Assets/Noir/Editor/SculptProbe.cs
-git commit -m "Add the additive delta layer to ElevationGrid, with a headless probe"
+git add Assets/Noir/Unity/ElevationGrid.cs Assets/Noir/Editor/SculptCheck.cs
+git commit -m "Add an additive delta layer to ElevationGrid for the sculpt tool"
 ```
 
 ---
 
-### Task 2: VillageMesh.BuildGround becomes a public entry point
+## Task 2: `SculptUndoStack`
 
 **Files:**
-- Modify: `Assets/Noir/Unity/VillageMesh.cs:391` (signature), `:650` (closing brace / return)
+- Create: `Assets/Noir/Editor/SculptUndoStack.cs`
+- Modify: `Assets/Noir/Editor/SculptCheck.cs`
 
 **Interfaces:**
-- Produces: `VillageMesh.BuildGround(WorldModel world, Transform parent) : GameObject` (was `private static void`).
-- Consumes: nothing new.
+- Consumes: nothing (pure `float[,]` snapshots supplied by the caller)
+- Produces: `SculptUndoStack` with `CanUndo`, `CanRedo` : `bool`,
+  `RecordBeforeStroke(float[,] snapshotBeforeStroke)` : `void`,
+  `Undo(float[,] currentGrid)` : `float[,]`, `Redo(float[,] currentGrid)` : `float[,]`,
+  `Clear()` : `void`. Consumed by `SculptTerrainWindow` in Task 5.
 
-No new test file — this is a signature-only change to code every existing `SmokeTest.Run()` invocation already exercises (`VillageMesh.Build` calls `BuildGround` unconditionally), so the existing smoke test is the regression check.
-
-- [ ] **Step 1: Widen the signature and return the built GameObject**
-
-In `Assets/Noir/Unity/VillageMesh.cs`, change:
-```csharp
-        private static void BuildGround(WorldModel world, Transform parent)
-        {
-            var go = new GameObject("Ground");
-            go.transform.SetParent(parent, false);
-```
-to:
-```csharp
-        /// <summary>Public so the sculpt tool can build just the ground - without walls, roofs,
-        /// props or people - into its own throwaway preview scene, using exactly the geometry
-        /// the real village ships.</summary>
-        public static GameObject BuildGround(WorldModel world, Transform parent)
-        {
-            var go = new GameObject("Ground");
-            go.transform.SetParent(parent, false);
-```
-
-And at the end of the method, change:
-```csharp
-            Debug.Log($"Ground mesh: {chunks.VertexCount + skirt.VertexCount:N0} vertices, "
-                    + $"{risers:N0} risers, {tiles.Count} chunks + surround, "
-                    + $"{chunks.DrawCalls + skirt.DrawCalls} draw calls.");
-        }
-```
-to:
-```csharp
-            Debug.Log($"Ground mesh: {chunks.VertexCount + skirt.VertexCount:N0} vertices, "
-                    + $"{risers:N0} risers, {tiles.Count} chunks + surround, "
-                    + $"{chunks.DrawCalls + skirt.DrawCalls} draw calls.");
-            return go;
-        }
-```
-
-The one existing call site, `BuildGround(world, root.transform);` inside `Build()`, is a statement that already discards its return value — `void` becoming a `GameObject`-returning method with the call left as a bare statement compiles unchanged.
-
-- [ ] **Step 2: Compile-check and run the smoke test**
-
-```powershell
-& "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-  -batchmode -quit -nographics -projectPath C:\SerialKillerGame -logFile C:\SerialKillerGame\.unity-build.log
-Select-String -Path C:\SerialKillerGame\.unity-build.log -Pattern "error CS"
-& "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-  -batchmode -quit -nographics -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SmokeTest.Run -logFile C:\SerialKillerGame\.unity-smoke.log
-Select-String -Path C:\SerialKillerGame\.unity-smoke.log -Pattern "SMOKE TEST"
-```
-Expected: no `error CS`, and `--- SMOKE TEST PASSED ---`.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add Assets/Noir/Unity/VillageMesh.cs
-git commit -m "Make VillageMesh.BuildGround a public entry point for the sculpt tool"
-```
-
----
-
-### Task 3: SculptHistory (undo/redo)
-
-**Files:**
-- Create: `Assets/Noir/Editor/SculptHistory.cs`
-- Modify: `Assets/Noir/Editor/SculptProbe.cs`
-
-**Interfaces:**
-- Produces: `SculptHistory` (sealed class): `BeginStroke(float[,] before) : void`, `Undo(float[,] current) : float[,]`, `Redo(float[,] current) : float[,]`, `CanUndo`, `CanRedo` (`bool`), `Clear() : void`.
-- Consumes: nothing (pure, no dependency on `ElevationGrid` or Unity Editor APIs).
-
-- [ ] **Step 1: Write the failing probe check**
-
-In `Assets/Noir/Editor/SculptProbe.cs`, add `using System.Collections.Generic;` to the top `using` block (needed by Task 4 too — harmless to add now), then add a call and a new method:
-
-```csharp
-                failures += CheckDeltaRoundTrip();
-                failures += CheckSaveLoadFormat();
-                failures += CheckSculptHistory();
-```
-
-```csharp
-        /// <summary>Undo must return exactly the grid handed to BeginStroke; Redo must return
-        /// exactly what Undo took away; starting a new stroke must throw away any redo the user
-        /// never took.</summary>
-        private static int CheckSculptHistory()
-        {
-            int failures = 0;
-            var history = new SculptHistory();
-
-            var a = new float[2, 2] { { 0f, 0f }, { 0f, 0f } };
-            var b = new float[2, 2] { { 1f, 0f }, { 0f, 0f } };
-            var c = new float[2, 2] { { 1f, 2f }, { 0f, 0f } };
-
-            history.BeginStroke(a);
-            history.BeginStroke(b);
-
-            var undoneOnce = history.Undo(c);
-            if (!GridEquals(undoneOnce, b))
-            {
-                Debug.LogError("[sculpt-probe] SculptHistory.Undo did not return the previous stroke");
-                failures++;
-            }
-
-            var undoneTwice = history.Undo(undoneOnce);
-            if (!GridEquals(undoneTwice, a))
-            {
-                Debug.LogError("[sculpt-probe] SculptHistory.Undo did not reach the original grid");
-                failures++;
-            }
-
-            if (history.CanUndo)
-            {
-                Debug.LogError("[sculpt-probe] SculptHistory.CanUndo true with nothing left to undo");
-                failures++;
-            }
-
-            var redoneOnce = history.Redo(undoneTwice);
-            if (!GridEquals(redoneOnce, b))
-            {
-                Debug.LogError("[sculpt-probe] SculptHistory.Redo did not restore the undone stroke");
-                failures++;
-            }
-
-            history.BeginStroke(redoneOnce);
-            if (history.CanRedo)
-            {
-                Debug.LogError("[sculpt-probe] BeginStroke did not clear the redo stack");
-                failures++;
-            }
-
-            Debug.Log("[sculpt-probe] sculpt history  undo/redo/new-stroke-clears-redo all correct");
-            return failures;
-        }
-
-        private static bool GridEquals(float[,] x, float[,] y)
-        {
-            if (x.GetLength(0) != y.GetLength(0) || x.GetLength(1) != y.GetLength(1)) return false;
-            for (int r = 0; r < x.GetLength(0); r++)
-            for (int c = 0; c < x.GetLength(1); c++)
-                if (x[r, c] != y[r, c]) return false;
-            return true;
-        }
-```
-
-This won't compile — `SculptHistory` doesn't exist yet.
-
-- [ ] **Step 2: Confirm it fails (compile error)**
-
-Same compile-check commands as Task 1 Step 2. Expected: `error CS0246` — "The type or namespace name 'SculptHistory' could not be found".
-
-- [ ] **Step 3: Implement SculptHistory**
-
-Create `Assets/Noir/Editor/SculptHistory.cs`:
+- [ ] **Step 1: Create `Assets/Noir/Editor/SculptUndoStack.cs`**
 
 ```csharp
 using System.Collections.Generic;
@@ -649,16 +451,19 @@ using System.Collections.Generic;
 namespace Noir.Editor
 {
     /// <summary>
-    /// Undo/redo for the sculpt window, as a plain stack of whole-delta-grid snapshots.
+    /// Undo/redo for the sculpt tool, as whole-grid snapshots rather than per-cell diffs.
     ///
-    /// The delta grid is 71x81 floats - about 23KB - which is cheap enough to keep the FULL grid
-    /// on every stroke rather than diff cell by cell. Deliberately not wired into Unity's own
-    /// Undo system: that would mean wrapping the delta grid in a ScriptableObject purely to get
-    /// Undo.RegisterCompleteObjectUndo to track it, and a private stack here is simpler, fully
-    /// deterministic, and cannot collide with the user's own scene-edit undo history sharing the
-    /// same Ctrl+Z.
+    /// The grid this undoes is 71x81 floats - about 23KB - so snapshotting all of it on every
+    /// stroke costs nothing worth optimising away, and it means undo can never drift from what a
+    /// stroke actually did: there is no incremental state to get out of sync.
+    ///
+    /// Deliberately not Unity's own Undo system, which only tracks UnityEngine.Objects - wiring
+    /// this into it would mean wrapping the delta grid in a ScriptableObject purely to get
+    /// Undo.RegisterCompleteObjectUndo to see it, for a stack that is simpler and easier to test
+    /// on its own, and that cannot collide with the user's own scene-edit undo history sharing
+    /// the same Ctrl+Z.
     /// </summary>
-    public sealed class SculptHistory
+    public sealed class SculptUndoStack
     {
         private readonly List<float[,]> _undo = new List<float[,]>();
         private readonly List<float[,]> _redo = new List<float[,]>();
@@ -666,33 +471,32 @@ namespace Noir.Editor
         public bool CanUndo => _undo.Count > 0;
         public bool CanRedo => _redo.Count > 0;
 
-        /// <summary>Call before a stroke changes anything, with the grid as it stood going in.
-        /// Starting a new stroke always clears redo - the branch a redo would have replayed no
-        /// longer exists once the user has painted something new.</summary>
-        public void BeginStroke(float[,] before)
+        /// <summary>Call BEFORE a stroke changes the grid, with the grid as it stood going in.
+        /// Starting a new stroke clears redo - the same rule any undo history follows once you
+        /// branch off from the point you rewound to.</summary>
+        public void RecordBeforeStroke(float[,] snapshotBeforeStroke)
         {
-            _undo.Add((float[,])before.Clone());
+            _undo.Add(snapshotBeforeStroke);
             _redo.Clear();
         }
 
-        /// <summary>Pops the most recent stroke and returns the grid to restore. current is
-        /// pushed onto the redo stack so Redo can put it back.</summary>
-        public float[,] Undo(float[,] current)
+        /// <summary>Pops the most recent stroke and returns the grid to restore. Call only when
+        /// CanUndo is true.</summary>
+        public float[,] Undo(float[,] currentGrid)
         {
-            if (!CanUndo) return current;
-            var previous = _undo[_undo.Count - 1];
+            float[,] restore = _undo[_undo.Count - 1];
             _undo.RemoveAt(_undo.Count - 1);
-            _redo.Add((float[,])current.Clone());
-            return previous;
+            _redo.Add(currentGrid);
+            return restore;
         }
 
-        public float[,] Redo(float[,] current)
+        /// <summary>Reapplies the most recently undone stroke. Call only when CanRedo is true.</summary>
+        public float[,] Redo(float[,] currentGrid)
         {
-            if (!CanRedo) return current;
-            var next = _redo[_redo.Count - 1];
+            float[,] restore = _redo[_redo.Count - 1];
             _redo.RemoveAt(_redo.Count - 1);
-            _undo.Add((float[,])current.Clone());
-            return next;
+            _undo.Add(currentGrid);
+            return restore;
         }
 
         public void Clear()
@@ -704,231 +508,520 @@ namespace Noir.Editor
 }
 ```
 
-- [ ] **Step 4: Confirm it compiles and the probe passes**
+- [ ] **Step 2: Add `CheckUndoStack` to `Assets/Noir/Editor/SculptCheck.cs`**
 
-Same commands as Task 1 Step 4. Expected: no `error CS`, log contains `sculpt history  undo/redo/new-stroke-clears-redo all correct` and `--- SCULPT PROBE PASSED ---`.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add Assets/Noir/Editor/SculptHistory.cs Assets/Noir/Editor/SculptProbe.cs
-git commit -m "Add SculptHistory, a pure undo/redo stack of delta-grid snapshots"
-```
-
----
-
-### Task 4: SculptBrush (falloff math)
-
-**Files:**
-- Create: `Assets/Noir/Editor/SculptBrush.cs`
-- Modify: `Assets/Noir/Editor/SculptProbe.cs`
-
-**Interfaces:**
-- Produces: `SculptBrush.FalloffWeight(float distance, float radius) : float`; `SculptBrush.CellsInBrush(float centreX, float centreY, float radius, int step, int cols, int rows) : IEnumerable<(int col, int row, float weight)>`.
-- Consumes: nothing.
-
-- [ ] **Step 1: Write the failing probe check**
-
-In `Assets/Noir/Editor/SculptProbe.cs`, add a call:
+Add this method to the `SculptCheck` class:
 
 ```csharp
-                failures += CheckSculptHistory();
-                failures += CheckBrushFalloff();
-```
-
-and a new method:
-
-```csharp
-        /// <summary>Falloff is 1.0 dead centre, 0.0 at the brush edge, and strictly between the
-        /// two halfway out. CellsInBrush must find the cell at its own centre and must not reach
-        /// a cell nowhere near it - the two ends of "the brush touches the right cells".</summary>
-        private static int CheckBrushFalloff()
+        private static int CheckUndoStack()
         {
             int failures = 0;
+            var stack = new SculptUndoStack();
+            var a = new float[,] { { 1f, 2f }, { 3f, 4f } };
+            var b = new float[,] { { 9f, 9f }, { 9f, 9f } };
 
-            float centreWeight = SculptBrush.FalloffWeight(0f, 10f);
-            if (Mathf.Abs(centreWeight - 1f) > 0.001f)
+            if (stack.CanUndo || stack.CanRedo)
             {
-                Debug.LogError($"[sculpt-probe] brush falloff: centre weight {centreWeight:0.000}, "
-                              + "expected 1.0");
+                Debug.LogError("[sculptcheck] undo: fresh stack should have nothing to undo or redo");
                 failures++;
             }
 
-            float edgeWeight = SculptBrush.FalloffWeight(10f, 10f);
-            if (Mathf.Abs(edgeWeight) > 0.001f)
+            stack.RecordBeforeStroke(a);
+            if (!stack.CanUndo)
             {
-                Debug.LogError($"[sculpt-probe] brush falloff: edge weight {edgeWeight:0.000}, "
-                              + "expected 0.0");
+                Debug.LogError("[sculptcheck] undo: CanUndo false after a stroke was recorded");
                 failures++;
             }
 
-            float midWeight = SculptBrush.FalloffWeight(5f, 10f);
-            if (midWeight <= edgeWeight || midWeight >= centreWeight)
+            var restored = stack.Undo(b);
+            if (restored != a)
             {
-                Debug.LogError($"[sculpt-probe] brush falloff: mid weight {midWeight:0.000} not "
-                              + $"between edge {edgeWeight:0.000} and centre {centreWeight:0.000}");
+                Debug.LogError("[sculptcheck] undo: did not return the pre-stroke grid");
+                failures++;
+            }
+            if (!stack.CanRedo)
+            {
+                Debug.LogError("[sculptcheck] undo: CanRedo false immediately after an undo");
                 failures++;
             }
 
-            // A cell dead centre of a 20m brush at (300,300) with a 30m step must appear -
-            // 300/30 = 10 exactly. A cell in the far corner of a 71x81 grid must not.
-            var cells = new List<(int col, int row, float weight)>(
-                SculptBrush.CellsInBrush(300f, 300f, 20f, 30, 71, 81));
-
-            bool centreCellFound = false;
-            foreach (var cell in cells)
-                if (cell.col == 10 && cell.row == 10) centreCellFound = true;
-            if (!centreCellFound)
+            var redone = stack.Redo(a);
+            if (redone != b)
             {
-                Debug.LogError("[sculpt-probe] brush falloff: CellsInBrush missed the cell at "
-                              + "its own centre");
+                Debug.LogError("[sculptcheck] undo: redo did not return the grid undo replaced");
                 failures++;
             }
 
-            foreach (var cell in cells)
+            stack.RecordBeforeStroke(a);
+            if (stack.CanRedo)
             {
-                if (cell.col != 70 && cell.row != 80) continue;
-                Debug.LogError($"[sculpt-probe] brush falloff: CellsInBrush included "
-                              + $"({cell.col},{cell.row}), nowhere near the brush centre");
+                Debug.LogError("[sculptcheck] undo: a new stroke should clear the redo stack");
                 failures++;
-                break;
             }
 
-            Debug.Log($"[sculpt-probe] brush falloff  centre 1.0, edge 0.0, {cells.Count} cells "
-                    + "for a 20m brush");
+            Debug.Log("[sculptcheck] undo stack ok");
             return failures;
         }
 ```
 
-This won't compile — `SculptBrush` doesn't exist yet.
+And call it from `Run()`, alongside the existing checks:
 
-- [ ] **Step 2: Confirm it fails (compile error)**
+```csharp
+                failures += CheckDeltaRoundTrip();
+                failures += CheckUndoStack();
+                failures += CheckSaveFormat(deltaPath);
+```
 
-Same compile-check commands as Task 1 Step 2. Expected: `error CS0246` — "The type or namespace name 'SculptBrush' could not be found".
+- [ ] **Step 3: Run the check and verify it passes**
 
-- [ ] **Step 3: Implement SculptBrush**
+Run: `Unity.exe -batchmode -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SculptCheck.Run -logFile -`
+Expected: `--- SCULPT CHECK PASSED ---`, exit code 0.
 
-Create `Assets/Noir/Editor/SculptBrush.cs`:
+- [ ] **Step 4: Commit**
+
+```bash
+git add Assets/Noir/Editor/SculptUndoStack.cs Assets/Noir/Editor/SculptCheck.cs
+git commit -m "Add the sculpt tool's undo/redo stack"
+```
+
+---
+
+## Task 3: `SculptBrush`
+
+**Files:**
+- Create: `Assets/Noir/Editor/SculptBrush.cs`
+- Modify: `Assets/Noir/Editor/SculptCheck.cs`
+
+**Interfaces:**
+- Consumes: `ElevationGrid.{DeltaCols,DeltaRows,DeltaStep,GetDeltaCell,SetDeltaCell,HeightAt}`
+  (Task 1); `Noir.Unity.MeshChunks.Size : int` (existing, `Assets/Noir/Unity/MeshChunks.cs`)
+- Produces:
+  - `SculptBrush.OverlappingChunks(float cx, float cy, float radius, IReadOnlyDictionary<(int col, int row), MeshFilter> chunkCache)` : `IEnumerable<MeshFilter>`
+  - `SculptBrush.Apply(float cx, float cy, float radius, float strength, bool invert, IEnumerable<MeshFilter> overlappingChunks)` : `void`
+  - Both consumed by `SculptTerrainWindow` in Task 5.
+
+- [ ] **Step 1: Create `Assets/Noir/Editor/SculptBrush.cs`**
 
 ```csharp
 using System.Collections.Generic;
 using UnityEngine;
+using Noir.Unity;
 
 namespace Noir.Editor
 {
     /// <summary>
-    /// The pure arithmetic of one brush stroke: which delta cells a stroke touches, and how much
-    /// of the stroke's strength each one gets.
-    ///
-    /// Kept apart from SculptTerrainWindow so it can be exercised without a Scene view - the
-    /// window's own job is reading the mouse and writing pixels, and none of that is where a
-    /// falloff bug would hide.
+    /// The brush's own math: which delta cells a stroke touches, and which mesh vertices have to
+    /// move because of it. No SceneView, no EditorWindow, no mouse - SculptTerrainWindow is the
+    /// only caller, and everything here works from plain world coordinates so it can be checked
+    /// headlessly against a hand-built mesh (see SculptCheck.CheckBrushPaint).
     /// </summary>
     public static class SculptBrush
     {
-        /// <summary>0 at the brush edge, 1 at its centre, smoothstepped rather than linear so a
-        /// wide brush fades out instead of ending in a visible ring.</summary>
-        public static float FalloffWeight(float distance, float radius)
+        /// <summary>Which cached Ground chunks a brush centred at (cx, cy) could possibly touch -
+        /// including the one-cell margin DeltaStep beyond the brush radius, since a cell's
+        /// bilinear neighbours can move a vertex that stands outside the radius itself.</summary>
+        public static IEnumerable<MeshFilter> OverlappingChunks(float cx, float cy, float radius,
+            IReadOnlyDictionary<(int col, int row), MeshFilter> chunkCache)
         {
-            if (radius <= 0f) return distance <= 0f ? 1f : 0f;
-            float t = Mathf.Clamp01(1f - distance / radius);
-            return t * t * (3f - 2f * t);
+            float reach = radius + ElevationGrid.DeltaStep;
+            int colFrom = Mathf.FloorToInt((cx - reach) / MeshChunks.Size);
+            int colTo = Mathf.FloorToInt((cx + reach) / MeshChunks.Size);
+            int rowFrom = Mathf.FloorToInt((cy - reach) / MeshChunks.Size);
+            int rowTo = Mathf.FloorToInt((cy + reach) / MeshChunks.Size);
+
+            for (int row = rowFrom; row <= rowTo; row++)
+            for (int col = colFrom; col <= colTo; col++)
+                if (chunkCache.TryGetValue((col, row), out var mf) && mf != null)
+                    yield return mf;
         }
 
-        /// <summary>Every delta cell within radius of (centreX, centreY), and the falloff weight
-        /// each one gets. Cell (col, row) sits at world (col * step, row * step) - the same
-        /// lattice ElevationGrid samples bilinearly - so walking one cell past the radius on
-        /// every side (rather than exactly to it) is what keeps a wide brush from leaving a hard
-        /// step where a sample point just inside the radius would otherwise blend against a cell
-        /// just outside it that was never touched.</summary>
-        public static IEnumerable<(int col, int row, float weight)> CellsInBrush(
-            float centreX, float centreY, float radius, int step, int cols, int rows)
+        /// <summary>
+        /// One brush application: nudges every delta cell within `radius` of (cx, cy) by
+        /// `strength`, weighted by a smooth radial falloff, then patches every vertex of every
+        /// given chunk whose (x, y) could have moved - live, without rebuilding anything.
+        ///
+        /// Costed in vertex fetches, not vertex count: Mesh.vertices copies the whole array on
+        /// every call, so each chunk is read once (for the "before" heights) and written once
+        /// (after mutating the grid), never per vertex.
+        /// </summary>
+        public static void Apply(float cx, float cy, float radius, float strength, bool invert,
+            IEnumerable<MeshFilter> overlappingChunks)
         {
-            int margin = 1;
-            int c0 = Mathf.Max(0, Mathf.FloorToInt((centreX - radius) / step) - margin);
-            int c1 = Mathf.Min(cols - 1, Mathf.CeilToInt((centreX + radius) / step) + margin);
-            int r0 = Mathf.Max(0, Mathf.FloorToInt((centreY - radius) / step) - margin);
-            int r1 = Mathf.Min(rows - 1, Mathf.CeilToInt((centreY + radius) / step) + margin);
+            float signedStrength = strength * (invert ? -1f : 1f);
+            float reach = radius + ElevationGrid.DeltaStep;
 
-            for (int row = r0; row <= r1; row++)
-            for (int col = c0; col <= c1; col++)
+            var verts = new Dictionary<MeshFilter, Vector3[]>();
+            var before = new Dictionary<MeshFilter, float[]>();
+
+            foreach (var mf in overlappingChunks)
             {
-                float dx = col * step - centreX;
-                float dy = row * step - centreY;
-                float distance = Mathf.Sqrt(dx * dx + dy * dy);
-                float weight = FalloffWeight(distance, radius);
-                if (weight > 0f) yield return (col, row, weight);
+                var v = mf.sharedMesh.vertices;
+                var b = new float[v.Length];
+                for (int i = 0; i < v.Length; i++)
+                    if (InReach(v[i], cx, cy, reach)) b[i] = ElevationGrid.HeightAt(v[i].x, -v[i].z);
+                verts[mf] = v;
+                before[mf] = b;
+            }
+
+            PaintCells(cx, cy, radius, signedStrength);
+
+            foreach (var entry in verts)
+            {
+                var mf = entry.Key;
+                var v = entry.Value;
+                var b = before[mf];
+                bool touched = false;
+
+                for (int i = 0; i < v.Length; i++)
+                {
+                    if (!InReach(v[i], cx, cy, reach)) continue;
+                    float after = ElevationGrid.HeightAt(v[i].x, -v[i].z);
+                    v[i].y += after - b[i];
+                    touched = true;
+                }
+
+                if (!touched) continue;
+                mf.sharedMesh.vertices = v;
+                mf.sharedMesh.RecalculateNormals();
+                mf.sharedMesh.RecalculateBounds();
+            }
+        }
+
+        private static bool InReach(Vector3 vertex, float cx, float cy, float reach)
+        {
+            float dx = vertex.x - cx, dy = -vertex.z - cy;
+            return dx * dx + dy * dy <= reach * reach;
+        }
+
+        /// <summary>Nudges every delta cell within `radius` of (cx, cy). A smooth falloff -
+        /// full strength at the centre, none at the rim - so a wide brush blends into its
+        /// neighbours instead of stepping at the edge.</summary>
+        private static void PaintCells(float cx, float cy, float radius, float signedStrength)
+        {
+            int step = ElevationGrid.DeltaStep;
+            int colFrom = Mathf.Max(0, Mathf.FloorToInt((cx - radius) / step));
+            int colTo = Mathf.Min(ElevationGrid.DeltaCols - 1, Mathf.CeilToInt((cx + radius) / step));
+            int rowFrom = Mathf.Max(0, Mathf.FloorToInt((cy - radius) / step));
+            int rowTo = Mathf.Min(ElevationGrid.DeltaRows - 1, Mathf.CeilToInt((cy + radius) / step));
+
+            for (int row = rowFrom; row <= rowTo; row++)
+            for (int col = colFrom; col <= colTo; col++)
+            {
+                float dx = col * step - cx, dy = row * step - cy;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                if (dist > radius) continue;
+
+                float t = 1f - Mathf.SmoothStep(0f, 1f, dist / radius);
+                ElevationGrid.SetDeltaCell(col, row, ElevationGrid.GetDeltaCell(col, row) + signedStrength * t);
             }
         }
     }
 }
 ```
 
-- [ ] **Step 4: Confirm it compiles and the probe passes**
+- [ ] **Step 2: Add `CheckBrushPaint` to `Assets/Noir/Editor/SculptCheck.cs`**
 
-Same commands as Task 1 Step 4. Expected: no `error CS`, log contains `brush falloff  centre 1.0, edge 0.0` and `--- SCULPT PROBE PASSED ---`.
+This builds one throwaway quad by hand — no `SculptPreview` dependency, so this task is testable
+on its own. Add:
 
-- [ ] **Step 5: Commit**
+```csharp
+        private static int CheckBrushPaint()
+        {
+            int failures = 0;
+            int col = 1, row = 1;
+            float step = ElevationGrid.DeltaStep;
+            float wx = col * step, wy = row * step;
+
+            GameObject go = null;
+            try
+            {
+                float before = ElevationGrid.HeightAt(wx, wy);
+
+                var mesh = new Mesh();
+                mesh.SetVertices(new[] { new Vector3(wx, before, -wy) });
+                mesh.SetIndices(new[] { 0, 0, 0 }, MeshTopology.Triangles, 0);
+
+                go = new GameObject("SculptCheckQuad");
+                var mf = go.AddComponent<MeshFilter>();
+                mf.sharedMesh = mesh;
+
+                var chunks = new Dictionary<(int, int), MeshFilter> { [(0, 0)] = mf };
+                var overlapping = SculptBrush.OverlappingChunks(wx, wy, 10f, chunks);
+                SculptBrush.Apply(wx, wy, 10f, 2f, invert: false, overlapping);
+
+                float afterCell = ElevationGrid.GetDeltaCell(col, row);
+                if (Mathf.Abs(afterCell - 2f) > 0.001f)
+                {
+                    Debug.LogError($"[sculptcheck] brush: expected cell delta 2m at brush centre, got {afterCell:0.###}m");
+                    failures++;
+                }
+
+                float afterVertexY = mf.sharedMesh.vertices[0].y;
+                if (Mathf.Abs(afterVertexY - before - 2f) > 0.001f)
+                {
+                    Debug.LogError($"[sculptcheck] brush: expected vertex to rise 2m, rose {afterVertexY - before:0.###}m");
+                    failures++;
+                }
+
+                ElevationGrid.SetDeltaCell(col, row, 0f);
+                Debug.Log("[sculptcheck] brush paint ok");
+            }
+            finally
+            {
+                if (go != null) UnityEngine.Object.DestroyImmediate(go);
+            }
+
+            return failures;
+        }
+```
+
+Add `using System.Collections.Generic;` and `using UnityEngine;` (`UnityEngine` is already
+present) to the top of the file, and call the new check from `Run()`:
+
+```csharp
+                failures += CheckDeltaRoundTrip();
+                failures += CheckUndoStack();
+                failures += CheckBrushPaint();
+                failures += CheckSaveFormat(deltaPath);
+```
+
+- [ ] **Step 3: Run the check and verify it passes**
+
+Run: `Unity.exe -batchmode -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SculptCheck.Run -logFile -`
+Expected: `--- SCULPT CHECK PASSED ---`, exit code 0.
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add Assets/Noir/Editor/SculptBrush.cs Assets/Noir/Editor/SculptProbe.cs
-git commit -m "Add SculptBrush, the pure falloff/cell-selection math for one stroke"
+git add Assets/Noir/Editor/SculptBrush.cs Assets/Noir/Editor/SculptCheck.cs
+git commit -m "Add the sculpt brush's cell and vertex patch math"
 ```
 
 ---
 
-### Task 5: SculptTerrainWindow
+## Task 4: `SculptPreview` (ground-only Edit-Mode scene)
 
 **Files:**
-- Create: `Assets/Noir/Editor/SculptTerrainWindow.cs`
+- Modify: `Assets/Noir/Unity/VillageMesh.cs:391` (widen `BuildGround` to `public`)
+- Create: `Assets/Noir/Editor/SculptPreview.cs`
+- Modify: `Assets/Noir/Editor/SculptCheck.cs`
 
 **Interfaces:**
-- Consumes: `ElevationGrid.{DeltaCols, DeltaRows, DeltaStep, GetDeltaCell, SetDeltaCell, CopyDelta, RestoreDelta, SaveDelta, HeightAt}` (Task 1); `VillageMesh.BuildGround(WorldModel, Transform) : GameObject` (Task 2); `SculptHistory` (Task 3); `SculptBrush.{FalloffWeight, CellsInBrush}` (Task 4); `Space3D.GroundHit(Ray, out Vector3) : bool`, `Space3D.FromWorld(Vector3) : Vec2`; `ContentLoader.{Exists, Root, Read}`; `PlaceKindTable.{IsInstalled, Install, Parse}`; `VillageParser.Parse`; `WorldBuilder.Build`; `VillageHost.{MapFile, Seed}`.
-- Produces: the `Noir/Sculpt Terrain` menu item. Nothing else in the project depends on this file.
+- Consumes: `VillageMesh.BuildGround(WorldModel world, Transform parent)` (now public);
+  `VillageHost.MapFile : string` (existing, public); `ContentLoader`, `VillageParser`,
+  `WorldBuilder`, `PlaceKindTable` (existing, `Noir.Core.World` / `Noir.Unity`)
+- Produces: `SculptPreview` with `Root : GameObject`, `World : WorldModel`,
+  `Chunks : IReadOnlyDictionary<(int col, int row), MeshFilter>`, `Build() : void`,
+  `Teardown() : void`. Consumed by `SculptTerrainWindow` in Task 5.
 
-This is the one piece of the design that cannot be verified headlessly — there is no way to script a mouse drag across a Scene view in `-batchmode`. Painting is checked by hand against the manual checklist in Step 4. Every other file in this plan exists specifically to keep as much of the risk as possible OUT of this unverifiable path.
+- [ ] **Step 1: Widen `VillageMesh.BuildGround` to `public`**
 
-- [ ] **Step 1: Implement the window**
-
-Create `Assets/Noir/Editor/SculptTerrainWindow.cs`:
+In `Assets/Noir/Unity/VillageMesh.cs`, change:
 
 ```csharp
-using System;
+        private static void BuildGround(WorldModel world, Transform parent)
+```
+
+to:
+
+```csharp
+        public static void BuildGround(WorldModel world, Transform parent)
+```
+
+No other change in that file — every existing caller of `BuildGround` still works unchanged.
+
+- [ ] **Step 2: Create `Assets/Noir/Editor/SculptPreview.cs`**
+
+```csharp
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
-using Noir.Core.Contracts;
 using Noir.Core.World;
 using Noir.Unity;
 
 namespace Noir.Editor
 {
     /// <summary>
-    /// Nudges the real ground at specific spots without ever touching the measured data
-    /// underneath. Edit Mode only, the same way Unity's own Terrain tool works - see
-    /// docs/superpowers/specs/2026-08-01-sculpt-paint-tool-design.md for why.
-    ///
-    /// Opens its own throwaway ground-only preview (no city, no people, no traffic) built by the
-    /// same VillageMesh.BuildGround the real village uses, and patches only the mesh vertices a
-    /// stroke actually touches - see SculptBrush for which those are and ElevationGrid for where
-    /// the height itself now lives.
+    /// The ground-only Edit-Mode scene the sculpt window paints on: no city, no buildings, no
+    /// traffic, no people - none of that changes shape under a brush, and building it anyway
+    /// would be exactly the "regenerate everything on every stroke" cost this tool exists to
+    /// avoid. Built from the same VillageMesh.BuildGround every full village build already runs,
+    /// so there is exactly one ground mesh generator in the project rather than a second one that
+    /// could drift from it.
     /// </summary>
-    public sealed class SculptTerrainWindow : EditorWindow
+    public sealed class SculptPreview
     {
-        private const int ChunkSize = 64;   // MeshChunks.Size - the ground's own chunk grid
+        public GameObject Root { get; private set; }
+        public WorldModel World { get; private set; }
 
-        private WorldModel _world;
-        private GameObject _previewRoot;
-        private GameObject _groundRoot;
         private readonly Dictionary<(int col, int row), MeshFilter> _chunks =
             new Dictionary<(int col, int row), MeshFilter>();
 
-        private readonly SculptHistory _history = new SculptHistory();
-        private float[,] _strokeStart;   // delta grid at the moment the mouse went down, or null
+        public IReadOnlyDictionary<(int col, int row), MeshFilter> Chunks => _chunks;
 
-        private float _radius = 12f;
-        private float _strength = 0.15f;
-        private bool _painting;
+        /// <summary>Tears down any previous preview and builds a fresh one from the map file on
+        /// disk. Also how Undo/Redo apply a restored delta grid - simpler and safer than trying
+        /// to re-derive exactly which chunks a multi-stroke undo touched.</summary>
+        public void Build()
+        {
+            Teardown();
+
+            PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
+            var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
+            World = WorldBuilder.Build(layout);
+
+            Root = new GameObject("SculptPreview");
+            VillageMesh.BuildGround(World, Root.transform);
+
+            var ground = Root.transform.Find("Ground");
+            foreach (Transform child in ground)
+            {
+                var mf = child.GetComponent<MeshFilter>();
+                if (mf == null) continue;
+                if (!TryParseChunkName(child.name, out int col, out int row)) continue;
+                _chunks[(col, row)] = mf;
+            }
+
+            Debug.Log($"[sculpt] preview built: {World.Width}x{World.Height}, {_chunks.Count} ground chunks.");
+        }
+
+        public void Teardown()
+        {
+            if (Root != null) Object.DestroyImmediate(Root);
+            Root = null;
+            World = null;
+            _chunks.Clear();
+        }
+
+        /// <summary>Chunk mesh names are "Ground {col},{row}" (see MeshChunks.Emit) - "Ground"
+        /// specifically, not "Surround", which is the same container's unchunked map-edge skirt
+        /// and would otherwise collide with a real chunk at (0,0).</summary>
+        private static bool TryParseChunkName(string name, out int col, out int row)
+        {
+            col = row = 0;
+            var parts = name.Split(' ');
+            if (parts.Length != 2 || parts[0] != "Ground") return false;
+            var coords = parts[1].Split(',');
+            if (coords.Length != 2) return false;
+            return int.TryParse(coords[0], out col) && int.TryParse(coords[1], out row);
+        }
+    }
+}
+```
+
+- [ ] **Step 3: Add `CheckPreviewBuild` to `Assets/Noir/Editor/SculptCheck.cs`**
+
+```csharp
+        private static int CheckPreviewBuild()
+        {
+            int failures = 0;
+            var preview = new SculptPreview();
+
+            try
+            {
+                preview.Build();
+
+                if (preview.Root == null)
+                {
+                    Debug.LogError("[sculptcheck] preview: Root is null after Build");
+                    failures++;
+                }
+                if (preview.World == null)
+                {
+                    Debug.LogError("[sculptcheck] preview: World is null after Build");
+                    failures++;
+                }
+                if (preview.Chunks.Count == 0)
+                {
+                    Debug.LogError("[sculptcheck] preview: no ground chunks were cached");
+                    failures++;
+                }
+
+                Debug.Log($"[sculptcheck] preview build ok ({preview.Chunks.Count} chunks)");
+            }
+            finally
+            {
+                preview.Teardown();
+            }
+
+            if (preview.Root != null)
+            {
+                Debug.LogError("[sculptcheck] preview: Root survived Teardown");
+                failures++;
+            }
+
+            return failures;
+        }
+```
+
+Call it from `Run()`:
+
+```csharp
+                failures += CheckDeltaRoundTrip();
+                failures += CheckUndoStack();
+                failures += CheckBrushPaint();
+                failures += CheckPreviewBuild();
+                failures += CheckSaveFormat(deltaPath);
+```
+
+- [ ] **Step 4: Run the check and verify it passes**
+
+Run: `Unity.exe -batchmode -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SculptCheck.Run -logFile -`
+Expected: `--- SCULPT CHECK PASSED ---`, exit code 0. Note this check builds and tears down a real
+ground mesh for whatever `VillageHost.MapFile` currently points at (`city.txt`) — expect the log
+to also show the `[sculpt] preview built: ...` line with a non-zero chunk count.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Assets/Noir/Unity/VillageMesh.cs Assets/Noir/Editor/SculptPreview.cs Assets/Noir/Editor/SculptCheck.cs
+git commit -m "Add the sculpt tool's ground-only Edit-Mode preview scene"
+```
+
+---
+
+## Task 5: `SculptTerrainWindow`
+
+**Files:**
+- Create: `Assets/Noir/Editor/SculptTerrainWindow.cs`
+
+**Interfaces:**
+- Consumes: `SculptPreview` (Task 4), `SculptBrush` (Task 3), `SculptUndoStack` (Task 2),
+  `ElevationGrid.{SnapshotDelta,RestoreDelta,SaveDelta}` (Task 1), `Space3D.GroundHit`
+  (existing, `Assets/Noir/Unity/Space3D.cs`)
+- Produces: the `Noir/Sculpt Terrain` menu item. Nothing else depends on this task — it is the
+  top of the stack.
+
+- [ ] **Step 1: Create `Assets/Noir/Editor/SculptTerrainWindow.cs`**
+
+```csharp
+using UnityEditor;
+using UnityEngine;
+using Noir.Unity;
+
+namespace Noir.Editor
+{
+    /// <summary>
+    /// The sculpt brush itself: an Edit-Mode window that paints height onto the ground preview
+    /// it builds when opened. Left-drag in the Scene view raises; hold Shift to lower.
+    ///
+    /// EDIT MODE ONLY, on purpose - see docs/superpowers/specs/2026-08-01-sculpt-paint-tool-design.md.
+    /// It never touches Play mode's MeshCollider (Assets/Noir/Unity/CityCollision.cs); that picks
+    /// up whatever gets saved here the next time the world is built.
+    ///
+    /// Undo/Redo are the window's own buttons, not Unity's global Ctrl+Z/Cmd+Z - see
+    /// SculptUndoStack's doc comment for why. This has no automated test: driving a mouse through
+    /// SceneView is not something a headless probe can do, so verifying this file means actually
+    /// opening it and painting - see Step 2 below.
+    /// </summary>
+    public sealed class SculptTerrainWindow : EditorWindow
+    {
+        private SculptPreview _preview;
+        private SculptUndoStack _undo;
+        private float[,] _strokeBefore;
+        private bool _dragging;
+        private bool _dirty;
+        private float _radius = 20f;
+        private float _strength = 0.2f;
 
         [MenuItem("Noir/Sculpt Terrain")]
         public static void Open() => GetWindow<SculptTerrainWindow>("Sculpt Terrain");
@@ -936,275 +1029,180 @@ namespace Noir.Editor
         private void OnEnable()
         {
             SceneView.duringSceneGui += OnSceneGUI;
-            RebuildPreview();
+            _preview = new SculptPreview();
+            _undo = new SculptUndoStack();
+            _preview.Build();
         }
 
         private void OnDisable()
         {
             SceneView.duringSceneGui -= OnSceneGUI;
-            TeardownPreview();
+
+            if (_dirty && EditorUtility.DisplayDialog("Sculpt Terrain",
+                    "Save painted height changes to elevation-delta.txt before closing?",
+                    "Save", "Discard"))
+                ElevationGrid.SaveDelta();
+
+            _preview?.Teardown();
         }
-
-        /// <summary>Unity calls this when the window closes with hasUnsavedChanges true and the
-        /// user picks "Save" on the native prompt - the same mechanism Shader Graph and Timeline
-        /// use, which is what makes this "matching Unity's own unsaved-scene prompt" rather than
-        /// a bespoke dialog.</summary>
-        public override void SaveChanges()
-        {
-            ElevationGrid.SaveDelta();
-            hasUnsavedChanges = false;
-            base.SaveChanges();
-        }
-
-        // ---------- preview lifecycle ----------
-
-        private void RebuildPreview()
-        {
-            TeardownPreview();
-
-            if (!ContentLoader.Exists)
-            {
-                Debug.LogError($"[sculpt] content not found at {ContentLoader.Root}");
-                return;
-            }
-
-            if (!PlaceKindTable.IsInstalled)
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-
-            var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-            _world = WorldBuilder.Build(layout, VillageHost.Seed);
-
-            _previewRoot = new GameObject("SculptPreview") { hideFlags = HideFlags.DontSave };
-            _groundRoot = VillageMesh.BuildGround(_world, _previewRoot.transform);
-
-            _chunks.Clear();
-            foreach (var filter in _groundRoot.GetComponentsInChildren<MeshFilter>())
-            {
-                var parts = filter.gameObject.name.Split(' ');
-                if (parts.Length != 2 || parts[0] != "Ground") continue;   // skips "Surround 0,0"
-                var coords = parts[1].Split(',');
-                if (coords.Length != 2) continue;
-                if (!int.TryParse(coords[0], out int col) || !int.TryParse(coords[1], out int row))
-                    continue;
-                _chunks[(col, row)] = filter;
-            }
-
-            Debug.Log($"[sculpt] preview ready: {_chunks.Count} ground chunks.");
-        }
-
-        private void TeardownPreview()
-        {
-            if (_previewRoot != null) DestroyImmediate(_previewRoot);
-            _previewRoot = null;
-            _groundRoot = null;
-            _chunks.Clear();
-        }
-
-        // ---------- GUI ----------
 
         private void OnGUI()
         {
+            EditorGUILayout.LabelField("Ground chunks", _preview?.Chunks.Count.ToString() ?? "0");
+            _radius = EditorGUILayout.Slider("Radius (m)", _radius, 5f, 120f);
+            _strength = EditorGUILayout.Slider("Strength (m/sample)", _strength, 0.02f, 2f);
             EditorGUILayout.HelpBox(
-                "Paint in the Scene view with the left mouse button. Shift lowers instead of "
-              + "raising.", MessageType.Info);
+                "Drag with the left mouse button in the Scene view to raise. Hold Shift to lower.",
+                MessageType.None);
 
-            _radius = EditorGUILayout.Slider("Radius (m)", _radius, 1f, 60f);
-            _strength = EditorGUILayout.Slider("Strength (m/pass)", _strength, 0.02f, 1f);
+            EditorGUILayout.Space();
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(_undo == null || !_undo.CanUndo))
+                    if (GUILayout.Button("Undo")) OnUndoClicked();
+                using (new EditorGUI.DisabledScope(_undo == null || !_undo.CanRedo))
+                    if (GUILayout.Button("Redo")) OnRedoClicked();
+            }
 
-            using (new EditorGUI.DisabledScope(!_history.CanUndo))
-                if (GUILayout.Button("Undo")) ApplyHistory(_history.Undo);
+            EditorGUILayout.Space();
+            using (new EditorGUI.DisabledScope(!_dirty))
+                if (GUILayout.Button("Save"))
+                {
+                    ElevationGrid.SaveDelta();
+                    _dirty = false;
+                }
 
-            using (new EditorGUI.DisabledScope(!_history.CanRedo))
-                if (GUILayout.Button("Redo")) ApplyHistory(_history.Redo);
+            if (GUILayout.Button("Rebuild Preview")) _preview.Build();
 
-            using (new EditorGUI.DisabledScope(!hasUnsavedChanges))
-                if (GUILayout.Button("Save")) SaveChanges();
-
-            if (GUILayout.Button("Rebuild Preview (pick up map edits)")) RebuildPreview();
-
-            EditorGUILayout.LabelField("Unsaved changes:", hasUnsavedChanges ? "yes" : "no");
+            EditorGUILayout.LabelField("Unsaved changes", _dirty ? "yes" : "no");
         }
-
-        /// <summary>Undo/redo goes through a full RebuildPreview rather than patching vertices
-        /// incrementally. A stroke's own vertex patch can lean on "only the delta changed, so the
-        /// difference in HeightAt IS the difference to apply" (see Paint below) - but a popped
-        /// snapshot can touch cells anywhere on the map, not just under a brush, and a full
-        /// rebuild is the same code path the real village already trusts rather than a second,
-        /// narrower one written just for this.</summary>
-        private void ApplyHistory(Func<float[,], float[,]> pop)
-        {
-            var current = ElevationGrid.CopyDelta();
-            if (current == null) return;
-            var restored = pop(current);
-            ElevationGrid.RestoreDelta(restored);
-            RebuildPreview();
-            hasUnsavedChanges = _history.CanUndo || hasUnsavedChanges;
-            Repaint();
-        }
-
-        // ---------- painting ----------
 
         private void OnSceneGUI(SceneView view)
         {
-            var e = Event.current;
-            if (e == null || _groundRoot == null) return;
+            if (_preview?.Root == null) return;
 
-            var ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-            if (!Space3D.GroundHit(ray, out var hit)) return;
+            Event e = Event.current;
+            int controlId = GUIUtility.GetControlID(FocusType.Passive);
+            if (e.type == EventType.Layout) HandleUtility.AddDefaultControl(controlId);
+            if (e.button != 0) return;
 
-            if (e.type == EventType.MouseDown && e.button == 0 && !e.alt)
+            bool isDown = e.type == EventType.MouseDown;
+            bool isDrag = e.type == EventType.MouseDrag;
+            bool isUp = e.type == EventType.MouseUp;
+            if (!isDown && !isDrag && !isUp) return;
+
+            Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+            if (!Space3D.GroundHit(ray, out Vector3 hit))
             {
-                _painting = true;
-                _strokeStart = ElevationGrid.CopyDelta();
-                Paint(hit, e.shift);
-                e.Use();
-            }
-            else if (_painting && e.type == EventType.MouseDrag && e.button == 0 && !e.alt)
-            {
-                Paint(hit, e.shift);
-                e.Use();
-            }
-            else if (_painting && e.type == EventType.MouseUp && e.button == 0)
-            {
-                _painting = false;
-                if (_strokeStart != null) _history.BeginStroke(_strokeStart);
-                _strokeStart = null;
-                hasUnsavedChanges = true;
-                e.Use();
+                if (isUp) EndStroke();
+                return;
             }
 
-            Handles.color = new Color(1f, 0.85f, 0.2f, 0.6f);
+            Handles.color = Color.yellow;
             Handles.DrawWireDisc(hit, Vector3.up, _radius);
-            view.Repaint();
-        }
+            SceneView.RepaintAll();
 
-        /// <summary>One paint event: mutate the delta cells under the brush, then nudge every
-        /// touched vertex by exactly how much HeightAt changed at that vertex's own (x, y).
-        /// Diffing HeightAt before/after - rather than writing a computed height straight onto
-        /// the vertex - is what keeps this correct regardless of whatever offset is already
-        /// baked into that vertex's Y (water sits lower than grass, a road is worn below its
-        /// verge): the offset never changes, so it cancels out of the difference.</summary>
-        private void Paint(Vector3 hit, bool lowering)
-        {
-            var centre = Space3D.FromWorld(hit);
-            float signedStrength = (lowering ? -1f : 1f) * _strength;
-
-            var touched = TouchedVertices(centre, _radius);
-            var before = new float[touched.Count];
-            for (int i = 0; i < touched.Count; i++)
-                before[i] = ElevationGrid.HeightAt(touched[i].wx, touched[i].wy);
-
-            foreach (var (col, row, weight) in SculptBrush.CellsInBrush(
-                         centre.X, centre.Y, _radius, ElevationGrid.DeltaStep,
-                         ElevationGrid.DeltaCols, ElevationGrid.DeltaRows))
+            if (isDown)
             {
-                float value = ElevationGrid.GetDeltaCell(col, row) + signedStrength * weight;
-                ElevationGrid.SetDeltaCell(col, row, value);
+                _strokeBefore = ElevationGrid.SnapshotDelta();
+                _dragging = true;
+                e.Use();
             }
-
-            var byFilter = new Dictionary<MeshFilter, Vector3[]>();
-            for (int i = 0; i < touched.Count; i++)
+            else if (isDrag && _dragging)
             {
-                var (filter, index, wx, wy) = touched[i];
-                if (!byFilter.TryGetValue(filter, out var verts))
-                    byFilter[filter] = verts = filter.sharedMesh.vertices;
-
-                float after = ElevationGrid.HeightAt(wx, wy);
-                var v = verts[index];
-                v.y += after - before[i];
-                verts[index] = v;
+                Paint(hit.x, -hit.z, e.shift);
+                e.Use();
             }
-
-            foreach (var kv in byFilter)
+            else if (isUp)
             {
-                kv.Key.sharedMesh.vertices = kv.Value;
-                kv.Key.sharedMesh.RecalculateNormals();
-                kv.Key.sharedMesh.RecalculateBounds();
+                EndStroke();
+                e.Use();
             }
         }
 
-        /// <summary>Every vertex, across every ground chunk the brush's bounding box overlaps,
-        /// that falls inside the brush radius - as (filter, vertex index, world x, world y). The
-        /// chunk grid here is MeshChunks.Size (64m), a different lattice from the delta grid's
-        /// own 30m step - a brush can span several chunks and still land inside one delta cell,
-        /// or the other way round.</summary>
-        private List<(MeshFilter filter, int index, float wx, float wy)> TouchedVertices(
-            Vec2 centre, float radius)
+        private void Paint(float worldX, float worldY, bool invert)
         {
-            var found = new List<(MeshFilter, int, float, float)>();
+            var chunks = SculptBrush.OverlappingChunks(worldX, worldY, _radius, _preview.Chunks);
+            SculptBrush.Apply(worldX, worldY, _radius, _strength, invert, chunks);
+            _dirty = true;
+            Repaint();
+        }
 
-            int c0 = Mathf.FloorToInt((centre.X - radius) / ChunkSize);
-            int c1 = Mathf.FloorToInt((centre.X + radius) / ChunkSize);
-            int r0 = Mathf.FloorToInt((centre.Y - radius) / ChunkSize);
-            int r1 = Mathf.FloorToInt((centre.Y + radius) / ChunkSize);
+        private void EndStroke()
+        {
+            if (!_dragging) return;
+            _dragging = false;
+            _undo.RecordBeforeStroke(_strokeBefore);
+            Repaint();
+        }
 
-            for (int row = r0; row <= r1; row++)
-            for (int col = c0; col <= c1; col++)
-            {
-                if (!_chunks.TryGetValue((col, row), out var filter)) continue;
-                var verts = filter.sharedMesh.vertices;
-                for (int i = 0; i < verts.Length; i++)
-                {
-                    float wx = verts[i].x, wy = -verts[i].z;
-                    float dx = wx - centre.X, dy = wy - centre.Y;
-                    if (dx * dx + dy * dy <= radius * radius)
-                        found.Add((filter, i, wx, wy));
-                }
-            }
+        private void OnUndoClicked()
+        {
+            if (!_undo.CanUndo) return;
+            var current = ElevationGrid.SnapshotDelta();
+            var restore = _undo.Undo(current);
+            ElevationGrid.RestoreDelta(restore);
+            _preview.Build();
+            _dirty = true;
+        }
 
-            return found;
+        private void OnRedoClicked()
+        {
+            if (!_undo.CanRedo) return;
+            var current = ElevationGrid.SnapshotDelta();
+            var restore = _undo.Redo(current);
+            ElevationGrid.RestoreDelta(restore);
+            _preview.Build();
+            _dirty = true;
         }
     }
 }
 ```
 
-- [ ] **Step 2: Compile-check**
+- [ ] **Step 2: Manual verification (no automated test — this is the interactive layer)**
 
-```powershell
-& "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-  -batchmode -quit -nographics -projectPath C:\SerialKillerGame -logFile C:\SerialKillerGame\.unity-build.log
-Select-String -Path C:\SerialKillerGame\.unity-build.log -Pattern "error CS"
-```
-Expected: no matches.
+This cannot be checked headlessly; open the editor and drive it by hand, per project convention
+(see the "Look at it before saying it works" project memory — render/observe before claiming a
+visual or interactive feature works):
 
-- [ ] **Step 3: Re-run the full probe and smoke test (regression)**
+1. In the Unity Editor, `Noir > Sculpt Terrain`. A window opens and the Scene view shows the
+   ground for `city.txt` (no buildings, no traffic).
+2. Left-drag on the ground in the Scene view. Verify: a yellow wire circle follows the cursor,
+   the ground rises smoothly under the brush in real time, and there are no visible frame drops.
+3. Hold Shift and drag over the same spot. Verify the ground lowers back down.
+4. Click **Undo**. Verify the last stroke reverts and the preview rebuilds. Click **Redo**;
+   verify it reapplies.
+5. Click **Save**. Verify `Content/elevation-delta.txt` now exists and its header reads
+   `grid 71 81 30`.
+6. Close the window, reopen it (`Noir > Sculpt Terrain`). Verify the terrain you painted is still
+   there — the saved delta reloaded correctly.
+7. Run `Noir > Play Check` (`Assets/Noir/Editor/PlayCheck.cs`, existing) and confirm it still
+   reports `VERDICT: Play should work.` — the delta file must not break the normal Play path.
+8. **Clean up:** if step 5 wrote a real `elevation-delta.txt` you don't want to keep for this
+   verification pass, `git checkout -- Content/elevation-delta.txt` (if it already existed) or
+   delete it (if it didn't) before committing, so this task's commit doesn't carry throwaway
+   test terrain.
 
-```powershell
-& "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-  -batchmode -quit -nographics -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SculptProbe.Run -logFile C:\SerialKillerGame\.unity-probe.log
-Select-String -Path C:\SerialKillerGame\.unity-probe.log -Pattern "sculpt-probe"
-& "C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" `
-  -batchmode -quit -nographics -projectPath C:\SerialKillerGame -executeMethod Noir.Editor.SmokeTest.Run -logFile C:\SerialKillerGame\.unity-smoke.log
-Select-String -Path C:\SerialKillerGame\.unity-smoke.log -Pattern "SMOKE TEST"
-```
-Expected: `--- SCULPT PROBE PASSED ---` and `--- SMOKE TEST PASSED ---`.
-
-- [ ] **Step 4: Manual verification (tell the user to do this — it cannot be scripted)**
-
-Ask the user to open the project, then:
-1. `Noir > Sculpt Terrain` from the menu bar. A window opens; the Scene view shows bare ground (no walls, buildings, or props) with no errors in the Console.
-2. Left-click-drag on the ground in the Scene view. The ground rises smoothly under the cursor with no frame drops; a yellow wire circle tracks the brush.
-3. Hold Shift and drag on a raised spot. It lowers back down.
-4. Click **Undo**. The last stroke reverts; the ground returns to its previous shape.
-5. Click **Redo**. The stroke reapplies.
-6. Click **Save**. `Content/elevation-delta.txt` appears (check via `git status` — untracked, new file).
-7. Close the window with an un-saved stroke still pending (paint something, don't click Save, then close the window with the X). Unity's native "Save changes" prompt should appear, offering Save/Discard/Cancel.
-8. Re-open `Noir > Sculpt Terrain`. The previously saved stroke is visible in the rebuilt preview (proves the round trip through the file, not just in-memory state).
-
-If `Content/elevation-delta.txt` was created only for this check and should not be committed yet, delete it and confirm `git status` is clean again.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add Assets/Noir/Editor/SculptTerrainWindow.cs
-git commit -m "Add SculptTerrainWindow: Edit-Mode brush painting on the delta layer"
+git commit -m "Add the Sculpt Terrain editor window: brush painting, undo/redo, save"
 ```
 
 ---
 
-## Self-Review Notes
+## Self-review notes
 
-- **Spec coverage:** all five sign-off gates from the parent spec are covered — responsiveness (Task 5's per-stroke vertex patch, never a full rebuild), persistence (Task 1's save/load, checked in Task 1's probe and Task 5's manual Step 4.6–4.8), undo/redo correctness with the base grid untouched (Task 3's probe + Task 5's `ApplyHistory`), integration with `ElevationGrid` (Task 1, consumed everywhere via the unchanged `HeightAt` signature), and no crashes at boundaries/rapid undo (`GetDeltaCell`/`SetDeltaCell` clamp/no-op rather than throw; `SculptHistory.Undo`/`Redo` no-op rather than throw when the stack is empty).
-- **Out of scope, confirmed absent from every task:** Play-mode sculpting, `CityCollision` patching, texturing, and any change to `elevation.txt`'s own sampling.
-- **Placeholder scan:** no TODOs; every step has complete code, not a description of code.
-- **Type consistency:** `SculptHistory.Undo/Redo` return `float[,]` in both Task 3's implementation and Task 5's `ApplyHistory` call; `SculptBrush.CellsInBrush` returns `IEnumerable<(int col, int row, float weight)>` in both Task 4's implementation and Task 5's `foreach` destructuring; `ElevationGrid.DeltaCols/DeltaRows/DeltaStep` are `int` everywhere they're read.
+- **Spec coverage:** every Stream 2 gate in `docs/superpowers/specs/2026-08-01-sculpt-paint-tool-design.md`
+  maps to a task — responsiveness and boundary safety (Task 3's chunk-local patching + clamped
+  cell ranges), persistence (Task 1's save/load), undo/redo with an untouched base grid (Tasks 1
+  + 2), `ElevationGrid` integration (Task 1's `HeightAt`).
+- **Type consistency checked:** `(int col, int row)` tuple keys are used identically in
+  `SculptPreview.Chunks`, `SculptBrush.OverlappingChunks`, and `SculptTerrainWindow`; `float[,]`
+  is the snapshot type everywhere it crosses a boundary (`ElevationGrid.SnapshotDelta/RestoreDelta`,
+  `SculptUndoStack`).
+- **No placeholders:** every step above is either runnable code or an explicit, concrete manual
+  verification checklist (Task 5, Step 2) — there is no "add tests for the above" left unresolved.
+- **Scope:** this plan is Stream 2 only. Texturing (Stream 3) and performance work (Stream 4) are
+  explicitly out of scope per the design doc and untouched here.
