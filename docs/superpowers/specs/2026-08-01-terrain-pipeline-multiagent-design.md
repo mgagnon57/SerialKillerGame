@@ -1,23 +1,26 @@
-# Terrain Pipeline: Multi-Agent Orchestration Design — CONTINUATION
+# Terrain & Parcel Plotting Pipeline — Multi-Agent Orchestration Design
 
 **Date:** 2026-08-01  
 **Project:** Serial Killer Game (Noir detective/investigation game)  
-**Current State:** Rossville terrain with USGS NED elevation (30m sampling, just resampled 2026-08-01)
+**Current State:** Real Rossville geography — USGS elevation + county parcel data, rotation aligned 2026-08-01
 
 ## What's Already Done
 
-✅ **Phase 1 (Geodata):** Real USGS elevation data loaded via `Content/elevation.txt` (71×81 samples, 30m spacing)  
+✅ **Phase 1 (Geodata):** Real USGS NED elevation loaded via `Content/elevation.txt` (71×81 samples, 30m spacing)  
 ✅ **Phase 2 (Terrain Gen):** Countryside system generates LOD'd terrain meshes; city/farm systems place features  
+✅ **Phase 3 (Parcel Data):** Real 794 cadastral parcels from Vermilion County (ParcelIndex.cs loaded and queryable)  
+✅ **Phase 3a (Parcel Alignment):** Just rotated +1.81° (2026-08-01) to align lot lines with street grid  
+✅ **Phase 3b (Parcel Annotation System):** ParcelNotes.cs with zoning, housing type, quality, occupants framework  
 ✅ **Base playability:** 960×960 map, 112+ people, traffic, buildings
 
-## Remaining Work: The Four Question Marks
+## Remaining Work: Parcel Annotation + Terrain Polish
 
 This workflow tackles the four remaining gaps when you say "do this":
 
-1. **Detail/Refinement** — In-editor sculpt/paint tools to fix specific terrain spots without resampling
-2. **Texturing** — Ground materials (grass, dirt, rock, water) that match actual terrain type
-3. **Features** — Rivers, landmarks, road accuracy verification
-4. **Performance** — Terrain running at 60fps with acceptable draw calls (baseline measurement + optimization)
+1. **Parcel Annotation** — Fill in parcel-notes.txt with zoning, housing type, condition, occupants, history (uses real public records as reference)
+2. **Detail/Refinement** — In-editor sculpt/paint tools to fix specific terrain spots
+3. **Texturing** — Ground materials matching terrain and parcel usage (residential grass, industrial dirt, etc.)
+4. **Performance** — Terrain + parcels running at 60fps with acceptable draw calls
 
 These run in parallel phases with fast-model iteration + expensive-model verification (same Approach 3 as before).
 
@@ -29,10 +32,10 @@ These run in parallel phases with fast-model iteration + expensive-model verific
 
 | Workstream | Fast Agent Role | Task | Expensive Agent Role | Verification Gate |
 |-------|-----------------|------|----------------------|-------------------|
-| **Stream 1: Sculpt/Paint** | Implementer | In-editor brush tool to paint height delta on terrain without resampling base data; undo/redo; real-time preview in game view; data persistence | Verifier | Tool responsiveness (no frame drops while painting), undo correctness, height-delta isolation from base elevation grid, integration with ElevationGrid queries |
-| **Stream 2: Texturing** | Implementer | Ground material system: detect terrain slope/elevation to pick grass/dirt/rock/water; blend textures; apply to Countryside/ground meshes; realistic appearance | Verifier | Visual match to real-world terrain types; performance baseline; seamless blending across LOD transitions; no texture swim or UV stretch |
-| **Stream 3: Features** | Implementer | Identify + implement major features (rivers, landmarks, road overlay accuracy); verify against real map; author as overlays or mesh deformations | Verifier | Feature placement correctness vs. real geography; visual accuracy; integration with existing terrain without hard-breaking |
-| **Stream 4: Performance** | Implementer | Baseline current performance (FPS, draw calls, memory); profile terrain systems; propose + implement optimization (mesh reduction, occlusion, LOD tweaks) | Verifier | 60fps baseline achieved; draw call reduction measured; no visual regression; memory footprint within target |
+| **Stream 1: Parcel Annotation** | Implementer | Research Rossville public records (county assessor, property history, local knowledge); fill parcel-notes.txt with zoning, housing type, condition, occupant names, character notes for each parcel. Use ParcelNotes schema (Zoning enum, HousingType, Quality, Adults/Kids, Names, Character field). Reference real data sources for plausibility. | Verifier | Zoning matches county records; housing types are plausible for era/location; occupant counts align with parcel size; character notes are grounded in community research; no unfounded speculation |
+| **Stream 2: Sculpt/Paint** | Implementer | In-editor brush tool to paint height delta on terrain without resampling base data; undo/redo; real-time preview in game view; data persistence | Verifier | Tool responsiveness (no frame drops while painting), undo correctness, height-delta isolation from base elevation grid, integration with ElevationGrid queries |
+| **Stream 3: Texturing** | Implementer | Ground material system: detect terrain slope/elevation + parcel zoning to pick grass/dirt/rock/water; blend textures; apply to Countryside/ground meshes; realistic appearance | Verifier | Visual match to real-world terrain types; residential parcels show maintained grass, industrial show dirt, etc.; seamless blending across LOD transitions; no texture swim or UV stretch |
+| **Stream 4: Performance** | Implementer | Baseline current performance (FPS, draw calls, memory) with terrain + parcels loaded; profile systems; propose + implement optimization (mesh reduction, occlusion, LOD tweaks) | Verifier | 60fps baseline achieved; draw call reduction measured; no visual regression; memory footprint within target |
 
 ### Model Allocation Strategy
 
@@ -111,30 +114,33 @@ START WORKSTREAM N
 
 ### Review Gate Sign-Off Criteria
 
-**Stream 1: Sculpt/Paint Tool**
+**Stream 1: Parcel Annotation**
+- ✓ Zoning values match county assessor records (spot-check 20+ parcels against public GIS)
+- ✓ Housing types are historically plausible (no Victorian mansions on industrial lots, etc.)
+- ✓ Condition/Quality matches what would be visible in streetview or property histories
+- ✓ Adult/Kid counts are proportional to parcel size (small lot ≠ large family)
+- ✓ Character notes grounded in research (not invented; references exist)
+- ✓ parcel-notes.txt is well-formed, parseable, no schema violations
+
+**Stream 2: Sculpt/Paint Tool**
 - ✓ Brush is responsive (no frame drops, paints in real-time)
 - ✓ Painted deltas persist on save and reload
 - ✓ Undo/redo works correctly (sculpt changes revert; base elevation grid unchanged)
 - ✓ Integrates cleanly with ElevationGrid (queries return base + delta)
 - ✓ No crashes at terrain boundaries or with rapid undo spam
 
-**Stream 2: Texturing**
-- ✓ Ground materials applied based on slope/elevation (grass on gentle, rock on steep, water in low spots)
+**Stream 3: Texturing**
+- ✓ Ground materials applied based on slope/elevation + parcel zoning (residential=grass, industrial=dirt, low=water)
 - ✓ Visual match to real Rossville terrain appearance
 - ✓ Textures blend smoothly across LOD transitions (no visible seams at Countryside edges)
+- ✓ Parcel boundaries visible from texture/material transitions (zoning is readable)
 - ✓ No texture swim or UV stretch under camera movement
 - ✓ Performance baseline met (no draw call spike from texturing system)
 
-**Stream 3: Features**
-- ✓ Major features (rivers, landmarks) identified and implemented
-- ✓ Feature placement matches real geography (spot-check vs. satellite imagery)
-- ✓ Integration with terrain is clean (no hard breaks in mesh or painting)
-- ✓ Features visible at gameplay scales (game camera perspective, not top-down only)
-
 **Stream 4: Performance**
-- ✓ Current baseline established (FPS, draw calls, memory on target hardware)
-- ✓ 60fps achieved with full terrain/city loaded
-- ✓ Draw calls reduced by at least 10% (or target met if already optimal)
+- ✓ Current baseline established (FPS, draw calls, memory on target hardware with full terrain + 794 parcels)
+- ✓ 60fps achieved with full terrain/city/parcels loaded
+- ✓ Draw calls reduced by at least 10% from baseline (or target met if already optimal)
 - ✓ No visual regression from optimization (shadows, LOD, occlusion working correctly)
 
 If any criterion fails → Fast model fixes → Expensive re-reviews → repeat until sign-off.
@@ -178,7 +184,29 @@ When all four workstreams are approved by the Expensive model and you can:
 
 ## Notes & Constraints
 
-- **Existing coordinate system:** Origin locked at Chicago St × Attica St (750, 1335). Do NOT change.
-- **Resampling:** Elevation just went 60m → 30m (2026-08-01). Matches real USGS 10m source well enough; do not resample again without reason.
-- **Integration risk:** Texturing system must respect LOD transitions in Countryside. Test visual seams at distance LOD boundaries (120m, 190m, 380m).
-- **Playability:** Aim to have Stream 1 (sculpt tool) working first, so you can refine terrain interactively while testing Streams 2-4.
+### Critical — Do NOT Redo This Work
+- **Parcel data:** 794 cadastral parcels from county records, already loaded, queryable, and rotation-aligned (2026-08-01). Do NOT regenerate, resample, or re-rotate.
+- **Elevation data:** USGS NED, 30m sampling (just moved from 60m). Stable and accurate. Do NOT re-sample without clear reason.
+- **Parcel Index/Notes systems:** ParcelIndex.cs and ParcelNotes.cs already built and working. Do NOT refactor or rewrite.
+
+### Coordinate Systems (Locked)
+- **Origin:** Chicago St × Attica St (750, 1335) — all systems reference this
+- **Parcels:** Rotated +1.81° to align lot lines with street grid (2026-08-01)
+- **Elevation:** Bilinear-sampled 30m grid, baseline relative to crossing
+- **All three must stay in sync** — any parcel query, elevation query, or texture lookup uses the same origin and rotation
+
+### Stream 1 Research Foundation
+- **Vermilion County Assessor:** gis.cityofdanville.org/arcgis/rest/services/Property/Property (source of parcel data)
+- **Public records:** Property tax assessments, deed records, property history databases for occupant/zoning research
+- **Local knowledge:** Historical societies, old maps, community memory where documented
+- **Ground truth:** Street view, tax records, building permits — plausibility checks
+
+### Integration Points
+- Texturing system reads parcel zoning (via ParcelNotes) to pick materials
+- Countryside LOD boundaries at 120m, 190m, 380m — textures must be seamless across them
+- Parcel boundaries should be visually readable (texture/material change at lot lines)
+
+### Playability
+- **Stream 1 (Parcel Annotation)** is the blocker — it informs texturing and visual plausibility. Start here.
+- **Stream 2 (Sculpt Tool)** allows interactive terrain refinement while annotation work proceeds.
+- Streams 3-4 (Texturing & Performance) run in parallel once research is underway.
