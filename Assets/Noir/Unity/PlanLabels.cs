@@ -80,14 +80,19 @@ namespace Noir.Unity
             {
                 if (line == null || !line.IsStraight || string.IsNullOrEmpty(line.Name)) continue;
 
-                string name = Pretty(line.Name);
                 for (float along = line.From; along <= line.To; along += Repeat)
                 {
                     var at = line.IsNorthSouth
                         ? new Vector2(line.Centre, along)
                         : new Vector2(along, line.Centre);
+                    var ahead = line.IsNorthSouth
+                        ? new Vector2(line.Centre, along + 10f)
+                        : new Vector2(along + 10f, line.Centre);
 
-                    Draw(cam, eye, at, name, _street, StreetReach);
+                    // Five of these change name partway - see StreetAddressing.RealName for why
+                    // that is resolved by position here rather than by a second RoadLine.
+                    string name = Pretty(StreetAddressing.RealName(line.Name, at));
+                    Draw(cam, eye, at, name, _street, StreetReach, ScreenAngle(cam, at, ahead));
                 }
             }
 
@@ -112,9 +117,13 @@ namespace Noir.Unity
 
         /// <summary>
         /// Put one label on screen, if it is in front of the camera and close enough to read.
+        ///
+        /// A street name is asked to flow along its own street, not sit flat across it - see
+        /// ScreenAngle for how that angle is found. Rotated about the label's own centre using
+        /// GUI.matrix, which is IMGUI's own way of doing this without a mesh or a font asset.
         /// </summary>
         private void Draw(Camera cam, Vector3 eye, Vector2 at, string text, GUIStyle style,
-                          float reach)
+                          float reach, float screenAngle = 0f)
         {
             var world = Space3D.ToWorld(new Core.Contracts.Vec2(at.x, at.y), 0.4f);
             if ((world - eye).sqrMagnitude > reach * reach) return;
@@ -129,6 +138,11 @@ namespace Noir.Unity
             var was = style.normal.textColor;
             _shadow.fontSize = style.fontSize;
             _shadow.fontStyle = style.fontStyle;
+
+            var oldMatrix = GUI.matrix;
+            if (screenAngle != 0f)
+                GUIUtility.RotateAroundPivot(screenAngle, r.center);
+
             GUI.Label(new Rect(r.x + 1f, r.y + 1f, r.width, r.height), text, _shadow);
 
             // Fades out over the last third of its range rather than popping off.
@@ -137,16 +151,60 @@ namespace Noir.Unity
                                                Mathf.Clamp01((reach - d) / (reach * 0.33f)));
             GUI.Label(r, text, style);
             style.normal.textColor = was;
+
+            GUI.matrix = oldMatrix;
         }
 
-        /// <summary>`chicago` becomes `CHICAGO ST`, `holmes` becomes `HOLMES AVE`.</summary>
+        /// <summary>
+        /// The on-screen angle to rotate a label so it reads along its own street rather than
+        /// flat across it, whatever the camera's own rotation happens to be - Q and E turn the
+        /// orbit, and a name that only ever read "north-south" would come out sideways the
+        /// moment somebody used them. Projects a step along the street into screen space and
+        /// measures the angle THERE, not in world space, which is what makes it agree with the
+        /// camera at any orbit angle.
+        ///
+        /// Flipped 180 degrees whenever that would read the text backwards or upside down -
+        /// GUI.Label always draws left-to-right, so "along the street" and "along the street
+        /// reversed" are the same physical line but only one of them is legible.
+        /// </summary>
+        private static float ScreenAngle(Camera cam, Vector2 at, Vector2 ahead)
+        {
+            var wa = Space3D.ToWorld(new Core.Contracts.Vec2(at.x, at.y), 0.4f);
+            var wb = Space3D.ToWorld(new Core.Contracts.Vec2(ahead.x, ahead.y), 0.4f);
+            var pa = cam.WorldToScreenPoint(wa);
+            var pb = cam.WorldToScreenPoint(wb);
+
+            float dx = pb.x - pa.x;
+            float dy = -(pb.y - pa.y);      // GUI y runs down the screen; the camera's runs up it
+            float angle = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+
+            if (angle > 90f || angle < -90f) angle += angle > 0f ? -180f : 180f;
+            return angle;
+        }
+
+        /// <summary>`chicago` becomes `CHICAGO ST`, `holmes` becomes `HOLMES AVE`.
+        ///
+        /// The four west-of-Route-1 names (park, perry, stufflebeam, mckibbin) and the
+        /// north-of-Attica name (smith) are their OWN roads now, not the same road under a
+        /// second name - see relay-rossville.py's EW/NS split, confirmed against Vermilion
+        /// County's own tax address data on 2026-08-01 - so each gets its own line here rather
+        /// than falling through to the generic uppercase-plus-ST guess.</summary>
         private static string Pretty(string name)
         {
             switch (name)
             {
-                case "chicago": return "CHICAGO ST  ·  ILLINOIS 1";
-                case "attica":  return "ATTICA ST";
-                case "holmes":  return "HOLMES AVE";
+                case "chicago":     return "CHICAGO ST  ·  ILLINOIS 1";
+                case "attica":      return "ATTICA ST";
+                case "holmes":      return "HOLMES AVE";
+                case "park":        return "PARK";
+                case "perry":       return "PERRY";
+                case "stufflebeam": return "STUFFLEBEAM";
+                case "mckibbin":    return "MCKIBBIN";
+                case "smith":       return "SMITH";
+                case "watson":      return "WATSON DR";
+                case "earlcourt":   return "EARL CT";
+                case "dale":        return "DALE";
+                case "greenwood":   return "GREENWOOD";
             }
             if (name.StartsWith("section") || name.StartsWith("crossroad")) return "SECTION RD";
             return name.ToUpperInvariant() + " ST";

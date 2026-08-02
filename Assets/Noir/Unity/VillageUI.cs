@@ -279,6 +279,16 @@ namespace Noir.Unity
             // The name IS the address - see relay-rossville.py and Content/parcels.txt.
             GUILayout.Label(place.Name, _title);
             GUILayout.Label($"{Article(kind.Name)}   ·   {LotSize(place)}", _small);
+
+            // The REAL county record for this lot, when the two disagree. Generated places keep
+            // their own synthetic numbering - "408 Holmes Ave" is a fixed story anchor and
+            // nothing here should ever move it - but the player asked to see what the tax rolls
+            // actually say, and silently hiding a mismatch would be worse than showing one.
+            int parcelIdForAddr = ParcelIndex.FindFor(place)?.Id ?? -1;
+            var county = parcelIdForAddr >= 0 ? ParcelAddresses.For(parcelIdForAddr) : null;
+            if (county?.Address != null && !SameAddress(county.Value.Address, place.Name))
+                GUILayout.Label($"<color=#8a8a86>county record: {county.Value.Address}</color>", _small);
+
             GUILayout.Space(10);
 
             // The line somebody wrote about this building when they put it in the map.
@@ -600,6 +610,12 @@ namespace Noir.Unity
         /// surveyed parcels never got a house or a business generated on them; before this a
         /// click there found nothing, which is most of what's visible on the plan reading as
         /// unclickable rather than as undeveloped land.
+        ///
+        /// THE REAL ADDRESS FIRST, THE ESTIMATE ONLY IF THERE IS NONE. ParcelAddresses is
+        /// Vermilion County's own tax record, matched to this exact parcel - see Content/parcel-
+        /// addresses.txt. StreetAddressing.Estimate's "400 block of X Ave" was always a guess for
+        /// a lot with no real answer on file, and showing it even where the county DOES have one
+        /// was indistinguishable from the guess being wrong.
         /// </summary>
         private void DrawParcelInspector(ParcelIndex.Parcel parcel)
         {
@@ -612,11 +628,20 @@ namespace Noir.Unity
             float hFt = parcel.Bounds.height * MetresToFeet;
             var centre = new Vector2(parcel.Bounds.x + parcel.Bounds.width / 2f,
                                      parcel.Bounds.y + parcel.Bounds.height / 2f);
-            string approx = StreetAddressing.Estimate(_host.World, centre);
 
-            GUILayout.Label(approx ?? "Undeveloped lot", _title);
-            GUILayout.Label($"{(approx != null ? "no house built" : "no address on file")}   ·   "
-                          + $"{Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft", _small);
+            var county = ParcelAddresses.For(parcel.Id);
+            string confirmed = county?.Address;
+            string approx = confirmed == null ? StreetAddressing.Estimate(_host.World, centre) : null;
+
+            GUILayout.Label(confirmed ?? approx ?? "Undeveloped lot", _title);
+
+            string status = confirmed != null ? "confirmed address, no house built"
+                          : approx != null ? "estimated address, no house built"
+                          : "no address on file";
+            GUILayout.Label($"{status}   ·   {Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft", _small);
+            if (county?.Pin != null)
+                GUILayout.Label($"<color=#8a8a86>PIN {county.Value.Pin}</color>", _small);
+
             GUILayout.Space(10);
             GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "
                            + "built on it.</color>", _label);
@@ -663,6 +688,29 @@ namespace Noir.Unity
             }
 
             return $"{Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft {what}";
+        }
+
+        private static readonly string[] StreetSuffixes = { "ave", "st", "dr", "ct", "rd", "pl", "place" };
+
+        /// <summary>Whether a generated place's own name and the county's confirmed address are
+        /// the same lot under two spellings rather than a genuine disagreement - the county's
+        /// PropertyAddress field never carries a street-type suffix (see Content/parcel-
+        /// addresses.txt), so a place's own "408 Holmes Ave" needs that word dropped before it is
+        /// fair to compare against the record's "408 Holmes".</summary>
+        private static bool SameAddress(string county, string generated)
+        {
+            var words = generated.Trim().Split(' ');
+            if (words.Length > 1)
+            {
+                string last = words[words.Length - 1].ToLowerInvariant();
+                foreach (var suffix in StreetSuffixes)
+                    if (last == suffix)
+                    {
+                        generated = string.Join(" ", words, 0, words.Length - 1);
+                        break;
+                    }
+            }
+            return string.Equals(county.Trim(), generated.Trim(), System.StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>"a diner", "an apartment" - the kind's own name, read out loud.</summary>

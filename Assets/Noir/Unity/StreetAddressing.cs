@@ -15,6 +15,37 @@ namespace Noir.Unity
     /// </summary>
     public static class StreetAddressing
     {
+        // Chicago St x Attica St - the same crossing everything else is measured from.
+        private const float CX = 750f, CY = 1335f;
+
+        /// <summary>
+        /// The street's REAL name at a point, where that differs from the RoadLine's own
+        /// internal identifier. Five roads change name partway along their length - Maple/Park,
+        /// Gilbert/Perry, Stewart/Stufflebeam and McKibben/McKibbin split at Route 1, Ann/Smith
+        /// splits at Attica - confirmed by Vermilion County's own tax address PropertyAddress
+        /// field on 2026-08-01, except McKibbin west, kept from an earlier research pass with no
+        /// addressed lot on that side to confirm it.
+        ///
+        /// APPLIED HERE, BY POSITION, RATHER THAN IN THE ROAD NETWORK ITSELF. Splitting the
+        /// actual RoadLine to match cost the lane graph its straight-through turn at the
+        /// junction where the two halves met: a car crossing there had no wired continuation
+        /// from one line to the other and stood with clear road ahead
+        /// (NoCarWaitsForeverAtTheHeadOfAClearQueue caught it). The name really does change; the
+        /// road it changes on does not.
+        /// </summary>
+        public static string RealName(string internalName, Vector2 at)
+        {
+            switch (internalName)
+            {
+                case "maple":    return at.x < CX ? "park" : "maple";
+                case "gilbert":  return at.x < CX ? "perry" : "gilbert";
+                case "stewart":  return at.x < CX ? "stufflebeam" : "stewart";
+                case "mckibben": return at.x < CX ? "mckibbin" : "mckibben";
+                case "ann":      return at.y < CY ? "smith" : "ann";
+                default:         return internalName;
+            }
+        }
+
         public static string Estimate(WorldModel world, Vector2 at)
         {
             if (world?.Roads?.Lines == null) return null;
@@ -37,7 +68,8 @@ namespace Noir.Unity
             if (frontage == null) return null;
 
             int block = BlockNumber(world.Roads.Lines, frontage, at);
-            string name = char.ToUpperInvariant(frontage.Name[0]) + frontage.Name.Substring(1);
+            string real = RealName(frontage.Name, at);
+            string name = char.ToUpperInvariant(real[0]) + real.Substring(1);
             return block > 0 ? $"{block} block of {name} Ave" : name + " Ave";
         }
 

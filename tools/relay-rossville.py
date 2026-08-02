@@ -16,8 +16,14 @@ Two things fell out of the real data that no amount of guessing would have produ
   300-foot block would give, and the variation IS the character.
 
 Several streets change name as they cross Route 1: McKibben east is McKibbin west,
-Maple is Park Place, Gilbert is Perry, Stewart is Stufflebeam. Each is emitted once
-under its eastern name, because the town is mostly east; the western name is beside it.
+Maple is Park west, Gilbert is Perry west, Stewart is Stufflebeam west. Each is now
+emitted as TWO road lines split at Route 1's own centreline (CX) - confirmed against
+Vermilion County's own tax assessment PropertyAddress field on 2026-08-01 for three of
+the four (Park, Perry and Stufflebeam all turned up as real addressed street names, all
+strictly west of CX); McKibbin west is kept from the prior research pass, unconfirmed
+by an actual addressed lot on that side. Ann has the same shape running the OTHER way:
+Smith Drive north of Attica (CY), Ann south of it - five addresses, four Smith and one
+Ann, split exactly where the data puts them.
 
 Ross Township holds 1,617 people against the village's 1,331, so 286 are spread over
 42 square miles - about seven to the square mile. The country here is a handful of
@@ -49,26 +55,26 @@ CX, CY = 750, 1335                 # Chicago Street x Attica Street
 # Thompson, Earlcourt - simply does not reach the far side in reality, whatever this map's own
 # roads (axis-aligned, and none of them clipped at the tracks yet) currently draw. Load-bearing
 # for whenever a train is simulated: gate crossing behaviour to those four streets and no others.
-EW = [                     # (north offset, name, western name, sides)
-    (+606, "york",       None,          "W"),
-    (+489, "henderson",  None,          "both"),  # real level crossing
-    (+353, "green",      None,          "both"),  # real level crossing
-    (+222, "benton",     None,          "both"),  # real level crossing
-    (+126, "holmes",     None,          "E"),     # 408 Holmes Ave lives here - no real crossing
-    (   0, "attica",     None,          "both"),  # THE cross street - real level crossing
-    (-143, "maple",      "Park Place",  "E"),
-    (-248, "gilbert",    "Perry",       "E"),
-    (-387, "stewart",    "Stufflebeam", "E"),
-    (-518, "mckibben",   "McKibbin",    "E"),
-    (-636, "dale",       None,          "E"),
-    (-699, "greenwood",  None,          "W"),
-    (-758, "thompson",   None,          "E"),
-    (-875, "earlcourt",  None,          "E"),
+EW = [                     # (north offset, name, western name, sides, western name confirmed?)
+    (+606, "york",       None,          "W",    False),
+    (+489, "henderson",  None,          "both", False),  # real level crossing
+    (+353, "green",      None,          "both", False),  # real level crossing
+    (+222, "benton",     None,          "both", False),  # real level crossing
+    (+126, "holmes",     None,          "E",    False),  # 408 Holmes Ave - no real crossing
+    (   0, "attica",     None,          "both", False),  # THE cross street - real level crossing
+    (-143, "maple",      "park",        "E",    True),   # confirmed: PARK, tax PropertyAddress
+    (-248, "gilbert",    "perry",       "E",    True),   # confirmed: PERRY, tax PropertyAddress
+    (-387, "stewart",    "stufflebeam", "E",    True),   # confirmed: STUFFLEBEAM, tax PropertyAddress
+    (-518, "mckibben",   "mckibbin",    "E",    False),  # unconfirmed - no addressed lot west of CX
+    (-636, "dale",       None,          "E",    False),
+    (-699, "greenwood",  None,          "W",    False),
+    (-758, "thompson",   None,          "E",    False),
+    (-875, "earlcourt",  None,          "E",    False),
 ]
 NS = [                             # north-south streets: (east offset, name, alias)
     (-224, "abner",      None),
     (-109, "watson",     None),
-    ( -64, "ann",        "Smith Drive"),
+    ( -64, "ann",        "smith"),   # Smith Drive north of Attica, Ann south - see split below
     (   0, "chicago",    "Illinois Route 1, the Dixie Highway"),
     (+104, "harrison",   None),
     (+213, "church",     None),
@@ -130,7 +136,7 @@ def blocks():
     """
     got = []
     xs, ys = sorted(XS), sorted(YS)
-    byY = {CY - o: (name, sides) for o, name, _, sides in EW}
+    byY = {CY - o: (name, sides) for o, name, _, sides, _c in EW}
 
     # INSET BY THE ROAD'S OWN HALF-WIDTH, not by a flat number. Route 1 and Attica are
     # 30m corridors and the village streets are 10m, so a flat 8m inset put the whole
@@ -236,12 +242,23 @@ w_("# thirteen hundred is. Offsets are metres from the crossroads.")
 for o, name, alias in NS:
     if name == "chicago": continue
     x = CX + o
+    # EMITTED AS ONE ROAD, NOT TWO. "ann" really is two streets end to end - Smith Drive
+    # north of Attica, Ann south of it, confirmed by the county's own tax address data on
+    # 2026-08-01 - but splitting the ROAD LINE to match cost the lane graph its straight-
+    # through turn at that junction: a car crossing Attica on this column had no wired
+    # continuation from one line to the other and stood there indefinitely with clear
+    # road ahead (caught by NoCarWaitsForeverAtTheHeadOfAClearQueue). The name split is
+    # real; it is applied as DISPLAY ONLY, by position, in PlanLabels and StreetAddressing
+    # - see RealName in both - rather than in the road network itself.
     w_(f"road {name} 10 {x},{Y0} {x},{Y1}   # {o:+d}m" + (f", {alias}" if alias else ""))
     w_("  class street")
-for o, name, alias, _s in EW:
+for o, name, western, _s, confirmed in EW:
     if name == "attica": continue
     y = CY - o
-    w_(f"road {name} 10 {X0},{y} {X1},{y}   # {o:+d}m" + (f", {alias} west of Route 1" if alias else ""))
+    # Same reasoning as "ann" above: Park/Perry/Stufflebeam/McKibbin west of Route 1 are
+    # real second names for these rows, applied as a DISPLAY-ONLY split rather than a road
+    # network split, for the same lane-graph reason.
+    w_(f"road {name} 10 {X0},{y} {X1},{y}   # {o:+d}m" + (f", {western} west of Route 1" if western else ""))
     w_("  class street")
 w_()
 w_("# ---- the section roads -----------------------------------------------------")
@@ -355,7 +372,7 @@ def frontage(rec, side, cursor):
 # streets - the Weighhouse stood ten metres into Holmes Avenue - because nothing told
 # it the block had ended. Storefronts stop at the junction and start again on the next
 # block, which is both what MapAudit demands and what a main street looks like.
-CROSS_Y = sorted(CY - o for o, name, _, _ in EW if name != "attica")
+CROSS_Y = sorted(CY - o for o, name, _, _, _ in EW if name != "attica")
 
 def blocked(y, wide, pad=8):
     for c in CROSS_Y:
