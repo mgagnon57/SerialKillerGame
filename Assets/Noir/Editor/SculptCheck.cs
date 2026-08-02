@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using UnityEditor;
@@ -27,7 +27,7 @@ namespace Noir.Editor
         public static void Run()
         {
             int failures = 0;
-            var originalDelta = ElevationGrid.CopyDelta();
+            var originalDelta = ElevationGrid.SnapshotDelta();
             string deltaPath = Path.Combine(ContentLoader.Root, "elevation-delta.txt");
             bool hadFile = File.Exists(deltaPath);
             string originalText = hadFile ? File.ReadAllText(deltaPath) : null;
@@ -117,4 +117,3 @@ namespace Noir.Editor
         }
     }
 }
-
