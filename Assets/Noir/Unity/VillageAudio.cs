@@ -74,10 +74,24 @@ namespace Noir.Unity
         /// </summary>
         private const float IndoorDuck = 0.3f;
 
-        /// <summary>Off for now - asked to mute the dawn chorus while sound work is on hold, not
-        /// to remove it. The bed still loads and plays at silent volume; flip this back on when
-        /// sound is next up.</summary>
-        private const bool BirdsEnabled = false;
+        /// <summary>
+        /// ALL THREE AMBIENCE BEDS ARE OFF. Not the dawn one - all of them.
+        ///
+        /// This started as BirdsEnabled, disabling bed 1 (ambience_dawn) alone, on the reasoning
+        /// that the dawn chorus is where birds live. That reasoning came from the comment a few
+        /// lines down rather than from the audio, and it was wrong: the three files are three
+        /// different recordings of the same length, and the one actually audible when the game
+        /// opens is ambience_NIGHT - the clock starts at 06:00, night fades out until 06:30, so
+        /// at the moment you press Play it is up at about a fifth volume. It has birds in it too.
+        /// The dawn bed was silenced correctly and the player kept hearing birds anyway, three
+        /// times, while being told it was fixed.
+        ///
+        /// So this is no longer a guess about which file contains what. Nothing loops until
+        /// somebody has actually listened to the three files and decided what each is for. The
+        /// bell and the footsteps are untouched - they are event sounds, they only fire when
+        /// something happens, and neither has ever been the complaint.
+        /// </summary>
+        private const bool AmbienceEnabled = false;
 
         private static readonly string[] BedNames = { "ambience_night", "ambience_dawn", "ambience_day" };
         private readonly AudioSource[] _beds = new AudioSource[BedNames.Length];
@@ -173,9 +187,10 @@ namespace Noir.Unity
         {
             for (int i = 0; i < BedNames.Length; i++)
             {
-                // The dawn chorus is off (BirdsEnabled, above) - not faded to silence, not
-                // loaded at all, so there is no source anywhere for it to leak from.
-                if (i == 1 && !BirdsEnabled) continue;
+                // EVERY bed is off, not just the dawn one - see AmbienceEnabled above for why
+                // silencing bed 1 alone did not stop the birds. Not loaded at all, so there is
+                // no source anywhere for any of them to leak from.
+                if (!AmbienceEnabled) continue;
 
                 var go = new GameObject(BedNames[i]);
                 go.transform.SetParent(transform, false);
@@ -232,14 +247,17 @@ namespace Noir.Unity
             // Night comes up from half past six, well before the evening chorus has finished,
             // so that dusk is two things overlapping rather than a hole between them. Its fall
             // is written as 28:00 to 30:30 — see Window on why the numbers run past midnight.
-            float night = Window(hour, 18.5f, 21.0f, 28.0f, 30.5f);
-            float day = Window(hour, 6.5f, 8.5f, 18.0f, 20.5f);
+            // GATED, WHERE THEY NEVER WERE. Only the dawn bed was ever conditional, so night
+            // and day went on playing at whatever the clock asked for - and night is the one
+            // audible at 06:00 when the game opens.
+            float night = AmbienceEnabled ? Window(hour, 18.5f, 21.0f, 28.0f, 30.5f) : 0f;
+            float day = AmbienceEnabled ? Window(hour, 6.5f, 8.5f, 18.0f, 20.5f) : 0f;
 
             // The chorus is mostly over by seven — birds sing at first light to hold a
             // territory and spend the rest of the morning eating. The evening chorus is the
             // same birds again, quieter and shorter, which is why it reuses the dawn bed
             // rather than earning a file of its own.
-            float dawn = BirdsEnabled
+            float dawn = AmbienceEnabled
                 ? Mathf.Max(Window(hour, 3.8f, 5.2f, 7.0f, 9.0f),
                            0.55f * Window(hour, 18.0f, 19.2f, 20.2f, 21.6f))
                 : 0f;

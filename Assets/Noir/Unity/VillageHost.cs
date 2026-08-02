@@ -180,9 +180,20 @@ namespace Noir.Unity
                 Particulars = ParticularsTable.Parse(ContentLoader.Read("particulars.txt"));
                 People = PopulationGenerator.Generate(World, names, Particulars, Seed);
 
-                // Start at six in the morning: the village is about to wake up, which is the
-                // most interesting minute of the day to arrive at.
-                Sim = new Simulation(World, People, Seed, startMinuteOfDay: 6 * 60);
+                // WAS SIX IN THE MORNING - "the village is about to wake up, the most
+                // interesting minute of the day to arrive at" - and that is a good instinct for a
+                // finished game and a bad one for a project being looked at fifty times a day.
+                // Six is BEFORE SUNRISE. Pressing Play showed a black screen with nothing on it,
+                // which is not a bug and looks exactly like one: the ground, the terrain work and
+                // the zoning textures were all there and all unlit, and the honest report was "I
+                // clicked Play and saw black".
+                //
+                // Noon while the world is being built. Nothing about the simulation depends on
+                // the opening hour - the digit keys already skip to 06:00, 08:00, 12:00, 17:00,
+                // 20:00 and 23:00, so arriving at dawn is one keypress away and arriving at a lit
+                // world is the default. Put it back to 6 * 60 when the game is being played
+                // rather than inspected.
+                Sim = new Simulation(World, People, Seed, startMinuteOfDay: 12 * 60);
 
                 Debug.Log($"Ashcombe: {World.Width}×{World.Height}, {World.PlaceCount} places, "
                         + $"{People.Count} people in {People.HouseholdCount} households.");
