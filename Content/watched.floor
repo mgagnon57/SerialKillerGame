@@ -177,8 +177,71 @@
 #  still not enacted.
 # ============================================================================
 
-ratio.median      1.21
-ratio.p10         0.52
-texture.median      24
-texture.min          8
-sight.median     0.053
+#  ---- 2026-08-01: THE PARTICULARS, ENACTED. The exception clause, invoked. --
+#
+#  The thing this file has asked for three times running is done. Every entry
+#  above ends the same way - "Citizen.Particulars is read by two inspectors and
+#  by NO line of simulation code, nine hundred clauses of texture and not one
+#  of them ever ENACTED" - and it is no longer true. Beat.Carries and
+#  Beat.Lingers are read by Simulation.cs and by Sightlines.cs: a person who
+#  never goes out empty-handed is carrying something a watcher can see, and a
+#  person who lingers is still there when you look up.
+#
+#  THE INSTRUMENT DID NOT MOVE, so these floors were not void and this is a
+#  real comparison rather than a re-baselining. Eyewitness.cs and Salience.cs
+#  have no commits since the line above was written; DaysWatched is still 14
+#  and Confirmations still 2.
+#
+#  THIS LOWERS ratio.median AND THAT IS THE EXCEPTION THIS FILE ALLOWS. Stated
+#  plainly, as the rule requires:
+#
+#      ratio.median   1.21  -> 0.89   (worst of three, DOWN, and badly)
+#      ratio.p10      0.52  -> 0.40   (down)
+#      texture.median   24  ->   29   (up five)
+#      texture.min       8  ->   11   (up three)
+#      sight.median  0.053  -> 0.123  (up, more than doubled)
+#
+#  The trade, honestly, and it is not a comfortable one: the remedy worked on
+#  the axis it was aimed at and cost more on the other axis than any change
+#  before it. Texture is the best it has ever been - the worst-served villager
+#  now yields eleven kinds of moment in a fortnight, against two before the
+#  dinner hour - and the ratio is the worst it has ever been, further from 2:1
+#  than the day the instrument was built.
+#
+#  WHY, AND THIS FILE PREDICTED IT TWICE. Beat.Lingers works by keeping people
+#  where they can be seen, and sight.median more than doubling is exactly that
+#  working. But the last two entries both end on the same finding - "time
+#  outdoors alone still accrues tactical facts faster than texture" - and this
+#  change put people outdoors far more than either of them did. The sign
+#  problem is not a side effect of the dinner hour or of visiting. It is the
+#  central one, and enacting the particulars has made it bigger by making the
+#  village more watchable in both directions at once.
+#
+#  So the honest reading of this entry is NOT "the particulars fixed it". It is:
+#  the named remedy was tried, it bought real texture, and it proved that
+#  texture and legibility are currently coupled. Anything that puts a person in
+#  view gives a watcher both columns at once. The next move has to be a KIND of
+#  moment that is not simply more time in the open - something seen indoors,
+#  something seen with other people, something whose meaning is not "here is
+#  where they are". Until that exists the two columns will keep rising together
+#  and the ratio will keep falling.
+#
+#      seed 1979   148 people   median 0.90   p10 0.40   tex 12/31  sight 13.4%
+#      seed 1980   148 people   median 0.93   p10 0.44   tex 16/31  sight 12.8%
+#      seed 1981   150 people   median 0.89   p10 0.43   tex 11/29  sight 12.3%
+#
+#  ALSO IN THIS MEASUREMENT, and recorded so the next comparison is honest:
+#  names.txt was retuned from Ashcombe's 1979 English pool to Rossville's 1991
+#  Illinois one (401 -> 439 surnames) and NameTable finally reads the
+#  male-child/female-child cohorts it had been shipping and ignoring. That
+#  changes the population DRAW - who gets which particulars, and therefore which
+#  Beats - though not the population's size or the rules it lives by. It is
+#  noise against a three-seed floor rather than a cause, but a future reader
+#  comparing against these numbers should know the pool underneath them changed.
+# ============================================================================
+
+ratio.median      0.89
+ratio.p10         0.40
+texture.median      29
+texture.min         11
+sight.median     0.123
