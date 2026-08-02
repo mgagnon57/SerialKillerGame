@@ -82,9 +82,20 @@ namespace Noir.Unity
         /// appear to work and then quietly forget between the click and the run. Read only while
         /// materials are being built, so the lookup costs nothing.
         /// </summary>
+        /// ON BY DEFAULT WHILE THE WORLD IS BEING BUILT, and off in batch mode regardless.
+        ///
+        /// Defaulting it off meant pressing Play showed a black screen and the only way to see
+        /// any of the ground work was to know about a menu item - which is indistinguishable
+        /// from the work not existing, and was reported as exactly that. The person looking at
+        /// this project every day should not have to opt in to seeing it.
+        ///
+        /// Batch mode is forced off so docs/snapshots/plan-top-down.png stays the dimmed survey
+        /// drawing it has always been. Preflight regenerates that file on every run, and a
+        /// default that changed it would rewrite the committed snapshot as a side effect of
+        /// validating something unrelated.
         public static bool ShowGroundColour
         {
-            get => PlayerPrefs.GetInt(GroundColourKey, 0) == 1;
+            get => !Application.isBatchMode && PlayerPrefs.GetInt(GroundColourKey, 1) == 1;
             set { PlayerPrefs.SetInt(GroundColourKey, value ? 1 : 0); PlayerPrefs.Save(); }
         }
 
