@@ -18,11 +18,14 @@ namespace Noir.Editor
         public static IEnumerable<MeshFilter> OverlappingChunks(float cx, float cy, float radius,
             IReadOnlyDictionary<(int col, int row), MeshFilter> chunkCache)
         {
+            // GroundSize, not Size: these (col, row) pairs index the Ground chunk cache, which is
+            // built on the ground's own coarser grid. Reading the shared Size here would ask for
+            // chunks that do not exist and silently leave the painted ones unpatched.
             float reach = Reach(radius);
-            int colFrom = Mathf.FloorToInt((cx - reach) / MeshChunks.Size);
-            int colTo = Mathf.FloorToInt((cx + reach) / MeshChunks.Size);
-            int rowFrom = Mathf.FloorToInt((cy - reach) / MeshChunks.Size);
-            int rowTo = Mathf.FloorToInt((cy + reach) / MeshChunks.Size);
+            int colFrom = Mathf.FloorToInt((cx - reach) / MeshChunks.GroundSize);
+            int colTo = Mathf.FloorToInt((cx + reach) / MeshChunks.GroundSize);
+            int rowFrom = Mathf.FloorToInt((cy - reach) / MeshChunks.GroundSize);
+            int rowTo = Mathf.FloorToInt((cy + reach) / MeshChunks.GroundSize);
 
             for (int row = rowFrom; row <= rowTo; row++)
             for (int col = colFrom; col <= colTo; col++)
