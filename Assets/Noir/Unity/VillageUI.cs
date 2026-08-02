@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -26,8 +25,11 @@ namespace Noir.Unity
         private bool _showPlan = true;
 
         // ---- the note editor, shared by the place panel and the bare-parcel panel ----
+        //
+        // Which parcel the drafts below currently hold. Set to int.MinValue to force a reload
+        // from disk on the next frame, which is what both `save` and `revert` do.
         private int _noteDraftFor = int.MinValue;
-        private string _noteDraft = "";
+        private Vector2 _noteScroll;
 
         private const float PanelWidth = 340f;
         private const float BarHeight = 48f;
@@ -320,9 +322,12 @@ namespace Noir.Unity
                 GUILayout.Label($"<color=#8a8a86>{place.JobSlots} job slots</color>", _small);
 
             int parcelId = ParcelIndex.FindFor(place)?.Id ?? -1;
-            DrawNoteEditor(parcelId);
+            // NO FlexibleSpace BEFORE THE BUTTON when there is a note editor above it: the
+            // editor's scroll view expands too, and two expanding siblings split the leftover
+            // height between them - which is how a form that fits ends up half-scrolled anyway.
+            if (parcelId >= 0) DrawNoteEditor(parcelId);
+            else GUILayout.FlexibleSpace();
 
-            GUILayout.FlexibleSpace();
             if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
                 _host.SelectedPlace = PlaceId.None;
 
@@ -336,151 +341,147 @@ namespace Noir.Unity
         /// ParcelNotes for why an address is not what this is filed under, and for the file
         /// format a saved household is written as.
         /// </summary>
-        private int _editingNoteFor = int.MinValue;
         private string _draftCharacter = "", _draftNames = "";
         private int _draftAdults, _draftKids;
         private ParcelNotes.Zoning _draftZoning;
         private ParcelNotes.HousingType _draftHousing;
+        private ParcelNotes.Quality _draftQuality;
         private int _draftStories;
         private bool _draftBasement;
+
+        /// <summary>
+        /// Loads the drafts from whatever is on file the first time a given parcel is shown, so
+        /// the form below can be LIVE rather than hidden behind an edit button.
+        ///
+        /// It used to be modal - a read-only summary with `edit` and `randomize` under it, and
+        /// every field that was not a name or a household count lived inside the edit branch. The
+        /// summary line for zoning only drew when something was already set, so on a fresh parcel
+        /// (the overwhelming majority: 468 of 794 have nothing on them) the panel showed no zoning,
+        /// no stories, no basement and no housing type at all, and nothing suggesting that clicking
+        /// `edit` would reveal them. Everything is on screen now.
+        /// </summary>
+        private void SeedDrafts(int parcelId)
+        {
+            if (_noteDraftFor == parcelId) return;
+            _noteDraftFor = parcelId;
+
+            var saved = ParcelNotes.For(parcelId);
+            _draftAdults = saved?.Adults ?? 0;
+            _draftKids = saved?.Kids ?? 0;
+            _draftNames = saved?.Names ?? "";
+            _draftCharacter = saved?.Character ?? "";
+            _draftZoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset;
+            _draftHousing = saved?.Housing ?? ParcelNotes.HousingType.Unset;
+            _draftQuality = saved?.Condition ?? ParcelNotes.Quality.Unset;
+            _draftStories = saved?.Stories ?? 0;
+            _draftBasement = saved?.Basement ?? false;
+        }
+
+        /// <summary>Everything in the drafts, as a note ready to write. The footprint is not a
+        /// draft - FootprintDrawer owns it and saves it separately - so it is carried across from
+        /// whatever is already on file rather than being overwritten with nothing.</summary>
+        private ParcelNotes.Note DraftNote(ParcelNotes.Note saved) => new ParcelNotes.Note
+        {
+            Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
+            Character = _draftCharacter, Footprint = saved?.Footprint,
+            Zoning = _draftZoning, Housing = _draftHousing, Condition = _draftQuality,
+            Stories = _draftStories, Basement = _draftBasement
+        };
 
         private void DrawNoteEditor(int parcelId)
         {
             if (parcelId < 0) return;
+            SeedDrafts(parcelId);
             GUILayout.Space(10);
 
             var drawer = _host.Footprint;
             bool drawingHere = drawer != null && drawer.Active && drawer.TargetParcelId == parcelId;
             var saved = ParcelNotes.For(parcelId);
-            bool editing = _editingNoteFor == parcelId;
 
+            _noteScroll = GUILayout.BeginScrollView(_noteScroll);
+
+            // ---- who lives here ----
             GUILayout.Label("<color=#8a8a86>household</color>", _small);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("adults", _small, GUILayout.Width(50));
+            if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftAdults = Mathf.Max(0, _draftAdults - 1);
+            GUILayout.Label(_draftAdults.ToString(), _label, GUILayout.Width(20));
+            if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftAdults++;
+            GUILayout.Space(10);
+            GUILayout.Label("kids", _small, GUILayout.Width(34));
+            if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftKids = Mathf.Max(0, _draftKids - 1);
+            GUILayout.Label(_draftKids.ToString(), _label, GUILayout.Width(20));
+            if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftKids++;
+            GUILayout.EndHorizontal();
 
-            if (!editing)
+            GUILayout.Space(4);
+            GUILayout.Label("<color=#8a8a86>names, one per line</color>", _small);
+            _draftNames = GUILayout.TextArea(_draftNames, GUILayout.Height(50));
+
+            GUILayout.Space(4);
+            GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
+            _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(60));
+
+            // ---- what the lot is ----
+            GUILayout.Space(8);
+            GUILayout.Label("<color=#8a8a86>zoning</color>", _small);
+            if (GUILayout.Button(Pretty(_draftZoning), _button, GUILayout.Height(24)))
+                _draftZoning = Cycle(_draftZoning);
+
+            if (_draftZoning == ParcelNotes.Zoning.Residential)
             {
-                if (saved == null || (saved.Adults == 0 && saved.Kids == 0
-                                       && string.IsNullOrWhiteSpace(saved.Names)))
-                {
-                    GUILayout.Label("<color=#75736e>nobody on file</color>", _label);
-                }
-                else
-                {
-                    GUILayout.Label(HouseholdSummary(saved.Adults, saved.Kids), _label);
-                    if (!string.IsNullOrWhiteSpace(saved.Names))
-                        GUILayout.Label($"<color=#8a8a86>{saved.Names.Replace("\n", ", ")}</color>", _small);
-                }
-                if (saved != null && !string.IsNullOrWhiteSpace(saved.Character))
-                {
-                    GUILayout.Space(4);
-                    GUILayout.Label(saved.Character, _label);
-                }
-
-                if (saved != null && (saved.Zoning != ParcelNotes.Zoning.Unset || saved.Stories != 0
-                                       || saved.Basement || saved.Housing != ParcelNotes.HousingType.Unset))
-                {
-                    GUILayout.Space(6);
-                    var bits = new List<string> { Pretty(saved.Zoning) };
-                    if (saved.Zoning == ParcelNotes.Zoning.Residential
-                        && saved.Housing != ParcelNotes.HousingType.Unset)
-                        bits.Add(Pretty(saved.Housing));
-                    if (saved.Stories > 0)
-                        bits.Add(saved.Stories == 1 ? "1 story" : $"{saved.Stories} stories");
-                    if (saved.Basement) bits.Add("basement");
-                    GUILayout.Label($"<color=#8a8a86>{string.Join(" · ", bits)}</color>", _small);
-                }
-
                 GUILayout.Space(4);
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("edit", _button, GUILayout.Width(70), GUILayout.Height(24)))
-                {
-                    _editingNoteFor = parcelId;
-                    _draftAdults = saved?.Adults ?? 0;
-                    _draftKids = saved?.Kids ?? 0;
-                    _draftNames = saved?.Names ?? "";
-                    _draftCharacter = saved?.Character ?? "";
-                    _draftZoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset;
-                    _draftHousing = saved?.Housing ?? ParcelNotes.HousingType.Unset;
-                    _draftStories = saved?.Stories ?? 0;
-                    _draftBasement = saved?.Basement ?? false;
-                }
-                if (GUILayout.Button("randomize", _button, GUILayout.Width(90), GUILayout.Height(24)))
-                {
-                    RandomizeHousehold(out _draftAdults, out _draftKids, out _draftNames, out _draftCharacter);
-                    ParcelNotes.Save(parcelId, new ParcelNotes.Note
-                    {
-                        Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
-                        Character = _draftCharacter, Footprint = saved?.Footprint,
-                        Zoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset,
-                        Housing = saved?.Housing ?? ParcelNotes.HousingType.Unset,
-                        Stories = saved?.Stories ?? 0, Basement = saved?.Basement ?? false
-                    });
-                }
-                GUILayout.EndHorizontal();
+                GUILayout.Label("<color=#8a8a86>housing type</color>", _small);
+                if (GUILayout.Button(Pretty(_draftHousing), _button, GUILayout.Height(24)))
+                    _draftHousing = Cycle(_draftHousing);
             }
-            else
+
+            GUILayout.Space(4);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("stories", _small, GUILayout.Width(50));
+            if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftStories = Mathf.Max(0, _draftStories - 1);
+            GUILayout.Label(_draftStories.ToString(), _label, GUILayout.Width(20));
+            if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftStories++;
+            GUILayout.Space(10);
+            if (GUILayout.Button(_draftBasement ? "basement: yes" : "basement: no", _button))
+                _draftBasement = !_draftBasement;
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(4);
+            GUILayout.Label("<color=#8a8a86>condition</color>", _small);
+            if (GUILayout.Button(Pretty(_draftQuality), _button, GUILayout.Height(24)))
+                _draftQuality = Cycle(_draftQuality);
+
+            GUILayout.EndScrollView();
+
+            // ---- committing ----
+            //
+            // SAVED IS NOT AUTOMATIC. Every control above writes to a draft and nothing else, so
+            // cycling zoning to see what the options are does not commit anything until asked.
+            bool dirty = saved == null
+                ? DraftIsAnything()
+                : (_draftAdults != saved.Adults || _draftKids != saved.Kids
+                || _draftNames != saved.Names || _draftCharacter != saved.Character
+                || _draftZoning != saved.Zoning || _draftHousing != saved.Housing
+                || _draftQuality != saved.Condition
+                || _draftStories != saved.Stories || _draftBasement != saved.Basement);
+
+            GUILayout.Space(4);
+            GUILayout.BeginHorizontal();
+            var wasColour = GUI.backgroundColor;
+            if (dirty) GUI.backgroundColor = new Color(0.90f, 0.48f, 0.30f);
+            if (GUILayout.Button(dirty ? "save *" : "save", _button, GUILayout.Height(24)))
             {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("adults", _small, GUILayout.Width(50));
-                if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftAdults = Mathf.Max(0, _draftAdults - 1);
-                GUILayout.Label(_draftAdults.ToString(), _label, GUILayout.Width(20));
-                if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftAdults++;
-                GUILayout.Space(10);
-                GUILayout.Label("kids", _small, GUILayout.Width(34));
-                if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftKids = Mathf.Max(0, _draftKids - 1);
-                GUILayout.Label(_draftKids.ToString(), _label, GUILayout.Width(20));
-                if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftKids++;
-                GUILayout.EndHorizontal();
-
-                GUILayout.Space(4);
-                GUILayout.Label("<color=#8a8a86>names, one per line</color>", _small);
-                _draftNames = GUILayout.TextArea(_draftNames, GUILayout.Height(50));
-
-                GUILayout.Space(4);
-                GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
-                _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(60));
-
-                GUILayout.Space(8);
-                GUILayout.Label("<color=#8a8a86>zoning</color>", _small);
-                if (GUILayout.Button(Pretty(_draftZoning), _button, GUILayout.Height(24)))
-                    _draftZoning = Cycle(_draftZoning);
-
-                GUILayout.Space(4);
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("stories", _small, GUILayout.Width(50));
-                if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftStories = Mathf.Max(0, _draftStories - 1);
-                GUILayout.Label(_draftStories.ToString(), _label, GUILayout.Width(20));
-                if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftStories++;
-                GUILayout.Space(10);
-                if (GUILayout.Button(_draftBasement ? "basement: yes" : "basement: no", _button))
-                    _draftBasement = !_draftBasement;
-                GUILayout.EndHorizontal();
-
-                if (_draftZoning == ParcelNotes.Zoning.Residential)
-                {
-                    GUILayout.Space(4);
-                    GUILayout.Label("<color=#8a8a86>housing type</color>", _small);
-                    if (GUILayout.Button(Pretty(_draftHousing), _button, GUILayout.Height(24)))
-                        _draftHousing = Cycle(_draftHousing);
-                }
-
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("save", _button, GUILayout.Height(24)))
-                {
-                    ParcelNotes.Save(parcelId, new ParcelNotes.Note
-                    {
-                        Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
-                        Character = _draftCharacter, Footprint = saved?.Footprint,
-                        Zoning = _draftZoning, Housing = _draftHousing,
-                        Stories = _draftStories, Basement = _draftBasement
-                    });
-                    _editingNoteFor = int.MinValue;
-                }
-                if (GUILayout.Button("randomize", _button, GUILayout.Height(24)))
-                    RandomizeHousehold(out _draftAdults, out _draftKids, out _draftNames, out _draftCharacter);
-                if (GUILayout.Button("cancel", _button, GUILayout.Height(24)))
-                    _editingNoteFor = int.MinValue;
-                GUILayout.EndHorizontal();
+                ParcelNotes.Save(parcelId, DraftNote(saved));
+                _noteDraftFor = int.MinValue;     // reload from what actually landed on disk
             }
+            GUI.backgroundColor = wasColour;
+
+            if (GUILayout.Button("randomize", _button, GUILayout.Height(24)))
+                RandomizeHousehold(out _draftAdults, out _draftKids, out _draftNames, out _draftCharacter);
+            if (GUILayout.Button("revert", _button, GUILayout.Height(24)))
+                _noteDraftFor = int.MinValue;
+            GUILayout.EndHorizontal();
 
             GUILayout.Space(6);
 
@@ -529,6 +530,30 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>Whether the drafts hold anything worth saving, for a parcel that has nothing
+        /// on file yet - mirrors ParcelNotes.Save's own emptiness test, so `save *` never lights
+        /// up for a note that would be discarded as empty the moment it was written.</summary>
+        private bool DraftIsAnything() =>
+            !string.IsNullOrWhiteSpace(_draftCharacter) || !string.IsNullOrWhiteSpace(_draftNames)
+            || _draftAdults != 0 || _draftKids != 0
+            || _draftZoning != ParcelNotes.Zoning.Unset
+            || _draftHousing != ParcelNotes.HousingType.Unset
+            || _draftQuality != ParcelNotes.Quality.Unset
+            || _draftStories != 0 || _draftBasement;
+
+        private static string Pretty(ParcelNotes.Quality q)
+        {
+            switch (q)
+            {
+                case ParcelNotes.Quality.Derelict: return "derelict";
+                case ParcelNotes.Quality.Poor: return "poor";
+                case ParcelNotes.Quality.Fair: return "fair";
+                case ParcelNotes.Quality.Good: return "good";
+                case ParcelNotes.Quality.Excellent: return "excellent";
+                default: return "condition not recorded";
+            }
+        }
+
         private static string Pretty(ParcelNotes.HousingType h)
         {
             switch (h)
@@ -539,15 +564,6 @@ namespace Noir.Unity
                 case ParcelNotes.HousingType.ApartmentComplex: return "apartment complex";
                 default: return "unspecified";
             }
-        }
-
-        private static string HouseholdSummary(int adults, int kids)
-        {
-            if (adults == 0 && kids == 0) return "<color=#75736e>nobody on file</color>";
-            string a = adults == 1 ? "1 adult" : $"{adults} adults";
-            if (kids == 0) return a;
-            string k = kids == 1 ? "1 kid" : $"{kids} kids";
-            return $"{a}, {k}";
         }
 
         private static NameTable _names;
@@ -646,9 +662,10 @@ namespace Noir.Unity
             GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "
                            + "built on it.</color>", _label);
 
+            // No FlexibleSpace here - the note editor's own scroll view takes the slack. See
+            // DrawPlaceInspector for why two expanding siblings is the wrong shape.
             DrawNoteEditor(parcel.Id);
 
-            GUILayout.FlexibleSpace();
             if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
                 _host.SelectedParcel = null;
 

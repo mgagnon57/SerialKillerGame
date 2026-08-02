@@ -32,6 +32,11 @@ namespace Noir.Unity
         /// meaningful when Zoning is Residential.</summary>
         public enum HousingType { Unset, SingleFamily, Duplex, Apartment, ApartmentComplex }
 
+        /// <summary>What condition the building is in - kept up, let go, or somewhere between.
+        /// Applies to any zoning, not just housing: a shut-up storefront is as much a fact about
+        /// a street as a derelict house is.</summary>
+        public enum Quality { Unset, Derelict, Poor, Fair, Good, Excellent }
+
         public sealed class Note
         {
             /// <summary>What the family is like - the seed for behaviour, not just flavour text.
@@ -58,6 +63,9 @@ namespace Noir.Unity
             /// least one.</summary>
             public int Stories;
             public bool Basement;
+
+            /// <summary>What condition it is in. See Quality above.</summary>
+            public Quality Condition;
         }
 
         private static Dictionary<int, Note> _byId;
@@ -82,7 +90,7 @@ namespace Noir.Unity
                        && string.IsNullOrWhiteSpace(note.Names)
                        && note.Adults == 0 && note.Kids == 0
                        && note.Zoning == Zoning.Unset && note.Housing == HousingType.Unset
-                       && note.Stories == 0 && !note.Basement
+                       && note.Stories == 0 && !note.Basement && note.Condition == Quality.Unset
                        && (note.Footprint == null || note.Footprint.Length < 3));
 
             if (empty) _byId.Remove(parcelId);
@@ -139,6 +147,10 @@ namespace Noir.Unity
                 {
                     if (System.Enum.TryParse(rest.Substring(7), true, out Zoning z)) note.Zoning = z;
                 }
+                else if (rest.StartsWith("quality "))
+                {
+                    if (System.Enum.TryParse(rest.Substring(8), true, out Quality q)) note.Condition = q;
+                }
                 else if (rest.StartsWith("building "))
                 {
                     var nums = rest.Substring(9).Split(' ');
@@ -172,7 +184,8 @@ namespace Noir.Unity
             var sb = new StringBuilder();
             sb.AppendLine("# ============================================================================");
             sb.AppendLine("#  AUTHORED PARCEL NOTES - who lived here, the household, the house shape if");
-            sb.AppendLine("#  it's known, and what the lot is - zoning, stories, basement, housing type.");
+            sb.AppendLine("#  it's known, and what the lot is - zoning, stories, basement, housing type");
+            sb.AppendLine("#  and what condition the building is in.");
             sb.AppendLine("#");
             sb.AppendLine("#  Keyed by parcel id, which is that parcel's line number in parcels.txt (0-");
             sb.AppendLine("#  based, comments and blanks not counted) - NOT an address, because most of");
@@ -200,6 +213,8 @@ namespace Noir.Unity
                 if (note.Stories != 0 || note.Basement || note.Housing != HousingType.Unset)
                     sb.AppendLine($"parcel {id} building {note.Stories} {(note.Basement ? 1 : 0)} "
                                 + $"{note.Housing.ToString().ToLowerInvariant()}");
+                if (note.Condition != Quality.Unset)
+                    sb.AppendLine($"parcel {id} quality {note.Condition.ToString().ToLowerInvariant()}");
                 if (note.Footprint != null && note.Footprint.Length >= 3)
                 {
                     sb.Append($"parcel {id} shape");
