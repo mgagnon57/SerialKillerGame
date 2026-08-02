@@ -133,42 +133,17 @@ namespace Noir.Unity
         /// </summary>
         private static int Features(List<Vector3> verts, List<Color> cols, List<int> tris)
         {
-            string text;
-            try { text = ContentLoader.Read("features.txt"); }
-            catch { return 0; }
-
             int n = 0;
-            foreach (var raw in text.Split('\n'))
+            foreach (var feature in MapFeatures.All())
             {
-                var line = raw.Trim();
-                if (line.Length == 0 || line[0] == '#') continue;
+                string kind = feature.Kind;
+                var pts = feature.Points;
 
-                int gap = line.IndexOf(' ');
-                if (gap <= 0) continue;
-                string kind = line.Substring(0, gap);
-
-                var pts = new List<Vector2>();
-                foreach (var piece in line.Substring(gap).Split(' '))
-                {
-                    int comma = piece.IndexOf(',');
-                    if (comma <= 0) continue;
-                    if (float.TryParse(piece.Substring(0, comma), System.Globalization.NumberStyles.Float,
-                                       System.Globalization.CultureInfo.InvariantCulture, out float x)
-                     && float.TryParse(piece.Substring(comma + 1), System.Globalization.NumberStyles.Float,
-                                       System.Globalization.CultureInfo.InvariantCulture, out float y))
-                        pts.Add(new Vector2(x, y));
-                }
-                if (pts.Count < 2) continue;
-
-                // SMOOTHED FOR DRAWING ONLY. A real survey way is a sparse set of straight-line
-                // vertices - a few points every hundred metres - which is honest data and reads
-                // as a slightly kinked series of straight segments the moment it is drawn at any
-                // zoom closer than the whole town. The real line does not have those corners; the
-                // survey just did not sample it any finer. Smoothing between the same vertices
-                // (not moving or discarding a single one) is cosmetic, and confined to the one
-                // feature this actually reads as wrong for - a river or a field ditch kinking is
-                // unremarkable, a railroad doing it looks like an error.
-                if (kind == "rail" || kind == "oldrail") pts = Smoothed(pts);
+                // Smoothed for drawing only, and only for the rail - see MapFeatures.Smoothed
+                // for why the railroad is the one feature that asks for it. CityRailBed draws
+                // the SAME curve on the ground from the same call, which is the whole reason
+                // the parse and the spline moved out of this file.
+                if (kind == "rail" || kind == "oldrail") pts = MapFeatures.Smoothed(pts);
 
                 (Color colour, float weight, bool closed) = kind switch
                 {
@@ -202,46 +177,6 @@ namespace Noir.Unity
             return n;
         }
 
-        /// <summary>Sub-divisions inserted between each pair of real vertices - four turns a
-        /// dozen-point survey way into a curve with no single straight-line segment longer than
-        /// a fraction of the gap between real points, without moving any of those points.</summary>
-        private const int SmoothSteps = 4;
-
-        /// <summary>
-        /// Catmull-Rom through the real vertices, unchanged - every original point is still on
-        /// the curve exactly where it was, only the straight segments between them are replaced
-        /// by an arc. The end points are their own neighbour (clamped), which is the standard fix
-        /// for a spline with nothing before its first or after its last control point.
-        /// </summary>
-        private static List<Vector2> Smoothed(List<Vector2> pts)
-        {
-            if (pts.Count < 3) return pts;
-
-            var out_ = new List<Vector2> { pts[0] };
-            for (int i = 0; i < pts.Count - 1; i++)
-            {
-                var p0 = pts[Mathf.Max(i - 1, 0)];
-                var p1 = pts[i];
-                var p2 = pts[i + 1];
-                var p3 = pts[Mathf.Min(i + 2, pts.Count - 1)];
-
-                for (int s = 1; s <= SmoothSteps; s++)
-                {
-                    float t = (float)s / SmoothSteps;
-                    out_.Add(CatmullRom(p0, p1, p2, p3, t));
-                }
-            }
-            return out_;
-        }
-
-        private static Vector2 CatmullRom(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
-        {
-            float t2 = t * t, t3 = t2 * t;
-            return 0.5f * ((2f * p1)
-                + (-p0 + p2) * t
-                + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2
-                + (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
-        }
 
         /// <summary>
         /// How far the tie spans across the line, in metres. Has to clear the rail line's own

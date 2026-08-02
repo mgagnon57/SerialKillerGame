@@ -250,6 +250,12 @@ namespace Noir.Unity
             {
                 CityStory.Build(World, city.transform);
                 CityRail.Build(World, city.transform);
+
+                // The real CSX line, at grade. Separate from CityRail above, which is the
+                // elevated El and is gated on a `place railway` city.txt does not have - see
+                // CityRailBed. This one needs no place: it follows the surveyed alignment in
+                // features.txt, which is the same line the survey plan draws.
+                CityRailBed.Build(World, city.transform);
                 CityFarm.Build(World, city.transform);
                 CityPowerlines.Build(World, city.transform);
                 CityGreenery.Build(World, city.transform);

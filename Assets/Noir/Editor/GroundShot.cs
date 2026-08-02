@@ -1,0 +1,272 @@
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Rendering;
+using Noir.Core.World;
+using Noir.Unity;
+
+namespace Noir.Editor
+{
+    /// <summary>
+    /// The ground, DRESSED, in daylight - the one thing the committed snapshot set cannot show.
+    ///
+    /// WHY IT IS NOT JUST ANOTHER CityShot CAMERA. That set is the dark SURVEY PLAN:
+    /// VillageHost.ShowBuildings is false and Materials3D.Plan dims the ground to near-black
+    /// behind it. Worse, Materials3D.ShowGroundColour is `!Application.isBatchMode &amp;&amp; ...`, so it
+    /// is hard-false in every headless run there is. A batch-mode plan render therefore CANNOT
+    /// show what colour the ground is or what stands on it, which makes it exactly the wrong
+    /// instrument for checking that a new terrain kind or a new ground-level structure reads
+    /// correctly - it would verify through the one path that bypasses the thing being verified.
+    ///
+    /// So this forces ShowBuildings on for the duration and puts it back afterwards. It writes
+    /// its own files and never touches the plan set.
+    ///
+    /// Ground, greenery and the rail bed only. The buildings, traffic and street furniture are a
+    /// long way from the North Fork and would add minutes to a render that is about a river.
+    ///
+    ///   Unity.exe -batchmode -quit -projectPath . -executeMethod Noir.Editor.GroundShot.Water
+    ///   Unity.exe -batchmode -quit -projectPath . -executeMethod Noir.Editor.GroundShot.Rail
+    /// </summary>
+    public static class GroundShot
+    {
+        /// <summary>One camera: where it looks, how far back, and what to call the file.</summary>
+        private readonly struct Shot
+        {
+            public readonly string Name;
+            public readonly Vector2 At;          // map coordinates, straight off features.txt
+            public readonly float Eye, Dist, Pitch, Yaw;
+
+            /// <summary>Snap to the railroad: At is treated as "near here", and both the exact
+            /// spot and the yaw are taken from the real polyline instead of from Yaw. See
+            /// SnapToRail - hand-computed bearings put the first three rail shots in a wood.</summary>
+            public readonly bool AlongRail;
+            public readonly float Beside;        // metres to the right of the track
+
+            public Shot(string name, float mx, float my, float dist, float pitch, float yaw,
+                        float eye = 0f, bool alongRail = false, float beside = 0f)
+            {
+                Name = name; At = new Vector2(mx, my);
+                Dist = dist; Pitch = pitch; Yaw = yaw; Eye = eye;
+                AlongRail = alongRail; Beside = beside;
+            }
+        }
+
+        /// <summary>
+        /// The point on the real CSX polyline nearest `near`, and the bearing of the track there
+        /// as a Unity yaw.
+        ///
+        /// WHY THIS EXISTS. The first three rail cameras were aimed by reading coordinates out of
+        /// features.txt and working the bearing out on paper, and two of them photographed a wood
+        /// forty metres from anything. The alignment is data; asking it where it is costs eight
+        /// lines and cannot be off by a hundred metres. Same reasoning as CityStory asking the
+        /// road network which way a roadside cross should face rather than authoring the angle.
+        /// </summary>
+        private static (Vector2 at, float yaw) SnapToRail(Vector2 near, float beside)
+        {
+            Vector2 best = near, tangent = Vector2.right;
+            float bestD2 = float.MaxValue;
+
+            foreach (var feature in MapFeatures.All())
+            {
+                if (feature.Kind != "rail") continue;
+                var pts = MapFeatures.Smoothed(feature.Points);
+                for (int i = 0; i < pts.Count - 1; i++)
+                {
+                    Vector2 a = pts[i], d = pts[i + 1] - a;
+                    float len2 = d.sqrMagnitude;
+                    if (len2 < 1e-6f) continue;
+
+                    float t = Mathf.Clamp01(Vector2.Dot(near - a, d) / len2);
+                    var p = a + d * t;
+                    float d2 = (p - near).sqrMagnitude;
+                    if (d2 >= bestD2) continue;
+                    bestD2 = d2; best = p; tangent = d.normalized;
+                }
+            }
+
+            // Map space is x east, y south; the right-hand side of a walk is (-dy, dx), the same
+            // derivation LaneGraph uses for which side of a road to drive on.
+            best += new Vector2(-tangent.y, tangent.x) * beside;
+
+            // Unity yaw is clockwise from +Z, and +Z is north while map y counts southward - so
+            // the world direction of a map tangent (tx, ty) is (tx, 0, -ty).
+            float yaw = Mathf.Atan2(tangent.x, -tangent.y) * Mathf.Rad2Deg;
+            return (best, yaw);
+        }
+
+        [MenuItem("Noir/Render The Water")]
+        public static void Water() => Run("water", new[]
+        {
+            // THE NORTH FORK from the air, mid-course. Framed ALONG the water, not across it:
+            // the question is whether it reads as a river running through farmland rather than
+            // as a blue rectangle.
+            new Shot("water-river", 150f, 1500f, 420f, 38f, 15f),
+
+            // WHERE ATTICA CROSSES IT - the one place the river meets the town's own grid, and
+            // the case that decides whether a road over water reads as a crossing or as a hole
+            // in the carriageway.
+            new Shot("water-crossing", 96f, 1335f, 70f, 12f, 90f, 1.6f),
+
+            // THE PONDS BEHIND THE SCHOOL: closed shapes rather than a corridor, and the ones
+            // somebody who grew up here would place instantly.
+            new Shot("water-ponds", 300f, 1120f, 260f, 40f, 200f),
+
+            // THE BANK at eye height. Water sits 0.35m below its neighbours and the ground mesh
+            // closes that step with a riser; this is the only view at which a missing riser
+            // shows, as a band of sky lying along the far bank.
+            new Shot("water-bank", 360f, 1530f, 55f, 3f, 200f, 1.6f),
+        });
+
+        [MenuItem("Noir/Render The Railroad")]
+        public static void Rail() => Run("rail", new[]
+        {
+            // EVERY ONE OF THESE SNAPS TO THE REAL POLYLINE - the coordinate is only "near here"
+            // and SnapToRail supplies the exact spot and the bearing. A railroad photographed
+            // across itself is a line; photographed along itself it is a railroad, so the yaw
+            // matters as much as the position, and both are data rather than arithmetic I did
+            // on paper and got wrong twice.
+
+            // FROM BESIDE THE TRACK at eye height, looking down the line, standing nine metres
+            // off it. If the ballast, the ties and the rails do not read as a railroad from
+            // here they do not read at all.
+            //
+            // OUT IN THE COUNTRY, at the south-east end past the last of the town lots, rather
+            // than the middle of town where this was first aimed: in among the blocks the frame
+            // fills with paving and hedges before the eye ever reaches the ballast, and the shot
+            // is meant to be about the track.
+            new Shot("rail-track", 1803f, 2095f, 30f, 2f, 0f, 1.6f, true, 9f),
+
+            // A LEVEL CROSSING. Attica is one of the four real OSM crossings; the bed drops and
+            // the rails run flush through the carriageway. This is the shot that says whether a
+            // crossing reads as a crossing or as a railway that stops at the kerb - so it looks
+            // ACROSS the line from the road, which is the one rail view that should not be
+            // along the track.
+            new Shot("rail-crossing", 1291f, 1335f, 38f, 8f, 250f, 1.6f),
+
+            // FROM THE AIR, along the real diagonal. The alignment is the whole point of the
+            // feature - this is where it can be checked against the plan.
+            new Shot("rail-alignment", 1230f, 1240f, 420f, 42f, 0f, 0f, true),
+
+            // WHERE IT PASSES THE TOWN, which is what makes it Rossville's railroad rather than
+            // a line through a field.
+            new Shot("rail-town", 1100f, 1050f, 240f, 30f, 0f, 0f, true),
+        });
+
+        private static void Run(string label, Shot[] shots)
+        {
+            GameObject root = null, camGo = null, sunGo = null;
+            Material sky = null;
+
+            bool wasShowBuildings = VillageHost.ShowBuildings;
+            var wasSky = RenderSettings.skybox;
+            var wasSun = RenderSettings.sun;
+            bool wasFog = RenderSettings.fog;
+            var wasFogColour = RenderSettings.fogColor;
+            float wasFogDensity = RenderSettings.fogDensity;
+            var wasAmbientMode = RenderSettings.ambientMode;
+            var wasAmbient = RenderSettings.ambientLight;
+
+            try
+            {
+                Directory.CreateDirectory(CityShot.OutputDir);
+
+                // Before anything is built: VillageMesh reads it while it is making materials.
+                VillageHost.ShowBuildings = true;
+
+                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
+                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
+                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+
+                int wet = 0;
+                for (int y = 0; y < world.Height; y++)
+                for (int x = 0; x < world.Width; x++)
+                    if (world.Grid.TerrainAt(x, y) == Noir.Core.World.Terrain.Water) wet++;
+                Debug.Log($"[groundshot:{label}] {world.Width}x{world.Height}, {wet:N0} water tiles "
+                        + $"({100f * wet / (world.Width * world.Height):F3}% of the map).");
+
+                // Split the same way CityShot splits it: the generated ground and rail bed are
+                // already chunked meshes and are left alone, and only the bought greenery goes
+                // through the chunker. Baking the ground a second time would work and would be
+                // a different pipeline from the one the game runs, which is the whole point of
+                // photographing it.
+                root = new GameObject("GroundShot");
+                VillageMesh.Build(world, root.transform, true);
+                CityRailBed.Build(world, root.transform);
+
+                var dressing = new GameObject("GroundShotDressing");
+                dressing.transform.SetParent(root.transform, false);
+                CityGreenery.Build(world, dressing.transform);
+                CityChunker.Bake(dressing);
+
+                sunGo = new GameObject("GroundShotSun");
+                var sun = sunGo.AddComponent<Light>();
+                sun.type = LightType.Directional;
+                sun.shadows = LightShadows.Soft;
+                sun.shadowStrength = 0.7f;
+
+                camGo = new GameObject("GroundShotCamera");
+                var cam = camGo.AddComponent<Camera>();
+                cam.fieldOfView = 45f;
+                cam.nearClipPlane = 0.3f;
+                cam.farClipPlane = 3000f;
+                cam.clearFlags = CameraClearFlags.Skybox;
+
+                sky = Snapshot.MakeSky();
+                RenderSettings.skybox = sky;
+                RenderSettings.sun = sun;
+                RenderSettings.fog = true;
+                RenderSettings.fogMode = FogMode.ExponentialSquared;
+                RenderSettings.ambientMode = AmbientMode.Flat;
+
+                // One o'clock, not the six the game opens at: this is a shot to READ the ground
+                // by, and at 06:00 SunRig's fog is at its thickest and everything is a smudge.
+                const float hour = 13f;
+                var (colour, intensity, ambient) = SunRig.SkyAt(hour);
+                sun.color = colour;
+                sun.intensity = intensity;
+                sunGo.transform.rotation = SunRig.SunRotation(hour);
+                RenderSettings.ambientLight = ambient;
+                RenderSettings.fogColor = SunRig.FogAt(colour, intensity, ambient);
+                RenderSettings.fogDensity = Mathf.Lerp(2.1f, 0.95f, Mathf.Clamp01(intensity))
+                                          / Mathf.Max(600f, Mathf.Max(world.Width, world.Height));
+                if (sky != null && sky.HasProperty("_Exposure"))
+                    sky.SetFloat("_Exposure", Mathf.Lerp(0.18f, 1.15f, Mathf.Clamp01(intensity)));
+
+                foreach (var shot in shots)
+                {
+                    var at = shot.At;
+                    float yaw = shot.Yaw;
+                    if (shot.AlongRail)
+                    {
+                        (at, yaw) = SnapToRail(shot.At, shot.Beside);
+                        Debug.Log($"[groundshot] {shot.Name}: snapped to the rail at "
+                                + $"{at.x:F0},{at.y:F0}, bearing {yaw:F0} degrees.");
+                    }
+
+                    // World space is x east, -z south (Space3D), so a map point is (mx, 0, -my).
+                    var target = new Vector3(at.x, shot.Eye, -at.y);
+                    CityShot.Frame(camGo, target, shot.Dist, shot.Pitch, yaw);
+                    CityShot.Capture(cam, Path.Combine(CityShot.OutputDir, shot.Name + ".png"));
+                }
+            }
+            finally
+            {
+                VillageHost.ShowBuildings = wasShowBuildings;
+                RenderSettings.skybox = wasSky;
+                RenderSettings.sun = wasSun;
+                RenderSettings.fog = wasFog;
+                RenderSettings.fogColor = wasFogColour;
+                RenderSettings.fogDensity = wasFogDensity;
+                RenderSettings.ambientMode = wasAmbientMode;
+                RenderSettings.ambientLight = wasAmbient;
+
+                if (camGo != null) Object.DestroyImmediate(camGo);
+                if (sunGo != null) Object.DestroyImmediate(sunGo);
+                if (root != null) Object.DestroyImmediate(root);
+                if (sky != null) Object.DestroyImmediate(sky);
+            }
+
+            if (Application.isBatchMode) EditorApplication.Exit(0);
+        }
+    }
+}
