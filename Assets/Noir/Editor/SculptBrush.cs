@@ -77,7 +77,14 @@ namespace Noir.Editor
 
                 if (!touched) continue;
                 mf.sharedMesh.vertices = v;
-                mf.sharedMesh.RecalculateNormals();
+                // No RecalculateNormals() here: VillageMesh.BuildGround writes normals that
+                // don't depend on vertex height (Vector3.up for ground, a fixed horizontal
+                // facing for risers), so the authored normals already match the painted mesh.
+                // Ground tiles are 4 unweled vertices per quad, so recalculating from the new
+                // per-face geometry would fake in hard faceting across the WHOLE chunk, not just
+                // the painted area, and make the live preview diverge from a real rebuild until
+                // "Rebuild Preview" is pressed. Bounds genuinely do change with height, and feed
+                // culling, so that recalculation stays.
                 mf.sharedMesh.RecalculateBounds();
             }
         }

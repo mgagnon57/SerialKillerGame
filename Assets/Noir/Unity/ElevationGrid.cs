@@ -225,6 +225,17 @@ namespace Noir.Unity
 
             File.WriteAllText(Path.Combine(ContentLoader.Root, DeltaFileName), text.ToString());
         }
+
+        /// <summary>Resets the one-shot load latch and re-reads elevation.txt and
+        /// elevation-delta.txt from disk. _loaded normally only ever flips true once per
+        /// session, so without this there is no way to prove LoadDelta can actually parse back
+        /// whatever SaveDelta just wrote - only that the writer produced well-formed text. Used
+        /// by SculptCheck.CheckSaveFormat to exercise the real save/reload round trip.</summary>
+        public static void ReloadFromDisk()
+        {
+            _loaded = false;
+            Load();
+        }
 #endif
     }
 }

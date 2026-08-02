@@ -115,6 +115,27 @@ namespace Noir.Editor
                 failures++;
             }
 
+            // The checks above only prove SaveDelta's TEXT is well-formed - not that LoadDelta
+            // can parse it back. ReloadFromDisk forces a fresh read of both elevation.txt and
+            // elevation-delta.txt (the one-shot _loaded latch would otherwise make every later
+            // HeightAt call in this session a no-op read of already-parsed memory), so comparing
+            // HeightAt before and after actually exercises the full save/reload round trip that
+            // "painted deltas persist on save/reload" depends on.
+            float expectedHeight = ElevationGrid.HeightAt(0f, 0f);
+            ElevationGrid.ReloadFromDisk();
+            float reloadedHeight = ElevationGrid.HeightAt(0f, 0f);
+            if (Mathf.Abs(reloadedHeight - expectedHeight) > 0.001f)
+            {
+                Debug.LogError($"[sculptcheck] save: after ReloadFromDisk, HeightAt(0,0) was "
+                    + $"{reloadedHeight:0.###}, expected {expectedHeight:0.###} - the painted "
+                    + "delta did not round trip through disk");
+                failures++;
+            }
+            else
+            {
+                Debug.Log("[sculptcheck] save/reload round trip ok");
+            }
+
             ElevationGrid.SetDeltaCell(0, 0, 0f);
             Debug.Log("[sculptcheck] save format ok");
             return failures;
@@ -176,14 +197,40 @@ namespace Noir.Editor
             int col = 1, row = 1;
             float step = ElevationGrid.DeltaStep;
             float wx = col * step, wy = row * step;
+            float radius = 10f;
+
+            // A second point, diagonally offset from the brush centre, sitting in the grid cell
+            // diagonally adjacent to (col, row) and close to that cell's far corner. It only
+            // picks up a small bilinear sliver of the painted node's delta, but it must pick up
+            // SOME - this is the exact case the DeltaStep*sqrt(2) Reach() margin exists for
+            // (see SculptBrush.Reach's doc comment), caught in Task 3's review. The plain 1x
+            // margin the old (buggy) code used would have excluded this point entirely.
+            float diagOffset = step * 29f / 30f;
+            float diagWx = wx + diagOffset, diagWy = wy + diagOffset;
+            float diagDist = Mathf.Sqrt(diagOffset * diagOffset + diagOffset * diagOffset);
+            float oldBuggyMargin = radius + step;
+            float correctMargin = radius + step * 1.41421356f;
+            if (!(diagDist > oldBuggyMargin && diagDist <= correctMargin))
+            {
+                Debug.LogError($"[sculptcheck] brush: diagonal test point at {diagDist:0.###}m "
+                    + $"is not between the old buggy margin {oldBuggyMargin:0.###}m and the "
+                    + $"correct one {correctMargin:0.###}m - fix the test geometry, it no "
+                    + "longer proves what it claims to");
+                failures++;
+            }
 
             GameObject go = null;
             try
             {
                 float before = ElevationGrid.HeightAt(wx, wy);
+                float diagBefore = ElevationGrid.HeightAt(diagWx, diagWy);
 
                 var mesh = new Mesh();
-                mesh.SetVertices(new[] { new Vector3(wx, before, -wy) });
+                mesh.SetVertices(new[]
+                {
+                    new Vector3(wx, before, -wy),
+                    new Vector3(diagWx, diagBefore, -diagWy),
+                });
                 mesh.SetIndices(new[] { 0, 0, 0 }, MeshTopology.Triangles, 0);
 
                 go = new GameObject("SculptCheckQuad");
@@ -191,8 +238,8 @@ namespace Noir.Editor
                 mf.sharedMesh = mesh;
 
                 var chunks = new Dictionary<(int, int), MeshFilter> { [(0, 0)] = mf };
-                var overlapping = SculptBrush.OverlappingChunks(wx, wy, 10f, chunks);
-                SculptBrush.Apply(wx, wy, 10f, 2f, invert: false, overlapping);
+                var overlapping = SculptBrush.OverlappingChunks(wx, wy, radius, chunks);
+                SculptBrush.Apply(wx, wy, radius, 2f, invert: false, overlapping);
 
                 float afterCell = ElevationGrid.GetDeltaCell(col, row);
                 if (Mathf.Abs(afterCell - 2f) > 0.001f)
@@ -206,6 +253,20 @@ namespace Noir.Editor
                 {
                     Debug.LogError($"[sculptcheck] brush: expected vertex to rise 2m, rose {afterVertexY - before:0.###}m");
                     failures++;
+                }
+
+                float diagAfterY = mf.sharedMesh.vertices[1].y;
+                float diagChange = diagAfterY - diagBefore;
+                if (diagChange <= 0.0005f)
+                {
+                    Debug.LogError($"[sculptcheck] brush: diagonal-margin vertex at "
+                        + $"{diagDist:0.###}m from brush centre did not rise (rose "
+                        + $"{diagChange:0.######}m) - the sqrt(2) Reach() margin regressed");
+                    failures++;
+                }
+                else
+                {
+                    Debug.Log($"[sculptcheck] brush diagonal-margin vertex rose {diagChange:0.######}m ok");
                 }
 
                 ElevationGrid.SetDeltaCell(col, row, 0f);
