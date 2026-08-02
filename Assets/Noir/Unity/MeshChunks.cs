@@ -207,6 +207,21 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>Triangle count across every submesh of every chunk - index count / 3, summed
+        /// rather than tracked separately, so it can never disagree with what actually got
+        /// built.</summary>
+        public int TriangleCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (var chunk in All)
+                    for (int s = 0; s < chunk.Tris.Length; s++)
+                        n += chunk.Tris[s].Count / 3;
+                return n;
+            }
+        }
+
         /// <summary>
         /// Build a renderer per non-empty chunk, and return them.
         ///

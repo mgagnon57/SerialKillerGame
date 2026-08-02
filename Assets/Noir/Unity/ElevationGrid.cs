@@ -33,6 +33,18 @@ namespace Noir.Unity
 
         private const string DeltaFileName = "elevation-delta.txt";
 
+        /// <summary>
+        /// The grid's own sample spacing in metres - 30, for the real USGS data. NOT gated to
+        /// the editor, unlike the sculpt tool's other internals below: VillageMesh's ground
+        /// mesher reads this AT RUNTIME too, to cap how far a run of identical-looking tiles is
+        /// allowed to merge into one quad before it would be approximating a stretch of real
+        /// terrain that the source data itself resolves as more than one bilinear patch. Zero
+        /// (elevation.txt missing, or not yet loaded) rather than throwing, since a caller
+        /// bounding a merge by "the native resolution" wants a sentinel it can special-case, not
+        /// an exception the ground has never thrown before.
+        /// </summary>
+        public static int Step { get { Load(); return _step; } }
+
         /// <summary>Height in metres at a world (village-space) point, relative to the
         /// crossing. Zero if elevation.txt is missing - the flat map this project shipped with
         /// until now, rather than a crash.</summary>
