@@ -21,6 +21,7 @@ namespace Noir.Unity
         private VillageHost _host;
         private GUIStyle _panel, _label, _title, _small, _button, _clock;
         private bool _stylesReady;
+        private bool _scaleLoaded;
         private Vector2 _scroll;
         private bool _showPlan = true;
 
@@ -33,6 +34,61 @@ namespace Noir.Unity
 
         private const float PanelWidth = 340f;
 
+        // ============================ READABILITY ============================
+        //
+        // EVERY SIZE IN THIS FILE IS MULTIPLIED BY Scale. Nothing here is drawn at a fixed pixel
+        // size any more, because a fixed size is a guess about somebody's eyes and this one was
+        // wrong: the panel was set at 13px body text and 11px for the grey secondary lines, which
+        // is unreadable for a partially sighted player and merely small for everybody else.
+        //
+        // Scaled rather than simply enlarged, so it is TUNABLE at runtime - Ctrl+= and Ctrl+-
+        // while the game is running, saved to PlayerPrefs so it survives a restart. A single
+        // hard-coded larger number would just be a different guess, and the person who needs it
+        // biggest is exactly the person who cannot try three builds to find out.
+        //
+        // Applies to fonts, panel size, the top bar, and every control height and width, because
+        // scaling text alone gives you big words in boxes that clip them.
+
+        /// <summary>1.0 is the old sizing. Clamped to something still usable at both ends.</summary>
+        public static float Scale = 1.6f;
+
+        private const float MinScale = 0.8f, MaxScale = 3.0f;
+        private const string ScaleKey = "noir.ui.scale";
+
+        /// <summary>Scale a pixel measurement. `S(24)` is "24 pixels at the default size".</summary>
+        private static float S(float px) => px * Scale;
+
+        /// <summary>Scale a font size. Rounded, because a fractional point size renders muddy.</summary>
+        private static int F(float px) => Mathf.Max(1, Mathf.RoundToInt(px * Scale));
+
+        private static void LoadScale() =>
+            Scale = Mathf.Clamp(PlayerPrefs.GetFloat(ScaleKey, 1.6f), MinScale, MaxScale);
+
+        /// <summary>
+        /// Ctrl+= larger, Ctrl+- smaller, Ctrl+0 back to default. Held on Ctrl so it cannot
+        /// collide with the single-key game shortcuts (Tab, H, F, the digits).
+        /// </summary>
+        private void ReadScaleKeys()
+        {
+            var keys = Keyboard.current;
+            if (keys == null) return;
+            if (!keys.ctrlKey.isPressed) return;
+
+            float was = Scale;
+            if (keys.equalsKey.wasPressedThisFrame || keys.numpadPlusKey.wasPressedThisFrame)
+                Scale = Mathf.Min(MaxScale, Scale + 0.1f);
+            if (keys.minusKey.wasPressedThisFrame || keys.numpadMinusKey.wasPressedThisFrame)
+                Scale = Mathf.Max(MinScale, Scale - 0.1f);
+            if (keys.digit0Key.wasPressedThisFrame) Scale = 1.6f;
+
+            if (Mathf.Approximately(was, Scale)) return;
+
+            // The styles cache their font sizes, so they have to be rebuilt at the new scale.
+            _stylesReady = false;
+            PlayerPrefs.SetFloat(ScaleKey, Scale);
+            PlayerPrefs.Save();
+        }
+
         /// <summary>
         /// Where an inspector goes: a panel in the MIDDLE of the screen rather than a rail down
         /// the right edge.
@@ -44,15 +100,18 @@ namespace Noir.Unity
         ///
         /// Sized against the window rather than fixed, and capped so it never fills a big screen
         /// edge to edge: a dialog that covers the map is worse than one you have to look across.
+        /// The cap GROWS WITH Scale - at 2x text a 760px panel would scroll for no reason other
+        /// than the width it was given, which is the same mistake the right rail made.
         /// </summary>
         private static Rect PanelRect()
         {
-            float w = Mathf.Min(760f, Screen.width - 80f);
-            float h = Mathf.Min(880f, Screen.height - BarHeight - 60f);
+            float w = Mathf.Min(S(760f), Screen.width - 80f);
+            float h = Mathf.Min(S(880f), Screen.height - BarHeight - 60f);
             return new Rect((Screen.width - w) * 0.5f,
                             BarHeight + (Screen.height - BarHeight - h) * 0.5f, w, h);
         }
-        private const float BarHeight = 48f;
+
+        private static float BarHeight => S(48f);
 
         /// <summary>
         /// Keep the whole top bar reachable. The skip buttons sit a long way right, and on a
@@ -64,30 +123,40 @@ namespace Noir.Unity
 
         private void BuildStyles()
         {
+            int pad = Mathf.RoundToInt(S(14f));
             _panel = new GUIStyle(GUI.skin.box);
             _panel.normal.background = SolidTexture(new Color(0.06f, 0.07f, 0.08f, 0.92f));
             _panel.border = new RectOffset(2, 2, 2, 2);
-            _panel.padding = new RectOffset(14, 14, 12, 12);
+            _panel.padding = new RectOffset(pad, pad, pad, pad);
 
             _label = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 13,
+                fontSize = F(13),
                 richText = true,
                 wordWrap = true
             };
             _label.normal.textColor = new Color(0.85f, 0.84f, 0.80f);
 
-            _title = new GUIStyle(_label) { fontSize = 17, fontStyle = FontStyle.Bold };
+            _title = new GUIStyle(_label) { fontSize = F(17), fontStyle = FontStyle.Bold };
             _title.normal.textColor = new Color(0.96f, 0.94f, 0.88f);
 
-            _small = new GUIStyle(_label) { fontSize = 11 };
-            _small.normal.textColor = new Color(0.60f, 0.60f, 0.58f);
+            // WAS 11px AND GREY ON DARK, which is the least readable thing on the screen and is
+            // used for the addresses, the county record, the household and every field label -
+            // i.e. most of the actual content. Lifted to 12 BEFORE scaling and paled up from
+            // 0.60 to 0.72 so it still reads as secondary without disappearing.
+            _small = new GUIStyle(_label) { fontSize = F(12) };
+            _small.normal.textColor = new Color(0.72f, 0.72f, 0.70f);
 
-            _button = new GUIStyle(GUI.skin.button) { fontSize = 13 };
+            _button = new GUIStyle(GUI.skin.button) { fontSize = F(13), richText = true };
 
             // The clock is the one thing you should never have to hunt for.
-            _clock = new GUIStyle(_label) { fontSize = 26, fontStyle = FontStyle.Bold };
+            _clock = new GUIStyle(_label) { fontSize = F(26), fontStyle = FontStyle.Bold };
             _clock.normal.textColor = new Color(0.98f, 0.96f, 0.90f);
+
+            // Typed text has to be at least as legible as the labels around it.
+            GUI.skin.textArea.fontSize = F(13);
+            GUI.skin.textField.fontSize = F(13);
+            GUI.skin.label.fontSize = F(13);
 
             _stylesReady = true;
         }
@@ -102,12 +171,14 @@ namespace Noir.Unity
 
         private void OnGUI()
         {
+            if (!_scaleLoaded) { LoadScale(); _scaleLoaded = true; }
+            ReadScaleKeys();
             if (!_stylesReady) BuildStyles();
 
             if (_host.LoadError != null)
             {
-                GUI.Box(new Rect(20, 20, 720, 110), GUIContent.none, _panel);
-                GUI.Label(new Rect(36, 34, 690, 90),
+                GUI.Box(new Rect(S(20f), S(20f), S(720f), S(110f)), GUIContent.none, _panel);
+                GUI.Label(new Rect(S(36f), S(34f), S(690f), S(90f)),
                     "<b>The village could not be loaded.</b>\n\n" + _host.LoadError, _label);
                 return;
             }
@@ -129,18 +200,18 @@ namespace Noir.Unity
 
         private void DrawTopBar()
         {
-            GUI.Box(new Rect(0, 0, Screen.width, BarHeight), GUIContent.none, _panel);
+            GUI.Box(new Rect(S(0f), S(0f), Screen.width, BarHeight), GUIContent.none, _panel);
 
             var clock = _host.Sim.Clock;
             bool paused = _host.SpeedIndex == 0;
 
             // ---- the clock, big enough to read without looking for it ----
-            GUI.Label(new Rect(18, 6, 200, 30),
+            GUI.Label(new Rect(S(18f), S(6f), S(200f), S(30f)),
                 $"{clock.HourOfDay:00}:{clock.MinuteOfHour:00}", _clock);
 
-            GUI.Label(new Rect(112, 8, 160, 18),
+            GUI.Label(new Rect(S(112f), S(8f), S(160f), S(18f)),
                 $"<b>{GameClock.DayNames[clock.DayOfWeek]}</b>", _label);
-            GUI.Label(new Rect(112, 26, 160, 16),
+            GUI.Label(new Rect(S(112f), S(26f), S(160f), S(16f)),
                 $"<color=#8a8a86>day {clock.Day}</color>", _small);
 
             // ---- what speed, in words, not just a highlighted button ----
@@ -148,46 +219,46 @@ namespace Noir.Unity
                 ? "<color=#ff8a5c><b>PAUSED</b></color>"
                 : $"<b>{VillageHost.SpeedLabels[_host.SpeedIndex]}</b>";
 
-            GUI.Label(new Rect(182, 6, 90, 18), "<color=#8a8a86>speed</color>", _small);
-            GUI.Label(new Rect(182, 22, 90, 22), speedText, _label);
+            GUI.Label(new Rect(S(182f), S(6f), S(90f), S(18f)), "<color=#8a8a86>speed</color>", _small);
+            GUI.Label(new Rect(S(182f), S(22f), S(90f), S(22f)), speedText, _label);
 
             if (_host.Skipping)
-                GUI.Label(new Rect(182, 22, 200, 22), "<color=#ff8a5c><b>skipping…</b></color>", _label);
+                GUI.Label(new Rect(S(182f), S(22f), S(200f), S(22f)), "<color=#ff8a5c><b>skipping…</b></color>", _label);
 
-            float x = 250f;
+            float x = S(250f);
             for (int i = 0; i < VillageHost.Speeds.Length; i++)
             {
                 bool active = _host.SpeedIndex == i;
                 var old = GUI.backgroundColor;
                 if (active) GUI.backgroundColor = new Color(0.90f, 0.48f, 0.30f);
-                if (GUI.Button(new Rect(x, 12, 42, 24), VillageHost.SpeedLabels[i], _button))
+                if (GUI.Button(new Rect(x, S(12f), S(42f), S(24f)), VillageHost.SpeedLabels[i], _button))
                     _host.SpeedIndex = i;
                 GUI.backgroundColor = old;
-                x += 45f;
+                x += S(45f);
             }
 
-            x += 14f;
-            GUI.Label(new Rect(x, 16, 40, 20), "skip", _small);
-            x += 36f;
+            x += S(14f);
+            GUI.Label(new Rect(x, S(16f), S(40f), S(20f)), "skip", _small);
+            x += S(36f);
             for (int i = 0; i < VillageHost.SkipHours.Length; i++)
             {
                 int hour = VillageHost.SkipHours[i];
                 // The digit that does the same thing, so the shortcut is discoverable rather
                 // than something you have to be told about.
-                if (GUI.Button(new Rect(x, 12, 52, 24), $"{hour:00}:00  <color=#8a8a86>{i + 1}</color>", _button))
+                if (GUI.Button(new Rect(x, S(12f), S(52f), S(24f)), $"{hour:00}:00  <color=#8a8a86>{i + 1}</color>", _button))
                     _host.SkipToHour(hour);
-                x += 56f;
+                x += S(56f);
             }
 
             // The census is the first thing to go on a narrow window - the controls matter
             // more than the readout, and overlapping text is worse than absent text.
-            if (Screen.width >= MinBarWidth + 440f)
-                GUI.Label(new Rect(Screen.width - 430, 16, 420, 20), Census(), _small);
+            if (Screen.width >= S(MinBarWidth) + S(440f))
+                GUI.Label(new Rect(Screen.width - S(430f), S(16f), S(420f), S(20f)), Census(), _small);
 
             // Which view you are in, far right. In street mode you can lose track of whether
             // WASD is going to pan the camera or walk you into a hedge.
             string mode = _host.ViewName;
-            GUI.Label(new Rect(Screen.width - 150, 2, 140, 16),
+            GUI.Label(new Rect(Screen.width - S(150f), S(2f), S(140f), S(16f)),
                 $"<color=#8a8a86>{mode}</color>", _small);
         }
 
@@ -234,20 +305,20 @@ namespace Noir.Unity
             if (keyboard != null && keyboard.hKey.wasPressedThisFrame) _showHelp = !_showHelp;
             if (!_showHelp) return;
 
-            const float w = 620f, h = 470f;
+            float w = S(620f), h = S(470f);
             var rect = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f, w, h);
             GUI.Box(rect, GUIContent.none, _panel);
 
-            GUILayout.BeginArea(new Rect(rect.x + 26, rect.y + 20, rect.width - 52, rect.height - 40));
+            GUILayout.BeginArea(new Rect(rect.x + S(26f), rect.y + S(20f), rect.width - S(52f), rect.height - S(40f)));
 
             GUILayout.Label("Ashcombe", _title);
             GUILayout.Label("<color=#8a8a86>press H to close</color>", _small);
-            GUILayout.Space(14);
+            GUILayout.Space(S(14f));
 
             Row("Space", "pause and resume");
             Row("[  ]", "slower / faster  —  ❚❚ ¼ ½ 1 3 10 60 300");
             Row("1 – 6", "skip to 06:00 08:00 12:00 17:00 20:00 23:00");
-            GUILayout.Space(10);
+            GUILayout.Space(S(10f));
 
             Row("Tab", "<b>overview ⇄ street level</b>");
             Row("WASD", "pan, or walk when at street level");
@@ -256,16 +327,16 @@ namespace Noir.Unity
             Row("Q  E", "rotate");
             Row("R  Shift+F", "tilt up / down");
             Row("wheel", "zoom");
-            GUILayout.Space(10);
+            GUILayout.Space(S(10f));
 
             Row("click", "select somebody");
             Row("F", "follow them");
-            GUILayout.Space(14);
+            GUILayout.Space(S(14f));
 
             GUILayout.Label(
                 "<color=#c9b98a>Roofs lift off as you zoom in from above, so you can watch "
               + "people indoors. They stay on at street level.</color>", _label);
-            GUILayout.Space(8);
+            GUILayout.Space(S(8f));
             GUILayout.Label(
                 "<color=#8a8a86>Try: press 5 for 21:00, then Tab, and walk down Back Lane. "
               + "Lit windows are houses where somebody is home and awake.</color>", _label);
@@ -276,7 +347,7 @@ namespace Noir.Unity
         private void Row(string key, string what)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"<b>{key}</b>", _label, GUILayout.Width(110));
+            GUILayout.Label($"<b>{key}</b>", _label, GUILayout.Width(S(110f)));
             GUILayout.Label(what, _label);
             GUILayout.EndHorizontal();
         }
@@ -294,7 +365,7 @@ namespace Noir.Unity
         {
             var rect = PanelRect();
             GUI.Box(rect, GUIContent.none, _panel);
-            GUILayout.BeginArea(new Rect(rect.x + 20, rect.y + 16, rect.width - 40, rect.height - 32));
+            GUILayout.BeginArea(new Rect(rect.x + S(20f), rect.y + S(16f), rect.width - S(40f), rect.height - S(32f)));
 
             var sim = _host.Sim;
             var kind = PlaceKindTable.Current.Row(place.Kind);
@@ -312,13 +383,13 @@ namespace Noir.Unity
             if (county?.Address != null && !SameAddress(county.Address, place.Name))
                 GUILayout.Label($"<color=#8a8a86>county record: {county.Address}</color>", _small);
 
-            GUILayout.Space(10);
+            GUILayout.Space(S(10f));
 
             // The line somebody wrote about this building when they put it in the map.
             if (!string.IsNullOrWhiteSpace(place.Human))
             {
                 GUILayout.Label($"<i>{place.Human}</i>", _label);
-                GUILayout.Space(10);
+                GUILayout.Space(S(10f));
             }
 
             // ---- when it is open ----
@@ -334,7 +405,7 @@ namespace Noir.Unity
                     : "<color=#a8817a><b>closed</b></color>", _label);
                 foreach (var window in place.Hours)
                     GUILayout.Label($"<color=#8a8a86>{window}</color>", _small);
-                GUILayout.Space(10);
+                GUILayout.Space(S(10f));
             }
 
             if (place.Units > 1)
@@ -349,7 +420,7 @@ namespace Noir.Unity
             if (parcelId >= 0) DrawNoteEditor(parcelId);
             else GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
+            if (GUILayout.Button("close", _button, GUILayout.Width(S(70f)), GUILayout.Height(S(26f))))
                 _host.SelectedPlace = PlaceId.None;
 
             GUILayout.EndArea();
@@ -432,7 +503,7 @@ namespace Noir.Unity
         {
             if (parcelId < 0) return;
             SeedDrafts(parcelId);
-            GUILayout.Space(10);
+            GUILayout.Space(S(10f));
 
             var drawer = _host.Footprint;
             bool drawingHere = drawer != null && drawer.Active && drawer.TargetParcelId == parcelId;
@@ -445,7 +516,7 @@ namespace Noir.Unity
             // two separate questions about the same lot, and stacking them made a form you had
             // to scroll past the people to reach the house.
             GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(330f));
+            GUILayout.BeginVertical(GUILayout.Width(S(330f)));
 
             // ---- who lives here ----
             //
@@ -463,7 +534,7 @@ namespace Noir.Unity
                 foreach (var person in generated.Members)
                     GUILayout.Label($"<color=#75736e>   {person.Forename} {generated.Surname}, "
                                   + $"{person.Age}</color>", _small);
-                if (GUILayout.Button("use this household", _button, GUILayout.Height(22)))
+                if (GUILayout.Button("use this household", _button, GUILayout.Height(S(22f))))
                 {
                     var lines = new System.Text.StringBuilder();
                     foreach (var person in generated.Members)
@@ -472,71 +543,71 @@ namespace Noir.Unity
                     _draftAdults = generated.Adults;
                     _draftKids = generated.Kids;
                 }
-                GUILayout.Space(6);
+                GUILayout.Space(S(6f));
             }
 
             GUILayout.Label("<color=#8a8a86>household</color>", _small);
             GUILayout.BeginHorizontal();
-            GUILayout.Label("adults", _small, GUILayout.Width(50));
-            if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftAdults = Mathf.Max(0, _draftAdults - 1);
-            GUILayout.Label(_draftAdults.ToString(), _label, GUILayout.Width(20));
-            if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftAdults++;
-            GUILayout.Space(10);
-            GUILayout.Label("kids", _small, GUILayout.Width(34));
-            if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftKids = Mathf.Max(0, _draftKids - 1);
-            GUILayout.Label(_draftKids.ToString(), _label, GUILayout.Width(20));
-            if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftKids++;
+            GUILayout.Label("adults", _small, GUILayout.Width(S(50f)));
+            if (GUILayout.Button("-", _button, GUILayout.Width(S(28f)))) _draftAdults = Mathf.Max(0, _draftAdults - 1);
+            GUILayout.Label(_draftAdults.ToString(), _label, GUILayout.Width(S(20f)));
+            if (GUILayout.Button("+", _button, GUILayout.Width(S(28f)))) _draftAdults++;
+            GUILayout.Space(S(10f));
+            GUILayout.Label("kids", _small, GUILayout.Width(S(34f)));
+            if (GUILayout.Button("-", _button, GUILayout.Width(S(28f)))) _draftKids = Mathf.Max(0, _draftKids - 1);
+            GUILayout.Label(_draftKids.ToString(), _label, GUILayout.Width(S(20f)));
+            if (GUILayout.Button("+", _button, GUILayout.Width(S(28f)))) _draftKids++;
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(4);
+            GUILayout.Space(S(4f));
             GUILayout.Label("<color=#8a8a86>names, one per line</color>", _small);
-            _draftNames = GUILayout.TextArea(_draftNames, GUILayout.Height(50));
+            _draftNames = GUILayout.TextArea(_draftNames, GUILayout.Height(S(50f)));
 
-            GUILayout.Space(4);
+            GUILayout.Space(S(4f));
             GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
-            _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(60));
+            _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(S(60f)));
 
             // ---- what the lot is: the right-hand column ----
             GUILayout.EndVertical();
-            GUILayout.Space(24);
-            GUILayout.BeginVertical(GUILayout.Width(330f));
+            GUILayout.Space(S(24f));
+            GUILayout.BeginVertical(GUILayout.Width(S(330f)));
 
             GUILayout.Label("<color=#8a8a86>zoning</color>", _small);
-            if (GUILayout.Button(Pretty(_draftZoning), _button, GUILayout.Height(24)))
+            if (GUILayout.Button(Pretty(_draftZoning), _button, GUILayout.Height(S(24f))))
                 _draftZoning = Cycle(_draftZoning);
 
             if (_draftZoning == ParcelNotes.Zoning.Residential)
             {
-                GUILayout.Space(4);
+                GUILayout.Space(S(4f));
                 GUILayout.Label("<color=#8a8a86>housing type</color>", _small);
-                if (GUILayout.Button(Pretty(_draftHousing), _button, GUILayout.Height(24)))
+                if (GUILayout.Button(Pretty(_draftHousing), _button, GUILayout.Height(S(24f))))
                     _draftHousing = Cycle(_draftHousing);
             }
 
-            GUILayout.Space(4);
+            GUILayout.Space(S(4f));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("stories", _small, GUILayout.Width(50));
-            if (GUILayout.Button("-", _button, GUILayout.Width(28))) _draftStories = Mathf.Max(0, _draftStories - 1);
-            GUILayout.Label(_draftStories.ToString(), _label, GUILayout.Width(20));
-            if (GUILayout.Button("+", _button, GUILayout.Width(28))) _draftStories++;
-            GUILayout.Space(10);
+            GUILayout.Label("stories", _small, GUILayout.Width(S(50f)));
+            if (GUILayout.Button("-", _button, GUILayout.Width(S(28f)))) _draftStories = Mathf.Max(0, _draftStories - 1);
+            GUILayout.Label(_draftStories.ToString(), _label, GUILayout.Width(S(20f)));
+            if (GUILayout.Button("+", _button, GUILayout.Width(S(28f)))) _draftStories++;
+            GUILayout.Space(S(10f));
             if (GUILayout.Button(_draftBasement ? "basement: yes" : "basement: no", _button))
                 _draftBasement = !_draftBasement;
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(4);
+            GUILayout.Space(S(4f));
             GUILayout.Label("<color=#8a8a86>condition</color>", _small);
-            if (GUILayout.Button(Pretty(_draftQuality), _button, GUILayout.Height(24)))
+            if (GUILayout.Button(Pretty(_draftQuality), _button, GUILayout.Height(S(24f))))
                 _draftQuality = Cycle(_draftQuality);
 
             // ---- the house itself ----
-            GUILayout.Space(8);
+            GUILayout.Space(S(8f));
             GUILayout.Label("<color=#8a8a86>rooms</color>", _small);
             Counter("beds", ref _draftBedrooms, 1);
             Counter("baths", ref _draftBaths, 1);
             Counter("half", ref _draftHalfBaths, 1);
 
-            GUILayout.Space(4);
+            GUILayout.Space(S(4f));
             Counter("sq ft", ref _draftSquareFeet, 50);
             Counter("built", ref _draftYearBuilt, 1, 1830);
 
@@ -576,29 +647,29 @@ namespace Noir.Unity
                 || _draftHalfBaths != saved.HalfBaths || _draftSquareFeet != saved.SquareFeet
                 || _draftYearBuilt != saved.YearBuilt);
 
-            GUILayout.Space(4);
+            GUILayout.Space(S(4f));
             GUILayout.BeginHorizontal();
             var wasColour = GUI.backgroundColor;
             if (dirty) GUI.backgroundColor = new Color(0.90f, 0.48f, 0.30f);
-            if (GUILayout.Button(dirty ? "save *" : "save", _button, GUILayout.Height(24)))
+            if (GUILayout.Button(dirty ? "save *" : "save", _button, GUILayout.Height(S(24f))))
             {
                 ParcelNotes.Save(parcelId, DraftNote(saved));
                 _noteDraftFor = int.MinValue;     // reload from what actually landed on disk
             }
             GUI.backgroundColor = wasColour;
 
-            if (GUILayout.Button("randomize", _button, GUILayout.Height(24)))
+            if (GUILayout.Button("randomize", _button, GUILayout.Height(S(24f))))
                 RandomizeHousehold(out _draftAdults, out _draftKids, out _draftNames, out _draftCharacter);
-            if (GUILayout.Button("revert", _button, GUILayout.Height(24)))
+            if (GUILayout.Button("revert", _button, GUILayout.Height(S(24f))))
                 _noteDraftFor = int.MinValue;
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(6);
+            GUILayout.Space(S(6f));
 
             if (!drawingHere)
             {
                 bool hasShape = saved?.Footprint != null;
-                if (GUILayout.Button(hasShape ? "redraw house" : "draw house", _button, GUILayout.Height(24)))
+                if (GUILayout.Button(hasShape ? "redraw house" : "draw house", _button, GUILayout.Height(S(24f))))
                     drawer?.Begin(parcelId, saved?.Footprint);
             }
             else
@@ -606,11 +677,11 @@ namespace Noir.Unity
                 GUILayout.Label($"<color=#c9b98a>drawing - click the ground to place a corner "
                                + $"({drawer.Points.Count} so far)</color>", _small);
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("undo point", _button, GUILayout.Height(24)))
+                if (GUILayout.Button("undo point", _button, GUILayout.Height(S(24f))))
                     drawer.UndoLast();
-                if (GUILayout.Button("finish", _button, GUILayout.Height(24)))
+                if (GUILayout.Button("finish", _button, GUILayout.Height(S(24f))))
                     drawer.Finish(parcelId);
-                if (GUILayout.Button("cancel", _button, GUILayout.Height(24)))
+                if (GUILayout.Button("cancel", _button, GUILayout.Height(S(24f))))
                     drawer.Cancel();
                 GUILayout.EndHorizontal();
             }
@@ -646,12 +717,12 @@ namespace Noir.Unity
         private void Counter(string label, ref int value, int step, int floor = 0)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(label, _small, GUILayout.Width(44));
-            if (GUILayout.Button("-", _button, GUILayout.Width(28)))
+            GUILayout.Label(label, _small, GUILayout.Width(S(44f)));
+            if (GUILayout.Button("-", _button, GUILayout.Width(S(28f))))
                 value = value == 0 ? floor : Mathf.Max(floor, value - step);
             GUILayout.Label(value == 0 ? "<color=#75736e>-</color>" : value.ToString(),
-                            _label, GUILayout.Width(46));
-            if (GUILayout.Button("+", _button, GUILayout.Width(28)))
+                            _label, GUILayout.Width(S(46f)));
+            if (GUILayout.Button("+", _button, GUILayout.Width(S(28f))))
                 value = value == 0 ? Mathf.Max(floor, step) : value + step;
             GUILayout.EndHorizontal();
         }
@@ -765,7 +836,7 @@ namespace Noir.Unity
         {
             var rect = PanelRect();
             GUI.Box(rect, GUIContent.none, _panel);
-            GUILayout.BeginArea(new Rect(rect.x + 20, rect.y + 16, rect.width - 40, rect.height - 32));
+            GUILayout.BeginArea(new Rect(rect.x + S(20f), rect.y + S(16f), rect.width - S(40f), rect.height - S(32f)));
 
             float wFt = parcel.Bounds.width * MetresToFeet;
             float hFt = parcel.Bounds.height * MetresToFeet;
@@ -804,7 +875,7 @@ namespace Noir.Unity
                                   + (county.Over65 ? ", over-65 exemption" : "") + "</color>", _small);
             }
 
-            GUILayout.Space(10);
+            GUILayout.Space(S(10f));
             GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "
                            + "built on it.</color>", _label);
 
@@ -812,7 +883,7 @@ namespace Noir.Unity
             // DrawPlaceInspector for why two expanding siblings is the wrong shape.
             DrawNoteEditor(parcel.Id);
 
-            if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
+            if (GUILayout.Button("close", _button, GUILayout.Width(S(70f)), GUILayout.Height(S(26f))))
                 _host.SelectedParcel = null;
 
             GUILayout.EndArea();
@@ -894,10 +965,10 @@ namespace Noir.Unity
             var citizen = _host.SelectedCitizen;
             if (citizen == null)
             {
-                GUI.Label(new Rect(16, Screen.height - 62, 900, 22),
+                GUI.Label(new Rect(S(16f), Screen.height - S(62f), S(900f), S(22f)),
                     "<b>Tab</b> street level   ·   right-drag or <b>Q</b>/<b>E</b> orbit   ·   "
                   + "<b>R</b>/<b>Shift+F</b> tilt   ·   <b>WASD</b> move   ·   wheel zoom", _small);
-                GUI.Label(new Rect(16, Screen.height - 40, 900, 22),
+                GUI.Label(new Rect(S(16f), Screen.height - S(40f), S(900f), S(22f)),
                     "<b>Space</b> pause   ·   <b>[</b> <b>]</b> speed   ·   <b>1</b>–<b>6</b> skip to hour   ·   "
                   + "click anyone, any building, or any lot   ·   <b>F</b> follow   ·   <b>H</b> for help", _small);
                 return;
@@ -905,7 +976,7 @@ namespace Noir.Unity
 
             var rect = PanelRect();
             GUI.Box(rect, GUIContent.none, _panel);
-            GUILayout.BeginArea(new Rect(rect.x + 20, rect.y + 16, rect.width - 40, rect.height - 32));
+            GUILayout.BeginArea(new Rect(rect.x + S(20f), rect.y + S(16f), rect.width - S(40f), rect.height - S(32f)));
 
             var sim = _host.Sim;
             var agent = sim.GetAgent(citizen.Id);
@@ -913,14 +984,14 @@ namespace Noir.Unity
 
             GUILayout.Label(citizen.FullName, _title);
             GUILayout.Label($"{citizen.Age}   ·   {Stage(citizen)}", _small);
-            GUILayout.Space(10);
+            GUILayout.Space(S(10f));
 
             // ---- what they are doing, right now ----
             string doing = agent.Travelling
                 ? $"walking to <b>{_host.World.GetPlace(sim.CurrentBlock(citizen.Id).Where)?.Name}</b>"
                 : $"{Verb(agent.Doing)} <b>{_host.World.GetPlace(agent.At)?.Name}</b>";
             GUILayout.Label(doing, _label);
-            GUILayout.Space(10);
+            GUILayout.Space(S(10f));
 
             // ---- who they are ----
             GUILayout.Label($"<color=#8a8a86>lives at</color>  {_host.World.GetPlace(citizen.Home)?.Name}", _label);
@@ -951,13 +1022,13 @@ namespace Noir.Unity
             else if (citizen.IsChild) GUILayout.Label("<color=#8a8a86>at school</color>", _label);
             else if (citizen.Stage == LifeStage.Elder) GUILayout.Label("<color=#8a8a86>retired</color>", _label);
 
-            GUILayout.Space(12);
+            GUILayout.Space(S(12f));
 
             // ---- the particulars: the whole reason this is worth watching ----
             foreach (int p in citizen.Particulars)
                 GUILayout.Label("<color=#c9b98a>" + _host.Particulars.Sentence(citizen.Forename, p) + "</color>", _label);
 
-            GUILayout.Space(12);
+            GUILayout.Space(S(12f));
             _showPlan = GUILayout.Toggle(_showPlan, "  today", _label);
 
             if (_showPlan)
@@ -977,9 +1048,9 @@ namespace Noir.Unity
 
             GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(_host.Following ? "stop following" : "follow  (F)", _button, GUILayout.Height(26)))
+            if (GUILayout.Button(_host.Following ? "stop following" : "follow  (F)", _button, GUILayout.Height(S(26f))))
                 _host.Following = !_host.Following;
-            if (GUILayout.Button("close", _button, GUILayout.Width(70), GUILayout.Height(26)))
+            if (GUILayout.Button("close", _button, GUILayout.Width(S(70f)), GUILayout.Height(S(26f))))
             {
                 _host.Selected = CitizenId.None;
                 _host.Following = false;

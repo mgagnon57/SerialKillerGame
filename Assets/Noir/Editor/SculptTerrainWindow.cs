@@ -63,35 +63,80 @@ namespace Noir.Editor
             _preview?.Teardown();
         }
 
+        // ---- readability ----
+        //
+        // This window is drawn with the EDITOR skin, which is fixed at about 11px and takes no
+        // notice of VillageUI.Scale - so it stayed unreadable while the in-game panel grew. The
+        // styles below are rebuilt whenever the scale changes and every control is given an
+        // explicit height, because a bigger font inside a default-height button is a clipped
+        // font. Adjust with the same Ctrl+= / Ctrl+- as the game, or the slider at the foot.
+        private GUIStyle _bigLabel, _bigButton;
+        private float _styledAt = -1f;
+
+        private void BuildStyles()
+        {
+            if (_bigLabel != null && Mathf.Approximately(_styledAt, Noir.Unity.VillageUI.Scale)) return;
+            _styledAt = Noir.Unity.VillageUI.Scale;
+
+            int size = Mathf.Max(9, Mathf.RoundToInt(12f * _styledAt));
+            _bigLabel = new GUIStyle(EditorStyles.label) { fontSize = size, wordWrap = true };
+            _bigButton = new GUIStyle(GUI.skin.button) { fontSize = size };
+
+            // EditorGUIUtility drives the LABEL half of every slider and field row. Without
+            // these two the numbers grow and their captions do not.
+            EditorGUIUtility.labelWidth = 160f * _styledAt;
+        }
+
+        private float Row => 20f * Mathf.Max(1f, _styledAt);
+
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("Ground chunks", _preview?.Chunks.Count.ToString() ?? "0");
-            _radius = EditorGUILayout.Slider("Radius (m)", _radius, 5f, 120f);
-            _strength = EditorGUILayout.Slider("Strength (m/sample)", _strength, 0.02f, 2f);
-            EditorGUILayout.HelpBox(
+            BuildStyles();
+
+            EditorGUIUtility.labelWidth = 160f * _styledAt;
+            var h = GUILayout.Height(Row);
+
+            EditorGUILayout.LabelField("Ground chunks", _preview?.Chunks.Count.ToString() ?? "0",
+                                       _bigLabel, h);
+            _radius = EditorGUILayout.Slider("Radius (m)", _radius, 5f, 120f, h);
+            _strength = EditorGUILayout.Slider("Strength (m/sample)", _strength, 0.02f, 2f, h);
+
+            EditorGUILayout.LabelField(
                 "Drag with the left mouse button in the Scene view to raise. Hold Shift to lower.",
-                MessageType.None);
+                _bigLabel, GUILayout.Height(Row * 2f));
 
             EditorGUILayout.Space();
             using (new EditorGUILayout.HorizontalScope())
             {
                 using (new EditorGUI.DisabledScope(_undo == null || !_undo.CanUndo))
-                    if (GUILayout.Button("Undo")) OnUndoClicked();
+                    if (GUILayout.Button("Undo", _bigButton, h)) OnUndoClicked();
                 using (new EditorGUI.DisabledScope(_undo == null || !_undo.CanRedo))
-                    if (GUILayout.Button("Redo")) OnRedoClicked();
+                    if (GUILayout.Button("Redo", _bigButton, h)) OnRedoClicked();
             }
 
             EditorGUILayout.Space();
             using (new EditorGUI.DisabledScope(!_dirty))
-                if (GUILayout.Button("Save"))
+                if (GUILayout.Button("Save", _bigButton, h))
                 {
                     ElevationGrid.SaveDelta();
                     _dirty = false;
                 }
 
-            if (GUILayout.Button("Rebuild Preview")) _preview.Build();
+            if (GUILayout.Button("Rebuild Preview", _bigButton, h)) _preview.Build();
 
-            EditorGUILayout.LabelField("Unsaved changes", _dirty ? "yes" : "no");
+            EditorGUILayout.LabelField("Unsaved changes", _dirty ? "yes" : "no", _bigLabel, h);
+
+            EditorGUILayout.Space();
+            float was = Noir.Unity.VillageUI.Scale;
+            float now = EditorGUILayout.Slider("Text size", was, 0.8f, 3.0f, h);
+            if (!Mathf.Approximately(was, now))
+            {
+                Noir.Unity.VillageUI.Scale = now;
+                UnityEngine.PlayerPrefs.SetFloat("noir.ui.scale", now);
+                UnityEngine.PlayerPrefs.Save();
+                _bigLabel = null;         // force a rebuild at the new size
+                Repaint();
+            }
         }
 
         private void OnSceneGUI(SceneView view)

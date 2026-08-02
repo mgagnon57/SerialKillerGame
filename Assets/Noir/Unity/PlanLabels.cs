@@ -43,19 +43,33 @@ namespace Noir.Unity
             return it;
         }
 
+        /// <summary>The scale these styles were built at, so a live Ctrl+= rebuilds them
+        /// instead of leaving the map at the old size while the panels grow.</summary>
+        private float _builtAt = -1f;
+
         private void Ready()
         {
-            if (_street != null) return;
+            if (_street != null && Mathf.Approximately(_builtAt, VillageUI.Scale)) return;
+            _builtAt = VillageUI.Scale;
 
+            // SCALED WITH THE REST OF THE UI. These are drawn over the map rather than in a
+            // panel, and they were the smallest text on screen - 13px for a street name and 11
+            // for an address, pale blue on near-black. See VillageUI.Scale, which the same
+            // Ctrl+= / Ctrl+- adjusts; the labels have to grow with the panels or the map stays
+            // unreadable while the inspector gets better.
             _street = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 13,
+                fontSize = Mathf.RoundToInt(13f * VillageUI.Scale),
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
             };
             _street.normal.textColor = new Color(0.55f, 0.93f, 1.00f);
 
-            _address = new GUIStyle(_street) { fontSize = 11, fontStyle = FontStyle.Normal };
+            _address = new GUIStyle(_street)
+            {
+                fontSize = Mathf.RoundToInt(12f * VillageUI.Scale),
+                fontStyle = FontStyle.Normal,
+            };
             _address.normal.textColor = new Color(1.00f, 0.97f, 0.88f);
 
             // Everything is drawn twice, black first and offset a pixel. Pale text on a dark
@@ -132,7 +146,10 @@ namespace Noir.Unity
             if (p.z <= 1f) return;                       // behind the camera
 
             // GUI y runs down the screen and the camera's runs up it.
-            var r = new Rect(p.x - 110f, Screen.height - p.y - 9f, 220f, 18f);
+            // The box grows with the text or a scaled-up street name is clipped by the
+            // rectangle it is centred in.
+            float w = 220f * VillageUI.Scale, h = 18f * VillageUI.Scale;
+            var r = new Rect(p.x - w * 0.5f, Screen.height - p.y - h * 0.5f, w, h);
             if (r.xMax < 0f || r.yMax < 0f || r.x > Screen.width || r.y > Screen.height) return;
 
             var was = style.normal.textColor;
