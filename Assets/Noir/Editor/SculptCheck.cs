@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using UnityEditor;
@@ -36,6 +37,7 @@ namespace Noir.Editor
             {
                 failures += CheckDeltaRoundTrip();
                 failures += CheckUndoStack();
+                failures += CheckBrushPaint();
                 failures += CheckSaveFormat(deltaPath);
             }
             catch (Exception ex)
@@ -164,6 +166,55 @@ namespace Noir.Editor
             }
 
             Debug.Log("[sculptcheck] undo stack ok");
+            return failures;
+        }
+
+        private static int CheckBrushPaint()
+        {
+            int failures = 0;
+            int col = 1, row = 1;
+            float step = ElevationGrid.DeltaStep;
+            float wx = col * step, wy = row * step;
+
+            GameObject go = null;
+            try
+            {
+                float before = ElevationGrid.HeightAt(wx, wy);
+
+                var mesh = new Mesh();
+                mesh.SetVertices(new[] { new Vector3(wx, before, -wy) });
+                mesh.SetIndices(new[] { 0, 0, 0 }, MeshTopology.Triangles, 0);
+
+                go = new GameObject("SculptCheckQuad");
+                var mf = go.AddComponent<MeshFilter>();
+                mf.sharedMesh = mesh;
+
+                var chunks = new Dictionary<(int, int), MeshFilter> { [(0, 0)] = mf };
+                var overlapping = SculptBrush.OverlappingChunks(wx, wy, 10f, chunks);
+                SculptBrush.Apply(wx, wy, 10f, 2f, invert: false, overlapping);
+
+                float afterCell = ElevationGrid.GetDeltaCell(col, row);
+                if (Mathf.Abs(afterCell - 2f) > 0.001f)
+                {
+                    Debug.LogError($"[sculptcheck] brush: expected cell delta 2m at brush centre, got {afterCell:0.###}m");
+                    failures++;
+                }
+
+                float afterVertexY = mf.sharedMesh.vertices[0].y;
+                if (Mathf.Abs(afterVertexY - before - 2f) > 0.001f)
+                {
+                    Debug.LogError($"[sculptcheck] brush: expected vertex to rise 2m, rose {afterVertexY - before:0.###}m");
+                    failures++;
+                }
+
+                ElevationGrid.SetDeltaCell(col, row, 0f);
+                Debug.Log("[sculptcheck] brush paint ok");
+            }
+            finally
+            {
+                if (go != null) UnityEngine.Object.DestroyImmediate(go);
+            }
+
             return failures;
         }
     }
