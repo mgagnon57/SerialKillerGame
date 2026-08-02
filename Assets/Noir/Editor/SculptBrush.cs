@@ -18,7 +18,7 @@ namespace Noir.Editor
         public static IEnumerable<MeshFilter> OverlappingChunks(float cx, float cy, float radius,
             IReadOnlyDictionary<(int col, int row), MeshFilter> chunkCache)
         {
-            float reach = radius + ElevationGrid.DeltaStep;
+            float reach = Reach(radius);
             int colFrom = Mathf.FloorToInt((cx - reach) / MeshChunks.Size);
             int colTo = Mathf.FloorToInt((cx + reach) / MeshChunks.Size);
             int rowFrom = Mathf.FloorToInt((cy - reach) / MeshChunks.Size);
@@ -43,7 +43,7 @@ namespace Noir.Editor
             IEnumerable<MeshFilter> overlappingChunks)
         {
             float signedStrength = strength * (invert ? -1f : 1f);
-            float reach = radius + ElevationGrid.DeltaStep;
+            float reach = Reach(radius);
 
             var verts = new Dictionary<MeshFilter, Vector3[]>();
             var before = new Dictionary<MeshFilter, float[]>();
@@ -87,6 +87,16 @@ namespace Noir.Editor
             float dx = vertex.x - cx, dy = -vertex.z - cy;
             return dx * dx + dy * dy <= reach * reach;
         }
+
+        /// <summary>
+        /// How far a change can reach beyond the brush radius itself: a painted cell's bilinear
+        /// influence covers a DeltaStep-wide SQUARE around it (it moves any vertex whose grid
+        /// cell has that cell as one of its four corners), so the worst case - a vertex sitting
+        /// in that square's own diagonal corner - is DeltaStep * sqrt(2) away, not DeltaStep.
+        /// Using the plain 1x margin here left a thin sliver of vertices at the brush's diagonal
+        /// edge unpatched until the next full rebuild (caught in Task 3's review).
+        /// </summary>
+        private static float Reach(float radius) => radius + ElevationGrid.DeltaStep * 1.41421356f;
 
         /// <summary>Nudges every delta cell within `radius` of (cx, cy). A smooth falloff -
         /// full strength at the centre, none at the rim - so a wide brush blends into its
