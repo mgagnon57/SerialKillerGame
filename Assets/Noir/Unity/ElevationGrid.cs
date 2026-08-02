@@ -1,5 +1,4 @@
-using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEngine;
@@ -17,21 +16,18 @@ namespace Noir.Unity
     /// everywhere else. Bilinear-sampled between grid points rather than snapped to the nearest
     /// one, so two buildings six metres apart do not stand on a visible step.
     ///
-    /// A SECOND grid, the same shape as the first, layers hand-painted correction on top -
-    /// Content/elevation-delta.txt, written only by the sculpt tool
-    /// (Assets/Noir/Editor/SculptTerrainWindow.cs). It exists so a specific spot can be fixed
-    /// without resampling or overwriting the real measured data underneath it: HeightAt adds the
-    /// two together, but only the delta grid is ever written by anything in this project.
+    /// A SECOND grid, the delta, rides on top - same shape as the base, added in rather than
+    /// replacing it. The base float[,] is never written to; every place a human hand needs to
+    /// nudge the ground (the sculpt tool, and only the sculpt tool) writes the delta instead, so
+    /// the real, measured USGS data underneath stays exactly what it was fetched as.
     /// </summary>
     public static class ElevationGrid
     {
-        private static float[,] _grid;   // [row, col], row 0 = north
-        private static float[,] _delta;  // same shape as _grid; all zero until something paints it
+        private static float[,] _grid;   // [row, col], row 0 = north - the real, measured data
+        private static float[,] _delta;  // same shape - human-authored, additive, may be null
         private static int _cols, _rows, _step;
         private static float _baseline;  // raw elevation at the crossing - the new "zero"
         private static bool _loaded;
-
-        private const string DeltaFileName = "elevation-delta.txt";
 
         /// <summary>Height in metres at a world (village-space) point, relative to the
         /// crossing. Zero if elevation.txt is missing - the flat map this project shipped with
@@ -40,16 +36,83 @@ namespace Noir.Unity
         {
             Load();
             if (_grid == null) return 0f;
-            return RawAt(worldX, worldY) - _baseline + DeltaAt(worldX, worldY);
+            float raw = Sample(_grid, worldX, worldY) - _baseline;
+            return _delta == null ? raw : raw + Sample(_delta, worldX, worldY);
         }
 
         public static float HeightAt(Vector2 world) => HeightAt(world.x, world.y);
 
-        private static float RawAt(float worldX, float worldY) => Bilinear(_grid, worldX, worldY);
+        // ---------- sculpt tool surface ----------
+        //
+        // Everything below is read by SculptTerrainWindow and nothing else - runtime code has no
+        // reason to touch a single cell or the save path, only the composed HeightAt above.
 
-        private static float DeltaAt(float worldX, float worldY) => Bilinear(_delta, worldX, worldY);
+        public static int DeltaCols { get { Load(); return _cols; } }
+        public static int DeltaRows { get { Load(); return _rows; } }
+        public static int DeltaStep { get { Load(); return _step; } }
 
-        private static float Bilinear(float[,] grid, float worldX, float worldY)
+        public static float GetDeltaCell(int col, int row)
+        {
+            Load();
+            if (_delta == null) return 0f;
+            col = Mathf.Clamp(col, 0, _cols - 1);
+            row = Mathf.Clamp(row, 0, _rows - 1);
+            return _delta[row, col];
+        }
+
+        public static void SetDeltaCell(int col, int row, float value)
+        {
+            Load();
+            if (_delta == null) return;
+            if (col < 0 || col >= _cols || row < 0 || row >= _rows) return;
+            _delta[row, col] = value;
+        }
+
+        /// <summary>A copy of the whole delta grid, for the sculpt window's undo stack to hold
+        /// on to. A copy rather than the live array, so a snapshot from three strokes ago cannot
+        /// be mutated by the fourth.</summary>
+        public static float[,] CopyDelta()
+        {
+            Load();
+            return _delta == null ? null : (float[,])_delta.Clone();
+        }
+
+        /// <summary>Replaces the whole delta grid - how the sculpt window pops a snapshot back
+        /// in on undo. The snapshot must be the shape Load() produced; the window only ever
+        /// hands back what CopyDelta gave it, so a mismatch means a caller outside the sculpt
+        /// window and is ignored rather than trusted.</summary>
+        public static void RestoreDelta(float[,] snapshot)
+        {
+            Load();
+            if (_delta == null || snapshot == null) return;
+            if (snapshot.GetLength(0) != _rows || snapshot.GetLength(1) != _cols) return;
+            _delta = (float[,])snapshot.Clone();
+        }
+
+        /// <summary>Writes the delta grid to Content/elevation-delta.txt, in the same text
+        /// format elevation.txt itself uses. Explicit, not automatic - the sculpt window calls
+        /// this from its own Save button (and its close-with-unsaved-changes prompt).</summary>
+        public static void SaveDelta()
+        {
+            Load();
+            if (_delta == null) return;
+
+            var sb = new StringBuilder();
+            sb.Append("grid ").Append(_cols).Append(' ').Append(_rows).Append(' ').Append(_step).Append('\n');
+            for (int row = 0; row < _rows; row++)
+            {
+                for (int col = 0; col < _cols; col++)
+                {
+                    if (col > 0) sb.Append(' ');
+                    sb.Append(_delta[row, col].ToString("0.###", CultureInfo.InvariantCulture));
+                }
+                sb.Append('\n');
+            }
+
+            File.WriteAllText(Path.Combine(ContentLoader.Root, "elevation-delta.txt"), sb.ToString());
+        }
+
+        private static float Sample(float[,] grid, float worldX, float worldY)
         {
             float gx = worldX / _step;
             float gy = worldY / _step;
@@ -111,23 +174,20 @@ namespace Noir.Unity
                 return;
             }
 
-            _baseline = RawAt(750f, 1335f);
+            _baseline = Sample(_grid, 750f, 1335f);
             LoadDelta();
         }
 
-        /// <summary>
-        /// The painted correction layer. Same shape as the base grid by construction - it is
-        /// always sized _rows x _cols, whatever elevation-delta.txt says, so a shape mismatch is
-        /// a warning and a flat layer rather than an array that stops matching HeightAt's own
-        /// indexing.
-        /// </summary>
+        /// <summary>Content/elevation-delta.txt, same format as the base grid. Missing file ->
+        /// an all-zero delta the same shape as the base - flat until proven otherwise, the same
+        /// fallback the base loader itself uses for a missing elevation.txt.</summary>
         private static void LoadDelta()
         {
             _delta = new float[_rows, _cols];
 
             string text;
-            try { text = ContentLoader.Read(DeltaFileName); }
-            catch { return; }   // no delta file yet - flat correction, same fallback as the base grid
+            try { text = ContentLoader.Read("elevation-delta.txt"); }
+            catch { return; }
 
             int row = 0;
             bool haveHeader = false;
@@ -139,13 +199,15 @@ namespace Noir.Unity
                 if (!haveHeader)
                 {
                     var parts = line.Split(' ');
-                    if (parts.Length != 4 || parts[0] != "grid"
-                        || int.Parse(parts[1], CultureInfo.InvariantCulture) != _cols
-                        || int.Parse(parts[2], CultureInfo.InvariantCulture) != _rows
-                        || int.Parse(parts[3], CultureInfo.InvariantCulture) != _step)
+                    bool ok = parts.Length == 4 && parts[0] == "grid"
+                            && int.TryParse(parts[1], out int cols) && cols == _cols
+                            && int.TryParse(parts[2], out int rows) && rows == _rows
+                            && int.TryParse(parts[3], out int step) && step == _step;
+                    if (!ok)
                     {
-                        Debug.LogWarning($"[elevation] {DeltaFileName}'s grid shape does not "
-                                        + "match elevation.txt - ignoring the delta file.");
+                        Debug.LogWarning("[elevation] elevation-delta.txt does not match the base "
+                                        + $"grid's {_cols}x{_rows}@{_step}m shape - ignoring it "
+                                        + "rather than trusting a stale or partial delta.");
                         return;
                     }
                     haveHeader = true;
@@ -160,71 +222,10 @@ namespace Noir.Unity
 
             if (row != _rows)
             {
-                Debug.LogWarning($"[elevation] {DeltaFileName}: expected {_rows} rows, read "
-                                + $"{row} - ignoring the delta file.");
+                Debug.LogWarning($"[elevation] elevation-delta.txt expected {_rows} rows, read "
+                                + $"{row} - ignoring it rather than trusting a partial one.");
                 _delta = new float[_rows, _cols];
             }
         }
-
-#if UNITY_EDITOR
-        /// <summary>
-        /// Editor-only surface for the sculpt tool (Assets/Noir/Editor/SculptTerrainWindow.cs and
-        /// its helpers). Nothing at runtime calls any of this - the game only ever reads through
-        /// HeightAt.
-        /// </summary>
-
-        public static int DeltaCols { get { Load(); return _cols; } }
-        public static int DeltaRows { get { Load(); return _rows; } }
-        public static int DeltaStep { get { Load(); return _step; } }
-
-        public static float GetDeltaCell(int col, int row)
-        {
-            Load();
-            return _delta[row, col];
-        }
-
-        public static void SetDeltaCell(int col, int row, float value)
-        {
-            Load();
-            _delta[row, col] = value;
-        }
-
-        /// <summary>A copy of every delta cell - what the sculpt window's undo stack snapshots,
-        /// and what SaveDelta and RestoreDelta both work from.</summary>
-        public static float[,] SnapshotDelta()
-        {
-            Load();
-            var copy = new float[_rows, _cols];
-            Array.Copy(_delta, copy, _delta.Length);
-            return copy;
-        }
-
-        /// <summary>The undo stack's only write path back into the live grid.</summary>
-        public static void RestoreDelta(float[,] snapshot)
-        {
-            Load();
-            Array.Copy(snapshot, _delta, _delta.Length);
-        }
-
-        public static void SaveDelta()
-        {
-            Load();
-            var text = new StringBuilder();
-            text.Append("grid ").Append(_cols).Append(' ').Append(_rows).Append(' ')
-                .Append(_step).Append('\n');
-
-            for (int row = 0; row < _rows; row++)
-            {
-                for (int col = 0; col < _cols; col++)
-                {
-                    if (col > 0) text.Append(' ');
-                    text.Append(_delta[row, col].ToString("0.###", CultureInfo.InvariantCulture));
-                }
-                text.Append('\n');
-            }
-
-            File.WriteAllText(Path.Combine(ContentLoader.Root, DeltaFileName), text.ToString());
-        }
-#endif
     }
 }
