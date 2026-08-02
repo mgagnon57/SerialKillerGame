@@ -44,7 +44,33 @@ against a standing project rule rather than being merely large or risky. Both ne
 
 ## Env
 
-- [ ] We need to add elevation at some point. — *2026-07-31*
+- [x] ~~We need to add elevation at some point.~~ **ALREADY DONE, and this entry was stale** -
+  nobody came back to tick it. Checked against the current code on 2026-08-02 rather than trusting
+  the note, the way the MapAudit entry below had to be. `Content/elevation.txt` is real USGS NED
+  10m data resampled to a 71 x 81 grid at 30m, and `ElevationGrid.HeightAt` bilinearly
+  interpolates it, RELATIVE TO THE CROSSROADS - which is why a caller passing a literal `0f` still
+  works and why this looked unstarted at a glance. Measured from the data:
+
+      raw elevation      200.8 .. 225.3 m   (659 .. 739 ft)
+      relief             24.5 m over the whole map
+      about the crossing -8.3 .. +16.2 m
+
+  EVERY ITEM ON THIS ENTRY'S OWN "what has to follow it" LIST IS DONE, verified one at a time:
+  `CityCollision` builds a MeshCollider sampling the same grid rather than one flat box;
+  `CityStreets.Seat` and `CityParking` take a per-tile ground sample (the literal `0f` in both is
+  only the x/z target - there is a comment there saying exactly that, and saying that writing a
+  world y of zero used to put the carriageway under the village); `CityBuildings` measures a base
+  Y per lot; `CityTraffic` positions vehicles through `HeightAt`; and the camera goes through
+  `Space3D.GroundHit`, a real ray-versus-ground intersection instead of a flat y=0 plane. The
+  sculpt tool's additive delta layer rides on top of all of it.
+
+  So there is nothing to build here. What the entry proposed - "a gentle height field OUTSIDE the
+  road grid only, which leaves every system that assumes flatness untouched" - was the cautious
+  version, and the real data went in everywhere instead. Left as a tick rather than deleted
+  because the reasoning below is still the best description of what elevation touches, and the
+  next person to wonder whether the map is flat should be able to read why it is not.
+  — *2026-07-31, verified done and closed 2026-08-02*
+
   SCOPED 2026-08-01. Everything in the game is on one plane and the plane is
   assumed, not stored: `Space3D.ToWorld(pos, 0f)` is how every person, vehicle,
   building and prop gets its height, and the argument is a literal zero at every
