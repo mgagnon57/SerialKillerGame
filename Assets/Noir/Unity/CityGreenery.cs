@@ -76,6 +76,13 @@ namespace Noir.Unity
             {
                 if (!Handles(prop.Kind)) continue;
 
+                // A railroad keeps its right of way cleared, and the first render of the rail
+                // bed had trees standing between the rails. Scatter is decided in Core off the
+                // terrain, and the corridor is not a terrain kind - it comes from the surveyed
+                // polyline in features.txt - so the one place that knows where the track runs
+                // has to be asked. See CityRailBed.OnRightOfWay.
+                if (CityRailBed.OnRightOfWay(world, prop.At.X, prop.At.Y)) continue;
+
                 var tile = prop.At;
                 var terrain = world.Grid.TerrainAt(tile.X, tile.Y);
                 string kindHere = KindAt(world, tile);

@@ -422,7 +422,29 @@ namespace Noir.Unity
         public static Material Bark =>
             _bark != null ? _bark : (_bark = Make("Bark", new Color32(0x4E, 0x3E, 0x2E, 0xFF), 0.03f));
 
-        private static Material _timber;
+        private static Material _timber, _ballast, _railSteel, _sleeper;
+
+        /// <summary>
+        /// Crushed limestone under a railroad. PALER than Stone deliberately - Stone is a wall,
+        /// weathered and slightly warm, and a track bed built out of it disappeared into the
+        /// grass from any distance. The bright grey ribbon is the thing that says "railroad" in
+        /// an aerial view of farmland; the rails themselves are two lines a few centimetres wide
+        /// and carry none of it.
+        /// </summary>
+        public static Material Ballast =>
+            _ballast != null ? _ballast : (_ballast = Make("Ballast", new Color32(0x9E, 0x99, 0x8E, 0xFF), 0.04f));
+
+        /// <summary>A creosoted sleeper: darker and greyer than Timber, which is a fence rail.</summary>
+        public static Material Sleeper =>
+            _sleeper != null ? _sleeper : (_sleeper = Make("Sleeper", new Color32(0x5A, 0x4C, 0x3E, 0xFF), 0.05f));
+
+        /// <summary>
+        /// Rail head, polished by traffic. Ironwork is a lamp column at 0x2E2E30 and reads as
+        /// black; a rail in daylight is bright enough to be the one part of the track you see
+        /// from a distance, which is the whole reason a line catches the eye across a field.
+        /// </summary>
+        public static Material RailSteel =>
+            _railSteel != null ? _railSteel : (_railSteel = Make("RailSteel", new Color32(0x8A, 0x8D, 0x92, 0xFF), 0.62f, 0.85f));
 
         /// <summary>
         /// Weathered sawn timber - fences, benches, gateposts.

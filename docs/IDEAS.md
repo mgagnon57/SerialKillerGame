@@ -261,8 +261,48 @@ against a standing project rule rather than being merely large or risky. Both ne
   renderers** and downtown is 26% of the city. — *2026-07-31*
 - [ ] `Modular Parts/Rails` is a 6-piece GROUND-LEVEL tram kit (1/3/5/10m plus turns), unused and quite separate from the elevated railway that is commented out in city.txt. **NO LONGER BLOCKED ON LAND** after the 1290 re-lay. What it needs is a ROUTE, and that is a decision about where people go rather than about where there is room - the lane graph is public on `CityTraffic.Graph` for exactly this. — *2026-07-30*
 
-- [ ] **The real CSX line has correct real-world alignment and is invisible the moment the game
-  leaves plan mode.** `Content/features.txt`'s `rail` polyline is the actual surveyed CSX
+- [x] ~~**The real CSX line has correct real-world alignment and is invisible the moment the game
+  leaves plan mode.**~~ DONE - `Assets/Noir/Unity/CityRailBed.cs`. **4,790m of track, 6,694 ties**,
+  ballast crown and shoulders, two rails, following the real surveyed polyline. Built as generated
+  geometry rather than from the pack's tram kit, for the reason the note gave. It reads the SAME
+  curve the survey plan does: the parse and the Catmull-Rom moved out of `CityOutlines` into a new
+  `MapFeatures`, so there is one reader of `features.txt` on the Unity side rather than two that
+  can disagree about where the railroad is.
+
+  A LEVEL CROSSING IS NOT AUTHORED, IT IS ASKED. Rather than matching the four `crossing` entries
+  to positions - a second opinion about where a road is - the bed asks the map what it is standing
+  on: ballast and ties stop, the rails carry on flush. The four surveyed OSM crossings are exactly
+  where it fires, because that is where the real roads are.
+
+  FOUR THINGS THE RENDERS CAUGHT, none of which a test could:
+
+  **The crown never drew at all.** The widest and most visible part of the bed was a quad passed
+  the same offset for both its edges - zero area, silently dropped. **And all three ballast strips
+  plus both rail flanks were wound face-down** and backface-culled. Correct geometry, correct
+  material, correct normals, invisible. The whole bed rendered as two dark lines and read as a
+  scratch on the field. The rule is written down now: a cross-section runs low offset to high, or
+  its face points at the ground.
+
+  **Trees were growing between the rails.** Scatter is decided in Core off terrain, and a railroad
+  corridor is not a terrain kind. `CityRailBed.OnRightOfWay` clears 6.5m either side off the same
+  polyline the bed is built from, and `CityGreenery` asks it.
+
+  **The line runs off the map and MeshChunks said so.** features.txt carries it to y=2674 on a
+  2400 map - correct, Hoopeston is six miles up the line - and the chunk grid was declared over
+  the map, so two kilometres of track got clamped into the edge chunks and could never be culled.
+  The grid is declared over the geometry now.
+
+  **Borrowed materials were the wrong objects.** Ballast was `Stone`, which is a weathered wall,
+  and the bed disappeared into the grass; rails were `Ironwork`, which is a lamp column and reads
+  as black. There is now a `Ballast`, a `Sleeper` and a `RailSteel`.
+
+  Stills: `rail-track`, `rail-crossing`, `rail-alignment`, `rail-town`. NOTE FOR WHOEVER LOOKS:
+  there are genuinely **two parallel ways** at the south-east end - that is what OSM has, a siding,
+  not a bug. Still open: no crossbucks, gates or lights at the four crossings, and no train runs on
+  it. Whether it should carry real freight is the separate, smaller decision the old note called
+  out, and the bed exists for it now. — *2026-08-02*
+
+- [ ] ~~**The real CSX line, superseded note kept for the reasoning.**~~ `Content/features.txt`'s `rail` polyline is the actual surveyed CSX
   right-of-way (converted from OpenStreetMap - see the note in `city.txt` itself at the "NO
   SIMULATED RAILROAD AVENUE" comment: getting this alignment right already fixed a quarter of the
   town's houses being on the wrong side of the real track). `CityOutlines.Features()` draws it
