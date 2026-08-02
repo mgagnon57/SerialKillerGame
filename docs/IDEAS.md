@@ -6,6 +6,42 @@ Captured with `/idea <thing>` — optionally prefixed with a category, e.g.
 `/idea road: the freeway should have on-ramps rather than crossings`. Tick a box when it is
 done or delete the line when it turns out to be a bad idea.
 
+## Decisions needed — read this section first
+
+Two things asked for overnight on 2026-08-02 that were NOT done, on purpose, because they run
+against a standing project rule rather than being merely large or risky. Both need an explicit
+"yes, do this anyway" from a person, not an autonomous call at 1am.
+
+- **Google Street View, to grade a real home's condition/quality at its real address.** The
+  project already has a rule for exactly this shape of request - see "NO REAL RESIDENTS" in
+  `docs/superpowers/specs/2026-08-01-terrain-pipeline-multiagent-design.md`. That rule is about
+  names, specifically, and the letter of it would not be broken by looking at a house rather than
+  a person - but the reasoning behind it is not really about names. Rossville is a real, small,
+  currently-inhabited town, and this project is a murder simulation set in it. Pulling a current
+  photograph of a real, named address to score its upkeep for a murder game is the same category
+  of thing the NO REAL RESIDENTS section was written to head off, whether or not a person's name
+  ends up attached: it makes a real, current, identifiable home into set dressing for a fictional
+  killing, without whoever lives there knowing that happened. `ParcelNotes`/`CountyRecord` already
+  derive housing quality from the ASSESSOR'S OWN real data (assessed value, class code, year
+  bracket) for exactly this reason - it is real without being a photograph of someone's actual
+  front door. If this is wanted anyway, it wants a decision from a person, in daylight, not a
+  default "the agent was told to keep going." Not attempted.
+
+- **Newspaper/archive research per real parcel, 1995-2006, to inform character notes.** This one
+  is not a grey area - it is the EXACT thing the design spec's "NO REAL RESIDENTS" section
+  withdrew, by name: *"An earlier draft of this document asked Stream 1 to research 'occupant
+  names' from public records and gated it on being 'grounded in community research'. That
+  instruction is withdrawn... Character notes are invented ON PURPOSE."* A 1995-2006 small-town
+  newspaper archive is built almost entirely out of named, identifiable, still-living-in-2026
+  people - real crime items, real obituaries, real school-board minutes with real names attached
+  to real addresses - and mining it per-parcel for a serial-killer game is precisely what that
+  paragraph exists to prevent. Doing it would not be a bug fix or a judgement call inside normal
+  scope; it would be undoing a decision the project already made in writing. Not attempted, and
+  not recommended without a very deliberate, specific override of that section - the household
+  generation this would replace (`Households.cs`, real demographic SHAPE from the county record,
+  fictional people from `Content/names.txt`) is the thing that let the game have a demographically
+  real town without a real resident in it.
+
 ## Env
 
 - [ ] We need to add elevation at some point. — *2026-07-31*
@@ -24,6 +60,62 @@ done or delete the line when it turns out to be a bad idea.
   step and it is worth doing on its own.
 
 - [x] ~~Power lines down the country roads.~~ DONE - `Assets/Noir/Unity/CityPowerlines.cs`, 394 poles and 284 spans down 18 roads. USED THE FARM SET, NOT THE CITY ONE: measuring both showed there are two internally-consistent pairs that must not be mixed, because the wire has to end where the pole does - `Pole_Electric_A_City` is 6.88m with its wire hanging 6.13-6.81, and `Pole_Electric_Old` is 7.37m with `Wire_20m_Tri` at 6.08-7.22. The old timber one belongs on a country road, and the note above only knew about the concrete city pair. Span is 20m because that is the wire's own measured length (z -20.02..0.18, drawn BACKWARD along -z), so a wire placed at a pole facing the previous one lands on both tops - not a spacing anybody picked. WHERE THEY GO IS ASKED, NOT DECLARED: each candidate spot asks the map what its ground is, and only grass, field or wood takes a pole, so the line stops itself where the fields stop rather than at a hardcoded town boundary that has already moved four times. Junctions exclude themselves for free (a crossing road's tile is Road, not grass) and so does anything inside a place, so no pole stands in a farmyard or a paddock. A wire is only hung when the previous spot also took a pole, so a line that reaches the edge of town ends cleanly instead of throwing a span across the gap. `country-poles.png` added to the CityShot set. MapAudit clean on all eight. — *2026-07-31*
+
+- [x] ~~`VillageMesh.BuildGround` draws one quad per 1x1m tile - ~20M vertices for the ground alone.~~
+  FIXED, Stream 4 (performance): greedy-merged into one quad per uniform run, bounded so a run
+  never crosses a 64m chunk edge or a 30m elevation-grid line (`ElevationGrid.Step`, newly
+  exposed) and Bank tiles never merge. Classification is untouched, byte-for-byte, so this cannot
+  blur a real zoning or terrain boundary - it only draws the same decision less often. Measured:
+  20,552,984 -> 575,652 vertices (35.7x), 10,276,492 -> 287,826 triangles, on the real map.
+  Draw calls did NOT move (2,626 both times) - see the new entry below, this is the follow-up it
+  opens. Branch `stream4-performance`, PR #1, not merged to main yet - waiting on review.
+  — *2026-08-02*
+
+- [ ] **Ground draw calls (2,626) didn't move when the vertex count did, and 2,626 is a lot for
+  a floor.** `MeshChunks.DrawCalls` is one per (chunk, material-present-in-it) pair, and merging
+  tiles WITHIN a chunk can't change which materials are present in it - only a coarser chunk grid
+  or fewer materials would. Both are real levers but neither is free: `MeshChunks.Size = 64` is
+  shared with Walls and Props, tuned for THEIR culling trade-off (see the big comment on the
+  class), so bumping it for ground only means a second, ground-specific `MeshChunks` grid at some
+  larger size (128m? 256m?) - now that a ground chunk is a few dozen cheap quads instead of
+  thousands of expensive ones, coarser ground culling probably costs much less than it used to.
+  Worth trying, worth measuring (draw calls before/after, and whether a worst-case near-camera
+  chunk still costs nothing), not attempted here because it's a second, independent change and
+  Stream 4 was scoped to the vertex blowup specifically. — *2026-08-02*
+
+- [ ] **There is no real river or ponds anywhere in the simulated town, despite having their real
+  coordinates.** `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one
+  long real polyline) and the real school ponds (`water ...` closed polygons), pulled from
+  OpenStreetMap - and `CityOutlines.Features()` is the ONLY thing that ever reads that file. It
+  draws them as a flat painted line/fill in the survey-plan view (`CityOutlines.Build`, gated
+  `!ShowBuildings` in `VillageHost.cs`), which is decoration only. `Content/city.txt` - the map
+  that actually gets simulated - has ZERO `terrain water` tiles anywhere (checked directly:
+  `grep -n "terrain water" city.txt` is empty). `Terrain.Water` is fully built out and unused on
+  this map: `HeightOf(Water)` sits a real ground at -0.35m, `Materials3D.ForTerrain(Water)` has
+  its look, riser logic closes the bank - all of it currently only exercised by the Ash, the
+  FICTIONAL river on the old 170x120 `village.txt` map nothing loads any more.
+
+  So the real river and the real ponds you can see traced correctly in the plan view are not
+  actually there when you look at the ground - no bank, no reflection, nobody can fall in, and a
+  path across the school field walks straight over open water that isn't drawn.
+
+  THE DECISION THIS NEEDS BEFORE ANYONE BUILDS IT: does real water become a TERRAIN KIND
+  (`Terrain.Water`, decided in `WorldBuilder`/`TileGrid` from features.txt at load time,
+  alongside city.txt's own painted terrain) or a GROUND LOOK overlay in the `VillageMesh`/
+  `GroundZoning` style (visual only, no change to `TileFlags.Water`/`BlocksSight`/pathing)? The
+  first is more honest - water should probably block sight and stop a person walking through it -
+  but it touches `Core.World.TileGrid` and anything that already reads `Terrain.Water` for game
+  logic, not just the renderer, and needs its own careful test pass the way the traffic and
+  parking fixes above did. The second is safer and faster (a rasterizer that reuses
+  `GroundZoning.EnsureGrid`'s exact "walk each shape's own bounding box, point-in-polygon per
+  tile" technique against the river polyline's own width and the pond polygons) but ships
+  good-looking water nobody can actually get wet in or blocked by, which may or may not be worth
+  having on its own.
+
+  NOT ATTEMPTED tonight on purpose - real coordinates are sitting right there and the conversion
+  is not hard, but it is a world-model decision, not a rendering tweak, and it deserves a look at
+  the result before it is called done the way every other visual system in this project gets one.
+  — *2026-08-02*
 
 ## Roads
 
@@ -93,6 +185,36 @@ done or delete the line when it turns out to be a bad idea.
   baked over 30 materials; the 27 district blocks are 8,228 of that, so **a block costs ~305
   renderers** and downtown is 26% of the city. — *2026-07-31*
 - [ ] `Modular Parts/Rails` is a 6-piece GROUND-LEVEL tram kit (1/3/5/10m plus turns), unused and quite separate from the elevated railway that is commented out in city.txt. **NO LONGER BLOCKED ON LAND** after the 1290 re-lay. What it needs is a ROUTE, and that is a decision about where people go rather than about where there is room - the lane graph is public on `CityTraffic.Graph` for exactly this. — *2026-07-30*
+
+- [ ] **The real CSX line has correct real-world alignment and is invisible the moment the game
+  leaves plan mode.** `Content/features.txt`'s `rail` polyline is the actual surveyed CSX
+  right-of-way (converted from OpenStreetMap - see the note in `city.txt` itself at the "NO
+  SIMULATED RAILROAD AVENUE" comment: getting this alignment right already fixed a quarter of the
+  town's houses being on the wrong side of the real track). `CityOutlines.Features()` draws it
+  correctly, with tick marks for ties and short cross-ticks at the four real OSM level crossings -
+  but only as a flat painted ribbon in the survey-plan view, and `CityOutlines.Build` is called
+  from `VillageHost` ONLY when `!ShowBuildings` (line ~272). `CityRail.cs`, the OTHER rail system
+  in the project, is a completely different thing - an ELEVATED URBAN "El" with a station and a
+  running two-car train - gated on a `place railway` in city.txt that does not exist (deliberately
+  commented out, per the same comment). So: turn `ShowBuildings` on for real gameplay, as the
+  project is clearly heading towards, and the real, correctly-aligned CSX line - the one thing
+  Rossville people would recognise on sight - simply is not there. Nothing paints an at-grade rail
+  bed (ballast, two rails, ties, a level crossing with gates or lights at the real OSM crossing
+  points) anywhere the dressed game can show it.
+
+  A real at-grade line is a much better fit for Rossville than the El kit - this is a single-track
+  branch through a farm town, not a Chicago transit line. Proposed shape: a small renderer that
+  reads the SAME `rail` polyline `CityOutlines` already parses (do not re-derive the coordinate
+  transform, reuse it), walks it in short segments the way `CityOutlines.Smoothed` already
+  smooths the polyline for drawing, and drops a simple ballast-strip + rail-pair mesh along it
+  (generated geometry in the `VillageMesh`/`Frontage` style, not a bought prefab - the pack's kit
+  is ground-level and city-styled, wrong era and wrong country same as the El). Grade crossings at
+  the four real OSM points already tagged in `features.txt`. Whether this should also carry a
+  real freight train the way `CityRail`/`CityTrain` does is a separate, smaller decision once the
+  bed itself exists. NOT ATTEMPTED tonight - this is real art/geometry work on the town's most
+  recognisable real feature, and it deserves the same "render it and look before calling it done"
+  treatment the ground-mesh work above got, which means it wants a session where the result can
+  actually be looked at rather than one where it can only be described. — *2026-08-02*
 - [ ] `Racetrack` is 152 prefabs - 25 road pieces, 91 fences, a control gate, an overpass - plus 79 racing cars excluded from traffic because there is nowhere to race them. **THE LAND EXISTS NOW**: the 1290 map's north-east corner is 270x270 with no road through it, which is exactly what this was waiting on. What it still needs is a track BUILDER - the kit is 25 modular pieces, so laying one is a CityDistrict-sized job rather than a placement, and it was left out of the outer city deliberately for that reason rather than forgotten. — *2026-07-30*
 
 ## Traffic
@@ -110,17 +232,16 @@ done or delete the line when it turns out to be a bad idea.
   widened to three signal cycles so it stops flapping, which hides nothing: the number to watch
   is the p90, and this is recorded so the tail is not mistaken for noise later. Worth either a
   filter lane, a signal, or letting a car that has waited two cycles take a smaller gap. — *2026-07-31*
-- [ ] Semi trailers drive the freeway with no cab. `Car_Truck_Trailer_Modern`,
-  `Car_Truck_Trailer_Container_Large` (+B..F) and `Car_Truck_Trailer_Car_Modern` are BARE TRAILERS
-  - checked the prefabs, they have rear wheels and no steering wheel - and `CityTraffic.Everyday`
-  puts all three in the freeway fleet as if they were vehicles. That is 8 of the 134 freeway
-  prefabs, so about one heavy in sixteen is a driverless box gliding down the road. The trap is the
-  naming: `Car_Truck_Trailer_Sleepercab_Modern` is the one that sounds most like a trailer and is
-  the only COMPLETE unit of the four - it has a steering wheel, front doors and front wheels. Fix is
-  either to drop the three bare trailers from the fleet, or to tow them properly by drawing a
-  tractor unit in front and keeping the pair at a fixed offset along the lane, which the lane graph
-  already makes easy since a trailer is just a second Mover pinned a few metres behind the first.
-  — *2026-07-31*
+- [x] ~~Semi trailers drive the freeway with no cab.~~ TOOK THE CHEAP FIX: dropped
+  `Car_Truck_Trailer_Modern`, `Car_Truck_Trailer_Container_Large` (+B..F) and
+  `Car_Truck_Trailer_Car_Modern` from `CityTraffic.Everyday`'s freeway list, keeping only
+  `Car_Truck_Trailer_Sleepercab_Modern` (+B..F) - the one complete unit of the four, confirmed by
+  listing the actual prefab files rather than trusting the note. THE PROPER FIX - towing a real
+  trailer behind its own tractor unit, a second `Mover` pinned a fixed offset behind the first - is
+  still not done and is the better long-term answer if articulated variety is wanted back; this
+  just stops the driverless-box sighting tonight, at the cost of the freeway's heavy traffic being
+  a little less varied. Not gated/measured beyond compiling - a content-list change, nothing about
+  the traffic MODEL moved. — *2026-07-31, cheap fix taken 2026-08-02*
 
 - [ ] No colliders on any vehicle: `CityTraffic` avoids by RULES (signals, give-way, look-ahead box), never by intersection test, so where a rule has no case cars pass through each other. Probably right for AI-vs-AI; needs revisiting the moment the player can drive. — *2026-07-30*
 - [x] ~~Jams appeared after the fleet went 97 -> 243.~~ **FIXED**, and the fix is four separate
@@ -330,7 +451,13 @@ done or delete the line when it turns out to be a bad idea.
 
 - [ ] **Two Core tests are failing and were already failing.** `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` (wants a ratio >= 2.0) and `TheTenthPercentileIsNotALock` (wants >= 1.0). Found while running the gate for the district work; CONFIRMED pre-existing by stashing that work and running them at HEAD, where they fail identically, so nothing above caused them. 163 of 165 pass. Not investigated - they are about the 2:1 texture-to-use instrument, which is a different subsystem from anything being touched here. Note also that a full Debug `dotnet test` takes 7m41s against 30s in Release, and there is a crashdump under `tools/Noir.Core.Tests/TestResults/` from an earlier run - see the CPU-instability note before blaming code for anything intermittent. — *2026-07-31*
 
-- [ ] `MapAudit` reports faults with `Debug.LogError` and then exits 0 REGARDLESS - `EditorApplication.Exit(0)` is unconditional. So a batchmode caller cannot tell a clean map from a broken one without grepping the log, which is the same "looks exactly like a clean pass" shape as the `-quit`/`-runTests` bug above. Left alone for now because something may already depend on the zero. — *2026-07-31*
+- [x] ~~`MapAudit` reports faults with `Debug.LogError` and then exits 0 REGARDLESS~~ ALREADY
+  FIXED by the time Stream 4 (performance) checked it on 2026-08-02 - nobody had come back to
+  tick the box. `MapAudit.Run` is now `EditorApplication.Exit(faults == 0 ? 0 : 1)`, and `Run`
+  was itself split from `RunCore` (which exits nothing) specifically so `Preflight` could call
+  the audit as one step of a longer pass and still inherit its exit code. Confirmed by reading
+  the current file rather than assuming the note was still true - it wasn't. — *2026-07-31,
+  closed 2026-08-02*
 
 - [ ] Lift the Crafting System's UGUI inventory UI — drag-drop slots, transfer, tabs — rather than writing one. Tedious to build, and presentation belongs in Unity anyway. — *2026-07-30*
 - [ ] Evidence catalogue as `Content/items.txt` in the shape of `kinds.txt`, read by Core. NOT the Crafting System's ScriptableObjects: content authored in an editor window is content `MapAudit` and the PlayMode tests cannot see. — *2026-07-30*
