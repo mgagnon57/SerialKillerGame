@@ -11,7 +11,16 @@
 ✅ **Phase 3 (Parcel Data):** Real 794 cadastral parcels from Vermilion County (ParcelIndex.cs loaded and queryable)  
 ✅ **Phase 3a (Parcel Alignment):** Just rotated +1.81° (2026-08-01) to align lot lines with street grid  
 ✅ **Phase 3b (Parcel Annotation System):** ParcelNotes.cs with zoning, housing type, quality, occupants framework  
-✅ **Base playability:** 960×960 map, 112+ people, traffic, buildings
+✅ **Base playability:** 2100×2400 map, 477 places, traffic, buildings *(the "960×960, 112 people" in earlier drafts of this line was stale)*
+
+### Stream 1 delivered, 2026-08-01 (commits 33941d7, 3d4a685, 55d3c0f, 81519aa)
+✅ **County record for 776 of 794 parcels** — `Content/parcel-county.txt`: address, PIN, assessor class code and wording, owner-occupancy, over-65 exemption, homesite/dwelling assessed value, acreage. Matched by Hungarian assignment: median 4.4m, p90 6.5m, worst 45.9m.  
+✅ **Zoning derived for every matched parcel** from real class codes — residential 524, vacant 118, commercial 58, agricultural 16. Class `0050` ("Commercial >6 Units") identifies the town's apartment buildings and seeds `ApartmentComplex`.  
+✅ **1991 households on every built residential lot** — `Households.cs`, deterministic from parcel id, stored nowhere. 522 households, 1,299 people against the real village's 1,331.  
+✅ **Editor** — zoning, housing type, condition, bedrooms, baths, half-baths, square feet, year built, all live in a centred two-column panel, with entered area sanity-checked in $/sqft against the county's assessed value.  
+✅ **names.txt retuned** for eastern Illinois in 1991, with child-name cohorts finally wired into `NameTable`.
+
+**Remaining parcel work is authoring, not research:** per-lot character notes and house detail on top of the generated households. It does not need an agent stream.
 
 ## Remaining Work: Parcel Annotation + Terrain Polish
 
@@ -195,18 +204,38 @@ When all four workstreams are approved by the Expensive model and you can:
 - **Elevation:** Bilinear-sampled 30m grid, baseline relative to crossing
 - **All three must stay in sync** — any parcel query, elevation query, or texture lookup uses the same origin and rotation
 
-### Stream 1 Research Foundation
-- **Vermilion County Assessor:** gis.cityofdanville.org/arcgis/rest/services/Property/Property (source of parcel data)
-- **Public records:** Property tax assessments, deed records, property history databases for occupant/zoning research
-- **Local knowledge:** Historical societies, old maps, community memory where documented
-- **Ground truth:** Street view, tax records, building permits — plausibility checks
+### Stream 1 Research Foundation — SUPERSEDED, see "No real residents" below
+- **Vermilion County Assessor:** gis.cityofdanville.org/arcgis/rest/services/Property/Property (source of parcel data, and now of class codes, occupancy, over-65 and assessed values — see `Content/parcel-county.txt`)
+- **What the county does NOT publish:** no square footage, bedroom, bathroom or year-built data anywhere online. Its tax card (devnetwedge) carries billing and assessment only, and its earliest year is 2007. Do not go looking again; this was checked on 2026-08-01.
+- **1991 records:** not obtainable. The portal starts at 2007; older rolls are paper at the courthouse.
+
+### NO REAL RESIDENTS — standing constraint, applies to every stream
+The assessor publishes the current owner of every parcel by name, and flags which owners are
+over 65 and which are owner-occupied. **No agent, stream or task may put a real person's name —
+or a recognisable variant of one — on a real address in this project.**
+
+Rossville is a real town of about 1,300 real people and this is a game about somebody murdering
+its residents. Real addresses are geography and are fine. Real names at those addresses would
+make identifiable living people into the victims of a murder simulation without their knowledge,
+and a deliberately near-miss pseudonym ("Judy Rayford" for "Judith Rayfield") is worse rather
+than better: it keeps the person identifiable while removing their ability to say it is not them.
+
+An earlier draft of this document asked Stream 1 to research "occupant names" from public records
+and gated it on being "grounded in community research". That instruction is withdrawn. Households
+are GENERATED — see `Households.cs` — with their shape taken from the county's real record
+(owner-occupied vs absentee, over-65, assessed dwelling value) and their people drawn from
+`Content/names.txt`. The town's demography is genuinely Rossville's; nobody in it is a real person.
+
+Regional recognisability is achieved instead through the surname pool, which carries the town's
+own street-name families (Henderson, Stufflebeam, McKibben, Holmes, Benton, Gilbert, Stewart,
+Watson, Greenwood), assigned to lots by seed rather than by record.
 
 ### Integration Points
 - Texturing system reads parcel zoning (via ParcelNotes) to pick materials
 - Countryside LOD boundaries at 120m, 190m, 380m — textures must be seamless across them
 - Parcel boundaries should be visually readable (texture/material change at lot lines)
 
-### Playability
-- **Stream 1 (Parcel Annotation)** is the blocker — it informs texturing and visual plausibility. Start here.
-- **Stream 2 (Sculpt Tool)** allows interactive terrain refinement while annotation work proceeds.
-- Streams 3-4 (Texturing & Performance) run in parallel once research is underway.
+### Launch order — REVISED 2026-08-01, 10PM
+- **Stream 1 (Parcel Annotation) is COMPLETE and is not to be launched.** See "Stream 1 delivered" above. Zoning is derived for all 776 matched parcels from the county's own class codes, and households are generated for every built residential lot. Relaunching it would redo committed work and, on the original brief, would have gone looking for real residents' names.
+- **Stream 2 (Sculpt/Paint Tool)** starts first. It is the only remaining blocker on interactive terrain refinement.
+- **Streams 3 (Texturing) and 4 (Performance)** run in parallel after Stream 2, and read parcel zoning through `ParcelNotes` / `CountyRecord` — both already populated, so neither waits on annotation.

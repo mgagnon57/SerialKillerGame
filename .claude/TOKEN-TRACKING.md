@@ -6,15 +6,26 @@
 
 ## Tracking Checkpoints
 
-After each stream completes, I will report:
+> **I CANNOT SEE MY OWN TOKEN USAGE.** Corrected 2026-08-01, 10PM. The original version of
+> this file asked me to report "Tokens spent this stream: X,XXX" at every gate. I have no
+> way to observe that number, so every figure I printed would have been invented — and an
+> invented number in a budget guard is worse than no number, because you would have steered
+> by it. The 50/70/85% red flags below can only be called by YOU, from your own usage
+> display.
+
+After each stream completes, I report only what is actually observable:
 
 ```
 STREAM N COMPLETE
-├─ Tokens spent this stream: X,XXX
-├─ Total spent so far: X,XXX  
-├─ Budget remaining: X,XXX
-└─ Burn rate: XXk/hour
+├─ Wall-clock elapsed: XX min
+├─ Agents spawned: N
+├─ Files changed: N   (+ the list)
+├─ Tests run / result: Preflight, PlayTests, Core
+└─ What is left in this stream: ...
 ```
+
+Then I stop and ask. You read your real usage and reply `continue`, `stop`, or
+`adjust-effort medium|high`.
 
 ## Red Flags (Stop if any trigger)
 
@@ -51,9 +62,10 @@ If burn rate is high:
 
 **I will message after each stream:**
 ```
-Stream [N] complete. [X]k tokens spent. [Y]k remaining. Burn rate [Z]k/hr. 
+Stream [N] complete. [XX] min elapsed, [N] agents, [N] files, tests [result].
 Continue to Stream [N+1]? (yes/no/adjust-effort)
 ```
+No token figure, because I cannot measure one. You supply that half.
 
 **You decide:** 
 - `yes` → continue as planned
