@@ -393,15 +393,23 @@ namespace Noir.Unity
             var go = new GameObject("Ground");
             go.transform.SetParent(parent, false);
 
-            // One submesh per terrain, plus a last one for the open country beyond the map.
-            int pasture = Materials3D.GroundOrder.Length;
+            // One submesh per terrain, THEN one per zoned look a Grass or Field tile can turn
+            // into (see GroundZoning), THEN a last one for the open country beyond the map. The
+            // zoned kinds are appended after GroundOrder rather than folded into it, because they
+            // are not a placement anybody made on the map - Grass and Field stay exactly the
+            // submeshes they always were for every tile zoning does not overrule.
+            int baseKinds = Materials3D.GroundOrder.Length;
+            int zonedKinds = System.Enum.GetValues(typeof(Materials3D.ZonedGround)).Length;
+            int pasture = baseKinds + zonedKinds;
             int submeshes = pasture + 1;
 
             var materials = new Material[submeshes];
             for (int i = 0; i < submeshes; i++)
                 materials[i] = i == pasture
                     ? Materials3D.Pasture
-                    : Materials3D.ForTerrain(Materials3D.GroundOrder[i]);
+                    : i < baseKinds
+                        ? Materials3D.ForTerrain(Materials3D.GroundOrder[i])
+                        : Materials3D.ForZoned((Materials3D.ZonedGround)(i - baseKinds));
 
             // The far rim is inclusive because the riser pass below walks one PAST the last
             // tile on both axes: a riser at x == world.Width is the cut edge of the last column
@@ -420,7 +428,6 @@ namespace Noir.Unity
             for (int gx = 0; gx < world.Width; gx++)
             {
                 var terrain = world.Grid.TerrainAt(gx, gy);
-                int submesh = SubmeshFor(terrain);
 
                 // Small height differences keep surfaces from z-fighting and read as real:
                 // water sits in its channel, roads are worn slightly below the verge. The real
@@ -430,16 +437,32 @@ namespace Noir.Unity
                 // stays seamless. Only a terrain-TYPE boundary (below) still needs a riser; a
                 // smooth real slope needs none, because there is no gap for one to close.
                 float flat = HeightOf(terrain);
-
-                var into = chunks.At(gx, gy);
-                int v0 = into.Verts.Count;
                 float x0 = gx, x1 = gx + 1f;
                 float z0 = -gy, z1 = -(gy + 1f);
 
-                into.Verts.Add(new Vector3(x0, flat + ElevationGrid.HeightAt(x0, gy), z0));
-                into.Verts.Add(new Vector3(x1, flat + ElevationGrid.HeightAt(x1, gy), z0));
-                into.Verts.Add(new Vector3(x1, flat + ElevationGrid.HeightAt(x1, gy + 1f), z1));
-                into.Verts.Add(new Vector3(x0, flat + ElevationGrid.HeightAt(x0, gy + 1f), z1));
+                // Named once so GroundZoning can read the same four corners rather than
+                // resampling ElevationGrid a second time - four HeightAt calls either way, not
+                // eight.
+                float h00 = ElevationGrid.HeightAt(x0, gy);
+                float h10 = ElevationGrid.HeightAt(x1, gy);
+                float h11 = ElevationGrid.HeightAt(x1, gy + 1f);
+                float h01 = ElevationGrid.HeightAt(x0, gy + 1f);
+
+                // Grass and Field are the map's own default guess at the ground; a real parcel's
+                // zoning, or a slope too steep for turf, can both overrule it. Every other
+                // terrain kind - road, path, water, floor, churchyard, wood - is a deliberate
+                // placement and is never touched by either.
+                int submesh = (terrain == Terrain.Grass || terrain == Terrain.Field)
+                    ? SubmeshForLook(GroundZoning.LookAt(world, gx, gy, terrain, h00, h10, h01, h11))
+                    : SubmeshFor(terrain);
+
+                var into = chunks.At(gx, gy);
+                int v0 = into.Verts.Count;
+
+                into.Verts.Add(new Vector3(x0, flat + h00, z0));
+                into.Verts.Add(new Vector3(x1, flat + h10, z0));
+                into.Verts.Add(new Vector3(x1, flat + h11, z1));
+                into.Verts.Add(new Vector3(x0, flat + h01, z1));
 
                 for (int i = 0; i < 4; i++) into.Normals.Add(Vector3.up);
 
@@ -731,9 +754,39 @@ namespace Noir.Unity
             return 0;   // walls sit on grass; their footprint is covered by the wall cube anyway
         }
 
-        /// <summary>The submesh a tile draws in; the pasture skirt beyond the last tile.</summary>
-        private static int SubmeshAt(WorldModel world, int gx, int gy, int pasture) =>
-            world.Grid.InBounds(gx, gy) ? SubmeshFor(world.Grid.TerrainAt(gx, gy)) : pasture;
+        /// <summary>The submesh a GroundZoning verdict draws in - Grass and Field fall back to
+        /// their ordinary GroundOrder submesh, unchanged for every tile zoning does not
+        /// overrule; Hard, Rough and Bank are the three appended after GroundOrder.</summary>
+        private static int SubmeshForLook(GroundLook look)
+        {
+            switch (look)
+            {
+                case GroundLook.Field: return SubmeshFor(Terrain.Field);
+                case GroundLook.Hard: return Materials3D.GroundOrder.Length + (int)Materials3D.ZonedGround.Hard;
+                case GroundLook.Rough: return Materials3D.GroundOrder.Length + (int)Materials3D.ZonedGround.Rough;
+                case GroundLook.Bank: return Materials3D.GroundOrder.Length + (int)Materials3D.ZonedGround.Bank;
+                default: return SubmeshFor(Terrain.Grass);
+            }
+        }
+
+        /// <summary>
+        /// The submesh a tile draws in, for a riser's higher side; the pasture skirt beyond the
+        /// last tile. Zoning-aware for the same reason the flat ground is - a kerb between a
+        /// road and a commercial yard should carry the yard's own material, not plain grass -
+        /// but not slope-aware: a riser's higher side is a different tile from the one whose
+        /// corners are in hand here, and re-sampling ElevationGrid just to catch the rare case
+        /// of a riser standing next to a steep bank was not worth a second elevation lookup for
+        /// every riser on the map.
+        /// </summary>
+        private static int SubmeshAt(WorldModel world, int gx, int gy, int pasture)
+        {
+            if (!world.Grid.InBounds(gx, gy)) return pasture;
+
+            var terrain = world.Grid.TerrainAt(gx, gy);
+            return (terrain == Terrain.Grass || terrain == Terrain.Field)
+                ? SubmeshForLook(GroundZoning.ZoningLookAt(world, gx, gy, terrain))
+                : SubmeshFor(terrain);
+        }
 
         /// <summary>
         /// The height of the ground at a tile, and of the land past the edge of the map.

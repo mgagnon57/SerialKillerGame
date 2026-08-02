@@ -143,6 +143,56 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>
+        /// Ground materials for a Grass or Field tile that reads as something else once its real
+        /// zoning or its real slope is asked - see GroundZoning. Not one of Noir.Core.World.
+        /// Terrain's own eight kinds, because none of them is a placement anybody made; they are
+        /// what the SAME fictional tile turns into once the real parcel underneath disagrees
+        /// with it.
+        /// </summary>
+        public enum ZonedGround { Hard, Rough, Bank }
+
+        private static readonly Dictionary<ZonedGround, Material> _byZoned = new Dictionary<ZonedGround, Material>();
+
+        public static Material ForZoned(ZonedGround kind)
+        {
+            if (_byZoned.TryGetValue(kind, out var existing)) return existing;
+
+            Material m; string texture; float tiling;
+            switch (kind)
+            {
+                case ZonedGround.Hard:
+                    // Commercial and industrial lots: packed earth and gravel, not turf - a feed
+                    // store's yard or a garage's apron. Reuses the road texture's grain
+                    // (hardstanding rather than lawn) at a duller, more olive tint than the road
+                    // itself gets, so a commercial yard reads as worked ground beside a street
+                    // rather than as more street.
+                    m = Make("GroundHard", new Color32(0x8C, 0x86, 0x74, 0xFF), 0.06f);
+                    texture = "road"; tiling = 4f;
+                    break;
+                case ZonedGround.Rough:
+                    // Vacant lots: a lot mowed once a summer, weeds through bare dirt - not lawn,
+                    // and not a farm field either. The path texture's own worn-dirt grain, tinted
+                    // browner and flatter than the kept grass next door.
+                    m = Make("GroundRough", new Color32(0x9C, 0x92, 0x66, 0xFF), 0.03f);
+                    texture = "path"; tiling = 4f;
+                    break;
+                default:   // Bank
+                    // Any tile too steep for turf to hold - a ditch side, a creek bank, whatever
+                    // the sculpt tool has cut. Bare worn ground regardless of what the parcel
+                    // standing on it is zoned for; see GroundZoning.BankGrade for why this is
+                    // rare on a map this flat and not a slope map painted over farmland.
+                    m = Make("GroundBank", new Color32(0x8A, 0x7A, 0x5C, 0xFF), 0.02f);
+                    texture = "path"; tiling = 3f;
+                    break;
+            }
+
+            SurfaceTextures.Apply(m, texture, tiling);
+            Plan(m);
+            _byZoned[kind] = m;
+            return m;
+        }
+
         public static Material Agent =>
             _agent != null ? _agent : (_agent = Make("Person", Color.white, 0.12f));
 
