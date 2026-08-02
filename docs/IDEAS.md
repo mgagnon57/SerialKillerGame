@@ -71,17 +71,41 @@ against a standing project rule rather than being merely large or risky. Both ne
   opens. Branch `stream4-performance`, PR #1, not merged to main yet - waiting on review.
   — *2026-08-02*
 
-- [ ] **Ground draw calls (2,626) didn't move when the vertex count did, and 2,626 is a lot for
-  a floor.** `MeshChunks.DrawCalls` is one per (chunk, material-present-in-it) pair, and merging
-  tiles WITHIN a chunk can't change which materials are present in it - only a coarser chunk grid
-  or fewer materials would. Both are real levers but neither is free: `MeshChunks.Size = 64` is
-  shared with Walls and Props, tuned for THEIR culling trade-off (see the big comment on the
-  class), so bumping it for ground only means a second, ground-specific `MeshChunks` grid at some
-  larger size (128m? 256m?) - now that a ground chunk is a few dozen cheap quads instead of
-  thousands of expensive ones, coarser ground culling probably costs much less than it used to.
-  Worth trying, worth measuring (draw calls before/after, and whether a worst-case near-camera
-  chunk still costs nothing), not attempted here because it's a second, independent change and
-  Stream 4 was scoped to the vertex blowup specifically. — *2026-08-02*
+- [x] ~~**Ground draw calls (2,626) didn't move when the vertex count did.**~~ DONE - the ground
+  has its own grid now, `MeshChunks.GroundSize = 256`, separate from the `Size = 64` Walls and
+  Props share. **2,626 -> 319 draw calls, 8.2x.** MEASURED, not picked: the new `GroundChunkProbe`
+  sweeps the size over the real map in one editor launch and reports what each value costs -
+
+      size   chunks   draw calls   vertices   worst chunk
+        64     1254        2,626    575,652     4,924 tris
+       128      323          860    559,504     8,902
+       256       90          319    553,148    15,846
+       384       42          184    549,676    19,738
+       512       25          120    549,452    37,098
+
+  Vertices go DOWN as chunks coarsen, which is the opposite of what I expected: a run may not
+  cross a chunk edge, so a coarser grid cuts fewer of them in half. 384 and 512 keep buying draw
+  calls and were NOT taken - twenty-five chunks over the whole town is few enough that turning
+  round discards nothing, and culling is the reason the class exists. Gates: Preflight exit 0 and
+  `VERDICT: nothing found`, SculptCheck passed (90 chunks, brush paint ok - `SculptBrush` maps
+  world coordinates to the Ground chunk cache and had to move to `GroundSize` with it).
+  — *2026-08-02*
+
+- [ ] **The plan view's feature ribbons float 6cm and that is not enough clearance.**
+  `CityOutlines.Lift = 0.06f`, and a ribbon vertex is `ElevationGrid.HeightAt(x,y) + Lift` - the
+  TRUE bilinear height - while the ground under it is now a coarser triangulation of that same
+  surface. The two are within a hair of each other, so the depth test flips on edge pixels. Found
+  by the chunk-size change above: `plan-top-down.png` moved by **1,091 pixels of 4,194,304
+  (0.026%)**, all of it on the diagonal rail ribbon and the ditch lines, none of it on the
+  axis-aligned lot lines. It is NOT non-determinism - two consecutive Preflight runs on identical
+  code are byte-identical, which is how this was attributed rather than guessed at - and it is
+  invisible to the eye (I cropped and compared both at 4x; the rail reads the same). But it means
+  the plan snapshot is no longer a stable regression check across ANY ground-mesh change, which is
+  most of what it was for. The fix is probably to raise `Lift`, which in a top-down orthographic
+  plan costs nothing visually - the caution is that the plan camera can orbit, and a ribbon lifted
+  far enough to always win will visibly hover at an oblique angle. Not done here: it is a change
+  to a different subsystem than the one being worked on, and it wants somebody to look at the plan
+  from an angle after changing it. — *2026-08-02*
 
 - [ ] **There is no real river or ponds anywhere in the simulated town, despite having their real
   coordinates.** `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one

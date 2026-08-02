@@ -388,8 +388,16 @@ namespace Noir.Unity
 
         // ---------- ground ----------
 
-        public static void BuildGround(WorldModel world, Transform parent)
+        /// <param name="chunkSize">Chunk edge in metres, for GroundChunkProbe to sweep. Left at
+        /// zero - which is every caller in the game - it is MeshChunks.GroundSize. It is a
+        /// parameter rather than a settable static precisely because the snapshots are compared
+        /// byte for byte: a global somebody forgot to put back would change the mesh for every
+        /// later build in the same editor session, and would show up as a snapshot diff a long
+        /// way from whatever moved it.</param>
+        public static void BuildGround(WorldModel world, Transform parent, int chunkSize = 0)
         {
+            int size = chunkSize > 0 ? chunkSize : MeshChunks.GroundSize;
+
             var go = new GameObject("Ground");
             go.transform.SetParent(parent, false);
 
@@ -414,7 +422,7 @@ namespace Noir.Unity
             // The far rim is inclusive because the riser pass below walks one PAST the last
             // tile on both axes: a riser at x == world.Width is the cut edge of the last column
             // and has to have a chunk to go in.
-            var chunks = new MeshChunks(submeshes, MeshChunks.Size, 0, 0, world.Width, world.Height);
+            var chunks = new MeshChunks(submeshes, size, 0, 0, world.Width, world.Height);
 
             // The land beyond the map is deliberately NOT chunked. It is a dozen quads two
             // kilometres across, and dropped into the chunk grid it would drag one chunk's
@@ -514,13 +522,13 @@ namespace Noir.Unity
                 int w = 1, h = 1;
                 if (sm != bankSubmesh)
                 {
-                    int chunkX1 = (gx / MeshChunks.Size + 1) * MeshChunks.Size;
+                    int chunkX1 = (gx / size + 1) * size;
                     int cellX1 = (gx / elevStep + 1) * elevStep;
                     int maxX = Mathf.Min(Mathf.Min(chunkX1, cellX1), world.Width);
                     while (gx + w < maxX && !claimed[gy, gx + w] && submeshGrid[gy, gx + w] == sm)
                         w++;
 
-                    int chunkY1 = (gy / MeshChunks.Size + 1) * MeshChunks.Size;
+                    int chunkY1 = (gy / size + 1) * size;
                     int cellY1 = (gy / elevStep + 1) * elevStep;
                     int maxY = Mathf.Min(Mathf.Min(chunkY1, cellY1), world.Height);
                     while (gy + h < maxY)
@@ -754,7 +762,7 @@ namespace Noir.Unity
             foreach (var chunk in chunks.All)
             {
                 AssertWinding(chunk, $"Ground chunk {chunk.Col},{chunk.Row}");
-                AssertFootprint(chunk);
+                AssertFootprint(chunk, size);
             }
             AssertWinding(beyond, "Ground surround");
 
@@ -762,7 +770,8 @@ namespace Noir.Unity
             var tiles = chunks.Emit(go.transform, "Ground", materials, ShadowCastingMode.Off, true);
             skirt.Emit(go.transform, "Surround", materials, ShadowCastingMode.Off, true);
 
-            Debug.Log($"Ground mesh: {chunks.VertexCount + skirt.VertexCount:N0} vertices, "
+            Debug.Log($"Ground mesh ({size}m chunks): "
+                    + $"{chunks.VertexCount + skirt.VertexCount:N0} vertices, "
                     + $"{chunks.TriangleCount + skirt.TriangleCount:N0} triangles, "
                     + $"{quads:N0} merged ground quads over {world.Width * world.Height:N0} tiles, "
                     + $"{risers:N0} risers, {tiles.Count} chunks + surround, "
@@ -826,10 +835,10 @@ namespace Noir.Unity
         /// run, a roof's eaves and a tree's canopy all overhang the chunk they were filed under
         /// on purpose, and are not checked.
         /// </summary>
-        private static void AssertFootprint(MeshChunk chunk)
+        private static void AssertFootprint(MeshChunk chunk, int size)
         {
-            float x0 = (float)chunk.Col * MeshChunks.Size, x1 = x0 + MeshChunks.Size;
-            float y0 = (float)chunk.Row * MeshChunks.Size, y1 = y0 + MeshChunks.Size;
+            float x0 = (float)chunk.Col * size, x1 = x0 + size;
+            float y0 = (float)chunk.Row * size, y1 = y0 + size;
 
             for (int i = 0; i < chunk.Verts.Count; i++)
             {

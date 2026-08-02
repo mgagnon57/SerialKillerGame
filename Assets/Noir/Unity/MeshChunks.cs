@@ -126,6 +126,45 @@ namespace Noir.Unity
         /// </summary>
         public const int Size = 64;
 
+        /// <summary>
+        /// Chunk edge for the GROUND alone, in metres. Deliberately a second, coarser number
+        /// rather than a bump to Size, because Size is shared with Walls and Props and is tuned
+        /// for THEIR trade-off - a chunk that holds whole buildings rather than slicing through
+        /// them (see above). The ground has no buildings to slice and wants a different answer.
+        ///
+        /// WHY IT CAN BE COARSER NOW, WHICH IT COULD NOT BEFORE. A draw call is one per
+        /// (chunk, material present in it), so the ground's bill is set by how many chunks there
+        /// are and not by how much is in them. On the 2,100 x 2,400 map, 64 m gives 33 x 38
+        /// chunks - and until the greedy merge landed, each of those chunks held four thousand
+        /// individual tile quads, so making them bigger would have meant handing the GPU tens of
+        /// thousands of quads for a chunk with one corner on screen. A ground chunk is now a few
+        /// dozen merged quads, and 256 m of it costs less than 64 m of it used to. The culling
+        /// accuracy that buys the draw-call reduction is the cheapest thing on the map to give up.
+        ///
+        /// MEASURED, not picked - GroundChunkProbe sweeps this over the real 2,100 x 2,400 map:
+        ///
+        ///     size   chunks   draw calls   vertices   worst chunk
+        ///       64     1254        2,626    575,652     4,924 tris
+        ///      128      323          860    559,504     8,902
+        ///      256       90          319    553,148    15,846
+        ///      384       42          184    549,676    19,738
+        ///      512       25          120    549,452    37,098
+        ///
+        /// Vertices go DOWN as chunks coarsen, which is not the direction anyone expects: a run
+        /// may not cross a chunk edge, so a coarser grid cuts fewer of them in half.
+        ///
+        /// 256 is where the two curves cross usefully. It is 8.2x fewer draw calls, and the
+        /// worst single chunk on the whole map is still under sixteen thousand triangles - about
+        /// what one bought tree costs - so nothing is paid for having a corner of one on screen.
+        /// 384 and 512 keep buying draw calls, and they are NOT taken: at 512 there are
+        /// twenty-five chunks over the entire town, which is few enough that turning round
+        /// discards almost nothing, and culling is the reason this class exists at all. The
+        /// ground is cheap enough now that it could probably survive being drawn whole - but
+        /// "probably survives being unculled" is a worse thing to write down than a grid that
+        /// still works, for two hundred draw calls that nothing has asked for.
+        /// </summary>
+        public const int GroundSize = 256;
+
         private readonly int _chunkSize;
         private readonly int _minCol, _minRow, _cols, _rows;
         private readonly int _submeshes;
