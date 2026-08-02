@@ -616,6 +616,16 @@ namespace Noir.Unity
 
                 if (roll % 5 >= 3) continue;      // not every metre of kerb has something on it
 
+                // GUARDED LIKE `lamps` AND `trees` ABOVE, which it was not. The line below takes
+                // a modulo by kerbside.Count, and Count is zero whenever the prop catalogue came
+                // back empty - a checkout where the Poly pack has not finished importing, or a
+                // fresh clone that does not have it at all. Catalogue returns nothing, line 463
+                // strips every empty role, kerbside ends up empty rather than merely short, and
+                // the divide throws the moment a street is dressed. It cannot fire in a project
+                // that HAS the pack, which is why it sat here: the two lists either side of it
+                // were guarded and this one was not, and no local run could tell the difference.
+                if (kerbside.Count == 0) continue;
+
                 var role = kerbside[(int)(roll / 5 % (uint)kerbside.Count)];
                 if (Put(parent, Pick(role, cx + step, cy, 223), vx + along, vy + across,
                         roll % 4 * 90f) != null) n++;
