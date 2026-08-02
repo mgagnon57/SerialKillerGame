@@ -22,9 +22,9 @@ touches.
 - **Base data is immutable.** `elevation.txt` is never written to, resampled, or re-rotated.
 - **Delta grid resolution matches the base grid** — 71×81 at the same 30m step. No independent
   finer grid.
-- Any code new code that crosses the `Noir.Unity` / `Noir.Editor` assembly boundary (there is no
-  `.asmdef` in `Assets/Noir`, so the `Editor` folder compiles into a separate default editor
-  assembly) must be `public` — `internal` is invisible across that boundary.
+- Any new code that crosses the `Noir.Unity` / `Noir.Editor` assembly boundary must be `public`
+  — `Assets/Noir/Editor` compiles into its own `Noir.Editor.asmdef` (referencing `Noir.Unity`),
+  so `internal` is invisible across it exactly as it would be under the folder-name convention.
 - Follow the project's existing doc-comment voice: explain *why*, not *what*, especially for any
   non-obvious constraint (see any file under `Assets/Noir/Unity` or `Assets/Noir/Editor` for the
   house style).
@@ -617,13 +617,23 @@ namespace Noir.Editor
     /// </summary>
     public static class SculptBrush
     {
+        /// <summary>
+        /// How far a change can reach beyond the brush radius itself: a painted cell's bilinear
+        /// influence covers a DeltaStep-wide SQUARE around it (it moves any vertex whose grid
+        /// cell has that cell as one of its four corners), so the worst case - a vertex sitting
+        /// in that square's own diagonal corner - is DeltaStep * sqrt(2) away, not DeltaStep.
+        /// Using the plain 1x margin here left a thin sliver of vertices at the brush's diagonal
+        /// edge unpatched until the next full rebuild (caught in Task 3's review).
+        /// </summary>
+        private static float Reach(float radius) => radius + ElevationGrid.DeltaStep * 1.41421356f;
+
         /// <summary>Which cached Ground chunks a brush centred at (cx, cy) could possibly touch -
-        /// including the one-cell margin DeltaStep beyond the brush radius, since a cell's
-        /// bilinear neighbours can move a vertex that stands outside the radius itself.</summary>
+        /// including the Reach margin beyond the brush radius, since a cell's bilinear neighbours
+        /// can move a vertex that stands outside the radius itself.</summary>
         public static IEnumerable<MeshFilter> OverlappingChunks(float cx, float cy, float radius,
             IReadOnlyDictionary<(int col, int row), MeshFilter> chunkCache)
         {
-            float reach = radius + ElevationGrid.DeltaStep;
+            float reach = Reach(radius);
             int colFrom = Mathf.FloorToInt((cx - reach) / MeshChunks.Size);
             int colTo = Mathf.FloorToInt((cx + reach) / MeshChunks.Size);
             int rowFrom = Mathf.FloorToInt((cy - reach) / MeshChunks.Size);
@@ -648,7 +658,7 @@ namespace Noir.Editor
             IEnumerable<MeshFilter> overlappingChunks)
         {
             float signedStrength = strength * (invert ? -1f : 1f);
-            float reach = radius + ElevationGrid.DeltaStep;
+            float reach = Reach(radius);
 
             var verts = new Dictionary<MeshFilter, Vector3[]>();
             var before = new Dictionary<MeshFilter, float[]>();
