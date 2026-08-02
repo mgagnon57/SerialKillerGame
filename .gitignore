@@ -12,6 +12,7 @@
 # Unity-generated solution/project files (regenerated on demand)
 /*.csproj
 /*.sln
+/*.slnx
 /*.unityproj
 /*.suo
 /*.user
