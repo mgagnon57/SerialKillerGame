@@ -424,52 +424,146 @@ namespace Noir.Unity
             var skirt = MeshChunks.Single(submeshes);
             var beyond = skirt.At(0, 0);
 
+            // ---- corner heights, cached once per GRID POINT rather than resampled per tile ----
+            //
+            // Every corner here used to be an ElevationGrid.HeightAt call made by whichever tile
+            // reached it first - up to four times over, since an interior corner is shared by
+            // four tiles. (width+1) x (height+1) points sampled once apiece is exactly the same
+            // information for a quarter of the calls, and it is what the merge below needs
+            // anyway: a run's own outer corners are these same cached points, just read further
+            // apart.
+            var corner = new float[world.Height + 1, world.Width + 1];
+            for (int gy = 0; gy <= world.Height; gy++)
+            for (int gx = 0; gx <= world.Width; gx++)
+                corner[gy, gx] = ElevationGrid.HeightAt(gx, gy);
+
+            // ---- what every tile looks like, decided once, same as it always was ----
+            //
+            // This is the ORIGINAL per-tile loop, unchanged in what it decides - same terrain
+            // lookup, same GroundZoning call with the same four corners, same small flat offset
+            // for water/road/path/floor. What changed is that the decision is now stored instead
+            // of drawn immediately, so identical neighbours can be found and merged before any
+            // geometry is emitted. A tile's classification here is byte-for-byte what it would
+            // have gotten drawn as one quad at a time - the merge below can only ever join tiles
+            // that already agree, never blur ones that do not.
+            var submeshGrid = new int[world.Height, world.Width];
+            var flatGrid = new float[world.Height, world.Width];
+
             for (int gy = 0; gy < world.Height; gy++)
             for (int gx = 0; gx < world.Width; gx++)
             {
                 var terrain = world.Grid.TerrainAt(gx, gy);
+                float h00 = corner[gy, gx];
+                float h10 = corner[gy, gx + 1];
+                float h11 = corner[gy + 1, gx + 1];
+                float h01 = corner[gy + 1, gx];
+
+                submeshGrid[gy, gx] = (terrain == Terrain.Grass || terrain == Terrain.Field)
+                    ? SubmeshForLook(GroundZoning.LookAt(world, gx, gy, terrain, h00, h10, h01, h11))
+                    : SubmeshFor(terrain);
+                flatGrid[gy, gx] = HeightOf(terrain);
+            }
+
+            // ---- merge into runs, greedily, bounded two ways ----
+            //
+            // A run may grow in either direction only while every tile in it agrees on BOTH of
+            // the following, and stops the moment either one would be broken:
+            //
+            //  - it may not cross a CHUNK edge, for the same reason a riser may not (see
+            //    AssertFootprint below): the chunk a run is filed under is decided by chunks.At
+            //    on its OWN first tile, and a run that then reached past that chunk's boundary
+            //    would be correctly wound, correctly coloured geometry filed under a chunk it
+            //    only partly belongs to - and it would vanish from the angles that chunk is
+            //    culled from, which is exactly the fault AssertFootprint exists to catch.
+            //
+            //  - it may not cross an ELEVATION GRID line. Content/elevation.txt resolves the
+            //    real ground at 30 m (ElevationGrid.Step) and HeightAt bilinearly interpolates
+            //    WITHIN each 30 m cell - so a quad whose four corners sit on one cell's own four
+            //    sample points reproduces that cell's real surface exactly, the same as the old
+            //    one-quad-per-tile mesh always did at 1 m, because both are just the two
+            //    triangles a bilinear cell has always been drawn as. A quad spanning MORE than
+            //    one cell would not: the true surface bends differently in the next cell over,
+            //    and one flat quad across the seam would silently average the two rather than
+            //    following either. Capping runs at the data's own resolution is not a loss of
+            //    detail the data had - a run that stays inside one cell was already flat or a
+            //    single tilted plane as far as the USGS grid actually measured it.
+            //
+            // BANK never merges at all, whatever these two bounds would otherwise allow, and is
+            // the one exception carved out ahead of them. It is the one look that exists BECAUSE
+            // a tile's own slope cleared BankGrade (see GroundZoning) - which is exactly where a
+            // stretch of real ground is most likely to still be curving inside a single 30 m
+            // cell, the one case the cell bound is least likely to be generous enough for. Banks
+            // are a small fraction of the map by construction, so keeping every one of them at
+            // 1 m costs almost nothing.
+            int elevStep = ElevationGrid.Step;
+            if (elevStep <= 0)
+                elevStep = Mathf.Max(world.Width, world.Height);   // no elevation.txt loaded -
+                                                                    // flat everywhere, so nothing
+                                                                    // real to preserve by capping
+            int bankSubmesh = Materials3D.GroundOrder.Length + (int)Materials3D.ZonedGround.Bank;
+
+            var claimed = new bool[world.Height, world.Width];
+            int quads = 0;
+
+            for (int gy = 0; gy < world.Height; gy++)
+            for (int gx = 0; gx < world.Width; gx++)
+            {
+                if (claimed[gy, gx]) continue;
+                int sm = submeshGrid[gy, gx];
+
+                int w = 1, h = 1;
+                if (sm != bankSubmesh)
+                {
+                    int chunkX1 = (gx / MeshChunks.Size + 1) * MeshChunks.Size;
+                    int cellX1 = (gx / elevStep + 1) * elevStep;
+                    int maxX = Mathf.Min(Mathf.Min(chunkX1, cellX1), world.Width);
+                    while (gx + w < maxX && !claimed[gy, gx + w] && submeshGrid[gy, gx + w] == sm)
+                        w++;
+
+                    int chunkY1 = (gy / MeshChunks.Size + 1) * MeshChunks.Size;
+                    int cellY1 = (gy / elevStep + 1) * elevStep;
+                    int maxY = Mathf.Min(Mathf.Min(chunkY1, cellY1), world.Height);
+                    while (gy + h < maxY)
+                    {
+                        bool rowMatches = true;
+                        for (int dx = 0; dx < w; dx++)
+                            if (claimed[gy + h, gx + dx] || submeshGrid[gy + h, gx + dx] != sm)
+                            { rowMatches = false; break; }
+                        if (!rowMatches) break;
+                        h++;
+                    }
+                }
+
+                for (int dy = 0; dy < h; dy++)
+                for (int dx = 0; dx < w; dx++)
+                    claimed[gy + dy, gx + dx] = true;
 
                 // Small height differences keep surfaces from z-fighting and read as real:
                 // water sits in its channel, roads are worn slightly below the verge. The real
                 // ground's own elevation is ADDED to that per corner rather than once for the
-                // whole quad - two neighbouring tiles of the same terrain share a world x,y at
+                // whole quad - two neighbouring RUNS of the same terrain share a world x,y at
                 // their common edge, so they sample the identical height there and the surface
                 // stays seamless. Only a terrain-TYPE boundary (below) still needs a riser; a
                 // smooth real slope needs none, because there is no gap for one to close.
-                float flat = HeightOf(terrain);
-                float x0 = gx, x1 = gx + 1f;
-                float z0 = -gy, z1 = -(gy + 1f);
-
-                // Named once so GroundZoning can read the same four corners rather than
-                // resampling ElevationGrid a second time - four HeightAt calls either way, not
-                // eight.
-                float h00 = ElevationGrid.HeightAt(x0, gy);
-                float h10 = ElevationGrid.HeightAt(x1, gy);
-                float h11 = ElevationGrid.HeightAt(x1, gy + 1f);
-                float h01 = ElevationGrid.HeightAt(x0, gy + 1f);
-
-                // Grass and Field are the map's own default guess at the ground; a real parcel's
-                // zoning, or a slope too steep for turf, can both overrule it. Every other
-                // terrain kind - road, path, water, floor, churchyard, wood - is a deliberate
-                // placement and is never touched by either.
-                int submesh = (terrain == Terrain.Grass || terrain == Terrain.Field)
-                    ? SubmeshForLook(GroundZoning.LookAt(world, gx, gy, terrain, h00, h10, h01, h11))
-                    : SubmeshFor(terrain);
+                float flat = flatGrid[gy, gx];
+                float x0 = gx, x1 = gx + w;
+                float z0 = -gy, z1 = -(gy + h);
 
                 var into = chunks.At(gx, gy);
                 int v0 = into.Verts.Count;
 
-                into.Verts.Add(new Vector3(x0, flat + h00, z0));
-                into.Verts.Add(new Vector3(x1, flat + h10, z0));
-                into.Verts.Add(new Vector3(x1, flat + h11, z1));
-                into.Verts.Add(new Vector3(x0, flat + h01, z1));
+                into.Verts.Add(new Vector3(x0, flat + corner[gy, gx], z0));
+                into.Verts.Add(new Vector3(x1, flat + corner[gy, gx + w], z0));
+                into.Verts.Add(new Vector3(x1, flat + corner[gy + h, gx + w], z1));
+                into.Verts.Add(new Vector3(x0, flat + corner[gy + h, gx], z1));
 
                 for (int i = 0; i < 4; i++) into.Normals.Add(Vector3.up);
 
                 // UVs in world units so a tiling texture runs continuously across the village
                 // instead of restarting at every tile - and, now, so it runs continuously
-                // across a chunk boundary too. This is why the UVs are in absolute metres and
-                // not relative to anything: split the mesh and nothing about the texture moves.
+                // across a chunk boundary, and across a run boundary, too. This is why the UVs
+                // are in absolute metres and not relative to anything: split the mesh, or merge
+                // several tiles into one quad, and nothing about the texture moves.
                 into.Uvs.Add(new Vector2(x0, -z0));
                 into.Uvs.Add(new Vector2(x1, -z0));
                 into.Uvs.Add(new Vector2(x1, -z1));
@@ -479,9 +573,10 @@ namespace Noir.Unity
                 // from Cross(v1-v0, v2-v0), and culls the back. Wound the other way round,
                 // these quads face straight down: lit correctly, shaded correctly, and
                 // invisible from every camera above the ground - which is all of them.
-                var tris = into.Tris[submesh];
+                var tris = into.Tris[sm];
                 tris.Add(v0); tris.Add(v0 + 1); tris.Add(v0 + 2);
                 tris.Add(v0); tris.Add(v0 + 2); tris.Add(v0 + 3);
+                quads++;
             }
 
             // Land beyond the last tile.
@@ -668,6 +763,8 @@ namespace Noir.Unity
             skirt.Emit(go.transform, "Surround", materials, ShadowCastingMode.Off, true);
 
             Debug.Log($"Ground mesh: {chunks.VertexCount + skirt.VertexCount:N0} vertices, "
+                    + $"{chunks.TriangleCount + skirt.TriangleCount:N0} triangles, "
+                    + $"{quads:N0} merged ground quads over {world.Width * world.Height:N0} tiles, "
                     + $"{risers:N0} risers, {tiles.Count} chunks + surround, "
                     + $"{chunks.DrawCalls + skirt.DrawCalls} draw calls.");
         }
