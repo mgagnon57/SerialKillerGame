@@ -1,0 +1,4590 @@
+# ============================================================================
+#  WHAT THE COUNTY SAYS ABOUT EACH PARCEL - VERMILION COUNTY, ILLINOIS
+#
+#  776 of Rossville's 794 surveyed parcels, matched against the Supervisor of
+#  Assessment's own property service (the same
+#  gis.cityofdanville.org/arcgis/rest/services/Property/Property that supplied
+#  the parcel geometry) by nearest-centroid Hungarian assignment: median 4.4m,
+#  90th percentile 6.5m, worst 45.9m. Raw records at
+#  tools/rossville-property-records.json so this can be rebuilt.
+#
+#  ONLY WHAT THE COUNTY LITERALLY RECORDS. Nothing here is inferred, averaged
+#  or invented - zoning, house size and household shape are all DERIVED FROM
+#  these numbers in code (see CountyRecord.cs), never baked in here, so the
+#  derivation can be corrected without the source data being touched.
+#
+#  NO OWNER NAMES, DELIBERATELY. The county publishes them and this file could
+#  trivially carry them. It does not, and must not: Rossville is a real town of
+#  about 1,300 real people, this is a game about someone murdering the
+#  residents of it, and the same records flag which owners are over 65 and
+#  which live alone. Real addresses are geography. Real names at those
+#  addresses would make real, identifiable, living people into the victims of
+#  a murder simulation without their knowledge. Households are generated from
+#  Content/names.txt instead. Do not "improve" this by adding the name field.
+#
+#  FIELDS
+#    pin        the county's parcel identification number
+#    address    situs address, county spelling, title-cased. 577 have one; the
+#               rest are vacant land, farm ground or right-of-way the county
+#               has never had reason to address, and blank is the ANSWER there
+#               rather than a gap.
+#    class      the county's own property class code and its own wording
+#    occupancy  owner | absentee | other. `owner` is the county's own
+#               owner-occupancy flag (TXOWOC). `absentee` means the owner's
+#               tax bill goes somewhere other than the property itself, which
+#               is what a rented house looks like in the record. The mailing
+#               address ITSELF is never stored - only this flag derived from
+#               whether it differed.
+#    over65     present only when the county's over-65 exemption is claimed;
+#               a fact about the OWNER, used only as a rate when generating
+#               household ages, never to identify anybody
+#    assessed   homesite and dwelling assessed value, in dollars. Illinois
+#               assesses at one third of market value, so dwelling x3 is
+#               roughly what the structure is worth - the best proxy the
+#               public record gives for how big and how good a house is,
+#               because this county publishes NO square footage, bedroom or
+#               bathroom data anywhere online. Checked: the tax card carries
+#               billing and assessment only.
+#    acres      the county's own acreage for the lot
+#
+#  Keyed by the parcel's line number in parcels.txt (0-based, comments and
+#  blanks not counted), matching Content/parcel-notes.txt.
+#
+#  Fetched and matched 2026-08-01. Earliest tax year the county publishes
+#  online is 2007; 1991 rolls exist only on paper at the courthouse.
+# ============================================================================
+
+parcel 0 pin "08-12-400-001"
+parcel 0 class 0021 "Farmland"
+parcel 0 occupancy other
+parcel 0 acres 40.00
+parcel 1 pin "08-11-200-022"
+parcel 1 address "106 Smith"
+parcel 1 class 0040 "Improved Residential Lot"
+parcel 1 occupancy owner
+parcel 1 assessed 3151 38663
+parcel 1 acres 0.34
+parcel 2 pin "08-11-203-002"
+parcel 2 address "403 N Chicago"
+parcel 2 class 0040 "Improved Residential Lot"
+parcel 2 occupancy owner
+parcel 2 over65
+parcel 2 assessed 4281 41169
+parcel 2 acres 0.34
+parcel 3 pin "08-11-203-003"
+parcel 3 address "104 Green"
+parcel 3 class 0040 "Improved Residential Lot"
+parcel 3 occupancy owner
+parcel 3 over65
+parcel 3 assessed 2862 24930
+parcel 3 acres 0.33
+parcel 4 pin "08-11-203-004"
+parcel 4 address "106 Green"
+parcel 4 class 0040 "Improved Residential Lot"
+parcel 4 occupancy other
+parcel 4 assessed 2513 34356
+parcel 4 acres 0.31
+parcel 5 pin "08-11-204-003"
+parcel 5 address "209 Green"
+parcel 5 class 0040 "Improved Residential Lot"
+parcel 5 occupancy other
+parcel 5 assessed 3192 46834
+parcel 5 acres 0.20
+parcel 6 pin "08-11-204-009"
+parcel 6 address "304 N Church"
+parcel 6 class 0040 "Improved Residential Lot"
+parcel 6 occupancy owner
+parcel 6 assessed 3755 39148
+parcel 6 acres 0.23
+parcel 7 pin "08-11-204-014"
+parcel 7 address "113 Benton"
+parcel 7 class 0040 "Improved Residential Lot"
+parcel 7 occupancy absentee
+parcel 7 assessed 1880 18961
+parcel 7 acres 0.12
+parcel 8 pin "08-11-204-017"
+parcel 8 address "218 Harrison"
+parcel 8 class 0040 "Improved Residential Lot"
+parcel 8 occupancy owner
+parcel 8 over65
+parcel 8 assessed 5503 34015
+parcel 8 acres 0.51
+parcel 9 pin "08-11-204-027"
+parcel 9 address "213 Harrison"
+parcel 9 class 0040 "Improved Residential Lot"
+parcel 9 occupancy absentee
+parcel 9 assessed 3033 14041
+parcel 9 acres 0.19
+parcel 10 pin "08-11-200-027"
+parcel 10 class 0040 "Improved Residential Lot"
+parcel 10 occupancy other
+parcel 10 assessed 11823 8389
+parcel 10 acres 8.44
+parcel 11 pin "08-11-204-025"
+parcel 11 class 0060 "Improved Commercial"
+parcel 11 occupancy other
+parcel 11 assessed 38158 179982
+parcel 11 acres 0.85
+parcel 12 pin "08-11-204-043"
+parcel 12 address "101 N Chicago"
+parcel 12 class 0060 "Improved Commercial"
+parcel 12 occupancy absentee
+parcel 12 assessed 3444 15931
+parcel 12 acres 0.04
+parcel 13 pin "08-11-204-048"
+parcel 13 address "112 E Attica"
+parcel 13 class 0040 "Improved Residential Lot"
+parcel 13 occupancy absentee
+parcel 13 assessed 4628 3816
+parcel 13 acres 0.06
+parcel 14 pin "08-11-205-008"
+parcel 14 class 0030 "Vac Lots-Lands/6 units"
+parcel 14 occupancy other
+parcel 14 assessed 6329 0
+parcel 14 acres 0.14
+parcel 15 pin "08-11-205-012"
+parcel 15 class 0040 "Improved Residential Lot"
+parcel 15 occupancy other
+parcel 15 assessed 3201 5414
+parcel 16 pin "08-11-207-005"
+parcel 16 class 0030 "Vac Lots-Lands/6 units"
+parcel 16 occupancy other
+parcel 16 assessed 627 0
+parcel 16 acres 0.29
+parcel 17 pin "08-11-207-008"
+parcel 17 address "114 Henderson"
+parcel 17 class 0040 "Improved Residential Lot"
+parcel 17 occupancy owner
+parcel 17 assessed 3033 23229
+parcel 17 acres 0.24
+parcel 18 pin "08-11-400-032"
+parcel 18 class 0021 "Farmland"
+parcel 18 occupancy other
+parcel 18 acres 0.44
+parcel 19 pin "08-11-401-011"
+parcel 19 address "111 W Attica"
+parcel 19 class 0040 "Improved Residential Lot"
+parcel 19 occupancy owner
+parcel 19 assessed 5776 33776
+parcel 19 acres 0.39
+parcel 20 pin "08-11-402-032"
+parcel 20 address "220 Stufflebeam"
+parcel 20 class 0040 "Improved Residential Lot"
+parcel 20 occupancy owner
+parcel 20 assessed 4245 100767
+parcel 20 acres 0.81
+parcel 21 pin "08-11-403-003"
+parcel 21 address "212 Park"
+parcel 21 class 0040 "Improved Residential Lot"
+parcel 21 occupancy owner
+parcel 21 assessed 3916 797
+parcel 21 acres 0.20
+parcel 22 pin "08-11-405-009"
+parcel 22 address "113 S Chicago"
+parcel 22 class 0060 "Improved Commercial"
+parcel 22 occupancy absentee
+parcel 22 assessed 4785 844
+parcel 22 acres 0.08
+parcel 23 pin "08-11-406-001"
+parcel 23 address "121 E Attica"
+parcel 23 class 0090 "Tax Exempt"
+parcel 23 occupancy absentee
+parcel 23 assessed 3538 0
+parcel 23 acres 0.16
+parcel 24 pin "08-11-408-037"
+parcel 24 class 0060 "Improved Commercial"
+parcel 24 occupancy other
+parcel 24 assessed 7118 237
+parcel 25 pin "08-11-412-001"
+parcel 25 address "102 Thompson"
+parcel 25 class 0040 "Improved Residential Lot"
+parcel 25 occupancy owner
+parcel 25 over65
+parcel 25 assessed 3033 11041
+parcel 25 acres 0.42
+parcel 26 pin "08-11-412-002"
+parcel 26 address "104 Thompson"
+parcel 26 class 0060 "Improved Commercial"
+parcel 26 occupancy absentee
+parcel 26 assessed 3033 32562
+parcel 26 acres 0.33
+parcel 27 pin "08-11-412-003"
+parcel 27 address "101 Thompson"
+parcel 27 class 0040 "Improved Residential Lot"
+parcel 27 occupancy absentee
+parcel 27 assessed 12717 2561
+parcel 27 acres 0.74
+parcel 28 pin "08-11-609-012"
+parcel 28 class 0090 "Tax Exempt"
+parcel 28 occupancy other
+parcel 28 acres 13.65
+parcel 29 pin "08-12-101-009"
+parcel 29 class 0030 "Vac Lots-Lands/6 units"
+parcel 29 occupancy other
+parcel 29 assessed 1977 0
+parcel 29 acres 0.25
+parcel 30 pin "08-12-101-019"
+parcel 30 class 0040 "Improved Residential Lot"
+parcel 30 occupancy other
+parcel 30 assessed 1945 5869
+parcel 30 acres 0.25
+parcel 31 pin "08-12-101-021"
+parcel 31 address "208 Henderson"
+parcel 31 class 0040 "Improved Residential Lot"
+parcel 31 occupancy owner
+parcel 31 assessed 2162 45918
+parcel 31 acres 0.25
+parcel 32 pin "08-12-307-024"
+parcel 32 class 0030 "Vac Lots-Lands/6 units"
+parcel 32 occupancy other
+parcel 32 assessed 3033 0
+parcel 32 acres 0.22
+parcel 33 pin "08-12-308-001"
+parcel 33 address "401 Gilbert"
+parcel 33 class 0040 "Improved Residential Lot"
+parcel 33 occupancy owner
+parcel 33 over65
+parcel 33 assessed 870 16460
+parcel 33 acres 0.13
+parcel 34 pin "08-12-308-006"
+parcel 34 address "404 Stewart"
+parcel 34 class 0030 "Vac Lots-Lands/6 units"
+parcel 34 occupancy absentee
+parcel 34 assessed 2138 0
+parcel 34 acres 0.39
+parcel 35 pin "08-12-308-014"
+parcel 35 address "407 S Grove"
+parcel 35 class 0040 "Improved Residential Lot"
+parcel 35 occupancy owner
+parcel 35 assessed 2251 32411
+parcel 35 acres 0.21
+parcel 36 pin "08-12-308-029"
+parcel 36 address "415 E Mc Kibben"
+parcel 36 class 0040 "Improved Residential Lot"
+parcel 36 occupancy owner
+parcel 36 assessed 3218 51011
+parcel 36 acres 0.25
+parcel 37 pin "08-12-308-033"
+parcel 37 address "404 Mc Kibben"
+parcel 37 class 0040 "Improved Residential Lot"
+parcel 37 occupancy absentee
+parcel 37 assessed 2529 29600
+parcel 37 acres 0.22
+parcel 38 pin "08-12-308-035"
+parcel 38 address "407 Stewart"
+parcel 38 class 0030 "Vac Lots-Lands/6 units"
+parcel 38 occupancy absentee
+parcel 38 assessed 386 0
+parcel 38 acres 0.25
+parcel 39 pin "08-12-308-038"
+parcel 39 class 0060 "Improved Commercial"
+parcel 39 occupancy other
+parcel 39 assessed 5369 9720
+parcel 39 acres 0.80
+parcel 40 pin "08-12-309-017"
+parcel 40 class 0080 "Industrial"
+parcel 40 occupancy other
+parcel 40 assessed 51279 313082
+parcel 40 acres 5.77
+parcel 41 pin "08-12-310-002"
+parcel 41 address "409 E Attica"
+parcel 41 class 0040 "Improved Residential Lot"
+parcel 41 occupancy owner
+parcel 41 over65
+parcel 41 assessed 9389 28871
+parcel 41 acres 0.49
+parcel 42 pin "08-12-525-047"
+parcel 42 class 5060 "Railroad - Leased"
+parcel 42 occupancy other
+parcel 42 assessed 627 0
+parcel 42 acres 0.62
+parcel 43 pin "08-12-525-049"
+parcel 43 class 5060 "Railroad - Leased"
+parcel 43 occupancy other
+parcel 43 assessed 2440 0
+parcel 43 acres 0.10
+parcel 44 pin "08-12-609-007"
+parcel 44 class 0090 "Tax Exempt"
+parcel 44 occupancy other
+parcel 44 acres 0.36
+parcel 45 pin "08-12-609-047"
+parcel 45 class 0090 "Tax Exempt"
+parcel 45 occupancy other
+parcel 45 acres 0.39
+parcel 46 pin "08-13-101-007"
+parcel 46 class 0032 "10-30 Res Vacant Land"
+parcel 46 occupancy other
+parcel 46 assessed 220 0
+parcel 46 acres 0.56
+parcel 47 pin "08-13-101-012"
+parcel 47 class 0032 "10-30 Res Vacant Land"
+parcel 47 occupancy other
+parcel 47 assessed 206 0
+parcel 47 acres 0.52
+parcel 48 pin "08-13-101-017"
+parcel 48 address "307 Earl Ct"
+parcel 48 class 0040 "Improved Residential Lot"
+parcel 48 occupancy owner
+parcel 48 over65
+parcel 48 assessed 5629 61747
+parcel 48 acres 0.49
+parcel 49 pin "08-13-101-020"
+parcel 49 class 0032 "10-30 Res Vacant Land"
+parcel 49 occupancy other
+parcel 49 assessed 67 0
+parcel 49 acres 0.17
+parcel 50 pin "08-13-101-021"
+parcel 50 address "796 S Grove"
+parcel 50 class 0060 "Improved Commercial"
+parcel 50 occupancy absentee
+parcel 50 assessed 1543 0
+parcel 50 acres 0.23
+parcel 51 pin "08-14-200-010"
+parcel 51 address "711 S Chicago"
+parcel 51 class 0060 "Improved Commercial"
+parcel 51 occupancy absentee
+parcel 51 assessed 4859 70987
+parcel 51 acres 0.40
+parcel 52 pin "08-14-200-011"
+parcel 52 class 0030 "Vac Lots-Lands/6 units"
+parcel 52 occupancy other
+parcel 52 assessed 517 0
+parcel 52 acres 0.08
+parcel 53 pin "08-12-101-026"
+parcel 53 address "304 Henderson"
+parcel 53 class 0040 "Improved Residential Lot"
+parcel 53 occupancy owner
+parcel 53 assessed 4312 49509
+parcel 53 acres 0.50
+parcel 54 pin "08-12-101-028"
+parcel 54 address "314 Henderson"
+parcel 54 class 0040 "Improved Residential Lot"
+parcel 54 occupancy owner
+parcel 54 assessed 2162 20173
+parcel 54 acres 0.25
+parcel 55 pin "08-12-103-025"
+parcel 55 address "402 E Attica"
+parcel 55 class 0040 "Improved Residential Lot"
+parcel 55 occupancy owner
+parcel 55 over65
+parcel 55 assessed 3093 26031
+parcel 55 acres 0.30
+parcel 56 pin "08-12-104-006"
+parcel 56 address "402 Benton"
+parcel 56 class 0040 "Improved Residential Lot"
+parcel 56 occupancy owner
+parcel 56 over65
+parcel 56 assessed 2162 15896
+parcel 56 acres 0.25
+parcel 57 pin "08-12-104-007"
+parcel 57 address "404 Benton"
+parcel 57 class 0040 "Improved Residential Lot"
+parcel 57 occupancy absentee
+parcel 57 assessed 2162 9656
+parcel 57 acres 0.25
+parcel 58 pin "08-12-104-013"
+parcel 58 address "405 Benton"
+parcel 58 class 0040 "Improved Residential Lot"
+parcel 58 occupancy owner
+parcel 58 over65
+parcel 58 assessed 2162 38728
+parcel 58 acres 0.50
+parcel 59 pin "08-12-104-018"
+parcel 59 address "401 Green"
+parcel 59 class 0040 "Improved Residential Lot"
+parcel 59 occupancy owner
+parcel 59 assessed 2162 46234
+parcel 59 acres 0.38
+parcel 60 pin "08-12-105-002"
+parcel 60 address "410 E Attica"
+parcel 60 class 0040 "Improved Residential Lot"
+parcel 60 occupancy absentee
+parcel 60 assessed 3409 23645
+parcel 60 acres 0.33
+parcel 61 pin "08-12-105-006"
+parcel 61 address "417 Holmes"
+parcel 61 class 0040 "Improved Residential Lot"
+parcel 61 occupancy owner
+parcel 61 over65
+parcel 61 assessed 2645 13433
+parcel 61 acres 0.25
+parcel 62 pin "08-12-107-007"
+parcel 62 class 0030 "Vac Lots-Lands/6 units"
+parcel 62 occupancy other
+parcel 62 assessed 2518 0
+parcel 62 acres 0.36
+parcel 63 pin "08-12-107-008"
+parcel 63 class 0030 "Vac Lots-Lands/6 units"
+parcel 63 occupancy other
+parcel 63 assessed 2518 0
+parcel 63 acres 0.36
+parcel 64 pin "08-11-204-028"
+parcel 64 address "208 Harrison"
+parcel 64 class 0040 "Improved Residential Lot"
+parcel 64 occupancy owner
+parcel 64 over65
+parcel 64 assessed 4594 43332
+parcel 64 acres 0.24
+parcel 65 pin "08-11-204-038"
+parcel 65 address "204 Harrison"
+parcel 65 class 0040 "Improved Residential Lot"
+parcel 65 occupancy absentee
+parcel 65 assessed 4286 2277
+parcel 65 acres 0.22
+parcel 66 pin "08-11-204-050"
+parcel 66 address "101 Holmes"
+parcel 66 class 0040 "Improved Residential Lot"
+parcel 66 occupancy other
+parcel 66 assessed 2087 10982
+parcel 66 acres 0.21
+parcel 67 pin "08-11-204-051"
+parcel 67 address "103 Holmes"
+parcel 67 class 0040 "Improved Residential Lot"
+parcel 67 occupancy absentee
+parcel 67 assessed 3192 750
+parcel 67 acres 0.16
+parcel 68 pin "08-11-204-052"
+parcel 68 address "103 Holmes"
+parcel 68 class 0040 "Improved Residential Lot"
+parcel 68 occupancy absentee
+parcel 68 assessed 2357 10534
+parcel 68 acres 0.09
+parcel 69 pin "08-11-204-054"
+parcel 69 address "200 N Church"
+parcel 69 class 0040 "Improved Residential Lot"
+parcel 69 occupancy owner
+parcel 69 assessed 3218 43752
+parcel 69 acres 0.25
+parcel 70 pin "08-11-204-068"
+parcel 70 address "204 N Church"
+parcel 70 class 0040 "Improved Residential Lot"
+parcel 70 occupancy absentee
+parcel 70 assessed 2693 8577
+parcel 70 acres 0.11
+parcel 71 pin "08-11-207-012"
+parcel 71 address "107 Henderson"
+parcel 71 class 0040 "Improved Residential Lot"
+parcel 71 occupancy owner
+parcel 71 assessed 5896 52155
+parcel 71 acres 0.69
+parcel 72 pin "08-11-207-018"
+parcel 72 address "410 N Church"
+parcel 72 class 0040 "Improved Residential Lot"
+parcel 72 occupancy other
+parcel 72 assessed 4980 12086
+parcel 72 acres 0.69
+parcel 73 pin "08-11-207-023"
+parcel 73 address "404 N Church"
+parcel 73 class 0030 "Vac Lots-Lands/6 units"
+parcel 73 occupancy absentee
+parcel 73 assessed 3543 0
+parcel 73 acres 0.52
+parcel 74 pin "08-11-400-004"
+parcel 74 address "11 Watson Dr"
+parcel 74 class 0040 "Improved Residential Lot"
+parcel 74 occupancy owner
+parcel 74 over65
+parcel 74 assessed 6747 72066
+parcel 74 acres 0.72
+parcel 75 pin "08-11-400-005"
+parcel 75 class 0030 "Vac Lots-Lands/6 units"
+parcel 75 occupancy other
+parcel 75 assessed 4471 0
+parcel 75 acres 0.43
+parcel 76 pin "08-11-400-017"
+parcel 76 address "10 Greenwood"
+parcel 76 class 0040 "Improved Residential Lot"
+parcel 76 occupancy absentee
+parcel 76 assessed 5571 45096
+parcel 76 acres 0.90
+parcel 77 pin "08-11-400-022"
+parcel 77 class 0030 "Vac Lots-Lands/6 units"
+parcel 77 occupancy other
+parcel 77 assessed 5571 0
+parcel 77 acres 0.89
+parcel 78 pin "08-11-400-030"
+parcel 78 address "5 Watson Dr"
+parcel 78 class 0040 "Improved Residential Lot"
+parcel 78 occupancy absentee
+parcel 78 assessed 0 13734
+parcel 78 acres 1.27
+parcel 79 pin "08-11-402-003"
+parcel 79 address "215 Perry"
+parcel 79 class 0040 "Improved Residential Lot"
+parcel 79 occupancy owner
+parcel 79 assessed 3254 35119
+parcel 79 acres 0.28
+parcel 80 pin "08-11-402-014"
+parcel 80 address "207 Perry"
+parcel 80 class 0040 "Improved Residential Lot"
+parcel 80 occupancy owner
+parcel 80 assessed 3239 30889
+parcel 80 acres 0.28
+parcel 81 pin "08-11-402-015"
+parcel 81 class 0030 "Vac Lots-Lands/6 units"
+parcel 81 occupancy other
+parcel 81 assessed 1629 0
+parcel 81 acres 0.14
+parcel 82 pin "08-11-402-016"
+parcel 82 class 0030 "Vac Lots-Lands/6 units"
+parcel 82 occupancy other
+parcel 82 assessed 1629 0
+parcel 82 acres 0.14
+parcel 83 pin "08-11-402-022"
+parcel 83 address "308 S Chicago"
+parcel 83 class 0040 "Improved Residential Lot"
+parcel 83 occupancy owner
+parcel 83 assessed 2080 41117
+parcel 83 acres 0.24
+parcel 84 pin "08-11-402-023"
+parcel 84 address "310 S Chicago"
+parcel 84 class 0040 "Improved Residential Lot"
+parcel 84 occupancy owner
+parcel 84 over65
+parcel 84 assessed 4628 46039
+parcel 84 acres 0.40
+parcel 85 pin "08-11-402-033"
+parcel 85 class 0030 "Vac Lots-Lands/6 units"
+parcel 85 occupancy other
+parcel 85 assessed 617 0
+parcel 85 acres 0.09
+parcel 86 pin "08-11-403-009"
+parcel 86 address "212 Perry"
+parcel 86 class 0040 "Improved Residential Lot"
+parcel 86 occupancy absentee
+parcel 86 assessed 3916 16512
+parcel 86 acres 0.20
+parcel 87 pin "08-11-403-015"
+parcel 87 address "209 Park"
+parcel 87 class 0040 "Improved Residential Lot"
+parcel 87 occupancy absentee
+parcel 87 assessed 3897 18643
+parcel 87 acres 0.20
+parcel 88 pin "08-11-403-016"
+parcel 88 address "207 Park"
+parcel 88 class 0030 "Vac Lots-Lands/6 units"
+parcel 88 occupancy absentee
+parcel 88 assessed 3916 0
+parcel 88 acres 0.20
+parcel 89 pin "08-11-403-019"
+parcel 89 address "201 Park"
+parcel 89 class 0040 "Improved Residential Lot"
+parcel 89 occupancy absentee
+parcel 89 assessed 3916 1713
+parcel 89 acres 0.20
+parcel 90 pin "08-11-200-011"
+parcel 90 address "112 Green"
+parcel 90 class 0040 "Improved Residential Lot"
+parcel 90 occupancy owner
+parcel 90 over65
+parcel 90 assessed 1823 24350
+parcel 90 acres 0.10
+parcel 91 pin "08-11-200-013"
+parcel 91 address "401 N Harrison"
+parcel 91 class 0040 "Improved Residential Lot"
+parcel 91 occupancy absentee
+parcel 91 assessed 2693 35590
+parcel 91 acres 0.31
+parcel 92 pin "08-11-203-007"
+parcel 92 address "401 N Chicago"
+parcel 92 class 0040 "Improved Residential Lot"
+parcel 92 occupancy absentee
+parcel 92 assessed 2080 25329
+parcel 92 acres 0.18
+parcel 93 pin "08-11-204-001"
+parcel 93 address "309 Harrison"
+parcel 93 class 0040 "Improved Residential Lot"
+parcel 93 occupancy owner
+parcel 93 assessed 3744 41126
+parcel 93 acres 0.23
+parcel 94 pin "08-11-204-002"
+parcel 94 address "207 Green"
+parcel 94 class 0040 "Improved Residential Lot"
+parcel 94 occupancy absentee
+parcel 94 assessed 2452 2085
+parcel 94 acres 0.15
+parcel 95 pin "08-11-204-004"
+parcel 95 class 0030 "Vac Lots-Lands/6 units"
+parcel 95 occupancy other
+parcel 95 assessed 1882 0
+parcel 95 acres 0.12
+parcel 96 pin "08-11-204-018"
+parcel 96 address "219 Harrison"
+parcel 96 class 0040 "Improved Residential Lot"
+parcel 96 occupancy owner
+parcel 96 assessed 3218 29993
+parcel 96 acres 0.22
+parcel 97 pin "08-11-204-023"
+parcel 97 address "217 Harrison"
+parcel 97 class 0040 "Improved Residential Lot"
+parcel 97 occupancy owner
+parcel 97 over65
+parcel 97 assessed 2561 19622
+parcel 97 acres 0.21
+parcel 98 pin "08-11-204-033"
+parcel 98 address "206 Harrison"
+parcel 98 class 0040 "Improved Residential Lot"
+parcel 98 occupancy owner
+parcel 98 assessed 4286 34577
+parcel 98 acres 0.23
+parcel 99 pin "08-11-204-036"
+parcel 99 class 0030 "Vac Lots-Lands/6 units"
+parcel 99 occupancy other
+parcel 99 assessed 2693 0
+parcel 99 acres 0.12
+parcel 100 pin "08-11-204-055"
+parcel 100 address "126 E Attica"
+parcel 100 class 0040 "Improved Residential Lot"
+parcel 100 occupancy owner
+parcel 100 assessed 4912 37873
+parcel 100 acres 0.26
+parcel 101 pin "08-11-204-057"
+parcel 101 address "132 E Attica"
+parcel 101 class 0040 "Improved Residential Lot"
+parcel 101 occupancy owner
+parcel 101 assessed 4912 59756
+parcel 101 acres 0.25
+parcel 102 pin "08-11-204-066"
+parcel 102 address "110 Benton"
+parcel 102 class 0040 "Improved Residential Lot"
+parcel 102 occupancy owner
+parcel 102 assessed 7501 34164
+parcel 102 acres 0.27
+parcel 103 pin "08-11-204-069"
+parcel 103 address "306 N Church"
+parcel 103 class 0040 "Improved Residential Lot"
+parcel 103 occupancy owner
+parcel 103 assessed 5026 47164
+parcel 103 acres 0.42
+parcel 104 pin "08-11-207-011"
+parcel 104 address "407 N Chicago"
+parcel 104 class 0040 "Improved Residential Lot"
+parcel 104 occupancy owner
+parcel 104 assessed 4609 32236
+parcel 104 acres 0.34
+parcel 105 pin "08-11-207-013"
+parcel 105 address "109 Henderson"
+parcel 105 class 0040 "Improved Residential Lot"
+parcel 105 occupancy owner
+parcel 105 assessed 5896 30019
+parcel 105 acres 0.39
+parcel 106 pin "08-11-207-016"
+parcel 106 address "408 Harrison"
+parcel 106 class 0030 "Vac Lots-Lands/6 units"
+parcel 106 occupancy absentee
+parcel 106 assessed 1411 0
+parcel 106 acres 0.09
+parcel 107 pin "08-11-207-017"
+parcel 107 address "409 Harrison"
+parcel 107 class 0040 "Improved Residential Lot"
+parcel 107 occupancy owner
+parcel 107 over65
+parcel 107 assessed 5092 28682
+parcel 107 acres 0.59
+parcel 108 pin "08-11-207-021"
+parcel 108 address "405 Harrison"
+parcel 108 class 0040 "Improved Residential Lot"
+parcel 108 occupancy owner
+parcel 108 assessed 3066 21647
+parcel 108 acres 0.25
+parcel 109 pin "08-11-402-002"
+parcel 109 address "217 Perry"
+parcel 109 class 0040 "Improved Residential Lot"
+parcel 109 occupancy other
+parcel 109 assessed 3583 5063
+parcel 109 acres 0.28
+parcel 110 pin "08-11-402-011"
+parcel 110 address "213 Perry"
+parcel 110 class 0040 "Improved Residential Lot"
+parcel 110 occupancy owner
+parcel 110 over65
+parcel 110 assessed 3254 39411
+parcel 110 acres 0.28
+parcel 111 pin "08-11-402-017"
+parcel 111 address "205 Perry"
+parcel 111 class 0040 "Improved Residential Lot"
+parcel 111 occupancy owner
+parcel 111 assessed 3239 18868
+parcel 111 acres 0.28
+parcel 112 pin "08-11-402-018"
+parcel 112 address "201 Perry"
+parcel 112 class 0040 "Improved Residential Lot"
+parcel 112 occupancy owner
+parcel 112 over65
+parcel 112 assessed 3254 28921
+parcel 112 acres 0.28
+parcel 113 pin "08-11-402-024"
+parcel 113 address "312 S Chicago"
+parcel 113 class 0040 "Improved Residential Lot"
+parcel 113 occupancy owner
+parcel 113 assessed 4628 43979
+parcel 113 acres 0.40
+parcel 114 pin "08-11-402-025"
+parcel 114 address "314 S Chicago"
+parcel 114 class 0040 "Improved Residential Lot"
+parcel 114 occupancy owner
+parcel 114 assessed 9246 21209
+parcel 114 acres 0.90
+parcel 115 pin "08-11-402-039"
+parcel 115 class 0030 "Vac Lots-Lands/6 units"
+parcel 115 occupancy other
+parcel 115 assessed 12316 0
+parcel 115 acres 7.19
+parcel 116 pin "08-11-403-004"
+parcel 116 address "215 Park"
+parcel 116 class 0040 "Improved Residential Lot"
+parcel 116 occupancy owner
+parcel 116 assessed 3916 23575
+parcel 116 acres 0.20
+parcel 117 pin "08-11-403-005"
+parcel 117 address "213 Park"
+parcel 117 class 0040 "Improved Residential Lot"
+parcel 117 occupancy owner
+parcel 117 assessed 3916 21353
+parcel 117 acres 0.20
+parcel 118 pin "08-11-403-006"
+parcel 118 address "211 Park"
+parcel 118 class 0040 "Improved Residential Lot"
+parcel 118 occupancy owner
+parcel 118 over65
+parcel 118 assessed 3916 25608
+parcel 118 acres 0.20
+parcel 119 pin "08-11-403-017"
+parcel 119 address "205 Park"
+parcel 119 class 0040 "Improved Residential Lot"
+parcel 119 occupancy absentee
+parcel 119 assessed 3916 7574
+parcel 119 acres 0.20
+parcel 120 pin "08-11-403-022"
+parcel 120 address "206 Perry"
+parcel 120 class 0040 "Improved Residential Lot"
+parcel 120 occupancy owner
+parcel 120 over65
+parcel 120 assessed 3916 15707
+parcel 120 acres 0.20
+parcel 121 pin "08-11-407-001"
+parcel 121 address "135 E Attica"
+parcel 121 class 0040 "Improved Residential Lot"
+parcel 121 occupancy owner
+parcel 121 assessed 4956 18170
+parcel 121 acres 0.26
+parcel 122 pin "08-11-408-009"
+parcel 122 class 0030 "Vac Lots-Lands/6 units"
+parcel 122 occupancy other
+parcel 122 assessed 407 0
+parcel 122 acres 0.05
+parcel 123 pin "08-11-408-016"
+parcel 123 address "101 Gilbert"
+parcel 123 class 0040 "Improved Residential Lot"
+parcel 123 occupancy owner
+parcel 123 assessed 3506 23309
+parcel 123 acres 0.26
+parcel 124 pin "08-11-408-021"
+parcel 124 address "102 Stewart"
+parcel 124 class 0040 "Improved Residential Lot"
+parcel 124 occupancy owner
+parcel 124 assessed 4865 39732
+parcel 124 acres 0.30
+parcel 125 pin "08-11-408-028"
+parcel 125 address "106 Mc Kibben"
+parcel 125 class 0040 "Improved Residential Lot"
+parcel 125 occupancy owner
+parcel 125 assessed 8564 29406
+parcel 125 acres 0.50
+parcel 126 pin "08-11-408-031"
+parcel 126 class 0030 "Vac Lots-Lands/6 units"
+parcel 126 occupancy other
+parcel 126 assessed 4312 0
+parcel 126 acres 0.25
+parcel 127 pin "08-11-409-001"
+parcel 127 address "100 Stufflebeam"
+parcel 127 class 0040 "Improved Residential Lot"
+parcel 127 occupancy owner
+parcel 127 assessed 9710 39677
+parcel 127 acres 0.64
+parcel 128 pin "08-11-409-002"
+parcel 128 address "50 Stufflebeam"
+parcel 128 class 0050 "Commercial >6 Units"
+parcel 128 occupancy absentee
+parcel 128 assessed 10632 27190
+parcel 128 acres 0.52
+parcel 129 pin "08-11-409-014"
+parcel 129 address "504 S Chicago"
+parcel 129 class 0040 "Improved Residential Lot"
+parcel 129 occupancy owner
+parcel 129 over65
+parcel 129 assessed 11485 77392
+parcel 129 acres 1.34
+parcel 130 pin "08-11-409-015"
+parcel 130 address "8 Greenwood"
+parcel 130 class 0040 "Improved Residential Lot"
+parcel 130 occupancy absentee
+parcel 130 assessed 5945 62049
+parcel 130 acres 0.93
+parcel 131 pin "08-11-409-017"
+parcel 131 address "5 Greenwood"
+parcel 131 class 0040 "Improved Residential Lot"
+parcel 131 occupancy owner
+parcel 131 over65
+parcel 131 assessed 4770 50430
+parcel 131 acres 0.98
+parcel 132 pin "08-11-411-001"
+parcel 132 address "507 S Chicago"
+parcel 132 class 0040 "Improved Residential Lot"
+parcel 132 occupancy owner
+parcel 132 over65
+parcel 132 assessed 3665 33281
+parcel 132 acres 0.37
+parcel 133 pin "08-11-601-001"
+parcel 133 class 0090 "Tax Exempt"
+parcel 133 occupancy other
+parcel 133 acres 0.93
+parcel 134 pin "08-12-101-032"
+parcel 134 address "211 Henderson"
+parcel 134 class 0040 "Improved Residential Lot"
+parcel 134 occupancy owner
+parcel 134 assessed 4660 41182
+parcel 134 acres 0.63
+parcel 135 pin "08-12-101-044"
+parcel 135 address "402 N Summit"
+parcel 135 class 0040 "Improved Residential Lot"
+parcel 135 occupancy owner
+parcel 135 assessed 2843 46121
+parcel 135 acres 0.33
+parcel 136 pin "08-12-101-049"
+parcel 136 address "310 Green"
+parcel 136 class 0040 "Improved Residential Lot"
+parcel 136 occupancy owner
+parcel 136 assessed 4253 51459
+parcel 136 acres 0.53
+parcel 137 pin "08-12-101-054"
+parcel 137 address "403 N Grove"
+parcel 137 class 0040 "Improved Residential Lot"
+parcel 137 occupancy owner
+parcel 137 assessed 6616 63513
+parcel 137 acres 0.54
+parcel 138 pin "08-12-102-010"
+parcel 138 address "202 Benton"
+parcel 138 class 0040 "Improved Residential Lot"
+parcel 138 occupancy owner
+parcel 138 over65
+parcel 138 assessed 3218 54134
+parcel 138 acres 0.25
+parcel 139 pin "08-12-102-013"
+parcel 139 address "208 Benton"
+parcel 139 class 0040 "Improved Residential Lot"
+parcel 139 occupancy absentee
+parcel 139 assessed 3218 15359
+parcel 139 acres 0.25
+parcel 140 pin "08-12-102-022"
+parcel 140 address "201 Benton"
+parcel 140 class 0040 "Improved Residential Lot"
+parcel 140 occupancy other
+parcel 140 assessed 1739 3466
+parcel 140 acres 0.13
+parcel 141 pin "08-12-102-025"
+parcel 141 address "207 Benton"
+parcel 141 class 0040 "Improved Residential Lot"
+parcel 141 occupancy owner
+parcel 141 assessed 3218 24927
+parcel 141 acres 0.25
+parcel 142 pin "08-12-102-026"
+parcel 142 address "209 Benton"
+parcel 142 class 0040 "Improved Residential Lot"
+parcel 142 occupancy owner
+parcel 142 assessed 2162 15275
+parcel 142 acres 0.25
+parcel 143 pin "08-12-102-030"
+parcel 143 address "303 Benton"
+parcel 143 class 0040 "Improved Residential Lot"
+parcel 143 occupancy owner
+parcel 143 assessed 1282 12054
+parcel 143 acres 0.17
+parcel 144 pin "08-12-102-033"
+parcel 144 address "307 Benton"
+parcel 144 class 0040 "Improved Residential Lot"
+parcel 144 occupancy absentee
+parcel 144 assessed 2162 2838
+parcel 144 acres 0.25
+parcel 145 pin "08-12-102-034"
+parcel 145 address "207 N Church"
+parcel 145 class 0040 "Improved Residential Lot"
+parcel 145 occupancy owner
+parcel 145 assessed 3004 34997
+parcel 145 acres 0.25
+parcel 146 pin "08-12-102-039"
+parcel 146 address "210 Holmes"
+parcel 146 class 0040 "Improved Residential Lot"
+parcel 146 occupancy owner
+parcel 146 assessed 3218 16572
+parcel 146 acres 0.25
+parcel 147 pin "08-12-102-041"
+parcel 147 address "214 Holmes"
+parcel 147 class 0040 "Improved Residential Lot"
+parcel 147 occupancy absentee
+parcel 147 assessed 3218 16795
+parcel 147 acres 0.26
+parcel 148 pin "08-12-102-046"
+parcel 148 address "401 Holmes"
+parcel 148 class 0030 "Vac Lots-Lands/6 units"
+parcel 148 occupancy absentee
+parcel 148 assessed 759 0
+parcel 148 acres 0.16
+parcel 149 pin "08-12-102-050"
+parcel 149 address "207 Holmes"
+parcel 149 class 0030 "Vac Lots-Lands/6 units"
+parcel 149 occupancy absentee
+parcel 149 assessed 3218 0
+parcel 149 acres 0.25
+parcel 150 pin "08-12-102-053"
+parcel 150 class 0030 "Vac Lots-Lands/6 units"
+parcel 150 occupancy other
+parcel 150 assessed 1649 0
+parcel 150 acres 0.15
+parcel 151 pin "08-12-102-054"
+parcel 151 address "110 N Summit"
+parcel 151 class 0040 "Improved Residential Lot"
+parcel 151 occupancy absentee
+parcel 151 assessed 1649 21539
+parcel 151 acres 0.15
+parcel 152 pin "08-12-102-059"
+parcel 152 address "203 Holmes"
+parcel 152 class 0030 "Vac Lots-Lands/6 units"
+parcel 152 occupancy absentee
+parcel 152 assessed 2983 0
+parcel 152 acres 0.23
+parcel 153 pin "08-12-102-062"
+parcel 153 address "202 E Attica"
+parcel 153 class 0030 "Vac Lots-Lands/6 units"
+parcel 153 occupancy absentee
+parcel 153 assessed 4052 0
+parcel 153 acres 0.27
+parcel 154 pin "08-12-102-065"
+parcel 154 address "206 E Attica"
+parcel 154 class 0040 "Improved Residential Lot"
+parcel 154 occupancy owner
+parcel 154 over65
+parcel 154 assessed 4912 9481
+parcel 154 acres 0.25
+parcel 155 pin "08-12-102-083"
+parcel 155 address "117 N Church"
+parcel 155 class 0040 "Improved Residential Lot"
+parcel 155 occupancy owner
+parcel 155 over65
+parcel 155 assessed 4345 24696
+parcel 155 acres 0.27
+parcel 156 pin "08-12-102-084"
+parcel 156 address "305 Benton"
+parcel 156 class 0040 "Improved Residential Lot"
+parcel 156 occupancy owner
+parcel 156 assessed 4211 4283
+parcel 156 acres 0.50
+parcel 157 pin "08-12-103-001"
+parcel 157 address "309 Green"
+parcel 157 class 0040 "Improved Residential Lot"
+parcel 157 occupancy owner
+parcel 157 assessed 2162 17475
+parcel 157 acres 0.25
+parcel 158 pin "08-12-103-002"
+parcel 158 address "309 Green"
+parcel 158 class 0030 "Vac Lots-Lands/6 units"
+parcel 158 occupancy other
+parcel 158 assessed 2162 0
+parcel 158 acres 0.25
+parcel 159 pin "08-12-103-005"
+parcel 159 address "310 Benton"
+parcel 159 class 0040 "Improved Residential Lot"
+parcel 159 occupancy owner
+parcel 159 assessed 2162 21226
+parcel 159 acres 0.25
+parcel 160 pin "08-11-403-020"
+parcel 160 address "210 Perry"
+parcel 160 class 0030 "Vac Lots-Lands/6 units"
+parcel 160 occupancy absentee
+parcel 160 assessed 3916 0
+parcel 160 acres 0.20
+parcel 161 pin "08-11-403-021"
+parcel 161 address "208 Perry"
+parcel 161 class 0040 "Improved Residential Lot"
+parcel 161 occupancy owner
+parcel 161 over65
+parcel 161 assessed 3916 5600
+parcel 161 acres 0.20
+parcel 162 pin "08-11-407-004"
+parcel 162 address "1082 Maple"
+parcel 162 class 0040 "Improved Residential Lot"
+parcel 162 occupancy absentee
+parcel 162 assessed 4312 60689
+parcel 162 acres 0.26
+parcel 163 pin "08-11-407-007"
+parcel 163 address "201 S Chicago"
+parcel 163 class 0040 "Improved Residential Lot"
+parcel 163 occupancy owner
+parcel 163 assessed 2944 23151
+parcel 163 acres 0.22
+parcel 164 pin "08-11-407-013"
+parcel 164 address "113 E Maple"
+parcel 164 class 0030 "Vac Lots-Lands/6 units"
+parcel 164 occupancy absentee
+parcel 164 assessed 2248 0
+parcel 164 acres 0.20
+parcel 165 pin "08-11-408-008"
+parcel 165 class 0030 "Vac Lots-Lands/6 units"
+parcel 165 occupancy other
+parcel 165 assessed 407 0
+parcel 165 acres 0.05
+parcel 166 pin "08-11-408-014"
+parcel 166 address "108 Gilbert"
+parcel 166 class 0040 "Improved Residential Lot"
+parcel 166 occupancy owner
+parcel 166 assessed 4312 28081
+parcel 166 acres 0.25
+parcel 167 pin "08-11-408-015"
+parcel 167 address "110 Gilbert"
+parcel 167 class 0030 "Vac Lots-Lands/6 units"
+parcel 167 occupancy absentee
+parcel 167 assessed 4312 0
+parcel 167 acres 0.25
+parcel 168 pin "08-11-408-026"
+parcel 168 address "407 S Chicago"
+parcel 168 class 0040 "Improved Residential Lot"
+parcel 168 occupancy owner
+parcel 168 assessed 2809 21287
+parcel 168 acres 0.18
+parcel 169 pin "08-11-408-027"
+parcel 169 address "409 S Chicago"
+parcel 169 class 0040 "Improved Residential Lot"
+parcel 169 occupancy absentee
+parcel 169 assessed 6845 4413
+parcel 169 acres 0.39
+parcel 170 pin "08-11-409-012"
+parcel 170 address "410 S Chicago"
+parcel 170 class 0040 "Improved Residential Lot"
+parcel 170 occupancy absentee
+parcel 170 assessed 5714 61493
+parcel 170 acres 0.44
+parcel 171 pin "08-11-409-019"
+parcel 171 address "508 S Chicago"
+parcel 171 class 0040 "Improved Residential Lot"
+parcel 171 occupancy owner
+parcel 171 over65
+parcel 171 assessed 6170 66659
+parcel 171 acres 1.49
+parcel 172 pin "08-11-410-002"
+parcel 172 address "403 S Chicago"
+parcel 172 class 0040 "Improved Residential Lot"
+parcel 172 occupancy owner
+parcel 172 over65
+parcel 172 assessed 3242 19273
+parcel 172 acres 0.18
+parcel 173 pin "08-11-411-003"
+parcel 173 address "508 S Church"
+parcel 173 class 0040 "Improved Residential Lot"
+parcel 173 occupancy absentee
+parcel 173 assessed 3665 18802
+parcel 173 acres 0.25
+parcel 174 pin "08-11-413-006"
+parcel 174 address "210 Stufflebeam"
+parcel 174 class 0040 "Improved Residential Lot"
+parcel 174 occupancy owner
+parcel 174 over65
+parcel 174 assessed 6744 61936
+parcel 174 acres 0.47
+parcel 175 pin "08-11-414-002"
+parcel 175 class 0050 "Commercial >6 Units"
+parcel 175 occupancy other
+parcel 175 assessed 10131 115971
+parcel 175 acres 0.92
+parcel 176 pin "08-11-609-013"
+parcel 176 class 0090 "Tax Exempt"
+parcel 176 occupancy other
+parcel 176 acres 0.11
+parcel 177 pin "08-12-101-036"
+parcel 177 address "407 N Summit"
+parcel 177 class 0030 "Vac Lots-Lands/6 units"
+parcel 177 occupancy other
+parcel 177 assessed 2128 0
+parcel 177 acres 0.24
+parcel 178 pin "08-12-101-042"
+parcel 178 address "407 N Church"
+parcel 178 class 0030 "Vac Lots-Lands/6 units"
+parcel 178 occupancy absentee
+parcel 178 assessed 4660 0
+parcel 178 acres 0.31
+parcel 179 pin "08-12-102-002"
+parcel 179 address "213 Green"
+parcel 179 class 0040 "Improved Residential Lot"
+parcel 179 occupancy absentee
+parcel 179 assessed 2031 4373
+parcel 179 acres 0.17
+parcel 180 pin "08-12-102-006"
+parcel 180 address "305 Green"
+parcel 180 class 0040 "Improved Residential Lot"
+parcel 180 occupancy owner
+parcel 180 assessed 2162 17623
+parcel 180 acres 0.25
+parcel 181 pin "08-12-102-012"
+parcel 181 address "206 Benton"
+parcel 181 class 0040 "Improved Residential Lot"
+parcel 181 occupancy owner
+parcel 181 assessed 3218 33360
+parcel 181 acres 0.25
+parcel 182 pin "08-12-102-038"
+parcel 182 address "208 Holmes"
+parcel 182 class 0040 "Improved Residential Lot"
+parcel 182 occupancy absentee
+parcel 182 assessed 3218 17066
+parcel 182 acres 0.25
+parcel 183 pin "08-12-102-061"
+parcel 183 address "108 Summit"
+parcel 183 class 0040 "Improved Residential Lot"
+parcel 183 occupancy owner
+parcel 183 assessed 4511 1610
+parcel 183 acres 0.20
+parcel 184 pin "08-12-102-066"
+parcel 184 address "208 E Attica"
+parcel 184 class 0040 "Improved Residential Lot"
+parcel 184 occupancy absentee
+parcel 184 assessed 4912 31708
+parcel 184 acres 0.26
+parcel 185 pin "08-12-103-006"
+parcel 185 address "312 Benton"
+parcel 185 class 0040 "Improved Residential Lot"
+parcel 185 occupancy absentee
+parcel 185 assessed 2162 16940
+parcel 185 acres 0.25
+parcel 186 pin "08-12-103-007"
+parcel 186 address "314 Benton"
+parcel 186 class 0040 "Improved Residential Lot"
+parcel 186 occupancy owner
+parcel 186 assessed 2162 12368
+parcel 186 acres 0.25
+parcel 187 pin "08-12-604-001"
+parcel 187 address "216 E Maple"
+parcel 187 class 0090 "Tax Exempt"
+parcel 187 occupancy absentee
+parcel 187 acres 0.25
+parcel 188 pin "08-12-301-015"
+parcel 188 address "204 E Maple"
+parcel 188 class 0040 "Improved Residential Lot"
+parcel 188 occupancy owner
+parcel 188 assessed 4312 13661
+parcel 188 acres 0.25
+parcel 189 pin "08-12-301-020"
+parcel 189 class 0030 "Vac Lots-Lands/6 units"
+parcel 189 occupancy other
+parcel 189 assessed 870 0
+parcel 189 acres 0.04
+parcel 190 pin "08-12-301-035"
+parcel 190 address "203 Summit"
+parcel 190 class 0040 "Improved Residential Lot"
+parcel 190 occupancy owner
+parcel 190 assessed 3694 38916
+parcel 190 acres 0.25
+parcel 191 pin "08-12-302-001"
+parcel 191 class 0040 "Improved Residential Lot"
+parcel 191 occupancy other
+parcel 191 assessed 531 7276
+parcel 191 acres 0.05
+parcel 192 pin "08-12-302-002"
+parcel 192 class 0030 "Vac Lots-Lands/6 units"
+parcel 192 occupancy other
+parcel 192 assessed 531 0
+parcel 192 acres 0.05
+parcel 193 pin "08-12-302-003"
+parcel 193 class 0030 "Vac Lots-Lands/6 units"
+parcel 193 occupancy other
+parcel 193 assessed 531 0
+parcel 193 acres 0.05
+parcel 194 pin "08-12-302-006"
+parcel 194 class 0030 "Vac Lots-Lands/6 units"
+parcel 194 occupancy other
+parcel 194 assessed 531 0
+parcel 194 acres 0.05
+parcel 195 pin "08-12-302-011"
+parcel 195 address "208 Gilbert"
+parcel 195 class 0040 "Improved Residential Lot"
+parcel 195 occupancy owner
+parcel 195 assessed 6448 11271
+parcel 195 acres 0.38
+parcel 196 pin "08-12-302-012"
+parcel 196 address "210 Gilbert"
+parcel 196 class 0040 "Improved Residential Lot"
+parcel 196 occupancy owner
+parcel 196 over65
+parcel 196 assessed 3437 22658
+parcel 196 acres 0.23
+parcel 197 pin "08-12-302-019"
+parcel 197 address "207 Gilbert"
+parcel 197 class 0040 "Improved Residential Lot"
+parcel 197 occupancy owner
+parcel 197 assessed 4312 12519
+parcel 197 acres 0.25
+parcel 198 pin "08-12-302-023"
+parcel 198 address "204 Stewart"
+parcel 198 class 0040 "Improved Residential Lot"
+parcel 198 occupancy owner
+parcel 198 over65
+parcel 198 assessed 7766 54019
+parcel 198 acres 0.50
+parcel 199 pin "08-12-303-017"
+parcel 199 address "305 Gilbert"
+parcel 199 class 0030 "Vac Lots-Lands/6 units"
+parcel 199 occupancy absentee
+parcel 199 assessed 3254 0
+parcel 199 acres 0.25
+parcel 200 pin "08-12-303-018"
+parcel 200 address "307 Gilbert"
+parcel 200 class 0040 "Improved Residential Lot"
+parcel 200 occupancy owner
+parcel 200 assessed 3254 23707
+parcel 200 acres 0.25
+parcel 201 pin "08-12-303-032"
+parcel 201 address "312 Stewart"
+parcel 201 class 0040 "Improved Residential Lot"
+parcel 201 occupancy other
+parcel 201 assessed 9667 18479
+parcel 201 acres 0.75
+parcel 202 pin "08-12-304-001"
+parcel 202 address "201 Stewart"
+parcel 202 class 0040 "Improved Residential Lot"
+parcel 202 occupancy owner
+parcel 202 assessed 4312 19685
+parcel 202 acres 0.25
+parcel 203 pin "08-12-304-005"
+parcel 203 address "209 Stewart"
+parcel 203 class 0040 "Improved Residential Lot"
+parcel 203 occupancy owner
+parcel 203 assessed 4312 27330
+parcel 203 acres 0.25
+parcel 204 pin "08-12-304-009"
+parcel 204 address "202 E Mc Kibben"
+parcel 204 class 0040 "Improved Residential Lot"
+parcel 204 occupancy owner
+parcel 204 assessed 4312 45829
+parcel 204 acres 0.25
+parcel 205 pin "08-12-304-013"
+parcel 205 address "210 Mc Kibben"
+parcel 205 class 0040 "Improved Residential Lot"
+parcel 205 occupancy owner
+parcel 205 assessed 4312 21397
+parcel 205 acres 0.25
+parcel 206 pin "08-12-304-015"
+parcel 206 address "216 Mc Kibben"
+parcel 206 class 0040 "Improved Residential Lot"
+parcel 206 occupancy absentee
+parcel 206 assessed 6405 18741
+parcel 206 acres 0.50
+parcel 207 pin "08-12-304-018"
+parcel 207 class 0040 "Improved Residential Lot"
+parcel 207 occupancy other
+parcel 207 assessed 4312 816
+parcel 207 acres 0.25
+parcel 208 pin "08-12-304-020"
+parcel 208 address "209 Mc Kibben"
+parcel 208 class 0040 "Improved Residential Lot"
+parcel 208 occupancy owner
+parcel 208 over65
+parcel 208 assessed 5285 34122
+parcel 208 acres 0.44
+parcel 209 pin "08-12-305-001"
+parcel 209 address "301 Stewart"
+parcel 209 class 0040 "Improved Residential Lot"
+parcel 209 occupancy absentee
+parcel 209 assessed 3218 1619
+parcel 209 acres 0.25
+parcel 210 pin "08-12-305-005"
+parcel 210 address "313 Stewart"
+parcel 210 class 0040 "Improved Residential Lot"
+parcel 210 occupancy owner
+parcel 210 assessed 3218 35055
+parcel 210 acres 0.25
+parcel 211 pin "08-12-305-007"
+parcel 211 address "302 Mc Kibben"
+parcel 211 class 0040 "Improved Residential Lot"
+parcel 211 occupancy owner
+parcel 211 assessed 3218 21677
+parcel 211 acres 0.25
+parcel 212 pin "08-12-305-024"
+parcel 212 address "312 Mc Kibben"
+parcel 212 class 0040 "Improved Residential Lot"
+parcel 212 occupancy owner
+parcel 212 over65
+parcel 212 assessed 6442 12136
+parcel 212 acres 0.50
+parcel 213 pin "08-12-305-026"
+parcel 213 address "315 Mc Kibben"
+parcel 213 class 0040 "Improved Residential Lot"
+parcel 213 occupancy owner
+parcel 213 over65
+parcel 213 assessed 6269 3444
+parcel 213 acres 0.50
+parcel 214 pin "08-12-306-005"
+parcel 214 address "212 Dale"
+parcel 214 class 0040 "Improved Residential Lot"
+parcel 214 occupancy owner
+parcel 214 over65
+parcel 214 assessed 3218 28870
+parcel 214 acres 0.25
+parcel 215 pin "08-12-306-009"
+parcel 215 address "302 Dale"
+parcel 215 class 0040 "Improved Residential Lot"
+parcel 215 occupancy owner
+parcel 215 assessed 6474 50908
+parcel 215 acres 0.50
+parcel 216 pin "08-11-200-007"
+parcel 216 address "302 N Chicago"
+parcel 216 class 0040 "Improved Residential Lot"
+parcel 216 occupancy owner
+parcel 216 assessed 2605 25703
+parcel 216 acres 0.30
+parcel 217 pin "08-11-200-021"
+parcel 217 class 0030 "Vac Lots-Lands/6 units"
+parcel 217 occupancy other
+parcel 217 assessed 2124 0
+parcel 217 acres 2.50
+parcel 218 pin "08-11-204-042"
+parcel 218 address "105 N Chicago"
+parcel 218 class 0060 "Improved Commercial"
+parcel 218 occupancy absentee
+parcel 218 assessed 4287 13344
+parcel 218 acres 0.04
+parcel 219 pin "08-11-204-044"
+parcel 219 address "102 E Attica"
+parcel 219 class 0030 "Vac Lots-Lands/6 units"
+parcel 219 occupancy absentee
+parcel 219 assessed 2282 0
+parcel 219 acres 0.07
+parcel 220 pin "08-11-204-061"
+parcel 220 class 0030 "Vac Lots-Lands/6 units"
+parcel 220 occupancy other
+parcel 220 assessed 407 0
+parcel 220 acres 0.04
+parcel 221 pin "08-11-204-062"
+parcel 221 address "204 N Chicago"
+parcel 221 class 0040 "Improved Residential Lot"
+parcel 221 occupancy absentee
+parcel 221 assessed 11078 15441
+parcel 221 acres 0.20
+parcel 222 pin "08-11-205-004"
+parcel 222 address "108 N Chicago"
+parcel 222 class 0060 "Improved Commercial"
+parcel 222 occupancy owner
+parcel 222 assessed 10593 8073
+parcel 222 acres 0.13
+parcel 223 pin "08-11-205-011"
+parcel 223 address "112 N Chicago"
+parcel 223 class 0040 "Improved Residential Lot"
+parcel 223 occupancy other
+parcel 223 assessed 8446 12101
+parcel 223 acres 0.32
+parcel 224 pin "08-11-205-013"
+parcel 224 address "106 N Chicago"
+parcel 224 class 0060 "Improved Commercial"
+parcel 224 occupancy owner
+parcel 224 assessed 10647 15821
+parcel 224 acres 0.39
+parcel 225 pin "08-11-207-001"
+parcel 225 address "107 Smith"
+parcel 225 class 0040 "Improved Residential Lot"
+parcel 225 occupancy owner
+parcel 225 assessed 10527 53657
+parcel 225 acres 0.73
+parcel 226 pin "08-11-207-006"
+parcel 226 address "106 Henderson"
+parcel 226 class 0040 "Improved Residential Lot"
+parcel 226 occupancy owner
+parcel 226 assessed 7036 16887
+parcel 226 acres 0.49
+parcel 227 pin "08-11-207-024"
+parcel 227 address "110 Henderson"
+parcel 227 class 0040 "Improved Residential Lot"
+parcel 227 occupancy owner
+parcel 227 over65
+parcel 227 assessed 7045 23918
+parcel 227 acres 0.46
+parcel 228 pin "08-11-208-005"
+parcel 228 address "106 York"
+parcel 228 class 0040 "Improved Residential Lot"
+parcel 228 occupancy owner
+parcel 228 assessed 8858 58545
+parcel 228 acres 0.30
+parcel 229 pin "08-11-400-002"
+parcel 229 class 0040 "Improved Residential Lot"
+parcel 229 occupancy other
+parcel 229 assessed 2418 5622
+parcel 229 acres 2.00
+parcel 230 pin "08-11-400-034"
+parcel 230 address "13 Greenwood"
+parcel 230 class 0011 "Homesite-Dwelling"
+parcel 230 occupancy absentee
+parcel 230 acres 1.60
+parcel 231 pin "08-11-401-012"
+parcel 231 address "127 W Attica"
+parcel 231 class 0040 "Improved Residential Lot"
+parcel 231 occupancy owner
+parcel 231 assessed 1385 22837
+parcel 231 acres 0.20
+parcel 232 pin "08-11-402-010"
+parcel 232 address "206 S Chicago"
+parcel 232 class 0040 "Improved Residential Lot"
+parcel 232 occupancy owner
+parcel 232 assessed 3930 15075
+parcel 232 acres 0.34
+parcel 233 pin "08-11-402-026"
+parcel 233 address "202 S Chicago"
+parcel 233 class 0060 "Improved Commercial"
+parcel 233 occupancy absentee
+parcel 233 assessed 3357 9845
+parcel 233 acres 0.29
+parcel 234 pin "08-11-403-001"
+parcel 234 address "216 Park Place"
+parcel 234 class 0040 "Improved Residential Lot"
+parcel 234 occupancy owner
+parcel 234 over65
+parcel 234 assessed 3916 25471
+parcel 234 acres 0.30
+parcel 235 pin "08-11-403-010"
+parcel 235 address "210 Park"
+parcel 235 class 0040 "Improved Residential Lot"
+parcel 235 occupancy absentee
+parcel 235 assessed 3916 9113
+parcel 235 acres 0.20
+parcel 236 pin "08-11-404-009"
+parcel 236 class 0060 "Improved Commercial"
+parcel 236 occupancy other
+parcel 236 assessed 3637 8583
+parcel 236 acres 0.04
+parcel 237 pin "08-11-404-018"
+parcel 237 address "112 S Chicago"
+parcel 237 class 0060 "Improved Commercial"
+parcel 237 occupancy absentee
+parcel 237 assessed 32889 341491
+parcel 237 acres 1.19
+parcel 238 pin "08-11-405-001"
+parcel 238 address "101 S Chicago"
+parcel 238 class 0060 "Improved Commercial"
+parcel 238 occupancy absentee
+parcel 238 assessed 6378 0
+parcel 238 acres 0.04
+parcel 239 pin "08-11-405-006"
+parcel 239 address "103 S Chicago"
+parcel 239 class 0060 "Improved Commercial"
+parcel 239 occupancy absentee
+parcel 239 assessed 2341 0
+parcel 239 acres 0.05
+parcel 240 pin "08-11-405-026"
+parcel 240 address "113 E Attica"
+parcel 240 class 0090 "Tax Exempt"
+parcel 240 occupancy absentee
+parcel 240 assessed 3441 0
+parcel 240 acres 0.05
+parcel 241 pin "08-11-604-005"
+parcel 241 address "N Chicago"
+parcel 241 class 0090 "Tax Exempt"
+parcel 241 occupancy absentee
+parcel 241 acres 0.73
+parcel 242 pin "08-11-607-011"
+parcel 242 class 0090 "Tax Exempt"
+parcel 242 occupancy other
+parcel 242 acres 0.08
+parcel 243 pin "08-11-607-014"
+parcel 243 class 0090 "Tax Exempt"
+parcel 243 occupancy other
+parcel 243 acres 0.01
+parcel 244 pin "08-11-607-015"
+parcel 244 class 0090 "Tax Exempt"
+parcel 244 occupancy other
+parcel 244 acres 0.04
+parcel 245 pin "08-11-607-016"
+parcel 245 class 0090 "Tax Exempt"
+parcel 245 occupancy other
+parcel 245 acres 0.81
+parcel 246 pin "08-11-608-008"
+parcel 246 class 0090 "Tax Exempt"
+parcel 246 occupancy other
+parcel 246 acres 10.55
+parcel 247 pin "08-11-609-006"
+parcel 247 class 0090 "Tax Exempt"
+parcel 247 occupancy other
+parcel 247 acres 19.01
+parcel 248 pin "08-11-609-014"
+parcel 248 class 0090 "Tax Exempt"
+parcel 248 occupancy other
+parcel 248 acres 0.14
+parcel 249 pin "08-11-609-016"
+parcel 249 address "107 E Attica"
+parcel 249 class 0090 "Tax Exempt"
+parcel 249 occupancy absentee
+parcel 249 acres 0.06
+parcel 250 pin "08-12-100-001"
+parcel 250 class 0021 "Farmland"
+parcel 250 occupancy other
+parcel 250 acres 34.90
+parcel 251 pin "08-12-101-011"
+parcel 251 class 0030 "Vac Lots-Lands/6 units"
+parcel 251 occupancy other
+parcel 251 assessed 1977 0
+parcel 251 acres 0.25
+parcel 252 pin "08-12-101-018"
+parcel 252 address "202 Henderson"
+parcel 252 class 0040 "Improved Residential Lot"
+parcel 252 occupancy other
+parcel 252 assessed 2162 40796
+parcel 252 acres 0.25
+parcel 253 pin "08-12-101-020"
+parcel 253 address "204 E Henderson"
+parcel 253 class 0040 "Improved Residential Lot"
+parcel 253 occupancy owner
+parcel 253 over65
+parcel 253 assessed 2162 25132
+parcel 253 acres 0.25
+parcel 254 pin "08-12-307-022"
+parcel 254 address "215 Thompson"
+parcel 254 class 0040 "Improved Residential Lot"
+parcel 254 occupancy owner
+parcel 254 over65
+parcel 254 assessed 3033 32915
+parcel 254 acres 0.22
+parcel 255 pin "08-12-307-029"
+parcel 255 address "315 Thompson"
+parcel 255 class 0040 "Improved Residential Lot"
+parcel 255 occupancy owner
+parcel 255 assessed 3033 16743
+parcel 255 acres 0.22
+parcel 256 pin "08-12-308-013"
+parcel 256 class 0040 "Improved Residential Lot"
+parcel 256 occupancy other
+parcel 256 assessed 1348 3448
+parcel 256 acres 0.12
+parcel 257 pin "08-12-308-018"
+parcel 257 class 0030 "Vac Lots-Lands/6 units"
+parcel 257 occupancy other
+parcel 257 assessed 2529 0
+parcel 257 acres 0.23
+parcel 258 pin "08-12-308-023"
+parcel 258 address "403 Mc Kibben"
+parcel 258 class 0040 "Improved Residential Lot"
+parcel 258 occupancy absentee
+parcel 258 assessed 3218 11667
+parcel 258 acres 0.25
+parcel 259 pin "08-12-308-025"
+parcel 259 address "409 Mc Kibben"
+parcel 259 class 0040 "Improved Residential Lot"
+parcel 259 occupancy owner
+parcel 259 over65
+parcel 259 assessed 3218 37351
+parcel 259 acres 0.25
+parcel 260 pin "08-12-308-028"
+parcel 260 class 0030 "Vac Lots-Lands/6 units"
+parcel 260 occupancy other
+parcel 260 assessed 695 0
+parcel 260 acres 0.06
+parcel 261 pin "08-12-308-039"
+parcel 261 address "309 S Grove"
+parcel 261 class 0040 "Improved Residential Lot"
+parcel 261 occupancy owner
+parcel 261 over65
+parcel 261 assessed 4305 32662
+parcel 261 acres 0.50
+parcel 262 pin "08-12-310-018"
+parcel 262 class 0080 "Industrial"
+parcel 262 occupancy other
+parcel 262 assessed 26916 27888
+parcel 262 acres 7.27
+parcel 263 pin "08-12-525-048"
+parcel 263 class 5060 "Railroad - Leased"
+parcel 263 occupancy other
+parcel 263 assessed 864 0
+parcel 263 acres 0.49
+parcel 264 pin "08-12-609-002"
+parcel 264 class 0090 "Tax Exempt"
+parcel 264 occupancy other
+parcel 264 acres 0.18
+parcel 265 pin "08-12-609-044"
+parcel 265 class 0090 "Tax Exempt"
+parcel 265 occupancy other
+parcel 265 acres 0.39
+parcel 266 pin "08-12-609-045"
+parcel 266 class 0090 "Tax Exempt"
+parcel 266 occupancy other
+parcel 266 acres 0.39
+parcel 267 pin "08-12-609-053"
+parcel 267 class 0090 "Tax Exempt"
+parcel 267 occupancy other
+parcel 267 acres 0.39
+parcel 268 pin "08-11-200-014"
+parcel 268 address "402 N Church"
+parcel 268 class 0040 "Improved Residential Lot"
+parcel 268 occupancy owner
+parcel 268 over65
+parcel 268 assessed 2165 14915
+parcel 268 acres 0.25
+parcel 269 pin "08-11-200-023"
+parcel 269 address "509 N Chicago"
+parcel 269 class 0040 "Improved Residential Lot"
+parcel 269 occupancy owner
+parcel 269 over65
+parcel 269 assessed 7648 49441
+parcel 269 acres 2.54
+parcel 270 pin "08-11-203-005"
+parcel 270 address "108 Green"
+parcel 270 class 0040 "Improved Residential Lot"
+parcel 270 occupancy absentee
+parcel 270 assessed 2344 4588
+parcel 270 acres 0.28
+parcel 271 pin "08-11-204-005"
+parcel 271 address "307 Harrison"
+parcel 271 class 0040 "Improved Residential Lot"
+parcel 271 occupancy owner
+parcel 271 assessed 3744 32847
+parcel 271 acres 0.39
+parcel 272 pin "08-11-204-013"
+parcel 272 address "301 Harrison"
+parcel 272 class 0040 "Improved Residential Lot"
+parcel 272 occupancy owner
+parcel 272 assessed 2189 38281
+parcel 272 acres 0.14
+parcel 273 pin "08-11-204-026"
+parcel 273 address "210 Harrison"
+parcel 273 class 0040 "Improved Residential Lot"
+parcel 273 occupancy owner
+parcel 273 over65
+parcel 273 assessed 4593 7488
+parcel 273 acres 0.37
+parcel 274 pin "08-11-204-029"
+parcel 274 address "211 Harrison"
+parcel 274 class 0040 "Improved Residential Lot"
+parcel 274 occupancy absentee
+parcel 274 assessed 3098 13278
+parcel 274 acres 0.16
+parcel 275 pin "08-11-204-034"
+parcel 275 address "209 Harrison"
+parcel 275 class 0040 "Improved Residential Lot"
+parcel 275 occupancy owner
+parcel 275 assessed 2137 13372
+parcel 275 acres 0.14
+parcel 276 pin "08-11-204-039"
+parcel 276 address "207 E Harrison"
+parcel 276 class 0040 "Improved Residential Lot"
+parcel 276 occupancy absentee
+parcel 276 assessed 2752 2285
+parcel 276 acres 0.12
+parcel 277 pin "08-11-204-040"
+parcel 277 address "202 N Church"
+parcel 277 class 0040 "Improved Residential Lot"
+parcel 277 occupancy owner
+parcel 277 over65
+parcel 277 assessed 2693 16421
+parcel 277 acres 0.12
+parcel 278 pin "08-11-204-041"
+parcel 278 address "202 Harrison"
+parcel 278 class 0040 "Improved Residential Lot"
+parcel 278 occupancy absentee
+parcel 278 assessed 2456 2351
+parcel 278 acres 0.43
+parcel 279 pin "08-11-204-058"
+parcel 279 address "206 N Church"
+parcel 279 class 0040 "Improved Residential Lot"
+parcel 279 occupancy absentee
+parcel 279 assessed 3875 14140
+parcel 279 acres 0.21
+parcel 280 pin "08-11-204-064"
+parcel 280 address "107 Benton"
+parcel 280 class 0040 "Improved Residential Lot"
+parcel 280 occupancy owner
+parcel 280 over65
+parcel 280 assessed 1567 23764
+parcel 280 acres 0.10
+parcel 281 pin "08-11-207-014"
+parcel 281 address "111 Henderson"
+parcel 281 class 0040 "Improved Residential Lot"
+parcel 281 occupancy owner
+parcel 281 assessed 2847 49791
+parcel 281 acres 0.19
+parcel 282 pin "08-11-207-019"
+parcel 282 class 0030 "Vac Lots-Lands/6 units"
+parcel 282 occupancy other
+parcel 282 assessed 2408 0
+parcel 282 acres 0.26
+parcel 283 pin "08-11-207-020"
+parcel 283 address "404 Harrison"
+parcel 283 class 0040 "Improved Residential Lot"
+parcel 283 occupancy absentee
+parcel 283 assessed 2408 14320
+parcel 283 acres 0.23
+parcel 284 pin "08-11-400-003"
+parcel 284 class 0030 "Vac Lots-Lands/6 units"
+parcel 284 occupancy other
+parcel 284 assessed 7495 0
+parcel 284 acres 0.72
+parcel 285 pin "08-11-400-035"
+parcel 285 address "9 Watson Dr"
+parcel 285 class 0040 "Improved Residential Lot"
+parcel 285 occupancy owner
+parcel 285 over65
+parcel 285 assessed 6170 67283
+parcel 285 acres 1.56
+parcel 286 pin "08-11-402-004"
+parcel 286 address "107 Park"
+parcel 286 class 0040 "Improved Residential Lot"
+parcel 286 occupancy absentee
+parcel 286 assessed 1739 16276
+parcel 286 acres 0.15
+parcel 287 pin "08-11-402-005"
+parcel 287 address "105 Park"
+parcel 287 class 0040 "Improved Residential Lot"
+parcel 287 occupancy owner
+parcel 287 assessed 3930 27898
+parcel 287 acres 0.34
+parcel 288 pin "08-11-402-013"
+parcel 288 address "209 Perry"
+parcel 288 class 0040 "Improved Residential Lot"
+parcel 288 occupancy owner
+parcel 288 assessed 3239 25419
+parcel 288 acres 0.28
+parcel 289 pin "08-11-402-027"
+parcel 289 address "306 S Chicago"
+parcel 289 class 0040 "Improved Residential Lot"
+parcel 289 occupancy absentee
+parcel 289 assessed 5416 52693
+parcel 289 acres 1.15
+parcel 290 pin "08-11-402-036"
+parcel 290 address "222 Stufflebeam"
+parcel 290 class 0040 "Improved Residential Lot"
+parcel 290 occupancy owner
+parcel 290 assessed 2680 90552
+parcel 290 acres 0.70
+parcel 291 pin "08-11-402-037"
+parcel 291 address "205 Ann"
+parcel 291 class 0040 "Improved Residential Lot"
+parcel 291 occupancy absentee
+parcel 291 assessed 2083 9649
+parcel 291 acres 0.18
+parcel 292 pin "08-11-403-007"
+parcel 292 address "216 Perry"
+parcel 292 class 0040 "Improved Residential Lot"
+parcel 292 occupancy other
+parcel 292 assessed 3916 22617
+parcel 292 acres 0.20
+parcel 293 pin "08-11-403-018"
+parcel 293 address "201 Park"
+parcel 293 class 0040 "Improved Residential Lot"
+parcel 293 occupancy absentee
+parcel 293 assessed 3916 1713
+parcel 293 acres 0.20
+parcel 294 pin "08-11-403-023"
+parcel 294 address "204 Perry"
+parcel 294 class 0040 "Improved Residential Lot"
+parcel 294 occupancy absentee
+parcel 294 assessed 3916 25935
+parcel 294 acres 0.20
+parcel 295 pin "08-11-407-002"
+parcel 295 address "137 E Attica"
+parcel 295 class 0040 "Improved Residential Lot"
+parcel 295 occupancy owner
+parcel 295 assessed 4532 27318
+parcel 295 acres 0.26
+parcel 296 pin "08-11-407-003"
+parcel 296 address "106 E Maple"
+parcel 296 class 0060 "Improved Commercial"
+parcel 296 occupancy absentee
+parcel 296 assessed 5069 62343
+parcel 296 acres 0.29
+parcel 297 pin "08-11-407-008"
+parcel 297 address "103 E Maple"
+parcel 297 class 0040 "Improved Residential Lot"
+parcel 297 occupancy owner
+parcel 297 over65
+parcel 297 assessed 2944 27299
+parcel 297 acres 0.20
+parcel 298 pin "08-11-407-011"
+parcel 298 class 0040 "Improved Residential Lot"
+parcel 298 occupancy other
+parcel 298 assessed 2944 627
+parcel 298 acres 0.20
+parcel 299 pin "08-11-408-004"
+parcel 299 class 0030 "Vac Lots-Lands/6 units"
+parcel 299 occupancy other
+parcel 299 assessed 438 0
+parcel 299 acres 0.04
+parcel 300 pin "08-11-408-005"
+parcel 300 address "103 Maple"
+parcel 300 class 0030 "Vac Lots-Lands/6 units"
+parcel 300 occupancy absentee
+parcel 300 assessed 407 0
+parcel 300 acres 0.05
+parcel 301 pin "08-11-408-011"
+parcel 301 address "102 Gilbert"
+parcel 301 class 0040 "Improved Residential Lot"
+parcel 301 occupancy owner
+parcel 301 assessed 3506 50817
+parcel 301 acres 0.22
+parcel 302 pin "08-11-408-018"
+parcel 302 address "105 Gilbert"
+parcel 302 class 0040 "Improved Residential Lot"
+parcel 302 occupancy owner
+parcel 302 over65
+parcel 302 assessed 4312 23986
+parcel 302 acres 0.25
+parcel 303 pin "08-11-408-022"
+parcel 303 address "104 Stewart"
+parcel 303 class 0040 "Improved Residential Lot"
+parcel 303 occupancy owner
+parcel 303 assessed 5103 17416
+parcel 303 acres 0.30
+parcel 304 pin "08-11-408-023"
+parcel 304 address "106 Stewart"
+parcel 304 class 0040 "Improved Residential Lot"
+parcel 304 occupancy absentee
+parcel 304 assessed 4312 8484
+parcel 304 acres 0.25
+parcel 305 pin "08-11-408-032"
+parcel 305 address "105 Mc Kibben"
+parcel 305 class 0040 "Improved Residential Lot"
+parcel 305 occupancy owner
+parcel 305 over65
+parcel 305 assessed 4312 24087
+parcel 305 acres 0.25
+parcel 306 pin "08-11-408-033"
+parcel 306 address "109 Gilbert"
+parcel 306 class 0040 "Improved Residential Lot"
+parcel 306 occupancy owner
+parcel 306 over65
+parcel 306 assessed 5948 34064
+parcel 306 acres 0.35
+parcel 307 pin "08-11-409-003"
+parcel 307 class 0050 "Commercial >6 Units"
+parcel 307 occupancy other
+parcel 307 assessed 3594 80692
+parcel 307 acres 0.31
+parcel 308 pin "08-11-409-009"
+parcel 308 address "3 Watson Dr"
+parcel 308 class 0040 "Improved Residential Lot"
+parcel 308 occupancy other
+parcel 308 assessed 0 3594
+parcel 308 acres 0.65
+parcel 309 pin "08-11-409-016"
+parcel 309 address "7 Greenwood"
+parcel 309 class 0040 "Improved Residential Lot"
+parcel 309 occupancy absentee
+parcel 309 assessed 12277 77977
+parcel 309 acres 0.94
+parcel 310 pin "08-11-409-020"
+parcel 310 address "408 S Chicago"
+parcel 310 class 0040 "Improved Residential Lot"
+parcel 310 occupancy owner
+parcel 310 over65
+parcel 310 assessed 9606 40827
+parcel 310 acres 0.73
+parcel 311 pin "08-11-410-003"
+parcel 311 address "405 S Chicago"
+parcel 311 class 0040 "Improved Residential Lot"
+parcel 311 occupancy owner
+parcel 311 assessed 3242 42875
+parcel 311 acres 0.18
+parcel 312 pin "08-11-604-004"
+parcel 312 address "110 E Maple"
+parcel 312 class 0090 "Tax Exempt"
+parcel 312 occupancy absentee
+parcel 312 acres 0.28
+parcel 313 pin "08-11-604-006"
+parcel 313 class 0090 "Tax Exempt"
+parcel 313 occupancy other
+parcel 313 acres 0.14
+parcel 314 pin "08-12-101-034"
+parcel 314 address "408 N Summit"
+parcel 314 class 0040 "Improved Residential Lot"
+parcel 314 occupancy owner
+parcel 314 assessed 3326 47284
+parcel 314 acres 0.39
+parcel 315 pin "08-12-101-045"
+parcel 315 address "302 Green"
+parcel 315 class 0040 "Improved Residential Lot"
+parcel 315 occupancy absentee
+parcel 315 assessed 2128 11558
+parcel 315 acres 0.23
+parcel 316 pin "08-12-101-047"
+parcel 316 class 0030 "Vac Lots-Lands/6 units"
+parcel 316 occupancy other
+parcel 316 assessed 2252 0
+parcel 316 acres 0.24
+parcel 317 pin "08-12-101-055"
+parcel 317 address "405 N Grove"
+parcel 317 class 0040 "Improved Residential Lot"
+parcel 317 occupancy owner
+parcel 317 over65
+parcel 317 assessed 7008 38553
+parcel 317 acres 0.44
+parcel 318 pin "08-12-102-003"
+parcel 318 class 0060 "Improved Commercial"
+parcel 318 occupancy other
+parcel 318 assessed 5174 17236
+parcel 318 acres 0.72
+parcel 319 pin "08-12-102-004"
+parcel 319 address "302 Summit"
+parcel 319 class 0060 "Improved Commercial"
+parcel 319 occupancy absentee
+parcel 319 assessed 2162 0
+parcel 319 acres 0.24
+parcel 320 pin "08-12-102-009"
+parcel 320 address "313 N Church"
+parcel 320 class 0040 "Improved Residential Lot"
+parcel 320 occupancy owner
+parcel 320 over65
+parcel 320 assessed 8108 22627
+parcel 320 acres 0.49
+parcel 321 pin "08-12-102-017"
+parcel 321 class 0060 "Improved Commercial"
+parcel 321 occupancy other
+parcel 321 assessed 2400 3639
+parcel 321 acres 0.20
+parcel 322 pin "08-12-102-037"
+parcel 322 address "206 Holmes"
+parcel 322 class 0030 "Vac Lots-Lands/6 units"
+parcel 322 occupancy absentee
+parcel 322 assessed 2087 0
+parcel 322 acres 0.25
+parcel 323 pin "08-12-102-042"
+parcel 323 address "216 Holmes"
+parcel 323 class 0030 "Vac Lots-Lands/6 units"
+parcel 323 occupancy absentee
+parcel 323 assessed 2162 0
+parcel 323 acres 0.26
+parcel 324 pin "08-12-102-064"
+parcel 324 address "204 E Attica"
+parcel 324 class 0040 "Improved Residential Lot"
+parcel 324 occupancy absentee
+parcel 324 assessed 4463 21714
+parcel 324 acres 0.23
+parcel 325 pin "08-12-102-068"
+parcel 325 address "212 E Attica"
+parcel 325 class 0040 "Improved Residential Lot"
+parcel 325 occupancy owner
+parcel 325 assessed 4912 23159
+parcel 325 acres 0.26
+parcel 326 pin "08-12-102-069"
+parcel 326 address "214 E Attica"
+parcel 326 class 0040 "Improved Residential Lot"
+parcel 326 occupancy absentee
+parcel 326 assessed 4912 7487
+parcel 326 acres 0.26
+parcel 327 pin "08-12-103-003"
+parcel 327 address "313 E Green"
+parcel 327 class 0040 "Improved Residential Lot"
+parcel 327 occupancy owner
+parcel 327 assessed 2162 28744
+parcel 327 acres 0.25
+parcel 328 pin "08-12-103-008"
+parcel 328 address "316 Benton"
+parcel 328 class 0040 "Improved Residential Lot"
+parcel 328 occupancy owner
+parcel 328 over65
+parcel 328 assessed 2162 31615
+parcel 328 acres 0.25
+parcel 329 pin "08-12-103-009"
+parcel 329 address "309 Benton"
+parcel 329 class 0040 "Improved Residential Lot"
+parcel 329 occupancy owner
+parcel 329 over65
+parcel 329 assessed 2162 16394
+parcel 329 acres 0.25
+parcel 330 pin "08-12-103-011"
+parcel 330 address "311 Benton"
+parcel 330 class 0040 "Improved Residential Lot"
+parcel 330 occupancy owner
+parcel 330 over65
+parcel 330 assessed 1802 32093
+parcel 330 acres 0.25
+parcel 331 pin "08-11-300-005"
+parcel 331 class 0030 "Vac Lots-Lands/6 units"
+parcel 331 occupancy other
+parcel 331 assessed 3466 0
+parcel 331 acres 2.50
+parcel 332 pin "08-11-200-003"
+parcel 332 address "604 N Chicago"
+parcel 332 class 0011 "Homesite-Dwelling"
+parcel 332 occupancy owner
+parcel 332 over65
+parcel 332 assessed 2717 102428
+parcel 332 acres 9.00
+parcel 333 pin "08-11-200-010"
+parcel 333 address "124 W Attica"
+parcel 333 class 0040 "Improved Residential Lot"
+parcel 333 occupancy absentee
+parcel 333 assessed 4071 5813
+parcel 333 acres 0.71
+parcel 334 pin "08-11-200-015"
+parcel 334 address "610 N Chicago"
+parcel 334 class 0040 "Improved Residential Lot"
+parcel 334 occupancy owner
+parcel 334 assessed 7511 40875
+parcel 334 acres 3.00
+parcel 335 pin "08-11-200-020"
+parcel 335 address "406 N Chicago"
+parcel 335 class 0040 "Improved Residential Lot"
+parcel 335 occupancy other
+parcel 335 assessed 2017 92072
+parcel 335 acres 6.38
+parcel 336 pin "08-11-200-024"
+parcel 336 class 0021 "Farmland"
+parcel 336 occupancy other
+parcel 336 acres 13.09
+parcel 337 pin "08-11-201-001"
+parcel 337 class 0030 "Vac Lots-Lands/6 units"
+parcel 337 occupancy other
+parcel 337 assessed 10577 0
+parcel 337 acres 5.72
+parcel 338 pin "08-11-203-008"
+parcel 338 class 0030 "Vac Lots-Lands/6 units"
+parcel 338 occupancy other
+parcel 338 assessed 2770 0
+parcel 338 acres 0.23
+parcel 339 pin "08-11-204-037"
+parcel 339 address "109 N Chicago"
+parcel 339 class 0040 "Improved Residential Lot"
+parcel 339 occupancy owner
+parcel 339 assessed 5103 47692
+parcel 339 acres 0.54
+parcel 340 pin "08-11-204-045"
+parcel 340 address "104 E Attica"
+parcel 340 class 0060 "Improved Commercial"
+parcel 340 occupancy absentee
+parcel 340 assessed 4628 8971
+parcel 340 acres 0.06
+parcel 341 pin "08-11-204-047"
+parcel 341 address "110 E Attica"
+parcel 341 class 0060 "Improved Commercial"
+parcel 341 occupancy absentee
+parcel 341 assessed 6937 7137
+parcel 341 acres 0.09
+parcel 342 pin "08-11-204-065"
+parcel 342 class 0030 "Vac Lots-Lands/6 units"
+parcel 342 occupancy other
+parcel 342 assessed 3218 0
+parcel 342 acres 0.02
+parcel 343 pin "08-11-205-002"
+parcel 343 class 0040 "Improved Residential Lot"
+parcel 343 occupancy other
+parcel 343 assessed 1282 5442
+parcel 343 acres 0.02
+parcel 344 pin "08-11-206-002"
+parcel 344 address "122 E Attica"
+parcel 344 class 0090 "Tax Exempt"
+parcel 344 occupancy absentee
+parcel 344 assessed 4642 0
+parcel 344 acres 0.26
+parcel 345 pin "08-11-206-004"
+parcel 345 class 0060 "Improved Commercial"
+parcel 345 occupancy other
+parcel 345 assessed 10406 77870
+parcel 345 acres 0.15
+parcel 346 pin "08-11-206-005"
+parcel 346 address "124 E Attica"
+parcel 346 class 0040 "Improved Residential Lot"
+parcel 346 occupancy owner
+parcel 346 assessed 2038 4361
+parcel 346 acres 0.09
+parcel 347 pin "08-11-207-004"
+parcel 347 class 0030 "Vac Lots-Lands/6 units"
+parcel 347 occupancy other
+parcel 347 assessed 5009 0
+parcel 347 acres 0.71
+parcel 348 pin "08-11-207-009"
+parcel 348 address "116 E Henderson"
+parcel 348 class 0040 "Improved Residential Lot"
+parcel 348 occupancy owner
+parcel 348 over65
+parcel 348 assessed 6303 35920
+parcel 348 acres 1.13
+parcel 349 pin "08-11-207-025"
+parcel 349 class 0030 "Vac Lots-Lands/6 units"
+parcel 349 occupancy other
+parcel 349 assessed 4223 0
+parcel 349 acres 0.64
+parcel 350 pin "08-11-400-009"
+parcel 350 class 0021 "Farmland"
+parcel 350 occupancy other
+parcel 350 acres 1.60
+parcel 351 pin "08-11-400-020"
+parcel 351 class 0060 "Improved Commercial"
+parcel 351 occupancy other
+parcel 351 assessed 695 0
+parcel 351 acres 0.06
+parcel 352 pin "08-11-400-028"
+parcel 352 address "12 Greenwood"
+parcel 352 class 0040 "Improved Residential Lot"
+parcel 352 occupancy owner
+parcel 352 over65
+parcel 352 assessed 4161 46576
+parcel 352 acres 0.36
+parcel 353 pin "08-11-400-031"
+parcel 353 class 0021 "Farmland"
+parcel 353 occupancy other
+parcel 353 acres 2.65
+parcel 354 pin "08-11-401-008"
+parcel 354 address "109 W Attica"
+parcel 354 class 0060 "Improved Commercial"
+parcel 354 occupancy absentee
+parcel 354 assessed 4223 4223
+parcel 354 acres 0.62
+parcel 355 pin "08-11-403-002"
+parcel 355 address "214 Park"
+parcel 355 class 0040 "Improved Residential Lot"
+parcel 355 occupancy owner
+parcel 355 assessed 3916 1778
+parcel 355 acres 0.20
+parcel 356 pin "08-11-403-012"
+parcel 356 address "206 Park"
+parcel 356 class 0040 "Improved Residential Lot"
+parcel 356 occupancy owner
+parcel 356 assessed 3916 16746
+parcel 356 acres 0.20
+parcel 357 pin "08-11-403-013"
+parcel 357 address "204 Park"
+parcel 357 class 0040 "Improved Residential Lot"
+parcel 357 occupancy absentee
+parcel 357 assessed 3916 5969
+parcel 357 acres 0.20
+parcel 358 pin "08-11-405-003"
+parcel 358 address "111 E Attica"
+parcel 358 class 0090 "Tax Exempt"
+parcel 358 occupancy absentee
+parcel 358 assessed 4331 0
+parcel 358 acres 0.06
+parcel 359 pin "08-11-405-008"
+parcel 359 class 0060 "Improved Commercial"
+parcel 359 occupancy other
+parcel 359 assessed 1762 7811
+parcel 359 acres 0.04
+parcel 360 pin "08-11-406-004"
+parcel 360 address "129-133 E Attica"
+parcel 360 class 0040 "Improved Residential Lot"
+parcel 360 occupancy absentee
+parcel 360 assessed 5896 41957
+parcel 360 acres 0.31
+parcel 361 pin "08-11-406-005"
+parcel 361 address "123 E Attica"
+parcel 361 class 0040 "Improved Residential Lot"
+parcel 361 occupancy owner
+parcel 361 assessed 6628 31703
+parcel 361 acres 0.34
+parcel 362 pin "08-11-413-008"
+parcel 362 address "219 Perry"
+parcel 362 class 0040 "Improved Residential Lot"
+parcel 362 occupancy owner
+parcel 362 assessed 3827 89864
+parcel 362 acres 0.39
+parcel 363 pin "08-11-608-009"
+parcel 363 class 0090 "Tax Exempt"
+parcel 363 occupancy other
+parcel 363 acres 4.84
+parcel 364 pin "08-12-101-012"
+parcel 364 class 0030 "Vac Lots-Lands/6 units"
+parcel 364 occupancy other
+parcel 364 assessed 1977 0
+parcel 364 acres 0.25
+parcel 365 pin "08-12-307-023"
+parcel 365 address "301 Thompson"
+parcel 365 class 0040 "Improved Residential Lot"
+parcel 365 occupancy absentee
+parcel 365 assessed 3033 19222
+parcel 365 acres 0.22
+parcel 366 pin "08-12-307-025"
+parcel 366 address "307 E Thompson"
+parcel 366 class 0040 "Improved Residential Lot"
+parcel 366 occupancy owner
+parcel 366 assessed 3033 42000
+parcel 366 acres 0.22
+parcel 367 pin "08-12-307-028"
+parcel 367 address "313 Thompson"
+parcel 367 class 0040 "Improved Residential Lot"
+parcel 367 occupancy owner
+parcel 367 assessed 3033 9234
+parcel 367 acres 0.22
+parcel 368 pin "08-12-308-003"
+parcel 368 address "303 Grove"
+parcel 368 class 0040 "Improved Residential Lot"
+parcel 368 occupancy owner
+parcel 368 over65
+parcel 368 assessed 1629 35525
+parcel 368 acres 0.22
+parcel 369 pin "08-12-308-007"
+parcel 369 class 0090 "Tax Exempt"
+parcel 369 occupancy other
+parcel 369 assessed 882 0
+parcel 369 acres 0.06
+parcel 370 pin "08-12-308-008"
+parcel 370 address "401 Stewart"
+parcel 370 class 0040 "Improved Residential Lot"
+parcel 370 occupancy owner
+parcel 370 assessed 2162 6863
+parcel 370 acres 0.25
+parcel 371 pin "08-12-308-012"
+parcel 371 address "409 Stewart"
+parcel 371 class 0040 "Improved Residential Lot"
+parcel 371 occupancy absentee
+parcel 371 assessed 2345 7330
+parcel 371 acres 0.42
+parcel 372 pin "08-12-308-021"
+parcel 372 address "414 Mc Kibben"
+parcel 372 class 0040 "Improved Residential Lot"
+parcel 372 occupancy owner
+parcel 372 over65
+parcel 372 assessed 2345 19484
+parcel 372 acres 0.35
+parcel 373 pin "08-12-308-022"
+parcel 373 address "401 Mc Kibben"
+parcel 373 class 0040 "Improved Residential Lot"
+parcel 373 occupancy owner
+parcel 373 assessed 3218 41818
+parcel 373 acres 0.25
+parcel 374 pin "08-12-308-026"
+parcel 374 address "411 E Mc Kibben"
+parcel 374 class 0040 "Improved Residential Lot"
+parcel 374 occupancy owner
+parcel 374 assessed 3218 25327
+parcel 374 acres 0.25
+parcel 375 pin "08-12-308-034"
+parcel 375 address "405 Stewart"
+parcel 375 class 0040 "Improved Residential Lot"
+parcel 375 occupancy absentee
+parcel 375 assessed 2162 31980
+parcel 375 acres 0.25
+parcel 376 pin "08-12-609-046"
+parcel 376 class 0090 "Tax Exempt"
+parcel 376 occupancy other
+parcel 376 acres 0.39
+parcel 377 pin "08-12-609-050"
+parcel 377 class 0090 "Tax Exempt"
+parcel 377 occupancy other
+parcel 377 acres 0.39
+parcel 378 pin "08-12-609-051"
+parcel 378 class 0090 "Tax Exempt"
+parcel 378 occupancy other
+parcel 378 acres 0.39
+parcel 379 pin "08-12-609-052"
+parcel 379 class 0090 "Tax Exempt"
+parcel 379 occupancy other
+parcel 379 acres 0.39
+parcel 380 pin "08-12-609-054"
+parcel 380 class 0090 "Tax Exempt"
+parcel 380 occupancy other
+parcel 380 acres 0.39
+parcel 381 pin "08-13-101-004"
+parcel 381 address "302 Earl Ct"
+parcel 381 class 0040 "Improved Residential Lot"
+parcel 381 occupancy owner
+parcel 381 over65
+parcel 381 assessed 5629 72787
+parcel 381 acres 0.57
+parcel 382 pin "08-13-101-006"
+parcel 382 class 0032 "10-30 Res Vacant Land"
+parcel 382 occupancy other
+parcel 382 assessed 206 0
+parcel 382 acres 0.52
+parcel 383 pin "08-13-101-014"
+parcel 383 address "301 Earl Ct"
+parcel 383 class 0040 "Improved Residential Lot"
+parcel 383 occupancy owner
+parcel 383 over65
+parcel 383 assessed 5629 64470
+parcel 383 acres 0.48
+parcel 384 pin "08-13-101-016"
+parcel 384 class 0032 "10-30 Res Vacant Land"
+parcel 384 occupancy other
+parcel 384 assessed 189 0
+parcel 384 acres 0.48
+parcel 385 pin "08-13-101-018"
+parcel 385 class 0032 "10-30 Res Vacant Land"
+parcel 385 occupancy other
+parcel 385 assessed 223 0
+parcel 385 acres 0.57
+parcel 386 pin "08-14-200-004"
+parcel 386 class 0060 "Improved Commercial"
+parcel 386 occupancy other
+parcel 386 assessed 5629 185345
+parcel 386 acres 1.00
+parcel 387 pin "08-12-101-023"
+parcel 387 address "214 Henderson"
+parcel 387 class 0040 "Improved Residential Lot"
+parcel 387 occupancy owner
+parcel 387 assessed 2162 30215
+parcel 387 acres 0.25
+parcel 388 pin "08-12-101-025"
+parcel 388 address "302 Henderson"
+parcel 388 class 0040 "Improved Residential Lot"
+parcel 388 occupancy absentee
+parcel 388 assessed 2162 28615
+parcel 388 acres 0.25
+parcel 389 pin "08-12-101-027"
+parcel 389 address "308 Henderson"
+parcel 389 class 0040 "Improved Residential Lot"
+parcel 389 occupancy owner
+parcel 389 assessed 2162 22282
+parcel 389 acres 0.25
+parcel 390 pin "08-12-101-051"
+parcel 390 class 0060 "Improved Commercial"
+parcel 390 occupancy other
+parcel 390 assessed 3433 18482
+parcel 390 acres 0.50
+parcel 391 pin "08-12-101-056"
+parcel 391 class 0021 "Farmland"
+parcel 391 occupancy other
+parcel 391 acres 1.25
+parcel 392 pin "08-12-102-082"
+parcel 392 class 0060 "Improved Commercial"
+parcel 392 occupancy other
+parcel 392 assessed 3528 26296
+parcel 392 acres 0.53
+parcel 393 pin "08-12-103-026"
+parcel 393 address "404 E Attica"
+parcel 393 class 0040 "Improved Residential Lot"
+parcel 393 occupancy absentee
+parcel 393 assessed 3093 5970
+parcel 393 acres 0.30
+parcel 394 pin "08-12-104-002"
+parcel 394 address "409 Green"
+parcel 394 class 0040 "Improved Residential Lot"
+parcel 394 occupancy owner
+parcel 394 assessed 2162 15829
+parcel 394 acres 0.25
+parcel 395 pin "08-12-104-011"
+parcel 395 address "403 E Benton"
+parcel 395 class 0090 "Tax Exempt"
+parcel 395 occupancy absentee
+parcel 395 assessed 778 0
+parcel 395 acres 0.25
+parcel 396 pin "08-12-104-015"
+parcel 396 address "404 Holmes"
+parcel 396 class 0040 "Improved Residential Lot"
+parcel 396 occupancy owner
+parcel 396 over65
+parcel 396 assessed 2162 18921
+parcel 396 acres 0.25
+parcel 397 pin "08-12-105-004"
+parcel 397 address "414 E Attica"
+parcel 397 class 0040 "Improved Residential Lot"
+parcel 397 occupancy absentee
+parcel 397 assessed 3409 15168
+parcel 397 acres 0.31
+parcel 398 pin "08-11-200-012"
+parcel 398 address "402 Harrison"
+parcel 398 class 0040 "Improved Residential Lot"
+parcel 398 occupancy absentee
+parcel 398 assessed 1739 9687
+parcel 398 acres 0.20
+parcel 399 pin "08-11-204-008"
+parcel 399 address "305 Harrison"
+parcel 399 class 0040 "Improved Residential Lot"
+parcel 399 occupancy owner
+parcel 399 assessed 3724 40185
+parcel 399 acres 0.27
+parcel 400 pin "08-11-204-010"
+parcel 400 address "303 Harrison"
+parcel 400 class 0040 "Improved Residential Lot"
+parcel 400 occupancy owner
+parcel 400 assessed 3755 50321
+parcel 400 acres 0.24
+parcel 401 pin "08-11-204-011"
+parcel 401 address "109 Benton"
+parcel 401 class 0040 "Improved Residential Lot"
+parcel 401 occupancy owner
+parcel 401 assessed 3744 20913
+parcel 401 acres 0.23
+parcel 402 pin "08-11-204-012"
+parcel 402 class 0030 "Vac Lots-Lands/6 units"
+parcel 402 occupancy other
+parcel 402 assessed 1880 0
+parcel 402 acres 0.12
+parcel 403 pin "08-11-204-020"
+parcel 403 address "212 N Church"
+parcel 403 class 0040 "Improved Residential Lot"
+parcel 403 occupancy owner
+parcel 403 assessed 3291 9089
+parcel 403 acres 0.21
+parcel 404 pin "08-11-204-022"
+parcel 404 address "214 Harrison"
+parcel 404 class 0040 "Improved Residential Lot"
+parcel 404 occupancy owner
+parcel 404 assessed 4457 14082
+parcel 404 acres 0.24
+parcel 405 pin "08-11-204-035"
+parcel 405 address "104 Holmes"
+parcel 405 class 0040 "Improved Residential Lot"
+parcel 405 occupancy owner
+parcel 405 over65
+parcel 405 assessed 5416 37327
+parcel 405 acres 0.23
+parcel 406 pin "08-11-204-053"
+parcel 406 address "105 Holmes"
+parcel 406 class 0040 "Improved Residential Lot"
+parcel 406 occupancy owner
+parcel 406 assessed 3218 10816
+parcel 406 acres 0.25
+parcel 407 pin "08-11-204-056"
+parcel 407 address "130 E Attica"
+parcel 407 class 0040 "Improved Residential Lot"
+parcel 407 occupancy absentee
+parcel 407 assessed 4912 24927
+parcel 407 acres 0.24
+parcel 408 pin "08-11-204-067"
+parcel 408 class 0040 "Improved Residential Lot"
+parcel 408 occupancy other
+parcel 408 assessed 2693 12376
+parcel 408 acres 0.12
+parcel 409 pin "08-11-207-010"
+parcel 409 address "409 N Chicago"
+parcel 409 class 0040 "Improved Residential Lot"
+parcel 409 occupancy owner
+parcel 409 over65
+parcel 409 assessed 8327 37358
+parcel 409 acres 0.99
+parcel 410 pin "08-11-207-015"
+parcel 410 address "410 Harrison"
+parcel 410 class 0040 "Improved Residential Lot"
+parcel 410 occupancy absentee
+parcel 410 assessed 2952 25199
+parcel 410 acres 0.22
+parcel 411 pin "08-11-207-022"
+parcel 411 class 0030 "Vac Lots-Lands/6 units"
+parcel 411 occupancy other
+parcel 411 assessed 3380 0
+parcel 411 acres 0.31
+parcel 412 pin "08-11-400-006"
+parcel 412 address "11 Greenwood"
+parcel 412 class 0040 "Improved Residential Lot"
+parcel 412 occupancy owner
+parcel 412 assessed 13842 53804
+parcel 412 acres 1.33
+parcel 413 pin "08-11-400-015"
+parcel 413 class 0030 "Vac Lots-Lands/6 units"
+parcel 413 occupancy other
+parcel 413 assessed 627 0
+parcel 413 acres 0.01
+parcel 414 pin "08-11-402-008"
+parcel 414 class 0030 "Vac Lots-Lands/6 units"
+parcel 414 occupancy other
+parcel 414 assessed 1277 0
+parcel 414 acres 0.11
+parcel 415 pin "08-11-402-012"
+parcel 415 class 0030 "Vac Lots-Lands/6 units"
+parcel 415 occupancy other
+parcel 415 assessed 3239 0
+parcel 415 acres 0.28
+parcel 416 pin "08-11-402-019"
+parcel 416 address "109 Perry"
+parcel 416 class 0040 "Improved Residential Lot"
+parcel 416 occupancy owner
+parcel 416 assessed 4859 66586
+parcel 416 acres 0.57
+parcel 417 pin "08-11-402-030"
+parcel 417 address "204 Stufflebeam"
+parcel 417 class 0040 "Improved Residential Lot"
+parcel 417 occupancy owner
+parcel 417 assessed 2656 80003
+parcel 417 acres 0.53
+parcel 418 pin "08-11-402-038"
+parcel 418 address "221 Perry"
+parcel 418 class 0040 "Improved Residential Lot"
+parcel 418 occupancy owner
+parcel 418 over65
+parcel 418 assessed 2827 32038
+parcel 418 acres 1.65
+parcel 419 pin "08-11-403-008"
+parcel 419 address "214 Perry"
+parcel 419 class 0040 "Improved Residential Lot"
+parcel 419 occupancy owner
+parcel 419 over65
+parcel 419 assessed 3916 16502
+parcel 419 acres 0.20
+parcel 420 pin "08-11-403-024"
+parcel 420 address "202 Perry"
+parcel 420 class 0040 "Improved Residential Lot"
+parcel 420 occupancy owner
+parcel 420 over65
+parcel 420 assessed 3916 29986
+parcel 420 acres 0.20
+parcel 421 pin "08-11-403-025"
+parcel 421 address "110 Perry"
+parcel 421 class 0040 "Improved Residential Lot"
+parcel 421 occupancy owner
+parcel 421 assessed 3916 32013
+parcel 421 acres 0.19
+parcel 422 pin "08-11-403-026"
+parcel 422 address "106 Perry"
+parcel 422 class 0040 "Improved Residential Lot"
+parcel 422 occupancy other
+parcel 422 assessed 3916 24263
+parcel 422 acres 0.26
+parcel 423 pin "08-11-407-009"
+parcel 423 address "105 E Maple"
+parcel 423 class 0040 "Improved Residential Lot"
+parcel 423 occupancy owner
+parcel 423 over65
+parcel 423 assessed 2944 34582
+parcel 423 acres 0.20
+parcel 424 pin "08-11-407-010"
+parcel 424 address "107 E Maple"
+parcel 424 class 0040 "Improved Residential Lot"
+parcel 424 occupancy owner
+parcel 424 assessed 2944 25732
+parcel 424 acres 0.20
+parcel 425 pin "08-11-407-012"
+parcel 425 address "111 E Maple"
+parcel 425 class 0040 "Improved Residential Lot"
+parcel 425 occupancy owner
+parcel 425 over65
+parcel 425 assessed 2944 55669
+parcel 425 acres 0.20
+parcel 426 pin "08-11-408-006"
+parcel 426 class 0040 "Improved Residential Lot"
+parcel 426 occupancy other
+parcel 426 assessed 407 4312
+parcel 426 acres 0.05
+parcel 427 pin "08-11-408-007"
+parcel 427 class 0040 "Improved Residential Lot"
+parcel 427 occupancy other
+parcel 427 assessed 407 13782
+parcel 427 acres 0.05
+parcel 428 pin "08-11-408-010"
+parcel 428 class 0040 "Improved Residential Lot"
+parcel 428 occupancy other
+parcel 428 assessed 407 1251
+parcel 428 acres 0.05
+parcel 429 pin "08-11-408-012"
+parcel 429 address "104 Gilbert"
+parcel 429 class 0040 "Improved Residential Lot"
+parcel 429 occupancy absentee
+parcel 429 assessed 3538 16684
+parcel 429 acres 0.20
+parcel 430 pin "08-11-408-013"
+parcel 430 address "106 Gilbert"
+parcel 430 class 0040 "Improved Residential Lot"
+parcel 430 occupancy absentee
+parcel 430 assessed 4312 25515
+parcel 430 acres 0.25
+parcel 431 pin "08-11-408-024"
+parcel 431 address "108 Stewart"
+parcel 431 class 0040 "Improved Residential Lot"
+parcel 431 occupancy owner
+parcel 431 assessed 4312 45128
+parcel 431 acres 0.25
+parcel 432 pin "08-11-408-025"
+parcel 432 address "402 S Church"
+parcel 432 class 0040 "Improved Residential Lot"
+parcel 432 occupancy owner
+parcel 432 assessed 8668 35390
+parcel 432 acres 0.50
+parcel 433 pin "08-11-408-034"
+parcel 433 address "304 S Church"
+parcel 433 class 0040 "Improved Residential Lot"
+parcel 433 occupancy absentee
+parcel 433 assessed 2580 25821
+parcel 433 acres 0.15
+parcel 434 pin "08-11-408-035"
+parcel 434 address "101 Mc Kibben"
+parcel 434 class 0040 "Improved Residential Lot"
+parcel 434 occupancy absentee
+parcel 434 assessed 8187 2254
+parcel 434 acres 0.52
+parcel 435 pin "08-11-409-004"
+parcel 435 address "404 S Chicago"
+parcel 435 class 0040 "Improved Residential Lot"
+parcel 435 occupancy owner
+parcel 435 assessed 4978 55236
+parcel 435 acres 0.64
+parcel 436 pin "08-11-409-005"
+parcel 436 address "1 Watson Dr"
+parcel 436 class 0040 "Improved Residential Lot"
+parcel 436 occupancy absentee
+parcel 436 assessed 5626 32567
+parcel 436 acres 0.47
+parcel 437 pin "08-11-409-011"
+parcel 437 address "106 W Mc Kibben"
+parcel 437 class 0040 "Improved Residential Lot"
+parcel 437 occupancy owner
+parcel 437 over65
+parcel 437 assessed 4317 52458
+parcel 437 acres 0.75
+parcel 438 pin "08-11-409-018"
+parcel 438 address "4 Greenwood"
+parcel 438 class 0040 "Improved Residential Lot"
+parcel 438 occupancy owner
+parcel 438 assessed 4248 59036
+parcel 438 acres 0.53
+parcel 439 pin "08-11-410-001"
+parcel 439 address "401 S Chicago"
+parcel 439 class 0040 "Improved Residential Lot"
+parcel 439 occupancy owner
+parcel 439 assessed 4312 67583
+parcel 439 acres 0.24
+parcel 440 pin "08-11-411-002"
+parcel 440 address "506 S Church"
+parcel 440 class 0040 "Improved Residential Lot"
+parcel 440 occupancy owner
+parcel 440 assessed 3665 54035
+parcel 440 acres 0.25
+parcel 441 pin "08-11-413-004"
+parcel 441 address "214 Stufflebeam"
+parcel 441 class 0040 "Improved Residential Lot"
+parcel 441 occupancy owner
+parcel 441 over65
+parcel 441 assessed 11239 64070
+parcel 441 acres 0.67
+parcel 442 pin "08-11-413-005"
+parcel 442 address "212 W Stufflebeam"
+parcel 442 class 0040 "Improved Residential Lot"
+parcel 442 occupancy owner
+parcel 442 assessed 7118 64093
+parcel 442 acres 0.46
+parcel 443 pin "08-11-414-001"
+parcel 443 address "202 W Stufflembeam"
+parcel 443 class 0040 "Improved Residential Lot"
+parcel 443 occupancy owner
+parcel 443 over65
+parcel 443 assessed 7118 69165
+parcel 443 acres 0.52
+parcel 444 pin "08-11-604-002"
+parcel 444 class 0090 "Tax Exempt"
+parcel 444 occupancy other
+parcel 444 acres 0.50
+parcel 445 pin "08-12-101-033"
+parcel 445 address "213 Henderson"
+parcel 445 class 0040 "Improved Residential Lot"
+parcel 445 occupancy owner
+parcel 445 over65
+parcel 445 assessed 2556 16766
+parcel 445 acres 0.30
+parcel 446 pin "08-12-101-035"
+parcel 446 address "407 N Summit"
+parcel 446 class 0040 "Improved Residential Lot"
+parcel 446 occupancy owner
+parcel 446 over65
+parcel 446 assessed 2128 18974
+parcel 446 acres 0.24
+parcel 447 pin "08-12-101-037"
+parcel 447 address "305 Henderson"
+parcel 447 class 0040 "Improved Residential Lot"
+parcel 447 occupancy owner
+parcel 447 assessed 4286 29333
+parcel 447 acres 0.48
+parcel 448 pin "08-12-101-043"
+parcel 448 address "211 Green"
+parcel 448 class 0040 "Improved Residential Lot"
+parcel 448 occupancy owner
+parcel 448 over65
+parcel 448 assessed 7488 40364
+parcel 448 acres 1.08
+parcel 449 pin "08-12-101-046"
+parcel 449 address "304 Green"
+parcel 449 class 0040 "Improved Residential Lot"
+parcel 449 occupancy owner
+parcel 449 assessed 2128 57018
+parcel 449 acres 0.23
+parcel 450 pin "08-12-101-048"
+parcel 450 address "308 Green"
+parcel 450 class 0040 "Improved Residential Lot"
+parcel 450 occupancy absentee
+parcel 450 assessed 2128 9735
+parcel 450 acres 0.24
+parcel 451 pin "08-12-101-053"
+parcel 451 address "307 Henderson"
+parcel 451 class 0040 "Improved Residential Lot"
+parcel 451 occupancy owner
+parcel 451 assessed 6710 75165
+parcel 451 acres 0.44
+parcel 452 pin "08-12-102-001"
+parcel 452 address "315 N Church"
+parcel 452 class 0040 "Improved Residential Lot"
+parcel 452 occupancy owner
+parcel 452 assessed 4050 18494
+parcel 452 acres 0.25
+parcel 453 pin "08-12-102-011"
+parcel 453 class 0030 "Vac Lots-Lands/6 units"
+parcel 453 occupancy other
+parcel 453 assessed 3218 0
+parcel 453 acres 0.25
+parcel 454 pin "08-12-102-016"
+parcel 454 class 0060 "Improved Commercial"
+parcel 454 occupancy other
+parcel 454 assessed 2222 18227
+parcel 454 acres 0.04
+parcel 455 pin "08-12-102-023"
+parcel 455 address "203 Benton"
+parcel 455 class 0040 "Improved Residential Lot"
+parcel 455 occupancy owner
+parcel 455 assessed 3004 28909
+parcel 455 acres 0.12
+parcel 456 pin "08-12-102-024"
+parcel 456 address "205 Benton"
+parcel 456 class 0040 "Improved Residential Lot"
+parcel 456 occupancy other
+parcel 456 assessed 3218 14202
+parcel 456 acres 0.25
+parcel 457 pin "08-12-102-027"
+parcel 457 address "211 Benton"
+parcel 457 class 0040 "Improved Residential Lot"
+parcel 457 occupancy owner
+parcel 457 over65
+parcel 457 assessed 2162 14926
+parcel 457 acres 0.25
+parcel 458 pin "08-12-102-029"
+parcel 458 address "208 Summit"
+parcel 458 class 0040 "Improved Residential Lot"
+parcel 458 occupancy owner
+parcel 458 over65
+parcel 458 assessed 3944 13131
+parcel 459 pin "08-12-102-029"
+parcel 459 address "208 Summit"
+parcel 459 class 0040 "Improved Residential Lot"
+parcel 459 occupancy owner
+parcel 459 over65
+parcel 459 assessed 3944 13131
+parcel 460 pin "08-12-102-035"
+parcel 460 address "205 N Church"
+parcel 460 class 0040 "Improved Residential Lot"
+parcel 460 occupancy owner
+parcel 460 assessed 2435 35310
+parcel 460 acres 0.19
+parcel 461 pin "08-12-102-036"
+parcel 461 address "204 Holmes"
+parcel 461 class 0040 "Improved Residential Lot"
+parcel 461 occupancy owner
+parcel 461 over65
+parcel 461 assessed 2087 24464
+parcel 461 acres 0.16
+parcel 462 pin "08-12-102-040"
+parcel 462 address "212 Holmes"
+parcel 462 class 0040 "Improved Residential Lot"
+parcel 462 occupancy owner
+parcel 462 assessed 3218 31595
+parcel 462 acres 0.26
+parcel 463 pin "08-12-102-049"
+parcel 463 address "205 Holmes"
+parcel 463 class 0040 "Improved Residential Lot"
+parcel 463 occupancy owner
+parcel 463 assessed 3218 27052
+parcel 463 acres 0.25
+parcel 464 pin "08-12-102-051"
+parcel 464 address "209 Holmes"
+parcel 464 class 0040 "Improved Residential Lot"
+parcel 464 occupancy absentee
+parcel 464 assessed 3218 32322
+parcel 464 acres 0.25
+parcel 465 pin "08-12-102-052"
+parcel 465 address "211 Holmes"
+parcel 465 class 0040 "Improved Residential Lot"
+parcel 465 occupancy owner
+parcel 465 assessed 3218 28320
+parcel 465 acres 0.25
+parcel 466 pin "08-12-102-067"
+parcel 466 address "210 E Attica"
+parcel 466 class 0030 "Vac Lots-Lands/6 units"
+parcel 466 occupancy absentee
+parcel 466 assessed 4912 0
+parcel 466 acres 0.26
+parcel 467 pin "08-12-102-070"
+parcel 467 address "216 E Attica"
+parcel 467 class 0040 "Improved Residential Lot"
+parcel 467 occupancy owner
+parcel 467 over65
+parcel 467 assessed 4912 17368
+parcel 467 acres 0.26
+parcel 468 pin "08-12-102-079"
+parcel 468 address "307 N Summit"
+parcel 468 class 0040 "Improved Residential Lot"
+parcel 468 occupancy owner
+parcel 468 over65
+parcel 468 assessed 2728 15625
+parcel 468 acres 0.25
+parcel 469 pin "08-12-103-004"
+parcel 469 address "307 Grove"
+parcel 469 class 0040 "Improved Residential Lot"
+parcel 469 occupancy absentee
+parcel 469 assessed 2162 15184
+parcel 469 acres 0.25
+parcel 470 pin "08-12-103-010"
+parcel 470 class 0030 "Vac Lots-Lands/6 units"
+parcel 470 occupancy other
+parcel 470 assessed 1787 0
+parcel 470 acres 0.25
+parcel 471 pin "08-12-301-001"
+parcel 471 address "201 E Attica"
+parcel 471 class 0040 "Improved Residential Lot"
+parcel 471 occupancy owner
+parcel 471 assessed 4532 71468
+parcel 471 acres 0.25
+parcel 472 pin "08-12-301-002"
+parcel 472 class 0040 "Improved Residential Lot"
+parcel 472 occupancy other
+parcel 472 assessed 2134 10842
+parcel 472 acres 0.13
+parcel 473 pin "08-12-301-003"
+parcel 473 address "205 E Attica"
+parcel 473 class 0040 "Improved Residential Lot"
+parcel 473 occupancy owner
+parcel 473 over65
+parcel 473 assessed 4139 28873
+parcel 473 acres 0.24
+parcel 474 pin "08-12-301-006"
+parcel 474 address "211 E Attica"
+parcel 474 class 0040 "Improved Residential Lot"
+parcel 474 occupancy owner
+parcel 474 assessed 4139 35271
+parcel 474 acres 0.24
+parcel 475 pin "08-12-604-006"
+parcel 475 address "202 E Maple"
+parcel 475 class 0090 "Tax Exempt"
+parcel 475 occupancy absentee
+parcel 475 acres 0.12
+parcel 476 pin "08-12-301-029"
+parcel 476 address "205 E Maple"
+parcel 476 class 0040 "Improved Residential Lot"
+parcel 476 occupancy absentee
+parcel 476 assessed 2944 20732
+parcel 476 acres 0.20
+parcel 477 pin "08-12-301-030"
+parcel 477 address "207 E Maple"
+parcel 477 class 0040 "Improved Residential Lot"
+parcel 477 occupancy owner
+parcel 477 over65
+parcel 477 assessed 2944 48475
+parcel 477 acres 0.20
+parcel 478 pin "08-12-301-045"
+parcel 478 address "309 E Maple"
+parcel 478 class 0080 "Industrial"
+parcel 478 occupancy absentee
+parcel 478 assessed 12916 4413
+parcel 478 acres 0.40
+parcel 479 pin "08-12-302-004"
+parcel 479 class 0030 "Vac Lots-Lands/6 units"
+parcel 479 occupancy other
+parcel 479 assessed 531 0
+parcel 479 acres 0.05
+parcel 480 pin "08-12-302-005"
+parcel 480 class 0030 "Vac Lots-Lands/6 units"
+parcel 480 occupancy other
+parcel 480 assessed 531 0
+parcel 480 acres 0.05
+parcel 481 pin "08-12-302-007"
+parcel 481 address "E Maple"
+parcel 481 class 0040 "Improved Residential Lot"
+parcel 481 occupancy absentee
+parcel 481 assessed 531 1967
+parcel 481 acres 0.05
+parcel 482 pin "08-12-302-013"
+parcel 482 address "212 E Gilbert"
+parcel 482 class 0040 "Improved Residential Lot"
+parcel 482 occupancy owner
+parcel 482 assessed 4723 34031
+parcel 482 acres 0.27
+parcel 483 pin "08-12-302-016"
+parcel 483 address "301 S Church"
+parcel 483 class 0040 "Improved Residential Lot"
+parcel 483 occupancy owner
+parcel 483 over65
+parcel 483 assessed 3506 21458
+parcel 483 acres 0.20
+parcel 484 pin "08-12-302-017"
+parcel 484 address "203 Gilbert"
+parcel 484 class 0040 "Improved Residential Lot"
+parcel 484 occupancy owner
+parcel 484 assessed 5103 19486
+parcel 484 acres 0.30
+parcel 485 pin "08-12-302-018"
+parcel 485 address "205 Gilbert"
+parcel 485 class 0040 "Improved Residential Lot"
+parcel 485 occupancy owner
+parcel 485 assessed 4312 12531
+parcel 485 acres 0.25
+parcel 486 pin "08-12-303-008"
+parcel 486 address "302 Gilbert"
+parcel 486 class 0040 "Improved Residential Lot"
+parcel 486 occupancy owner
+parcel 486 over65
+parcel 486 assessed 3466 35859
+parcel 486 acres 0.27
+parcel 487 pin "08-12-303-010"
+parcel 487 address "306 Gilbert"
+parcel 487 class 0040 "Improved Residential Lot"
+parcel 487 occupancy owner
+parcel 487 over65
+parcel 487 assessed 6448 47596
+parcel 487 acres 0.50
+parcel 488 pin "08-12-303-011"
+parcel 488 address "310 Gilbert"
+parcel 488 class 0040 "Improved Residential Lot"
+parcel 488 occupancy absentee
+parcel 488 assessed 3218 18653
+parcel 488 acres 0.25
+parcel 489 pin "08-12-303-015"
+parcel 489 address "301 Gilbert"
+parcel 489 class 0040 "Improved Residential Lot"
+parcel 489 occupancy absentee
+parcel 489 assessed 6545 6037
+parcel 489 acres 0.50
+parcel 490 pin "08-12-303-022"
+parcel 490 class 0030 "Vac Lots-Lands/6 units"
+parcel 490 occupancy other
+parcel 490 assessed 3254 0
+parcel 490 acres 0.25
+parcel 491 pin "08-12-303-023"
+parcel 491 address "302 Stewart"
+parcel 491 class 0040 "Improved Residential Lot"
+parcel 491 occupancy owner
+parcel 491 assessed 3218 12392
+parcel 491 acres 0.25
+parcel 492 pin "08-12-304-006"
+parcel 492 address "211 Stewart"
+parcel 492 class 0040 "Improved Residential Lot"
+parcel 492 occupancy owner
+parcel 492 assessed 4312 7383
+parcel 492 acres 0.25
+parcel 493 pin "08-12-304-007"
+parcel 493 class 0090 "Tax Exempt"
+parcel 493 occupancy other
+parcel 493 assessed 1686 0
+parcel 493 acres 0.25
+parcel 494 pin "08-12-304-010"
+parcel 494 address "204 Mc Kibben"
+parcel 494 class 0040 "Improved Residential Lot"
+parcel 494 occupancy owner
+parcel 494 assessed 4312 28426
+parcel 494 acres 0.25
+parcel 495 pin "08-12-304-011"
+parcel 495 address "206 Mc Kibben"
+parcel 495 class 0040 "Improved Residential Lot"
+parcel 495 occupancy other
+parcel 495 assessed 4312 31827
+parcel 495 acres 0.25
+parcel 496 pin "08-12-304-019"
+parcel 496 address "207 Mc Kibben"
+parcel 496 class 0040 "Improved Residential Lot"
+parcel 496 occupancy absentee
+parcel 496 assessed 4312 35486
+parcel 496 acres 0.25
+parcel 497 pin "08-12-304-022"
+parcel 497 address "213 Mc Kibben"
+parcel 497 class 0040 "Improved Residential Lot"
+parcel 497 occupancy absentee
+parcel 497 assessed 3380 30961
+parcel 497 acres 0.31
+parcel 498 pin "08-12-305-004"
+parcel 498 address "311 Stewart"
+parcel 498 class 0040 "Improved Residential Lot"
+parcel 498 occupancy owner
+parcel 498 assessed 3218 26742
+parcel 498 acres 0.25
+parcel 499 pin "08-12-305-006"
+parcel 499 address "400 S Grove"
+parcel 499 class 0040 "Improved Residential Lot"
+parcel 499 occupancy owner
+parcel 499 over65
+parcel 499 assessed 3218 35055
+parcel 499 acres 0.25
+parcel 500 pin "08-12-305-013"
+parcel 500 class 0030 "Vac Lots-Lands/6 units"
+parcel 500 occupancy other
+parcel 500 assessed 3218 0
+parcel 500 acres 0.25
+parcel 501 pin "08-12-305-018"
+parcel 501 address "309 Mc Kibben"
+parcel 501 class 0040 "Improved Residential Lot"
+parcel 501 occupancy owner
+parcel 501 over65
+parcel 501 assessed 3218 29849
+parcel 501 acres 0.25
+parcel 502 pin "08-12-306-001"
+parcel 502 address "505 S Church"
+parcel 502 class 0040 "Improved Residential Lot"
+parcel 502 occupancy owner
+parcel 502 over65
+parcel 502 assessed 3665 32787
+parcel 502 acres 0.25
+parcel 503 pin "08-12-306-002"
+parcel 503 address "202 Dale"
+parcel 503 class 0040 "Improved Residential Lot"
+parcel 503 occupancy absentee
+parcel 503 assessed 3665 873
+parcel 503 acres 0.25
+parcel 504 pin "08-12-301-004"
+parcel 504 address "207 E Attica"
+parcel 504 class 0040 "Improved Residential Lot"
+parcel 504 occupancy owner
+parcel 504 assessed 4532 43800
+parcel 504 acres 0.24
+parcel 505 pin "08-12-301-005"
+parcel 505 address "209 E Attica"
+parcel 505 class 0040 "Improved Residential Lot"
+parcel 505 occupancy absentee
+parcel 505 assessed 4139 20695
+parcel 505 acres 0.24
+parcel 506 pin "08-12-307-030"
+parcel 506 address "302 Thompson"
+parcel 506 class 0040 "Improved Residential Lot"
+parcel 506 occupancy owner
+parcel 506 assessed 9099 22149
+parcel 506 acres 0.70
+parcel 507 pin "08-12-301-013"
+parcel 507 address "117 S Church"
+parcel 507 class 0040 "Improved Residential Lot"
+parcel 507 occupancy owner
+parcel 507 over65
+parcel 507 assessed 2149 41657
+parcel 507 acres 0.13
+parcel 508 pin "08-12-301-016"
+parcel 508 address "206 E Maple"
+parcel 508 class 0040 "Improved Residential Lot"
+parcel 508 occupancy owner
+parcel 508 assessed 4312 25778
+parcel 508 acres 0.25
+parcel 509 pin "08-12-301-017"
+parcel 509 address "208 E Maple"
+parcel 509 class 0040 "Improved Residential Lot"
+parcel 509 occupancy owner
+parcel 509 assessed 4312 23098
+parcel 509 acres 0.25
+parcel 510 pin "08-12-301-018"
+parcel 510 address "210 E Maple"
+parcel 510 class 0040 "Improved Residential Lot"
+parcel 510 occupancy owner
+parcel 510 assessed 4312 25447
+parcel 510 acres 0.25
+parcel 511 pin "08-12-301-027"
+parcel 511 address "201 E Maple"
+parcel 511 class 0040 "Improved Residential Lot"
+parcel 511 occupancy owner
+parcel 511 over65
+parcel 511 assessed 2944 17773
+parcel 511 acres 0.20
+parcel 512 pin "08-12-301-028"
+parcel 512 address "203 E Maple"
+parcel 512 class 0040 "Improved Residential Lot"
+parcel 512 occupancy owner
+parcel 512 assessed 2944 41454
+parcel 512 acres 0.20
+parcel 513 pin "08-12-301-033"
+parcel 513 address "213 E Maple"
+parcel 513 class 0040 "Improved Residential Lot"
+parcel 513 occupancy owner
+parcel 513 assessed 2944 4375
+parcel 513 acres 0.20
+parcel 514 pin "08-12-301-036"
+parcel 514 address "205 Summit"
+parcel 514 class 0040 "Improved Residential Lot"
+parcel 514 occupancy owner
+parcel 514 assessed 2227 20764
+parcel 514 acres 0.15
+parcel 515 pin "08-12-301-037"
+parcel 515 address "305 E Maple"
+parcel 515 class 0040 "Improved Residential Lot"
+parcel 515 occupancy absentee
+parcel 515 assessed 2944 36078
+parcel 515 acres 0.20
+parcel 516 pin "08-12-301-038"
+parcel 516 address "307 E Maple"
+parcel 516 class 0040 "Improved Residential Lot"
+parcel 516 occupancy absentee
+parcel 516 assessed 2620 199
+parcel 516 acres 0.20
+parcel 517 pin "08-12-301-042"
+parcel 517 class 0040 "Improved Residential Lot"
+parcel 517 occupancy other
+parcel 517 assessed 2031 7104
+parcel 517 acres 0.12
+parcel 518 pin "08-12-301-046"
+parcel 518 address "215 E Maple"
+parcel 518 class 0040 "Improved Residential Lot"
+parcel 518 occupancy owner
+parcel 518 over65
+parcel 518 assessed 3474 42086
+parcel 518 acres 0.25
+parcel 519 pin "08-12-302-009"
+parcel 519 address "202 Gilbert"
+parcel 519 class 0040 "Improved Residential Lot"
+parcel 519 occupancy owner
+parcel 519 assessed 6448 25200
+parcel 519 acres 0.37
+parcel 520 pin "08-12-302-010"
+parcel 520 address "204 Gilbert"
+parcel 520 class 0040 "Improved Residential Lot"
+parcel 520 occupancy owner
+parcel 520 over65
+parcel 520 assessed 4312 53350
+parcel 520 acres 0.25
+parcel 521 pin "08-12-302-021"
+parcel 521 address "211 Gilbert"
+parcel 521 class 0040 "Improved Residential Lot"
+parcel 521 occupancy other
+parcel 521 assessed 4312 13278
+parcel 521 acres 0.25
+parcel 522 pin "08-12-303-012"
+parcel 522 address "312 Gilbert"
+parcel 522 class 0040 "Improved Residential Lot"
+parcel 522 occupancy owner
+parcel 522 over65
+parcel 522 assessed 3218 7501
+parcel 522 acres 0.25
+parcel 523 pin "08-12-303-021"
+parcel 523 address "313 Gilbert"
+parcel 523 class 0040 "Improved Residential Lot"
+parcel 523 occupancy owner
+parcel 523 assessed 3254 10853
+parcel 523 acres 0.25
+parcel 524 pin "08-12-303-026"
+parcel 524 address "308 Stewart"
+parcel 524 class 0040 "Improved Residential Lot"
+parcel 524 occupancy absentee
+parcel 524 assessed 3218 8014
+parcel 524 acres 0.25
+parcel 525 pin "08-12-303-031"
+parcel 525 address "304 Gilbert"
+parcel 525 class 0040 "Improved Residential Lot"
+parcel 525 occupancy absentee
+parcel 525 assessed 2979 8396
+parcel 525 acres 0.23
+parcel 526 pin "08-12-304-003"
+parcel 526 class 0030 "Vac Lots-Lands/6 units"
+parcel 526 occupancy other
+parcel 526 assessed 4312 0
+parcel 526 acres 0.25
+parcel 527 pin "08-12-304-008"
+parcel 527 address "215 Stewart"
+parcel 527 class 0040 "Improved Residential Lot"
+parcel 527 occupancy other
+parcel 527 assessed 4312 8088
+parcel 527 acres 0.25
+parcel 528 pin "08-12-304-012"
+parcel 528 address "208 Mc Kibben"
+parcel 528 class 0040 "Improved Residential Lot"
+parcel 528 occupancy owner
+parcel 528 assessed 4312 13420
+parcel 528 acres 0.25
+parcel 529 pin "08-12-304-014"
+parcel 529 address "212 Mc Kibben"
+parcel 529 class 0040 "Improved Residential Lot"
+parcel 529 occupancy owner
+parcel 529 over65
+parcel 529 assessed 4312 21703
+parcel 529 acres 0.25
+parcel 530 pin "08-12-304-023"
+parcel 530 address "215 Mc Kibben"
+parcel 530 class 0040 "Improved Residential Lot"
+parcel 530 occupancy owner
+parcel 530 over65
+parcel 530 assessed 4312 19054
+parcel 530 acres 0.25
+parcel 531 pin "08-12-305-003"
+parcel 531 address "309 Stewart"
+parcel 531 class 0040 "Improved Residential Lot"
+parcel 531 occupancy absentee
+parcel 531 assessed 3218 15594
+parcel 531 acres 0.25
+parcel 532 pin "08-12-305-008"
+parcel 532 class 0030 "Vac Lots-Lands/6 units"
+parcel 532 occupancy other
+parcel 532 assessed 3218 0
+parcel 532 acres 0.25
+parcel 533 pin "08-12-305-016"
+parcel 533 address "305 Mc Kibben"
+parcel 533 class 0040 "Improved Residential Lot"
+parcel 533 occupancy owner
+parcel 533 over65
+parcel 533 assessed 5009 20700
+parcel 533 acres 0.39
+parcel 534 pin "08-12-305-019"
+parcel 534 address "311 Mc Kibben"
+parcel 534 class 0040 "Improved Residential Lot"
+parcel 534 occupancy absentee
+parcel 534 assessed 3218 15751
+parcel 534 acres 0.25
+parcel 535 pin "08-12-305-025"
+parcel 535 address "305 Stewart"
+parcel 535 class 0040 "Improved Residential Lot"
+parcel 535 occupancy owner
+parcel 535 over65
+parcel 535 assessed 9660 65772
+parcel 535 acres 0.75
+parcel 536 pin "08-12-306-003"
+parcel 536 address "208 Dale"
+parcel 536 class 0030 "Vac Lots-Lands/6 units"
+parcel 536 occupancy absentee
+parcel 536 assessed 6474 0
+parcel 536 acres 0.50
+parcel 537 pin "08-12-306-008"
+parcel 537 address "516 S Summit"
+parcel 537 class 0040 "Improved Residential Lot"
+parcel 537 occupancy owner
+parcel 537 over65
+parcel 537 assessed 1485 14494
+parcel 537 acres 0.11
+parcel 538 pin "08-12-306-013"
+parcel 538 address "312 Dale"
+parcel 538 class 0040 "Improved Residential Lot"
+parcel 538 occupancy absentee
+parcel 538 assessed 3218 38109
+parcel 538 acres 0.25
+parcel 539 pin "08-12-306-015"
+parcel 539 address "316 Grove"
+parcel 539 class 0040 "Improved Residential Lot"
+parcel 539 occupancy other
+parcel 539 assessed 3218 19254
+parcel 539 acres 0.25
+parcel 540 pin "08-12-306-019"
+parcel 540 address "213 Dale"
+parcel 540 class 0040 "Improved Residential Lot"
+parcel 540 occupancy owner
+parcel 540 over65
+parcel 540 assessed 3218 10699
+parcel 540 acres 0.25
+parcel 541 pin "08-12-307-003"
+parcel 541 address "206 Thompson"
+parcel 541 class 0030 "Vac Lots-Lands/6 units"
+parcel 541 occupancy absentee
+parcel 541 assessed 3033 0
+parcel 541 acres 0.22
+parcel 542 pin "08-12-601-001"
+parcel 542 class 0090 "Tax Exempt"
+parcel 542 occupancy other
+parcel 542 acres 1.79
+parcel 543 pin "08-12-301-007"
+parcel 543 address "213 E Attica"
+parcel 543 class 0040 "Improved Residential Lot"
+parcel 543 occupancy owner
+parcel 543 assessed 3380 25335
+parcel 543 acres 0.23
+parcel 544 pin "08-12-301-008"
+parcel 544 address "215 E Attica"
+parcel 544 class 0040 "Improved Residential Lot"
+parcel 544 occupancy owner
+parcel 544 assessed 4139 32455
+parcel 544 acres 0.23
+parcel 545 pin "08-12-301-019"
+parcel 545 address "212 E Maple"
+parcel 545 class 0040 "Improved Residential Lot"
+parcel 545 occupancy owner
+parcel 545 over65
+parcel 545 assessed 3565 46762
+parcel 545 acres 0.21
+parcel 546 pin "08-12-301-021"
+parcel 546 address "214 E Maple"
+parcel 546 class 0040 "Improved Residential Lot"
+parcel 546 occupancy owner
+parcel 546 over65
+parcel 546 assessed 4312 46634
+parcel 546 acres 0.25
+parcel 547 pin "08-12-301-031"
+parcel 547 address "209 E Maple"
+parcel 547 class 0040 "Improved Residential Lot"
+parcel 547 occupancy owner
+parcel 547 assessed 2944 33932
+parcel 547 acres 0.20
+parcel 548 pin "08-12-301-032"
+parcel 548 address "211 E Maple"
+parcel 548 class 0060 "Improved Commercial"
+parcel 548 occupancy absentee
+parcel 548 assessed 2854 13208
+parcel 548 acres 0.20
+parcel 549 pin "08-12-302-014"
+parcel 549 address "214 Gilbert"
+parcel 549 class 0040 "Improved Residential Lot"
+parcel 549 occupancy owner
+parcel 549 assessed 4312 6922
+parcel 549 acres 0.25
+parcel 550 pin "08-12-302-015"
+parcel 550 address "216 Gilbert"
+parcel 550 class 0040 "Improved Residential Lot"
+parcel 550 occupancy owner
+parcel 550 assessed 4312 6601
+parcel 550 acres 0.25
+parcel 551 pin "08-12-302-020"
+parcel 551 address "209 Gilbert"
+parcel 551 class 0040 "Improved Residential Lot"
+parcel 551 occupancy owner
+parcel 551 assessed 4312 5597
+parcel 551 acres 0.25
+parcel 552 pin "08-12-303-019"
+parcel 552 address "309 Gilbert"
+parcel 552 class 0040 "Improved Residential Lot"
+parcel 552 occupancy owner
+parcel 552 over65
+parcel 552 assessed 6503 11245
+parcel 552 acres 0.50
+parcel 553 pin "08-12-303-024"
+parcel 553 address "304 Stewart"
+parcel 553 class 0040 "Improved Residential Lot"
+parcel 553 occupancy absentee
+parcel 553 assessed 3218 6913
+parcel 553 acres 0.25
+parcel 554 pin "08-12-303-025"
+parcel 554 address "306 Stewart"
+parcel 554 class 0040 "Improved Residential Lot"
+parcel 554 occupancy absentee
+parcel 554 assessed 3218 7053
+parcel 554 acres 0.25
+parcel 555 pin "08-12-303-027"
+parcel 555 address "310 Stewart"
+parcel 555 class 0040 "Improved Residential Lot"
+parcel 555 occupancy absentee
+parcel 555 assessed 3218 20846
+parcel 555 acres 0.25
+parcel 556 pin "08-12-303-035"
+parcel 556 address "314 Gilbert"
+parcel 556 class 0060 "Improved Commercial"
+parcel 556 occupancy absentee
+parcel 556 assessed 5681 12181
+parcel 556 acres 0.37
+parcel 557 pin "08-12-304-002"
+parcel 557 address "203 Stewart"
+parcel 557 class 0040 "Improved Residential Lot"
+parcel 557 occupancy owner
+parcel 557 assessed 4312 16248
+parcel 557 acres 0.25
+parcel 558 pin "08-12-304-004"
+parcel 558 address "207 Stewart"
+parcel 558 class 0040 "Improved Residential Lot"
+parcel 558 occupancy absentee
+parcel 558 assessed 4312 17225
+parcel 558 acres 0.25
+parcel 559 pin "08-12-304-016"
+parcel 559 address "201 Mc Kibben"
+parcel 559 class 0040 "Improved Residential Lot"
+parcel 559 occupancy owner
+parcel 559 assessed 4312 34831
+parcel 559 acres 0.25
+parcel 560 pin "08-12-304-017"
+parcel 560 address "203 Mc Kibben"
+parcel 560 class 0040 "Improved Residential Lot"
+parcel 560 occupancy other
+parcel 560 assessed 4312 7548
+parcel 560 acres 0.25
+parcel 561 pin "08-12-305-009"
+parcel 561 address "306 Mc Kibben"
+parcel 561 class 0040 "Improved Residential Lot"
+parcel 561 occupancy owner
+parcel 561 assessed 3218 23156
+parcel 561 acres 0.25
+parcel 562 pin "08-12-305-010"
+parcel 562 address "308 Mc Kibben"
+parcel 562 class 0040 "Improved Residential Lot"
+parcel 562 occupancy owner
+parcel 562 assessed 3218 7765
+parcel 562 acres 0.25
+parcel 563 pin "08-12-305-014"
+parcel 563 address "316 Mc Kibben"
+parcel 563 class 0040 "Improved Residential Lot"
+parcel 563 occupancy owner
+parcel 563 assessed 3218 8509
+parcel 563 acres 0.25
+parcel 564 pin "08-12-305-015"
+parcel 564 address "303 Mc Kibben"
+parcel 564 class 0040 "Improved Residential Lot"
+parcel 564 occupancy absentee
+parcel 564 assessed 4723 13076
+parcel 564 acres 0.36
+parcel 565 pin "08-12-305-017"
+parcel 565 address "307 Mc Kibben"
+parcel 565 class 0040 "Improved Residential Lot"
+parcel 565 occupancy owner
+parcel 565 over65
+parcel 565 assessed 3218 1899
+parcel 565 acres 0.25
+parcel 566 pin "08-12-306-004"
+parcel 566 address "210 Dale"
+parcel 566 class 0040 "Improved Residential Lot"
+parcel 566 occupancy other
+parcel 566 assessed 3218 8039
+parcel 566 acres 0.25
+parcel 567 pin "08-12-306-010"
+parcel 567 address "306 Dale Ave"
+parcel 567 class 0040 "Improved Residential Lot"
+parcel 567 occupancy owner
+parcel 567 assessed 3218 11282
+parcel 567 acres 0.25
+parcel 568 pin "08-12-306-011"
+parcel 568 address "308 Dale"
+parcel 568 class 0090 "Tax Exempt"
+parcel 568 occupancy absentee
+parcel 568 assessed 3218 0
+parcel 568 acres 0.25
+parcel 569 pin "08-12-306-012"
+parcel 569 address "310 Dale"
+parcel 569 class 0040 "Improved Residential Lot"
+parcel 569 occupancy owner
+parcel 569 assessed 3218 41715
+parcel 569 acres 0.25
+parcel 570 pin "08-12-306-020"
+parcel 570 address "215 Dale"
+parcel 570 class 0040 "Improved Residential Lot"
+parcel 570 occupancy owner
+parcel 570 over65
+parcel 570 assessed 6474 49694
+parcel 570 acres 0.50
+parcel 571 pin "08-12-306-024"
+parcel 571 address "307 Dale"
+parcel 571 class 0040 "Improved Residential Lot"
+parcel 571 occupancy owner
+parcel 571 assessed 3218 24429
+parcel 571 acres 0.38
+parcel 572 pin "08-12-306-028"
+parcel 572 address "201 Dale"
+parcel 572 class 0040 "Improved Residential Lot"
+parcel 572 occupancy owner
+parcel 572 over65
+parcel 572 assessed 3240 28340
+parcel 572 acres 0.25
+parcel 573 pin "08-12-306-030"
+parcel 573 address "315 Dale"
+parcel 573 class 0040 "Improved Residential Lot"
+parcel 573 occupancy other
+parcel 573 assessed 1524 23189
+parcel 573 acres 0.25
+parcel 574 pin "08-12-306-034"
+parcel 574 address "303 Dale"
+parcel 574 class 0040 "Improved Residential Lot"
+parcel 574 occupancy owner
+parcel 574 assessed 5240 16508
+parcel 574 acres 0.38
+parcel 575 pin "08-12-307-001"
+parcel 575 address "202 Thompson"
+parcel 575 class 0040 "Improved Residential Lot"
+parcel 575 occupancy absentee
+parcel 575 assessed 3033 18276
+parcel 575 acres 0.22
+parcel 576 pin "08-12-307-002"
+parcel 576 address "204 Thompson"
+parcel 576 class 0040 "Improved Residential Lot"
+parcel 576 occupancy owner
+parcel 576 over65
+parcel 576 assessed 3033 22626
+parcel 576 acres 0.22
+parcel 577 pin "08-12-307-005"
+parcel 577 address "210 E Thompson"
+parcel 577 class 0040 "Improved Residential Lot"
+parcel 577 occupancy owner
+parcel 577 over65
+parcel 577 assessed 3033 35434
+parcel 577 acres 0.23
+parcel 578 pin "08-12-307-014"
+parcel 578 address "314 Thompson"
+parcel 578 class 0040 "Improved Residential Lot"
+parcel 578 occupancy owner
+parcel 578 assessed 6078 43261
+parcel 578 acres 0.49
+parcel 579 pin "08-12-306-014"
+parcel 579 address "314 Dale"
+parcel 579 class 0040 "Improved Residential Lot"
+parcel 579 occupancy owner
+parcel 579 assessed 3218 69576
+parcel 579 acres 0.25
+parcel 580 pin "08-12-306-018"
+parcel 580 address "209 Dale"
+parcel 580 class 0040 "Improved Residential Lot"
+parcel 580 occupancy owner
+parcel 580 over65
+parcel 580 assessed 3218 15561
+parcel 580 acres 0.25
+parcel 581 pin "08-12-306-021"
+parcel 581 address "601 Summit"
+parcel 581 class 0040 "Improved Residential Lot"
+parcel 581 occupancy owner
+parcel 581 over65
+parcel 581 assessed 3218 39827
+parcel 581 acres 0.25
+parcel 582 pin "08-12-306-026"
+parcel 582 address "311 Dale"
+parcel 582 class 0040 "Improved Residential Lot"
+parcel 582 occupancy owner
+parcel 582 assessed 3218 48533
+parcel 582 acres 0.25
+parcel 583 pin "08-12-306-031"
+parcel 583 address "313 Dale"
+parcel 583 class 0040 "Improved Residential Lot"
+parcel 583 occupancy owner
+parcel 583 assessed 1578 48159
+parcel 583 acres 0.25
+parcel 584 pin "08-12-306-032"
+parcel 584 address "506 Summit"
+parcel 584 class 0040 "Improved Residential Lot"
+parcel 584 occupancy owner
+parcel 584 over65
+parcel 584 assessed 3336 14439
+parcel 584 acres 0.23
+parcel 585 pin "08-12-307-004"
+parcel 585 address "208 Thompson"
+parcel 585 class 0040 "Improved Residential Lot"
+parcel 585 occupancy owner
+parcel 585 assessed 3033 35469
+parcel 585 acres 0.22
+parcel 586 pin "08-12-307-011"
+parcel 586 address "308 Thompson"
+parcel 586 class 0040 "Improved Residential Lot"
+parcel 586 occupancy absentee
+parcel 586 assessed 3033 17968
+parcel 586 acres 0.24
+parcel 587 pin "08-12-307-012"
+parcel 587 address "310 Thompson"
+parcel 587 class 0040 "Improved Residential Lot"
+parcel 587 occupancy owner
+parcel 587 assessed 3033 47945
+parcel 587 acres 0.24
+parcel 588 pin "08-12-609-003"
+parcel 588 class 0090 "Tax Exempt"
+parcel 588 occupancy other
+parcel 588 acres 1.55
+parcel 589 pin "08-12-105-007"
+parcel 589 class 0030 "Vac Lots-Lands/6 units"
+parcel 589 occupancy other
+parcel 589 assessed 7931 0
+parcel 589 acres 0.77
+parcel 590 pin "08-11-204-071"
+parcel 590 class 0060 "Improved Commercial"
+parcel 590 occupancy other
+parcel 590 assessed 1600 3734
+parcel 591 pin "08-13-101-001"
+parcel 591 class 0032 "10-30 Res Vacant Land"
+parcel 591 occupancy other
+parcel 591 assessed 200 0
+parcel 591 acres 0.51
+parcel 592 pin "08-13-101-008"
+parcel 592 address "202 Earl Ct"
+parcel 592 class 0040 "Improved Residential Lot"
+parcel 592 occupancy owner
+parcel 592 assessed 6753 47810
+parcel 592 acres 0.50
+parcel 593 pin "08-13-101-010"
+parcel 593 class 0032 "10-30 Res Vacant Land"
+parcel 593 occupancy other
+parcel 593 assessed 189 0
+parcel 593 acres 0.44
+parcel 594 pin "08-13-101-011"
+parcel 594 class 0032 "10-30 Res Vacant Land"
+parcel 594 occupancy other
+parcel 594 assessed 220 0
+parcel 594 acres 0.57
+parcel 595 pin "08-13-101-015"
+parcel 595 class 0032 "10-30 Res Vacant Land"
+parcel 595 occupancy other
+parcel 595 assessed 189 0
+parcel 595 acres 0.48
+parcel 596 pin "08-13-609-001"
+parcel 596 class 0090 "Tax Exempt"
+parcel 596 occupancy other
+parcel 596 acres 0.52
+parcel 597 pin "08-12-101-024"
+parcel 597 address "216 Henderson"
+parcel 597 class 0040 "Improved Residential Lot"
+parcel 597 occupancy absentee
+parcel 597 assessed 2162 29409
+parcel 597 acres 0.25
+parcel 598 pin "08-12-101-029"
+parcel 598 class 0030 "Vac Lots-Lands/6 units"
+parcel 598 occupancy other
+parcel 598 assessed 2162 0
+parcel 598 acres 0.25
+parcel 599 pin "08-12-101-030"
+parcel 599 class 0030 "Vac Lots-Lands/6 units"
+parcel 599 occupancy other
+parcel 599 assessed 2162 0
+parcel 599 acres 0.25
+parcel 600 pin "08-12-103-024"
+parcel 600 address "407 Holmes"
+parcel 600 class 0040 "Improved Residential Lot"
+parcel 600 occupancy owner
+parcel 600 assessed 2162 36032
+parcel 600 acres 0.25
+parcel 601 pin "08-12-104-008"
+parcel 601 class 0030 "Vac Lots-Lands/6 units"
+parcel 601 occupancy other
+parcel 601 assessed 2162 0
+parcel 601 acres 0.25
+parcel 602 pin "08-12-104-009"
+parcel 602 address "408 Benton"
+parcel 602 class 0040 "Improved Residential Lot"
+parcel 602 occupancy absentee
+parcel 602 assessed 2162 28423
+parcel 602 acres 0.25
+parcel 603 pin "08-12-104-010"
+parcel 603 address "401 Benton"
+parcel 603 class 0040 "Improved Residential Lot"
+parcel 603 occupancy owner
+parcel 603 assessed 2162 33950
+parcel 603 acres 0.25
+parcel 604 pin "08-12-104-016"
+parcel 604 address "406 Holmes"
+parcel 604 class 0090 "Tax Exempt"
+parcel 604 occupancy absentee
+parcel 604 assessed 2162 0
+parcel 604 acres 0.25
+parcel 605 pin "08-12-105-003"
+parcel 605 address "412 E Attica"
+parcel 605 class 0040 "Improved Residential Lot"
+parcel 605 occupancy owner
+parcel 605 over65
+parcel 605 assessed 3409 24918
+parcel 605 acres 0.31
+parcel 606 pin "08-12-105-005"
+parcel 606 address "416 E Attica"
+parcel 606 class 0040 "Improved Residential Lot"
+parcel 606 occupancy owner
+parcel 606 assessed 3409 36712
+parcel 606 acres 0.32
+parcel 607 pin "08-12-107-009"
+parcel 607 class 0030 "Vac Lots-Lands/6 units"
+parcel 607 occupancy other
+parcel 607 assessed 2518 0
+parcel 607 acres 0.36
+parcel 608 pin "08-12-107-010"
+parcel 608 class 0030 "Vac Lots-Lands/6 units"
+parcel 608 occupancy other
+parcel 608 assessed 2518 0
+parcel 608 acres 0.36
+parcel 609 pin "08-12-300-006"
+parcel 609 class 0060 "Improved Commercial"
+parcel 609 occupancy other
+parcel 609 assessed 2184 0
+parcel 609 acres 0.30
+parcel 610 pin "08-12-300-016"
+parcel 610 class 0021 "Farmland"
+parcel 610 occupancy other
+parcel 610 acres 24.52
+parcel 611 pin "08-12-301-023"
+parcel 611 address "302 E Maple"
+parcel 611 class 0040 "Improved Residential Lot"
+parcel 611 occupancy owner
+parcel 611 assessed 6545 28321
+parcel 611 acres 0.50
+parcel 612 pin "08-12-307-019"
+parcel 612 address "209 Thompson"
+parcel 612 class 0040 "Improved Residential Lot"
+parcel 612 occupancy owner
+parcel 612 assessed 3033 20875
+parcel 612 acres 0.22
+parcel 613 pin "08-12-307-021"
+parcel 613 class 0030 "Vac Lots-Lands/6 units"
+parcel 613 occupancy other
+parcel 613 assessed 3033 0
+parcel 613 acres 0.22
+parcel 614 pin "08-11-200-004"
+parcel 614 address "600 N Chicago"
+parcel 614 class 0040 "Improved Residential Lot"
+parcel 614 occupancy owner
+parcel 614 over65
+parcel 614 assessed 2717 50059
+parcel 614 acres 0.50
+parcel 615 pin "08-11-200-026"
+parcel 615 address "616 N Chicago"
+parcel 615 class 0040 "Improved Residential Lot"
+parcel 615 occupancy owner
+parcel 615 over65
+parcel 615 assessed 2717 38113
+parcel 615 acres 1.56
+parcel 616 pin "08-11-201-002"
+parcel 616 address "512 N Chicago"
+parcel 616 class 0040 "Improved Residential Lot"
+parcel 616 occupancy absentee
+parcel 616 assessed 6704 12401
+parcel 616 acres 0.58
+parcel 617 pin "08-11-204-015"
+parcel 617 class 0060 "Improved Commercial"
+parcel 617 occupancy other
+parcel 617 assessed 3543 6739
+parcel 617 acres 0.24
+parcel 618 pin "08-11-204-046"
+parcel 618 address "106 E Attica"
+parcel 618 class 0060 "Improved Commercial"
+parcel 618 occupancy absentee
+parcel 618 assessed 6937 0
+parcel 618 acres 0.09
+parcel 619 pin "08-11-204-063"
+parcel 619 address "206 N Chicago"
+parcel 619 class 0040 "Improved Residential Lot"
+parcel 619 occupancy owner
+parcel 619 assessed 3901 33425
+parcel 619 acres 0.13
+parcel 620 pin "08-11-204-070"
+parcel 620 address "114 E Attica"
+parcel 620 class 0060 "Improved Commercial"
+parcel 620 occupancy absentee
+parcel 620 assessed 1015 679
+parcel 621 pin "08-11-205-003"
+parcel 621 address "110 N Chicago"
+parcel 621 class 0060 "Improved Commercial"
+parcel 621 occupancy other
+parcel 621 assessed 0 7066
+parcel 621 acres 0.21
+parcel 622 pin "08-11-205-009"
+parcel 622 address "117 W Attica"
+parcel 622 class 0040 "Improved Residential Lot"
+parcel 622 occupancy owner
+parcel 622 assessed 6134 20944
+parcel 622 acres 0.28
+parcel 623 pin "08-11-207-003"
+parcel 623 address "508 Harrison"
+parcel 623 class 0040 "Improved Residential Lot"
+parcel 623 occupancy owner
+parcel 623 assessed 2927 18198
+parcel 623 acres 0.24
+parcel 624 pin "08-11-207-007"
+parcel 624 address "108 Henderson"
+parcel 624 class 0040 "Improved Residential Lot"
+parcel 624 occupancy owner
+parcel 624 assessed 3489 50330
+parcel 624 acres 0.24
+parcel 625 pin "08-11-400-010"
+parcel 625 class 0021 "Farmland"
+parcel 625 occupancy other
+parcel 625 acres 1.60
+parcel 626 pin "08-11-400-025"
+parcel 626 address "14 Greenwood Dr"
+parcel 626 class 0040 "Improved Residential Lot"
+parcel 626 occupancy owner
+parcel 626 over65
+parcel 626 assessed 4845 97472
+parcel 626 acres 0.52
+parcel 627 pin "08-11-400-029"
+parcel 627 class 0040 "Improved Residential Lot"
+parcel 627 occupancy other
+parcel 627 assessed 8456 12245
+parcel 627 acres 0.75
+parcel 628 pin "08-11-400-033"
+parcel 628 class 0021 "Farmland"
+parcel 628 occupancy other
+parcel 628 acres 6.41
+parcel 629 pin "08-11-401-004"
+parcel 629 class 0050 "Commercial >6 Units"
+parcel 629 occupancy other
+parcel 629 assessed 21099 101483
+parcel 629 acres 1.40
+parcel 630 pin "08-11-401-005"
+parcel 630 address "121 W Attica"
+parcel 630 class 0040 "Improved Residential Lot"
+parcel 630 occupancy owner
+parcel 630 assessed 6257 24141
+parcel 630 acres 0.17
+parcel 631 pin "08-11-401-010"
+parcel 631 address "113 W Attica"
+parcel 631 class 0090 "Tax Exempt"
+parcel 631 occupancy absentee
+parcel 631 assessed 3842 0
+parcel 631 acres 0.35
+parcel 632 pin "08-11-401-013"
+parcel 632 address "125 W Attica"
+parcel 632 class 0040 "Improved Residential Lot"
+parcel 632 occupancy owner
+parcel 632 assessed 8004 28637
+parcel 632 acres 1.18
+parcel 633 pin "08-11-403-011"
+parcel 633 address "208 Park"
+parcel 633 class 0040 "Improved Residential Lot"
+parcel 633 occupancy owner
+parcel 633 over65
+parcel 633 assessed 3916 23507
+parcel 633 acres 0.20
+parcel 634 pin "08-11-403-014"
+parcel 634 address "202 Park"
+parcel 634 class 0040 "Improved Residential Lot"
+parcel 634 occupancy owner
+parcel 634 assessed 3916 16753
+parcel 634 acres 0.20
+parcel 635 pin "08-11-403-028"
+parcel 635 address "204 S Chicago"
+parcel 635 class 0060 "Improved Commercial"
+parcel 635 occupancy absentee
+parcel 635 assessed 5164 3280
+parcel 635 acres 0.17
+parcel 636 pin "08-11-405-007"
+parcel 636 address "107 S Chicago"
+parcel 636 class 0060 "Improved Commercial"
+parcel 636 occupancy owner
+parcel 636 assessed 4643 844
+parcel 636 acres 0.08
+parcel 637 pin "08-11-406-003"
+parcel 637 address "125 E Attica"
+parcel 637 class 0040 "Improved Residential Lot"
+parcel 637 occupancy absentee
+parcel 637 assessed 4425 29355
+parcel 637 acres 0.23
+parcel 638 pin "08-11-408-002"
+parcel 638 address "124 S Chicago"
+parcel 638 class 0060 "Improved Commercial"
+parcel 638 occupancy other
+parcel 638 assessed 3599 13211
+parcel 638 acres 0.15
+parcel 639 pin "08-11-408-038"
+parcel 639 address "106 Park Pl"
+parcel 639 class 0040 "Improved Residential Lot"
+parcel 639 occupancy owner
+parcel 639 assessed 3843 8968
+parcel 640 pin "08-11-413-007"
+parcel 640 address "218 Stufflebeam"
+parcel 640 class 0040 "Improved Residential Lot"
+parcel 640 occupancy owner
+parcel 640 over65
+parcel 640 assessed 8838 57988
+parcel 640 acres 0.69
+parcel 641 pin "08-11-603-004"
+parcel 641 class 0090 "Tax Exempt"
+parcel 641 occupancy other
+parcel 642 pin "08-11-605-001"
+parcel 642 class 0090 "Tax Exempt"
+parcel 642 occupancy other
+parcel 642 acres 0.24
+parcel 643 pin "08-11-607-013"
+parcel 643 class 0090 "Tax Exempt"
+parcel 643 occupancy other
+parcel 643 acres 0.10
+parcel 644 pin "08-11-609-001"
+parcel 644 class 0090 "Tax Exempt"
+parcel 644 occupancy other
+parcel 644 acres 4.50
+parcel 645 pin "08-11-609-017"
+parcel 645 class 0090 "Tax Exempt"
+parcel 645 occupancy other
+parcel 645 acres 0.03
+parcel 646 pin "08-12-101-010"
+parcel 646 class 0030 "Vac Lots-Lands/6 units"
+parcel 646 occupancy other
+parcel 646 assessed 1977 0
+parcel 646 acres 0.25
+parcel 647 pin "08-12-101-017"
+parcel 647 class 0030 "Vac Lots-Lands/6 units"
+parcel 647 occupancy other
+parcel 647 assessed 2162 0
+parcel 647 acres 0.24
+parcel 648 pin "08-12-307-026"
+parcel 648 address "309 Thompson"
+parcel 648 class 0040 "Improved Residential Lot"
+parcel 648 occupancy owner
+parcel 648 over65
+parcel 648 assessed 3033 46999
+parcel 648 acres 0.22
+parcel 649 pin "08-12-307-027"
+parcel 649 address "311 E Thompson"
+parcel 649 class 0040 "Improved Residential Lot"
+parcel 649 occupancy owner
+parcel 649 over65
+parcel 649 assessed 6078 35525
+parcel 649 acres 0.43
+parcel 650 pin "08-12-308-002"
+parcel 650 address "403 Gilbert"
+parcel 650 class 0040 "Improved Residential Lot"
+parcel 650 occupancy owner
+parcel 650 assessed 870 18445
+parcel 650 acres 0.16
+parcel 651 pin "08-12-308-009"
+parcel 651 address "403 Stewart"
+parcel 651 class 0040 "Improved Residential Lot"
+parcel 651 occupancy owner
+parcel 651 over65
+parcel 651 assessed 1887 26822
+parcel 651 acres 0.25
+parcel 652 pin "08-12-308-017"
+parcel 652 address "406 E Mc Kibben"
+parcel 652 class 0040 "Improved Residential Lot"
+parcel 652 occupancy owner
+parcel 652 assessed 1815 44738
+parcel 652 acres 0.21
+parcel 653 pin "08-12-308-024"
+parcel 653 address "405 Mc Kibben"
+parcel 653 class 0040 "Improved Residential Lot"
+parcel 653 occupancy owner
+parcel 653 assessed 3218 3186
+parcel 653 acres 0.25
+parcel 654 pin "08-12-308-032"
+parcel 654 address "413 Mc Kibben"
+parcel 654 class 0040 "Improved Residential Lot"
+parcel 654 occupancy owner
+parcel 654 over65
+parcel 654 assessed 5336 36557
+parcel 654 acres 0.44
+parcel 655 pin "08-12-308-036"
+parcel 655 address "410 Mc Kibben"
+parcel 655 class 0040 "Improved Residential Lot"
+parcel 655 occupancy owner
+parcel 655 over65
+parcel 655 assessed 4334 46327
+parcel 655 acres 0.50
+parcel 656 pin "08-12-525-050"
+parcel 656 class 5060 "Railroad - Leased"
+parcel 656 occupancy other
+parcel 656 assessed 8597 0
+parcel 656 acres 0.30
+parcel 657 pin "08-12-604-002"
+parcel 657 class 0090 "Tax Exempt"
+parcel 657 occupancy other
+parcel 657 acres 4.07
+parcel 658 pin "08-12-609-043"
+parcel 658 class 0090 "Tax Exempt"
+parcel 658 occupancy other
+parcel 658 acres 0.06
+parcel 659 pin "08-12-609-048"
+parcel 659 class 0090 "Tax Exempt"
+parcel 659 occupancy other
+parcel 659 acres 0.39
+parcel 660 pin "08-12-609-049"
+parcel 660 class 0090 "Tax Exempt"
+parcel 660 occupancy other
+parcel 660 acres 0.39
+parcel 661 pin "08-13-101-003"
+parcel 661 class 0032 "10-30 Res Vacant Land"
+parcel 661 occupancy other
+parcel 661 assessed 206 0
+parcel 661 acres 0.52
+parcel 662 pin "08-13-101-005"
+parcel 662 address "208 Earl Ct"
+parcel 662 class 0040 "Improved Residential Lot"
+parcel 662 occupancy owner
+parcel 662 over65
+parcel 662 assessed 5629 64021
+parcel 662 acres 0.57
+parcel 663 pin "08-13-101-009"
+parcel 663 class 0032 "10-30 Res Vacant Land"
+parcel 663 occupancy other
+parcel 663 assessed 176 0
+parcel 663 acres 0.41
+parcel 664 pin "08-13-101-013"
+parcel 664 address "207 Earl Ct"
+parcel 664 class 0040 "Improved Residential Lot"
+parcel 664 occupancy owner
+parcel 664 over65
+parcel 664 assessed 5629 77006
+parcel 664 acres 0.57
+parcel 665 pin "08-14-200-003"
+parcel 665 address "703 S Chicago"
+parcel 665 class 0040 "Improved Residential Lot"
+parcel 665 occupancy owner
+parcel 665 assessed 2752 54310
+parcel 665 acres 0.60
+parcel 666 pin "08-14-200-005"
+parcel 666 address "707 S Chicago"
+parcel 666 class 0040 "Improved Residential Lot"
+parcel 666 occupancy owner
+parcel 666 assessed 11951 67212
+parcel 666 acres 1.10
+parcel 667 pin "08-14-200-006"
+parcel 667 address "709 S Chicago"
+parcel 667 class 0040 "Improved Residential Lot"
+parcel 667 occupancy owner
+parcel 667 over65
+parcel 667 assessed 6106 38776
+parcel 667 acres 0.50
+parcel 668 pin "08-12-101-022"
+parcel 668 class 0030 "Vac Lots-Lands/6 units"
+parcel 668 occupancy other
+parcel 668 assessed 2162 0
+parcel 668 acres 0.25
+parcel 669 pin "08-12-102-071"
+parcel 669 address "107 N Summit"
+parcel 669 class 0040 "Improved Residential Lot"
+parcel 669 occupancy owner
+parcel 669 assessed 6386 13654
+parcel 669 acres 0.30
+parcel 670 pin "08-12-103-028"
+parcel 670 address "408 E Attica"
+parcel 670 class 0040 "Improved Residential Lot"
+parcel 670 occupancy owner
+parcel 670 over65
+parcel 670 assessed 3204 22381
+parcel 670 acres 0.61
+parcel 671 pin "08-12-104-005"
+parcel 671 address "306 Grove"
+parcel 671 class 0040 "Improved Residential Lot"
+parcel 671 occupancy owner
+parcel 671 assessed 2162 21835
+parcel 671 acres 0.38
+parcel 672 pin "08-12-104-014"
+parcel 672 address "402 Holmes"
+parcel 672 class 0040 "Improved Residential Lot"
+parcel 672 occupancy owner
+parcel 672 over65
+parcel 672 assessed 2162 13478
+parcel 672 acres 0.25
+parcel 673 pin "08-12-104-017"
+parcel 673 address "408 Holmes"
+parcel 673 class 0040 "Improved Residential Lot"
+parcel 673 occupancy owner
+parcel 673 assessed 2162 25696
+parcel 673 acres 0.25
+parcel 674 pin "08-12-106-001"
+parcel 674 address "502 E Attica"
+parcel 674 class 0040 "Improved Residential Lot"
+parcel 674 occupancy absentee
+parcel 674 assessed 3409 46018
+parcel 674 acres 0.33
+parcel 675 pin "08-12-106-004"
+parcel 675 address "508 E Attica"
+parcel 675 class 0040 "Improved Residential Lot"
+parcel 675 occupancy absentee
+parcel 675 assessed 3409 1085
+parcel 675 acres 0.33
+parcel 676 pin "08-12-106-005"
+parcel 676 address "504 E Attica"
+parcel 676 class 0040 "Improved Residential Lot"
+parcel 676 occupancy owner
+parcel 676 assessed 3064 28575
+parcel 676 acres 0.33
+parcel 677 pin "08-12-107-002"
+parcel 677 address "504 Holmes"
+parcel 677 class 0040 "Improved Residential Lot"
+parcel 677 occupancy owner
+parcel 677 over65
+parcel 677 assessed 3647 3886
+parcel 677 acres 0.36
+parcel 678 pin "08-12-107-003"
+parcel 678 class 0030 "Vac Lots-Lands/6 units"
+parcel 678 occupancy other
+parcel 678 assessed 3647 0
+parcel 678 acres 0.36
+parcel 679 pin "08-12-300-015"
+parcel 679 class 0060 "Improved Commercial"
+parcel 679 occupancy other
+parcel 679 assessed 216 2159
+parcel 679 acres 0.01
+parcel 680 pin "08-12-307-016"
+parcel 680 address "203 Thompson"
+parcel 680 class 0040 "Improved Residential Lot"
+parcel 680 occupancy other
+parcel 680 assessed 3033 41173
+parcel 680 acres 0.22
+parcel 681 pin "08-12-307-017"
+parcel 681 address "205 Thompson"
+parcel 681 class 0040 "Improved Residential Lot"
+parcel 681 occupancy owner
+parcel 681 over65
+parcel 681 assessed 3033 25724
+parcel 681 acres 0.22
+parcel 682 pin "08-12-300-007"
+parcel 682 class 0021 "Farmland"
+parcel 682 occupancy other
+parcel 682 acres 9.50
+parcel 683 pin "08-12-300-008"
+parcel 683 class 0021 "Farmland"
+parcel 683 occupancy other
+parcel 683 acres 10.10
+parcel 684 pin "08-12-300-014"
+parcel 684 class 0060 "Improved Commercial"
+parcel 684 occupancy other
+parcel 684 assessed 216 2159
+parcel 684 acres 0.01
+parcel 685 pin "08-12-301-024"
+parcel 685 address "306 E Maple"
+parcel 685 class 0040 "Improved Residential Lot"
+parcel 685 occupancy other
+parcel 685 assessed 2189 1684
+parcel 685 acres 0.25
+parcel 686 pin "08-12-301-025"
+parcel 686 address "308 E Maple"
+parcel 686 class 0040 "Improved Residential Lot"
+parcel 686 occupancy absentee
+parcel 686 assessed 3267 3141
+parcel 686 acres 0.25
+parcel 687 pin "08-12-307-020"
+parcel 687 address "211 Thompson"
+parcel 687 class 0040 "Improved Residential Lot"
+parcel 687 occupancy owner
+parcel 687 assessed 3033 38245
+parcel 687 acres 0.22
+parcel 688 pin "08-12-306-017"
+parcel 688 address "207 Dale"
+parcel 688 class 0040 "Improved Residential Lot"
+parcel 688 occupancy owner
+parcel 688 assessed 4878 44942
+parcel 688 acres 0.50
+parcel 689 pin "08-12-306-025"
+parcel 689 address "309 Dale"
+parcel 689 class 0040 "Improved Residential Lot"
+parcel 689 occupancy owner
+parcel 689 assessed 3380 38633
+parcel 689 acres 0.25
+parcel 690 pin "08-12-306-029"
+parcel 690 class 0030 "Vac Lots-Lands/6 units"
+parcel 690 occupancy other
+parcel 690 assessed 3240 0
+parcel 690 acres 0.25
+parcel 691 pin "08-12-306-033"
+parcel 691 class 0030 "Vac Lots-Lands/6 units"
+parcel 691 occupancy other
+parcel 691 assessed 2153 0
+parcel 691 acres 0.16
+parcel 692 pin "08-12-307-006"
+parcel 692 address "212 Thompson"
+parcel 692 class 0040 "Improved Residential Lot"
+parcel 692 occupancy owner
+parcel 692 over65
+parcel 692 assessed 4535 41595
+parcel 692 acres 0.34
+parcel 693 pin "08-12-307-007"
+parcel 693 address "216 Thompson"
+parcel 693 class 0040 "Improved Residential Lot"
+parcel 693 occupancy owner
+parcel 693 over65
+parcel 693 assessed 3954 12262
+parcel 693 acres 0.34
+parcel 694 pin "08-12-307-013"
+parcel 694 address "312 Thompson"
+parcel 694 class 0040 "Improved Residential Lot"
+parcel 694 occupancy owner
+parcel 694 assessed 3033 25469
+parcel 694 acres 0.24
+parcel 695 pin "08-12-609-004"
+parcel 695 class 0090 "Tax Exempt"
+parcel 695 occupancy other
+parcel 695 acres 0.43
+parcel 696 pin "08-12-106-003"
+parcel 696 address "506 E Attica"
+parcel 696 class 0040 "Improved Residential Lot"
+parcel 696 occupancy owner
+parcel 696 assessed 3409 28397
+parcel 696 acres 0.33
+parcel 697 pin "08-12-107-001"
+parcel 697 address "502 Holmes"
+parcel 697 class 0040 "Improved Residential Lot"
+parcel 697 occupancy other
+parcel 697 assessed 3647 4223
+parcel 697 acres 0.36
+parcel 698 pin "08-12-107-004"
+parcel 698 class 0030 "Vac Lots-Lands/6 units"
+parcel 698 occupancy other
+parcel 698 assessed 3647 0
+parcel 698 acres 0.36
+parcel 699 pin "08-12-107-006"
+parcel 699 class 0030 "Vac Lots-Lands/6 units"
+parcel 699 occupancy other
+parcel 699 assessed 2518 0
+parcel 699 acres 0.36
+parcel 700 pin "08-12-300-009"
+parcel 700 class 0030 "Vac Lots-Lands/6 units"
+parcel 700 occupancy other
+parcel 700 assessed 627 0
+parcel 700 acres 0.03
+parcel 701 pin "08-12-300-012"
+parcel 701 address "402 Gilbert"
+parcel 701 class 0080 "Industrial"
+parcel 701 occupancy absentee
+parcel 701 assessed 29354 975236
+parcel 701 acres 3.89
+parcel 702 pin "08-12-307-015"
+parcel 702 address "201 Thompson"
+parcel 702 class 0040 "Improved Residential Lot"
+parcel 702 occupancy owner
+parcel 702 over65
+parcel 702 assessed 6077 19816
+parcel 702 acres 0.43
+parcel 703 pin "08-12-307-018"
+parcel 703 address "207 Thompson"
+parcel 703 class 0040 "Improved Residential Lot"
+parcel 703 occupancy absentee
+parcel 703 assessed 3033 34297
+parcel 703 acres 0.22
+parcel 704 pin "08-12-103-012"
+parcel 704 address "315 Benton"
+parcel 704 class 0040 "Improved Residential Lot"
+parcel 704 occupancy absentee
+parcel 704 assessed 720 7368
+parcel 704 acres 0.25
+parcel 705 pin "08-12-103-015"
+parcel 705 address "316 Holmes"
+parcel 705 class 0030 "Vac Lots-Lands/6 units"
+parcel 705 occupancy absentee
+parcel 705 assessed 2162 0
+parcel 705 acres 0.25
+parcel 706 pin "08-12-302-030"
+parcel 706 address "215 Gilbert"
+parcel 706 class 0040 "Improved Residential Lot"
+parcel 706 occupancy owner
+parcel 706 assessed 8145 26232
+parcel 706 acres 0.47
+parcel 707 pin "08-12-303-001"
+parcel 707 class 0030 "Vac Lots-Lands/6 units"
+parcel 707 occupancy other
+parcel 707 assessed 531 0
+parcel 707 acres 0.05
+parcel 708 pin "08-12-103-014"
+parcel 708 address "312 Holmes"
+parcel 708 class 0040 "Improved Residential Lot"
+parcel 708 occupancy absentee
+parcel 708 assessed 2162 3055
+parcel 708 acres 0.25
+parcel 709 pin "08-12-302-026"
+parcel 709 address "210 Stewart"
+parcel 709 class 0040 "Improved Residential Lot"
+parcel 709 occupancy absentee
+parcel 709 assessed 4312 2928
+parcel 709 acres 0.25
+parcel 710 pin "08-12-302-027"
+parcel 710 address "212 Stewart"
+parcel 710 class 0040 "Improved Residential Lot"
+parcel 710 occupancy owner
+parcel 710 assessed 4312 30734
+parcel 710 acres 0.25
+parcel 711 pin "08-12-302-028"
+parcel 711 address "216 Stewart"
+parcel 711 class 0040 "Improved Residential Lot"
+parcel 711 occupancy owner
+parcel 711 assessed 2906 41850
+parcel 711 acres 0.25
+parcel 712 pin "08-12-302-031"
+parcel 712 class 0030 "Vac Lots-Lands/6 units"
+parcel 712 occupancy other
+parcel 712 assessed 471 0
+parcel 712 acres 0.03
+parcel 713 pin "08-12-303-003"
+parcel 713 class 0030 "Vac Lots-Lands/6 units"
+parcel 713 occupancy other
+parcel 713 assessed 531 0
+parcel 713 acres 0.05
+parcel 714 pin "08-11-203-001"
+parcel 714 address "405 N Chicago"
+parcel 714 class 0040 "Improved Residential Lot"
+parcel 714 occupancy owner
+parcel 714 over65
+parcel 714 assessed 3357 40908
+parcel 714 acres 0.31
+parcel 715 pin "08-12-103-016"
+parcel 715 address "316 Holmes"
+parcel 715 class 0040 "Improved Residential Lot"
+parcel 715 occupancy owner
+parcel 715 over65
+parcel 715 assessed 2162 23920
+parcel 715 acres 0.25
+parcel 716 pin "08-12-302-029"
+parcel 716 address "305 Summit"
+parcel 716 class 0040 "Improved Residential Lot"
+parcel 716 occupancy owner
+parcel 716 assessed 4308 15395
+parcel 716 acres 0.25
+parcel 717 pin "08-12-303-002"
+parcel 717 class 0040 "Improved Residential Lot"
+parcel 717 occupancy other
+parcel 717 assessed 531 925
+parcel 717 acres 0.05
+parcel 718 pin "08-11-210-001"
+parcel 718 class 0060 "Improved Commercial"
+parcel 718 occupancy other
+parcel 718 assessed 1278 2090
+parcel 719 pin "08-11-210-002"
+parcel 719 class 0060 "Improved Commercial"
+parcel 719 occupancy other
+parcel 719 assessed 1278 2090
+parcel 719 acres 1.43
+parcel 720 pin "08-11-201-005"
+parcel 720 class 0021 "Farmland"
+parcel 720 occupancy other
+parcel 720 acres 8.25
+parcel 721 pin "08-11-201-007"
+parcel 721 address "412 N Chicago"
+parcel 721 class 0040 "Improved Residential Lot"
+parcel 721 occupancy owner
+parcel 721 assessed 8674 51988
+parcel 721 acres 1.50
+parcel 722 pin "08-11-202-001"
+parcel 722 address "202 N Chicago"
+parcel 722 class 0040 "Improved Residential Lot"
+parcel 722 occupancy owner
+parcel 722 over65
+parcel 722 assessed 7009 19023
+parcel 722 acres 0.26
+parcel 723 pin "08-11-202-004"
+parcel 723 address "120 W Attica"
+parcel 723 class 0040 "Improved Residential Lot"
+parcel 723 occupancy owner
+parcel 723 assessed 6942 17121
+parcel 723 acres 0.36
+parcel 724 pin "08-11-202-007"
+parcel 724 address "116 W Attica"
+parcel 724 class 0040 "Improved Residential Lot"
+parcel 724 occupancy owner
+parcel 724 assessed 5193 21469
+parcel 724 acres 0.24
+parcel 725 pin "08-11-405-014"
+parcel 725 address "121 S Chicago"
+parcel 725 class 0060 "Improved Commercial"
+parcel 725 occupancy absentee
+parcel 725 assessed 844 0
+parcel 725 acres 0.10
+parcel 726 pin "08-11-405-015"
+parcel 726 address "123 S Chicago"
+parcel 726 class 0060 "Improved Commercial"
+parcel 726 occupancy absentee
+parcel 726 assessed 6993 2013
+parcel 726 acres 0.10
+parcel 727 pin "08-11-405-020"
+parcel 727 address "104 E Maple"
+parcel 727 class 0060 "Improved Commercial"
+parcel 727 occupancy other
+parcel 727 assessed 4859 3366
+parcel 727 acres 0.22
+parcel 728 pin "08-11-405-022"
+parcel 728 class 0060 "Improved Commercial"
+parcel 728 occupancy other
+parcel 728 assessed 4845 4112
+parcel 728 acres 0.05
+parcel 729 pin "08-12-100-010"
+parcel 729 address "401 N Church"
+parcel 729 class 0040 "Improved Residential Lot"
+parcel 729 occupancy owner
+parcel 729 over65
+parcel 729 assessed 2496 9603
+parcel 729 acres 0.17
+parcel 730 pin "08-12-100-014"
+parcel 730 class 0021 "Farmland"
+parcel 730 occupancy other
+parcel 730 acres 5.81
+parcel 731 pin "08-12-100-015"
+parcel 731 class 0011 "Homesite-Dwelling"
+parcel 731 occupancy other
+parcel 731 acres 2.91
+parcel 732 pin "08-12-103-013"
+parcel 732 address "310 Holmes"
+parcel 732 class 0040 "Improved Residential Lot"
+parcel 732 occupancy absentee
+parcel 732 assessed 1314 1887
+parcel 732 acres 0.25
+parcel 733 pin "08-12-302-024"
+parcel 733 class 0040 "Improved Residential Lot"
+parcel 733 occupancy other
+parcel 733 assessed 4312 9823
+parcel 733 acres 0.25
+parcel 734 pin "08-12-302-025"
+parcel 734 address "208 Stewart"
+parcel 734 class 0040 "Improved Residential Lot"
+parcel 734 occupancy owner
+parcel 734 over65
+parcel 734 assessed 4312 21713
+parcel 734 acres 0.25
+parcel 735 pin "08-12-303-004"
+parcel 735 class 0030 "Vac Lots-Lands/6 units"
+parcel 735 occupancy other
+parcel 735 assessed 531 0
+parcel 735 acres 0.05
+parcel 736 pin "08-11-201-006"
+parcel 736 address "502 N Chicago"
+parcel 736 class 0040 "Improved Residential Lot"
+parcel 736 occupancy owner
+parcel 736 assessed 7866 76694
+parcel 736 acres 0.54
+parcel 737 pin "08-11-208-007"
+parcel 737 address "111 Smith"
+parcel 737 class 0040 "Improved Residential Lot"
+parcel 737 occupancy other
+parcel 737 assessed 3797 59394
+parcel 737 acres 0.31
+parcel 738 pin "08-11-208-008"
+parcel 738 address "202 York"
+parcel 738 class 0040 "Improved Residential Lot"
+parcel 738 occupancy owner
+parcel 738 assessed 3797 59270
+parcel 738 acres 0.58
+parcel 739 pin "08-11-208-010"
+parcel 739 class 0030 "Vac Lots-Lands/6 units"
+parcel 739 occupancy other
+parcel 739 assessed 3064 0
+parcel 739 acres 0.15
+parcel 740 pin "08-11-201-008"
+parcel 740 address "510 N Chicago"
+parcel 740 class 0040 "Improved Residential Lot"
+parcel 740 occupancy owner
+parcel 740 over65
+parcel 740 assessed 7633 50300
+parcel 740 acres 1.04
+parcel 741 pin "08-11-201-009"
+parcel 741 address "508 N Chicago"
+parcel 741 class 0040 "Improved Residential Lot"
+parcel 741 occupancy owner
+parcel 741 assessed 11619 224824
+parcel 741 acres 4.02
+parcel 742 pin "08-11-202-008"
+parcel 742 address "114 W Attica"
+parcel 742 class 0040 "Improved Residential Lot"
+parcel 742 occupancy owner
+parcel 742 assessed 4312 34908
+parcel 742 acres 0.20
+parcel 743 pin "08-11-202-011"
+parcel 743 address "118 W Attica"
+parcel 743 class 0040 "Improved Residential Lot"
+parcel 743 occupancy owner
+parcel 743 assessed 5594 39909
+parcel 743 acres 0.26
+parcel 744 pin "08-11-202-012"
+parcel 744 address "112 W Attica"
+parcel 744 class 0040 "Improved Residential Lot"
+parcel 744 occupancy owner
+parcel 744 assessed 6474 63694
+parcel 744 acres 0.30
+parcel 745 pin "08-11-208-006"
+parcel 745 address "110 Smith"
+parcel 745 class 0040 "Improved Residential Lot"
+parcel 745 occupancy owner
+parcel 745 over65
+parcel 745 assessed 8858 18244
+parcel 745 acres 0.32
+parcel 746 pin "08-11-208-012"
+parcel 746 address "210 York"
+parcel 746 class 0040 "Improved Residential Lot"
+parcel 746 occupancy owner
+parcel 746 over65
+parcel 746 assessed 3797 35612
+parcel 746 acres 0.35
+parcel 747 pin "08-11-405-010"
+parcel 747 address "115 S Chicago"
+parcel 747 class 0060 "Improved Commercial"
+parcel 747 occupancy absentee
+parcel 747 assessed 3742 844
+parcel 747 acres 0.05
+parcel 748 pin "08-11-405-013"
+parcel 748 address "119 S Chicago"
+parcel 748 class 0060 "Improved Commercial"
+parcel 748 occupancy absentee
+parcel 748 assessed 8327 2931
+parcel 748 acres 0.11
+parcel 749 pin "08-11-405-018"
+parcel 749 address "129 S Chicago"
+parcel 749 class 0060 "Improved Commercial"
+parcel 749 occupancy absentee
+parcel 749 assessed 3165 5014
+parcel 749 acres 0.04
+parcel 750 pin "08-11-405-021"
+parcel 750 address "117 S Chicago"
+parcel 750 class 0030 "Vac Lots-Lands/6 units"
+parcel 750 occupancy absentee
+parcel 750 assessed 1604 0
+parcel 750 acres 0.02
+parcel 751 pin "08-11-405-023"
+parcel 751 address "117 S Chicago"
+parcel 751 class 0060 "Improved Commercial"
+parcel 751 occupancy other
+parcel 751 assessed 3897 6433
+parcel 751 acres 0.07
+parcel 752 pin "08-12-100-003"
+parcel 752 class 0021 "Farmland"
+parcel 752 occupancy other
+parcel 752 acres 15.63
+parcel 753 pin "08-12-100-005"
+parcel 753 class 0040 "Improved Residential Lot"
+parcel 753 occupancy other
+parcel 753 assessed 1815 1251
+parcel 753 acres 1.00
+parcel 754 pin "08-12-100-016"
+parcel 754 address "402 Grove"
+parcel 754 class 0040 "Improved Residential Lot"
+parcel 754 occupancy absentee
+parcel 754 assessed 1747 15318
+parcel 754 acres 0.41
+parcel 755 pin "08-12-101-004"
+parcel 755 class 0030 "Vac Lots-Lands/6 units"
+parcel 755 occupancy other
+parcel 755 assessed 1715 0
+parcel 755 acres 0.25
+parcel 756 pin "08-12-103-021"
+parcel 756 class 0040 "Improved Residential Lot"
+parcel 756 occupancy other
+parcel 756 assessed 2162 7971
+parcel 756 acres 0.25
+parcel 757 pin "08-12-103-022"
+parcel 757 address "403 Holmes"
+parcel 757 class 0040 "Improved Residential Lot"
+parcel 757 occupancy owner
+parcel 757 assessed 2162 8633
+parcel 757 acres 0.25
+parcel 758 pin "08-11-208-011"
+parcel 758 address "208 York"
+parcel 758 class 0040 "Improved Residential Lot"
+parcel 758 occupancy owner
+parcel 758 over65
+parcel 758 assessed 3064 53188
+parcel 758 acres 0.29
+parcel 759 pin "08-11-208-013"
+parcel 759 class 0030 "Vac Lots-Lands/6 units"
+parcel 759 occupancy other
+parcel 759 assessed 3064 0
+parcel 759 acres 0.15
+parcel 760 pin "08-11-208-014"
+parcel 760 address "102 York"
+parcel 760 class 0040 "Improved Residential Lot"
+parcel 760 occupancy owner
+parcel 760 assessed 4770 76354
+parcel 760 acres 1.08
+parcel 761 pin "08-11-209-002"
+parcel 761 class 0030 "Vac Lots-Lands/6 units"
+parcel 761 occupancy other
+parcel 761 assessed 1 0
+parcel 761 acres 2.40
+parcel 762 pin "08-11-405-016"
+parcel 762 address "125 S Chicago"
+parcel 762 class 0060 "Improved Commercial"
+parcel 762 occupancy absentee
+parcel 762 assessed 5104 5038
+parcel 762 acres 0.07
+parcel 763 pin "08-11-405-024"
+parcel 763 class 0060 "Improved Commercial"
+parcel 763 occupancy other
+parcel 763 assessed 1950 0
+parcel 763 acres 0.04
+parcel 764 pin "08-11-405-025"
+parcel 764 address "115 E Attica"
+parcel 764 class 0060 "Improved Commercial"
+parcel 764 occupancy absentee
+parcel 764 assessed 3340 11845
+parcel 764 acres 0.18
+parcel 765 pin "08-12-100-018"
+parcel 765 class 0021 "Farmland"
+parcel 765 occupancy other
+parcel 765 acres 4.90
+parcel 766 pin "08-12-101-005"
+parcel 766 class 0030 "Vac Lots-Lands/6 units"
+parcel 766 occupancy other
+parcel 766 assessed 1715 0
+parcel 766 acres 0.25
+parcel 767 pin "08-12-101-007"
+parcel 767 address "215 E Attica"
+parcel 767 class 0030 "Vac Lots-Lands/6 units"
+parcel 767 occupancy absentee
+parcel 767 assessed 1715 0
+parcel 767 acres 0.25
+parcel 768 pin "08-12-103-017"
+parcel 768 class 0060 "Improved Commercial"
+parcel 768 occupancy other
+parcel 768 assessed 1115 10372
+parcel 768 acres 0.25
+parcel 769 pin "08-12-103-023"
+parcel 769 address "405 Holmes"
+parcel 769 class 0040 "Improved Residential Lot"
+parcel 769 occupancy absentee
+parcel 769 assessed 2162 3168
+parcel 769 acres 0.25
+parcel 770 pin "08-12-103-018"
+parcel 770 class 0060 "Improved Commercial"
+parcel 770 occupancy other
+parcel 770 assessed 1180 19957
+parcel 770 acres 0.25
+parcel 771 pin "08-12-103-019"
+parcel 771 address "315 Holmes"
+parcel 771 class 0030 "Vac Lots-Lands/6 units"
+parcel 771 occupancy absentee
+parcel 771 assessed 2162 0
+parcel 771 acres 0.25
+parcel 772 pin "08-12-101-001"
+parcel 772 class 0030 "Vac Lots-Lands/6 units"
+parcel 772 occupancy other
+parcel 772 assessed 1715 0
+parcel 772 acres 0.25
+parcel 773 pin "08-12-101-006"
+parcel 773 address "210 Henderson"
+parcel 773 class 0040 "Improved Residential Lot"
+parcel 773 occupancy owner
+parcel 773 assessed 1715 34493
+parcel 773 acres 0.25
+parcel 774 pin "08-12-101-008"
+parcel 774 address "215 E Attica"
+parcel 774 class 0030 "Vac Lots-Lands/6 units"
+parcel 774 occupancy absentee
+parcel 774 assessed 1715 0
+parcel 774 acres 0.25
+parcel 775 pin "08-12-103-020"
+parcel 775 address "315 Holmes"
+parcel 775 class 0040 "Improved Residential Lot"
+parcel 775 occupancy absentee
+parcel 775 assessed 2162 12216
+parcel 775 acres 0.25

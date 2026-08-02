@@ -287,9 +287,9 @@ namespace Noir.Unity
             // nothing here should ever move it - but the player asked to see what the tax rolls
             // actually say, and silently hiding a mismatch would be worse than showing one.
             int parcelIdForAddr = ParcelIndex.FindFor(place)?.Id ?? -1;
-            var county = parcelIdForAddr >= 0 ? ParcelAddresses.For(parcelIdForAddr) : null;
-            if (county?.Address != null && !SameAddress(county.Value.Address, place.Name))
-                GUILayout.Label($"<color=#8a8a86>county record: {county.Value.Address}</color>", _small);
+            var county = parcelIdForAddr >= 0 ? CountyRecord.For(parcelIdForAddr) : null;
+            if (county?.Address != null && !SameAddress(county.Address, place.Name))
+                GUILayout.Label($"<color=#8a8a86>county record: {county.Address}</color>", _small);
 
             GUILayout.Space(10);
 
@@ -348,6 +348,7 @@ namespace Noir.Unity
         private ParcelNotes.Quality _draftQuality;
         private int _draftStories;
         private bool _draftBasement;
+        private int _draftBedrooms, _draftBaths, _draftHalfBaths, _draftSquareFeet, _draftYearBuilt;
 
         /// <summary>
         /// Loads the drafts from whatever is on file the first time a given parcel is shown, so
@@ -370,11 +371,27 @@ namespace Noir.Unity
             _draftKids = saved?.Kids ?? 0;
             _draftNames = saved?.Names ?? "";
             _draftCharacter = saved?.Character ?? "";
-            _draftZoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset;
-            _draftHousing = saved?.Housing ?? ParcelNotes.HousingType.Unset;
             _draftQuality = saved?.Condition ?? ParcelNotes.Quality.Unset;
             _draftStories = saved?.Stories ?? 0;
             _draftBasement = saved?.Basement ?? false;
+            _draftBedrooms = saved?.Bedrooms ?? 0;
+            _draftBaths = saved?.Baths ?? 0;
+            _draftHalfBaths = saved?.HalfBaths ?? 0;
+            _draftSquareFeet = saved?.SquareFeet ?? 0;
+            _draftYearBuilt = saved?.YearBuilt ?? 0;
+
+            // THE COUNTY'S ANSWER IS THE STARTING VALUE where nobody has authored one. Its class
+            // code says what the assessor thinks the lot is, for all 776 matched parcels, which
+            // beats making somebody set `residential` by hand 517 times. An authored value always
+            // wins - this only fills a blank.
+            var county = CountyRecord.For(parcelId);
+            _draftZoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset;
+            if (_draftZoning == ParcelNotes.Zoning.Unset && county != null)
+                _draftZoning = county.Zoning;
+
+            _draftHousing = saved?.Housing ?? ParcelNotes.HousingType.Unset;
+            if (_draftHousing == ParcelNotes.HousingType.Unset && county != null)
+                _draftHousing = county.Housing;
         }
 
         /// <summary>Everything in the drafts, as a note ready to write. The footprint is not a
@@ -385,7 +402,9 @@ namespace Noir.Unity
             Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
             Character = _draftCharacter, Footprint = saved?.Footprint,
             Zoning = _draftZoning, Housing = _draftHousing, Condition = _draftQuality,
-            Stories = _draftStories, Basement = _draftBasement
+            Stories = _draftStories, Basement = _draftBasement,
+            Bedrooms = _draftBedrooms, Baths = _draftBaths, HalfBaths = _draftHalfBaths,
+            SquareFeet = _draftSquareFeet, YearBuilt = _draftYearBuilt
         };
 
         private void DrawNoteEditor(int parcelId)
@@ -452,6 +471,32 @@ namespace Noir.Unity
             if (GUILayout.Button(Pretty(_draftQuality), _button, GUILayout.Height(24)))
                 _draftQuality = Cycle(_draftQuality);
 
+            // ---- the house itself ----
+            GUILayout.Space(8);
+            GUILayout.Label("<color=#8a8a86>rooms</color>", _small);
+            Counter("beds", ref _draftBedrooms, 1);
+            Counter("baths", ref _draftBaths, 1);
+            Counter("half", ref _draftHalfBaths, 1);
+
+            GUILayout.Space(4);
+            Counter("sq ft", ref _draftSquareFeet, 50);
+            Counter("built", ref _draftYearBuilt, 1, 1830);
+
+            // WHAT THE COUNTY WOULD SAY ABOUT THAT NUMBER. The assessor publishes no square
+            // footage anywhere, but it does publish what the dwelling is assessed at, and
+            // Illinois assesses at a third of market - so market value over the entered area is
+            // a dollars-per-square-foot that can be sanity-checked by eye. Rossville runs about
+            // $55-95/sqft; well outside that means the area or the condition is wrong.
+            var countyNow = CountyRecord.For(parcelId);
+            if (countyNow != null && countyNow.HasBuilding && _draftSquareFeet > 0)
+            {
+                int perFoot = countyNow.MarketValue / _draftSquareFeet;
+                bool odd = perFoot < 40 || perFoot > 130;
+                GUILayout.Label($"<color={(odd ? "#c9a08a" : "#8a8a86")}>${perFoot}/sq ft against the "
+                              + $"county's ${countyNow.MarketValue:N0}"
+                              + (odd ? " - outside what this town sells for" : "") + "</color>", _small);
+            }
+
             GUILayout.EndScrollView();
 
             // ---- committing ----
@@ -464,7 +509,10 @@ namespace Noir.Unity
                 || _draftNames != saved.Names || _draftCharacter != saved.Character
                 || _draftZoning != saved.Zoning || _draftHousing != saved.Housing
                 || _draftQuality != saved.Condition
-                || _draftStories != saved.Stories || _draftBasement != saved.Basement);
+                || _draftStories != saved.Stories || _draftBasement != saved.Basement
+                || _draftBedrooms != saved.Bedrooms || _draftBaths != saved.Baths
+                || _draftHalfBaths != saved.HalfBaths || _draftSquareFeet != saved.SquareFeet
+                || _draftYearBuilt != saved.YearBuilt);
 
             GUILayout.Space(4);
             GUILayout.BeginHorizontal();
@@ -530,6 +578,22 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>A labelled -/+ row. `step` is how much a click moves it and `floor` is the
+        /// lowest it will go, which is 0 for a count and a year the town could actually have been
+        /// built in for a date - a year field that steps down through 3, 2, 1, 0 is useless.</summary>
+        private void Counter(string label, ref int value, int step, int floor = 0)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, _small, GUILayout.Width(44));
+            if (GUILayout.Button("-", _button, GUILayout.Width(28)))
+                value = value == 0 ? floor : Mathf.Max(floor, value - step);
+            GUILayout.Label(value == 0 ? "<color=#75736e>-</color>" : value.ToString(),
+                            _label, GUILayout.Width(46));
+            if (GUILayout.Button("+", _button, GUILayout.Width(28)))
+                value = value == 0 ? Mathf.Max(floor, step) : value + step;
+            GUILayout.EndHorizontal();
+        }
+
         /// <summary>Whether the drafts hold anything worth saving, for a parcel that has nothing
         /// on file yet - mirrors ParcelNotes.Save's own emptiness test, so `save *` never lights
         /// up for a note that would be discarded as empty the moment it was written.</summary>
@@ -539,7 +603,9 @@ namespace Noir.Unity
             || _draftZoning != ParcelNotes.Zoning.Unset
             || _draftHousing != ParcelNotes.HousingType.Unset
             || _draftQuality != ParcelNotes.Quality.Unset
-            || _draftStories != 0 || _draftBasement;
+            || _draftStories != 0 || _draftBasement
+            || _draftBedrooms != 0 || _draftBaths != 0 || _draftHalfBaths != 0
+            || _draftSquareFeet != 0 || _draftYearBuilt != 0;
 
         private static string Pretty(ParcelNotes.Quality q)
         {
@@ -627,11 +693,11 @@ namespace Noir.Unity
         /// click there found nothing, which is most of what's visible on the plan reading as
         /// unclickable rather than as undeveloped land.
         ///
-        /// THE REAL ADDRESS FIRST, THE ESTIMATE ONLY IF THERE IS NONE. ParcelAddresses is
-        /// Vermilion County's own tax record, matched to this exact parcel - see Content/parcel-
-        /// addresses.txt. StreetAddressing.Estimate's "400 block of X Ave" was always a guess for
-        /// a lot with no real answer on file, and showing it even where the county DOES have one
-        /// was indistinguishable from the guess being wrong.
+        /// THE REAL ADDRESS FIRST, THE ESTIMATE ONLY IF THERE IS NONE. CountyRecord is Vermilion
+        /// County's own tax record, matched to this exact parcel - see Content/parcel-county.txt.
+        /// StreetAddressing.Estimate's "400 block of X Ave" was always a guess for a lot with no
+        /// real answer on file, and showing it even where the county DOES have one was
+        /// indistinguishable from the guess being wrong.
         /// </summary>
         private void DrawParcelInspector(ParcelIndex.Parcel parcel)
         {
@@ -645,18 +711,37 @@ namespace Noir.Unity
             var centre = new Vector2(parcel.Bounds.x + parcel.Bounds.width / 2f,
                                      parcel.Bounds.y + parcel.Bounds.height / 2f);
 
-            var county = ParcelAddresses.For(parcel.Id);
+            var county = CountyRecord.For(parcel.Id);
             string confirmed = county?.Address;
             string approx = confirmed == null ? StreetAddressing.Estimate(_host.World, centre) : null;
 
             GUILayout.Label(confirmed ?? approx ?? "Undeveloped lot", _title);
 
-            string status = confirmed != null ? "confirmed address, no house built"
-                          : approx != null ? "estimated address, no house built"
-                          : "no address on file";
+            string status = confirmed != null ? "confirmed address" : approx != null
+                          ? "estimated address" : "no address on file";
+            if (county != null && !county.HasBuilding) status += ", no house built";
             GUILayout.Label($"{status}   ·   {Mathf.RoundToInt(wFt)} x {Mathf.RoundToInt(hFt)} ft", _small);
-            if (county?.Pin != null)
-                GUILayout.Label($"<color=#8a8a86>PIN {county.Value.Pin}</color>", _small);
+
+            if (county != null)
+            {
+                if (county.Pin != null)
+                    GUILayout.Label($"<color=#8a8a86>PIN {county.Pin}"
+                                  + (county.Acres > 0f ? $"   ·   {county.Acres:0.00} acres" : "")
+                                  + "</color>", _small);
+                if (county.ClassName != null)
+                    GUILayout.Label($"<color=#8a8a86>assessed as {county.ClassName.ToLowerInvariant()}"
+                                  + $" ({county.ClassCode})</color>", _small);
+                if (county.HasBuilding)
+                    GUILayout.Label($"<color=#8a8a86>building assessed ${county.DwellingValue:N0}"
+                                  + $"   ·   about ${county.MarketValue:N0} market</color>", _small);
+
+                string who = county.Occupied == CountyRecord.Occupancy.Owner ? "owner-occupied"
+                           : county.Occupied == CountyRecord.Occupancy.Absentee
+                             ? "tax bill goes elsewhere - likely rented" : null;
+                if (who != null)
+                    GUILayout.Label($"<color=#8a8a86>{who}"
+                                  + (county.Over65 ? ", over-65 exemption" : "") + "</color>", _small);
+            }
 
             GUILayout.Space(10);
             GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "

@@ -66,6 +66,30 @@ namespace Noir.Unity
 
             /// <summary>What condition it is in. See Quality above.</summary>
             public Quality Condition;
+
+            // ---- the house itself ----
+            //
+            // ZERO IS "NOT RECORDED" THROUGHOUT, not a real measurement of zero. Vermilion
+            // County publishes none of this - no square footage, no bedroom or bathroom count,
+            // no year built, anywhere online; its tax card carries billing and assessment only.
+            // So unlike the address and the class code these are AUTHORED, and the county's
+            // assessed dwelling value (see CountyRecord.MarketValue) is the only public check
+            // on whether a number entered here is plausible.
+
+            public int Bedrooms;
+
+            /// <summary>Full bathrooms - a toilet, a basin and a bath or shower.</summary>
+            public int Baths;
+
+            /// <summary>Half bathrooms: a toilet and a basin, no bath. Counted separately
+            /// rather than as "2.5 baths" because which one a house has matters when somebody
+            /// is moving through it - a half bath is usually downstairs and off a hall.</summary>
+            public int HalfBaths;
+
+            /// <summary>Finished living area in square FEET. This is America.</summary>
+            public int SquareFeet;
+
+            public int YearBuilt;
         }
 
         private static Dictionary<int, Note> _byId;
@@ -91,6 +115,8 @@ namespace Noir.Unity
                        && note.Adults == 0 && note.Kids == 0
                        && note.Zoning == Zoning.Unset && note.Housing == HousingType.Unset
                        && note.Stories == 0 && !note.Basement && note.Condition == Quality.Unset
+                       && note.Bedrooms == 0 && note.Baths == 0 && note.HalfBaths == 0
+                       && note.SquareFeet == 0 && note.YearBuilt == 0
                        && (note.Footprint == null || note.Footprint.Length < 3));
 
             if (empty) _byId.Remove(parcelId);
@@ -146,6 +172,25 @@ namespace Noir.Unity
                 else if (rest.StartsWith("zoning "))
                 {
                     if (System.Enum.TryParse(rest.Substring(7), true, out Zoning z)) note.Zoning = z;
+                }
+                else if (rest.StartsWith("rooms "))
+                {
+                    var nums = rest.Substring(6).Split(' ');
+                    if (nums.Length >= 3 && int.TryParse(nums[0], out int bed)
+                                         && int.TryParse(nums[1], out int bath)
+                                         && int.TryParse(nums[2], out int half))
+                    {
+                        note.Bedrooms = bed; note.Baths = bath; note.HalfBaths = half;
+                    }
+                }
+                else if (rest.StartsWith("size "))
+                {
+                    var nums = rest.Substring(5).Split(' ');
+                    if (nums.Length >= 2 && int.TryParse(nums[0], out int sqft)
+                                         && int.TryParse(nums[1], out int year))
+                    {
+                        note.SquareFeet = sqft; note.YearBuilt = year;
+                    }
                 }
                 else if (rest.StartsWith("quality "))
                 {
@@ -215,6 +260,10 @@ namespace Noir.Unity
                                 + $"{note.Housing.ToString().ToLowerInvariant()}");
                 if (note.Condition != Quality.Unset)
                     sb.AppendLine($"parcel {id} quality {note.Condition.ToString().ToLowerInvariant()}");
+                if (note.Bedrooms != 0 || note.Baths != 0 || note.HalfBaths != 0)
+                    sb.AppendLine($"parcel {id} rooms {note.Bedrooms} {note.Baths} {note.HalfBaths}");
+                if (note.SquareFeet != 0 || note.YearBuilt != 0)
+                    sb.AppendLine($"parcel {id} size {note.SquareFeet} {note.YearBuilt}");
                 if (note.Footprint != null && note.Footprint.Length >= 3)
                 {
                     sb.Append($"parcel {id} shape");
