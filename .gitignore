@@ -82,3 +82,6 @@ Assets/StreamingAssets.meta
 # not always clean it up. It is per-run (the GUID changes) so it is never worth keeping.
 Assets/InitTestScene*.unity
 Assets/InitTestScene*.unity.meta
+
+# A report about a Unity account. Redacted, but not something to commit.
+ai-probe.txt

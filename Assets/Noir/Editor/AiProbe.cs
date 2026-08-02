@@ -116,6 +116,25 @@ namespace Noir.Editor
             log.AppendLine("  NOTE: no cost/pricing API exists client-side. The only measure of "
                          + "what a generation costs is the points balance before and after one.");
 
+            // WRITTEN TO A FILE AS WELL AS THE CONSOLE. A multi-line Debug.Log shows only its
+            // first line in the Console list - you have to click the entry and read the detail
+            // pane underneath - which is a poor way to hand thirty lines to somebody, and a
+            // worse way to get them back out again. The file can just be read.
+            //
+            // Project root, and gitignored: this is a report about an account, and even redacted
+            // it is not something to commit.
+            var path = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(Application.dataPath, "..", "ai-probe.txt"));
+            try
+            {
+                System.IO.File.WriteAllText(path, log.ToString());
+                log.AppendLine($"  written to {path}");
+            }
+            catch (Exception e)
+            {
+                log.AppendLine($"  could not write {path}: {e.Message}");
+            }
+
             Debug.Log(log.ToString());
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
