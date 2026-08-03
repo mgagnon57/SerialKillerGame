@@ -38,6 +38,27 @@ namespace Noir.Unity
         /// `depth` is how far it projects, `fraction` how much of the frontage it covers: a
         /// foursquare and a bungalow carry the porch the full width, a farmhouse usually does not.
         /// </summary>
+        /// <remarks>
+        /// KNOWN DEFECT, 2026-08-03, unverified fix pending: this draws SOLID rather than as an
+        /// open porch. The parts are a floor slab 0.25 thick at y=0.15, a roof slab 0.18 thick at
+        /// y=postHeight, and three or four 0.18 posts between them - which should read as a gap
+        /// and does not.
+        ///
+        /// What has been ruled out by reading rather than guessed at:
+        ///   - the width fraction WORKS. farmhouse 0.55x9, ranch 0.3x14 and bungalow 0.95x11 all
+        ///     render at the right widths; an earlier reading of the foursquare as too narrow was
+        ///     perspective error.
+        ///   - the grammars RESOLVE. All four render distinct silhouettes - a steep gable against
+        ///     a low hip - which a fallback to CottageMassing could not produce.
+        ///   - Extras IS called, from RoofBuilder, after the roof and chimneys.
+        ///   - the winding is copied from MassingExtras.Quad, which is the project's reference.
+        ///   - post spacing and the outer-edge offset are arithmetically correct.
+        ///
+        /// So the fault is in how it draws, not where. It was not chased further because Unity
+        /// was handed to a parallel session and a geometry fix that cannot be rendered cannot be
+        /// verified - and this project's own rule is that MapAudit and the tests cannot see ugly.
+        /// The Debug.Log below prints span and position; run HouseProto when Unity is free.
+        /// </remarks>
         internal static void Porch(Place place, Massing m, MeshChunk into, int submesh,
                                    float depth, float fraction, float postHeight)
         {
