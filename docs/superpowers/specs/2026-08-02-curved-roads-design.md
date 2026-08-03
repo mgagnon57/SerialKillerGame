@@ -258,7 +258,35 @@ believing any intermittent Debug failure.
 
 ## Phases B and C — sketch only
 
-**Phase B — the consumers.** Migrate the 13 files from `Centre`/`IsNorthSouth` to `Path`.
+**Phase B — the consumers.** Migrate the consuming files from `Centre`/`IsNorthSouth` to `Path`.
+
+> **CORRECTION, from Phase A's final review: it is 24 files, not 13.** The count in "What's
+> already there" above was taken from a grep that missed the editor tools and several renderers.
+> Also on the list: `Editor/MapAudit.cs`, `Editor/TrafficCheck.cs`, `Editor/Snapshot.cs`,
+> `Unity/PlanLabels.cs`, `Unity/Player.cs`, `Unity/SunRig.cs`, `Unity/VillageAudio.cs`,
+> `Unity/OrbitCamera.cs`, `Unity/Massing/MassingExtras.cs`, and — most consequentially —
+> **`Unity/StreetAddressing.cs`, which derives house numbers from `IsNorthSouth`/`Centre`.**
+> That is the file that assigns **408 Holmes Ave**. Migrating it is the step where the killer's
+> address can silently move, so it wants its own verification, not a sweep.
+
+**Three curve-only defects Phase A found, fixed, and deliberately did NOT finish** — all invisible
+to the golden baseline, because Phase A ships no curve and the baseline only sees straight roads:
+
+- **`Heading` is still derived from `line.IsNorthSouth`, not from the tangent.** §5 above says it
+  should come from the segment's local tangent; `LaneGraph` still labels segments from the whole
+  road's dominant axis. Harmless for a 15° Route 1, wrong for any segment whose local tangent
+  leaves its road's dominant axis.
+- **A curve declared in decreasing coordinate order inverts its segments' travel direction.**
+  Phase A fixed the *tangent* flip for this case, but the `Way` label and the `From + s` mapping
+  were not fixed, and the test written to guard it compares only a sorted multiset of
+  `Way→Way:Kind`, which is invariant under exactly that inversion — so it passes while blind.
+  In Phase B this feeds `Headings.Side` and would put lanes in the oncoming carriageway.
+- **An oblique crossing near a sharp bend can land in the Straight dead-zone** (`|cross|` inside
+  the ±0.3 band) and then be dropped by the same-line `legal` check.
+
+Both of the first two need the same decision — *what does `Way` mean on a curve?* — which is
+renderer/traffic work, not geometry work, and so belongs here rather than in Phase A.
+
 `CityStreets` lays its 30m/10m prefab tiles along the path at arc-length intervals, each yawed to the
 local tangent (Route 1 turns ~15° over ~2.2km, so roughly 0.2° per 30m tile — the wedge gaps on the
 outside of the curve are negligible). Junction tiles snap to 90°. `CityTraffic` takes vehicle
