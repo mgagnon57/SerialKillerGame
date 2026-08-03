@@ -111,11 +111,18 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// The rear outbuilding every house on the Sanborn sheets has behind it.
+        /// The rear outbuilding almost every lot on the Sanborn sheets has on it.
         ///
         /// A shed, a privy, a summer kitchen, later a garage - the maps do not always say which,
-        /// but the SMALL SQUARE BEHIND THE HOUSE is on almost every lot, and a residential block
-        /// without them reads as a subdivision rather than a town that grew.
+        /// but the SMALL SQUARE AT THE BACK OF THE LOT is on nearly every one, and a residential
+        /// block without them reads as a subdivision rather than a town that grew.
+        ///
+        /// IT BELONGS TO THE LOT, NOT TO THE HOUSE, and this is the wrong place for it. The 1913
+        /// sheet has lots carrying an outbuilding and NO HOUSE at all - lot 57 and lot 81 in
+        /// docs/research/RESIDENTIAL-1913.md - which a hook hanging off the house grammar can
+        /// never produce, because it only runs where a house exists. Moving it wants a lot-level
+        /// pass rather than a massing Extras, and that is a change to whatever places dwellings
+        /// rather than to this file. Left here, working, and labelled - see RESIDENTIAL-1913 §5.
         /// </summary>
         internal static void RearOutbuilding(Place place, MeshChunk into, int submesh, float size)
         {
@@ -136,6 +143,57 @@ namespace Noir.Unity
 
             Box(into, new Vector3(cx, size * 0.5f * 0.8f, -cy),
                 new Vector3(size, size * 0.8f, size), submesh);
+        }
+
+        /// <summary>
+        /// The back ell — a lower wing running off the rear of the main mass.
+        ///
+        /// THE SINGLE BIGGEST TELL OF A GENERATED TOWN IS A RECTANGULAR HOUSE, and the 1913 sheet
+        /// is unambiguous that no real one is: every dwelling on it is L-shaped or T-shaped, a
+        /// main block with a wing running back, usually a storey lower. It is how these houses
+        /// were actually built - the ell is the kitchen, added or built cheap - and it is why a
+        /// row of them does not read as extruded.
+        ///
+        /// Drawn as walls only, at `drop` below the main eaves, with a flat cap. A proper ridged
+        /// roof over the ell wants AddRoof, which lives in RoofBuilder and takes a TileRect, so
+        /// it is a bigger change than an Extras hook should make. A flat-capped wing at the right
+        /// height and footprint already breaks the box, which is the thing that matters at the
+        /// distance this game is looked at.
+        /// </summary>
+        internal static void BackEll(Place place, Massing m, MeshChunk into, int submesh,
+                                     float widthFraction, float projection, float drop)
+        {
+            var b = place.Bounds;
+
+            float dx = place.Door.X - (b.X + b.W * 0.5f);
+            float dy = place.Door.Y - (b.Y + b.H * 0.5f);
+            bool frontOnY = Mathf.Abs(dy) >= Mathf.Abs(dx);
+            float sign = frontOnY ? Mathf.Sign(dy) : Mathf.Sign(dx);
+            if (sign == 0f) sign = 1f;
+
+            // Off the BACK - the opposite side from the door - and offset to one side, because an
+            // ell centred on the rear wall reads as a symmetrical wing and no vernacular house
+            // has one of those.
+            float span = (frontOnY ? b.W : b.H) * Mathf.Clamp01(widthFraction);
+            float height = Mathf.Max(2.2f, m.Eaves - drop);
+
+            float cx = b.X + b.W * 0.5f;
+            float cy = b.Y + b.H * 0.5f;
+
+            if (frontOnY)
+            {
+                cy = (sign > 0f ? b.Y : b.Y + b.H) - sign * projection * 0.5f;
+                cx += b.W * 0.20f;
+            }
+            else
+            {
+                cx = (sign > 0f ? b.X : b.X + b.W) - sign * projection * 0.5f;
+                cy += b.H * 0.20f;
+            }
+
+            var size = frontOnY ? new Vector3(span, height, projection)
+                                : new Vector3(projection, height, span);
+            Box(into, new Vector3(cx, height * 0.5f, -cy), size, submesh);
         }
 
         private static void Box(MeshChunk into, Vector3 centre, Vector3 size, int submesh)
@@ -207,6 +265,10 @@ namespace Noir.Unity
 
         public void Extras(Place place, MeshChunk into)
         {
+            // The ell is the kitchen wing, a storey lower, off the back and to one side. It is
+            // what stops a row of these reading as extruded - see RESIDENTIAL-1913 §4.
+            FrameHouse.BackEll(place, Profile(place), into, Materials3D.WallIndex,
+                               widthFraction: 0.5f, projection: 4.0f, drop: 1.4f);
             FrameHouse.Porch(place, Profile(place), into, Materials3D.WallIndex,
                              depth: 2.0f, fraction: 0.55f, postHeight: 2.7f);
             FrameHouse.RearOutbuilding(place, into, Materials3D.WallIndex, size: 3.2f);
@@ -229,6 +291,10 @@ namespace Noir.Unity
 
         public void Extras(Place place, MeshChunk into)
         {
+            // Shallower than the farmhouse's: a foursquare is a town house on a town lot and its
+            // back wing is a service range rather than half the building.
+            FrameHouse.BackEll(place, Profile(place), into, Materials3D.WallIndex,
+                               widthFraction: 0.42f, projection: 3.0f, drop: 2.6f);
             FrameHouse.Porch(place, Profile(place), into, Materials3D.WallIndex,
                              depth: 2.4f, fraction: 1.0f, postHeight: 3.0f);
             FrameHouse.RearOutbuilding(place, into, Materials3D.WallIndex, size: 3.4f);
