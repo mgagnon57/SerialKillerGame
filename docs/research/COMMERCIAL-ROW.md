@@ -34,6 +34,81 @@ they were still building against it.
 
 ---
 
+## West side of Chicago Street, north → south
+
+From `crop-chicago-west-row.png`. Runs south from the Attica corner.
+
+| # | use | storeys | frontage |
+|---|---|---|---|
+| 1 | Bank, **I.O.O.F. Hall 2nd** | 2 | corner unit |
+| 2 | Dry Goods & Groceries | 2 | 22 ft |
+| 3 | Dry Goods 1st, **Tailor 2nd** | 2 | 22 ft |
+| 4 | Groceries 1st, **G.A.R. Hall 2nd** | 2 | 22 ft |
+| 5 | Groceries | 1 | 18 ft |
+| 6 | Hardware | 1 | 16 ft |
+| 7 | Millinery | 1 | 18 ft |
+| 8 | General Merchandise | 1 | 18 ft |
+| 9 | Furniture | 1 | 18 ft |
+| 10 | Barber | — | **frame**, south end |
+
+Behind: Warehouse, Tin Shop, sheds, Agricultural Implements + shed — all frame.
+
+## East side of Chicago Street, north → south
+
+From `crop-chicago-east-row.png`.
+
+| # | use | storeys |
+|---|---|---|
+| 1 | Drugs | 2 — corner |
+| 2 | Restaurant, **Lodge Rms 2nd** | 2 |
+| 3 | Barber, **Office 2nd** | 2 |
+| 4 | Drugs 1st, **Law Office 2nd** *(marked vacant)* | 2 |
+| 5 | Groceries 1st, **Dentist 2nd** | 2 |
+| 6 | Novelties | 1 |
+| 7 | Meat | 1 |
+| 8 | Barber | 1 |
+| 9 | Hardware / Plumbing | 1 |
+| 10 | Groceries | 1 |
+| 11 | **Rossville Steam Laundry** | 1 |
+| 12 | Printing | 1 |
+| 13 | Blacksmith *(elec. motor)* | 1 |
+
+Behind: Poultry Killing, a gasoline tank, and the **gas generator for lighting the shoe factory**.
+
+## The Attica frontage east of Chicago, west → east
+
+| use | storeys | frontage |
+|---|---|---|
+| Confectionery | 2 | 26 ft |
+| Clothing | 2 | 26 ft |
+| Meat | 1 | 15 ft |
+| "The Potter", dwelling above | 2 | 25 ft |
+| **Harness & Vehicle Repairs** | 2 | 48 ft — the widest unit downtown |
+| Agricultural Implements | 2 | 28 ft |
+| Groceries | 1 | 18 ft |
+| Office / Wall Paper | 1 | 14 ft |
+
+---
+
+## THE RULE ALL FOUR FACES SHARE
+
+Put the faces side by side and one pattern governs the whole downtown:
+
+> **Height and width decay with distance from the crossing.**
+
+The corner of Attica × Chicago carries two-storey units of 22–26 ft with **halls, offices, a
+dentist and a law office upstairs**. Walk away from it in any direction and the buildings drop to
+one storey, narrow to 14–18 ft, and the trades get heavier and dirtier — millinery gives way to
+hardware, then to a steam laundry, then to a blacksmith, then to frame sheds and poultry killing.
+
+That gradient is the single most useful thing in this document. It is not decoration; it is land
+value written in brick, and it means a generator does not need to place each unit by hand. It
+needs:
+
+- **distance from the crossing** → storeys (2 near, 1 far), width (26 ft near, 14 ft far)
+- **the corner units are the anchors** — bank, drugs, and the fraternal halls above them
+- **the row degrades to frame at its far ends** — the brick simply stops
+
 ## The pattern this gives the generator
 
 1. **25 ft is the default unit.** Six of nine. Two at 18 ft, one at 22 ft.
