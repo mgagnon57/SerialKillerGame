@@ -191,5 +191,56 @@ namespace Noir.Core.Tests
             Assert.That(world.Roads.At(wellPast.X, wellPast.Y), Is.Null,
                         "8m past the true end along a shallow tangent is off the pavement");
         }
+
+        [Test]
+        public void AJunctionKnowsHowFarAlongEachRoadItSits()
+        {
+            var world = Build(Header
+                + "road ew 30 0,75 239,75\n  class mainroad\n"
+                + "road ns 30 165,0 165,239\n  class mainroad\n");
+
+            Assert.That(world.Roads.Junctions.Count, Is.EqualTo(1));
+            var j = world.Roads.Junctions[0];
+
+            Assert.That(j.X, Is.EqualTo(165f), "unchanged: the N-S road's centre");
+            Assert.That(j.Y, Is.EqualTo(75f), "unchanged: the E-W road's centre");
+
+            // New, and what LaneGraph needs: where the crossing falls along each road.
+            Assert.That(j.SNorthSouth, Is.EqualTo(75f).Within(0.01f));
+            Assert.That(j.SEastWest, Is.EqualTo(165f).Within(0.01f));
+        }
+
+        [Test]
+        public void ACurvedRoadFormsJunctionsAtAll()
+        {
+            // The old constructor gated on IsStraight && IsNorthSouth, so a bent road crossed
+            // nothing: no junctions, and therefore no lanes and no traffic anywhere on it.
+            var world = Build(Header
+                + "road bend 30 20,20 20,120 60,180 140,200\n  class mainroad\n"
+                + "road cross 30 0,190 239,190\n  class mainroad\n");
+
+            Assert.That(world.Roads.Junctions.Count, Is.GreaterThanOrEqualTo(1),
+                        "a curve that crosses a straight road must produce a junction");
+        }
+
+        [Test]
+        public void TwoRoadsMayCrossMoreThanOnce()
+        {
+            // An S-bend can meet the same straight road twice. The old model held one junction
+            // per pair by construction and could not represent it.
+            //
+            // The waypoints below dip to one side of flat's y=120, bulge past it, and come back:
+            // Y runs 20, 80, 160, 90, 40 - below, below, ABOVE, below, below - so the smoothed
+            // path crosses y=120 once heading out and once heading back. (A first draft of this
+            // fixture had Y climbing monotonically through the peak, which - verified against
+            // RoadPath.Through directly - only touches y=120 once: a curve has to actually
+            // double back across the line, not just brush it, to cross it twice.)
+            var world = Build("village Test\nsize 300 300\nterrain path 0,0 300x300\n"
+                + "road wiggle 30 40,20 40,80 160,160 60,90 40,40\n  class mainroad\n"
+                + "road flat 30 0,120 299,120\n  class mainroad\n");
+
+            Assert.That(world.Roads.Junctions.Count, Is.GreaterThanOrEqualTo(2),
+                        "the S-bend crosses the straight road on the way out and on the way back");
+        }
     }
 }

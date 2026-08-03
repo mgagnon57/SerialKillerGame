@@ -190,19 +190,47 @@ namespace Noir.Core.World
 
         public readonly RoadLine NorthSouth, EastWest;
 
-        public Junction(RoadLine ns, RoadLine ew)
+        /// <summary>
+        /// How far along each road the crossing falls. THIS is what LaneGraph cuts lanes at;
+        /// before Phase A it inferred the position from the other road's Centre, which only
+        /// works while every road is straight.
+        /// </summary>
+        public readonly float SNorthSouth, SEastWest;
+
+        /// <summary>
+        /// The direction each road is heading THROUGH the crossing.
+        ///
+        /// Recorded here for Phase B, which has to face signal heads and stop lines square to a
+        /// road that may no longer be axis-aligned. Task 9 does NOT read these: a turn's
+        /// direction depends on which way the segment travels, not only on which way the road
+        /// was declared, so LaneGraph asks the path for the tangent and flips it for a segment
+        /// running against the declaration.
+        /// </summary>
+        public readonly Vec2 TangentNorthSouth, TangentEastWest;
+
+        public Junction(RoadLine ns, RoadLine ew, float sNs, float sEw, float x, float y)
         {
             NorthSouth = ns;
             EastWest = ew;
-            X = ns.Centre;
-            Y = ew.Centre;
+            SNorthSouth = sNs;
+            SEastWest = sEw;
+            X = x;
+            Y = y;
+            TangentNorthSouth = ns.Path.TangentAt(sNs);
+            TangentEastWest = ew.Path.TangentAt(sEw);
         }
 
         /// <summary>
         /// How far from the centre the crossing reaches - half the WIDER corridor, because the
         /// junction tile is square and sized to the road that needs the most room.
+        ///
+        /// Still half the wider corridor on an oblique crossing, which is an UNDER-estimate:
+        /// two 30m corridors meeting at 45 degrees overlap further than 15m along each. Left as
+        /// it is deliberately - Phase A ships no oblique junction, and widening the reach here
+        /// would move every existing junction's lane cuts for no present gain.
         /// </summary>
-        public float Reach => Math.Max(NorthSouth.HalfWidth, EastWest.HalfWidth);
+        public float Reach => NorthSouth.HalfWidth > EastWest.HalfWidth
+            ? NorthSouth.HalfWidth : EastWest.HalfWidth;
     }
 
     /// <summary>
@@ -223,18 +251,17 @@ namespace Noir.Core.World
             for (int i = 0; i < Lines.Count; i++)
             {
                 var ns = Lines[i];
-                if (!ns.IsStraight || !ns.IsNorthSouth) continue;
+                if (ns.Path == null || !ns.IsNorthSouth) continue;
 
                 for (int j = 0; j < Lines.Count; j++)
                 {
                     var ew = Lines[j];
-                    if (!ew.IsStraight || ew.IsNorthSouth) continue;
+                    if (ew.Path == null || ew.IsNorthSouth) continue;
 
-                    // They cross only where each one's centre falls inside the other's run.
-                    if (ns.Centre < ew.From || ns.Centre > ew.To) continue;
-                    if (ew.Centre < ns.From || ew.Centre > ns.To) continue;
-
-                    crossings.Add(new Junction(ns, ew));
+                    // EVERY crossing, not one. A road that bends can meet the same straight road
+                    // twice, and the old model held a single junction per pair by construction.
+                    foreach (var hit in Crossings(ns.Path, ew.Path))
+                        crossings.Add(new Junction(ns, ew, hit.SA, hit.SB, hit.X, hit.Y));
                 }
             }
             Junctions = crossings;
@@ -277,6 +304,104 @@ namespace Noir.Core.World
                 if (best == null || line.Width > best.Width) best = line;
             }
             return best;
+        }
+
+        private readonly struct Crossing
+        {
+            public readonly float SA, SB, X, Y;
+            public Crossing(float sa, float sb, float x, float y) { SA = sa; SB = sb; X = x; Y = y; }
+        }
+
+        /// <summary>
+        /// Where two centre lines actually meet.
+        ///
+        /// TWO BRANCHES, AND THE SPLIT IS ABOUT COST AS MUCH AS CORRECTNESS. The obvious
+        /// implementation - every dense segment of one against every dense segment of the other -
+        /// is 2400 x 2100 segment pairs for a full-height road against a full-width one, times
+        /// the 160-odd pairs in the real grid. That is hundreds of millions of iterations at
+        /// every world build, for a map where the answer is a one-line intersection.
+        ///
+        /// So: two axis-aligned straights get the closed form, which is every pair in the real
+        /// map and is arithmetically the (ns.Centre, ew.Centre) the old constructor asserted
+        /// outright. Anything involving a curve WALKS ONE PATH AND WATCHES WHICH SIDE OF THE
+        /// OTHER IT IS ON - where the signed lateral flips, the curve has crossed. That is one
+        /// Project per sample rather than a nested loop, and Project on a straight road is
+        /// constant time, so a curved Route 1 against the whole street grid stays linear.
+        /// </summary>
+        private static List<Crossing> Crossings(RoadPath a, RoadPath b)
+        {
+            var found = new List<Crossing>();
+
+            if (a.IsStraightAxisAligned && b.IsStraightAxisAligned)
+            {
+                var a0 = a.PointAt(0f);
+                var b0 = b.PointAt(0f);
+                bool aVertical = a0.X == a.PointAt(a.Length).X;
+                bool bVertical = b0.X == b.PointAt(b.Length).X;
+                if (aVertical == bVertical) return found;              // parallel; never crosses
+
+                float x = aVertical ? a0.X : b0.X;
+                float y = aVertical ? b0.Y : a0.Y;
+
+                // (x, y) sits exactly on BOTH infinite lines by construction, so latA/latB below
+                // are 0 always - see RoadNetwork.At's own note that "for an axis-aligned line the
+                // lateral is invariant along the tangent". They cannot tell us whether the
+                // crossing falls off either road's finite run; only S can, and Project clamps S
+                // to the run before returning it, so a clamped S looks no different from a real
+                // one until you ask where it actually points.
+                var (sa, latA) = a.Project(new Vec2(x, y));
+                var (sb, latB) = b.Project(new Vec2(x, y));
+                if (latA > 0.001f || latA < -0.001f) return found;
+                if (latB > 0.001f || latB < -0.001f) return found;
+
+                // So: play S back through PointAt. Off the end, Project clamped S to the
+                // endpoint, and the endpoint is not (x, y) - the road never actually reaches the
+                // other one's line. Inside the run, S is the true unclamped projection and
+                // PointAt(S) reproduces (x, y) exactly, boundary included.
+                var backA = a.PointAt(sa);
+                if (Math.Abs(backA.X - x) > 0.001f || Math.Abs(backA.Y - y) > 0.001f) return found;
+                var backB = b.PointAt(sb);
+                if (Math.Abs(backB.X - x) > 0.001f || Math.Abs(backB.Y - y) > 0.001f) return found;
+
+                found.Add(new Crossing(sa, sb, x, y));
+                return found;
+            }
+
+            float pitch = RoadPath.ResamplePitch;
+            var previous = a.PointAt(0f);
+            var (_, previousLateral) = b.Project(previous);
+
+            for (float s = pitch; s <= a.Length; s += pitch)
+            {
+                var here = a.PointAt(s);
+                var (_, lateral) = b.Project(here);
+
+                if ((previousLateral < 0f) != (lateral < 0f))
+                {
+                    float t = previousLateral / (previousLateral - lateral);
+                    if (t >= 0f && t <= 1f)
+                    {
+                        float sa = s - pitch + pitch * t;
+                        var hit = a.PointAt(sa);
+                        var (sb, _) = b.Project(hit);
+
+                        // Beyond B's end, Project clamps and the lateral is measured to the end
+                        // point - which can flip sign for a road that merely passes the end
+                        // without touching it. Only strictly inside the run is a crossing.
+                        if (sb > 0.001f && sb < b.Length - 0.001f)
+                        {
+                            bool duplicate = false;
+                            foreach (var seen in found)
+                                if ((seen.SA - sa) * (seen.SA - sa) < 1f) { duplicate = true; break; }
+                            if (!duplicate) found.Add(new Crossing(sa, sb, hit.X, hit.Y));
+                        }
+                    }
+                }
+
+                previous = here;
+                previousLateral = lateral;
+            }
+            return found;
         }
     }
 }
