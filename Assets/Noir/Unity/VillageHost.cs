@@ -103,7 +103,7 @@ namespace Noir.Unity
         /// the "who is inside this building" panel all keep working with it off, because none of
         /// them ever went through the figures.
         /// </summary>
-        public static bool ShowPeople = false;
+        public static bool ShowPeople = true;
 
         /// <summary>
         /// Whether to raise the bought building models, or draw the town as a survey plan.

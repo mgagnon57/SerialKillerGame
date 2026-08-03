@@ -4,6 +4,12 @@
 #  One row per situation. The left word is the situation; the rest of the line is
 #  the clips that suit it, by their own names.
 #
+#  ONE ROW IS ONE LINE. There is no continuation character: the reader takes the
+#  first word of a line as the situation and the whole of the rest as the clips,
+#  so a row wrapped onto a second line silently becomes a situation named after
+#  its first clip and is never looked up by anybody. The rows below are long and
+#  they stay long.
+#
 #  ADDING AN ANIMATION IS A LINE HERE AND NOTHING ELSE. Drop the .fbx in
 #  Assets/Noir/Animations - it configures its own import - add its name to a row,
 #  and everybody in that situation can play it. No C#, no Animator graph, no
@@ -20,10 +26,24 @@
 #  THE NAMES ARE MIXAMO'S OWN, unchanged, because the clip keeps its filename
 #  through the import and the Animator state is called the same thing. There is
 #  nothing to translate anywhere along that chain and so nothing to get wrong.
+#  The two exceptions are `Walking Male` and `Walking Female`, which arrive from
+#  the locomotion packs both called `walking.fbx` and cannot both be that on a
+#  case-insensitive disk - they are renamed at the file, which keeps filename,
+#  clip name and the name in this row all still the same thing.
 #
 #  A situation with no row, or a row naming a clip that has not been downloaded,
 #  falls through to `default`. That is what makes a half-finished animation set
 #  safe to run: people stand about rather than the city refusing to build.
+#
+#  A ROW IS A FLAT DRAW AND THAT IS THE THING TO WATCH WHEN ADDING TO ONE. Every
+#  clip named gets roughly one person in N, so a row of twelve makes one home in
+#  twelve into whatever the twelfth clip is. That is why `Piano Playing` and
+#  `Guitar Playing` were downloaded and then deliberately NOT kept: they are fine
+#  animations and one household in twelve at a piano is not a fine town. There is
+#  no way to say "one person in this building does this and the rest do not", and
+#  until there is, a clip that is only true of one person in a room does not go
+#  on a row. `Bartending` is the exception that proves the shape of the rule - one
+#  drinker in ten being the one behind the counter is about right.
 # ============================================================================
 
 # ---- moving --------------------------------------------------------------
@@ -37,33 +57,60 @@
 # played at the ratio between it and the ground actually covered, so at 1x the
 # feet plant. Above about twice speed the clamp gives up and admits it - no clip
 # can show a stride at 10x. Omit the figure on a row that is not locomotion.
-moving          1.4m/s  Walking
+#
+# THE FIGURE IS PER ROW AND NOT PER CLIP, which is what decides who may share a
+# row here. `Walking Male` and `Walking Female` were measured off their own root
+# motion at 1.57 and 1.56 m/s before it was discarded, so the three walks agree
+# to within a few percent and 1.5 is honest for all of them - the largest error
+# left is about seven percent, which is a hundredth of a stride and invisible.
+# The drunk and injured walks in the same download are NOT here for exactly this
+# reason: they are much slower, they would skate against this figure, and one
+# townsperson in four walking drunk at nine in the morning is the wrong town.
+moving          1.5m/s  Walking, Walking Male, Walking Female
 # Running is the child at the playground and NOBODY else. An adult jogging across
 # Northgate reads as fleeing, which is a story event rather than a commute, and
 # this game should not say that by accident.
 hurrying        3.6m/s  Running
 
 # ---- standing still, by what they are there for --------------------------
-talking         Talking
-atthepub        Drinking
-atwork          Standing Idle
-shopping        Looking Around
-ontheallotment  Digging, Dig And Plant Seeds
+# Talking is the one everybody sees close up, because it is what stops two people
+# in the street in front of you, so it gets the widest set in the file.
+talking         Talking, Talking At Watercooler, Standing Arguing, Arm Gesture, Head Gesture, Happy Hand Gesture, Hands Forward Gesture, Whatever Gesture, Shrugging, Laughing, Thoughtful Head Nod, Telling A Secret, Strong Gesture, Acknowledging, Agreeing
+
+atthepub        Drinking, Sitting Drinking, Drunk Idle, Drunk Idle Variation, Laughing, Smoking, Cards, Talking, Standing Arguing, Bartending
+
+# A fax machine and a filing cabinet are period-correct for 2000 and a
+# touchscreen tablet is not, which is why one of those was imported and the other
+# was left in the download.
+atwork          Standing Idle, Typing, Writing, Using A Filing Cabinet, Using A Fax Machine, Counting, Inspecting, Lifting, Carrying, Pushing, Moving Object, Talking On Phone, Wiping Sweat, Working On Device
+
+shopping        Looking Around, Look Around, Looking, Inspecting, Rummaging, Standing Idle 03 Examine, Standing Idle 02 Looking, Picking Up Object, Taking Item, Counting, Thinking
+
+ontheallotment  Digging, Dig And Plant Seeds, Plant A Plant, Plant Tree, Pull Plant, Pick Fruit, Watering, Kneeling Inspecting, Wiping Sweat, Neck Stretching, Arm Stretching
 
 # Sitting is a lie told on purpose, for now: nothing here knows whether there is
 # a chair under the person, because the interior generator places furniture and
 # the day plan does not reserve any of it. At this distance a congregation
 # sitting on nothing reads better than one standing to attention for an hour.
-atchurch        Sitting Idle
-atschool        Sitting Idle
-athome          Sitting Idle
-visiting        Sitting Idle
+atchurch        Sitting Idle, Sitting, Seated Idle, Praying, Singing, Sitting Talking, Sitting Clap
+atschool        Sitting Idle, Sitting, Seated Idle, Sitting Talking, Writing, Hand Raising, Sitting Laughing, Bored, Yawn
+athome          Sitting Idle, Sitting, Seated Idle, Sitting Talking, Sitting Laughing, Gaming, Yawn, Petting Animal, Smoking, Neutral Idle, Breathing Idle
+visiting        Sitting Idle, Sitting Talking, Sitting Laughing, Seated Idle, Talking, Standing Greeting, Shaking Hands 1, Shaking Hands 2, Laughing
+
+# The playground row is what a child does STANDING there. The running about is
+# the `hurrying` row above, which this activity is the only thing that reaches.
+attheplayground Looking Around, Cheering, Standing Clap, Clapping, Waving, Happy Idle
+
+# Between two places and stopped - waiting to cross, or arrived and not yet in.
+travellingto    Standing Idle, Neutral Idle, Looking Around, Bored, Weight Shift, Standing Idle Looking Ver. 1
+walking         Standing Idle, Neutral Idle, Looking Around, Weight Shift
 
 # Asleep is deliberately empty. They are indoors, behind a wall, in the dark, and
 # the only thing that ever shows it is the window not being lit.
 asleep
 
 # ---- the fallback --------------------------------------------------------
-# Every situation with nothing else to say, which on a half-imported set is most
-# of them.
-default         Standing Idle
+# Every situation with nothing else to say. This row is worth more variety than
+# it looks: it is what anybody unaccounted for is doing, so a thin one is a
+# street of identical statues even when every other row in the file is rich.
+default         Standing Idle, Neutral Idle, Breathing Idle, Idle, Standing Idle 03, Standing Idle Looking Ver. 1, Weight Shift, Happy Idle, Sad Idle, Thinking, Bored
