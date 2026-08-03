@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Noir.Core.Contracts;
 
 namespace Noir.Core.World
@@ -128,9 +128,17 @@ namespace Noir.Core.World
             switch (terrain)
             {
                 case Terrain.Wood:
-                    // Dense but not solid - a wood you can walk into.
-                    if (rng.Chance(0.34f)) props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));
-                    else if (rng.Chance(0.10f)) props.Add(new Prop(PropKind.Bush, new Tile(x, y), Roll(rng)));
+                    // CREEK TIMBER, NOT A PLANTATION. This is eastern Illinois: the trees are a
+                    // ribbon along the North Fork and the drainage ditches, and the rest of the
+                    // county was drained for corn - which is what the tile works going from
+                    // 2,000 to 8,000 tiles a day between 1898 and 1906 was FOR.
+                    //
+                    // At 0.34 this put 39,638 trees on 98,000 tiles of wood, a tree every two
+                    // and a half square metres. A wood you can walk into is nearer one every
+                    // twenty-five, and this is 1.9% of the map producing half of everything the
+                    // renderer had to bake.
+                    if (rng.Chance(0.045f)) props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));
+                    else if (rng.Chance(0.020f)) props.Add(new Prop(PropKind.Bush, new Tile(x, y), Roll(rng)));
                     break;
 
                 case Terrain.Grass:
@@ -140,11 +148,13 @@ namespace Noir.Core.World
                         // rather than drawn.
                         if (rng.Chance(0.42f)) props.Add(new Prop(PropKind.Hedge, new Tile(x, y), Roll(rng)));
                     }
-                    else if (rng.Chance(0.012f))
+                    // Grass is a yard in town AND open pasture out of it, and it is 27.7% of the
+                    // map, so a rate tuned for a village green plants a park across the county.
+                    else if (rng.Chance(0.0015f))
                     {
                         props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));
                     }
-                    else if (rng.Chance(0.010f))
+                    else if (rng.Chance(0.0015f))
                     {
                         props.Add(new Prop(PropKind.Bush, new Tile(x, y), Roll(rng)));
                     }
@@ -164,10 +174,20 @@ namespace Noir.Core.World
                     {
                         if (rng.Chance(0.42f)) props.Add(new Prop(PropKind.Hedge, new Tile(x, y), Roll(rng)));
                     }
-                    else if (OnFieldEdge(grid, x, y) && rng.Chance(0.55f))
-                        props.Add(new Prop(PropKind.Fence, new Tile(x, y), Roll(rng)));
-                    else if (rng.Chance(0.004f))
-                        props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));
+                    else if (OnFieldEdge(grid, x, y))
+                    {
+                        // THE FENCE ROW IS WHERE THE TREES ARE. Nothing grows in the middle of a
+                        // worked field - it gets ploughed - but the line between two fields is
+                        // never ploughed, so volunteer trees come up in it and stay. A line of
+                        // them along a field boundary is the shape of this landscape from any
+                        // distance, and it is the only tree in open country that belongs.
+                        if (rng.Chance(0.045f))
+                            props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));
+                        else if (rng.Chance(0.55f))
+                            props.Add(new Prop(PropKind.Fence, new Tile(x, y), Roll(rng)));
+                    }
+                    // and NOTHING scattered in the crop itself. 0.004 over 2.99 million field
+                    // tiles was 11,864 trees standing in standing corn.
                     break;
 
                 case Terrain.Churchyard:
