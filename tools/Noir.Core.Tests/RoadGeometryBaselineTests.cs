@@ -36,6 +36,13 @@ namespace Noir.Core.Tests
     /// Those extents are from OSM and are NOT independently corroborated - see the note in
     /// Content/city.txt. The positions are; the lengths are not. Owner accepted them on sight.
     ///
+    /// THEN FIFTEEN ALLEYS WENT IN, which is why the figures climb again: 25 roads to 40, 59
+    /// junctions to 113. A Midwestern plat is split down the middle of every block, and without
+    /// them every block here was twice its true depth with each lot backing onto another lot.
+    /// Unlike the extents these ARE corroborated twice over - the 1940 USDA aerial shows a
+    /// weaker bright line exactly halfway between every pair of streets, and OSM maps them
+    /// separately as `service=alley`. Both agree on where they run.
+    ///
     /// What was actually wrong was the DOWNTOWN, which was authored on a straight line while
     /// the road curved away from it - the centreline passed inside the barber and the steam
     /// laundry and left the west shop row 94 m behind. The buildings moved, not the road. See
@@ -66,7 +73,7 @@ namespace Noir.Core.Tests
             TestContext.Out.WriteLine($"turns      = {graph.Turns.Count}");
             TestContext.Out.WriteLine($"entries    = {graph.Entries.Count}");
 
-            Assert.That(world.Roads.Lines.Count, Is.EqualTo(25), "roads in city.txt");
+            Assert.That(world.Roads.Lines.Count, Is.EqualTo(40), "roads in city.txt");
             Assert.That(world.Roads.Junctions.Count, Is.EqualTo(BaselineJunctions));
             Assert.That(graph.Segments.Count, Is.EqualTo(BaselineSegments));
             Assert.That(graph.Turns.Count, Is.EqualTo(BaselineTurns));
@@ -208,15 +215,15 @@ namespace Noir.Core.Tests
         //     curvature-induced misclassification would bias one direction, because a curve
         //     bends one way; the symmetry is evidence the tangent-based turn classification is
         //     not skewed by it.
-        private const int BaselineJunctions = 59;
-        private const int BaselineSegments = 250;
-        private const int BaselineTurns = 606;
-        private const int BaselineEntries = 32;
+        private const int BaselineJunctions = 113;
+        private const int BaselineSegments = 448;
+        private const int BaselineTurns = 1110;
+        private const int BaselineEntries = 38;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "6495D2DE4A0260E6EF9367A23CA8D86D4B0CA91B50B3FE3C68A4E08EFCE49D1D";
+            "9CBBB8BAFD335DD19D2BEC61B56E8944EF2F1123C701A4EB1ABBD0DC5438528B";
     }
 }
