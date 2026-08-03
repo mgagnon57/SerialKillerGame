@@ -159,6 +159,37 @@ dark.
 
 ---
 
+## The canopy — and why 2000 is its own moment
+
+The 1940 aerial shows the town almost entirely under mature trees (`photos/README.md`). What those
+trees *are* has a period answer, and it is different in 1940, in 2000, and today.
+
+- **1940 was elm.** The American elm was *the* Midwestern street tree — planted in avenues for its
+  arching vase shape. The dense unbroken canopy in that aerial is very largely elm.
+- **Dutch elm disease took them** through the 1950s–70s, and the towns that replanted did so with
+  **silver maple, hackberry, honey locust — and green ash**, which was planted enormously as the
+  elm replacement.
+- **Then the ash died too.** Emerald ash borer reached Illinois around 2006 and worked through the
+  state after that.
+
+Which lands on a specific and useful fact:
+
+> **In 2000 the ash trees are alive.** The elms are already forty years gone, and the borer has not
+> arrived. The canopy is mature silver maple, hackberry, honey locust and *healthy ash* — thicker
+> than today's and composed differently from 1940's.
+
+A town modelled from present-day imagery would be missing a chunk of canopy that was standing in
+2000. *Sourced in outline — species suitability is documented; the elm and ash sequence is
+well-established regional history but the Illinois EAB date should be checked before it is quoted.*
+
+**In the country, the hedgerow is Osage orange.** Planted as living fence before barbed wire and
+still standing as ragged lines of trees along field boundaries and lanes — visible in the 1940
+aerial as thin dark lines between fields. Not a windbreak of conifers; a thorny, low, unruly hedge.
+Farmsteads themselves sit in tight shelterbelt clumps, which both the 1940 aerial and the 2019 drone
+photograph show identically, eighty years apart.
+
+---
+
 ## Sources
 
 - **Crop progress** — *Illinois Agricultural Statistics 2000*, USDA NASS Illinois Field Office,
