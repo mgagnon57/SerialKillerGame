@@ -39,19 +39,29 @@ namespace Noir.PlayTests
             var body = GameObject.Find("PlayerArmature");
             Assert.That(body, Is.Not.Null, "the armature was not instantiated");
 
-            float y = body.transform.position.y;
+            var at = body.transform.position;
+            float y = at.y;
 
-            // The floor is at 0.06 and a CharacterController sits its origin at its own base, so
-            // anything near zero is standing. Well below it is the failure this exists to catch.
-            Assert.That(y, Is.GreaterThan(-1f),
-                        $"the player fell through the world - ended at y={y:0.00}, "
-                      + "so the collision shell did not hold");
-            Assert.That(y, Is.LessThan(5f),
-                        $"the player never landed - still at y={y:0.00}");
+            // AGAINST THE GROUND UNDER THEM, NOT AGAINST ZERO. This used to read `y > -1f` and
+            // `y < 5f`, which was the same flat-map assumption `Player.Standing` was making: true
+            // while the whole map was one plane at nought, and meaningless once ElevationGrid gave
+            // it 24m of relief and put the ground under Second Street at +4.2m. Both a man standing
+            // correctly on a hill and a man falling through a valley can be at y=3.
+            //
+            // The floor is CityCollision.Floor - 0.06m - above the local terrain, and a
+            // CharacterController sits its origin at its own base, so standing means within about
+            // a metre of the height the grid reports HERE, at the point they actually came to rest.
+            float ground = ElevationGrid.HeightAt(at.x, -at.z);
+
+            Assert.That(y, Is.GreaterThan(ground - 1f),
+                        $"the player fell through the world - ended at y={y:0.00} with the ground "
+                      + $"at {ground:0.00}, so the collision shell did not hold");
+            Assert.That(y, Is.LessThan(ground + 5f),
+                        $"the player never landed - still at y={y:0.00} with the ground "
+                      + $"at {ground:0.00}");
 
             // And they are somewhere in the town rather than off the edge of it.
             var world = CityUnderTest.World;
-            var at = body.transform.position;
             Assert.That(at.x, Is.InRange(0f, (float)world.Width), "spawned outside the map in x");
             Assert.That(-at.z, Is.InRange(0f, (float)world.Height), "spawned outside the map in y");
 

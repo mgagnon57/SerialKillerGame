@@ -177,6 +177,21 @@ namespace Noir.Unity
         /// NEAREST THE MIDDLE, not the first one found. Taking the first put them on Westway at
         /// 375, which is downtown's western boundary and half a mile of walking from anything;
         /// nearest-the-middle is Second Street, which is the one the town was laid out around.
+        ///
+        /// AND THE HEIGHT IS ASKED OF THE MAP FOR THE SAME REASON, which it was not until the
+        /// people were turned on and the fall stopped being survivable. This was a typed `3f`
+        /// meaning "three metres up, and the floor is at nought" - true while the map was one flat
+        /// plane, and quietly wrong from the moment ElevationGrid gave it 24m of relief. The
+        /// ground under Second Street is +4.2m, so a player dropped at y=3 arrived a metre BELOW
+        /// the collision mesh, fell straight through it and kept going.
+        ///
+        /// IT LOOKED LIKE IT WORKED FOR AS LONG AS THE FRAMES WERE CHEAP. `ThePlayerCanStandInTheStreet`
+        /// drops the player and reads the height 240 frames later, asking for something above -1m;
+        /// with nobody drawn those frames were short enough that the man was still only just under
+        /// the ground when it looked, and falling read as standing. Seven hundred and sixty-three
+        /// animators made the frames long enough to finish the fall, and the same bug that had
+        /// been there all along finally cleared the bar. A test that passes because the machine is
+        /// fast is a test that was not measuring what it thought.
         /// </summary>
         private static Vector3 Standing(WorldModel world)
         {
@@ -197,7 +212,11 @@ namespace Noir.Unity
                 x = line.Centre + line.HalfWidth - 2f;
             }
 
-            return new Vector3(x, 3f, -world.Height * 0.5f);   // dropped in from above the floor
+            // Three metres above the ground THERE, not above nought. Still a drop, on purpose:
+            // landing is what proves the collision shell holds, and it is the one thing about a
+            // player character a still photograph cannot answer.
+            float y = world.Height * 0.5f;
+            return new Vector3(x, ElevationGrid.HeightAt(x, y) + 3f, -y);
         }
     }
 }
