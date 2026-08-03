@@ -65,9 +65,9 @@ namespace Noir.Core.Tests
                 Assert.That(line.Path.Length, Is.EqualTo(line.To - line.From).Within(0f),
                             line.Name + " length");
 
-                for (float t = 0f; t <= 1f; t += 0.1f)
+                for (int step = 0; step <= 10; step++)
                 {
-                    float s = line.Path.Length * t;
+                    float s = line.Path.Length * (step / 10f);
                     var p = line.Path.PointAt(s);
 
                     float across = line.IsNorthSouth ? p.X : p.Y;
