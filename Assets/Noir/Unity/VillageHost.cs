@@ -161,8 +161,14 @@ namespace Noir.Unity
             // developer's local tick would quietly decide whether the tests build a survey plan
             // or four thousand renderers of brick town. A headless run is the same run on every
             // machine or it is not a gate.
+            // DEFAULTS ON NOW. It defaulted to the survey plan for as long as the pack could not
+            // build an Illinois frame house, and the cost was that pressing Play showed a dark
+            // drawing with no hint that a town existed behind it - which was reported as the
+            // town being missing, twice. The answer is no longer a different default but the
+            // LAYER SWITCHES: the town comes up whole and anything in the way of what you are
+            // looking at comes off with one click. See Layers.
             if (!Application.isBatchMode)
-                ShowBuildings = PlayerPrefs.GetInt(BuiltTownKey, 0) == 1;
+                ShowBuildings = PlayerPrefs.GetInt(BuiltTownKey, 1) == 1;
             Debug.Log(ShowBuildings
                 ? "[host] The built town is ON - buildings, streets, greenery, the farm and the "
                 + "railroad. Turn it off again in Noir > Show The Built Town."
@@ -234,6 +240,11 @@ namespace Noir.Unity
                 return;
             }
 
+            // Before anything registers: the dictionaries would otherwise still hold roots from
+            // the last build, all of them destroyed, and the first toggle would walk a list of
+            // dead pointers.
+            Layers.Clear();
+
             _village = VillageMesh.Build(World, transform, ShowBuildings);
 
             // The ground, roads and props are still drawn by the village renderer; only the
@@ -247,9 +258,12 @@ namespace Noir.Unity
             // that be the road. Half a plan and half a model reads as neither.
             if (ShowBuildings)
             {
-                CityStreets.Build(World, city.transform);
-                CityParking.Build(World, city.transform);
-                CitySigns.Build(World, city.transform);
+                // EACH ONE REGISTERED AS ITS OWN LAYER, and each baked separately further down.
+                // The switch is on the root, so a layer can be taken away at runtime without a
+                // rebuild - see Layers, which explains why the bake had to be split to allow it.
+                Layers.Register(Layers.Kind.Streets, CityStreets.Build(World, city.transform));
+                Layers.Register(Layers.Kind.Parking, CityParking.Build(World, city.transform));
+                Layers.Register(Layers.Kind.Signs, CitySigns.Build(World, city.transform));
             }
             // BUILDINGS OFF, LOT LINES ON. The Universal Pack holds exactly two house families
             // and both are Chicago brownstones - bay fronts, stoops, fire escapes - so a village
@@ -267,6 +281,10 @@ namespace Noir.Unity
                 authored = CityBuildings.Build(World, city.transform);
                 blocks = CityDistrict.Build(World, city.transform);
                 estates = CitySuburb.Build(World, city.transform);
+
+                Layers.Register(Layers.Kind.Buildings, authored);
+                Layers.Register(Layers.Kind.Districts, blocks);
+                Layers.Register(Layers.Kind.Houses, estates);
             }
             // Built AFTER the bake and outside it, further down - CityChunker combines every
             // renderer under `city` into a handful of meshes and destroys the originals, and a
@@ -277,17 +295,17 @@ namespace Noir.Unity
             // hides forty lot boundaries.
             if (ShowBuildings)
             {
-                CityStory.Build(World, city.transform);
-                CityRail.Build(World, city.transform);
+                Layers.Register(Layers.Kind.Story, CityStory.Build(World, city.transform));
+                Layers.Register(Layers.Kind.Rail, CityRail.Build(World, city.transform));
 
                 // The real CSX line, at grade. Separate from CityRail above, which is the
                 // elevated El and is gated on a `place railway` city.txt does not have - see
                 // CityRailBed. This one needs no place: it follows the surveyed alignment in
                 // features.txt, which is the same line the survey plan draws.
-                CityRailBed.Build(World, city.transform);
-                CityFarm.Build(World, city.transform);
-                CityPowerlines.Build(World, city.transform);
-                CityGreenery.Build(World, city.transform);
+                Layers.Register(Layers.Kind.RailBed, CityRailBed.Build(World, city.transform));
+                Layers.Register(Layers.Kind.Farm, CityFarm.Build(World, city.transform));
+                Layers.Register(Layers.Kind.Powerlines, CityPowerlines.Build(World, city.transform));
+                Layers.Register(Layers.Kind.Trees, CityGreenery.Build(World, city.transform));
             }
 
             // BEFORE the bake, because it measures the buildings the bake is about to destroy,
@@ -297,6 +315,21 @@ namespace Noir.Unity
             CityCollision.Build(World, transform, authored, blocks, estates);
 
             // Assembled out of pieces, drawn as a handful of meshes.
+            //
+            // PER LAYER, NOT OVER THE WHOLE CITY, and that is the whole reason the layer
+            // switches can exist. CityChunker combines every renderer under the node it is
+            // given and DestroyImmediates the originals - so one bake over `city` turned the
+            // trees and the walls into the same mesh and left nothing to switch off. Baking
+            // each layer's own root keeps that root alive with its own Baked child underneath.
+            //
+            // It costs draw calls: two layers sharing a material no longer merge, so the same
+            // brick appears in the buildings' chunk and again in the districts'. Chunking WITHIN
+            // a layer is where nearly all of the win was - 18,059 renderers to 7,635 - and that
+            // is untouched. Anything left unregistered is baked with the city as before.
+            foreach (var kind in Layers.All)
+                foreach (var root in Layers.RootsOf(kind))
+                    CityChunker.Bake(root);
+
             CityChunker.Bake(city);
 
             // AFTER the bake and OUTSIDE the node it bakes: a combined mesh cannot move or
@@ -322,7 +355,14 @@ namespace Noir.Unity
             }
 
             var signals = CitySignals.Create(World, transform);
-            CityTraffic.Create(World, transform, signals);
+            var traffic = CityTraffic.Create(World, transform, signals);
+
+            // The two that MOVE. Registered like the rest, and switching them off hides them
+            // exactly as HideActors always did - the cars keep driving their lanes and the
+            // signals keep cycling underneath, because this decides what is drawn and nothing
+            // else. Not baked: a combined mesh cannot move or change colour.
+            if (signals != null) Layers.Register(Layers.Kind.Signals, signals.gameObject);
+            if (traffic != null) Layers.Register(Layers.Kind.Traffic, traffic.gameObject);
 
             // DRAWN OR NOT, THEY STILL EXIST. Gating CityTraffic.Create itself on the plan flag
             // was the obvious way to keep cars off a survey drawing and it was wrong twice over:
@@ -342,6 +382,7 @@ namespace Noir.Unity
             // built out: a few hundred figures walking through a downtown that is still being
             // laid is noise over the thing actually being looked at.
             if (ShowPeople) _agentView = AgentMeshView.Create(this, transform);
+            if (_agentView != null) Layers.Register(Layers.Kind.People, _agentView.gameObject);
 
             _rig = OrbitCamera.Create(this);
 
@@ -350,6 +391,16 @@ namespace Noir.Unity
             // street costs nothing to nobody who never asks for it.
             Player.Create(this, transform);
             _lighting = SunRig.Create(this, transform);
+
+            // A callback rather than a root: the lamps and glazing are renderers scattered
+            // through the town's own meshes, so there is no node to switch off. The lights
+            // themselves keep burning either way, which is the same distinction everywhere else
+            // here draws - this decides what is DRAWN.
+            if (_lighting != null)
+                Layers.Register(Layers.Kind.Lamps, _lighting.SetFixtureRenderers);
+
+            // The switches, on screen. L opens them.
+            LayerPanel.Create(transform);
 
             // AFTER the people AND the lights exist, which is the whole of the bug this line
             // used to have. It sat above CityTraffic.Create's block, where _agentView was still

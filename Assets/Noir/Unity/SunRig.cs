@@ -117,12 +117,21 @@ namespace Noir.Unity
         /// A lamp post standing over an empty plan is the same complaint as a signal head over
         /// an empty road corridor; this is that fix for the fixtures SunRig itself owns.
         /// </summary>
-        public void HideFixtureRenderers()
+        public void HideFixtureRenderers() => SetFixtureRenderers(false);
+
+        /// <summary>
+        /// The same switch, both ways, so the lighting can be a Layer somebody turns back on.
+        ///
+        /// These are lists of renderers rather than a node of their own - a lantern is part of
+        /// the lamp post it hangs from - so there is nothing for Layers to SetActive and this is
+        /// registered there as a callback instead.
+        /// </summary>
+        public void SetFixtureRenderers(bool visible)
         {
             if (_fixtures == null) return;
-            foreach (var r in _fixtures.Lanterns) if (r != null) r.enabled = false;
-            foreach (var r in _fixtures.Panes) if (r != null) r.enabled = false;
-            foreach (var r in _fixtures.Glazing) if (r != null) r.enabled = false;
+            foreach (var r in _fixtures.Lanterns) if (r != null) r.enabled = visible;
+            foreach (var r in _fixtures.Panes) if (r != null) r.enabled = visible;
+            foreach (var r in _fixtures.Glazing) if (r != null) r.enabled = visible;
         }
 
         /// <summary>
