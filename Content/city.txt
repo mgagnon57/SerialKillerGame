@@ -1178,110 +1178,110 @@ road crossroad1 10 1880,0 1880,2399
 # ==========================================================================
 
 place casino 695,1282 22x35 "the Opera House"
-  door 731,1299
+  door 716,1299
   human Open all night, and the carpet is loud enough that nobody notices the hour.
 place cinema 685,1258 22x22 "the Motion Picture house"
-  door 731,1269
+  door 706,1269
   human Two screens, one of which has been showing the same film since spring.
 place bank 676,1227 22x29 "the Rossville bank"
-  door 731,1241
+  door 697,1241
   human Marble that was meant to look permanent.
 place precinct 661,1166 18x35 "the village office"
-  door 731,1183
+  door 678,1183
   human The light in the front office never goes off, which is not the same as somebody being awake.
 place villagehall 653,1138 16x26 "the I.O.O.F. hall"
-  door 731,1151
+  door 668,1151
   human Bingo, inquests, and the annual meeting about the verge.
 place villagehall 758,1291 16x26 "the G.A.R. hall"
-  door 768,1304
+  door 758,1304
   human Scout hut, polling station, and where the inquest was held.
 place shop 750,1271 20x18 "Henderson's"
-  door 768,1280
+  door 750,1280
   human Open at five, which is either a service or an accusation.
 place shop 743,1245 14x24 "the Attica Street market"
-  door 768,1257
+  door 743,1257
   human Fruit stacked to a geometry that survives being sold from.
 place pub 735,1221 14x22 "the Livingood House"
-  door 768,1232
+  door 735,1232
   human The car park is bigger than the pub and on Fridays it is not big enough.
 place pub 721,1179 14x22 "the Commercial Hotel"
-  door 768,1190
+  door 721,1190
   human Older than the road, and it shows in the floor.
 place pub 713,1155 12x22 "the grain office"
-  door 768,1166
+  door 713,1166
   human Four o'clock and the same men are in it who were in it at noon.
 place postoffice 707,1137 14x16 "Rossville Post Office"
-  door 768,1145
+  door 707,1145
   human A queue that moves at the speed of one conversation at a time.
 place diner 726,1353 11x20 "the Chicago Street diner"
-  door 731,1363
+  door 736,1363
   human Open before anyone needs it to be, and the same four faces are in it at six.
 place gasstation 733,1375 11x20 "the pumps"
-  door 731,1385
+  door 743,1385
   human Somebody is always sitting in a car here not buying anything.
 place shop 738,1397 12x16 "the drug store"
-  door 731,1405
+  door 749,1405
   human A general store, which out here means it stocks what the last person asked for.
 place shop 744,1415 12x16 "the bakery"
-  door 731,1423
+  door 755,1423
   human Sells out by ten and does not bake more, on principle.
 place shop 750,1433 12x16 "the printing office"
-  door 731,1441
+  door 761,1441
   human Papers, sweets, and a bell that has never once been oiled.
 place shop 756,1451 12x16 "the hardware"
-  door 731,1459
+  door 767,1459
   human A hardware shop that also does keys, shoes, and advice.
 place shop 768,1486 12x16 "the grocer"
-  door 731,1494
+  door 779,1494
   human Run by a family who have never agreed on the opening hours.
 place shop 774,1504 12x16 "the millinery"
-  door 731,1512
+  door 785,1512
   human Wool, thread, and a cat that is not for sale.
 place shop 780,1522 12x16 "the confectionery"
-  door 731,1530
+  door 791,1530
   human The smell reaches the county line on a west wind.
 place shop 787,1540 12x16 "the general merchandise"
-  door 731,1548
+  door 798,1548
   human The last shop before the county line and it knows it.
 place postoffice 793,1558 12x16 "the north sub-office"
-  door 731,1566
+  door 804,1566
   human One window, one clerk, and a scale that has been condemned twice.
 place icecream 776,1353 11x16 "the ice cream parlour"
-  door 768,1361
+  door 776,1361
   human Shut half the year, and the queue at Easter goes round the corner.
 place shop 782,1371 10x13 "the jeweller"
-  door 768,1377
+  door 782,1377
   human Ironmongery, and a man who can find the one screw you need in a minute.
 place shop 786,1386 10x13 "the meat market"
-  door 768,1392
+  door 786,1392
   human Everything a fortnight from its date and nobody has ever complained.
 place shop 791,1401 10x13 "the barber"
-  door 768,1407
+  door 791,1407
   human A tailor who has outlived three fashions and expects to outlive a fourth.
 place carwash 795,1416 13x10 "the steam laundry"
-  door 768,1421
+  door 795,1421
   human A place people leave a car and walk away from for ten minutes.
 place restroom 800,1428 8x14 "the rest room"
-  door 768,1435
+  door 800,1435
   human Council-green tile and a door that does not lock.
 place shop 805,1444 10x11 "the second drug store"
-  door 768,1449
+  door 805,1449
   human The window has not changed since the coronation and neither has the smell.
 place newsstand 809,1457 3x7 "the news stand"
-  door 768,1460
+  door 809,1460
   human Papers, cigarettes, and the man who knows who bought which.
 place apartment 818,1486 8x6 "the rooms over the grocer"
-  door 768,1489
+  door 818,1489
   units 3
   human Over the shops, and the stairs go up from the street.
 place apartment 821,1494 8x6 "the rooms over the meat market"
-  door 768,1497
+  door 821,1497
   units 3
 place apartment 824,1502 8x6 "the rooms over the barber"
-  door 768,1505
+  door 824,1505
   units 3
 place apartment 827,1510 8x6 "the rooms over the laundry"
-  door 768,1513
+  door 827,1513
   units 3
 
 # ---- the school, the firehouse, the elevator, the water tower --------------

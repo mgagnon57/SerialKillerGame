@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using Noir.Core.Contracts;
@@ -134,7 +134,20 @@ namespace Noir.Core.World
                     else if (!grid.IsWalkable(p.Door))
                         report.Errors.Add($"'{p.Name}': door {p.Door} is not walkable");
                     else if (!p.Bounds.Contains(p.Door))
-                        report.Warnings.Add($"'{p.Name}': door {p.Door} is outside its footprint {p.Bounds}");
+                        // AN ERROR, NOT A WARNING. This was a warning until 2026-08-03, when
+                        // thirty-five downtown buildings were moved onto Chicago Street's curve
+                        // and their `door` lines - which are separate lines in the map file - were
+                        // left behind. Every door ended up stranded in the carriageway, several
+                        // metres outside the building it belongs to. The map loaded, the town
+                        // built, thirty-two warnings scrolled past unread, and the editor then
+                        // locked up on one core with flat memory until it was killed.
+                        //
+                        // A door is where a person enters a building. One that is not on the
+                        // building cannot be walked to from inside it, and nothing downstream is
+                        // written to cope with that. It is a broken map, so it says so.
+                        report.Errors.Add($"'{p.Name}': door {p.Door} is outside its footprint "
+                                        + $"{p.Bounds} - a door has to be ON the building. If the "
+                                        + "building was moved, its `door` line has to move with it.");
                     else if (region[grid.Index(p.Door)] != mainRegion)
                         report.Errors.Add($"'{p.Name}': door {p.Door} is cut off from the rest of the village");
 
