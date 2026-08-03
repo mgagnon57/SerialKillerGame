@@ -1103,49 +1103,89 @@ road attica 30 0,1335 2099,1335
   class mainroad
 
 # ---- the village streets --------------------------------------------------
+# EXTENTS ARE REAL, 2026-08-03. Every one of these used to run the identical span -
+# north-south streets y699..2240 and east-west x496..1530, a 1,034 x 1,541 m stencil
+# with every street starting and stopping together and running out into open field at
+# all four edges. No platted town does that; a grid frays at its edges.
+#
+# The spans below come from OpenStreetMap's mapping of the town streets, which is a
+# different thing from the unreviewed TIGER way that carries Route 1 (see the Chicago
+# Street note above) but is NOT independently confirmed. Read that carefully:
+#
+#   POSITIONS are confirmed. Every street's fixed coordinate agrees with
+#   tools/rossville-streets.json - a separate source of real latitudes and longitudes -
+#   to within 3 to 7 metres. Abner -221 against -224, Harrison +107 against +104,
+#   Church +216 against +213. Two sources, one answer.
+#
+#   EXTENTS are NOT confirmed. They rest on OSM alone. An attempt to corroborate them
+#   against the county parcels failed and was thrown out: the parcels tile the whole
+#   township including open farmland, so "there are lots beside this line" is true
+#   everywhere and distinguishes nothing.
+#
+# They are used anyway because the thing they replace is worse and the error is in the
+# safe direction - a street that stops too soon leaves a gap, where the old stencil ran
+# every street 1.5 km into a cornfield. The 1940 aerial in docs/research/photos is the
+# document that could settle it; nothing has yet managed to georeference it well enough.
+#
+# How wrong the old spans were, on OSM's reading:
+#
+#     Abner     declared 1541 m   real   99 m   15.6x
+#     Goodwine  declared 1541 m   real  128 m   12.1x
+#     Watson    declared 1541 m   real  145 m   10.6x
+#     Ann       declared 1541 m   real  293 m    5.3x
+#     York      declared 1034 m   real  282 m    3.7x
+#     Summit    declared 1541 m   real 1377 m    1.1x
+#
+# Ends are snapped to a crossing street where they stopped within 45 m of one, so no
+# road dead-ends a few metres short of the junction it obviously makes.
+#
+# ABNER AND WATSON ARE GONE, and that is a judgement call worth stating. They are real
+# streets - 99 m and 145 m of it - on the west side, and their positions were right.
+# But nothing in the data connects them to anything: the east-west streets they would
+# meet do not reach that far west either, once those are cut to their real length. An
+# isolated road is forbidden here (see the section-road note below: its traffic drives
+# off the tarmac and out of the world), so rather than invent a connection they are
+# left out until something shows what they join. The likeliest answer is one of the
+# unnamed residential ways OSM has in that corner.
 # 10m corridors, unmarked, which is what a residential street in a village of
 # thirteen hundred is. Offsets are metres from the crossroads.
-road abner 10 526,699 526,2240   # -224m
+road ann 10 686,1335 686,1634   # -64m, Smith Drive
   class street
-road watson 10 641,699 641,2240   # -109m
+road harrison 10 854,729 854,1335   # +104m
   class street
-road ann 10 686,699 686,2240   # -64m, Smith Drive
+road church 10 963,846 963,2093   # +213m
   class street
-road harrison 10 854,699 854,2240   # +104m
+road summit 10 1149,846 1149,2210   # +399m
   class street
-road church 10 963,699 963,2240   # +213m
+road grove 10 1330,846 1330,2210   # +580m
   class street
-road summit 10 1149,699 1149,2240   # +399m
+road goodwine 10 1500,1209 1500,1335   # +750m, Creative Avenue
   class street
-road grove 10 1330,699 1330,2240   # +580m
+road york 10 526,729 806,729   # +606m
   class street
-road goodwine 10 1500,699 1500,2240   # +750m, Creative Avenue
+road henderson 10 572,846 1330,846   # +489m
   class street
-road york 10 496,729 1530,729   # +606m
+road green 10 641,982 1417,982   # +353m
   class street
-road henderson 10 496,846 1530,846   # +489m
+road benton 10 686,1113 1425,1113   # +222m
   class street
-road green 10 496,982 1530,982   # +353m
+road holmes 10 854,1209 1500,1209   # +126m
   class street
-road benton 10 496,1113 1530,1113   # +222m
+road maple 10 800,1478 1330,1478   # -143m, Park Place west of Route 1
   class street
-road holmes 10 496,1209 1530,1209   # +126m
+road gilbert 10 854,1583 1446,1583   # -248m, Perry west of Route 1
   class street
-road maple 10 496,1478 1530,1478   # -143m, Park Place west of Route 1
+road stewart 10 854,1722 1500,1722   # -387m, Stufflebeam west of Route 1
   class street
-road gilbert 10 496,1583 1530,1583   # -248m, Perry west of Route 1
+road mckibben 10 854,1853 1548,1853   # -518m, McKibbin west of Route 1
   class street
-road stewart 10 496,1722 1530,1722   # -387m, Stufflebeam west of Route 1
+road dale 10 902,1971 1330,1971   # -636m
   class street
-road mckibben 10 496,1853 1530,1853   # -518m, McKibbin west of Route 1
+road greenwood 10 526,2034 906,2034   # -699m
   class street
-road dale 10 496,1971 1530,1971   # -636m
+road thompson 10 912,2093 1330,2093   # -758m
   class street
-road greenwood 10 496,2034 1530,2034   # -699m
-  class street
-road thompson 10 496,2093 1530,2093   # -758m
-  class street
-road earlcourt 10 496,2210 1530,2210   # -875m
+road earlcourt 10 1068,2210 1330,2210   # -875m
   class street
 
 # ---- the section roads -----------------------------------------------------

@@ -26,6 +26,16 @@ namespace Noir.Core.Tests
     /// around it in 1857. A cardinal grid with a diagonal highway through it is exactly what
     /// that history produces, and the road curves. The counts below are the curve's.
     ///
+    /// THE SIDE STREETS WERE THEN CUT TO THEIR REAL LENGTH, 2026-08-03, which is why these
+    /// figures drop so far: 142 junctions to 59, 614 segments to 250. Every street used to run
+    /// the identical span - a 1,034 x 1,541 m stencil with all of them starting and stopping
+    /// together and running out into open field. Abner is really 99 m, not 1,541; Goodwine 128;
+    /// Watson 145. Abner and Watson came out of the map entirely: at their real length nothing
+    /// connects to them, and an isolated road's traffic drives off the world.
+    ///
+    /// Those extents are from OSM and are NOT independently corroborated - see the note in
+    /// Content/city.txt. The positions are; the lengths are not. Owner accepted them on sight.
+    ///
     /// What was actually wrong was the DOWNTOWN, which was authored on a straight line while
     /// the road curved away from it - the centreline passed inside the barber and the steam
     /// laundry and left the west shop row 94 m behind. The buildings moved, not the road. See
@@ -56,7 +66,7 @@ namespace Noir.Core.Tests
             TestContext.Out.WriteLine($"turns      = {graph.Turns.Count}");
             TestContext.Out.WriteLine($"entries    = {graph.Entries.Count}");
 
-            Assert.That(world.Roads.Lines.Count, Is.EqualTo(27), "roads in city.txt");
+            Assert.That(world.Roads.Lines.Count, Is.EqualTo(25), "roads in city.txt");
             Assert.That(world.Roads.Junctions.Count, Is.EqualTo(BaselineJunctions));
             Assert.That(graph.Segments.Count, Is.EqualTo(BaselineSegments));
             Assert.That(graph.Turns.Count, Is.EqualTo(BaselineTurns));
@@ -198,15 +208,15 @@ namespace Noir.Core.Tests
         //     curvature-induced misclassification would bias one direction, because a curve
         //     bends one way; the symmetry is evidence the tangent-based turn classification is
         //     not skewed by it.
-        private const int BaselineJunctions = 142;
-        private const int BaselineSegments = 614;
-        private const int BaselineTurns = 1656;
-        private const int BaselineEntries = 54;
+        private const int BaselineJunctions = 59;
+        private const int BaselineSegments = 250;
+        private const int BaselineTurns = 606;
+        private const int BaselineEntries = 32;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "9BFF36F308B76B0DDB3FAF1B54D0E352064C776D03E1FC6E80DD0051E34964F1";
+            "6495D2DE4A0260E6EF9367A23CA8D86D4B0CA91B50B3FE3C68A4E08EFCE49D1D";
     }
 }
