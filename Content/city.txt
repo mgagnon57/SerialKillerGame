@@ -1074,14 +1074,39 @@ terrain water 0,2267 1x17
 # `mainroad` is a 30m corridor, one lane each way with lay-bys, which is what a
 # two-lane state highway through a village is. Both run the full extent of the map:
 # a state route does not stop at the village limit.
-# CHICAGO STREET IS A CURVE, and this is the surveyed alignment rather than a guess.
-# OpenStreetMap way 22037977 (ref=IL 1), projected into village metres about the
-# Chicago/Attica crossing and rotated into the parcels' own frame. Sampled every 12m
-# along this line, 0 of 112 points fall inside a county lot; along the straight x=750
-# it used to be declared at, 95 of 112 do - we drew the state highway through the
-# middle of the town's back gardens. The first and last points are interpolated out to
-# the map edges so traffic still arrives from off-stage.
-road chicago 30 314,0 371,177 466,470 593,855 675,1109 747,1332 776,1423 799,1491 839,1607 857,1687 863,1740 872,1876 881,2049 899,2399
+# ROUTE 1 AND CHICAGO STREET ARE ONE ROAD. Outside the village it is Illinois
+# Route 1; inside it, it is Chicago Street. It is straight through the plat, and it
+# is one of the two streets the town was laid out on in 1857.
+#
+# THIS WAS WRONG FOR A LONG TIME and the reason is worth keeping. It used to carry a
+# fourteen-point curve taken from OpenStreetMap way 22037977 (ref=IL 1), which looks
+# authoritative and is not: its tags say `tiger:reviewed = no` and
+# `tiger:county = Iroquois, IL`. Rossville is in VERMILION county. That way is raw,
+# never-checked TIGER import of the rural highway from the county to the north, and
+# nobody has ever traced its line through this town.
+#
+# What settles it is OSM's own mapping of the town's streets, which is separate from
+# that way. Measured end to end: East 3550 North Road 4,713 m at 0.0 degrees off
+# square, East Attica 1,029 m at 0.6, South Summit 871 m at 2.3, Green 791 m at 5.3,
+# Henderson 744 m at 2.2, Gilbert 598 m at 1.6. The grid is square to two or three
+# degrees. Railroad Avenue is 39 degrees off, correctly, because it follows the rail.
+# The IL 1 way is 11.8 degrees off - the ONLY long feature in the town that is
+# neither square nor rail-aligned. The county parcels agree: their dominant edge
+# bearing is 88 degrees.
+#
+# The damage the curve did, all measured before it was removed: it crossed Ann Street
+# and Harrison Street, which two platted streets cannot do; and it ran THROUGH the
+# downtown, passing inside the barber (1.6 m from the centreline) and the steam
+# laundry (1.1 m) while leaving the west shop row 94 m behind. See
+# docs/research/ROADS-AND-BLOCKS.md.
+#
+# The real curve, which the owner describes and which is genuine, is SOUTH of the
+# town - Route 1 swings away once it is past the plat. The plat runs from York
+# (y=729) to Earl Court (y=2210), so the street is dead straight across that and only
+# bends beyond it. The shape of the bend is NOT well established: the only source for
+# it is the same unreviewed TIGER way, so it is drawn as a modest departure and
+# should be replaced when something better turns up.
+road chicago 30 747,0 747,2210 762,2280 800,2399
   class mainroad
 road attica 30 0,1335 2099,1335
   class mainroad

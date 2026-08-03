@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Security.Cryptography;
 using System.Text;
 using NUnit.Framework;
@@ -14,12 +14,24 @@ namespace Noir.Core.Tests
     /// built from, all straight at the time, came out unchanged. That claim is only worth
     /// anything if it is a number somebody recorded before the rewrite started.
     ///
-    /// Phase B then put a real curve into one of those 27: Chicago Street / Illinois Route 1
-    /// now follows its surveyed alignment instead of a straight line at x=750 (see
-    /// Content/city.txt). That is a deliberate content change, not a regression, so the
-    /// baseline below was re-recorded against it rather than defended against it. The other 26
-    /// roads are untouched and still straight - see
-    /// <see cref="ChicagoAloneBendsEveryOtherRealRoadIsStraightAndAxisAligned"/>.
+    /// Phase B then put a curve into one of those 27: Chicago Street / Illinois Route 1 was
+    /// given the alignment of OpenStreetMap way 22037977, and the baseline was re-recorded
+    /// against it - 614 segments, 1656 turns.
+    ///
+    /// THAT CURVE WAS WRONG AND HAS BEEN TAKEN OUT AGAIN, 2026-08-03. The OSM way carries
+    /// `tiger:reviewed = no` and `tiger:county = Iroquois, IL`; Rossville is in Vermilion. It
+    /// is unchecked TIGER import of the rural highway from the next county north, and nobody
+    /// ever traced its line through this town. Route 1 and Chicago Street are ONE road - the
+    /// highway outside the village, the street inside it - and it runs straight through a plat
+    /// that OSM's own separately-mapped town streets show is square to two or three degrees.
+    /// The curve had it crossing Ann Street and Harrison Street, and passing through the inside
+    /// of the barber and the steam laundry downtown. See docs/research/ROADS-AND-BLOCKS.md.
+    ///
+    /// So these counts are back to what they were BEFORE the curve went in: 620 segments and
+    /// 1692 turns, with junctions and entries never having moved. That the pre-curve figures
+    /// return exactly is the strongest evidence the curve was the anomaly. The checksum is new
+    /// rather than restored, because the street is at x=747 in the grid and bends south of the
+    /// plat, which is not the old dead-straight x=750.
     ///
     /// These figures were READ OFF THE BUILD, not off any document. docs/STATE.md quotes
     /// counts from a 960x960 map that no longer exists.
@@ -189,14 +201,14 @@ namespace Noir.Core.Tests
         //     bends one way; the symmetry is evidence the tangent-based turn classification is
         //     not skewed by it.
         private const int BaselineJunctions = 142;
-        private const int BaselineSegments = 614;
-        private const int BaselineTurns = 1656;
+        private const int BaselineSegments = 620;
+        private const int BaselineTurns = 1692;
         private const int BaselineEntries = 54;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "9BFF36F308B76B0DDB3FAF1B54D0E352064C776D03E1FC6E80DD0051E34964F1";
+            "4E6E66AB8D93984DAF149F81A116C9EC2BD156D883C1571099FA5041EFFBFE8D";
     }
 }
