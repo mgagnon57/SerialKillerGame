@@ -305,6 +305,34 @@ namespace Noir.Unity
         {
             var line = _world.Roads.Lines[segment.Line];
             float along = LaneGraph.AlongOf(segment.Way, s);
+
+            // A ROAD THAT BENDS HAS NO SINGLE CENTRE to measure across from, and reading the
+            // scalar one anyway is not a small error - it is a phantom straight road. Chicago
+            // Street's Centre is the x of its FIRST point, x=314 up at the north edge, so every
+            // car on the curve was drawn strung out along a line at x=327 while the asphalt it
+            // was supposed to be on ran through x=735 at that latitude. The PlayMode suite read
+            // it exactly right: "999.00m past the asphalt".
+            //
+            // Ask the path instead. `along` is a village coordinate on the road's own axis and
+            // the path is parameterised from line.From, so the arc length is the difference.
+            if (!line.IsStraight && line.Path != null)
+            {
+                float arc = along - line.From;
+                var at = line.Path.PointAt(arc);
+                var normal = line.Path.NormalAt(arc);
+
+                // The offset is measured PERPENDICULAR to the road here rather than along an
+                // axis - which for a straight road is the same thing, and for a bend is the only
+                // thing that means anything. Side() still decides which side of the centre line
+                // the direction of travel keeps to; the normal only says which way that is here.
+                float offset = Headings.Side(segment.Way)
+                             * CityStreets.LaneOffset(line.Class, segment.Lane);
+                float vx = at.X + normal.X * offset;
+                float vy = at.Y + normal.Y * offset;
+
+                return new Vector3(vx, ElevationGrid.HeightAt(vx, vy), -vy);
+            }
+
             float cross = CrossOf(segment);
 
             return line.IsNorthSouth
