@@ -94,18 +94,53 @@ models needing it: the bake was **18,059 renderers, and 7,635 after**, with 11,0
 the log before and none after. The chunker does tell you, once per prefab, but it is one line
 among thousands.
 
+## THE TOWN IS SET IN ~2000, BEFORE THE FIRE
+
+Decided 2026-08-03, and it settles a question that was open for as long as the project has
+existed. The research in `docs/research/ROSSVILLE-HISTORY.md` found that Rossville **changed
+inside the story's own window**:
+
+- **27/28 February 2004** — a fire destroyed about a quarter of the downtown commercial row.
+  A Casey's petrol station stands on that corner today.
+- **2006** — Rossville-Alvin High School closed.
+
+**We build the town as it stood around 2000.** That means:
+
+- The **downtown brick row is whole** — the buildings the 1893 fire produced are all still
+  standing. No gap, no Casey's.
+- The **antique shops are trading** — this is the tail of the "Antique Capital of Illinois" era,
+  already being eaten by eBay but not yet burnt out.
+- **The high school is open.**
+- Population is at its **census low of 1,217** (2000) — the town is thin but whole.
+
+Anything built from here should be checked against that date. A detail that is true of Rossville
+in 2026 is not automatically true of Rossville in 2000, and the fire is the dividing line.
+
 ## Next, in the order I would do it
 
-1. **Verify the suite** (above). One run.
-2. **Walk the plan and correct it.** The user grew up there for 26 years; their eye is worth
-   more than any dataset. Ask what is wrong before building anything else.
-3. **A house kit.** Nothing about the residential streets can be right until there is one.
-   Candidates: Suburb Neighborhood House Pack (modular, suits `Stack`), POLYGON Town Pack
-   (Synty, closest style match). Swapping `only: "Bayhouse"` for a new family is a small
-   contained change — grid, addresses and population all stay.
-4. **Building footprints**, if wanted: the county has none (Danville's layer stops ~4km south),
-   OSM has 19 in the whole village. Microsoft US Building Footprints and Overture are unchecked.
-5. Elevation is **scoped in `docs/IDEAS.md`** and deliberately not started.
+1. ~~Verify the suite~~ **DONE 2026-08-03.** Core 227/2 (the two by-design), PlayMode 11/13 —
+   see `docs/OVERNIGHT-2026-08-03.md` for the two known failures.
+2. ~~Walk the plan and correct it~~ **PARTLY DONE.** The user's eye caught that Chicago Street was
+   straight; it is now on its real surveyed curve with asphalt on it.
+3. **A house kit — and the research now says what it must be.** See
+   `docs/research/ROSSVILLE-HISTORY.md` §7a. Three date-layers, **all frame, none brick**:
+   - the **1857–1910s core** — 1 to 1½ storey vernacular farmhouse and American Foursquare, small
+     rear outbuilding, quarter-acre lots *(directly observed on the Sanborn sheets)*
+   - a **larger 1920s–40s layer** — bungalows and minimal-traditional cottages. Median build year
+     for the town is **1943**, so this is the biggest single cohort and it postdates the maps
+   - a **minority of postwar ranches** on the newer edges
+
+   **Approach undecided on purpose:** prototype one house procedurally and one from the owned
+   packs, look at them side by side, then choose. Buying a pack and spending AI points are both
+   still open but neither is committed.
+4. **Building footprints — and there is a source nobody knew about.** The county has none and OSM
+   has 19 in the whole village, but **five Sanborn fire-insurance atlases are public domain and
+   nine sheets are already downloaded** to `docs/research/sanborn/`. They give exact footprints,
+   construction material, storey count and use for 1898, 1906 and 1913 — and most of the downtown
+   brick row survived from 1893 to 2004, so **the 1913 footprints are substantially valid for
+   2000**. Decided: georeference them for the commercial core.
+5. ~~Elevation~~ **DONE and verified.** USGS NED, 24.85m of relief carried by the built mesh across
+   600,780 vertices, reading exactly 0.0m at the Chicago/Attica origin. `Noir/Probe The Elevation`.
 
 ## Cost discipline — read this before doing anything
 

@@ -42,6 +42,42 @@ against a standing project rule rather than being merely large or risky. Both ne
   fictional people from `Content/names.txt`) is the thing that let the game have a demographically
   real town without a real resident in it.
 
+## From the town history research — 2026-08-03
+
+Everything here comes out of `docs/research/ROSSVILLE-HISTORY.md` and the nine Sanborn sheets in
+`docs/research/sanborn/`. **The town is built as it stood around 2000, before the February 2004
+fire** — see `docs/HANDOFF.md`.
+
+- [ ] **Georeference the Sanborn footprints for the downtown core.** The 1913 sheets draw every
+  building at Attica × Chicago with its material, storey count and use. Most of that row was built
+  after the 1893 fire and stood until 2004, so it is substantially valid for 2000. This is the only
+  real building-footprint source this project has — the county has none and OSM has 19. — *2026-08-03*
+- [ ] **The commercial row is shops below, lodge rooms and offices above.** Not a scatter of
+  buildings — a continuous two-storey brick terrace. The 1913 sheet names bank, jeweller, bakery,
+  meat, drugs, hardware, furniture, millinery, barber, plumbing, printing, and a steam laundry,
+  with "Lodge Rms 2nd" over several of them. That pattern goes back to the very first store in
+  1857, which the Odd Fellows built with their hall on the upper floor. — *2026-08-03*
+- [ ] **A frame house kit in three date-layers**, replacing the pack's Chicago brownstones. See
+  HANDOFF §3 for the spec. Nothing residential in this town is brick. — *2026-08-03*
+- [ ] **The original town is four blocks at Chicago × Attica**, and everything else is a named
+  addition — Gilbert's, Satterthwait's, Livingood's, Henderson's. Worth encoding: the oldest,
+  densest fabric should be those four blocks, thinning outward through the additions in the order
+  they were platted. — *2026-08-03*
+- [ ] **Industry belongs along the railroad, not the streets.** Historically three grain elevators,
+  two lumber yards, a wagon works, a brick and tile works, a cannery with its own sauerkraut plant,
+  a creamery, and stock pens — all strung along the C&EI. By 2000 nearly all of it is gone, which
+  is itself worth drawing: the town has empty industrial ground on its east side. — *2026-08-03*
+- [ ] **Landmarks that should exist by name**: the 1903 C&EI depot (still standing, a museum), the
+  old Ross Township building (the historical society), Christman Park, the spherical water tower
+  (150,000 gal), the grain elevator. These are the silhouette a person who grew up there
+  recognises. — *2026-08-03*
+- [ ] **The antique shops should be trading in 2000** — many small shops in ordinary storefronts,
+  not one mall building. It is the tail of the era; eBay is already eating it. — *2026-08-03*
+- [ ] Unresolved and worth settling before anything leans on it: **the incorporation date**.
+  Wikipedia and the village say August 1859; both county histories say July 1872 with the vote
+  count, the trustee election and the officers named. Two independent research passes hit this.
+  — *2026-08-03*
+
 ## Env
 
 - [x] ~~We need to add elevation at some point.~~ **ALREADY DONE, and this entry was stale** -
