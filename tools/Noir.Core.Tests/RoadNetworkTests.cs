@@ -242,5 +242,62 @@ namespace Noir.Core.Tests
             Assert.That(world.Roads.Junctions.Count, Is.GreaterThanOrEqualTo(2),
                         "the S-bend crosses the straight road on the way out and on the way back");
         }
+
+        [Test]
+        public void ACurvedEastWestRoadFormsJunctionsToo()
+        {
+            // The constructor always calls Crossings(ns.Path, ew.Path), so a bending "ns"-role
+            // road (ACurvedRoadFormsJunctionsAtAll) only ever exercises Crossings walking its
+            // first argument. A bend on the EAST-WEST road instead is the only way to force
+            // Crossings to walk its SECOND argument - proof the S values it reports afterwards
+            // are the right way round and not silently swapped.
+            var world = Build("village Test\nsize 300 300\nterrain path 0,0 300x300\n"
+                + "road straight 30 120,0 120,239\n  class mainroad\n"
+                + "road curvy 30 0,80 80,80 120,140 160,80 239,80\n  class mainroad\n");
+
+            Assert.That(world.Roads.Junctions.Count, Is.GreaterThanOrEqualTo(1));
+            var j = world.Roads.Junctions[0];
+
+            var straight = world.Roads.Lines[0];
+            var curvy = world.Roads.Lines[1];
+
+            // The reported S must be along the road it names, not the other one: PointAt(S)
+            // on each road has to reproduce the crossing point. Swap SNorthSouth/SEastWest by
+            // accident and at least one of these fails.
+            var backNS = straight.Path.PointAt(j.SNorthSouth);
+            Assert.That(backNS.X, Is.EqualTo(j.X).Within(0.01f), "SNorthSouth is along the wrong road");
+            Assert.That(backNS.Y, Is.EqualTo(j.Y).Within(0.01f), "SNorthSouth is along the wrong road");
+
+            var backEW = curvy.Path.PointAt(j.SEastWest);
+            Assert.That(backEW.X, Is.EqualTo(j.X).Within(0.01f), "SEastWest is along the wrong road");
+            Assert.That(backEW.Y, Is.EqualTo(j.Y).Within(0.01f), "SEastWest is along the wrong road");
+        }
+
+        [Test]
+        public void RoadsWhoseRunsDoNotOverlapDoNotCross()
+        {
+            // ns (x=100) and ew (y=20) would meet at (100,20) if both roads were infinite.
+            // They are not: ns's own declared run only starts at y=100, well south of ew's
+            // line, so the pavements themselves never reach each other. Only the round-trip
+            // check in Crossings' closed-form branch catches this - Project's lateral is
+            // invariant along the tangent for a straight axis-aligned road (RoadNetwork.At
+            // leans on the same fact for its own boundary case), so it reads exactly 0
+            // whether or not the point is actually on the road, and by itself cannot tell a
+            // real crossing from two lines that merely share a point neither pavement reaches.
+            var apart = Build(Header
+                + "road ns 30 100,100 100,239\n  class mainroad\n"
+                + "road ew 30 0,20 239,20\n  class mainroad\n");
+            Assert.That(apart.Roads.Junctions, Is.Empty,
+                        "ns starts at y=100 and never reaches ew's y=20");
+
+            // Positive control, same pair: ns widened to actually reach ew's line. The
+            // pavements really do meet now, exactly once, so this test discriminates in both
+            // directions rather than just proving Crossings can return nothing.
+            var together = Build(Header
+                + "road ns 30 100,0 100,239\n  class mainroad\n"
+                + "road ew 30 0,20 239,20\n  class mainroad\n");
+            Assert.That(together.Roads.Junctions.Count, Is.EqualTo(1),
+                        "widened to actually reach ew's line, the same pair crosses exactly once");
+        }
     }
 }

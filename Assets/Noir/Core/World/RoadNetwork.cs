@@ -323,10 +323,18 @@ namespace Noir.Core.World
         ///
         /// So: two axis-aligned straights get the closed form, which is every pair in the real
         /// map and is arithmetically the (ns.Centre, ew.Centre) the old constructor asserted
-        /// outright. Anything involving a curve WALKS ONE PATH AND WATCHES WHICH SIDE OF THE
-        /// OTHER IT IS ON - where the signed lateral flips, the curve has crossed. That is one
-        /// Project per sample rather than a nested loop, and Project on a straight road is
-        /// constant time, so a curved Route 1 against the whole street grid stays linear.
+        /// outright. Anything involving a curve WALKS THE CURVED SIDE AND PROJECTS ONTO THE
+        /// OTHER - where the signed lateral flips, the curve has crossed. That is one Project
+        /// per sample rather than a nested loop, and Project on a STRAIGHT road is constant
+        /// time - but on a curved one it walks every dense sample, so which side gets walked
+        /// is not cosmetic. Walking `a` unconditionally would stay linear for a curved N-S
+        /// road against straight E-W streets (every curve in today's map, and every test
+        /// fixture below, since the constructor only ever calls this as Crossings(ns.Path,
+        /// ew.Path)) but silently regress to the O(len_a x len_b) this function exists to
+        /// avoid the day a straight N-S road meets a curved E-W one. So: walk whichever of
+        /// a/b is curved and project onto the other; if both are curved, which one is walked
+        /// no longer affects cost, so `a` is walked. Results are still handed back as
+        /// (SA = along a, SB = along b) regardless of which side was actually walked.
         /// </summary>
         private static List<Crossing> Crossings(RoadPath a, RoadPath b)
         {
@@ -367,29 +375,42 @@ namespace Noir.Core.World
                 return found;
             }
 
-            float pitch = RoadPath.ResamplePitch;
-            var previous = a.PointAt(0f);
-            var (_, previousLateral) = b.Project(previous);
+            // At least one side is curved here - two straights already returned above. Walk
+            // that side; project onto the other. Only when a is the straight one and b is the
+            // curved one does that mean walking b instead of a.
+            bool walkB = a.IsStraightAxisAligned && !b.IsStraightAxisAligned;
+            RoadPath walk = walkB ? b : a;
+            RoadPath other = walkB ? a : b;
 
-            for (float s = pitch; s <= a.Length; s += pitch)
+            float pitch = RoadPath.ResamplePitch;
+            var previous = walk.PointAt(0f);
+            var (_, previousLateral) = other.Project(previous);
+
+            for (float s = pitch; s <= walk.Length; s += pitch)
             {
-                var here = a.PointAt(s);
-                var (_, lateral) = b.Project(here);
+                var here = walk.PointAt(s);
+                var (_, lateral) = other.Project(here);
 
                 if ((previousLateral < 0f) != (lateral < 0f))
                 {
                     float t = previousLateral / (previousLateral - lateral);
                     if (t >= 0f && t <= 1f)
                     {
-                        float sa = s - pitch + pitch * t;
-                        var hit = a.PointAt(sa);
-                        var (sb, _) = b.Project(hit);
+                        float sWalk = s - pitch + pitch * t;
+                        var hit = walk.PointAt(sWalk);
+                        var (sOther, _) = other.Project(hit);
 
-                        // Beyond B's end, Project clamps and the lateral is measured to the end
-                        // point - which can flip sign for a road that merely passes the end
-                        // without touching it. Only strictly inside the run is a crossing.
-                        if (sb > 0.001f && sb < b.Length - 0.001f)
+                        // Beyond the other road's end, Project clamps and the lateral is
+                        // measured to the end point - which can flip sign for a road that
+                        // merely passes the end without touching it. Only strictly inside the
+                        // run is a crossing.
+                        if (sOther > 0.001f && sOther < other.Length - 0.001f)
                         {
+                            // Hand back (SA = along a, SB = along b) regardless of which side
+                            // was walked, so callers never have to know.
+                            float sa = walkB ? sOther : sWalk;
+                            float sb = walkB ? sWalk : sOther;
+
                             bool duplicate = false;
                             foreach (var seen in found)
                                 if ((seen.SA - sa) * (seen.SA - sa) < 1f) { duplicate = true; break; }
