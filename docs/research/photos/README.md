@@ -85,6 +85,55 @@ That scale is *taken from the standard USDA specification, not measured off the 
 derived distances as approximate until something of known ground length is measured in the image.
 `00al02089.jpg` covers the ground to the west.
 
+### Calibrated 2026-08-03 — what checks out and what does not
+
+**0.647 m/px on the FULL FRAME is confirmed.** Measured off the street grid itself rather than
+assumed: a brightness profile down a residential strip (native x 3300–3650) puts the strong
+east–west street lines at y 4679, 4856, 5050, 5231, 5412, which is **117, 125, 117, 117 m** at that
+scale. `city.txt` declares its east–west streets 117–136 m apart, and `rossville-streets.json`'s
+latitudes give 117 m for York→Henderson and 125 m for Holmes→Attica. Three independent sources on
+the same spacing. **Work from the full frame.**
+
+**The derived crop's 1.732 m/px could NOT be reproduced**, and the mapping formula around it should
+not be used until someone re-derives it. Fitting the crop's brightness ridges against the real
+street latitudes gave 1.606 m/px north–south and 1.940 m/px east–west — a photograph has one scale,
+so that fit is picking up field texture rather than streets and is worthless. The 1.732 may well be
+right; it is *unverified*, which is not the same thing.
+
+**The crossing is NOT at map centre — do not use the formula as written.** It assumes the crossing
+sits at village (1050, 1200), the middle of the 2100 × 2400 map. It does not: Attica × Chicago is
+at **(748, 1335)**, taken from the road network itself (the junction of the roads named `chicago`
+and `attica`). Anchor any mapping there.
+
+---
+
+## Alleys — checked first, as the brief said, and they are there
+
+**Rossville has mid-block alleys, and the generator has none.**
+
+Profiling a residential strip at native resolution, the strong bright lines — the streets — fall
+every ~117 m, and **a consistently weaker bright line runs exactly halfway between each pair**:
+
+| | native y | ridge strength |
+|---|---|---|
+| street | 4679 | 34.1 |
+| **alley** | **4759** | **5.8** |
+| street | 4856 | 32.3 |
+| **alley** | **4953** | **12.1** |
+| street | 5050 | 17.2 |
+| **alley** | **5126** | **11.1** |
+| street | 5231 | 29.5 |
+| **alley** | **5321** | **10.6** |
+| street | 5412 | 29.2 |
+
+That is the classic Midwestern plat: a block about 117 m deep, split down the middle by a service
+alley at roughly 58 m. It is where the outbuildings face, where the bins and the garages are
+reached from, and where a person can cross a block without using a street — which for a game about
+who saw whom is not a small detail.
+
+`city.txt` has no alleys at all. Its blocks are therefore twice the depth they should be, and every
+lot backs onto another lot instead of onto a lane.
+
 ---
 
 ## The downtown
