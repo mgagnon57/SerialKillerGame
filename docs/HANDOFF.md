@@ -116,6 +116,18 @@ inside the story's own window**:
 Anything built from here should be checked against that date. A detail that is true of Rossville
 in 2026 is not automatically true of Rossville in 2000, and the fire is the dividing line.
 
+**But no single source describes that town, so each element is taken from whichever era documents
+it best.** The rule, and a table naming the source and era for every part of the town, is in
+`docs/research/SOURCING.md`. In one line:
+
+> **Take the fabric from whoever measured it, and the use from whoever lived in it.**
+
+A building's footprint, material and storey count were surveyed in 1913 and had not changed by
+2000 — those buildings stood until the 2004 fire. What the shop *sold* changed completely. So the
+shape comes from 1913 and the sign over the door comes from 2000. Counter-intuitively, **1913 is
+the better-documented year**: it has a professional survey of every building, where 2000 has
+modern parcels, 19 OSM footprints and living memory.
+
 ## Next, in the order I would do it
 
 1. ~~Verify the suite~~ **DONE 2026-08-03.** Core 227/2 (the two by-design), PlayMode 11/13 —
