@@ -246,11 +246,20 @@ namespace Noir.Core.World
             RoadLine best = null;
             foreach (var line in Lines)
             {
-                if (!line.IsStraight) continue;
-                float across = line.IsNorthSouth ? x : y;
-                float along = line.IsNorthSouth ? y : x;
-                if (Math.Abs(across - line.Centre) > line.HalfWidth) continue;
-                if (along < line.From || along > line.To) continue;
+                if (line.Path == null) continue;
+
+                // Through the path rather than against Centre, so this answers for a road that
+                // bends. For a straight axis-aligned line Project reduces to exactly the old
+                // Math.Abs(across - Centre) test - see RoadGeometryBaselineTests.
+                var (s, lateral) = line.Path.Project(new Vec2(x, y));
+                if ((lateral < 0f ? -lateral : lateral) > line.HalfWidth) continue;
+                if (s <= 0f || s >= line.Path.Length)
+                {
+                    // Project clamps, so a point off the end reports s at the end with a small
+                    // lateral. Reject unless it is genuinely within the run.
+                    float along = line.IsNorthSouth ? y : x;
+                    if (along < line.From || along > line.To) continue;
+                }
                 if (best == null || line.Width > best.Width) best = line;
             }
             return best;

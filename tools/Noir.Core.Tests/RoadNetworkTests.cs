@@ -133,5 +133,36 @@ namespace Noir.Core.Tests
                             $"{line.Name} is the width its class requires");
             }
         }
+
+        [Test]
+        public void AtAnswersForACurvedRoadToo()
+        {
+            // The old At skipped any line where !IsStraight outright, so a bent road was
+            // invisible to zoning and to the lighting pass - they would have called it open
+            // ground and planted trees down the carriageway.
+            var world = Build(Header
+                + "road bend 10 20,20 20,120 60,180 120,200\n  class street\n");
+
+            var line = world.Roads.Lines[0];
+            Assert.That(line.IsStraight, Is.False, "the fixture is meant to bend");
+
+            var onIt = line.Path.PointAt(line.Path.Length * 0.5f);
+            Assert.That(world.Roads.At(onIt.X, onIt.Y), Is.Not.Null,
+                        "a point on the centre line is on the road");
+
+            var beside = onIt + line.Path.NormalAt(line.Path.Length * 0.5f) * 40f;
+            Assert.That(world.Roads.At(beside.X, beside.Y), Is.Null,
+                        "40m aside from a 10m corridor is not on the road");
+        }
+
+        [Test]
+        public void AtStillPrefersTheWidestWhereTwoRoadsOverlap()
+        {
+            var world = Build(Header
+                + "road wide 30 0,75 239,75\n  class mainroad\n"
+                + "road narrow 10 75,0 75,239\n  class street\n");
+
+            Assert.That(world.Roads.At(75f, 75f).Name, Is.EqualTo("wide"));
+        }
     }
 }
