@@ -108,8 +108,28 @@ namespace Noir.PlayTests
                 return false;
             }
 
-            float across = line.IsNorthSouth ? vx : vy;
-            float off = Mathf.Abs(across - line.Centre);
+            // HOW FAR FROM THE CENTRE LINE, measured the way the road is actually shaped.
+            //
+            // This used to be |across - line.Centre| on one axis, and against a road that bends
+            // that is not a measurement, it is a straight ruler held up to a curve. It reported
+            // a van sitting correctly on Chicago Street's south end as "583.23m past the
+            // asphalt" - which is exactly |903.23 - 314| - 6, the distance from the x of the
+            // road's FIRST point, 2.4km away at the north edge.
+            //
+            // RoadNetwork.At had already been taught to ask the path; this had not, so the test
+            // was failing a car the game was placing correctly.
+            float off;
+            if (line.Path != null)
+            {
+                var (_, lateral) = line.Path.Project(new Noir.Core.Contracts.Vec2(vx, vy));
+                off = Mathf.Abs(lateral);
+            }
+            else
+            {
+                float across = line.IsNorthSouth ? vx : vy;
+                off = Mathf.Abs(across - line.Centre);
+            }
+
             float half = CityStreets.Asphalt(line.Class);
 
             over = off - half;

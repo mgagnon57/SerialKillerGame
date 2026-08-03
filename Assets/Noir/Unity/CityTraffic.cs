@@ -318,8 +318,30 @@ namespace Noir.Unity
             if (!line.IsStraight && line.Path != null)
             {
                 float arc = along - line.From;
+
+                // THE MARGIN RUNS OFF THE END OF THE PATH, and RoadPath.PointAt clamps.
+                //
+                // LaneGraph extends every lane thirty metres past the map edge so traffic
+                // arrives from off-stage rather than appearing out of nothing - so a segment on
+                // Chicago Street legitimately runs to arc 2516 on a path 2486 long. Clamping put
+                // every car in that margin on the same endpoint: they stacked up at one point
+                // ("came within 0.00m") and sat where no asphalt was laid.
+                //
+                // Off the end, carry on in a straight line along the tangent there, which is
+                // what a road running off the edge of the world should look like anyway.
                 var at = line.Path.PointAt(arc);
                 var normal = line.Path.NormalAt(arc);
+
+                if (arc < 0f || arc > line.Path.Length)
+                {
+                    float edge = arc < 0f ? 0f : line.Path.Length;
+                    var tangent = line.Path.TangentAt(edge);
+                    var end = line.Path.PointAt(edge);
+                    float past = arc - edge;
+                    at = new Noir.Core.Contracts.Vec2(end.X + tangent.X * past,
+                                                      end.Y + tangent.Y * past);
+                    normal = line.Path.NormalAt(edge);
+                }
 
                 // The offset is measured PERPENDICULAR to the road here rather than along an
                 // axis - which for a straight road is the same thing, and for a bend is the only
@@ -359,13 +381,35 @@ namespace Noir.Unity
                 return;
             }
 
-            // One lane holds x and the other holds z, so where they cross is simply one
-            // coordinate from each. Height is not one coordinate from either - a and c already
-            // carry real terrain height from PointOn, and a corner between them is close enough
-            // to flat, over a single junction, that their average is the right ground for it.
-            bool fromIsNorthSouth = _world.Roads.Lines[from.Line].IsNorthSouth;
+            // WHERE THE TWO LANE CENTRE LINES WOULD MEET.
+            //
+            // This used to be "one lane holds x and the other holds z, so take one coordinate
+            // from each", which is exact while every road is axis-aligned and meaningless the
+            // moment one is not. Chicago Street crosses the grid about seventeen degrees off
+            // vertical, so a.x was not the corner's x and cars cut turns onto ground that is not
+            // road - reported by the PlayMode suite as 8.99m past the asphalt.
+            //
+            // Intersecting the two tangents is the same answer for a right-angled crossing and
+            // the right one for an oblique. Height is not taken from either: a and c already
+            // carry real terrain height, and a corner between them is close enough to flat over
+            // a single junction that their average is the right ground.
             float midY = (a.y + c.y) * 0.5f;
-            b = fromIsNorthSouth ? new Vector3(a.x, midY, c.z) : new Vector3(c.x, midY, a.z);
+
+            var dirA = PointOn(from, from.ToS) - PointOn(from, from.ToS - 1f);
+            var dirC = PointOn(to, to.FromS + 1f) - PointOn(to, to.FromS);
+
+            float ax = a.x, az = a.z, cx = c.x, cz = c.z;
+            float denom = dirA.x * dirC.z - dirA.z * dirC.x;
+
+            if (Mathf.Abs(denom) < 1e-4f)
+            {
+                // Near-parallel: there is no corner worth cutting, so run straight between them.
+                b = new Vector3((ax + cx) * 0.5f, midY, (az + cz) * 0.5f);
+                return;
+            }
+
+            float t = ((cx - ax) * dirC.z - (cz - az) * dirC.x) / denom;
+            b = new Vector3(ax + dirA.x * t, midY, az + dirA.z * t);
         }
 
         private static Vector3 Bezier(Vector3 a, Vector3 b, Vector3 c, float t)
