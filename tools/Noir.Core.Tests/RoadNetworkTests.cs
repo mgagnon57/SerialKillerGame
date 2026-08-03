@@ -164,5 +164,32 @@ namespace Noir.Core.Tests
 
             Assert.That(world.Roads.At(75f, 75f).Name, Is.EqualTo("wide"));
         }
+
+        [Test]
+        public void AtRejectsPastTheCurvedEndAlongAShallowTangent()
+        {
+            // The end-of-run fallback used to compare the declared axis coordinate (y, since
+            // this road's overall span reads north-south) against From/To. The final leg here
+            // is shallow - nearly east-west - so walking along the TRUE tangent barely moves y
+            // at all, and a point genuinely off the end of the pavement could still slip through
+            // that test. The fix measures real distance to the true end instead.
+            var world = Build(Header
+                + "road bend 10 20,20 20,180 170,188\n  class street\n");
+
+            var line = world.Roads.Lines[0];
+            Assert.That(line.IsStraight, Is.False, "the fixture is meant to bend");
+            Assert.That(line.IsNorthSouth, Is.True, "the overall span is meant to read north-south");
+
+            var end = line.Path.PointAt(line.Path.Length);
+            var tangent = line.Path.TangentAt(line.Path.Length);
+
+            var justInside = end - tangent * 2f;
+            Assert.That(world.Roads.At(justInside.X, justInside.Y), Is.Not.Null,
+                        "just short of the true end is still on the road");
+
+            var wellPast = end + tangent * 8f;
+            Assert.That(world.Roads.At(wellPast.X, wellPast.Y), Is.Null,
+                        "8m past the true end along a shallow tangent is off the pavement");
+        }
     }
 }

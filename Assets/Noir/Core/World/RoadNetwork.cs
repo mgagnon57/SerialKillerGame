@@ -255,10 +255,24 @@ namespace Noir.Core.World
                 if ((lateral < 0f ? -lateral : lateral) > line.HalfWidth) continue;
                 if (s <= 0f || s >= line.Path.Length)
                 {
-                    // Project clamps, so a point off the end reports s at the end with a small
-                    // lateral. Reject unless it is genuinely within the run.
-                    float along = line.IsNorthSouth ? y : x;
-                    if (along < line.From || along > line.To) continue;
+                    // Project clamps to the ends of a run, so a point past the end comes back
+                    // with an end S and a lateral measured to that end point.
+                    if (line.Path.IsStraightAxisAligned)
+                    {
+                        // Exactly the old test, and provably identical to it: for an
+                        // axis-aligned line the lateral is invariant along the tangent.
+                        float along = line.IsNorthSouth ? y : x;
+                        if (along < line.From || along > line.To) continue;
+                    }
+                    else
+                    {
+                        // A bend has no single axis to measure "past the end" along, so ask the
+                        // real distance to the nearest point on the centre line instead. Only
+                        // reached at a clamped end, so it cannot change the interior answer.
+                        var here = new Vec2(x, y);
+                        var end = line.Path.PointAt(s);
+                        if ((here - end).LengthSquared > line.HalfWidth * line.HalfWidth) continue;
+                    }
                 }
                 if (best == null || line.Width > best.Width) best = line;
             }
