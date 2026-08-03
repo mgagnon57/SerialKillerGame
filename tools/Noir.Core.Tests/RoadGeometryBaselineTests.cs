@@ -52,6 +52,48 @@ namespace Noir.Core.Tests
                 Assert.That(line.IsStraight, Is.True, line.Name + " is not straight");
         }
 
+        [Test]
+        public void EveryRealRoadsPathReproducesItsOldCentreExactly()
+        {
+            // The zero-regression guarantee, asserted against real content rather than a
+            // fixture. Centre is the single float Phase A is replacing; if Path disagrees with
+            // it anywhere on any of the 27 roads, the town has moved.
+            foreach (var line in RealCity().Roads.Lines)
+            {
+                Assert.That(line.Path, Is.Not.Null, line.Name + " has no path");
+                Assert.That(line.Path.IsStraightAxisAligned, Is.True, line.Name);
+                Assert.That(line.Path.Length, Is.EqualTo(line.To - line.From).Within(0f),
+                            line.Name + " length");
+
+                for (float t = 0f; t <= 1f; t += 0.1f)
+                {
+                    float s = line.Path.Length * t;
+                    var p = line.Path.PointAt(s);
+
+                    float across = line.IsNorthSouth ? p.X : p.Y;
+                    float along = line.IsNorthSouth ? p.Y : p.X;
+
+                    Assert.That(across, Is.EqualTo(line.Centre),
+                                line.Name + " drifted off its centre at s=" + s);
+                    Assert.That(along, Is.EqualTo(line.From + s),
+                                line.Name + " is not where From+s says at s=" + s);
+                }
+            }
+        }
+
+        [Test]
+        public void APathsTangentAgreesWithTheAxisTheLineSaysItRunsOn()
+        {
+            foreach (var line in RealCity().Roads.Lines)
+            {
+                var t = line.Path.TangentAt(line.Path.Length * 0.5f);
+                if (line.IsNorthSouth)
+                    Assert.That(t.X, Is.EqualTo(0f), line.Name + " is N-S but its tangent has x");
+                else
+                    Assert.That(t.Y, Is.EqualTo(0f), line.Name + " is E-W but its tangent has y");
+            }
+        }
+
         // Filled in at Step 3 from the run in Step 2.
         private const int BaselineJunctions = 142;
         private const int BaselineSegments = 620;

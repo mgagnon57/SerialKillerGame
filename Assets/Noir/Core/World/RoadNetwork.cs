@@ -112,6 +112,16 @@ namespace Noir.Core.World
         /// <summary>The declared extent along the road's own axis, in continuous coordinates.</summary>
         public readonly float From, To;
 
+        /// <summary>
+        /// Where the centre line actually runs.
+        ///
+        /// Centre above is A SINGLE FLOAT and cannot describe a road that bends, which is why
+        /// Illinois Route 1 is drawn straight through 85% of the lots it passes. For a straight
+        /// axis-aligned road - which is all 27 in the current map - this is the exact same
+        /// geometry Centre/From/To describe, and RoadPath returns it bit for bit.
+        /// </summary>
+        public readonly RoadPath Path;
+
         public RoadLine(string name, RoadClass klass, int width, IReadOnlyList<Tile> points)
         {
             Name = name ?? "";
@@ -142,6 +152,27 @@ namespace Noir.Core.World
             int hi = IsNorthSouth ? Math.Max(a.Y, b.Y) : Math.Max(a.X, b.X);
             From = lo;
             To = hi + 1f;          // a tile covers [i, i+1), so the run ends past its last tile
+
+            // Built from the DERIVED continuous centre line, not from the declared tiles: the
+            // brush covers -(W/2)..(W/2 + W%2 - 1), so an odd width sits half a tile past the
+            // declared coordinate, and a tile's run ends at hi+1 rather than hi. Path has to
+            // describe the road WorldBuilder actually strokes.
+            if (IsStraight)
+            {
+                Path = IsNorthSouth
+                    ? RoadPath.Straight(new Vec2(Centre, From), new Vec2(Centre, To))
+                    : RoadPath.Straight(new Vec2(From, Centre), new Vec2(To, Centre));
+            }
+            else
+            {
+                // A declared curve runs through its tile centres - Vec2.CentreOf, the convention
+                // the rest of Core already means by "where a tile is". Phase A ships no curved
+                // road, so nothing exercises this on real content yet; Phase C revisits it if the
+                // half-width parity above turns out to matter on a bend.
+                var through = new Vec2[Points.Count];
+                for (int i = 0; i < Points.Count; i++) through[i] = Vec2.CentreOf(Points[i]);
+                Path = RoadPath.Through(through);
+            }
         }
 
         /// <summary>Half the corridor, for asking whether a point is on this road.</summary>
