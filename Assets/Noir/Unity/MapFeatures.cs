@@ -69,11 +69,6 @@ namespace Noir.Unity
             return _cache;
         }
 
-        /// <summary>Sub-divisions inserted between each pair of real vertices - four turns a
-        /// dozen-point survey way into a curve with no single straight-line segment longer than
-        /// a fraction of the gap between real points, without moving any of those points.</summary>
-        private const int SmoothSteps = 4;
-
         /// <summary>
         /// Catmull-Rom through the real vertices, unchanged - every original point is still on
         /// the curve exactly where it was, only the straight segments between them are replaced

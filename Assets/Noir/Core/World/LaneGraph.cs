@@ -79,7 +79,9 @@ namespace Noir.Core.World
         /// Start and end in TRAVEL COORDINATES: a number that increases along the direction of
         /// travel whichever way that points, so a car's progress is always FromS rising to ToS
         /// and no code has to carry a sign around. <see cref="LaneGraph.AlongOf"/> turns it back
-        /// into a village coordinate.
+        /// into a village coordinate exactly for a straight road; for a curve it only offsets
+        /// arc length onto the road's declared axis, a convenience rather than the road's real
+        /// off-axis position - see the "From + s" note below, where junction stops are cut.
         /// </summary>
         public float FromS, ToS;
 
@@ -125,7 +127,12 @@ namespace Noir.Core.World
     /// where they can be tested. WHERE a lane sits across the carriageway is measured off the
     /// bought road tile and stays with the renderer.
     ///
-    /// STRAIGHT, AXIS-ALIGNED ROADS ONLY, which is what RoadNetwork already restricts itself to.
+    /// CURVES ARE CUT AND CLASSIFIED LIKE ANY OTHER ROAD, NOT SPECIAL-CASED. Lanes are cut at
+    /// junction ARC LENGTHS rather than at a village coordinate (see the note below), and turns
+    /// are classified FROM THE TANGENTS the roads meet at, not from Heading (see that note too)
+    /// - so a curved road gets lanes and legal turns the same way a straight one does. Heading
+    /// itself is unaffected: it stays a coarse N/S/E/W label, not the segment's own tangent,
+    /// which is a real gap for a curve and a deliberate deferral rather than an oversight here.
     /// </summary>
     public sealed class LaneGraph
     {

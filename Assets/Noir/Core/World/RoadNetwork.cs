@@ -78,9 +78,13 @@ namespace Noir.Core.World
     /// facts - where the centre line runs, which way it points, and what class it is - so the
     /// world keeps them instead of making each caller rediscover them.
     ///
-    /// STRAIGHT AND AXIS-ALIGNED. Northgate's roads all are. A road that bends still rasterises
-    /// correctly, because that is done from Points; it is only the centre line below that
-    /// assumes a straight run, and <see cref="IsStraight"/> says whether it may be trusted.
+    /// STRAIGHT AND AXIS-ALIGNED, Northgate's roads all are today - but the road itself no
+    /// longer assumes that: <see cref="Path"/> below is where the centre line actually runs,
+    /// straight or curved, and is the answer that always holds. Centre/From/To remain alongside
+    /// it, not as a stale approximation but because for a straight road they are exactly right -
+    /// the very numbers Path is built from - and 20-odd other files still read them directly
+    /// rather than going through Path. <see cref="IsStraight"/> says whether that shortcut is
+    /// available for a given road.
     /// </summary>
     public sealed class RoadLine
     {
@@ -383,8 +387,7 @@ namespace Noir.Core.World
             RoadPath other = walkB ? a : b;
 
             float pitch = RoadPath.ResamplePitch;
-            var previous = walk.PointAt(0f);
-            var (_, previousLateral) = other.Project(previous);
+            var (_, previousLateral) = other.Project(walk.PointAt(0f));
 
             for (float s = pitch; s <= walk.Length; s += pitch)
             {
@@ -419,7 +422,6 @@ namespace Noir.Core.World
                     }
                 }
 
-                previous = here;
                 previousLateral = lateral;
             }
             return found;
