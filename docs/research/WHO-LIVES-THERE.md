@@ -52,7 +52,7 @@ directly from England in 1832."*
 
 ---
 
-## The drift: the name pool is tuned to 1991, the town is set in 2000
+## The clock starts in 1991, and the name pool is already right
 
 `Content/names.txt` opens *"Names for Rossville, Illinois - 1991"* and builds its cohorts on that:
 
@@ -64,25 +64,32 @@ young adults   born 1966-1973
 the children   born 1974-1991      <- the -child lists
 ```
 
-But `SOURCING.md` pins the town to **around 2000** — before the February 2004 fire, before the 2006
-school closure. The names file predates that decision and was never moved.
+**That is correct and should not be moved.** The game *opens* in 1991 and runs forward; the town is
+not a snapshot of 2000. An earlier draft of this file argued the cohorts had drifted and should be
+slid to a 2000 setting — that was wrong, and it is recorded here rather than quietly deleted
+because the same mistake is easy to make again from `SOURCING.md` alone.
 
-**Nine years is nothing for the adults and everything for the children.** The adult pool spans
-ninety years deliberately, and sliding it a decade changes almost nothing — the same people are in
-the same post-office queue, nine years older. But the child list is bounded at 1991, so **every
-child born 1992–2000 is missing**, which is most of the primary school.
+**`SOURCING.md` needs reading carefully on this point.** It says *"one town, built as it stood
+around 2000"*, and for **fabric** that is a reasonable simplification — the downtown row is whole
+from 1898 until the 2004 fire, so 1991 and 2000 look the same in brick. But for **use** they are
+not the same town at all, and that is the half the doctrine says to take from whoever lived in it:
 
-That is the same class of error the file itself documents and fixed once already: it notes that
-`male-child` and `female-child` were silently ignored, so *"the village had seven-year-olds called
-Clarence."* A 7-year-old in 1991 was born 1984 — Jason, Ashley, Dustin. A 7-year-old in **2000** was
-born **1993**, which is a different set of names entirely.
+| | 1991 — the opening | 2000 |
+|---|---|---|
+| population | **1,334** (1990 census) | 1,217 — the historic low |
+| the antique trade | **still the town's identity and economy** | dying; eBay has bitten |
+| the high school | open, and will be for fifteen more years | open, six years left |
+| the downtown row | whole | whole |
+| Danville's GM foundry | **still running** | closed since 1995 |
 
-**The fix is content, not code:** extend the child cohorts to births 1982–2000 and reset the header
-year. The adult list can stay as it is.
+**In 1991 the antique trade is alive.** That is the single biggest difference. `SOURCING.md`'s line
+*"antique shops, not harness repair"* is right — but it dates the uses to ~2000, when the trade was
+already going. At the opening the shops are trading, and whatever remains of the tourist traffic
+that once brought seven Greyhound buses a day is still arriving.
 
-*(Also minor: the sizing note reasons from "1,331 people", the 2010 census. The 2000 figure — the
-setting's own year — is **1,217**. It does not change the conclusion that about two households per
-surname is right.)*
+*(Minor: the sizing note reasons from "1,331 people", the 2010 census. The 1990 figure — the
+opening year's own — is **1,334**, which happens to land in the same place. Two households per
+surname stands.)*
 
 ---
 
