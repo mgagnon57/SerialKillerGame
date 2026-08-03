@@ -366,7 +366,8 @@ namespace Noir.Unity
                 }
 
                 string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
-                if (Seat(parent, piece, cx - half, cy - half, module, module, yaw) != null) laid++;
+                var t = Seat(parent, piece, cx - half, cy - half, module, module, yaw);
+                if (t != null) { if (line.Class == RoadClass.Street) Verge(t); laid++; }
             }
             return laid;
         }
@@ -432,7 +433,8 @@ namespace Noir.Unity
                 }
 
                 string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
-                if (SeatAt(parent, piece, at.X, at.Y, yaw) != null) laid++;
+                var t = SeatAt(parent, piece, at.X, at.Y, yaw);
+                if (t != null) { if (line.Class == RoadClass.Street) Verge(t); laid++; }
             }
 
             Debug.Log($"[streets] '{line.Name}' bends: {laid} tiles laid along "
@@ -448,6 +450,47 @@ namespace Noir.Unity
         /// tiles pivot at a corner rather than the middle, so the drift has to be measured after
         /// the rotation is applied, not before.
         /// </summary>
+
+        /// <summary>
+        /// A RESIDENTIAL STREET HAS NO KERB. Turn its concrete edging into grass verge.
+        ///
+        /// The pack ships one 10 m road tile and it is a CITY street: asphalt, paint, and a
+        /// concrete sidewalk strip down both sides - the same three materials the 30 m main road
+        /// uses. Laid on Rossville that gave every side street in a town of twelve hundred the
+        /// kerbs and walks of a downtown block, which is the mismatch the owner spotted: "Route 1
+        /// and Attica are good size roads while each side street is not".
+        ///
+        /// The pack has no unkerbed 10 m tile, so the geometry stays and the SURFACE changes. The
+        /// sidewalk strip becomes M_Ground_Grass and reads as the mown verge it should be. Chicago
+        /// and Attica keep their concrete, which is right - the 2007 photographs of the crossing
+        /// show exactly that, kerbs and set-back walks on the through route and nothing on the
+        /// residential streets running off it.
+        ///
+        /// BY MATERIAL NAME, NOT SUBMESH INDEX. The two prefabs order their submeshes
+        /// differently - sidewalk is index 2 on the 10 m tile and index 0 on the 30 m one - so
+        /// anything keyed on position would silently repaint the carriageway on one of them.
+        /// </summary>
+        private static void Verge(GameObject tile)
+        {
+            if (tile == null) return;
+            if (_verge == null)
+                _verge = AssetDatabase.LoadAssetAtPath<Material>(
+                    "Assets/polyperfect/Poly Universal Pack/Materials/Nature/M_Ground_Grass.mat");
+            if (_verge == null) return;
+
+            foreach (var r in tile.GetComponentsInChildren<MeshRenderer>())
+            {
+                var mats = r.sharedMaterials;
+                bool hit = false;
+                for (int i = 0; i < mats.Length; i++)
+                    if (mats[i] != null && mats[i].name.StartsWith("M_Sidewalk", System.StringComparison.Ordinal))
+                    { mats[i] = _verge; hit = true; }
+                if (hit) r.sharedMaterials = mats;
+            }
+        }
+
+        private static Material _verge;
+
         private static GameObject SeatAt(Transform parent, string path, float mx, float my, float yaw)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
