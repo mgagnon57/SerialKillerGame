@@ -18,20 +18,18 @@ namespace Noir.Core.Tests
     /// given the alignment of OpenStreetMap way 22037977, and the baseline was re-recorded
     /// against it - 614 segments, 1656 turns.
     ///
-    /// THAT CURVE WAS WRONG AND HAS BEEN TAKEN OUT AGAIN, 2026-08-03. The OSM way carries
+    /// IT WAS BRIEFLY STRAIGHTENED IN ERROR on 2026-08-03 and put straight back. The OSM way carries
     /// `tiger:reviewed = no` and `tiger:county = Iroquois, IL`; Rossville is in Vermilion. It
-    /// is unchecked TIGER import of the rural highway from the next county north, and nobody
-    /// ever traced its line through this town. Route 1 and Chicago Street are ONE road - the
-    /// highway outside the village, the street inside it - and it runs straight through a plat
-    /// that OSM's own separately-mapped town streets show is square to two or three degrees.
-    /// The curve had it crossing Ann Street and Harrison Street, and passing through the inside
-    /// of the barber and the steam laundry downtown. See docs/research/ROADS-AND-BLOCKS.md.
+    /// is unchecked TIGER import, and every other street in town is square to two or three
+    /// degrees - which looked damning until the owner pointed out that this road IS THE HUBBARD
+    /// TRAIL. A footpath from 1829 that became a highway in 1833, with the town platted square
+    /// around it in 1857. A cardinal grid with a diagonal highway through it is exactly what
+    /// that history produces, and the road curves. The counts below are the curve's.
     ///
-    /// So these counts are back to what they were BEFORE the curve went in: 620 segments and
-    /// 1692 turns, with junctions and entries never having moved. That the pre-curve figures
-    /// return exactly is the strongest evidence the curve was the anomaly. The checksum is new
-    /// rather than restored, because the street is at x=747 in the grid and bends south of the
-    /// plat, which is not the old dead-straight x=750.
+    /// What was actually wrong was the DOWNTOWN, which was authored on a straight line while
+    /// the road curved away from it - the centreline passed inside the barber and the steam
+    /// laundry and left the west shop row 94 m behind. The buildings moved, not the road. See
+    /// docs/research/ROADS-AND-BLOCKS.md.
     ///
     /// These figures were READ OFF THE BUILD, not off any document. docs/STATE.md quotes
     /// counts from a 960x960 map that no longer exists.
@@ -201,14 +199,14 @@ namespace Noir.Core.Tests
         //     bends one way; the symmetry is evidence the tangent-based turn classification is
         //     not skewed by it.
         private const int BaselineJunctions = 142;
-        private const int BaselineSegments = 620;
-        private const int BaselineTurns = 1692;
+        private const int BaselineSegments = 614;
+        private const int BaselineTurns = 1656;
         private const int BaselineEntries = 54;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "4E6E66AB8D93984DAF149F81A116C9EC2BD156D883C1571099FA5041EFFBFE8D";
+            "9BFF36F308B76B0DDB3FAF1B54D0E352064C776D03E1FC6E80DD0051E34964F1";
     }
 }

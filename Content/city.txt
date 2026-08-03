@@ -1074,39 +1074,30 @@ terrain water 0,2267 1x17
 # `mainroad` is a 30m corridor, one lane each way with lay-bys, which is what a
 # two-lane state highway through a village is. Both run the full extent of the map:
 # a state route does not stop at the village limit.
-# ROUTE 1 AND CHICAGO STREET ARE ONE ROAD. Outside the village it is Illinois
-# Route 1; inside it, it is Chicago Street. It is straight through the plat, and it
-# is one of the two streets the town was laid out on in 1857.
+# ROUTE 1 AND CHICAGO STREET ARE ONE ROAD, AND IT IS NOT STRAIGHT.
+# Outside the village it is Illinois Route 1; inside it, Chicago Street. Same road.
 #
-# THIS WAS WRONG FOR A LONG TIME and the reason is worth keeping. It used to carry a
-# fourteen-point curve taken from OpenStreetMap way 22037977 (ref=IL 1), which looks
-# authoritative and is not: its tags say `tiger:reviewed = no` and
-# `tiger:county = Iroquois, IL`. Rossville is in VERMILION county. That way is raw,
-# never-checked TIGER import of the rural highway from the county to the north, and
-# nobody has ever traced its line through this town.
+# IT RUNS DIAGONALLY THROUGH A SQUARE GRID, and that is not a contradiction - it is
+# the whole history of the place. This road is the HUBBARD TRAIL: a footpath from
+# 1829, Chicago to Danville, which became Illinois's first state highway in 1833.
+# A footpath does not follow section lines. The town was platted square in 1857
+# around a trail that was already there, so the grid is cardinal and the road that
+# made the town cuts across it at about twenty degrees. See ROSSVILLE-HISTORY.md 1.
 #
-# What settles it is OSM's own mapping of the town's streets, which is separate from
-# that way. Measured end to end: East 3550 North Road 4,713 m at 0.0 degrees off
-# square, East Attica 1,029 m at 0.6, South Summit 871 m at 2.3, Green 791 m at 5.3,
-# Henderson 744 m at 2.2, Gilbert 598 m at 1.6. The grid is square to two or three
-# degrees. Railroad Avenue is 39 degrees off, correctly, because it follows the rail.
-# The IL 1 way is 11.8 degrees off - the ONLY long feature in the town that is
-# neither square nor rail-aligned. The county parcels agree: their dominant edge
-# bearing is 88 degrees.
+# Alignment from OpenStreetMap way 22037977 (ref=IL 1), projected into village metres
+# about the Chicago/Attica crossing. Measured bearing: a constant +20 degrees from
+# north of town down through the crossing and the downtown, then bending south of the
+# commercial block - +21 at y1555, +17 at y1645, +13 at y1682, +9 at y1721, +6 from
+# y1734 on. That bend south of town centre is the one the owner describes.
 #
-# The damage the curve did, all measured before it was removed: it crossed Ann Street
-# and Harrison Street, which two platted streets cannot do; and it ran THROUGH the
-# downtown, passing inside the barber (1.6 m from the centreline) and the steam
-# laundry (1.1 m) while leaving the west shop row 94 m behind. See
-# docs/research/ROADS-AND-BLOCKS.md.
-#
-# The real curve, which the owner describes and which is genuine, is SOUTH of the
-# town - Route 1 swings away once it is past the plat. The plat runs from York
-# (y=729) to Earl Court (y=2210), so the street is dead straight across that and only
-# bends beyond it. The shape of the bend is NOT well established: the only source for
-# it is the same unreviewed TIGER way, so it is drawn as a modest departure and
-# should be replaced when something better turns up.
-road chicago 30 747,0 747,2210 762,2280 800,2399
+# THIS WAS BRIEFLY STRAIGHTENED IN ERROR on 2026-08-03 and put back the same day. The
+# argument for straightening was that the way carries `tiger:reviewed = no` and
+# `tiger:county = Iroquois, IL` while Rossville is in Vermilion, and that every other
+# street in town is square to two or three degrees. All of that is true and none of it
+# matters: the owner has driven this road his whole life and it curves, and the
+# Hubbard Trail explains exactly why a square town has a diagonal highway through it.
+# The buildings were what needed moving, not the road.
+road chicago 30 314,0 371,177 466,470 593,855 675,1109 747,1332 776,1423 799,1491 839,1607 857,1687 863,1740 872,1876 881,2049 899,2399
   class mainroad
 road attica 30 0,1335 2099,1335
   class mainroad
@@ -1186,110 +1177,110 @@ road crossroad1 10 1880,0 1880,2399
 #  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET
 # ==========================================================================
 
-place casino 710,1282 22x35 "the Opera House"
+place casino 695,1282 22x35 "the Opera House"
   door 731,1299
   human Open all night, and the carpet is loud enough that nobody notices the hour.
-place cinema 710,1258 22x22 "the Motion Picture house"
+place cinema 685,1258 22x22 "the Motion Picture house"
   door 731,1269
   human Two screens, one of which has been showing the same film since spring.
-place bank 710,1227 22x29 "the Rossville bank"
+place bank 676,1227 22x29 "the Rossville bank"
   door 731,1241
   human Marble that was meant to look permanent.
-place precinct 714,1166 18x35 "the village office"
+place precinct 661,1166 18x35 "the village office"
   door 731,1183
   human The light in the front office never goes off, which is not the same as somebody being awake.
-place villagehall 716,1138 16x26 "the I.O.O.F. hall"
+place villagehall 653,1138 16x26 "the I.O.O.F. hall"
   door 731,1151
   human Bingo, inquests, and the annual meeting about the verge.
-place villagehall 768,1291 16x26 "the G.A.R. hall"
+place villagehall 758,1291 16x26 "the G.A.R. hall"
   door 768,1304
   human Scout hut, polling station, and where the inquest was held.
-place shop 768,1271 20x18 "Henderson's"
+place shop 750,1271 20x18 "Henderson's"
   door 768,1280
   human Open at five, which is either a service or an accusation.
-place shop 768,1245 14x24 "the Attica Street market"
+place shop 743,1245 14x24 "the Attica Street market"
   door 768,1257
   human Fruit stacked to a geometry that survives being sold from.
-place pub 768,1221 14x22 "the Livingood House"
+place pub 735,1221 14x22 "the Livingood House"
   door 768,1232
   human The car park is bigger than the pub and on Fridays it is not big enough.
-place pub 768,1179 14x22 "the Commercial Hotel"
+place pub 721,1179 14x22 "the Commercial Hotel"
   door 768,1190
   human Older than the road, and it shows in the floor.
-place pub 768,1155 12x22 "the grain office"
+place pub 713,1155 12x22 "the grain office"
   door 768,1166
   human Four o'clock and the same men are in it who were in it at noon.
-place postoffice 768,1137 14x16 "Rossville Post Office"
+place postoffice 707,1137 14x16 "Rossville Post Office"
   door 768,1145
   human A queue that moves at the speed of one conversation at a time.
-place diner 721,1353 11x20 "the Chicago Street diner"
+place diner 726,1353 11x20 "the Chicago Street diner"
   door 731,1363
   human Open before anyone needs it to be, and the same four faces are in it at six.
-place gasstation 721,1375 11x20 "the pumps"
+place gasstation 733,1375 11x20 "the pumps"
   door 731,1385
   human Somebody is always sitting in a car here not buying anything.
-place shop 720,1397 12x16 "the drug store"
+place shop 738,1397 12x16 "the drug store"
   door 731,1405
   human A general store, which out here means it stocks what the last person asked for.
-place shop 720,1415 12x16 "the bakery"
+place shop 744,1415 12x16 "the bakery"
   door 731,1423
   human Sells out by ten and does not bake more, on principle.
-place shop 720,1433 12x16 "the printing office"
+place shop 750,1433 12x16 "the printing office"
   door 731,1441
   human Papers, sweets, and a bell that has never once been oiled.
-place shop 720,1451 12x16 "the hardware"
+place shop 756,1451 12x16 "the hardware"
   door 731,1459
   human A hardware shop that also does keys, shoes, and advice.
-place shop 720,1486 12x16 "the grocer"
+place shop 768,1486 12x16 "the grocer"
   door 731,1494
   human Run by a family who have never agreed on the opening hours.
-place shop 720,1504 12x16 "the millinery"
+place shop 774,1504 12x16 "the millinery"
   door 731,1512
   human Wool, thread, and a cat that is not for sale.
-place shop 720,1522 12x16 "the confectionery"
+place shop 780,1522 12x16 "the confectionery"
   door 731,1530
   human The smell reaches the county line on a west wind.
-place shop 720,1540 12x16 "the general merchandise"
+place shop 787,1540 12x16 "the general merchandise"
   door 731,1548
   human The last shop before the county line and it knows it.
-place postoffice 720,1558 12x16 "the north sub-office"
+place postoffice 793,1558 12x16 "the north sub-office"
   door 731,1566
   human One window, one clerk, and a scale that has been condemned twice.
-place icecream 768,1353 11x16 "the ice cream parlour"
+place icecream 776,1353 11x16 "the ice cream parlour"
   door 768,1361
   human Shut half the year, and the queue at Easter goes round the corner.
-place shop 768,1371 10x13 "the jeweller"
+place shop 782,1371 10x13 "the jeweller"
   door 768,1377
   human Ironmongery, and a man who can find the one screw you need in a minute.
-place shop 768,1386 10x13 "the meat market"
+place shop 786,1386 10x13 "the meat market"
   door 768,1392
   human Everything a fortnight from its date and nobody has ever complained.
-place shop 768,1401 10x13 "the barber"
+place shop 791,1401 10x13 "the barber"
   door 768,1407
   human A tailor who has outlived three fashions and expects to outlive a fourth.
-place carwash 768,1416 13x10 "the steam laundry"
+place carwash 795,1416 13x10 "the steam laundry"
   door 768,1421
   human A place people leave a car and walk away from for ten minutes.
-place restroom 768,1428 8x14 "the rest room"
+place restroom 800,1428 8x14 "the rest room"
   door 768,1435
   human Council-green tile and a door that does not lock.
-place shop 768,1444 10x11 "the second drug store"
+place shop 805,1444 10x11 "the second drug store"
   door 768,1449
   human The window has not changed since the coronation and neither has the smell.
-place newsstand 768,1457 3x7 "the news stand"
+place newsstand 809,1457 3x7 "the news stand"
   door 768,1460
   human Papers, cigarettes, and the man who knows who bought which.
-place apartment 768,1486 8x6 "the rooms over the grocer"
+place apartment 818,1486 8x6 "the rooms over the grocer"
   door 768,1489
   units 3
   human Over the shops, and the stairs go up from the street.
-place apartment 768,1494 8x6 "the rooms over the meat market"
+place apartment 821,1494 8x6 "the rooms over the meat market"
   door 768,1497
   units 3
-place apartment 768,1502 8x6 "the rooms over the barber"
+place apartment 824,1502 8x6 "the rooms over the barber"
   door 768,1505
   units 3
-place apartment 768,1510 8x6 "the rooms over the laundry"
+place apartment 827,1510 8x6 "the rooms over the laundry"
   door 768,1513
   units 3
 

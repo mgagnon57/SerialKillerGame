@@ -60,52 +60,46 @@ Route 1 starts west of Ann and finishes east of Harrison. **Two platted streets 
   square but **differ in size**. The real north–south spacings are 115, 35, 20, 54, 104, 109, 185,
   181, 141, 60 m — nothing like a repeating module.
 
-## 5. RESOLVED — the curve was a TIGER artifact
+## 5. RESOLVED — the road was right, the buildings were wrong
 
-**Route 1 and Chicago Street are one road.** Outside the village it is Illinois Route 1; inside it
-is Chicago Street. It runs straight through the plat. Settled by the owner, who grew up here, and
-confirmed by every measurement once the right question was asked.
+**Route 1 and Chicago Street are one road, and it curves.** Outside the village it is Illinois
+Route 1; inside it, Chicago Street. Settled by the owner, who has driven it his whole life.
 
-The curve came from OpenStreetMap way 22037977. Its own tags condemn it:
+**Why a square town has a diagonal highway, which is the part that confused this for two days.**
+This road is the **Hubbard Trail** — a footpath from 1829, Chicago to Danville, which became
+Illinois's first state highway in 1833. A footpath does not follow section lines. The town was
+platted square in 1857 *around a trail that was already there*. So the grid is cardinal, the road
+that made the town cuts across it at about twenty degrees, and both are correct. See
+`ROSSVILLE-HISTORY.md` §1, which said this all along: *"Route 1 is not an arbitrary line — it is a
+1829 footpath that became a road."*
 
-```
-tiger:reviewed = no
-tiger:county   = Iroquois, IL      <-- Rossville is in VERMILION county
-```
+### A wrong turn, recorded because the reasoning was seductive
 
-Raw, never-checked TIGER import of the rural highway from the county to the north. Nobody ever
-traced its line through this town, and **OSM has no way named "Chicago Street" at all** — the
-highway way swallowed the street and is misnamed "2300 East".
+On 2026-08-03 the road was **straightened in error** and put back the same day. The case for
+straightening looked strong: OSM way 22037977 carries `tiger:reviewed = no` and
+`tiger:county = Iroquois, IL` while Rossville is in Vermilion — raw, unchecked 2007 census import —
+and every other street in town measures square to two or three degrees.
 
-What settles it is OSM's *own* separate mapping of the town's streets. Measured end to end:
+All of that is true. None of it mattered. A bad source can still point the right way, and the
+Hubbard Trail explains the diagonal completely. **The owner had already said twice that the road
+was right and the shops were not aligned to it**; the correct response was to move the shops.
 
-| street | length | degrees off square |
+### What actually got fixed
+
+The downtown was authored on two straight columns at x=726 and x=772 while the road curved away
+from them. Every building in the strip has been re-laid against the centreline at a 20 m setback —
+15 m of half-carriageway plus a 5 m walk:
+
+| | before | after |
 |---|---|---|
-| East 3550 North Road | 4,713 m | **0.0** |
-| East Attica Street | 1,029 m | 0.6 |
-| South Summit | 871 m | 2.3 |
-| Henderson | 744 m | 2.2 |
-| Gilbert | 598 m | 1.6 |
-| Railroad Avenue | 414 m | 39.0 — correct, it follows the rail |
-| **"2300 East" (IL 1)** | **8,582 m** | **11.8** |
+| offset from the centreline | **1.1 m to 94.1 m** | **20.5 m to 29.6 m** |
+| the barber, the steam laundry | road passing **inside** them | 23.5 and 24.5 m |
+| the west row at y=1566 | 94.1 m adrift | 25.3 m |
 
-The grid is square to two or three degrees. Railroad Avenue is properly diagonal. The IL 1 way is
-the **only** long feature in town that is neither — and it is the unreviewed one.
+Thirty-five buildings moved, from the I.O.O.F. hall at y=1137 down to the north sub-office at
+y=1558. The road did not move.
 
-### What straightening it restored
-
-`road chicago 30 747,0 747,2210 762,2280 800,2399` — straight across the plat (York y=729 to Earl
-Court y=2210), bending only beyond it.
-
-- **Downtown offsets: 20–28 m at every northing**, from 1.1–94.1 m. A consistent shopfront setback
-  on a 30 m road, both rows.
-- **Gap to Ann −61 m at every northing** (declared −61), Harrison +108 (declared +107). Constant
-  the whole length; no street crosses another.
-- **The lane graph returned to its pre-curve figures exactly** — 620 segments and 1692 turns,
-  against 614/1656 while the curve was in. That the old numbers come back unchanged is the
-  strongest single piece of evidence that the curve was the anomaly.
-
-The real bend south of town is genuine and the owner describes it, but its **shape is not
-established** — the only source is the same unreviewed way, so it is drawn as a modest departure
-past y=2210 and should be replaced when something better turns up. The 1940 aerial is the obvious
-candidate.
+**Known limitation:** places in `city.txt` are axis-aligned rectangles with no rotation, so the row
+*steps* along the curve instead of turning to face it, leaving small wedges between units. That is
+a content-format limit, not a placement error, and it wants a rotation field on `place` before it
+can be better.
