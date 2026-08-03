@@ -11,8 +11,10 @@ it came to be where it is, what was built on it, and what it did for a living.
 Rossville exists because of a footpath. Gurdon Hubbard's trading trail from Chicago to Danville
 ran past a lodging house John Liggett built in 1829, and the settlement that grew there was called
 **Liggett's Grove**. In **1833 that trail became Illinois's first state highway** — it is Illinois
-Route 1 today, and part of the Dixie Highway from 1914. The village incorporated in **August 1859**,
-named for the settler **Jacob Ross**. The **Chicago & Eastern Illinois Railroad** arrived and cut
+Route 1 today, and part of the Dixie Highway from 1914. The town was **platted in 1857**, four
+blocks at a crossroads, named for the settler **Jacob Ross**, and its documented incorporation is
+**July 1872** (see §9 — the widely-repeated "August 1859" is not corroborated by either county
+history). The **Chicago & Eastern Illinois Railroad** arrived and cut
 across the town on a diagonal, which is why the rail line and the street grid disagree in angle to
 this day. A fire took a quarter of the downtown in **1893**; it was rebuilt in brick, from brick
 made at a works inside the village. The town supported itself on grain, a canning factory and
@@ -31,7 +33,9 @@ lost another quarter of its downtown to a **second fire in February 2004**.
 | **1833** | **The trail becomes Illinois's first state highway.** It is Illinois Route 1 today. |
 | 1838 | **Alvan Gilbert** buys the Liggett farm. |
 | 1839 | Gilbert becomes postmaster of the new post office. |
-| **Aug 1859** | **Rossville incorporates as a village**, named for settler **Jacob Ross**. |
+| **1857** | **The town is platted** — four blocks at Chicago × Attica, named for settler **Jacob Ross**. |
+| *Aug 1859* | *"incorporates as a village" — claimed by the village and Wikipedia, **uncorroborated**; see §9* |
+| **Jul 1872** | **Documented incorporation** under the general act — 53–15, trustees elected 24 August. |
 | 1914 | Route 1 becomes part of the **Dixie Highway**. |
 
 Sources: [Village of Rossville](https://villageofrossville.org/our-history),
@@ -51,8 +55,13 @@ bought the founding farm subdivided most of the town.
 
 ## 1a. The original plat — four blocks, and why the streets are called that
 
-From the 1911 *History of Vermilion County* (Lottie E. Jones), public domain, pp. 296–301
-([full text at archive.org](https://archive.org/stream/historyofvermili01will/historyofvermili01will_djvu.txt)):
+From the *History of Vermilion County, Illinois* by **Jack Moore Williams**, signed "Danville,
+Illinois. March 11, 1930", public domain, pp. 296–301
+([full text at archive.org](https://archive.org/stream/historyofvermili01will/historyofvermili01will_djvu.txt)).
+
+*(An earlier draft of this file credited the 1911 Lottie E. Jones history. That was wrong — the
+volume actually consulted is Williams 1930, confirmed by its own signature block. Both editions
+exist and are public domain; only Williams was read.)*
 
 > *"Alvan Gilbert and Joseph Satterthwait laid out and recorded the original town of Rossville
 > about 1857. **It contained only four blocks at the intersection of what was known as the Chicago
@@ -111,7 +120,7 @@ extended it in 1873; it was *"famous in this part of the country as a very good 
 - **1850** — Presbyterian church organised, at Mr. Gilbert's house
 - **1868** — a **two-storey brick school house** built; *"Rossville has always had excellent schools"*
 - **1869** — Methodist church built; first Presbyterian church built the same year
-- **1872** — see the incorporation conflict in §9
+- **1872** — incorporation under the general act; see §9
 
 ### The country before the town
 
@@ -431,19 +440,38 @@ documents).
 
 **Contradictions found, and how they are resolved here.**
 
-- **The incorporation date is genuinely disputed, and this is the biggest open question here.**
-  Wikipedia and the village's own website say **August 1859**. But **both** primary county
-  histories give **July 1872** — and they give it in circumstantial detail no summary would
-  invent: incorporation under the general incorporation act, carried **53 votes to 15** on
-  **27 July 1872**, followed by an election for six trustees, clerk and police magistrate on
-  **24 August 1872**, with all the officers named.
+- **The incorporation date — investigated 2026-08-03. Partly resolved, and the useful part is
+  knowing which half is solid.**
 
-  Two independent research passes hit this conflict separately, so it is real and not a misreading.
-  A plausible reconciliation is that 1859 was an earlier organisation or plat and 1872 was
-  re-incorporation under the 1872 general act — but **no source consulted actually says that**, and
-  it should not be asserted. The primary sources are contemporaneous and specific; the modern
-  sources are brief. **Treat 1872 as at least as well-evidenced as 1859.**
-- A low-quality source gives a founding date of **1862**, which nothing supports.
+  There are four dates in circulation. Sorted by what actually backs them:
+
+  | date | claim | evidence |
+  |---|---|---|
+  | **1857** | original plat, four blocks | **Solid.** Beckwith 1879 and Williams 1930, near-identical wording |
+  | **July 1872** | incorporated under the general incorporation act | **Solid.** Both county histories, with the vote (**53–15**, 27 July), the trustee election (24 August) and every officer named |
+  | Aug 1859 | "incorporated as a village" | village website + Wikipedia prose only. **Neither county history mentions it** |
+  | 1862 | "founded" | Wikipedia infobox + a county timeline. Coincides with the Gilbert & Satterthwait addition that "lay all around the original town" — probably a plat year mistaken for a founding |
+
+  **What the new evidence settles:** 1872 does **not** mean the town began then. Illinois passed a
+  general incorporation act in 1872 and municipalities across the county re-incorporated under it —
+  Williams uses the same phrase for **Danville** (*"in 1874, the city was incorporated under the
+  general act of 1872"*), and Danville had been the **county seat since 1826**. A town cannot be
+  founded forty-eight years after it becomes the county seat. So the phrase describes a filing
+  under a new state law, not an origin, and the apparent 1859-vs-1872 contradiction dissolves.
+
+  **What it does not settle:** whether Rossville had an earlier incorporation to re-file. Williams
+  uses the same construction for **Georgetown** (*"incorporated under the general act of 1872, on
+  February 22, 1873, by a vote submitted to the electors"*) in what reads like a first
+  incorporation. The phrase is compatible with either. And the only 1859 event either county
+  history records at Rossville is *"In 1859 Gideon Davis built a hotel."*
+
+  **So, for the record:** 1872 is the **documented legal incorporation**; 1859 is asserted only by
+  modern sources and is uncorroborated by the two histories that describe the 1872 vote in detail.
+  The village may well be right about its own founding — but nothing found here confirms it. Cite
+  1872 when the source matters, and **do not present 1859 as established.**
+
+  *(This entry originally read "RESOLVED — use August 1859." That went further than the evidence,
+  in the opposite direction from the error it was fixing. Corrected the same day.)*
 - Current **median age** is reported as **~42** by the 2020 Census and as **~34.6** by several
   aggregator sites that recycle each other. Trust 42.
 - The Sanborn title blocks say "population 1,500" in both 1898 and 1913; the census says the peak
@@ -466,7 +494,7 @@ and "a whole block". Which specific buildings were lost in 2004 has not been est
 **Not yet retrieved.** The **1927 and 1933** Sanborn atlases are catalogued by the Library of
 Congress but **were never digitised** — both items return zero image resources, so they are not
 merely awkward to fetch, they are not online. Paper copies would have to be consulted. A decade-by-decade census series. The original town plat. Any architectural survey of the
-housing stock. The 1879 and 1911 *History of Vermilion County* volumes, which are public domain and
+housing stock. The 1879 (Beckwith) and 1930 (Williams) *History of Vermilion County* volumes, which are public domain and
 would likely add a great deal.
 
 **Deliberately not researched.** Anything about people currently living in Rossville — no names,

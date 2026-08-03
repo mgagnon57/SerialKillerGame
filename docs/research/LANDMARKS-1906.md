@@ -19,7 +19,7 @@ apart on the same ground near School and Church streets.
 - 32 ft across the main range
 - *"Heat: steam. Light: elec."*
 
-The 1911 county history says a two-storey brick school house was built in **1868** and that
+The 1930 county history (Williams) says a two-storey brick school house was built in **1868** and that
 *"Rossville has always had excellent schools… matters in which the town takes just pride."* By
 1906 that pride is two buildings.
 

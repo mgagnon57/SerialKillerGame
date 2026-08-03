@@ -23,6 +23,7 @@ rest.** A fresh session needs nothing from any prior conversation.
 | file | what is in it |
 |---|---|
 | **`ROSSVILLE-HISTORY.md`** | the master narrative — founding, the Hubbard Trail, the railroad, both fires, population, the antique era. **Read this second.** |
+| **`SOURCE-PROVENANCE.md`** | which county history is which, and what each one can be trusted for |
 | **`SOURCING.md`** | the rule: which era each part of the town comes from, and what it rules out |
 | **`COMMERCIAL-ROW.md`** | the downtown, unit by unit, all four faces, with storeys and frontages in feet |
 | **`DOWNTOWN-1913.md`** | the 1913 commercial core in detail |
@@ -62,6 +63,13 @@ the corner with halls and offices above; one storey and 14–18 ft further out; 
 the **quarter-acre median lot is confirmed twice** by independent datasets — 1,011 m² from GIS
 geometry, 1,012 m² from assessed acreage.
 
+**The incorporation date is half-settled.** **July 1872 is the documented incorporation** — both
+county histories give the vote (53–15), the date and every officer. The famous "August 1859"
+appears only in modern sources and is **uncorroborated**. What the research did settle is that
+1872 is not a *founding* date: Illinois passed a general incorporation act in 1872 and towns
+across the county filed under it — Williams uses the identical phrase for **Danville**, county
+seat since **1826**. Cite 1872; don't present 1859 as established. `ROSSVILLE-HISTORY.md` §9.
+
 **30% of parcels are absentee-owned.** For a game about who was where: a third of the doors belong
 to someone who isn't behind them.
 
@@ -89,9 +97,6 @@ daylight decision. Everything here is geographic or aggregate.
 
 ## Open questions worth settling
 
-- **The incorporation date.** Wikipedia and the village say **August 1859**; both county histories
-  say **July 1872** with the vote count (53–15), the trustee election and the officers named. Two
-  independent research passes hit this. Unresolved.
 - **How much of the 1913 downtown still stood in 2000.** The 2004 fire taking "a quarter" implies
   three quarters were there. Working assumption: build the full row, error bounded at a quarter.
 - **A claim to distrust:** an "Opera House built 1908 by Alexander Bell McRae" appears in search
