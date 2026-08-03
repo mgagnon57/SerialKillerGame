@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Noir.Core.Contracts;
 
 namespace Noir.Core.World
 {
@@ -161,7 +162,6 @@ namespace Noir.Core.World
             for (int li = 0; li < roads.Lines.Count; li++)
             {
                 var line = roads.Lines[li];
-                if (!line.IsStraight) continue;
 
                 // A road runs between the points it was DECLARED between, which for the city's
                 // arterials is edge to edge and for a farm track is not. Using the map's size
@@ -169,15 +169,25 @@ namespace Noir.Core.World
                 // lanes across fields nobody put a road in.
                 int lanes = RoadClasses.LanesEachWay(line.Class);
 
-                // The junctions on THIS road, as village coordinates along its own axis, with
-                // how far each one reaches.
+                // ARC LENGTH, off the junction itself, rather than reading the crossing's village
+                // coordinate back through this road's own Centre. The old way could only work
+                // while every road was a constant cross-coordinate.
                 var stops = new List<(float along, float reach, int index)>();
                 for (int j = 0; j < roads.Junctions.Count; j++)
                 {
                     var junction = roads.Junctions[j];
-                    float cross = line.IsNorthSouth ? junction.X : junction.Y;
-                    if (Math.Abs(cross - line.Centre) > 0.5f) continue;   // not on this road
-                    stops.Add((line.IsNorthSouth ? junction.Y : junction.X, junction.Reach, j));
+                    float s;
+                    if (ReferenceEquals(junction.NorthSouth, line)) s = junction.SNorthSouth;
+                    else if (ReferenceEquals(junction.EastWest, line)) s = junction.SEastWest;
+                    else continue;                                        // not on this road
+
+                    // From + s, deliberately, rather than raw arc length. For a straight road the
+                    // two are identical and FromS/ToS keep the exact values they have today,
+                    // which is what the recorded baseline pins. For a curve it is a convenience:
+                    // arc length measured from the path start, offset onto the road's declared
+                    // axis. Nothing carries traffic on a curve until Phase C, and Phase B should
+                    // settle whether segments want a true arc-length origin before it does.
+                    stops.Add((line.From + s, junction.Reach, j));
                 }
 
                 var ways = line.IsNorthSouth
@@ -200,9 +210,14 @@ namespace Noir.Core.World
                     // that is NOT the edge sends cars thirty metres beyond where the road stops
                     // - which for the farm track that comes off Second Street meant a van
                     // driving out into a field, in a straight line, on nothing.
+                    // Unchanged in meaning: the margin is for leaving the MAP, not for leaving
+                    // the road, so a farm track that stops at a junction does not send a van out
+                    // into a field. Expressed against the path's own extent so it reads the same
+                    // for a curve.
                     float span = line.IsNorthSouth ? height : width;
+                    float pathEnd = line.From + line.Path.Length;
                     float low = line.From <= 0.01f ? line.From - margin : line.From;
-                    float high = line.To >= span - 0.01f ? line.To + margin : line.To;
+                    float high = pathEnd >= span - 0.01f ? pathEnd + margin : pathEnd;
 
                     float start = TravelOf(way, Headings.Increasing(way) ? low : high);
                     float end = TravelOf(way, Headings.Increasing(way) ? high : low);
@@ -241,7 +256,28 @@ namespace Noir.Core.World
                 {
                     if (onward.FromJunction != into.ToJunction) continue;
 
-                    var kind = Headings.Between(into.Way, onward.Way);
+                    // FROM THE TANGENTS, not the enum, so an oblique crossing classifies too.
+                    // For axis-aligned roads this yields precisely what Headings.Between yields:
+                    // the cross product's sign is which way the wheel turns, and the dot tells a
+                    // straight-on from a U-turn. No angle is taken - see CoreDeterminismTests.
+                    var tIn = roads.Lines[into.Line].Path.TangentAt(
+                        AlongOf(into.Way, into.ToS) - roads.Lines[into.Line].From);
+                    var tOut = roads.Lines[onward.Line].Path.TangentAt(
+                        AlongOf(onward.Way, onward.FromS) - roads.Lines[onward.Line].From);
+
+                    // The path's tangent always points the way the road was DECLARED; a segment
+                    // running the other way travels against it.
+                    if (!Headings.Increasing(into.Way)) tIn = new Vec2(-tIn.X, -tIn.Y);
+                    if (!Headings.Increasing(onward.Way)) tOut = new Vec2(-tOut.X, -tOut.Y);
+
+                    float dot = tIn.X * tOut.X + tIn.Y * tOut.Y;
+                    float cross = tIn.X * tOut.Y - tIn.Y * tOut.X;
+
+                    TurnKind? kind;
+                    if (dot <= -0.5f) kind = null;                       // a U-turn; never offered
+                    else if (cross > 0.3f) kind = TurnKind.Right;        // right is (-y, x): +cross
+                    else if (cross < -0.3f) kind = TurnKind.Left;
+                    else kind = TurnKind.Straight;
                     if (kind == null) continue;                      // no U-turns
 
                     var toLine = roads.Lines[onward.Line];

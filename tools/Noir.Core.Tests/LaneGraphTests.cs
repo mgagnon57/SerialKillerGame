@@ -336,5 +336,134 @@ namespace Noir.Core.Tests
                 if (!segment.IsExit)
                     Assert.That(graph.TurnsFrom(segment.Index), Is.Not.Empty);
         }
+
+        [Test]
+        public void ACurvedRoadGetsLanes()
+        {
+            // `if (!line.IsStraight) continue` meant a bent road got no segments at all, so no
+            // car could ever be placed on it. This is the line Phase A exists to delete.
+            var graph = Build(Header
+                + "road bend 30 20,20 20,120 60,180 140,200\n  class mainroad\n"
+                + "road cross 30 0,190 239,190\n  class mainroad\n", out var world);
+
+            var bend = world.Roads.Lines[0];
+            Assert.That(bend.IsStraight, Is.False, "the fixture is meant to bend");
+
+            int onBend = 0;
+            foreach (var seg in graph.Segments) if (seg.Line == 0) onBend++;
+            Assert.That(onBend, Is.GreaterThan(0), "a curved road must carry lanes");
+        }
+
+        [Test]
+        public void NoSegmentAnywhereHasNegativeOrZeroLength()
+        {
+            var graph = Build(Header
+                + "road bend 30 20,20 20,120 60,180 140,200\n  class mainroad\n"
+                + "road cross 30 0,190 239,190\n  class mainroad\n", out _);
+
+            foreach (var seg in graph.Segments)
+                Assert.That(seg.Length, Is.GreaterThan(0f),
+                            "segment " + seg.Index + " on line " + seg.Line + " has no length");
+        }
+
+        [Test]
+        public void EveryArrivalStillHasALegalWayOut()
+        {
+            // The invariant that mattered most before Phase A and still does: a car reaching a
+            // junction must have somewhere to go, or it vanishes or wedges.
+            var graph = Build(Header + Grid, out _);
+            foreach (var seg in graph.Segments)
+            {
+                if (seg.IsExit) continue;
+                Assert.That(graph.TurnsFrom(seg.Index).Count, Is.GreaterThan(0),
+                            "segment " + seg.Index + " arrives at a junction with no way out");
+            }
+        }
+
+        [Test]
+        public void TurnsAreStillClassifiedTheWayTheEnumClassifiedThem()
+        {
+            // Tangent-based classification must agree with Headings.Between on axis-aligned
+            // roads, or every existing signal phase and give-way rule changes meaning.
+            var graph = Build(Header + Grid, out _);
+            foreach (var turn in graph.Turns)
+            {
+                var from = graph.Segments[turn.From];
+                var to = graph.Segments[turn.To];
+                var expected = Headings.Between(from.Way, to.Way);
+                Assert.That(expected, Is.Not.Null, "a U-turn was offered");
+                Assert.That(turn.Kind, Is.EqualTo(expected.Value),
+                            "turn " + from.Way + "->" + to.Way + " classified differently");
+            }
+        }
+
+        /// <summary>
+        /// The real Illinois Route 1, as surveyed, on a map the size of the real one.
+        ///
+        /// These twelve points are the OSM centre line (way 22037977, ref IL 1) projected into
+        /// village metres and rotated into the parcels' frame - the curve that runs down the
+        /// corridor the county's own lots leave for it, where the straight x=750 we ship today
+        /// puts 85% of its length inside somebody's back garden.
+        ///
+        /// It is a FIXTURE, not content. Phase A ships no curve in Content/city.txt, because the
+        /// renderers still skip anything where !IsStraight and a road with traffic and no asphalt
+        /// under it is worse than the straight one. This proves the geometry works so that Phase C
+        /// can lay it down once Phase B has migrated the consumers.
+        /// </summary>
+        private const string RealRoute1 =
+            "road route1 30 371,177 466,470 593,855 675,1109 747,1332 776,1423 "
+          + "799,1491 839,1607 857,1687 863,1740 872,1876 881,2049\n  class mainroad\n";
+
+        [Test]
+        public void TheRealRoute1ProducesASaneLaneGraph()
+        {
+            var graph = Build(
+                "village Rossville\nsize 2100 2400\nterrain path 0,0 2100x2400\n"
+                + RealRoute1
+                + "road attica 30 0,1335 2099,1335\n  class mainroad\n"
+                + "road benton 10 496,1113 1530,1113\n  class street\n", out var world);
+
+            var route1 = world.Roads.Lines[0];
+            Assert.That(route1.IsStraight, Is.False, "the real Route 1 bends");
+            Assert.That(route1.Path.Length, Is.GreaterThan(1900f), "it spans most of the map");
+
+            Assert.That(world.Roads.Junctions.Count, Is.GreaterThanOrEqualTo(2),
+                        "Route 1 crosses both Attica and Benton");
+
+            int onRoute1 = 0;
+            foreach (var seg in graph.Segments)
+            {
+                Assert.That(seg.Length, Is.GreaterThan(0f), "segment " + seg.Index + " has no length");
+                if (seg.Line == 0) onRoute1++;
+            }
+            Assert.That(onRoute1, Is.GreaterThan(0), "the real curve carries lanes");
+
+            foreach (var seg in graph.Segments)
+                if (!seg.IsExit)
+                    Assert.That(graph.TurnsFrom(seg.Index).Count, Is.GreaterThan(0),
+                                "segment " + seg.Index + " arrives somewhere with no way out");
+        }
+
+        [Test]
+        public void EveryLaneOnTheRealRoute1StaysWithinItsOwnCorridor()
+        {
+            // The claim that matters for Phase B: a lane offset from a curved centre line is
+            // still ON the road. Measured perpendicular to the curve, which is the only
+            // meaningful way to ask it once the road stops being axis-aligned.
+            Build("village Rossville\nsize 2100 2400\nterrain path 0,0 2100x2400\n"
+                  + RealRoute1
+                  + "road attica 30 0,1335 2099,1335\n  class mainroad\n", out var world);
+
+            var path = world.Roads.Lines[0].Path;
+            float halfWidth = world.Roads.Lines[0].HalfWidth;
+
+            for (float s = 0f; s <= path.Length; s += 25f)
+            {
+                var lane = path.PointAt(s) + path.NormalAt(s) * (halfWidth - 2f);
+                var (_, lateral) = path.Project(lane);
+                Assert.That(lateral, Is.EqualTo(halfWidth - 2f).Within(1.5f),
+                            "a lane 2m inside the kerb reads as somewhere else at s=" + s);
+            }
+        }
     }
 }
