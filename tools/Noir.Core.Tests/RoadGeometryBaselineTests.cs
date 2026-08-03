@@ -9,10 +9,17 @@ namespace Noir.Core.Tests
     /// <summary>
     /// What the road network and the lane graph produce for the REAL town, pinned.
     ///
-    /// Phase A rewrites how both are computed - junctions become path intersections, lanes
-    /// become arc length - and the whole safety argument is that the 27 straight roads
-    /// Rossville is built from come out unchanged. That claim is only worth anything if it is
-    /// a number somebody recorded before the rewrite started.
+    /// Phase A rewrote how both are computed - junctions become path intersections, lanes
+    /// become arc length - and the whole safety argument was that the 27 roads Rossville is
+    /// built from, all straight at the time, came out unchanged. That claim is only worth
+    /// anything if it is a number somebody recorded before the rewrite started.
+    ///
+    /// Phase B then put a real curve into one of those 27: Chicago Street / Illinois Route 1
+    /// now follows its surveyed alignment instead of a straight line at x=750 (see
+    /// Content/city.txt). That is a deliberate content change, not a regression, so the
+    /// baseline below was re-recorded against it rather than defended against it. The other 26
+    /// roads are untouched and still straight - see
+    /// <see cref="ChicagoAloneBendsEveryOtherRealRoadIsStraightAndAxisAligned"/>.
     ///
     /// These figures were READ OFF THE BUILD, not off any document. docs/STATE.md quotes
     /// counts from a 960x960 map that no longer exists.
@@ -51,9 +58,9 @@ namespace Noir.Core.Tests
         {
             // The five counts above catch a segment appearing or disappearing; they say nothing
             // about one MOVING. A uniform sub-metre offset applied to every FromS would still
-            // produce 27 roads, 142 junctions, 620 segments, 1692 turns and 54 entries and pass
+            // produce 27 roads, 142 junctions, 614 segments, 1656 turns and 54 entries and pass
             // every assertion above unnoticed. This one is sensitive to the actual geometry of
-            // every one of the 620 segments - which road, which way, which lane, and where it
+            // every one of the 614 segments - which road, which way, which lane, and where it
             // starts and ends - not just how many of them there are.
             var world = RealCity();
             var graph = new LaneGraph(world.Roads, world.Width, world.Height);
@@ -88,22 +95,38 @@ namespace Noir.Core.Tests
         }
 
         [Test]
-        public void EveryRealRoadIsStraightAndAxisAligned()
+        public void ChicagoAloneBendsEveryOtherRealRoadIsStraightAndAxisAligned()
         {
-            // The premise of the whole zero-regression argument. If this ever fails, a curve
-            // has entered the map and the equivalence tests below stopped meaning what they say.
+            // The premise of the whole zero-regression argument, updated for Phase B. It used
+            // to be "every road in the map is straight"; Chicago Street / Illinois Route 1 now
+            // follows its real surveyed alignment (Content/city.txt), a 14-point polyline, and
+            // is a deliberate, permanent exception to it. This checks the narrower premise both
+            // ways - chicago bends and nothing else does - so it fails just as loudly whether a
+            // second road loses its straightness or chicago gets straightened back out.
             foreach (var line in RealCity().Roads.Lines)
-                Assert.That(line.IsStraight, Is.True, line.Name + " is not straight");
+            {
+                bool shouldBeStraight = line.Name != "chicago";
+                Assert.That(line.IsStraight, Is.EqualTo(shouldBeStraight),
+                            shouldBeStraight ? line.Name + " should be straight"
+                                              : line.Name + " should bend");
+            }
         }
 
         [Test]
-        public void EveryRealRoadsPathReproducesItsOldCentreExactly()
+        public void EveryStraightRoadsPathReproducesItsOldCentreExactly()
         {
             // The zero-regression guarantee, asserted against real content rather than a
             // fixture. Centre is the single float Phase A is replacing; if Path disagrees with
-            // it anywhere on any of the 27 roads, the town has moved.
+            // it anywhere on any of the 26 straight roads, the town has moved. Chicago is
+            // excluded on purpose, not by oversight: Phase B gave it a real curve, so its Path
+            // no longer reduces to a single Centre float offset from a From/To run - that is
+            // the intended effect of the change, not a regression in it.
+            // ChicagoAloneBendsEveryOtherRealRoadIsStraightAndAxisAligned above is what pins
+            // chicago's own shape down instead.
             foreach (var line in RealCity().Roads.Lines)
             {
+                if (!line.IsStraight) continue;
+
                 Assert.That(line.Path, Is.Not.Null, line.Name + " has no path");
                 Assert.That(line.Path.IsStraightAxisAligned, Is.True, line.Name);
                 Assert.That(line.Path.Length, Is.EqualTo(line.To - line.From).Within(0f),
@@ -126,10 +149,16 @@ namespace Noir.Core.Tests
         }
 
         [Test]
-        public void APathsTangentAgreesWithTheAxisTheLineSaysItRunsOn()
+        public void AStraightRoadsPathTangentAgreesWithTheAxisTheLineSaysItRunsOn()
         {
+            // Same exclusion, same reason, as EveryStraightRoadsPathReproducesItsOldCentre-
+            // Exactly above: chicago's Path is a curve now, so its tangent at the midpoint has
+            // no reason to be purely axis-aligned, and asserting that it is would be asserting
+            // the bend away rather than describing it.
             foreach (var line in RealCity().Roads.Lines)
             {
+                if (!line.IsStraight) continue;
+
                 var t = line.Path.TangentAt(line.Path.Length * 0.5f);
                 if (line.IsNorthSouth)
                     Assert.That(t.X, Is.EqualTo(0f), line.Name + " is N-S but its tangent has x");
@@ -143,14 +172,31 @@ namespace Noir.Core.Tests
         // Content/city.txt ever moves one of these, re-record it deliberately - read the new
         // value off TestContext.Out from a run of the test it belongs to and paste it in here -
         // rather than loosening the assertion to make the mismatch stop mattering.
+        //
+        // RE-RECORDED for Phase B: Chicago Street / Illinois Route 1 now follows its real
+        // surveyed alignment instead of a straight line at x=750 (Content/city.txt, class
+        // comment above). Junctions and entries are unchanged, because the curve still crosses
+        // the same 16 east-west streets it always did; segments moved 620 -> 614 and turns
+        // moved 1692 -> 1656. Rather than assume that drop is benign, three things were checked
+        // against the rebuilt graph:
+        //   - 0 stranded segments - every segment arriving at a junction still has at least one
+        //     legal exit, so no vehicle can vanish. This is the invariant that matters most,
+        //     and it holds.
+        //   - 32 straight continuations through chicago, exactly 2 per direction across its 16
+        //     junctions - the curve is read as the road continuing, not as a turn.
+        //   - Left and right turns touching chicago are symmetric, 56 and 56. A
+        //     curvature-induced misclassification would bias one direction, because a curve
+        //     bends one way; the symmetry is evidence the tangent-based turn classification is
+        //     not skewed by it.
         private const int BaselineJunctions = 142;
-        private const int BaselineSegments = 620;
-        private const int BaselineTurns = 1692;
+        private const int BaselineSegments = 614;
+        private const int BaselineTurns = 1656;
         private const int BaselineEntries = 54;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
+        // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "5CAC24E17ABEB9FDB8FDC74C2C9635B0265B0D703B2D0F4325F7B1444F3C2E20";
+            "9BFF36F308B76B0DDB3FAF1B54D0E352064C776D03E1FC6E80DD0051E34964F1";
     }
 }

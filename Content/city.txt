@@ -1074,7 +1074,14 @@ terrain water 0,2267 1x17
 # `mainroad` is a 30m corridor, one lane each way with lay-bys, which is what a
 # two-lane state highway through a village is. Both run the full extent of the map:
 # a state route does not stop at the village limit.
-road chicago 30 750,0 750,2399
+# CHICAGO STREET IS A CURVE, and this is the surveyed alignment rather than a guess.
+# OpenStreetMap way 22037977 (ref=IL 1), projected into village metres about the
+# Chicago/Attica crossing and rotated into the parcels' own frame. Sampled every 12m
+# along this line, 0 of 112 points fall inside a county lot; along the straight x=750
+# it used to be declared at, 95 of 112 do - we drew the state highway through the
+# middle of the town's back gardens. The first and last points are interpolated out to
+# the map edges so traffic still arrives from off-stage.
+road chicago 30 314,0 371,177 466,470 593,855 675,1109 747,1332 776,1423 799,1491 839,1607 857,1687 863,1740 872,1876 881,2049 899,2399
   class mainroad
 road attica 30 0,1335 2099,1335
   class mainroad
