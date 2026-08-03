@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -32,6 +32,9 @@ namespace Noir.Editor
     /// </summary>
     public static class HouseProto
     {
+        /// <summary>Tile the prototype place is laid at - see the map text below.</summary>
+        private const int Origin = 5;
+
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "..", "docs", "elevations", "houses"));
 
@@ -77,7 +80,11 @@ namespace Noir.Editor
                 sun.shadows = LightShadows.Soft;
                 sun.shadowStrength = 0.35f;
                 sun.intensity = 1.1f;
-                sunGo.transform.rotation = Quaternion.Euler(38f, 150f, 0f);
+                // Round to the camera's side. It was at 150 degrees, which lit the wall the old
+                // camera faced; with the camera moved to the door side that became backlight and
+                // photographed every prototype's facade in its own shadow. -50 keeps the sun off
+                // the lens axis so the two visible faces still read as different planes.
+                sunGo.transform.rotation = Quaternion.Euler(38f, -50f, 0f);
 
                 RenderSettings.skybox = null;
                 RenderSettings.sun = sun;
@@ -105,8 +112,16 @@ namespace Noir.Editor
                     float span = Mathf.Max(Mathf.Max(w, h), top * 2.2f);
                     float distance = span * 1.9f + 8f;
 
-                    var target = new Vector3(w * 0.5f, top * 0.45f, -(h * 0.5f));
-                    var eye = target + new Vector3(distance * 0.42f, distance * 0.34f, distance * 0.84f);
+                    // FROM THE DOOR SIDE, and aimed at the middle of the house rather than at its
+                    // corner. Both of those were wrong, and together they cost a day: the place is
+                    // laid at tile (5,5) with its door on the far wall at y=5+h, so the porch
+                    // projects to +y, which is -z in world space - and the camera was parked at
+                    // +z looking at (w/2, -h/2), which is the BACK corner. Every prototype ever
+                    // shot from here had its porch hidden behind the house, and the solid lump
+                    // visible at the front, diagnosed at length as a broken porch, was the back
+                    // ell doing exactly what it was told.
+                    var target = new Vector3(Origin + w * 0.5f, top * 0.45f, -(Origin + h * 0.5f));
+                    var eye = target + new Vector3(distance * 0.42f, distance * 0.34f, -distance * 0.84f);
                     camGo.transform.position = eye;
                     camGo.transform.LookAt(target);
 

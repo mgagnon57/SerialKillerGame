@@ -34,7 +34,6 @@ rest.** A fresh session needs nothing from any prior conversation.
 | **`LANDMARKS-1906.md`** | the two brick schools (one towered) and the tile works that drained the prairie |
 | `agent-reports/` | three deeper research passes: transport, buildings, economy |
 | `sanborn/` | nine map sheets (1898, 1906, 1913), enlarged crops, and two machine-classified renders |
-| `pending/` | code written but never compiled — see "blocked" below |
 
 ---
 
@@ -92,13 +91,16 @@ asphalt, traffic driving the curve.
 Sanborn decay rule (14 tests). It is pure geometry: nothing renders it yet, and giving it a
 street to sit on is Unity work.
 
-**Blocked on Unity** — a parallel session has the editor:
-- `pending/FrameHouseGrammars.with-ell.cs.txt` — adds the back ell to the house grammars.
-  **Written, never compiled.** Restore and compile when the editor is free.
-- The **porch draws solid** instead of open. Everything ruled out by reading is recorded in
-  `Assets/Noir/Unity/Massing/FrameHouseGrammars.cs`'s `<remarks>` — do not re-derive it.
-- Two untested one-liners in the tree from commit `3837124`: a `Debug.Log` in `Porch` and a
-  `ShowBuildings` save/restore in `HouseProto`.
+**Cleared 2026-08-03**, once the editor came free — the back ell compiles and is in; the two
+untested one-liners are verified (the `Debug.Log` served its purpose and is gone, the
+`ShowBuildings` save/restore is correct); and **the porch was never broken.**
+
+That last one is worth keeping. The porch was diagnosed at length as drawing solid, with five
+things carefully ruled out by reading — all five correct. The fault was that `HouseProto` framed
+the house from the wrong side, so the porch was *behind* the house in every prototype ever shot,
+and the solid lump at the front was the back ell. Logging the emitted centres and comparing them
+with where the camera stood settled in thirty seconds what a day of reading geometry could not.
+The full note is in `FrameHouseGrammars.cs`'s `<remarks>`.
 
 **Not done, and why**: no foreclosure or property-distress records were used. That data is about
 identifiable people in trouble, the repo carries a written **NO REAL RESIDENTS** rule, and it is a
