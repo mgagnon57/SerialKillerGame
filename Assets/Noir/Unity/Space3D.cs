@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Noir.Core.Contracts;
 
 namespace Noir.Unity
@@ -43,6 +43,16 @@ namespace Noir.Unity
 
         public static Vector3 ToWorld(Vec2 v, float height) =>
             new Vector3(v.X, height + ElevationGrid.HeightAt(v.X, v.Y), -v.Y);
+
+        /// <summary>
+        /// The height of the ground under a building, taken at the middle of its footprint.
+        ///
+        /// ONE height for the whole building, deliberately. A house is level and the ground is
+        /// cut and filled around it; sampling per-corner would warp the walls to follow the
+        /// contour, which is what a tent does and not what a house does.
+        /// </summary>
+        public static float GroundUnder(Noir.Core.World.TileRect b) =>
+            ElevationGrid.HeightAt(b.X + b.W * 0.5f, b.Y + b.H * 0.5f);
 
         /// <summary>The village-space point under a world position. Unaffected by elevation -
         /// horizontal position never depended on height, which is what keeps click-picking,

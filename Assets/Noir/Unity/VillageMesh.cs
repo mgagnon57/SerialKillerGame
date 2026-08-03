@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.Contracts;
@@ -53,6 +53,10 @@ namespace Noir.Unity
         {
             var root = new GameObject("Village");
             root.transform.SetParent(parent, false);
+
+            // Before any geometry: work out where the town's crossing is and how far its houses
+            // reach, because the massing grammar for every dwelling is derived from that.
+            HouseLayers.Install(world);
 
             BuildGround(world, root.transform);
             if (showDressing)
@@ -352,6 +356,20 @@ namespace Noir.Unity
             int baseColour = Shader.PropertyToID("_BaseColor");
             int colour = Shader.PropertyToID("_Color");
 
+            // THE FLOOR A PIECE OF FURNITURE STANDS ON is its building's, not the terrain's.
+            // Everything else about a building is seated on the ground under the middle of its
+            // footprint so the building stands level; a chair sampling the contour under its own
+            // four legs would sit at a slightly different height from the floor it is on, and on
+            // a slope would sink through it. Looked up per item rather than cached: 800 pieces
+            // against 500 places is a few hundred thousand rectangle tests, once, at build time.
+            float FloorUnder(TileRect fp)
+            {
+                int cx = fp.X + fp.W / 2, cy = fp.Y + fp.H / 2;
+                foreach (var place in world.AllPlaces)
+                    if (place.Bounds.Contains(cx, cy)) return Space3D.GroundUnder(place.Bounds);
+                return ElevationGrid.HeightAt(cx + 0.5f, cy + 0.5f);
+            }
+
             foreach (var f in world.AllFurniture)
             {
                 var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -366,7 +384,7 @@ namespace Noir.Unity
                 box.transform.localScale = new Vector3(fp.W - 0.12f, height, fp.H - 0.12f);
                 box.transform.position = new Vector3(
                     fp.X + fp.W * 0.5f,
-                    height * 0.5f + 0.02f,          // sits on the raised interior floor
+                    FloorUnder(fp) + height * 0.5f + 0.02f,   // on the raised interior floor
                     -(fp.Y + fp.H * 0.5f));
 
                 Discard(box.GetComponent<BoxCollider>());
@@ -1023,13 +1041,34 @@ namespace Noir.Unity
                 }
             }
 
-            // A garden wall or a churchyard wall belongs to no building and keeps the old height.
+            // WHERE THE FOOT OF THIS WALL SITS.
+            //
+            // A building's walls take ONE height for the whole footprint - the ground under the
+            // middle of it - so the building stands level and the ground is cut and filled around
+            // it. A garden or churchyard wall belongs to no building and follows the contour
+            // tile by tile, because a garden wall really does run up a slope.
+            float BaseAt(int gx, int gy)
+            {
+                int id = owner[gy * world.Width + gx];
+                if (id >= 0)
+                {
+                    var p = world.GetPlace(new PlaceId(id));
+                    if (p != null) return Space3D.GroundUnder(p.Bounds);
+                }
+                return ElevationGrid.HeightAt(gx + 0.5f, gy + 0.5f);
+            }
+
+            // The ABSOLUTE height of the wall top, ground included, so it meets the roof - which
+            // is lifted onto the same ground in RoofBuilder. Returning the eaves alone built
+            // every wall from y=0 up, which on Rossville's contour left the roof floating three
+            // metres clear of the walls holding it up.
             float HeightAt(int gx, int gy)
             {
                 int id = owner[gy * world.Width + gx];
-                if (id < 0) return Space3D.WallHeight;
+                float ground = BaseAt(gx, gy);
+                if (id < 0) return ground + Space3D.WallHeight;
                 var p = world.GetPlace(new PlaceId(id));
-                return p == null ? Space3D.WallHeight : MassingGrammars.Of(p).Eaves;
+                return ground + (p == null ? Space3D.WallHeight : MassingGrammars.Of(p).Eaves);
             }
 
             int OwnerAt(int gx, int gy) => owner[gy * world.Width + gx];
@@ -1058,7 +1097,7 @@ namespace Noir.Unity
                     int length = gx - start;
                     if (length >= 2)
                     {
-                        AddWall(chunks.At(start, gy), start, gy, length, 1, HeightAt(start, gy));
+                        AddWall(chunks.At(start, gy), start, gy, length, 1, BaseAt(start, gy), HeightAt(start, gy));
                         count++;
                     }
                     else { used[gy * world.Width + start] = false; }   // leave singles for the vertical pass
@@ -1080,7 +1119,7 @@ namespace Noir.Unity
                         used[gy * world.Width + gx] = true;
                         gy++;
                     }
-                    AddWall(chunks.At(gx, start), gx, start, 1, gy - start, HeightAt(gx, start));
+                    AddWall(chunks.At(gx, start), gx, start, 1, gy - start, BaseAt(gx, start), HeightAt(gx, start));
                     count++;
                 }
             }
@@ -1109,7 +1148,8 @@ namespace Noir.Unity
         /// whichever mesh it ends up in, and splitting the runs across meshes cannot change a
         /// single shaded pixel.
         /// </summary>
-        private static void AddWall(MeshChunk into, int gx, int gy, int w, int h, float top)
+        private static void AddWall(MeshChunk into, int gx, int gy, int w, int h,
+                                    float bottom, float top)
         {
             var verts = into.Verts;
             var uvs = into.Uvs;
@@ -1119,10 +1159,14 @@ namespace Noir.Unity
             float z0 = -gy, z1 = -(gy + h);
 
             // (corner a, corner b) walked so that a->b->up is wound outward.
-            Face(new Vector3(x1, 0f, z0), new Vector3(x0, 0f, z0));   // north
-            Face(new Vector3(x0, 0f, z1), new Vector3(x1, 0f, z1));   // south
-            Face(new Vector3(x1, 0f, z1), new Vector3(x1, 0f, z0));   // east
-            Face(new Vector3(x0, 0f, z0), new Vector3(x0, 0f, z1));   // west
+            // Sunk half a metre below the ground it stands on, so a wall meets a contour that
+            // dips slightly across the footprint without daylight under its foot.
+            float y0 = bottom - 0.5f;
+
+            Face(new Vector3(x1, y0, z0), new Vector3(x0, y0, z0));   // north
+            Face(new Vector3(x0, y0, z1), new Vector3(x1, y0, z1));   // south
+            Face(new Vector3(x1, y0, z1), new Vector3(x1, y0, z0));   // east
+            Face(new Vector3(x0, y0, z0), new Vector3(x0, y0, z1));   // west
 
             Cap();
 
@@ -1147,17 +1191,25 @@ namespace Noir.Unity
                 int i = verts.Count;
                 float run = Vector3.Distance(a, b);
 
+                // `top` IS AN ABSOLUTE HEIGHT, not a rise. It always was for Cap(), which places
+                // its four corners at exactly `top`; this used to extrude `Vector3.up * top` from
+                // the foot instead, and the two agreed only because the foot was hard-coded to
+                // y=0. The moment walls were seated on real ground the sides shot to base+top -
+                // 10.80 m on a house whose eaves are at 7.75 - while the cap stayed put, so every
+                // building grew a parapet exactly as tall as the ground it stood on.
+                float rise = top - a.y;
+
                 verts.Add(a);
                 verts.Add(b);
-                verts.Add(b + Vector3.up * top);
-                verts.Add(a + Vector3.up * top);
+                verts.Add(new Vector3(b.x, top, b.z));
+                verts.Add(new Vector3(a.x, top, a.z));
 
                 // Metres across, metres up. The texture is the same size on a cottage as on
                 // the mill, which is the whole point of doing this by hand.
                 uvs.Add(new Vector2(0f, 0f));
                 uvs.Add(new Vector2(run, 0f));
-                uvs.Add(new Vector2(run, top));
-                uvs.Add(new Vector2(0f, top));
+                uvs.Add(new Vector2(run, rise));
+                uvs.Add(new Vector2(0f, rise));
 
                 tris.Add(i); tris.Add(i + 2); tris.Add(i + 1);
                 tris.Add(i); tris.Add(i + 3); tris.Add(i + 2);

@@ -1,4 +1,4 @@
-namespace Noir.Unity
+﻿namespace Noir.Unity
 {
     public enum RoofForm
     {
@@ -83,5 +83,16 @@ namespace Noir.Unity
         /// buildings that were failing to announce themselves, and not move a single cottage.
         /// </summary>
         public static readonly Massing Cottage = new Massing(3.0f, RoofForm.Hip, 2.2f);
+
+        /// <summary>
+        /// The same building standing <paramref name="by"/> metres higher.
+        ///
+        /// Every roof form derives its heights from <see cref="Eaves"/> and <see cref="Pitch"/>
+        /// and none of them refers to absolute zero, so raising the eaves raises the whole roof
+        /// — ridge, hips, gables and chimneys together — without touching four roof functions.
+        /// That is what puts a building on the ground it stands on rather than on the y=0 plane.
+        /// </summary>
+        public Massing Lifted(float by) =>
+            new Massing(Eaves + by, Roof, Pitch, RidgeAcross, Chimneys);
     }
 }

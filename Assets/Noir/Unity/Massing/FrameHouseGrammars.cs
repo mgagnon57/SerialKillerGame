@@ -82,15 +82,18 @@ namespace Noir.Unity
             else          cx = (sign > 0f ? b.X + b.W : b.X) + sign * depth * 0.5f;
 
 
+            // Everything below stands on the ground the house stands on, not on y=0.
+            float ground = Space3D.GroundUnder(b);
+
             var floorSize = frontOnY ? new Vector3(span, 0.25f, depth)
                                      : new Vector3(depth, 0.25f, span);
-            Box(into, new Vector3(cx, 0.15f, -cy), floorSize, submesh);
+            Box(into, new Vector3(cx, ground + 0.15f, -cy), floorSize, submesh);
 
             // The roof: a thin slab at post height, slightly wider than the floor so it reads as
             // an overhang rather than a lid.
             var roofSize = frontOnY ? new Vector3(span + 0.3f, 0.18f, depth + 0.25f)
                                     : new Vector3(depth + 0.25f, 0.18f, span + 0.3f);
-            Box(into, new Vector3(cx, postHeight, -cy), roofSize, submesh);
+            Box(into, new Vector3(cx, ground + postHeight, -cy), roofSize, submesh);
 
             // Posts. Three across a narrow porch, four across a wide one - enough to read as a
             // colonnade at distance without becoming a fence.
@@ -104,7 +107,7 @@ namespace Noir.Unity
                 float px = frontOnY ? cx + along : cx + sign * outer;
                 float py = frontOnY ? cy + sign * outer : cy + along;
 
-                Box(into, new Vector3(px, postHeight * 0.5f, -py),
+                Box(into, new Vector3(px, ground + postHeight * 0.5f, -py),
                     new Vector3(0.18f, postHeight, 0.18f), submesh);
             }
         }
@@ -140,7 +143,7 @@ namespace Noir.Unity
             if (frontOnY) { cy = (sign > 0f ? b.Y : b.Y + b.H) - sign * (size * 0.5f + 1.5f); cx += b.W * 0.18f; }
             else          { cx = (sign > 0f ? b.X : b.X + b.W) - sign * (size * 0.5f + 1.5f); cy += b.H * 0.18f; }
 
-            Box(into, new Vector3(cx, size * 0.5f * 0.8f, -cy),
+            Box(into, new Vector3(cx, Space3D.GroundUnder(b) + size * 0.5f * 0.8f, -cy),
                 new Vector3(size, size * 0.8f, size), submesh);
         }
 
@@ -192,7 +195,7 @@ namespace Noir.Unity
 
             var size = frontOnY ? new Vector3(span, height, projection)
                                 : new Vector3(projection, height, span);
-            Box(into, new Vector3(cx, height * 0.5f, -cy), size, submesh);
+            Box(into, new Vector3(cx, Space3D.GroundUnder(b) + height * 0.5f, -cy), size, submesh);
         }
 
         private static void Box(MeshChunk into, Vector3 centre, Vector3 size, int submesh)
