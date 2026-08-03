@@ -29,6 +29,7 @@ rest.** A fresh session needs nothing from any prior conversation.
 | **`DOWNTOWN-1898-vs-1913.md`** | what changed in fifteen years — and the fire labelled on the 1898 map |
 | **`RESIDENTIAL-1913.md`** | house form, lot occupancy, and what it says about the massing grammars |
 | **`PARCEL-STATISTICS.md`** | the assessor's 794 records analysed — density, lot size, values, absentee rate |
+| **`LANDMARKS-1906.md`** | the two brick schools (one towered) and the tile works that drained the prairie |
 | `agent-reports/` | three deeper research passes: transport, buildings, economy |
 | `sanborn/` | nine map sheets (1898, 1906, 1913) plus enlarged crops |
 | `pending/` | code written but never compiled — see "blocked" below |
