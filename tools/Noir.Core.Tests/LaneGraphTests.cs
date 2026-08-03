@@ -465,5 +465,115 @@ namespace Noir.Core.Tests
                             "a lane 2m inside the kerb reads as somewhere else at s=" + s);
             }
         }
+
+        // ---- fix round 1: three curve-only defects the baseline cannot see ------------
+
+        [Test]
+        public void ACurvedRoadThatEndsInsideTheMapGetsNoOffStageMargin()
+        {
+            // The map-edge test used to compare arc length - which exceeds chord length on a
+            // bend - against the map's own dimension, so a curve well inside the map could be
+            // judged to "reach the edge" and be handed the +30m off-stage margin anyway: the
+            // run's end segment landing thirty metres past where the curve's own last point is.
+            var graph = Build(Header
+                + "road bend 30 20,20 20,120 60,180 140,200\n  class mainroad\n", out var world);
+
+            var bend = world.Roads.Lines[0];
+            Assert.That(bend.To, Is.LessThan(210f), "the fixture's premise: bend ends well inside the map");
+            Assert.That(bend.Path.Length, Is.GreaterThan(bend.To - bend.From),
+                        "the fixture's premise: arc length must exceed the chord for the bug to bite");
+
+            float pathEnd = bend.From + bend.Path.Length;
+
+            int checkedSegments = 0;
+            foreach (var seg in graph.Segments)
+            {
+                if (seg.Line != 0 || seg.Way != Heading.South) continue;
+                checkedSegments++;
+                Assert.That(seg.ToS, Is.EqualTo(pathEnd).Within(0.5f),
+                            "a road that ends well short of the map edge should not get the "
+                          + "off-stage margin");
+            }
+            Assert.That(checkedSegments, Is.GreaterThan(0), "the fixture must produce a segment to check");
+        }
+
+        [Test]
+        public void ABendDeclaredInDecreasingOrderClassifiesTheSameAsIncreasingOrder()
+        {
+            // Headings.Increasing assumes a path's tangent points toward the increasing
+            // coordinate - true for a straight RoadLine, which always builds Path From->To
+            // regardless of declaration order, but not for a curve, which is
+            // RoadPath.Through(Points) in DECLARED order. A bend authored high-to-low used to
+            // have every turn it offers inverted - left for right - purely because of which end
+            // its author happened to write first.
+            //
+            // The crossing sits at y=80, on the bend's first (still straight, pre-corner) leg,
+            // deliberately clear of the sharp turn further on - AT the corner the curve's own
+            // tangent runs nearly parallel to a road crossing there, which makes some of that
+            // junction's turns fall in the Straight dead zone by a separate, oblique-crossing
+            // effect (see Junction.Reach's own note that Phase A ships no oblique junction) and
+            // would confound this test with a question it is not asking.
+            var forward = Build(Header
+                + "road bend 30 20,20 20,120 60,180 140,200\n  class mainroad\n"
+                + "road cross 30 0,80 239,80\n  class mainroad\n", out var forwardWorld);
+            var backward = Build(Header
+                + "road bend 30 140,200 60,180 20,120 20,20\n  class mainroad\n"
+                + "road cross 30 0,80 239,80\n  class mainroad\n", out var backwardWorld);
+
+            List<string> TurnsTouchingBend(LaneGraph graph, WorldModel world) => graph.Turns
+                .Select(t => (from: graph.Segments[t.From], to: graph.Segments[t.To], t.Kind))
+                .Where(t => world.Roads.Lines[t.from.Line].Name == "bend"
+                         || world.Roads.Lines[t.to.Line].Name == "bend")
+                .Select(t => t.from.Way + "->" + t.to.Way + ":" + t.Kind)
+                .OrderBy(s => s)
+                .ToList();
+
+            var forwardTurns = TurnsTouchingBend(forward, forwardWorld);
+            var backwardTurns = TurnsTouchingBend(backward, backwardWorld);
+
+            Assert.That(forwardTurns, Is.Not.Empty, "the fixture must produce turns touching the bend");
+            Assert.That(backwardTurns, Is.EqualTo(forwardTurns),
+                "declaring the same physical bend in the opposite point order changed how its "
+              + "turns classify");
+        }
+
+        [Test]
+        public void ACurvedFreewaysOwnContinuationDoesNotStrandEitherLane()
+        {
+            // Tangents are sampled ~Reach either side of the stop line - about 30m of chord.
+            // Past roughly 17.5 degrees of bend across that chord, a curve continuing into
+            // ITSELF reads as a real Left or Right instead of Straight. On a one-lane road that
+            // is invisible: lane 0 is simultaneously the inside AND outside lane, so either
+            // misclassification still satisfies the "legal" test by coincidence. A freeway has
+            // no such coincidence - a misclassified continuation strands whichever lane is not
+            // the edge the wrong Kind demands, and that lane dead-ends with nowhere to go.
+            var graph = Build(Header
+                + "road curve 30 20,20 20,150 140,180\n  class freeway\n"
+                + "road cross2 30 0,152 239,152\n  class mainroad\n", out var world);
+
+            int curve = -1;
+            for (int i = 0; i < world.Roads.Lines.Count; i++)
+                if (world.Roads.Lines[i].Name == "curve") curve = i;
+            Assert.That(curve, Is.GreaterThanOrEqualTo(0));
+            Assert.That(world.Roads.Lines[curve].IsStraight, Is.False, "the fixture is meant to bend");
+            Assert.That(world.Roads.Junctions.Count, Is.EqualTo(1), "curve should cross cross2 exactly once");
+
+            // Checked directly against the SAME lane continuing on the SAME road and way, not
+            // just "has some way out" - a real crossing road offers real turns of its own, and
+            // those would paper over exactly the dead continuation this test exists to catch.
+            int checkedSegments = 0;
+            foreach (var seg in graph.Segments)
+            {
+                if (seg.Line != curve || seg.IsExit) continue;
+                checkedSegments++;
+                bool continues = graph.TurnsFrom(seg.Index)
+                    .Select(t => graph.Segments[graph.Turns[t].To])
+                    .Any(to => to.Line == curve && to.Way == seg.Way && to.Lane == seg.Lane);
+                Assert.That(continues, Is.True,
+                            "lane " + seg.Lane + " of the curved freeway (" + seg.Way
+                          + ") has no straight-through continuation of its own lane");
+            }
+            Assert.That(checkedSegments, Is.GreaterThan(0), "the fixture must produce an arrival to test");
+        }
     }
 }

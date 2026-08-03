@@ -207,17 +207,20 @@ namespace Noir.Core.World
                     //
                     // Lanes run a little past the edge of the world so that traffic arrives from
                     // off-stage instead of appearing out of nothing. Applying that to an end
-                    // that is NOT the edge sends cars thirty metres beyond where the road stops
-                    // - which for the farm track that comes off Second Street meant a van
-                    // driving out into a field, in a straight line, on nothing.
-                    // Unchanged in meaning: the margin is for leaving the MAP, not for leaving
-                    // the road, so a farm track that stops at a junction does not send a van out
-                    // into a field. Expressed against the path's own extent so it reads the same
-                    // for a curve.
+                    // that is NOT the edge sends cars beyond where the road stops - which for the
+                    // farm track that comes off Second Street meant a van driving out into a
+                    // field, in a straight line, on nothing.
+                    //
+                    // Whether the road reaches the edge is asked of the DECLARED extent
+                    // (line.To), not of the arc length: a curve's arc length exceeds its chord,
+                    // so a bend that ends well inside the map could otherwise trip this test and
+                    // be handed the off-stage margin anyway. The run's end itself stays in arc
+                    // length (pathEnd), consistent with where the stops above are measured. For a
+                    // straight road line.To and pathEnd are identical, so nothing here moves it.
                     float span = line.IsNorthSouth ? height : width;
                     float pathEnd = line.From + line.Path.Length;
                     float low = line.From <= 0.01f ? line.From - margin : line.From;
-                    float high = pathEnd >= span - 0.01f ? pathEnd + margin : pathEnd;
+                    float high = line.To >= span - 0.01f ? pathEnd + margin : pathEnd;
 
                     float start = TravelOf(way, Headings.Increasing(way) ? low : high);
                     float end = TravelOf(way, Headings.Increasing(way) ? high : low);
@@ -256,28 +259,60 @@ namespace Noir.Core.World
                 {
                     if (onward.FromJunction != into.ToJunction) continue;
 
-                    // FROM THE TANGENTS, not the enum, so an oblique crossing classifies too.
-                    // For axis-aligned roads this yields precisely what Headings.Between yields:
-                    // the cross product's sign is which way the wheel turns, and the dot tells a
-                    // straight-on from a U-turn. No angle is taken - see CoreDeterminismTests.
-                    var tIn = roads.Lines[into.Line].Path.TangentAt(
-                        AlongOf(into.Way, into.ToS) - roads.Lines[into.Line].From);
-                    var tOut = roads.Lines[onward.Line].Path.TangentAt(
-                        AlongOf(onward.Way, onward.FromS) - roads.Lines[onward.Line].From);
-
-                    // The path's tangent always points the way the road was DECLARED; a segment
-                    // running the other way travels against it.
-                    if (!Headings.Increasing(into.Way)) tIn = new Vec2(-tIn.X, -tIn.Y);
-                    if (!Headings.Increasing(onward.Way)) tOut = new Vec2(-tOut.X, -tOut.Y);
-
-                    float dot = tIn.X * tOut.X + tIn.Y * tOut.Y;
-                    float cross = tIn.X * tOut.Y - tIn.Y * tOut.X;
-
+                    // A road continuing into ITSELF in the same direction is going straight by
+                    // definition, whatever its curvature - short-circuited before the tangent
+                    // math because that math is sampled only ~Reach (about 15m) either side of
+                    // the stop line, and a curve bending enough over that short a chord can
+                    // otherwise read as a real Left or Right. On a one-lane road that
+                    // misclassification is invisible - lane 0 is simultaneously the inside and
+                    // outside lane, so either Kind still satisfies the legal check below by
+                    // coincidence - but on a freeway a wrongly-Right continuation demands
+                    // into.Lane == fromLanes - 1, so lane 0 would get no continuation at all and
+                    // dead-end. See ACurvedFreewaysOwnContinuationDoesNotStrandEitherLane.
                     TurnKind? kind;
-                    if (dot <= -0.5f) kind = null;                       // a U-turn; never offered
-                    else if (cross > 0.3f) kind = TurnKind.Right;        // right is (-y, x): +cross
-                    else if (cross < -0.3f) kind = TurnKind.Left;
-                    else kind = TurnKind.Straight;
+                    if (onward.Line == into.Line && onward.Way == into.Way)
+                    {
+                        kind = TurnKind.Straight;
+                    }
+                    else
+                    {
+                        // FROM THE TANGENTS, not the enum, so an oblique crossing classifies
+                        // too. For axis-aligned roads this yields precisely what
+                        // Headings.Between yields: the cross product's sign is which way the
+                        // wheel turns, and the dot tells a straight-on from a U-turn. No angle
+                        // is taken - see CoreDeterminismTests.
+                        var tIn = roads.Lines[into.Line].Path.TangentAt(
+                            AlongOf(into.Way, into.ToS) - roads.Lines[into.Line].From);
+                        var tOut = roads.Lines[onward.Line].Path.TangentAt(
+                            AlongOf(onward.Way, onward.FromS) - roads.Lines[onward.Line].From);
+
+                        // Flip each tangent to point the way its OWN SEGMENT travels, rather
+                        // than assuming the path already points that way. That assumption held
+                        // for a straight road, which RoadLine always builds Path From->To
+                        // regardless of declaration order, but a curve is
+                        // RoadPath.Through(Points) in DECLARED order, and a road authored
+                        // high-to-low reverses it. Comparing against the heading's own cardinal
+                        // direction - never against declaration order - is right either way, and
+                        // for an axis-aligned road the tangent is exactly cardinal, so this
+                        // reduces to the old behaviour bit-for-bit.
+                        var intoWay = Headings.IsNorthSouth(into.Way)
+                            ? new Vec2(0f, Headings.Increasing(into.Way) ? 1f : -1f)
+                            : new Vec2(Headings.Increasing(into.Way) ? 1f : -1f, 0f);
+                        if (tIn.X * intoWay.X + tIn.Y * intoWay.Y < 0f) tIn = new Vec2(-tIn.X, -tIn.Y);
+
+                        var onwardWay = Headings.IsNorthSouth(onward.Way)
+                            ? new Vec2(0f, Headings.Increasing(onward.Way) ? 1f : -1f)
+                            : new Vec2(Headings.Increasing(onward.Way) ? 1f : -1f, 0f);
+                        if (tOut.X * onwardWay.X + tOut.Y * onwardWay.Y < 0f) tOut = new Vec2(-tOut.X, -tOut.Y);
+
+                        float dot = tIn.X * tOut.X + tIn.Y * tOut.Y;
+                        float cross = tIn.X * tOut.Y - tIn.Y * tOut.X;
+
+                        if (dot <= -0.5f) kind = null;                    // a U-turn; never offered
+                        else if (cross > 0.3f) kind = TurnKind.Right;     // right is (-y, x): +cross
+                        else if (cross < -0.3f) kind = TurnKind.Left;
+                        else kind = TurnKind.Straight;
+                    }
                     if (kind == null) continue;                      // no U-turns
 
                     var toLine = roads.Lines[onward.Line];
