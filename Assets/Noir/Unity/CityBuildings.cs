@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.World;
@@ -58,7 +58,7 @@ namespace Noir.Unity
         {
             switch (kind)
             {
-                case "apartment": case "dwelling":
+                case "apartment":
                 case "shop": case "pub": case "postoffice": case "villagehall":
                     return true;
                 default:
@@ -95,12 +95,6 @@ namespace Noir.Unity
                 // looked like, and it was one function call away from being right: CitySuburb
                 // had the recipe all along - Bayhouse, one storey or two - and nothing was
                 // reading it because suburbs used to be cells rather than places.
-                if (KindOf(place) == "dwelling")
-                {
-                    pieces += House(root.transform, place, place.Bounds, FacingOf(place));
-                    continue;
-                }
-
                 bool leftEnd = !HasNeighbour(lots, place, -1);
                 bool rightEnd = !HasNeighbour(lots, place, +1);
                 pieces += Townhouse(root.transform, place, place.Bounds, leftEnd || rightEnd, FacingOf(place));
@@ -202,7 +196,7 @@ namespace Noir.Unity
         {
             switch (KindOf(place))
             {
-                case "apartment": case "dwelling":
+                case "apartment":
                 case "shop": case "pub": case "postoffice": case "villagehall":
                 case "diner": case "precinct": case "school2": case "hospital":
                 case "firestation": case "cinema": case "bank": case "casino":
@@ -275,13 +269,17 @@ namespace Noir.Unity
         /// A bungalow one time in four. An estate built over a decade is not all one height,
         /// and a run of identical houses reads as a terrace even when they are ten metres apart.
         /// </summary>
-        private static int House(Transform parent, Place place, TileRect lot, float yaw)
-        {
-            int storeys = Materials3D.Scatter(lot.X, lot.Y, 5179) % 4 == 0 ? 0 : 1;
-            int n = Stack(parent, place, lot, yaw, storeys, false, out var built, only: "Bayhouse");
-            Record(place, built);
-            return n;
-        }
+        // A DWELLING USED TO GET A PACK BAYHOUSE HERE, one storey or two. It does not any more.
+        //
+        // The pack's houses are generic American suburban models and Rossville's are not: the
+        // 1913 Sanborn sheets show 1 and 1.5 storey frame houses, L or T shaped with an ell
+        // running back and a porch across the front, at a median 97 m2 footprint. None of that is
+        // in a Bayhouse. So dwellings are no longer claimed by Handles(), which lets RoofBuilder
+        // build them from the frame grammars instead - see HouseLayers, which picks which of the
+        // three date-layers each lot gets from where the lot stands.
+        //
+        // CitySuburb still calls Stack() directly with only:"Bayhouse" for its own cells; that is
+        // a different generator and is left alone.
 
         private static int Townhouse(Transform parent, Place place, TileRect lot, bool end, float yaw)
         {

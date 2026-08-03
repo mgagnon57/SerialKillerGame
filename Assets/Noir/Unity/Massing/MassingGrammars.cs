@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Noir.Core.World;
 
 namespace Noir.Unity
@@ -49,6 +49,20 @@ namespace Noir.Unity
         public static IMassingGrammar For(Place place)
         {
             string name = place == null ? null : PlaceKindTable.Current.Row(place.Kind).Massing;
+
+            // A DWELLING IS NOT ONE SHAPE. Every other kind here maps a name to a grammar and is
+            // done, because a church is a church. Houses are the exception: the town has three
+            // date-layers of them and which one a lot gets depends on where the lot is, so the
+            // answer cannot come from a static column in kinds.txt. HouseLayers asks Core, which
+            // decides from figures measured off the Sanborn sheets.
+            //
+            // It happens HERE rather than at any of the six call sites because this is the choke
+            // point they all share - RoofBuilder, Frontage, XRay, VillageMesh, Elevations and
+            // SmokeTest. Deciding anywhere else and a house's roof, its eaves height, its
+            // frontage and its x-ray cutaway could each pick a different era of the same house.
+            if (place != null && place.Kind == PlaceKind.Dwelling && HouseLayers.Installed)
+                return HouseLayers.Grammar(place);
+
             if (name != null && Registry.TryGetValue(name, out var grammar)) return grammar;
 
             if (name != null && _warned.Add(name))
