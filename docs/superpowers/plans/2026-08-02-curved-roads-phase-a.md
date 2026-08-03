@@ -738,14 +738,16 @@ Append inside the `RoadPathTests` class in `tools/Noir.Core.Tests/RoadPathTests.
             // merely a similar one. Catmull-Rom at t=0.5 on the first span of the fixture above,
             // with the first point clamped as its own neighbour:
             //   0.5 * (2*p1 + (-p0+p2)*t + (2*p0-5*p1+4*p2-p3)*t^2 + (-p0+3*p1-3*p2+p3)*t^3)
-            // with p0=p1=(0,0), p2=(0,100), p3=(20,180) at t=0.5 gives x = -0.625, y = 53.125.
+            // with p0=p1=(0,0), p2=(0,100), p3=(20,180) at t=0.5:
+            //   x = 0.5 * ((-20)*0.25 + 20*0.125)          = 0.5 * -2.5 = -1.25
+            //   y = 0.5 * (100*0.5 + 220*0.25 + -120*0.125) = 0.5 * 90   = 45
             var smoothed = RoadPath.Smooth(new[]
             {
                 new Vec2(0f, 0f), new Vec2(0f, 100f), new Vec2(20f, 180f), new Vec2(60f, 240f),
             });
 
-            Assert.That(smoothed[2].X, Is.EqualTo(-0.625f).Within(1e-4f));
-            Assert.That(smoothed[2].Y, Is.EqualTo(53.125f).Within(1e-4f));
+            Assert.That(smoothed[2].X, Is.EqualTo(-1.25f).Within(1e-4f));
+            Assert.That(smoothed[2].Y, Is.EqualTo(45f).Within(1e-4f));
         }
 ```
 
