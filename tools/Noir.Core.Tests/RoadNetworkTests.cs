@@ -126,9 +126,14 @@ namespace Noir.Core.Tests
             Assert.That(world.Roads.Lines.Count, Is.GreaterThan(0), "the city has roads");
             Assert.That(world.Roads.Junctions.Count, Is.GreaterThan(0), "and they cross");
 
+            // Every road is straight except chicago (Illinois Route 1), which follows its real
+            // surveyed alignment on purpose - see RoadGeometryBaselineTests for the pinned
+            // detail on that curve. This still checks straightness for every line, just against
+            // the one deliberate exception rather than a blanket True.
             foreach (var line in world.Roads.Lines)
             {
-                Assert.That(line.IsStraight, Is.True, $"{line.Name} is straight");
+                Assert.That(line.IsStraight, Is.EqualTo(line.Name != "chicago"),
+                            $"{line.Name} straightness");
                 Assert.That(line.Width, Is.EqualTo(RoadClasses.CorridorWidth(line.Class)),
                             $"{line.Name} is the width its class requires");
             }
