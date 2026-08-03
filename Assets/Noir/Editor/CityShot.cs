@@ -35,6 +35,31 @@ namespace Noir.Editor
         [MenuItem("Noir/Render City Block (night, 22:00)")]
         public static void RenderNight() { Hour = 22f; Render(); }
 
+        /// <summary>
+        /// The BUILT town at noon, for `-executeMethod` from a headless run.
+        ///
+        /// <see cref="VillageHost.ShowBuildings"/> defaults off, so every one of the entry points
+        /// above photographs the survey plan — black ground, white kerb lines, no buildings. That
+        /// is the right default for the editor, where the menu toggle is one click away, and it
+        /// is useless from batch mode where there is nobody to click it. Without this, verifying
+        /// a change to how the town LOOKS from a headless run silently renders the one view that
+        /// cannot show it, which is exactly the trap that hid the porch.
+        ///
+        /// Restores the flag afterwards so a batch session that renders both does not have the
+        /// first shot change the second.
+        /// </summary>
+        public static void RenderBuiltNoon()
+        {
+            bool was = VillageHost.ShowBuildings;
+            try
+            {
+                VillageHost.ShowBuildings = true;
+                Hour = 13f;
+                Render();
+            }
+            finally { VillageHost.ShowBuildings = was; }
+        }
+
         internal static string OutputDir =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "..", "docs", "snapshots"));
 
