@@ -82,7 +82,7 @@ The 1898 Sanborn sheet shows why brick was available: **Habel Bros. Tile Works**
 village at McKibben & Gilbert, *"capacity 25,000 brick per day & 2,000 tile per day"*, with two
 kilns and a brick kiln shed. A town with its own brickworks rebuilds in brick.
 
-### February 2004 — inside living memory
+### 27 February 2004 — inside living memory
 
 A large fire destroyed **another quarter of the downtown commercial section, opposite the 1893
 burn**. It took a whole block of businesses — a restaurant, gift shops, and many of the **antique
@@ -97,6 +97,10 @@ Sources: [News-Gazette](https://www.news-gazette.com/living/rossville-changes-af
 
 > For a game set in **1995–2006**, the 2004 fire falls *inside the story's window*. The downtown
 > changes shape partway through the period being simulated.
+
+**And the antique trade was already dying when it burned.** eBay had been eroding the small-town
+antique business through the late 1990s. The fire did not interrupt a thriving district; it
+finished one that was already going.
 
 ---
 
@@ -195,14 +199,20 @@ rebuilt by 1913. Canning fits the region: Hoopeston, the next town north, was a 
 
 | year | population | source |
 |---|---|---|
-| 1898 | **1,500** | Sanborn title block |
-| 1913 | **1,500** | Sanborn title block |
-| 2000 | 1,217 | Village of Rossville |
-| 2010 | 1,331 | Village of Rossville |
+| 1898 | ~1,500 | Sanborn title block (mapmaker's estimate) |
+| 1913 | ~1,500 | Sanborn title block |
+| **1920** | **1,588 — the peak** | census |
+| 1930–1990 | a shallow plateau, **1,300–1,470** | census |
+| **2000** | **1,217 — the low** | census |
+| 2010 | 1,331 | census |
+| today | ~1,150–1,250 | estimate |
 
-The Sanborn figures are the mapmakers' own contemporaneous estimates, and they show the town at
-1,500 more than a century ago — **above where it stands now**. A fuller decade-by-decade census
-series is in `rossville-economy.md`.
+**The decline is gentle, not a collapse.** About **−23% from peak across a century** — far softer
+than Danville (−31% from its 1970 peak) or Vermilion County as a whole (−24% since 1970, and
+accelerating). Rossville did not empty out; it slowly thinned.
+
+Note the shape: the town's **low point is the year 2000**, and it then *rose* through the decade.
+Full decade-by-decade series in `.superpowers/research/rossville-economy.md`.
 
 ---
 
@@ -218,6 +228,31 @@ identity did not recover.
 [News-Gazette](https://www.news-gazette.com/living/rossville-changes-after-2004-fire-with-times/article_5002a309-9179-4bf2-8bea-b2d43addf418.html))
 
 ---
+
+## 6a. What was happening *around* Rossville in the game's window
+
+This is the part that matters for writing people rather than buildings. A character in Rossville
+around 2000 is not nostalgic about a distant golden age — they have **recent, specific bad news**
+from just up and down Route 1:
+
+| when | what | where |
+|---|---|---|
+| **1995** | **GM foundry closes** — roughly **$50 million** of annual payroll gone | Danville, 15 miles south |
+| **1998** | Chiquita closes one of the two historic **canneries** | Hoopeston, 9 miles north |
+| late 1990s | **eBay** erodes the small-town antique trade | Rossville's own main street |
+| **2004** | **FMC farm-equipment plant** closes | Hoopeston |
+| **27 Feb 2004** | **the downtown fire** | Rossville |
+| **2006** | **Rossville-Alvin High School closes** | Rossville |
+
+Six things in eleven years, and four of them land in the last three. **Coal was never Rossville's
+story** — Vermilion County coal was real but concentrated at Danville, Westville, Catlin and
+Georgetown. Rossville was grain, canning and the railroad.
+
+Nothing from the 1898–1913 industrial peak — three competing grain elevators, the wagon works, the
+brick and tile works, the cannery with its own sauerkraut plant, the creamery, two hotels, the
+opera house — survived to the game's era.
+
+Source: `.superpowers/research/rossville-economy.md`, with citations.
 
 ## 7. Institutions today
 
@@ -262,6 +297,18 @@ Sources: [Village of Rossville](https://villageofrossville.org/our-history),
 1833; incorporation 1859; the 1893 and 2004 fires; the C&EI and the 1903 depot; the antique era;
 the 2006 high-school closure; everything read directly off the Sanborn sheets (those are primary
 documents).
+
+**Contradictions found, and how they are resolved here.**
+
+- One low-quality source gives a founding date of **1862**. Both Wikipedia and the village's own
+  history say **incorporated August 1859**. This document uses 1859. A "founded" date differing
+  from an "incorporated" date is common and both may be defensible, but 1862 has no good source
+  behind it.
+- Current **median age** is reported as **~42** by the 2020 Census and as **~34.6** by several
+  aggregator sites that recycle each other. Trust 42.
+- The Sanborn title blocks say "population 1,500" in both 1898 and 1913; the census says the peak
+  was **1,588 in 1920**. These are not in conflict — the Sanborn figures are mapmakers' round
+  estimates, not enumerations.
 
 **Weaker.** The exact street-by-street extent of each fire — the 1893 burn is attributed to East
 Attica Street by the village's own history, but the 2004 burn is described only as "opposite" it
