@@ -30,9 +30,10 @@ rest.** A fresh session needs nothing from any prior conversation.
 | **`DOWNTOWN-1898-vs-1913.md`** | what changed in fifteen years — and the fire labelled on the 1898 map |
 | **`RESIDENTIAL-1913.md`** | house form, lot occupancy, and what it says about the massing grammars |
 | **`PARCEL-STATISTICS.md`** | the assessor's 794 records analysed — density, lot size, values, absentee rate |
+| **`BUILDING-CENSUS-1913.md`** | **all 503 buildings counted and measured by machine** — materials, footprint sizes, outbuildings |
 | **`LANDMARKS-1906.md`** | the two brick schools (one towered) and the tile works that drained the prairie |
 | `agent-reports/` | three deeper research passes: transport, buildings, economy |
-| `sanborn/` | nine map sheets (1898, 1906, 1913) plus enlarged crops |
+| `sanborn/` | nine map sheets (1898, 1906, 1913), enlarged crops, and two machine-classified renders |
 | `pending/` | code written but never compiled — see "blocked" below |
 
 ---
@@ -51,7 +52,13 @@ Livingood's, Henderson's. **The grid is a family tree.**
 1857 on two roads; the line arrived 1871 and ran along the eastern boundary. The diagonal is
 history, not error.
 
-**Houses are frame, never brick**, in three date-layers: 1857–1910s farmhouse/foursquare,
+**Houses are frame, never brick — now counted, not estimated.** All four 1913 sheets classified by
+Sanborn's own colour key: **473 frame buildings to 30 brick**, and of the brick, sixteen are the
+downtown shops and the remaining five are institutional. A whole residential sheet has **one** red
+building on it. The median frame house footprint is **97 m² (1,047 sq ft)**, p10 54 to p90 163 —
+three to one across the town. `BUILDING-CENSUS-1913.md`.
+
+The three date-layers: 1857–1910s farmhouse/foursquare,
 a **larger** 1920s–40s bungalow layer (median build year **1943**), and postwar ranches on the
 edges. Every house on the map is **L or T shaped** — a rectangular footprint is the loudest tell
 of a generated town.
