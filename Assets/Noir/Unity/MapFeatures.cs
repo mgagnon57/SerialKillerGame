@@ -86,35 +86,23 @@ namespace Noir.Unity
         /// whole town. The real line does not have those corners; the survey just did not sample
         /// it any finer. A river or a field ditch kinking is unremarkable; a railroad doing it
         /// looks like an error, which is why only the rail asks for this.
+        ///
+        /// (The curve itself is Noir.Core.World.RoadPath.Smooth. It moved to Core so the roads
+        /// and the railway bend along the same arithmetic rather than two copies of it, and so
+        /// it can be tested under dotnet test - which it never could be here.)
         /// </summary>
         public static List<Vector2> Smoothed(List<Vector2> pts)
         {
             if (pts.Count < 3) return pts;
 
-            var out_ = new List<Vector2> { pts[0] };
-            for (int i = 0; i < pts.Count - 1; i++)
-            {
-                var p0 = pts[Mathf.Max(i - 1, 0)];
-                var p1 = pts[i];
-                var p2 = pts[i + 1];
-                var p3 = pts[Mathf.Min(i + 2, pts.Count - 1)];
+            var input = new Noir.Core.Contracts.Vec2[pts.Count];
+            for (int i = 0; i < pts.Count; i++) input[i] = new Noir.Core.Contracts.Vec2(pts[i].x, pts[i].y);
 
-                for (int s = 1; s <= SmoothSteps; s++)
-                {
-                    float t = (float)s / SmoothSteps;
-                    out_.Add(CatmullRom(p0, p1, p2, p3, t));
-                }
-            }
-            return out_;
-        }
+            var smoothed = Noir.Core.World.RoadPath.Smooth(input);
 
-        private static Vector2 CatmullRom(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
-        {
-            float t2 = t * t, t3 = t2 * t;
-            return 0.5f * ((2f * p1)
-                         + (-p0 + p2) * t
-                         + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2
-                         + (-p0 + 3f * p1 - 3f * p2 + p3) * t3);
+            var result = new List<Vector2>(smoothed.Length);
+            foreach (var p in smoothed) result.Add(new Vector2(p.X, p.Y));
+            return result;
         }
     }
 }
