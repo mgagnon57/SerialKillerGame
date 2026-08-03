@@ -320,12 +320,7 @@ namespace Noir.Unity
         /// </summary>
         private static int Lay(Transform parent, RoadLine line, WorldModel world)
         {
-            if (!line.IsStraight)
-            {
-                Debug.LogWarning($"[streets] '{line.Name}' bends, and only straight roads are "
-                               + "tiled. It will have terrain but no surface.");
-                return 0;
-            }
+            if (!line.IsStraight) return LayCurved(parent, line, world);
 
             int module = RoadClasses.CorridorWidth(line.Class);
             float half = module / 2f;
@@ -374,6 +369,105 @@ namespace Noir.Unity
                 if (Seat(parent, piece, cx - half, cy - half, module, module, yaw) != null) laid++;
             }
             return laid;
+        }
+
+        /// <summary>
+        /// A road that bends, tiled along its own centre line.
+        ///
+        /// WHY IT IS A SEPARATE WALK. The straight version steps a village coordinate and lays a
+        /// tile square to an axis, which is meaningless once the road turns: there is no single
+        /// yaw for the whole run and no axis to step along. This walks ARC LENGTH instead, asks
+        /// the path where it is and which way it points at each step, and seats one tile there
+        /// facing that way.
+        ///
+        /// THE PREFABS ARE STRAIGHT AND STAY STRAIGHT. There is no curved asphalt in the kit, so
+        /// a curve is a chain of straight tiles each turned a little further - which is how a
+        /// real road is actually built, and at Route 1's rate of bend, about a fifth of a degree
+        /// per thirty-metre tile, the wedge gaps on the outside of the curve are millimetres.
+        /// A sharper road would show them, and that is a real limit of laying a straight prefab
+        /// along a curve rather than a defect to chase.
+        /// </summary>
+        private static int LayCurved(Transform parent, RoadLine line, WorldModel world)
+        {
+            int module = RoadClasses.CorridorWidth(line.Class);
+            float half = module / 2f;
+            var path = line.Path;
+            if (path == null || path.Length < module) return 0;
+
+            int laid = 0;
+            for (float s = 0f; s + module <= path.Length + 0.01f; s += module)
+            {
+                // The middle of this tile, not its leading edge, so the tile is centred on the
+                // stretch of road it is covering.
+                float mid = s + half;
+                var at = path.PointAt(mid);
+                var tangent = path.TangentAt(mid);
+
+                // Village (x,y) is x east, y south; Unity yaw is clockwise from +Z and +Z is
+                // north. So a map tangent (tx,ty) points along the world direction (tx,0,-ty),
+                // which is the same derivation GroundShot uses to aim a camera down the rail.
+                float yaw = Mathf.Atan2(tangent.X, -tangent.Y) * Mathf.Rad2Deg;
+
+                bool inJunction = false;
+                foreach (var j in world.Roads.Junctions)
+                    if (Mathf.Abs(at.X - j.X) < j.Reach && Mathf.Abs(at.Y - j.Y) < j.Reach)
+                    { inJunction = true; break; }
+                if (inJunction) continue;
+
+                // Near a crossing, and in the town: the crosswalk tile, which carries the zebra
+                // and the stop line. Measured as real distance to the junction rather than along
+                // one axis, because on a bend neither axis means anything.
+                bool atCrossing = false;
+                foreach (var j in world.Roads.Junctions)
+                {
+                    if (!ReferenceEquals(j.NorthSouth, line) && !ReferenceEquals(j.EastWest, line))
+                        continue;
+
+                    float dx = at.X - j.X, dy = at.Y - j.Y;
+                    if (dx * dx + dy * dy >= module * 1.5f * (module * 1.5f)) continue;
+                    if (!CitySignals.InTheTown(world, j)) continue;
+
+                    atCrossing = true;
+                    break;
+                }
+
+                string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
+                if (SeatAt(parent, piece, at.X, at.Y, yaw) != null) laid++;
+            }
+
+            Debug.Log($"[streets] '{line.Name}' bends: {laid} tiles laid along "
+                    + $"{path.Length:0}m of centre line.");
+            return laid;
+        }
+
+        /// <summary>
+        /// Seat a tile CENTRED on a point, at any yaw.
+        ///
+        /// Seat() below covers an axis-aligned patch, which cannot express "centred here, turned
+        /// twenty degrees". Same measured-bounds correction and the same ground sample - the
+        /// tiles pivot at a corner rather than the middle, so the drift has to be measured after
+        /// the rotation is applied, not before.
+        /// </summary>
+        private static GameObject SeatAt(Transform parent, string path, float mx, float my, float yaw)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) { Debug.LogWarning("[streets] missing " + path); return null; }
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetParent(parent, false);
+            go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            var rends = go.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return go;
+
+            var b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+            float groundY = parent.position.y + ElevationGrid.HeightAt(mx, my);
+            var want = new Vector3(mx, 0f, -my);
+            var drift = b.center - go.transform.position;
+            go.transform.position = new Vector3(want.x - drift.x, groundY, want.z - drift.z);
+            return go;
         }
 
         /// <summary>
