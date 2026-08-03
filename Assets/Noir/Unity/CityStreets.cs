@@ -71,6 +71,7 @@ namespace Noir.Unity
             // long. Laid every ten metres it therefore overlaps its neighbour by nearly four,
             // which on a rutted track is not a fault - it is what stops the joins showing.
             // Seating by measured bounds is what makes that harmless.
+            RoadClass.Alley    => Dirt + "Road_Dirt_B_Straight_10x10m.prefab",
             RoadClass.Track    => Dirt + "Road_Dirt_A_Straight_10x10m.prefab",
 
             _                  => Kit + "Road_Straight_10x10_City.prefab",
@@ -80,6 +81,7 @@ namespace Noir.Unity
         {
             RoadClass.Freeway  => Kit + "Freeway_Crosswalk_30x30_City.prefab",
             RoadClass.Mainroad => Kit + "Mainroad_Crosswalk_City.prefab",
+            RoadClass.Alley    => Straight(klass),      // nor across an alley mouth
             RoadClass.Track    => Straight(klass),      // nobody paints a zebra on a farm track
             _                  => Kit + "Road_Crosswalk_10x10_City.prefab",
         };
@@ -476,6 +478,9 @@ namespace Noir.Unity
             if (_verge == null)
                 _verge = AssetDatabase.LoadAssetAtPath<Material>(
                     "Assets/polyperfect/Poly Universal Pack/Materials/Nature/M_Ground_Grass.mat");
+            if (_plainTop == null)
+                _plainTop = AssetDatabase.LoadAssetAtPath<Material>(
+                    "Assets/polyperfect/Poly Universal Pack/Materials/City/M_Asphalt_A_City.mat");
             if (_verge == null) return;
 
             foreach (var r in tile.GetComponentsInChildren<MeshRenderer>())
@@ -483,13 +488,27 @@ namespace Noir.Unity
                 var mats = r.sharedMaterials;
                 bool hit = false;
                 for (int i = 0; i < mats.Length; i++)
-                    if (mats[i] != null && mats[i].name.StartsWith("M_Sidewalk", System.StringComparison.Ordinal))
+                {
+                    if (mats[i] == null) continue;
+
+                    // The concrete edging becomes mown verge.
+                    if (mats[i].name.StartsWith("M_Sidewalk", System.StringComparison.Ordinal))
                     { mats[i] = _verge; hit = true; }
+
+                    // AND THE PAINT GOES. The kit's 10 m tile carries a white edge line on its
+                    // M_Universal submesh, which is a city street's marking. Rossville's side
+                    // streets are unmarked asphalt - the 2007 photographs show paint only on the
+                    // through route, and in 1940 most of these were not even hard-surfaced.
+                    // Repainted as asphalt rather than deleted, so the mesh stays whole.
+                    else if (_plainTop != null &&
+                             mats[i].name.StartsWith("M_Universal", System.StringComparison.Ordinal))
+                    { mats[i] = _plainTop; hit = true; }
+                }
                 if (hit) r.sharedMaterials = mats;
             }
         }
 
-        private static Material _verge;
+        private static Material _verge, _plainTop;
 
         private static GameObject SeatAt(Transform parent, string path, float mx, float my, float yaw)
         {

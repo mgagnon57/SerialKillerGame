@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Noir.Core.Contracts;
 
@@ -22,6 +22,17 @@ namespace Noir.Core.World
         /// </summary>
         Track,
 
+        /// <summary>
+        /// A mid-block service alley. SIX-metre corridor - the narrowest thing here, because
+        /// that is what an alley is: two ruts and just enough room for one vehicle and the bins.
+        ///
+        /// It is its own class rather than a narrow Track because the width is not a free
+        /// choice - the parser pins it to the class, since the road kit's tiles are built to it.
+        /// Ten metres of alley made every block read as though it had a second street down the
+        /// middle of it.
+        /// </summary>
+        Alley,
+
         /// <summary>A residential street. Ten-metre corridor, no markings.</summary>
         Street,
 
@@ -42,7 +53,8 @@ namespace Noir.Core.World
         /// of the models and is measured off the mesh by the renderer, not asserted here.
         /// </summary>
         public static int CorridorWidth(RoadClass klass) =>
-            klass == RoadClass.Street || klass == RoadClass.Track ? 10 : 30;
+            klass == RoadClass.Alley ? 6
+          : klass == RoadClass.Street || klass == RoadClass.Track ? 10 : 30;
 
         /// <summary>
         /// How many running lanes there are in each direction.
@@ -60,6 +72,7 @@ namespace Noir.Core.World
         {
             switch ((text ?? "").Trim().ToLowerInvariant())
             {
+                case "alley":    klass = RoadClass.Alley;    return true;
                 case "track":    klass = RoadClass.Track;    return true;
                 case "street":   klass = RoadClass.Street;   return true;
                 case "mainroad": klass = RoadClass.Mainroad; return true;

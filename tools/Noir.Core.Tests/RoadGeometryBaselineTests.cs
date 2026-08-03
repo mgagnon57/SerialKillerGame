@@ -43,6 +43,10 @@ namespace Noir.Core.Tests
     /// weaker bright line exactly halfway between every pair of streets, and OSM maps them
     /// separately as `service=alley`. Both agree on where they run.
     ///
+    /// They went in at ten metres, the Track width, and every block read as though it had a
+    /// second street down its middle. RoadClass.Alley now carries a SIX-metre corridor, which
+    /// moves every alley lane and is why the counts hold but the checksum moved.
+    ///
     /// What was actually wrong was the DOWNTOWN, which was authored on a straight line while
     /// the road curved away from it - the centreline passed inside the barber and the steam
     /// laundry and left the west shop row 94 m behind. The buildings moved, not the road. See
@@ -224,6 +228,6 @@ namespace Noir.Core.Tests
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "9CBBB8BAFD335DD19D2BEC61B56E8944EF2F1123C701A4EB1ABBD0DC5438528B";
+            "B313FB5EB3834B2EA100867F6480DC927618E5D3F0E29C5B70F828CBAFB7A328";
     }
 }
