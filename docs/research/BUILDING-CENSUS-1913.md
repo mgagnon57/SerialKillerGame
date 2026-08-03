@@ -76,10 +76,20 @@ house, because some lots carry one with no house at all.
 threshold between "small house" and "large barn" is a judgement call that moves this figure — a
 45 m² cut gives 5.6, a lower cut gives nearer 4.5. Consistent, not precise.
 
-**Against the modern assessor.** 268 dwellings in 1913 against **517 improved residential parcels**
-today. The town nearly doubled its houses while its population fell from 1,500 to 1,217 — which is
-the ordinary twentieth-century story of household size collapsing, and is what the **median build
-year of 1943** in the parcel data already said. The two datasets are independent and they agree.
+**Against the modern assessor, and against the Census.** 268 dwellings in 1913 against **517
+improved residential parcels** today: the town nearly doubled its houses while its population fell
+from 1,500 to 1,217, which is the ordinary twentieth-century story of household size collapsing.
+
+The Census ACS gives a sharper test than that. It puts **48.2%** of the current housing stock in
+its bottom bucket, **"1939 or earlier"**. Pre-1913 houses are necessarily a subset of pre-1940
+ones, so this count's 268 of 517 — **51.8%** — should sit *below* 48.2% and instead sits 3.6
+points above it.
+
+That gap is the measurement, not the town. The whole count hangs on a 45 m² threshold separating a
+small house from a large barn, and moving it a few square metres moves the dwelling count by more
+than nineteen buildings. **So the two surveys agree to within 8%, and the honest reading is that
+roughly half of Rossville's houses predate the First World War.** Anything that depends on the
+third significant figure of that is depending on the threshold, not on the evidence.
 
 **Against the commercial row.** The classifier puts brick exactly where `COMMERCIAL-ROW.md` says
 the terrace is, in one continuous mass at the crossing with no gaps in it, and puts frame
