@@ -22,6 +22,15 @@ namespace Noir.Unity
                 { "mill",      new MillMassing() },
                 { "garage",    new GarageMassing() },
                 { "works",     new WorksMassing() },
+
+                // The Illinois frame house, in the three date-layers the record shows. See
+                // FrameHouseGrammars - these are sourced off nine Sanborn sheets and the town's
+                // 1943 median build year, not chosen by eye. Registered but not yet named by any
+                // row in kinds.txt: the models are being prototyped against the packs first.
+                { "farmhouse",  new FarmhouseMassing() },
+                { "foursquare", new FoursquareMassing() },
+                { "bungalow",   new BungalowMassing() },
+                { "ranch",      new RanchMassing() },
             };
 
         /// <summary>
