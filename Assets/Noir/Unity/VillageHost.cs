@@ -326,11 +326,28 @@ namespace Noir.Unity
             // brick appears in the buildings' chunk and again in the districts'. Chunking WITHIN
             // a layer is where nearly all of the win was - 18,059 renderers to 7,635 - and that
             // is untouched. Anything left unregistered is baked with the city as before.
+            // AND NOTHING BAKES `city` ITSELF AFTERWARDS. That was the first version and it
+            // silently undid the whole thing: `city` is the PARENT of every layer root, so
+            // baking it walked back over the meshes the layer bakes had just made, combined
+            // them into one node and destroyed the roots - leaving the switches pointing at
+            // nothing. The renders proved it: with the trees switched off, the picture came
+            // back byte-identical.
+            //
+            // It was also slower. Re-combining already-combined meshes by chunk and material
+            // turned 10,226 layer meshes into 7,796 worse ones.
             foreach (var kind in Layers.All)
                 foreach (var root in Layers.RootsOf(kind))
                     CityChunker.Bake(root);
 
-            CityChunker.Bake(city);
+            // Anything parented to `city` that no layer claimed is left unbaked on purpose - it
+            // would be invisible to the switches, and a renderer nobody can turn off is worth
+            // knowing about rather than quietly merging away.
+            int orphans = 0;
+            foreach (var r in city.GetComponentsInChildren<MeshRenderer>(true))
+                if (r.transform.parent == city.transform) orphans++;
+            if (orphans > 0)
+                Debug.LogWarning($"[layers] {orphans} renderers sit directly under the city and "
+                               + "belong to no layer, so nothing can switch them off.");
 
             // AFTER the bake and OUTSIDE the node it bakes: a combined mesh cannot move or
             // change colour, so anything that drives - or that goes red and green - has to be
