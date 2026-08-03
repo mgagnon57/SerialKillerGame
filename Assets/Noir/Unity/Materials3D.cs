@@ -147,7 +147,7 @@ namespace Noir.Unity
 
             // A texture multiplies the base colour, so the palette above still governs the look
             // and a greyscale or bought texture set inherits it rather than fighting it.
-            SurfaceTextures.Apply(m, texture);
+            SurfaceTextures.ApplyPack(m, texture);
             Plan(m);
 
             _byTerrain[t] = m;
@@ -169,7 +169,7 @@ namespace Noir.Unity
             {
                 if (_pasture != null) return _pasture;
                 _pasture = Make("Pasture", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f);
-                SurfaceTextures.Apply(_pasture, "grass", 21f);
+                SurfaceTextures.ApplyPack(_pasture, "grass", 21f);
                 Plan(_pasture);
                 return _pasture;
             }
@@ -230,7 +230,7 @@ namespace Noir.Unity
                     break;
             }
 
-            SurfaceTextures.Apply(m, texture, tiling);
+            SurfaceTextures.ApplyPack(m, texture, tiling);
             Plan(m);
             _byZoned[kind] = m;
             return m;

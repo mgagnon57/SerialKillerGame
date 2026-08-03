@@ -612,5 +612,6 @@ against a standing project rule rather than being merely large or risky. Both ne
 
 - [ ] Lift the Crafting System's UGUI inventory UI — drag-drop slots, transfer, tabs — rather than writing one. Tedious to build, and presentation belongs in Unity anyway. — *2026-07-30*
 - [ ] Evidence catalogue as `Content/items.txt` in the shape of `kinds.txt`, read by Core. NOT the Crafting System's ScriptableObjects: content authored in an editor window is content `MapAudit` and the PlayMode tests cannot see. — *2026-07-30*
+- [ ] A layered visibility toggle system for the town view: independently switch off/on trees, buildings, and other dressing layers, graduating all the way down to the bare black survey-plan layout (roads + lot boundaries only), and a single control to restore everything back to full detail at once. — *2026-08-02*
 
 ## Ad hoc

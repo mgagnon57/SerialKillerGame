@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Noir.Unity
 {
@@ -84,6 +87,114 @@ namespace Noir.Unity
                 material.SetTexture("_MainTex", tex);
                 material.SetTextureScale("_MainTex", Vector2.one / tilingMetres);
             }
+        }
+
+        /// <summary>
+        /// Real PBR ground sets already owned in the Universal Pack, mapped onto the same name
+        /// keys ForTerrain hands to Apply. A name with no entry here - "water", currently, which
+        /// the pack has nothing tileable for - falls straight back to the procedural placeholder.
+        ///
+        /// "field" and "path" deliberately do not share a texture even though both are dirt:
+        /// Ground_Dirt_Stubble reads as a dry, worked field at a distance; Ground_Dirt_Flat reads
+        /// as a worn track underfoot. The same file for both would make a farm track disappear
+        /// into the field it crosses.
+        /// </summary>
+        private static readonly Dictionary<string, (string Albedo, string Normal, string Ao)> _packSets =
+            new Dictionary<string, (string, string, string)>
+        {
+            ["grass"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Nature/Grass_A_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Grass_A_Nrm.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Grass_A_AO.png"),
+            ["churchyard"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Nature/Grass_A_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Grass_A_Nrm.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Grass_A_AO.png"),
+            ["field"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Stubble_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Stubble_Nrm.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Stubble_AO.png"),
+            ["wood"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Nature/Dirt_A_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Dirt_A_Nrm.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Dirt_A_AO.png"),
+            ["road"] = ("Assets/polyperfect/Poly Universal Pack/Textures/City/Asphalt_A_City_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/City/Asphalt_A_City_Nrm.png",
+                         null),
+            ["path"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Flat_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Flat_Nrm.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Flat_AO.png"),
+            ["floor"] = ("Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Nrm.png",
+                         null),
+        };
+
+#if UNITY_EDITOR
+        private static readonly Dictionary<string, Texture2D> _packCache = new Dictionary<string, Texture2D>();
+
+        private static Texture2D LoadPackTexture(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath)) return null;
+            if (_packCache.TryGetValue(assetPath, out var cached)) return cached;
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            _packCache[assetPath] = tex;
+            return tex;
+        }
+#endif
+
+        /// <summary>
+        /// Bind a real PBR ground set - albedo, normal and ambient occlusion, where the pack has
+        /// all three - instead of the flat procedural placeholder. Falls back to <see cref="Apply"/>
+        /// for any name not in <see cref="_packSets"/>, or if the mapped file cannot be found.
+        ///
+        /// EDITOR-ONLY, same reason as CityGreenery's prefab lookups: this reads the pack through
+        /// AssetDatabase rather than copying its files into Content/textures/, so nothing bought
+        /// gets duplicated into a tracked folder, and a build player without AssetDatabase falls
+        /// straight back to Apply.
+        /// </summary>
+        public static void ApplyPack(Material material, string name, float tilingMetres = TilingMetres)
+        {
+#if UNITY_EDITOR
+            if (material != null && _packSets.TryGetValue(name, out var set))
+            {
+                var albedo = LoadPackTexture(set.Albedo);
+                if (albedo != null)
+                {
+                    if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
+                    if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
+
+                    var scale = Vector2.one / tilingMetres;
+                    if (material.HasProperty("_BaseMap"))
+                    {
+                        material.SetTexture("_BaseMap", albedo);
+                        material.SetTextureScale("_BaseMap", scale);
+                    }
+                    if (material.HasProperty("_MainTex"))
+                    {
+                        material.SetTexture("_MainTex", albedo);
+                        material.SetTextureScale("_MainTex", scale);
+                    }
+
+                    // The keyword is not optional - URP's Lit shader ignores _BumpMap without
+                    // it, the same trap WindowGlass and LampGlass hit with _EMISSION.
+                    var normal = LoadPackTexture(set.Normal);
+                    if (normal != null && material.HasProperty("_BumpMap"))
+                    {
+                        material.EnableKeyword("_NORMALMAP");
+                        material.SetTexture("_BumpMap", normal);
+                        material.SetTextureScale("_BumpMap", scale);
+                        if (material.HasProperty("_BumpScale")) material.SetFloat("_BumpScale", 1f);
+                    }
+
+                    var ao = LoadPackTexture(set.Ao);
+                    if (ao != null && material.HasProperty("_OcclusionMap"))
+                    {
+                        material.SetTexture("_OcclusionMap", ao);
+                        material.SetTextureScale("_OcclusionMap", scale);
+                        if (material.HasProperty("_OcclusionStrength")) material.SetFloat("_OcclusionStrength", 1f);
+                    }
+
+                    return;
+                }
+            }
+#endif
+            Apply(material, name, tilingMetres);
         }
 
         public static void ReportOnce()
