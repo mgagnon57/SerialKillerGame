@@ -1,4 +1,4 @@
-# ==========================================================================
+﻿# ==========================================================================
 #  NORTHGATE, ON ROSSVILLE, ILLINOIS'S OWN STREET GRID
 #
 #  Not a grid that looks like Rossville - the actual one, taken from
@@ -37,7 +37,7 @@
 #  tools/rossville-streets.json.
 # ==========================================================================
 
-village Northgate
+village Rossville
 size 2100 2400
 
 # ---- ground ---------------------------------------------------------------
@@ -1161,110 +1161,110 @@ road crossroad1 10 1880,0 1880,2399
 #  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET
 # ==========================================================================
 
-place casino 710,1282 22x35 "the Regency Rooms"
+place casino 710,1282 22x35 "the Opera House"
   door 731,1299
   human Open all night, and the carpet is loud enough that nobody notices the hour.
-place cinema 710,1258 22x22 "the Rialto"
+place cinema 710,1258 22x22 "the Motion Picture house"
   door 731,1269
   human Two screens, one of which has been showing the same film since spring.
-place bank 710,1227 22x29 "Northgate Savings"
+place bank 710,1227 22x29 "the Rossville bank"
   door 731,1241
   human Marble that was meant to look permanent.
-place precinct 714,1166 18x35 "Northgate Precinct"
+place precinct 714,1166 18x35 "the village office"
   door 731,1183
   human The light in the front office never goes off, which is not the same as somebody being awake.
-place villagehall 716,1138 16x26 "the Wicker End rooms"
+place villagehall 716,1138 16x26 "the I.O.O.F. hall"
   door 731,1151
   human Bingo, inquests, and the annual meeting about the verge.
-place villagehall 768,1291 16x26 "the south rooms"
+place villagehall 768,1291 16x26 "the G.A.R. hall"
   door 768,1304
   human Scout hut, polling station, and where the inquest was held.
-place shop 768,1271 20x18 "Ellery's"
+place shop 768,1271 20x18 "Henderson's"
   door 768,1280
   human Open at five, which is either a service or an accusation.
-place shop 768,1245 14x24 "the Fourth Street market"
+place shop 768,1245 14x24 "the Attica Street market"
   door 768,1257
   human Fruit stacked to a geometry that survives being sold from.
-place pub 768,1221 14x22 "the Drovers"
+place pub 768,1221 14x22 "the Livingood House"
   door 768,1232
   human The car park is bigger than the pub and on Fridays it is not big enough.
-place pub 768,1179 14x22 "the Wheatsheaf"
+place pub 768,1179 14x22 "the Commercial Hotel"
   door 768,1190
   human Older than the road, and it shows in the floor.
-place pub 768,1155 12x22 "the Weighhouse"
+place pub 768,1155 12x22 "the grain office"
   door 768,1166
   human Four o'clock and the same men are in it who were in it at noon.
-place postoffice 768,1137 14x16 "Northgate Post Office"
+place postoffice 768,1137 14x16 "Rossville Post Office"
   door 768,1145
   human A queue that moves at the speed of one conversation at a time.
-place diner 721,1353 11x20 "the Northgate Diner"
+place diner 721,1353 11x20 "the Chicago Street diner"
   door 731,1363
   human Open before anyone needs it to be, and the same four faces are in it at six.
 place gasstation 721,1375 11x20 "the pumps"
   door 731,1385
   human Somebody is always sitting in a car here not buying anything.
-place shop 720,1397 12x16 "Halliwell's"
+place shop 720,1397 12x16 "the drug store"
   door 731,1405
   human A general store, which out here means it stocks what the last person asked for.
-place shop 720,1415 12x16 "the west bakery"
+place shop 720,1415 12x16 "the bakery"
   door 731,1423
   human Sells out by ten and does not bake more, on principle.
-place shop 720,1433 12x16 "the paper shop"
+place shop 720,1433 12x16 "the printing office"
   door 731,1441
   human Papers, sweets, and a bell that has never once been oiled.
-place shop 720,1451 12x16 "Trewin's"
+place shop 720,1451 12x16 "the hardware"
   door 731,1459
   human A hardware shop that also does keys, shoes, and advice.
-place shop 720,1486 12x16 "the east grocer"
+place shop 720,1486 12x16 "the grocer"
   door 731,1494
   human Run by a family who have never agreed on the opening hours.
-place shop 720,1504 12x16 "Ottery's"
+place shop 720,1504 12x16 "the millinery"
   door 731,1512
   human Wool, thread, and a cat that is not for sale.
-place shop 720,1522 12x16 "the east bakery"
+place shop 720,1522 12x16 "the confectionery"
   door 731,1530
   human The smell reaches the county line on a west wind.
-place shop 720,1540 12x16 "the county stores"
+place shop 720,1540 12x16 "the general merchandise"
   door 731,1548
   human The last shop before the county line and it knows it.
-place postoffice 720,1558 12x16 "the east sub-office"
+place postoffice 720,1558 12x16 "the north sub-office"
   door 731,1566
   human One window, one clerk, and a scale that has been condemned twice.
-place icecream 768,1353 11x16 "Bruno's"
+place icecream 768,1353 11x16 "the ice cream parlour"
   door 768,1361
   human Shut half the year, and the queue at Easter goes round the corner.
-place shop 768,1371 10x13 "Vance & Son"
+place shop 768,1371 10x13 "the jeweller"
   door 768,1377
   human Ironmongery, and a man who can find the one screw you need in a minute.
-place shop 768,1386 10x13 "the corner grocer"
+place shop 768,1386 10x13 "the meat market"
   door 768,1392
   human Everything a fortnight from its date and nobody has ever complained.
-place shop 768,1401 10x13 "Meacham's"
+place shop 768,1401 10x13 "the barber"
   door 768,1407
   human A tailor who has outlived three fashions and expects to outlive a fourth.
-place carwash 768,1416 13x10 "the wash"
+place carwash 768,1416 13x10 "the steam laundry"
   door 768,1421
   human A place people leave a car and walk away from for ten minutes.
-place restroom 768,1428 8x14 "the public conveniences"
+place restroom 768,1428 8x14 "the rest room"
   door 768,1435
   human Council-green tile and a door that does not lock.
-place shop 768,1444 10x11 "the chemist"
+place shop 768,1444 10x11 "the second drug store"
   door 768,1449
   human The window has not changed since the coronation and neither has the smell.
-place newsstand 768,1457 3x7 "the stand"
+place newsstand 768,1457 3x7 "the news stand"
   door 768,1460
   human Papers, cigarettes, and the man who knows who bought which.
-place apartment 768,1486 8x6 "Chicago Street Chambers"
+place apartment 768,1486 8x6 "the rooms over the grocer"
   door 768,1489
   units 3
   human Over the shops, and the stairs go up from the street.
-place apartment 768,1494 8x6 "Chicago Street Chambers, 2"
+place apartment 768,1494 8x6 "the rooms over the meat market"
   door 768,1497
   units 3
-place apartment 768,1502 8x6 "Chicago Street Chambers, 3"
+place apartment 768,1502 8x6 "the rooms over the barber"
   door 768,1505
   units 3
-place apartment 768,1510 8x6 "Chicago Street Chambers, 4"
+place apartment 768,1510 8x6 "the rooms over the laundry"
   door 768,1513
   units 3
 
@@ -1274,10 +1274,10 @@ place apartment 768,1510 8x6 "Chicago Street Chambers, 4"
 # tracks any more, see RAILROAD above, only the siting constant and the decorative
 # `rail` feature in features.txt.
 
-place firestation 694,737 28x27 "Engine 9"
+place firestation 694,737 28x27 "the Rossville fire house"
   door 708,763
   human The doors are open in all weather and the crew watch the street from inside them.
-place school2 534,1121 47x18 "Northgate Elementary"
+place school2 534,1121 47x18 "Rossville Elementary"
   door 557,1138
   human Painted every summer and scuffed back to the undercoat by October.
 place watertower 862,854 18x18 "the water tower"
@@ -2049,7 +2049,7 @@ place allotments 4,79 30x40 "the west allotments"
 place allotments 45,81 50x40 "the east allotments"
   human Sheds built from doors, and every one of them locked.
 place allotments 7,606 50x14 "the south allotments"
-  human The best soil in Northgate and everybody knows it.
+  human The best soil in Vermilion County and everybody knows it.
 place churchyard 70,609 30x24 "the old burial ground"
   human Older than anything still standing, and the names have gone off the stones.
 place memorial 104,609 3x3 "the cross on the Bishop road"

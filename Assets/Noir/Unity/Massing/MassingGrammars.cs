@@ -14,7 +14,15 @@ namespace Noir.Unity
             new Dictionary<string, IMassingGrammar>
             {
                 { "cottage",   Fallback },
-                { "shopfront", new ShopfrontMassing() },
+                // "shopfront" IS a Main Street block now. It used to be ShopfrontMassing, a
+                // 3.6 m hip-roofed English village shop, which was right while Ashcombe was a
+                // live map and is simply wrong on an Illinois main street. Every kind whose
+                // content row says `massing shopfront` - the shops, the bank, the diner, the
+                // motion picture house, the ice cream parlour - is part of the same terrace on
+                // the Sanborn sheet, so they all get the same fabric and differ only in what the
+                // simulation does with them.
+                { "shopfront", new MainStreetMassing() },
+                { "mainstreet", new MainStreetMassing() },
                 { "pub",       new PubMassing() },
                 { "hall",      new HallMassing() },
                 { "school",    new SchoolMassing() },
@@ -63,6 +71,13 @@ namespace Noir.Unity
             if (place != null && place.Kind == PlaceKind.Dwelling && HouseLayers.Installed)
                 return HouseLayers.Grammar(place);
 
+            // AND A DOWNTOWN BUILDING IS NOT ONE SHAPE EITHER. Same reasoning as the dwelling
+            // above: how tall a commercial block is depends on how far it stands from Attica x
+            // Chicago, so it cannot come from a static column. See CommercialLayers, which asks
+            // Core's CommercialRow - the rule measured off forty units on the 1913 sheets.
+            if (place != null && HouseLayers.Installed && OnMainStreet(place.Kind))
+                return MainStreet;
+
             if (name != null && Registry.TryGetValue(name, out var grammar)) return grammar;
 
             if (name != null && _warned.Add(name))
@@ -72,6 +87,21 @@ namespace Noir.Unity
 
             return Fallback;
         }
+
+        private static readonly MainStreetMassing MainStreet = new MainStreetMassing();
+
+        /// <summary>
+        /// The kinds that make up a commercial terrace rather than standing on their own.
+        ///
+        /// A parade is a terrace that sells things: the shops, the pub, the post office and the
+        /// hall over them are all the same fabric on the Sanborn sheet - ground floor glazed to
+        /// the street, a floor of offices or lodge rooms over it, party walls both sides. What
+        /// differs is what the SIMULATION does with them, which is the right place for the
+        /// difference to live.
+        /// </summary>
+        private static bool OnMainStreet(PlaceKind kind) =>
+            kind == PlaceKind.Shop || kind == PlaceKind.Pub
+         || kind == PlaceKind.PostOffice || kind == PlaceKind.VillageHall;
 
         private static readonly HashSet<string> _warned = new HashSet<string>();
 

@@ -58,9 +58,13 @@ namespace Noir.Unity
         {
             switch (kind)
             {
-                case "apartment":
-                case "shop": case "pub": case "postoffice": case "villagehall":
-                    return true;
+                // NOTHING. A town of twelve hundred has no stacked city block in it.
+                //
+                // This list used to be apartment, shop, pub, postoffice and villagehall, and it
+                // put 2-4 storey modular townhouses on all of them. The shops are a Main Street
+                // terrace now (see MassingGrammars), and the four "apartment" places are flats
+                // OVER THE SHOPS - which is what the Sanborn sheet shows again and again,
+                // "dwelling above" - not a block of their own.
                 default:
                     return false;
             }
@@ -104,26 +108,28 @@ namespace Noir.Unity
             {
                 // One bought building per kind. The lot in city.txt is sized from the prefab,
                 // never the other way round - these are the pack's own footprints rounded up.
+                // WHAT A TOWN OF TWELVE HUNDRED ACTUALLY HAS ITS OWN BUILDING FOR.
+                //
+                // The pack ships a casino, a cinema, a hospital, a police station, a car wash, a
+                // public convenience and a skyscraper, and Northgate used all of them. Rossville
+                // has none: what the 1913 sheet shows at the crossing is a continuous terrace of
+                // one- and two-storey brick shopfronts, and the bank, the drug store and the
+                // motion picture house are UNITS IN THAT TERRACE, not standalone landmarks.
+                // Those kinds are gone from this switch and fall through to the massing
+                // grammars, where `massing shopfront` now means a Main Street block.
+                //
+                // What is left here is the handful of things that really do stand alone on their
+                // own ground in a farm town: the fire house, the school, the water tower, the
+                // grain elevator, the filling station, and the farm buildings.
                 string prefab = KindOf(place) switch
                 {
-                    "diner"       => Whole + "Diner_City.prefab",
-                    "precinct"    => Whole + "Police_Station_City.prefab",
                     // school2, not school: `school` is Ashcombe's village school and this is the
                     // pack's American elementary. Mapping the village kind here put a City
                     // school in a 1979 English village and left the city's own school - which
                     // is a different kind, numbered past the enum - with no model at all.
                     "school2"     => Whole + "School_City.prefab",
-                    "hospital"    => Whole + "Hospital_City.prefab",
                     "firestation" => Whole + "Fire_Station_City.prefab",
-                    "cinema"      => Whole + "Cinema_City.prefab",
-                    "bank"        => Whole + "Bank_City.prefab",
-                    "casino"      => Whole + "Casino_City.prefab",
                     "gasstation"  => Whole + "Gas_Station_City.prefab",
-                    "icecream"    => Whole + "Shop_Icecream_City.prefab",
-                    "carwash"     => Whole + "Car_Wash_City.prefab",
-                    "restroom"    => Whole + "Restroom_City.prefab",
-                    "newsstand"   => Whole + "Newspaper_Shop_City.prefab",
-                    "tower"       => Skyscraper(place.Bounds),
 
                     // The two things on a village skyline, and the FARM tower is the right one
                     // however wrong that sounds. `Water_Tower_City` lives under Props City/Roof
@@ -196,12 +202,7 @@ namespace Noir.Unity
         {
             switch (KindOf(place))
             {
-                case "apartment":
-                case "shop": case "pub": case "postoffice": case "villagehall":
-                case "diner": case "precinct": case "school2": case "hospital":
-                case "firestation": case "cinema": case "bank": case "casino":
-                case "gasstation": case "icecream": case "carwash":
-                case "restroom": case "newsstand": case "tower":
+                case "school2": case "firestation": case "gasstation":
                 case "watertower": case "elevator":
                 case "farm": case "barn": case "silo":
                     return true;

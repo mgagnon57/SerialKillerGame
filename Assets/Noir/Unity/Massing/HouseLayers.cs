@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.World;
 
@@ -48,6 +48,14 @@ namespace Noir.Unity
         public static bool Installed { get; private set; }
 
         /// <summary>
+        /// Half the width of the crossing itself - the distance from the middle of the crossroads
+        /// out to the building line. Commercial frontages are measured ALONG THE ROW from that
+        /// line, not from the middle of the road, so anything comparing against a surveyed
+        /// frontage has to take this off first.
+        /// </summary>
+        public static float CrossingReach { get; private set; }
+
+        /// <summary>
         /// Work out the town's centre and extent from the world itself. Call once per build,
         /// before anything asks for a grammar.
         /// </summary>
@@ -57,6 +65,7 @@ namespace Noir.Unity
             if (world == null) return;
 
             Centre = CrossingOf(world);
+            CrossingReach = ReachOf(world);
 
             // The radius is the furthest DWELLING, not the furthest anything: the map runs two
             // kilometres into cornfields, and measuring against those would squash the whole town
@@ -108,6 +117,22 @@ namespace Noir.Unity
 
             return n == 0 ? new Vector2(world.Width * 0.5f, world.Height * 0.5f)
                           : new Vector2((float)(sx / n), (float)(sy / n));
+        }
+
+        /// <summary>How far the crossing's own carriageway reaches from its middle.</summary>
+        private static float ReachOf(WorldModel world)
+        {
+            var roads = world.Roads;
+            if (roads == null) return 0f;
+
+            foreach (var j in roads.Junctions)
+            {
+                if (j.NorthSouth == null || j.EastWest == null) continue;
+                bool pair = (Named(j.NorthSouth, "chicago") && Named(j.EastWest, "attica"))
+                         || (Named(j.NorthSouth, "attica") && Named(j.EastWest, "chicago"));
+                if (pair) return j.Reach;
+            }
+            return 0f;
         }
 
         private static bool Named(RoadLine line, string name) =>
