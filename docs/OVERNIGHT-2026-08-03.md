@@ -74,7 +74,7 @@ reads exactly **0.0m at x=750**, the Chicago Street crossing every other measure
 project is taken from. West edge −4.9m, rising to +8.5m around x=1200, back to +2.5m at the east
 edge: the town sits on a low rise east of Route 1, which is why the river is out west and down.
 
-### Chicago Street bends
+### Chicago Street bends, and it is a road rather than a lane graph
 
 `Content/city.txt` now declares Illinois Route 1 on its **real surveyed alignment** — the
 14-point polyline from OpenStreetMap way 22037977, rotated into the parcels' frame — instead of
@@ -83,6 +83,28 @@ a straight line at x=750.
 Sampled every 12m: **0 of 112 points** fall inside a county lot along the real centreline;
 **95 of 112** did along the straight one. We had been drawing the state highway through the
 middle of the town's back gardens.
+
+You can see it in `layers-town-ground.png`: the road sweeps in from the top left, bends through
+the crossroads, and carries on south-east across the rectilinear grid — which is exactly the gap
+the county lots leave for it.
+
+**It needed asphalt as well as geometry.** `CityStreets` refused to tile anything that bent, so
+the curved road had lanes, junctions and traffic with nothing under any of it. The PlayMode
+suite caught it precisely — *"Car_Offroad_Roofless_Modern_F was 999.00m past the asphalt"*, 999
+being the sentinel for no asphalt found anywhere. `LayCurved` now walks arc length and seats one
+tile per module facing the local tangent: **65 tiles along 2,486m of centre line.**
+
+The prefabs are straight and stay straight — there is no curved asphalt in the kit — so a curve
+is a chain of straight tiles each turned a little further, which is how a real road is built. At
+Route 1's rate of bend, about a fifth of a degree per thirty-metre tile, the gaps are
+millimetres. A sharper road would show them.
+
+The golden baseline moved with the road, deliberately and with the reasoning recorded: segments
+620 → 614, turns 1692 → 1656, junctions unchanged at 142. Verified rather than accepted —
+**0 stranded segments** (nowhere a car can arrive with no legal exit), **32 straight
+continuations** through Chicago (exactly 2 per direction across its 16 junctions, so the curve
+reads as the road continuing rather than as a turn), and **left/right turns symmetric at 56/56**,
+which a curvature-induced misclassification would have skewed one way.
 
 ## The health of the app
 
@@ -118,6 +140,30 @@ than an audit could put it.
 4. **`docs/STATE.md`'s "RESUME HERE" banner is stale** — still describes the superseded 960×960
    map. `HANDOFF.md` has replaced it as the entry point but nothing says so.
 
+### Traffic drives the curve now
+
+Putting the road down exposed that nothing else knew it had bent. Each fix uncovered the next,
+and every one was found by the PlayMode suite reporting a **distance in metres** rather than
+crashing — which is the argument for that suite in one line.
+
+| what was wrong | how it showed up |
+|---|---|
+| `CityTraffic` built positions from the scalar `Centre` | cars strung along a phantom straight road at x=327 while the asphalt ran through x=735 — *"999.00m past the asphalt"* |
+| lanes run 30m past the map edge; `PointAt` **clamps** | every car in that margin landed on the same point — *"came within 0.00m"* |
+| the test's own ruler was straight | a van sitting correctly on the road called *"583.23m past the asphalt"* — exactly \|903.23 − 314\| − 6, measured from the x of the road's first point 2.4km away |
+| turns took one coordinate from each lane | correct at a right angle, meaningless at 17° — cars cut corners onto grass |
+
+**PlayMode went 9 → 11 of 13.**
+
+**What is still wrong, and it is the one the Phase B spec already called:** a car mid-junction on
+the curve reads about **9m** off the asphalt, because `Junction.Reach` is half the wider corridor
+and that under-estimates an oblique crossing — two 30m corridors meeting at an angle overlap
+further than 15m along each. *The car is in the junction; the box deciding what counts as "in the
+junction" is too small.* Fixing it changes `Reach` in Core, which moves the golden baseline again
+— a deliberate daylight change, not one to make at 4am while you are asleep.
+
+The other failure is `ShowPeople` being off, which predates all of tonight.
+
 ## What is NOT done, and why
 
 - **Hedges survive the Trees switch.** `VillageMesh` draws hedges as runs *into the terrain
@@ -139,3 +185,23 @@ than an audit could put it.
 
   Everything used tonight is geographic: USGS elevation, OpenStreetMap roads/rail/water, county
   parcel boundaries.
+
+## Where this leaves the town
+
+Everything you said you needed to see first is now on the ground and checkable:
+
+- **elevation** — real USGS, verified in the mesh, 0.0m at the Chicago/Attica origin
+- **roads** — real OSM centrelines, and Route 1 on its true curve with asphalt on it
+- **railroad** — the real CSX surveyed alignment, drawn at grade
+- **water** — the North Fork and the ponds behind the school, real shapes
+- **lots** — 794 county parcels
+- **ground** — real PBR textures, and zoning driving what each tile is
+
+And you can now take any of it away with one click to look at what is underneath, which is the
+thing that was missing.
+
+## If you only do one thing this morning
+
+Press Play, hit **L**, click **Ground + roads**, and look at the town from above. That is
+Rossville's real geography — elevation, street grid, the highway on its true curve, the railroad
+— with nothing invented standing on top of it.
