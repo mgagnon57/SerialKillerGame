@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -36,6 +36,20 @@ namespace Noir.Unity
             var before = root.GetComponentsInChildren<MeshRenderer>();
             if (before.Length == 0) return;
 
+            // THE GRID COARSENS FOR A LAYER THAT COVERS THE COUNTY.
+            //
+            // 64 m matches MeshChunks.Size and is right for anything the size of a town: the
+            // buildings bake to a couple of hundred meshes. But the trees and the farmland are
+            // scattered over the whole 2100 x 2400 map, which is about 1,250 chunks, and with a
+            // handful of materials that came to 5,723 baked meshes out of 81,940 renderers -
+            // fourteen renderers per mesh. Thousands of tiny CombineMeshes calls cost 10.6 s,
+            // and thousands of tiny meshes are worse to draw afterwards than a few big ones.
+            //
+            // Measured, after the whole 120-second startup was profiled rather than guessed at.
+            // Below the threshold nothing changes at all, so every layer that was already fine
+            // bakes on exactly the grid it did before.
+            int chunk = before.Length > 20000 ? Chunk * 4 : Chunk;
+
             // key -> the pieces that will become one mesh
             var groups = new Dictionary<(int cx, int cz, int mat), List<(MeshFilter f, int sub)>>();
             var materials = new List<Material>();
@@ -63,7 +77,7 @@ namespace Noir.Unity
                 consumed.Add(r.gameObject);
 
                 var at = r.bounds.center;
-                int cx = Mathf.FloorToInt(at.x / Chunk), cz = Mathf.FloorToInt(at.z / Chunk);
+                int cx = Mathf.FloorToInt(at.x / chunk), cz = Mathf.FloorToInt(at.z / chunk);
 
                 var slots = r.sharedMaterials;
                 for (int s = 0; s < slots.Length && s < f.sharedMesh.subMeshCount; s++)
@@ -84,6 +98,9 @@ namespace Noir.Unity
             }
 
             if (groups.Count == 0) return;
+
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            long groupMs = clock.ElapsedMilliseconds;
 
             var baked = new GameObject("Baked");
             baked.transform.SetParent(root.transform, false);
@@ -116,6 +133,8 @@ namespace Noir.Unity
                 meshes++;
             }
 
+            long combineMs = clock.ElapsedMilliseconds - groupMs;
+
             // Only now, or the combine reads meshes that have already gone.
             int removed = 0;
             foreach (var r in before)
@@ -126,10 +145,13 @@ namespace Noir.Unity
                 removed++;
             }
 
+            long destroyMs = clock.ElapsedMilliseconds - groupMs - combineMs;
+
             int after = root.GetComponentsInChildren<MeshRenderer>().Length;
             Debug.Log($"[chunker] {before.Length} renderers -> {after} "
                     + $"({meshes} baked meshes, {removed} originals removed, "
-                    + $"{materials.Count} materials).");
+                    + $"{materials.Count} materials, {chunk} m grid) "
+                    + $"combine {combineMs} ms, destroy {destroyMs} ms.");
         }
 
         /// <summary>

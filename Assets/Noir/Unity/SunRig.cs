@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -204,11 +204,19 @@ namespace Noir.Unity
             // Asking the roof builder settles it, because a building that is worth putting a
             // roof over is a building that is worth putting windows in, and the two lists can
             // no longer drift apart.
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+
             foreach (var place in world.AllPlaces)
                 if (RoofBuilder.IsRoofed(place.Kind))
                     AddWindow(world, place, parent, fixtures);
 
+            long windows = clock.ElapsedMilliseconds;
             BuildStreetLamps(world, parent, fixtures);
+            long lamps = clock.ElapsedMilliseconds - windows;
+
+            Debug.Log($"[sunrig] windows {windows} ms, street lamps {lamps} ms "
+                    + $"(scan {_lampScanMs} ms, instantiate {_lampMakeMs} ms, "
+                    + $"measure {_lampMeasureMs} ms)");
             return fixtures;
         }
 
@@ -344,20 +352,15 @@ namespace Noir.Unity
         {
             const float spacing = 13f;
             var placed = new List<Vector2>();
+            _lampScanMs = _lampMakeMs = _lampMeasureMs = 0;
+            var stage = System.Diagnostics.Stopwatch.StartNew();
 
             for (int y = 0; y < world.Height; y++)
             for (int x = 0; x < world.Width; x++)
             {
                 if ((world.Grid.FlagsAt(x, y) & TileFlags.Road) == 0) continue;
 
-                // NOBODY LIGHTS A FARM TRACK. A track rasterises to the same Terrain.Road as an
-                // arterial, so this lit the dirt road to Home Farm on a thirteen-metre spacing
-                // and stood municipal lamp posts down it across two hundred metres of field.
-                // The road network remembers which corridor a tile belongs to; ask it.
-                var road = world.Roads.At(x + 0.5f, y + 0.5f);
-                if (road != null && road.Class == RoadClass.Track) continue;
-
-                // On the kerb, not in the carriageway.
+                // On the kerb, not in the carriageway. Cheap, and local to the grid.
                 if (!NextToVerge(world, x, y)) continue;
 
                 bool tooClose = false;
@@ -367,7 +370,29 @@ namespace Noir.Unity
                     if (dx * dx + dy * dy < spacing * spacing) { tooClose = true; break; }
                 }
                 if (tooClose) continue;
+
+                // NOBODY LIGHTS A FARM TRACK. A track rasterises to the same Terrain.Road as an
+                // arterial, so this lit the dirt road to Home Farm on a thirteen-metre spacing
+                // and stood municipal lamp posts down it across two hundred metres of field.
+                // The road network remembers which corridor a tile belongs to; ask it.
+                //
+                // ASKED LAST, because it is by far the most expensive test here: At() projects
+                // the point onto every road in the network, and since Chicago Street became a
+                // real curve that means walking a resampled path of a couple of thousand points.
+                // Running it per road tile over a 2100x2400 map cost EIGHTY-SIX SECONDS of a
+                // 120-second startup - measured, after a first guess at the prefab loader below
+                // turned out to be worth two milliseconds. The cheap tests above reject all but
+                // a few thousand candidates, so this now runs a few thousand times instead of
+                // several hundred thousand.
+                //
+                // The order is safe: a track tile was never added to `placed` before either, it
+                // was rejected earlier in the same iteration, so the set of lamps is unchanged.
+                var road = world.Roads.At(x + 0.5f, y + 0.5f);
+                if (road != null && road.Class == RoadClass.Track) continue;
+
                 placed.Add(new Vector2(x, y));
+
+                _lampScanMs += stage.ElapsedMilliseconds; stage.Restart();
 
                 var ground = Space3D.ToWorld(new Tile(x, y));
 
@@ -386,15 +411,17 @@ namespace Noir.Unity
                 // Night - so it reads as lit without anything being added to it, and the glow
                 // below drives that submesh alone rather than tinting the whole post.
                 var post = Lamp(x, y);
-                if (post == null) continue;
+                if (post == null) { stage.Restart(); continue; }
 
                 post.name = $"lamppost:{x},{y}";
                 post.transform.SetParent(parent, false);
                 post.transform.position = ground;
                 post.transform.rotation = Quaternion.Euler(0f, Facing(world, x, y), 0f);
 
+                _lampMakeMs += stage.ElapsedMilliseconds; stage.Restart();
+
                 var lamp = post.GetComponentInChildren<MeshRenderer>();
-                if (lamp == null) continue;
+                if (lamp == null) { stage.Restart(); continue; }
 
                 // Where the light hangs, and how tall this lamp actually is - measured off the
                 // model rather than assumed, because the four street lamps are not all one
@@ -411,6 +438,8 @@ namespace Noir.Unity
                 into.Lamps.Add(into.Lights.Add(new Vector3(ground.x, head, ground.z),
                                                new Color(1.00f, 0.85f, 0.60f), 14f,
                                                LampKey(x, y)));
+
+                _lampMeasureMs += stage.ElapsedMilliseconds; stage.Restart();
             }
         }
 
@@ -441,17 +470,36 @@ namespace Noir.Unity
 
             if (_lamps.Count == 0) return null;
 
-            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                _lamps[(int)(Materials3D.Scatter(x, y, 8221) % (uint)_lamps.Count)]);
-            return prefab == null
-                ? null
-                : (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab);
+            // LOADED ONCE, NOT ONCE PER LAMP. The path list was cached and the load was not, so
+            // every one of Rossville's 2,688 street lamps went back to the asset database for a
+            // prefab the last one had just fetched.
+            if (_lampPrefabs == null)
+            {
+                _lampPrefabs = new List<GameObject>(_lamps.Count);
+                foreach (var path in _lamps)
+                    _lampPrefabs.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path));
+            }
+
+            var prefab = _lampPrefabs[(int)(Materials3D.Scatter(x, y, 8221) % (uint)_lampPrefabs.Count)];
+            if (prefab == null) return null;
+
+            // Object.Instantiate, NOT PrefabUtility.InstantiatePrefab. The latter creates a live
+            // prefab CONNECTION - an instance that tracks its asset, carries override bookkeeping
+            // and shows up as a linked object in the scene - and that costs multiples of a plain
+            // copy. Nothing here wants the link: CityChunker combines every one of these into a
+            // handful of meshes and destroys the originals a few seconds later.
+            //
+            // Together with the cache above, this is where Play's two minutes went. SunRig was
+            // 88 seconds of a 120-second build; the lamps were nearly all of it.
+            return Object.Instantiate(prefab);
 #else
             return null;
 #endif
         }
 
         private static List<string> _lamps;
+        private static List<GameObject> _lampPrefabs;
+        private static long _lampScanMs, _lampMakeMs, _lampMeasureMs;
 
         /// <summary>
         /// Which way a lamp faces: across its own carriageway, so the arm reaches over the road

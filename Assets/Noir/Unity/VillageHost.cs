@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
@@ -180,6 +181,50 @@ namespace Noir.Unity
             go.AddComponent<VillageHost>();
         }
 
+
+        /// <summary>
+        /// Where the two minutes go.
+        ///
+        /// Pressing Play on Rossville spends its whole build inside one synchronous Awake, and
+        /// Unity reports that as a single "Integration: 121428 ms" line with no breakdown - which
+        /// is exactly as useful as "slow". This times each stage and prints them worst-first, so
+        /// the next person to ask why it takes so long gets an answer instead of a stopwatch.
+        ///
+        /// Costs one Stopwatch and a few dozen strings, once, on a path that already takes two
+        /// minutes. It is not gated behind a flag because a profile nobody switches on is a
+        /// profile nobody reads.
+        /// </summary>
+        private sealed class BuildProfile
+        {
+            private readonly System.Diagnostics.Stopwatch _watch = System.Diagnostics.Stopwatch.StartNew();
+            private readonly List<KeyValuePair<string, long>> _stages = new List<KeyValuePair<string, long>>();
+            private long _mark;
+
+            /// <summary>Close off the stage that just ran and name it.</summary>
+            public void Done(string stage)
+            {
+                long now = _watch.ElapsedMilliseconds;
+                _stages.Add(new KeyValuePair<string, long>(stage, now - _mark));
+                _mark = now;
+            }
+
+            public void Report()
+            {
+                _stages.Sort((a, b) => b.Value.CompareTo(a.Value));
+
+                var sb = new System.Text.StringBuilder();
+                sb.Append("[build] ").Append(_watch.ElapsedMilliseconds).Append(" ms total, worst first:");
+                foreach (var stage in _stages)
+                {
+                    if (stage.Value < 50) continue;          // noise
+                    sb.AppendLine().Append("    ")
+                      .Append(stage.Value.ToString().PadLeft(7)).Append(" ms  ")
+                      .Append(stage.Key);
+                }
+                Debug.Log(sb.ToString());
+            }
+        }
+
         private void Awake()
         {
             Instance = this;
@@ -245,7 +290,9 @@ namespace Noir.Unity
             // dead pointers.
             Layers.Clear();
 
+            var profile = new BuildProfile();
             _village = VillageMesh.Build(World, transform, ShowBuildings);
+            profile.Done("VillageMesh (ground, walls, roofs, frontage, furniture)");
 
             // The ground, roads and props are still drawn by the village renderer; only the
             // BUILDINGS are bought models. Nothing happens here for a map that has no city
@@ -262,8 +309,11 @@ namespace Noir.Unity
                 // The switch is on the root, so a layer can be taken away at runtime without a
                 // rebuild - see Layers, which explains why the bake had to be split to allow it.
                 Layers.Register(Layers.Kind.Streets, CityStreets.Build(World, city.transform));
+                profile.Done("CityStreets");
                 Layers.Register(Layers.Kind.Parking, CityParking.Build(World, city.transform));
+                profile.Done("CityParking");
                 Layers.Register(Layers.Kind.Signs, CitySigns.Build(World, city.transform));
+                profile.Done("CitySigns");
             }
             // BUILDINGS OFF, LOT LINES ON. The Universal Pack holds exactly two house families
             // and both are Chicago brownstones - bay fronts, stoops, fire escapes - so a village
@@ -296,16 +346,22 @@ namespace Noir.Unity
             if (ShowBuildings)
             {
                 Layers.Register(Layers.Kind.Story, CityStory.Build(World, city.transform));
+                profile.Done("CityStory");
                 Layers.Register(Layers.Kind.Rail, CityRail.Build(World, city.transform));
+                profile.Done("CityRail");
 
                 // The real CSX line, at grade. Separate from CityRail above, which is the
                 // elevated El and is gated on a `place railway` city.txt does not have - see
                 // CityRailBed. This one needs no place: it follows the surveyed alignment in
                 // features.txt, which is the same line the survey plan draws.
                 Layers.Register(Layers.Kind.RailBed, CityRailBed.Build(World, city.transform));
+                profile.Done("CityRailBed");
                 Layers.Register(Layers.Kind.Farm, CityFarm.Build(World, city.transform));
+                profile.Done("CityFarm");
                 Layers.Register(Layers.Kind.Powerlines, CityPowerlines.Build(World, city.transform));
+                profile.Done("CityPowerlines");
                 Layers.Register(Layers.Kind.Trees, CityGreenery.Build(World, city.transform));
+                profile.Done("CityGreenery");
             }
 
             // BEFORE the bake, because it measures the buildings the bake is about to destroy,
@@ -313,6 +369,7 @@ namespace Noir.Unity
             // project raycasts against this - picking still walks the world model - it exists so
             // a person has a floor and the bank has walls.
             CityCollision.Build(World, transform, authored, blocks, estates);
+            profile.Done("CityCollision");
 
             // Assembled out of pieces, drawn as a handful of meshes.
             //
@@ -338,6 +395,7 @@ namespace Noir.Unity
             foreach (var kind in Layers.All)
                 foreach (var root in Layers.RootsOf(kind))
                     CityChunker.Bake(root);
+            profile.Done("CityChunker.Bake (all layers)");
 
             // Anything parented to `city` that no layer claimed is left unbaked on purpose - it
             // would be invisible to the switches, and a renderer nobody can turn off is worth
@@ -372,7 +430,9 @@ namespace Noir.Unity
             }
 
             var signals = CitySignals.Create(World, transform);
+            profile.Done("CitySignals");
             var traffic = CityTraffic.Create(World, transform, signals);
+            profile.Done("CityTraffic");
 
             // The two that MOVE. Registered like the rest, and switching them off hides them
             // exactly as HideActors always did - the cars keep driving their lanes and the
@@ -392,6 +452,7 @@ namespace Noir.Unity
             // off. Same distinction ShowPeople has always drawn: simulated either way, this only
             // decides whether they are on screen.
             _xray = XRay.Create(World, _village);
+            profile.Done("XRay");
 
             // The people are SIMULATED either way - Sim ticks, they go to work, windows light
             // from who is behind them, and clicking a building still says who is in it. This
@@ -399,6 +460,7 @@ namespace Noir.Unity
             // built out: a few hundred figures walking through a downtown that is still being
             // laid is noise over the thing actually being looked at.
             if (ShowPeople) _agentView = AgentMeshView.Create(this, transform);
+            profile.Done("AgentMeshView (the people)");
             if (_agentView != null) Layers.Register(Layers.Kind.People, _agentView.gameObject);
 
             _rig = OrbitCamera.Create(this);
@@ -407,7 +469,9 @@ namespace Noir.Unity
             // out. Nothing is spawned until the first press: a rigged character standing in the
             // street costs nothing to nobody who never asks for it.
             Player.Create(this, transform);
+            profile.Done("Player");
             _lighting = SunRig.Create(this, transform);
+            profile.Done("SunRig");
 
             // A callback rather than a root: the lamps and glazing are renderers scattered
             // through the town's own meshes, so there is no node to switch off. The lights
@@ -427,11 +491,15 @@ namespace Noir.Unity
             if (!ShowBuildings) HideActors();
 
             PostFx.Create(transform);
+            profile.Done("PostFx");
             PostFx.EnableOn(Camera.main);
 
             // The church bell, the ambience beds and footsteps by surface. Atmosphere is half
             // sound, and until now the village made none at all.
             VillageAudio.Create(this, transform);
+            profile.Done("VillageAudio");
+
+            profile.Report();
         }
 
         /// <summary>
