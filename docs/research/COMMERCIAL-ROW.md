@@ -4,9 +4,10 @@ Read off `sanborn/crop-attica-north-row.png`, enlarged from the 1913 sheet. **Ev
 its storey count and its frontage in feet**, written under it by the surveyor. This is the fabric
 the sourcing doctrine says to build from — see `SOURCING.md`.
 
-**Not yet wired to anything.** Deliberately kept here rather than dropped into `Content/`: a
-content file nothing reads is the dead-data problem the health audit already flagged. It moves to
-`Content/` when a generator consumes it.
+**Now wired.** `Assets/Noir/Core/World/CommercialRow.cs` generates a terrace from the rule below;
+`tools/Noir.Core.Tests/CommercialRowTests.cs` checks it against these figures. Every constant in
+that file traces to a number on this page — if a figure here is corrected, the generator's
+constants are what to correct with it.
 
 ---
 

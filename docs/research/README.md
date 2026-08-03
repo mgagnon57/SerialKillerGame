@@ -25,7 +25,7 @@ rest.** A fresh session needs nothing from any prior conversation.
 | **`ROSSVILLE-HISTORY.md`** | the master narrative — founding, the Hubbard Trail, the railroad, both fires, population, the antique era. **Read this second.** |
 | **`SOURCE-PROVENANCE.md`** | which county history is which, and what each one can be trusted for |
 | **`SOURCING.md`** | the rule: which era each part of the town comes from, and what it rules out |
-| **`COMMERCIAL-ROW.md`** | the downtown, unit by unit, all four faces, with storeys and frontages in feet |
+| **`COMMERCIAL-ROW.md`** | the downtown, unit by unit, all four faces, with storeys and frontages in feet — **wired to `Core/World/CommercialRow.cs`** |
 | **`DOWNTOWN-1913.md`** | the 1913 commercial core in detail |
 | **`DOWNTOWN-1898-vs-1913.md`** | what changed in fifteen years — and the fire labelled on the 1898 map |
 | **`RESIDENTIAL-1913.md`** | house form, lot occupancy, and what it says about the massing grammars |
@@ -80,6 +80,10 @@ to someone who isn't behind them.
 **Built and verified** (see `../OVERNIGHT-2026-08-03.md`): the layer system (16 switches, `L` in
 Play), Universal Pack ground textures, elevation verified in the mesh, the curved Route 1 with
 asphalt, traffic driving the curve.
+
+**Built since, Core-only and Unity-free** — `CommercialRow` lays a downtown terrace from the
+Sanborn decay rule (14 tests). It is pure geometry: nothing renders it yet, and giving it a
+street to sit on is Unity work.
 
 **Blocked on Unity** — a parallel session has the editor:
 - `pending/FrameHouseGrammars.with-ell.cs.txt` — adds the back ell to the house grammars.
