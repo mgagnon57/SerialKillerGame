@@ -50,6 +50,7 @@ in **time, senses and people**:
 | **`WHO-SEES-WHOM.md`** | the observation network — who is out, who is looking, which month hides what. Synthesis of the rest, aimed at the game's actual mechanic |
 | **`WHO-LIVES-THERE.md`** | settlement origin, the denominational fingerprint, the surname pool, and the high school that closes in 2006 |
 | **`INSIDE-THE-HOUSES.md`** | rooms, ceiling heights and the standard plan — the front door opens into the living room, and the back door faces the alley |
+| **`TECHNOLOGY.md`** | what the town has and when it gets it — adoption curves 1991–2006, rural-corrected, for the year-gated technology layer |
 | **`WHAT-IT-SOUNDS-LIKE.md`** | the railroad as metronome, harvest as the loud season, and the one cicada year in the window |
 | **`POLICE-AND-INCIDENT.md`** | four officers, five arrests a year, **no homicides at all** — and the blotter as texture. No person named |
 | **`photos/`** | **the town from the air in 1940**, plus 29 photographs of the standing buildings. Reference only |
