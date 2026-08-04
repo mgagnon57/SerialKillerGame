@@ -151,7 +151,14 @@ kind church
   describe  yes
 
 kind school
-  words     school
+  # `school2` and `elementary` were a SECOND KIND until 2026-08-03, authored so that
+  # CityBuildings could hand Rossville the pack's American School_City while leaving
+  # Ashcombe's village school alone. It cost more than it bought: a kind the PlaceKind
+  # enum has never heard of is numbered past it, and DayPlanner asks for
+  # PlaceKind.School by its ENUM MEMBER - so Rossville's 165 children had no school to
+  # be sent to and not one of them ever went. Ashcombe is retired; there is one map.
+  # Kept as words so old content still parses.
+  words     school elementary school2
   form      building
   rooms     auto
   grammar   spine
@@ -450,24 +457,6 @@ kind precinct
 # ---- landmarks, one bought building each ------------------------------------
 # Every one of these is a whole prefab from the pack placed on a lot sized from it.
 # The counter and hours are what make it a place people GO to rather than scenery.
-
-kind school2
-  words     school2 elementary
-  form      building
-  rooms     auto
-  grammar   spine
-  roof      yes
-  frontage  school
-  massing   shopfront
-  props     none
-  counter   yes
-  service   4 7
-  hours     08:00-20:00
-  jobs      6
-  roles     teacher
-  shifts    one
-  catchment yes
-  describe  yes
 
 kind hospital
   words     hospital

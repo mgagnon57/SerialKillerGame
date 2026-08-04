@@ -184,7 +184,7 @@ namespace Noir.Unity
         private static readonly Dictionary<string, string> Landmark = new Dictionary<string, string>
         {
             { "hospital",    "Sign_Hospital_B_City" },
-            { "school2",     "Sign_School_B_City" },
+            { "school",      "Sign_School_B_City" },
             { "gasstation",  "Sign_Gasoline_B_City" },
             { "diner",       "Sign_Restaurant_B_City" },
             { "precinct",    "Sign_Emergency_B_City" },

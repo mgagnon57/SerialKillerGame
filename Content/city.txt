@@ -1427,7 +1427,7 @@ place apartment 827,1510 8x6 "the rooms over the laundry"
 place firestation 694,737 28x27 "the Rossville fire house"
   door 708,763
   human The doors are open in all weather and the crew watch the street from inside them.
-place school2 534,1121 47x18 "Rossville Elementary"
+place school 534,1121 47x18 "Rossville Elementary"
   door 557,1138
   human Painted every summer and scuffed back to the undercoat by October.
 place watertower 862,854 18x18 "the water tower"

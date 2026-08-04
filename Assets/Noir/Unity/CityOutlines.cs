@@ -376,7 +376,7 @@ namespace Noir.Unity
                 case "gasstation": case "carwash":
                     return new Color(1.00f, 0.72f, 0.20f);      // trade - amber
 
-                case "school2": case "hospital": case "precinct": case "firestation":
+                case "school": case "hospital": case "precinct": case "firestation":
                 case "villagehall": case "restroom": case "watertower": case "elevator":
                     return new Color(0.76f, 0.55f, 1.00f);      // civic - violet, so roads keep cyan
 

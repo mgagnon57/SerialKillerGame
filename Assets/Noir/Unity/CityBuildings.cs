@@ -141,11 +141,17 @@ namespace Noir.Unity
                 // grain elevator, the filling station, and the farm buildings.
                 string prefab = KindOf(place) switch
                 {
-                    // school2, not school: `school` is Ashcombe's village school and this is the
-                    // pack's American elementary. Mapping the village kind here put a City
-                    // school in a 1979 English village and left the city's own school - which
-                    // is a different kind, numbered past the enum - with no model at all.
-                    "school2"     => Whole + "School_City.prefab",
+                    // THIS USED TO KEY ON `school2`, A SECOND KIND that existed so Ashcombe's
+                    // village school would not get the pack's American elementary. The price was
+                    // hidden and much larger than the benefit: a kind the PlaceKind enum has
+                    // never heard of is numbered past it, DayPlanner asks for PlaceKind.School by
+                    // its ENUM MEMBER, and so Rossville's 165 children had no school to be sent
+                    // to. Not one of them ever went, at any hour of any day, and the town read as
+                    // normal because the building was still standing there.
+                    //
+                    // Ashcombe is retired and there is one map, so the two kinds are one kind
+                    // again and this is simply the school.
+                    "school"      => Whole + "School_City.prefab",
                     "firestation" => Whole + "Fire_Station_City.prefab",
                     "gasstation"  => Whole + "Gas_Station_City.prefab",
 
@@ -220,7 +226,7 @@ namespace Noir.Unity
         {
             switch (KindOf(place))
             {
-                case "school2": case "firestation": case "gasstation":
+                case "school": case "firestation": case "gasstation":
                 case "watertower": case "elevator":
                 case "farm": case "barn": case "silo":
                     return true;
@@ -523,7 +529,6 @@ namespace Noir.Unity
                 "hospital"    => CarsCity + "Car_Ambulance_Modern.prefab",
                 "firestation" => CarsCity + "Car_Firetruck_Modern.prefab",
                 "school"      => CarsCity + "Car_Bus_School_Modern.prefab",
-                "school2"     => CarsCity + "Car_Bus_School_Modern.prefab",
                 "gasstation"  => CarsTrucks + "Car_Truck_Modern_Cistern.prefab",
                 "diner"       => CarsCity + "Car_Cargovan_Modern.prefab",
                 _             => null,

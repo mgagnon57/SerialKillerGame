@@ -187,6 +187,72 @@ kind shed
             Assert.That(table.Row(shed).Massing, Is.EqualTo("cottage"));
         }
 
+        [Test]
+        public void EveryCatchmentKindIsOneTheEnumCanName()
+        {
+            // THE GUARD FOR A FAULT THAT COST ROSSVILLE ITS SCHOOL FOR MONTHS.
+            //
+            // A catchment is looked up by ENUM MEMBER - Household.School is
+            // Catchment(PlaceKind.School), and DayPlanner asks the same way. A kind the enum has
+            // never heard of is numbered past it by Assemble below, so it can be authored with
+            // `catchment yes`, be assigned to every household by the generator, stand in the map
+            // with a bought model on it - and still never be found by anything that asks.
+            //
+            // That is exactly what `school2` was. Rossville's 165 children were given a catchment
+            // pointing at Rossville Elementary and not one of them ever went, at any hour of any
+            // day, because the planner asked for PlaceKind.School and the map's school was not
+            // that kind. Nothing failed; the building simply stood there empty.
+            //
+            // So: a kind may be content-only, and a kind may be a catchment, but it may not be
+            // both. If a new institution needs households to belong to it, it needs a PlaceKind
+            // member - or the lookup has to stop going through the enum.
+            var table = PlaceKindTable.Parse(TestContent.ReadRaw("kinds.txt"));
+
+            var named = new HashSet<int>();
+            foreach (PlaceKind k in Enum.GetValues(typeof(PlaceKind))) named.Add((int)k);
+
+            // THE THREE THAT ARE ACTUALLY ASKED FOR. Household exposes School, Church and Surgery
+            // and DayPlanner asks for School twice; every one of those goes through the enum, so
+            // every one of them must be a member with a row behind it.
+            foreach (var kind in new[] { PlaceKind.School, PlaceKind.Church, PlaceKind.Surgery })
+            {
+                Assert.That(named.Contains((int)kind), Is.True);
+                Assert.That(table.Row(kind), Is.Not.Null, $"{kind} has no row");
+                Assert.That(new List<PlaceKind>(table.CatchmentKinds), Contains.Item(kind),
+                            $"{kind} is looked up as a catchment, so its row needs `catchment yes`");
+            }
+
+            // AND THE ONES THAT ARE NOT, PINNED RATHER THAN FIXED. `precinct` and `hospital` are
+            // `catchment yes` and content-only, so they are numbered past the enum exactly as
+            // `school2` was - but nothing anywhere asks for them, so today they cost a wasted
+            // Locality.NearestOfKind per household at generation and nothing worse.
+            //
+            // The moment somebody adds a Household.Precinct or a PlaceKind.Hospital and an
+            // accessor to match, it becomes the school bug again. This list failing is that
+            // moment: add the enum member, do not add the accessor.
+            var unlookupable = new List<string>();
+            foreach (var kind in table.CatchmentKinds)
+                if (!named.Contains((int)kind)) unlookupable.Add(table.Row(kind).Name);
+            unlookupable.Sort(StringComparer.Ordinal);
+
+            Assert.That(unlookupable, Is.EqualTo(new[] { "hospital", "precinct" }),
+                "a catchment kind the enum cannot name can never be found by Household.Catchment. "
+              + "These two are known and harmless because nothing looks them up. A third one, or "
+              + "one of these gaining a caller, is the fault that emptied Rossville's school.");
+
+            // And the one that actually bit: the school is findable, by the member the planner uses.
+            Assert.That(table.Row(PlaceKind.School), Is.Not.Null);
+            Assert.That(table.TryKindOf("school", out var school), Is.True);
+            Assert.That(school, Is.EqualTo(PlaceKind.School));
+
+            // `school2` and `elementary` survive as WORDS on that row, so content written before
+            // the two kinds were merged still parses and still lands on the enum member.
+            Assert.That(table.TryKindOf("school2", out var legacy), Is.True, "old content still parses");
+            Assert.That(legacy, Is.EqualTo(PlaceKind.School));
+            Assert.That(table.TryKindOf("elementary", out var elementary), Is.True);
+            Assert.That(elementary, Is.EqualTo(PlaceKind.School));
+        }
+
         private static string Join(IReadOnlyList<string> parts)
         {
             var copy = new List<string>(parts);
