@@ -7,6 +7,57 @@ already finished and committed. Steps 2–6 are what you are picking up.
 
 ---
 
+## DONE 2026-08-03 — reply from the coding session
+
+**Steps 2, 3, 4 and 6 are built and committed** (`6e28f40`). Suite went 300→316 passing of 318;
+the two failures are still `TwoToOneTests`, by design. Unity compiles clean.
+
+- `Core/World/Era.cs` — `Era.Crossing` is `Fields.DayWhen` lifted out, and `Fields` calls it. Its
+  fourteen tests stayed green, which was the named regression check. The two roundings differ on
+  purpose and both files say why.
+- `Content/technology.txt` — every row from `TECHNOLOGY.md` with its measured/inferred marking
+  carried across, plus the correction rule.
+- `Core/World/TechnologyTable.cs` — `Parse`/`Install`/`Has`/`AdoptsIn`/`LosesIn`/`Adopted`. Inert
+  when absent, loud when malformed.
+- `tools/Noir.Core.Tests/TechnologyDiagnostic.cs` — `[Explicit]`, as revised.
+- Plus the one Unity line in `VillageHost`, caught rather than fatal.
+
+**Three departures, all argued rather than assumed:**
+
+1. **`needs` was added to the row syntax, and it was not in the plan.** The diagnostic printed four
+   households by name and one of them had dial-up from 1999 and no computer ever. Independent
+   curves put about a sixth of the town online with nothing to read it on — and every test passed,
+   because each curve was individually perfect. `dialup … needs computer` ranks the child off the
+   parent's queue, so containment is exact rather than probable, and the load refuses a child curve
+   that rises above its parent. **This is the single best argument for Step 6 existing.**
+2. **The town-scope purity check was written and then removed.** I first refused fractional `town`
+   rows on the grounds that a town fact is true for everybody or nobody — which rejected the plan's
+   own `payphone 1970:100 1998:60 2005:10`. The plan is right and I was wrong: a fractional town
+   curve means a share of the town's *stock*, and past-half reads as "there is still one to use".
+   Documented on the enum rather than enforced.
+3. **`e911address` is absent, per instruction** — with a test pinning the absence, and a note in the
+   content file that absence is *itself* the claim that rural addressing never arrived.
+
+**Step 5 was not done, because neither consumer exists.**
+
+- **There is no LLM dialogue prompt anywhere in the repo.** No file under `Assets/Noir` names an
+  LLM, a prompt, Claude or LLMUnity. That is a decision that has been made, not code that has been
+  written, so there is nothing to add a technology line to.
+- **`DayPlan` has no telephone or reachability concept.** Its only "call" is *calling at* a house
+  in person (`DayPlan.cs:602`). Reachability is not a thing being modelled that needed gating; it
+  would have to be invented first.
+
+Building either would have meant inventing the consumer to justify the layer — which is the same
+mistake as building props before facts, one level up. The layer is queryable, loaded, and tested;
+wiring it belongs with whoever builds the dialogue port. **Flagging rather than quietly doing it.**
+
+One thing that bit, worth carrying: `Noir.Core.Contracts.Light` collided with `UnityEngine.Light`
+and stopped the editor entering play mode while the whole Core suite stayed green — the netstandard
+gate has no UnityEngine, so there was no second `Light` to collide with. Renamed to `LightLevel`
+(`9722173`). **A green `dotnet test` is not evidence that Unity compiles.**
+
+---
+
 > **Re-evaluated 2026-08-03, after `Fields`, `Railroad` and `Daylight` landed.** Five things
 > changed and two of them matter: **`Fields` already invented this adoption model** (a fixed rank
 > in [0,1), curve inverted per entity) so Step 2 generalises `Fields.DayWhen` rather than writing a
