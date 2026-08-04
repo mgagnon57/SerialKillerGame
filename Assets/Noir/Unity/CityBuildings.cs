@@ -80,6 +80,24 @@ namespace Noir.Unity
             root.transform.SetParent(parent, false);
             _glazing.Clear();
 
+            // EDITOR ONLY, AND UNLIKE THE PEOPLE THERE IS NO FALLBACK. Everything below loads
+            // through AssetDatabase and PrefabUtility, which are UnityEditor APIs and do not exist
+            // in a player - so in a standalone build this method returns an empty root and not one
+            // bought prop is placed. The same is true of CityStreets, CityGreenery, CityTraffic,
+            // CityParking, CitySigns and SunRig; a build today would be the procedural survey plan
+            // and capsule people, which is a working game and is not the one anybody is looking at
+            // in the editor.
+            //
+            // AgentMeshView has the same #if and says so out loud - "a bought person if there is
+            // one, and the primitives if there is not" - because it HAS a `?? AgentFigure.Build`
+            // to fall back to. This has nothing, so the failure is silent and the compiler is
+            // happy. That asymmetry is the only reason this comment exists: the pattern was
+            // understood when the people were written and the town got it by accident.
+            //
+            // NOT A FLAG FLIP TO FIX. It needs Resources/, Addressables, or a serialized
+            // ScriptableObject catalogue built at edit time and read at runtime - real work, and
+            // deliberately not started here. Cheap to write down now, expensive to discover in the
+            // week somebody wants a playable build.
 #if UNITY_EDITOR
             // A terrace is only a terrace if its units know they are in one. Neighbours are
             // found by lot adjacency: anything sharing an edge with this lot hides that side,
