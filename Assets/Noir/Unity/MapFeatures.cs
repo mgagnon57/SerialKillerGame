@@ -32,12 +32,30 @@ namespace Noir.Unity
 
         private static List<Feature> _cache;
 
+        /// <summary>
+        /// When the file the cache was built from was last written.
+        ///
+        /// THE CACHE HAD NO WAY TO BE INVALIDATED, and a static survives a domain reload when the
+        /// editor is not set to reload domains on play. So editing Content/features.txt and then
+        /// measuring the railway returned the geometry from BEFORE the edit - the file on disk and
+        /// the line being drawn silently disagreeing, which is the precise shape of "I fixed it"
+        /// followed by "it looks exactly the same". Found on 2026-08-04 while moving the rail onto
+        /// its right of way: the check that caught it compared the first vertex on disk against
+        /// the first vertex in memory, and they differed.
+        ///
+        /// One stat call per read is nothing next to re-parsing, and far less than the cost of one
+        /// wrong measurement.
+        /// </summary>
+        private static System.DateTime _stamp;
+
         /// <summary>Every feature in the file, in file order. Empty if the file is missing -
         /// a checkout without Content/features.txt still builds, it just has no railway.</summary>
         public static IReadOnlyList<Feature> All()
         {
-            if (_cache != null) return _cache;
+            var written = ContentLoader.WrittenAt("features.txt");
+            if (_cache != null && written == _stamp) return _cache;
 
+            _stamp = written;
             _cache = new List<Feature>();
             string text;
             try { text = ContentLoader.Read("features.txt"); }

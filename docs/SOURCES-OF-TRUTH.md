@@ -23,6 +23,7 @@ It exists because the ruling it contains *already existed*, scattered, and went 
 | **Does a road run through something** | building footprints in `city.txt` | — | parcels — they are tax boundaries and cannot answer this |
 | **Ground height** | `Content/elevation.txt` — USGS NED | — | — |
 | **Rail, water, school grounds** | `Content/features.txt` — OSM | Sanborn 1898/1913 for the rail corridor | — |
+| **Where the rail sits ACROSS its corridor** | `parcels.txt` **779, 781, 785** — see §2.1 | — | the gaps between parcels — there is no gap, the railroad owns the strip |
 | **What the county records per lot** | `Content/parcel-county.txt` | — | inferring anything not literally recorded |
 | **Shape, character, what the town is like** | **the owner** | everything else | — |
 
@@ -51,6 +52,36 @@ ALLEYS    n=107      mostly 13 ft, with a real cluster at 20 ft
 
 **66 ft is one surveyor's chain.** It is not an average and not a coincidence — it is the standard
 Midwest plat street right-of-way, and 99 of 125 samples hit it exactly.
+
+### 2.1 A RAILROAD RIGHT OF WAY IS A PARCEL, NOT A GAP
+
+**Parcels 779, 781 and 785 are the railroad's own land.** Three strips, chained end to end for
+about 2 km through the town:
+
+| parcel | true area | perimeter | implied strip width |
+|---|---|---|---|
+| 779 | 18,493 m² | 1,327 m | 27.9 m |
+| 781 | 34,513 m² | 2,035 m | 33.9 m |
+| 785 | 10,848 m² | 806 m | 26.9 m |
+
+A *street* right of way shows up as a **gap** in the parcel coverage, because nobody owns it. A
+railroad right of way is the opposite: the railroad bought the strip, so the county records it as
+a parcel like any other. **"The track is inside a parcel" is therefore the correct state, not a
+fault** — it means the train is on railroad land.
+
+This cost most of a day on 2026-08-04. Every scan looked for a parcel-free corridor beside the
+track, found only farmland and open ground, and concluded no corridor existed — while the owner
+could see it plainly on screen, because he was looking at the *edges of the strip* and the scan was
+looking for the *absence of one*. The measurement that finally worked asked a different question:
+**which parcel is the track in, and how wide and long is it?** Area over half-perimeter gives a
+strip's width, and 28–34 m over 2 km is a railroad and cannot be anything else.
+
+**How to place the rail across it:** for each vertex inside 779/781/785, walk perpendicular to
+both walls of *that same parcel* and move the vertex to the midpoint. Vertices outside those three
+parcels are in open country, where the parcels tile farmland and "inside a lot" means nothing —
+**leave them alone.** Applied 2026-08-04: median off-centre went 4.3 m to 0.5 m, worst 13.5 m to
+9.0 m, and the tightest clearance to a wall 1.5 m to 5.5 m. Through the platted town the track now
+runs with 15.0 m of its own land on each side.
 
 ### THE DISTINCTION THAT MATTERS
 

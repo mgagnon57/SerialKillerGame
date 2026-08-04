@@ -24,5 +24,20 @@ namespace Noir.Unity
                 throw new FileNotFoundException($"Content file missing: {path}");
             return File.ReadAllText(path);
         }
+
+        /// <summary>
+        /// When a content file was last written, for anyone caching a parse of it.
+        ///
+        /// These files are edited by hand while the editor is open, and a static cache survives a
+        /// domain reload - so "parsed once" quietly means "parsed before your edit" unless the
+        /// holder of the cache can tell that the file moved underneath it. Returns
+        /// <see cref="System.DateTime.MinValue"/> for a missing file, which differs from any real
+        /// timestamp and so reads as "reparse".
+        /// </summary>
+        public static System.DateTime WrittenAt(string fileName)
+        {
+            string path = Path.Combine(Root, fileName);
+            return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : System.DateTime.MinValue;
+        }
     }
 }

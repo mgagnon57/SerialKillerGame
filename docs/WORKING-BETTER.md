@@ -47,6 +47,24 @@ Before generalising from a scan: **widen the window until the answer changes, or
 the window is not the limit.** If a measurement says "there is nothing here", the first question is
 whether the instrument could have seen it.
 
+### 3a. Measure the property that was wrong, AND the one you might break
+
+Added 2026-08-04, after the railroad. The track was off its right of way, so the measurement was
+*position* — and the fix scored perfectly on it: median 0.5 m off centre, 15 m of clearance a side.
+It also snaked visibly, because moving each vertex onto the corridor centre by a different amount
+put a 17° kink between two vertices 21 m apart, and the drawing spline amplified it.
+
+**Position and shape are two different measurements, and a geometry fix trades one against the
+other.** The numbers were all true. Nobody measured the second thing, so the owner found it by
+looking at the screen — again.
+
+For a line, shape means the **signed** heading change per vertex. Unsigned hides the fault: a
+steady 5° per vertex is a curve, alternating ±5° is a snake. Count direction flips, not degrees.
+
+Generally: before reporting a fix, ask what property the change could have degraded, and measure
+that one too. A fix that is right on its own metric and wrong on the neighbouring one is the
+easiest kind to ship by accident.
+
 ### 4. When every candidate scores the same, the test is broken
 
 Already written in `osm-tiger-data-is-not-a-survey` for the case where everything *agrees*. It was
