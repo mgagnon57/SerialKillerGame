@@ -1236,19 +1236,22 @@ road railroad 10 1396,1581 1464,1683 1479,1705 1546,1805 1548,1819 1578,1824 159
 # mid-block, so it is Greenwood, not an alley beside it.
 road alley1 4 823,1113 823,1478   # NS, -31m off x=854
   class alley
-road alley2 4 893,982 893,1113   # NS, +39m off x=854
+road alley2 4 891,982 891,1113   # NS, +37m off x=854. Shifted 2m west 2026-08-03: at 893 it
+                                  # ran through 204 E Green Ave and 203 E Benton Ave.
   class alley
-road alley3 4 928,1478 928,1722   # NS, -35m off x=963
+road alley3 4 936,1478 936,1722   # NS, -27m off x=963. Shifted 8m east 2026-08-03 - it was
+                                  # laid across the houses on this block, not behind them.
   class alley
-road alley4 4 1058,982 1058,1478   # NS, -91m off x=1149
+road alley4 4 1052,982 1052,1478   # NS, -97m off x=1149. Shifted 6m west 2026-08-03.
   class alley
-road alley5 4 1079,1478 1079,2093   # NS, -70m off x=1149
+road alley5 4 1078,1478 1078,2093   # NS, -71m off x=1149. Shifted 1m west 2026-08-03.
   class alley
 road alley6 4 854,1157 1149,1157   # EW, +44m off y=1113
   class alley
 road alley7 4 1240,846 1240,1209   # NS, -90m off x=1330
   class alley
-road alley8 4 1269,1478 1269,2144   # NS, -61m off x=1330
+road alley8 4 1264,1478 1264,2144   # NS, -66m off x=1330. Shifted 5m west 2026-08-03 - the
+                                  # worst of them, 60 samples of alley laid over houses.
   class alley
 road alley9 4 854,1283 1149,1283   # EW, -52m off y=1335
   class alley
