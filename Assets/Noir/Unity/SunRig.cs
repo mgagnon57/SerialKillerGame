@@ -73,7 +73,14 @@ namespace Noir.Unity
             public readonly List<MeshRenderer> Glazing = new List<MeshRenderer>();
             public readonly List<PlaceId> GlazingPlaces = new List<PlaceId>();
 
-            public Fixtures(Transform parent) { Lights = new LightPool(parent); }
+            /// <summary>
+            /// THE POOL IS SIZED TO WHAT WILL ACTUALLY BE LIT. It used to be 32 real lights
+            /// unconditionally, and a probe found 33 lights alive in a survey view whose own log
+            /// read "0 window lights, 0 panes, 0 street lamps" - thirty-two shadow-casting lights
+            /// existing to illuminate nothing, every frame, and multiplying the shader variant
+            /// space that has to be compiled on the first frame.
+            /// </summary>
+            public Fixtures(Transform parent, int slots) { Lights = new LightPool(parent, slots); }
         }
 
         public static SunRig Create(VillageHost host, Transform parent)
@@ -169,8 +176,26 @@ namespace Noir.Unity
             var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
             if (urp != null)
             {
-                urp.shadowDistance = 320f;
-                urp.shadowCascadeCount = 4;   // keeps near shadows sharp over that range
+                // SIZED TO WHAT IS STANDING. 320 m at four cascades is four shadow-map passes
+                // over a quarter of the map, every frame, and it is the right call for a built
+                // town at dusk. It is dead weight for a survey view where the tallest thing on
+                // screen is a painted line: nothing casts, and the passes still run.
+                //
+                // Measured cold-start cost of the full setting was a 64-second stall on first
+                // Play - a large shader variant space compiled on the first frame that uses it.
+                bool standing = Layers.IsOn(Layers.Kind.Massing)
+                             || Layers.IsOn(Layers.Kind.Buildings)
+                             || Layers.IsOn(Layers.Kind.Houses)
+                             || Layers.IsOn(Layers.Kind.Districts)
+                             || Layers.IsOn(Layers.Kind.Trees)
+                             || Layers.IsOn(Layers.Kind.Farm);
+
+                urp.shadowDistance = standing ? 320f : 60f;
+                urp.shadowCascadeCount = standing ? 4 : 1;
+                if (!standing)
+                    Debug.Log("[sunrig] nothing is standing, so shadows drop to 1 cascade over "
+                            + "60 m. Switch a building layer on and re-enter Play for the full "
+                            + "range.");
             }
             else
             {
@@ -190,7 +215,8 @@ namespace Noir.Unity
         /// </summary>
         public static Fixtures BuildFixtures(WorldModel world, Transform parent)
         {
-            var fixtures = new Fixtures(parent);
+            bool wantLamps = Layers.IsOn(Layers.Kind.Lamps);
+            var fixtures = new Fixtures(parent, wantLamps ? LightPool.DefaultSize : 1);
 
             // Every place that HAS walls gets glass in them.
             //
@@ -206,13 +232,27 @@ namespace Noir.Unity
             // no longer drift apart.
             var clock = System.Diagnostics.Stopwatch.StartNew();
 
+            // NOT BUILT WHEN THE LAYER IS OFF. This was 9,661 ms of a 16,789 ms build - by far the
+            // most expensive thing in it, and 7,595 ms of that was the lamp SCAN alone - to
+            // produce 373 window lights, 4,524 panes and 2,133 street lamps that were then hidden
+            // immediately. On a survey view it is the whole build time and a large part of every
+            // frame after it, spent on fixtures nobody asked to see.
+            //
+            // Layers is normally a way of LOOKING and does not change what exists. Lighting
+            // fixtures are pure scenery with nothing behind them, so skipping the build is safe;
+            // the cost is that switching Lamps back on needs a rebuild rather than being free.
+            bool wanted = wantLamps;
+
             foreach (var place in world.AllPlaces)
-                if (RoofBuilder.IsRoofed(place.Kind))
+                if (wanted && RoofBuilder.IsRoofed(place.Kind))
                     AddWindow(world, place, parent, fixtures);
 
             long windows = clock.ElapsedMilliseconds;
-            BuildStreetLamps(world, parent, fixtures);
+            if (wanted) BuildStreetLamps(world, parent, fixtures);
             long lamps = clock.ElapsedMilliseconds - windows;
+            if (!wanted)
+                Debug.Log("[sunrig] street lighting layer is off - no fixtures built. "
+                        + "Switch Lamps on and re-enter Play to get them back.");
 
             Debug.Log($"[sunrig] windows {windows} ms, street lamps {lamps} ms "
                     + $"(scan {_lampScanMs} ms, instantiate {_lampMakeMs} ms, "

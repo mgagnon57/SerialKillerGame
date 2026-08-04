@@ -119,7 +119,14 @@ namespace Noir.Unity
             return new Rect(Screen.width - w - S(12f), BarHeight + S(8f), w, h);
         }
 
-        private static float BarHeight => S(48f);
+        /// <summary>
+        /// How tall the clock bar is, in real pixels.
+        ///
+        /// PUBLIC because anything else drawing at the top of the screen has to sit under it, and
+        /// S() is user-tunable at runtime - a second overlay that guessed a fixed 52 px was
+        /// covered by the bar the moment the UI scale went up. One source for the number.
+        /// </summary>
+        public static float BarHeight => S(48f);
 
         /// <summary>
         /// Keep the whole top bar reachable. The skip buttons sit a long way right, and on a
@@ -203,7 +210,15 @@ namespace Noir.Unity
             var mouse = Event.current.mousePosition;
             bool anyPanel = _host.Selected.IsValid || _host.SelectedPlace.IsValid
                          || _host.SelectedParcel.HasValue;
-            PointerOverUI = mouse.y < BarHeight || (anyPanel && PanelRect().Contains(mouse));
+
+            // THE LAYER PANEL COUNTS AS UI TOO. It is drawn top left by a different behaviour and
+            // was missing from this test, so every click on a layer row fell through and opened
+            // the parcel inspector on whatever was behind the button - which is worse than a
+            // no-op, because it changes the selection while you are trying to change the view.
+            PointerOverUI = mouse.y < BarHeight
+                         || (anyPanel && PanelRect().Contains(mouse))
+                         || LayerPanel.Bounds.Contains(mouse)
+                         || PerfHud.Bounds.Contains(mouse);
         }
 
         private void DrawTopBar()

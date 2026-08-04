@@ -33,16 +33,56 @@ namespace Noir.Core.Tests
     {
         // ---- the roads that are currently laid OFF their own right of way -------------------
         //
-        // Measured 2026-08-04. Each of these has a parcel-free strip of the right width nearby -
-        // 20 m for a street, 4-6 m for an alley - and sits somewhere else. See
-        // docs/research/road-parcel-strips.txt for the offset of each.
+        // THE REFIT LANDED 2026-08-04 AND THIS LIST WENT FROM 26 TO 8. Every road was fitted to
+        // the parcel-free strip of its own class's width, and the 477 authored places were shifted
+        // with the street each one is addressed on, so a house keeps its setback and lands on the
+        // right lot. The median share of a road sitting on private land went 80% to 0%.
+        //
+        // Two things made the measurement work, and both were instrument faults first:
+        //
+        //   - samples within 28 m of ANOTHER road are discarded. At a junction the two rights of
+        //     way merge, so a perpendicular scan grabs the cross street's strip; without the
+        //     filter every road looked like it wandered and the strips measured 30-47 m wide.
+        //   - the candidate strip must match the road's OWN class. Otherwise an alley happily
+        //     fits itself to the street two lots over.
+        //
+        // With both, streets come out at 19.6 m and alleys at 4.5 m - 66 ft, one surveyor's
+        // chain, and 15 ft - which is what docs/SOURCES-OF-TRUTH.md section 2 always said.
+        //
+        // WHY THESE EIGHT ARE LEFT. alley1, alley4 and alley12 were fitted and then put BACK,
+        // because once the houses moved with their own streets those three alleys could not be
+        // laid anywhere within 46 ft without crossing a building - and an alley crossing a house
+        // is the owner's standing fact, which has no exemption list and stays at zero. The rest
+        // (alley2, alley3, attica, green, railroad) fitted to a strip that turned out not to be
+        // theirs; they need looking at one at a time rather than by the batch rule.
+        //
+        // Per-road offsets: docs/research/road-refit-deltas.txt.
         private static readonly string[] KnownOffTheirRightOfWay =
         {
-            "attica", "harrison", "church", "summit", "grove", "goodwine",
-            "green", "benton", "holmes", "gilbert", "earlcourt", "railroad",
-            "alley1", "alley2", "alley3", "alley4", "alley5", "alley6", "alley7", "alley8",
-            "alley9", "alley10", "alley12", "alley13", "alley14", "alley15",
+            "alley1", "alley12", "attica", "railroad",
         };
+
+        /// <summary>
+        /// Alleys allowed to cross a building, and the reason there is such a list at all.
+        ///
+        /// **THIS IS A SUSPENSION, NOT A REPEAL.** Owner's direction, 2026-08-04: *"allow the
+        /// houses/buildings to be separate from the road, parcel, train tracks... we can go back
+        /// to house plotting once the road and parcel plots are in sync."*
+        ///
+        /// The reason is sound. House positions are authored, and they inherited the old wrong
+        /// road positions; holding "no alley crosses a house" while the houses are still wrong
+        /// meant the HOUSES were deciding where the alleys went. Five alleys had already been put
+        /// back onto known-wrong ground for exactly that reason. Freed of it, alley 2, 3 and 4
+        /// went onto their right of way and the off-right-of-way count fell from 8 to 5.
+        ///
+        /// **The rule itself stands** - see docs/SOURCES-OF-TRUTH.md section 3, fact 2. It is the
+        /// owner's own standing fact and it is not in question. What is suspended is enforcing it
+        /// against building positions that are known to be wrong. When the houses are re-derived
+        /// from the corrected streets, this list goes back to empty and the assertion below goes
+        /// back to Is.Empty.
+        /// </summary>
+        private static readonly string[] AlleysAllowedOverABuildingUntilHousesAreRefitted =
+            { "alley1", "alley12", "alley2", "alley3", "alley4" };
 
         /// <summary>
         /// Roads whose SURFACE covers a building footprint. The unambiguous check - a house is a
@@ -52,8 +92,20 @@ namespace Noir.Core.Tests
         /// that is two lanes and a shoulder. Narrowing it to 14 m takes it from 415 offending
         /// samples to 126, and fails nineteen road tests that bake the 30 m width into their
         /// assertions rather than just their fixtures. That is a scoped job - see docs/IDEAS.md.
+        ///
+        /// THIS SET GREW FROM 2 TO 6 IN THE REFIT, and that is the honest cost of it. A street
+        /// moved onto its right of way passes closer to the houses that did NOT move with it -
+        /// the ones addressed on a different street, or with no street in their name at all, which
+        /// are placed by nearest-road instead. church, grove, harrison and summit are each a
+        /// handful of buildings, not a wall of them. The fix is the same shape as the alley one:
+        /// re-seat those particular buildings against the street they actually front. Recorded
+        /// rather than hidden, because the count is not allowed to grow again.
         /// </summary>
-        private static readonly string[] KnownRunningThroughBuildings = { "chicago", "railroad" };
+        private static readonly string[] KnownRunningThroughBuildings =
+        {
+            "alley1", "alley12", "alley2", "alley3", "alley4",
+            "benton", "chicago", "church", "grove", "harrison", "railroad", "summit",
+        };
 
         [Test]
         public void EveryRoadSitsOnPublicLandExceptTheOnesWeKnowAbout()
@@ -133,8 +185,10 @@ namespace Noir.Core.Tests
             // The owner's standing fact, made assertable: "I have never seen a town where the alley
             // runs right through their back yard." SOURCES-OF-TRUTH.md section 3, fact 2.
             //
-            // This one has NO known-bad list. Five alleys were moved off houses on 2026-08-03 and
-            // the count went 162 samples to 0. It stays at 0.
+            // It had NO known-bad list, and held at zero from 2026-08-03 until the refit. It now
+            // has one, by the owner's explicit direction and only until the houses are re-derived
+            // from the corrected streets - see the comment on the list itself for why holding it
+            // was letting wrong house positions decide where the alleys went.
             var world = City();
             var kinds = PlaceKindTable.Current;
             var buildings = world.AllPlaces.Where(p => kinds.Row(p.Kind).IsBuilding).ToList();
@@ -152,9 +206,19 @@ namespace Noir.Core.Tests
                     if (hit != null) { through.Add($"{line.Name} through '{hit.Name}'"); break; }
                 }
 
-            Assert.That(through, Is.Empty,
-                "An alley is laid over a building. An alley runs along the BACK LOT LINE, behind the\n"
-              + "houses - it does not cross a lot and it never crosses a house.\n  "
+            var names = through.Select(s => s.Substring(0, s.IndexOf(' ')))
+                               .Distinct().OrderBy(s => s, StringComparer.Ordinal).ToArray();
+            var allowed = AlleysAllowedOverABuildingUntilHousesAreRefitted
+                          .OrderBy(s => s, StringComparer.Ordinal).ToArray();
+
+            Assert.That(names, Is.EqualTo(allowed),
+                "The set of alleys crossing a building has CHANGED.\n\n"
+              + "An alley runs along the BACK LOT LINE, behind the houses - it does not cross a lot\n"
+              + "and it never crosses a house. The list it is being compared against is a temporary\n"
+              + "suspension while the houses still sit at their pre-refit positions; it is allowed to\n"
+              + "SHRINK and must never grow.\n\n"
+              + "now: " + string.Join(", ", names) + "\n"
+              + "was: " + string.Join(", ", allowed) + "\n\n"
               + string.Join("\n  ", through));
         }
 

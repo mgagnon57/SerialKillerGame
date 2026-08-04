@@ -289,10 +289,27 @@ namespace Noir.Unity
 
         // ---- building ------------------------------------------------------------------
 
-        public static GameObject Build(WorldModel world, Transform parent)
+        public static GameObject Build(WorldModel world, Transform parent) =>
+            Build(world, parent, out _);
+
+        /// <summary>
+        /// Streets and alleys, built into TWO roots so they can be switched independently.
+        ///
+        /// The alley root is a SIBLING of the street root, not a child of it: a child would be
+        /// switched off with its parent, and the whole point is that the alleys can be taken away
+        /// while the streets stay. Requested while the alleys were known to be wrong and the
+        /// streets were being judged - "make them a layer to add as they are still all fucked".
+        ///
+        /// Junctions stay with the streets. An alley-only junction is a few tiles and splitting
+        /// them would mean reading the arms of every junction to decide.
+        /// </summary>
+        public static GameObject Build(WorldModel world, Transform parent, out GameObject alleys)
         {
             var root = new GameObject("CityStreets");
             root.transform.SetParent(parent, false);
+
+            alleys = new GameObject("CityAlleys");
+            alleys.transform.SetParent(parent, false);
 
             // Clear of Ashcombe's ground, which is still drawn underneath the whole city at y=0.
             //
@@ -307,6 +324,7 @@ namespace Noir.Unity
             // 0.12 puts the asphalt at 0.02 and the kerb at 0.12, both above the ground plane,
             // and leaves the kerb reading as a kerb.
             root.transform.localPosition = new Vector3(0f, 0.12f, 0f);
+            alleys.transform.localPosition = root.transform.localPosition;   // same lift, or they sink
 
 #if UNITY_EDITOR
             int tiles = 0, dressing = 0;
@@ -362,9 +380,10 @@ namespace Noir.Unity
                          j.X - reach, j.Y - reach, reach * 2f, reach * 2f, yaw) != null) tiles++;
             }
 
-            // 2. The carriageways.
+            // 2. The carriageways, each into the root that owns its class.
             foreach (var line in world.Roads.Lines)
-                tiles += Lay(root.transform, line, world);
+                tiles += Lay(line.Class == RoadClass.Alley ? alleys.transform : root.transform,
+                             line, world);
 
             // 3. Everything that is not a carriageway, sampled off the terrain grid as before:
             //    pavement where a street has an edge, parks, and the backs of blocks.

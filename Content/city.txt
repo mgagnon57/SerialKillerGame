@@ -1,4 +1,4 @@
-﻿# ==========================================================================
+# ==========================================================================
 #  NORTHGATE, ON ROSSVILLE, ILLINOIS'S OWN STREET GRID
 #
 #  Not a grid that looks like Rossville - the actual one, taken from
@@ -1097,9 +1097,9 @@ terrain water 0,2267 1x17
 # matters: the owner has driven this road his whole life and it curves, and the
 # Hubbard Trail explains exactly why a square town has a diagonal highway through it.
 # The buildings were what needed moving, not the road.
-road chicago 30 314,0 371,177 466,470 593,855 675,1109 747,1332 776,1423 799,1491 839,1607 857,1687 863,1740 872,1876 881,2049 899,2399
+road chicago 30 313,0 370,177 465,470 592,855 674,1109 746,1332 775,1423 798,1491 838,1607 856,1687 862,1740 871,1876 880,2049 898,2399
   class mainroad
-road attica 30 0,1335 2099,1335
+road attica 30 0,1353 2099,1353
   class mainroad
 
 # ---- the village streets --------------------------------------------------
@@ -1149,43 +1149,43 @@ road attica 30 0,1335 2099,1335
 # unnamed residential ways OSM has in that corner.
 # 10m corridors, unmarked, which is what a residential street in a village of
 # thirteen hundred is. Offsets are metres from the crossroads.
-road ann 10 686,1335 686,1634   # -64m, Smith Drive
+road ann 4 689,1335 689,1634   # -64m, Smith Drive
+  class alley
+road harrison 10 832,729 832,1099 902,1357   # +104m
   class street
-road harrison 10 854,729 854,1335   # +104m
+road church 10 975,846 975,2104   # +213m
   class street
-road church 10 963,846 963,2093   # +213m
+road summit 10 1163,846 1163,2228   # +399m
   class street
-road summit 10 1149,846 1149,2210   # +399m
+road grove 10 1348,846 1348,2210   # +580m
   class street
-road grove 10 1330,846 1330,2210   # +580m
+road goodwine 10 1531,1209 1531,1356   # +750m, Creative Avenue
   class street
-road goodwine 10 1500,1209 1500,1335   # +750m, Creative Avenue
+road york 10 526,726 806,726   # +606m
   class street
-road york 10 526,729 806,729   # +606m
+road henderson 10 572,849 1351,849   # +489m
   class street
-road henderson 10 572,846 1330,846   # +489m
+road green 10 659,1008 699,1000 739,987 779,979 819,977 859,976 909,975 949,975 989,975 1029,974 1169,962 1209,963 1259,963 1299,964 1359,965 1399,965 1418,965   # +353m
   class street
-road green 10 641,982 1417,982   # +353m
+road benton 10 708,1136 718,1135 728,1135 738,1133 748,1129 768,1121 778,1117 788,1113 798,1113 808,1111 818,1108 848,1102 858,1102 868,1102 878,1102 888,1102 898,1101 908,1101 918,1101 928,1101 938,1101 948,1101 958,1101 988,1100 1018,1099 1426,1099   # +222m
   class street
-road benton 10 686,1113 1425,1113   # +222m
+road holmes 10 829,1226 1534,1226   # +126m
   class street
-road holmes 10 854,1209 1500,1209   # +126m
+road maple 10 791,1478 1351,1478   # -143m, Park Place west of Route 1
   class street
-road maple 10 800,1478 1330,1478   # -143m, Park Place west of Route 1
+road gilbert 10 834,1603 1446,1603   # -248m, Perry west of Route 1
   class street
-road gilbert 10 854,1583 1446,1583   # -248m, Perry west of Route 1
+road stewart 10 854,1728 1500,1728   # -387m, Stufflebeam west of Route 1
   class street
-road stewart 10 854,1722 1500,1722   # -387m, Stufflebeam west of Route 1
+road mckibben 10 854,1853 1592,1853   # -518m, McKibbin west of Route 1
   class street
-road mckibben 10 854,1853 1548,1853   # -518m, McKibbin west of Route 1
+road dale 10 874,1980 1351,1980   # -636m
   class street
-road dale 10 902,1971 1330,1971   # -636m
+road greenwood 10 526,2032 906,2032   # -699m
   class street
-road greenwood 10 526,2034 906,2034   # -699m
+road thompson 10 880,2101 1351,2101   # -758m
   class street
-road thompson 10 912,2093 1330,2093   # -758m
-  class street
-road earlcourt 10 1068,2210 1330,2210   # -875m
+road earlcourt 10 1068,2225 1330,2225   # -875m
   class street
 
 
@@ -1206,7 +1206,7 @@ road earlcourt 10 1068,2210 1330,2210   # -875m
 # longitude per street, which cannot express a diagonal, so a road like this one
 # could never have been in it. Found by widening to OpenStreetMap, which has it
 # as two ways (22031735 residential, 22031737 unclassified). Geometry is theirs.
-road railroad 10 1396,1581 1464,1683 1479,1705 1546,1805 1548,1819 1578,1824 1598,1830 1615,1850 1789,2111 1809,2141
+road railroad 10 1379,1594 1447,1696 1462,1718 1529,1818 1531,1832 1561,1837 1581,1843 1598,1863 1772,2124 1810,2181
   class street
 
 # ---- the alleys ------------------------------------------------------------
@@ -1234,38 +1234,38 @@ road railroad 10 1396,1581 1464,1683 1479,1705 1546,1805 1548,1819 1578,1824 159
 #
 # One OSM alley was dropped: it lies exactly on Greenwood Street rather than
 # mid-block, so it is Greenwood, not an alley beside it.
-road alley1 4 823,1113 823,1478   # NS, -31m off x=854
+road alley1 4 801,1096 801,1483   # NS, -31m off x=854
   class alley
-road alley2 4 891,982 891,1113   # NS, +37m off x=854. Shifted 2m west 2026-08-03: at 893 it
+road alley2 4 902,974 902,1113   # NS, +37m off x=854. Shifted 2m west 2026-08-03: at 893 it
                                   # ran through 204 E Green Ave and 203 E Benton Ave.
   class alley
-road alley3 4 936,1478 936,1722   # NS, -27m off x=963. Shifted 8m east 2026-08-03 - it was
+road alley3 4 923,1473 923,1731   # NS, -27m off x=963. Shifted 8m east 2026-08-03 - it was
                                   # laid across the houses on this block, not behind them.
   class alley
-road alley4 4 1052,982 1052,1478   # NS, -97m off x=1149. Shifted 6m west 2026-08-03.
+road alley4 4 1066,974 1066,1483   # NS, -97m off x=1149. Shifted 6m west 2026-08-03.
   class alley
-road alley5 4 1078,1478 1078,2093   # NS, -71m off x=1149. Shifted 1m west 2026-08-03.
+road alley5 4 1071,1473 1071,2104   # NS, -71m off x=1149. Shifted 1m west 2026-08-03.
   class alley
-road alley6 4 854,1157 1149,1157   # EW, +44m off y=1113
+road alley6 4 829,1163 1166,1163   # EW, +44m off y=1113
   class alley
-road alley7 4 1240,846 1240,1209   # NS, -90m off x=1330
+road alley7 4 1248,846 1248,1229   # NS, -90m off x=1330
   class alley
-road alley8 4 1264,1478 1264,2144   # NS, -66m off x=1330. Shifted 5m west 2026-08-03 - the
+road alley8 4 1257,1473 1257,2183   # NS, -66m off x=1330. Shifted 5m west 2026-08-03 - the
                                   # worst of them, 60 samples of alley laid over houses.
   class alley
-road alley9 4 854,1283 1149,1283   # EW, -52m off y=1335
+road alley9 4 829,1289 1166,1289   # EW, -52m off y=1335
   class alley
-road alley10 4 854,1410 1149,1410   # EW, -68m off y=1478
+road alley10 4 820,1415 1166,1415   # EW, -68m off y=1478
   class alley
-road alley11 4 1437,1209 1437,1335   # NS, -63m off x=1500
+road alley11 4 1436,1209 1436,1356   # NS, -63m off x=1500
   class alley
-road alley12 4 602,1443 747,1443   # EW, -35m off y=1478
+road alley12 4 602,1428 780,1428   # EW, -35m off y=1478
   class alley
-road alley13 4 854,1536 1149,1536   # EW, -47m off y=1583
+road alley13 4 813,1541 1166,1541   # EW, -47m off y=1583
   class alley
-road alley14 4 854,1663 1149,1663   # EW, -59m off y=1722
+road alley14 4 849,1667 1166,1667   # EW, -59m off y=1722
   class alley
-road alley15 4 1149,1776 1330,1776   # EW, +54m off y=1722
+road alley15 4 1149,1791 1351,1791   # EW, +54m off y=1722
   class alley
 
 # ---- the section roads -----------------------------------------------------
@@ -1317,98 +1317,98 @@ road crossroad1 10 1880,0 1880,2399
 #  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET
 # ==========================================================================
 
-place casino 695,1282 22x35 "the Opera House"
-  door 716,1299
+place casino 694,1282 22x35 "the Opera House"
+  door 715,1299
   human Open all night, and the carpet is loud enough that nobody notices the hour.
-place cinema 685,1258 22x22 "the Motion Picture house"
-  door 706,1269
+place cinema 684,1258 22x22 "the Motion Picture house"
+  door 705,1269
   human Two screens, one of which has been showing the same film since spring.
-place bank 676,1227 22x29 "the Rossville bank"
-  door 697,1241
+place bank 675,1227 22x29 "the Rossville bank"
+  door 696,1241
   human Marble that was meant to look permanent.
-place precinct 661,1166 18x35 "the village office"
-  door 678,1183
+place precinct 660,1166 18x35 "the village office"
+  door 677,1183
   human The light in the front office never goes off, which is not the same as somebody being awake.
-place villagehall 653,1138 16x26 "the I.O.O.F. hall"
-  door 668,1151
+place villagehall 652,1138 16x26 "the I.O.O.F. hall"
+  door 667,1151
   human Bingo, inquests, and the annual meeting about the verge.
-place villagehall 758,1291 16x26 "the G.A.R. hall"
-  door 758,1304
+place villagehall 757,1291 16x26 "the G.A.R. hall"
+  door 757,1304
   human Scout hut, polling station, and where the inquest was held.
-place shop 750,1271 20x18 "Henderson's"
-  door 750,1280
+place shop 749,1271 20x18 "Henderson's"
+  door 749,1280
   human Open at five, which is either a service or an accusation.
-place shop 743,1245 14x24 "the Attica Street market"
-  door 743,1257
+place shop 742,1245 14x24 "the Attica Street market"
+  door 742,1257
   human Fruit stacked to a geometry that survives being sold from.
-place pub 735,1221 14x22 "the Livingood House"
-  door 735,1232
+place pub 734,1221 14x22 "the Livingood House"
+  door 734,1232
   human The car park is bigger than the pub and on Fridays it is not big enough.
-place pub 721,1179 14x22 "the Commercial Hotel"
-  door 721,1190
+place pub 720,1179 14x22 "the Commercial Hotel"
+  door 720,1190
   human Older than the road, and it shows in the floor.
-place pub 713,1155 12x22 "the grain office"
-  door 713,1166
+place pub 712,1155 12x22 "the grain office"
+  door 712,1166
   human Four o'clock and the same men are in it who were in it at noon.
-place postoffice 707,1137 14x16 "Rossville Post Office"
-  door 707,1145
+place postoffice 706,1137 14x16 "Rossville Post Office"
+  door 706,1145
   human A queue that moves at the speed of one conversation at a time.
-place diner 726,1353 11x20 "the Chicago Street diner"
-  door 736,1363
+place diner 726,1371 11x20 "the Chicago Street diner"
+  door 736,1381
   human Open before anyone needs it to be, and the same four faces are in it at six.
-place gasstation 733,1375 11x20 "the pumps"
-  door 743,1385
+place gasstation 732,1375 11x20 "the pumps"
+  door 742,1385
   human Somebody is always sitting in a car here not buying anything.
-place shop 738,1397 12x16 "the drug store"
-  door 749,1405
+place shop 737,1397 12x16 "the drug store"
+  door 748,1405
   human A general store, which out here means it stocks what the last person asked for.
-place shop 744,1415 12x16 "the bakery"
-  door 755,1423
+place shop 743,1415 12x16 "the bakery"
+  door 754,1423
   human Sells out by ten and does not bake more, on principle.
 place shop 750,1433 12x16 "the printing office"
-  door 761,1441
+  door 760,1441
   human Papers, sweets, and a bell that has never once been oiled.
-place shop 756,1451 12x16 "the hardware"
-  door 767,1459
+place shop 755,1451 12x16 "the hardware"
+  door 766,1459
   human A hardware shop that also does keys, shoes, and advice.
-place shop 768,1486 12x16 "the grocer"
-  door 779,1494
+place shop 767,1486 12x16 "the grocer"
+  door 778,1494
   human Run by a family who have never agreed on the opening hours.
-place shop 774,1504 12x16 "the millinery"
-  door 785,1512
+place shop 773,1504 12x16 "the millinery"
+  door 784,1512
   human Wool, thread, and a cat that is not for sale.
-place shop 780,1522 12x16 "the confectionery"
-  door 791,1530
+place shop 779,1522 12x16 "the confectionery"
+  door 790,1530
   human The smell reaches the county line on a west wind.
-place shop 787,1540 12x16 "the general merchandise"
-  door 798,1548
+place shop 786,1540 12x16 "the general merchandise"
+  door 797,1548
   human The last shop before the county line and it knows it.
-place postoffice 793,1558 12x16 "the north sub-office"
-  door 804,1566
+place postoffice 792,1558 12x16 "the north sub-office"
+  door 803,1566
   human One window, one clerk, and a scale that has been condemned twice.
-place icecream 776,1353 11x16 "the ice cream parlour"
-  door 776,1361
+place icecream 776,1371 11x16 "the ice cream parlour"
+  door 776,1379
   human Shut half the year, and the queue at Easter goes round the corner.
-place shop 782,1371 10x13 "the jeweller"
-  door 782,1377
+place shop 781,1371 10x13 "the jeweller"
+  door 781,1377
   human Ironmongery, and a man who can find the one screw you need in a minute.
-place shop 786,1386 10x13 "the meat market"
-  door 786,1392
+place shop 785,1386 10x13 "the meat market"
+  door 785,1392
   human Everything a fortnight from its date and nobody has ever complained.
-place shop 791,1401 10x13 "the barber"
-  door 791,1407
+place shop 790,1401 10x13 "the barber"
+  door 790,1407
   human A tailor who has outlived three fashions and expects to outlive a fourth.
-place carwash 795,1416 13x10 "the steam laundry"
-  door 795,1421
+place carwash 794,1416 13x10 "the steam laundry"
+  door 794,1421
   human A place people leave a car and walk away from for ten minutes.
-place restroom 800,1428 8x14 "the rest room"
-  door 800,1435
+place restroom 799,1428 8x14 "the rest room"
+  door 799,1435
   human Council-green tile and a door that does not lock.
-place shop 805,1444 10x11 "the second drug store"
-  door 805,1449
+place shop 804,1444 10x11 "the second drug store"
+  door 804,1449
   human The window has not changed since the coronation and neither has the smell.
-place newsstand 809,1457 3x7 "the news stand"
-  door 809,1460
+place newsstand 808,1457 3x7 "the news stand"
+  door 808,1460
   human Papers, cigarettes, and the man who knows who bought which.
 place apartment 818,1486 8x6 "the rooms over the grocer"
   door 818,1489
@@ -1417,11 +1417,11 @@ place apartment 818,1486 8x6 "the rooms over the grocer"
 place apartment 821,1494 8x6 "the rooms over the meat market"
   door 821,1497
   units 3
-place apartment 824,1502 8x6 "the rooms over the barber"
-  door 824,1505
+place apartment 823,1502 8x6 "the rooms over the barber"
+  door 823,1505
   units 3
-place apartment 827,1510 8x6 "the rooms over the laundry"
-  door 827,1513
+place apartment 826,1510 8x6 "the rooms over the laundry"
+  door 826,1513
   units 3
 
 # ---- the school, the firehouse, the elevator, the water tower --------------
@@ -1430,19 +1430,19 @@ place apartment 827,1510 8x6 "the rooms over the laundry"
 # tracks any more, see RAILROAD above, only the siting constant and the decorative
 # `rail` feature in features.txt.
 
-place firestation 694,737 28x27 "the Rossville fire house"
-  door 708,763
+place firestation 694,734 28x27 "the Rossville fire house"
+  door 708,760
   human The doors are open in all weather and the crew watch the street from inside them.
-place school 534,1121 47x18 "Rossville Elementary"
-  door 557,1138
+place school 533,1121 47x18 "Rossville Elementary"
+  door 556,1138
   human Painted every summer and scuffed back to the undercoat by October.
-place watertower 862,854 18x18 "the water tower"
+place watertower 840,854 18x18 "the water tower"
   human The name is painted on it and reads from the section road.
-place elevator 1157,1353 24x34 "the Rossville elevator"
+place elevator 1171,1353 24x34 "the Rossville elevator"
   human Concrete, and it throws a shadow over the tracks all morning.
-place green 534,1730 24x37 "the depot yard"
+place green 537,1730 24x37 "the depot yard"
   human Grass that grew because nobody got round to paving it.
-place playground 1157,1979 30x28 "the Bishop road swings"
+place playground 1171,1979 30x28 "the Bishop road swings"
   human One swing has been chained up since April and nobody remembers why.
 
 # ==========================================================================
@@ -1485,130 +1485,130 @@ place playground 1157,1979 30x28 "the Bishop road swings"
 #  no house on it is what that looks like from the street.
 # ==========================================================================
 
-place house 540,745 13x7 "306 York Ave"
-  door 546,745
-place house 566,745 13x7 "304 York Ave"
-  door 572,745
-place house 592,745 13x7 "302 York Ave"
-  door 598,745
-place house 540,823 13x7 "305 W Henderson Ave"
-  door 546,829
-place house 592,823 13x7 "301 W Henderson Ave"
-  door 598,829
-place house 540,862 13x7 "306 W Henderson Ave"
-  door 546,862
-place house 566,862 13x7 "304 W Henderson Ave"
-  door 572,862
-place house 592,862 13x7 "302 W Henderson Ave"
-  door 598,862
-place house 540,959 13x7 "305 W Green Ave"
-  door 546,965
-place house 566,959 13x7 "303 W Green Ave"
-  door 572,965
-place house 592,959 13x7 "301 W Green Ave"
-  door 598,965
-place house 566,998 13x7 "304 W Green Ave"
-  door 572,998
-place house 592,998 13x7 "302 W Green Ave"
-  door 598,998
-place house 540,1090 13x7 "305 W Benton Ave"
-  door 546,1096
-place house 566,1090 13x7 "303 W Benton Ave"
-  door 572,1096
-place house 592,1090 13x7 "301 W Benton Ave"
-  door 598,1096
-place house 540,1302 13x7 "305 W Attica Ave"
-  door 546,1308
-place house 566,1302 13x7 "303 W Attica Ave"
-  door 572,1308
-place house 592,1302 13x7 "301 W Attica Ave"
-  door 598,1308
-place house 540,1361 13x7 "306 W Attica Ave"
-  door 546,1361
-place house 566,1361 13x7 "304 W Attica Ave"
-  door 572,1361
-place house 592,1361 13x7 "302 W Attica Ave"
-  door 598,1361
-place house 540,2011 13x7 "305 Greenwood Ave"
-  door 546,2017
-place house 566,2011 13x7 "303 Greenwood Ave"
-  door 572,2017
-place house 592,2011 13x7 "301 Greenwood Ave"
-  door 598,2017
-place house 540,2050 13x7 "306 Greenwood Ave"
-  door 546,2050
-place house 566,2050 13x7 "304 Greenwood Ave"
-  door 572,2050
-place house 592,2050 13x7 "302 Greenwood Ave"
-  door 598,2050
-place house 655,745 13x7 "202 York Ave"
-  door 661,745
-place house 655,823 13x7 "201 W Henderson Ave"
-  door 661,829
-place house 655,862 13x7 "202 W Henderson Ave"
-  door 661,862
-place house 655,959 13x7 "201 W Green Ave"
-  door 661,965
-place house 655,998 13x7 "202 W Green Ave"
-  door 661,998
-place house 655,1090 13x7 "201 W Benton Ave"
-  door 661,1096
-place house 655,2011 13x7 "201 Greenwood Ave"
-  door 661,2017
-place house 655,2050 13x7 "202 Greenwood Ave"
-  door 661,2050
-place house 700,862 13x7 "102 W Henderson Ave"
-  door 706,862
-place house 700,959 13x7 "101 W Green Ave"
-  door 706,965
-place house 700,1090 13x7 "101 W Benton Ave"
-  door 706,1096
-place house 700,2011 13x7 "101 Greenwood Ave"
-  door 706,2017
-place house 700,2050 13x7 "102 Greenwood Ave"
-  door 706,2050
-place house 774,823 13x7 "101 E Henderson Ave"
-  door 780,829
-place house 800,823 13x7 "103 E Henderson Ave"
-  door 806,829
-place house 774,862 13x7 "102 E Henderson Ave"
-  door 780,862
-place house 800,862 13x7 "104 E Henderson Ave"
-  door 806,862
-place house 826,862 13x7 "106 E Henderson Ave"
-  door 832,862
-place house 774,959 13x7 "101 E Green Ave"
-  door 780,965
-place house 800,959 13x7 "103 E Green Ave"
-  door 806,965
-place house 826,959 13x7 "105 E Green Ave"
-  door 832,965
-place house 774,998 13x7 "102 E Green Ave"
-  door 780,998
-place house 826,998 13x7 "106 E Green Ave"
-  door 832,998
-place house 774,1090 13x7 "101 E Benton Ave"
-  door 780,1096
-place house 800,1090 13x7 "103 E Benton Ave"
-  door 806,1096
-place house 826,1090 13x7 "105 E Benton Ave"
-  door 832,1096
-place house 774,1599 13x7 "102 Gilbert Ave"
-  door 780,1599
-place house 800,1599 13x7 "104 Gilbert Ave"
-  door 806,1599
-place house 826,1599 13x7 "106 Gilbert Ave"
-  door 832,1599
-place house 774,1699 13x7 "101 Stewart Ave"
-  door 780,1705
-place house 800,1699 13x7 "103 Stewart Ave"
-  door 806,1705
-place house 826,1699 13x7 "105 Stewart Ave"
-  door 832,1705
-place house 774,1738 13x7 "102 Stewart Ave"
-  door 780,1738
-place house 826,1738 13x7 "106 Stewart Ave"
-  door 832,1738
+place house 540,742 13x7 "306 York Ave"
+  door 546,742
+place house 566,742 13x7 "304 York Ave"
+  door 572,742
+place house 592,742 13x7 "302 York Ave"
+  door 598,742
+place house 540,826 13x7 "305 W Henderson Ave"
+  door 546,832
+place house 592,826 13x7 "301 W Henderson Ave"
+  door 598,832
+place house 540,865 13x7 "306 W Henderson Ave"
+  door 546,865
+place house 566,865 13x7 "304 W Henderson Ave"
+  door 572,865
+place house 592,865 13x7 "302 W Henderson Ave"
+  door 598,865
+place house 540,954 13x7 "305 W Green Ave"
+  door 546,960
+place house 566,954 13x7 "303 W Green Ave"
+  door 572,960
+place house 592,954 13x7 "301 W Green Ave"
+  door 598,960
+place house 566,993 13x7 "304 W Green Ave"
+  door 572,993
+place house 592,993 13x7 "302 W Green Ave"
+  door 598,993
+place house 540,1076 13x7 "305 W Benton Ave"
+  door 546,1082
+place house 566,1076 13x7 "303 W Benton Ave"
+  door 572,1082
+place house 592,1076 13x7 "301 W Benton Ave"
+  door 598,1082
+place house 540,1320 13x7 "305 W Attica Ave"
+  door 546,1326
+place house 566,1320 13x7 "303 W Attica Ave"
+  door 572,1326
+place house 592,1320 13x7 "301 W Attica Ave"
+  door 598,1326
+place house 540,1379 13x7 "306 W Attica Ave"
+  door 546,1379
+place house 566,1379 13x7 "304 W Attica Ave"
+  door 572,1379
+place house 592,1379 13x7 "302 W Attica Ave"
+  door 598,1379
+place house 540,2009 13x7 "305 Greenwood Ave"
+  door 546,2015
+place house 566,2009 13x7 "303 Greenwood Ave"
+  door 572,2015
+place house 592,2009 13x7 "301 Greenwood Ave"
+  door 598,2015
+place house 540,2048 13x7 "306 Greenwood Ave"
+  door 546,2048
+place house 566,2048 13x7 "304 Greenwood Ave"
+  door 572,2048
+place house 592,2048 13x7 "302 Greenwood Ave"
+  door 598,2048
+place house 655,742 13x7 "202 York Ave"
+  door 661,742
+place house 655,826 13x7 "201 W Henderson Ave"
+  door 661,832
+place house 655,865 13x7 "202 W Henderson Ave"
+  door 661,865
+place house 655,954 13x7 "201 W Green Ave"
+  door 661,960
+place house 655,993 13x7 "202 W Green Ave"
+  door 661,993
+place house 655,1076 13x7 "201 W Benton Ave"
+  door 661,1082
+place house 655,2009 13x7 "201 Greenwood Ave"
+  door 661,2015
+place house 655,2048 13x7 "202 Greenwood Ave"
+  door 661,2048
+place house 700,865 13x7 "102 W Henderson Ave"
+  door 706,865
+place house 700,954 13x7 "101 W Green Ave"
+  door 706,960
+place house 700,1076 13x7 "101 W Benton Ave"
+  door 706,1082
+place house 700,2009 13x7 "101 Greenwood Ave"
+  door 706,2015
+place house 700,2048 13x7 "102 Greenwood Ave"
+  door 706,2048
+place house 774,826 13x7 "101 E Henderson Ave"
+  door 780,832
+place house 800,826 13x7 "103 E Henderson Ave"
+  door 806,832
+place house 774,865 13x7 "102 E Henderson Ave"
+  door 780,865
+place house 800,865 13x7 "104 E Henderson Ave"
+  door 806,865
+place house 826,865 13x7 "106 E Henderson Ave"
+  door 832,865
+place house 774,954 13x7 "101 E Green Ave"
+  door 780,960
+place house 800,954 13x7 "103 E Green Ave"
+  door 806,960
+place house 826,954 13x7 "105 E Green Ave"
+  door 832,960
+place house 774,993 13x7 "102 E Green Ave"
+  door 780,993
+place house 826,993 13x7 "106 E Green Ave"
+  door 832,993
+place house 774,1076 13x7 "101 E Benton Ave"
+  door 780,1082
+place house 800,1076 13x7 "103 E Benton Ave"
+  door 806,1082
+place house 826,1076 13x7 "105 E Benton Ave"
+  door 832,1082
+place house 774,1619 13x7 "102 Gilbert Ave"
+  door 780,1619
+place house 800,1619 13x7 "104 Gilbert Ave"
+  door 806,1619
+place house 826,1619 13x7 "106 Gilbert Ave"
+  door 832,1619
+place house 774,1705 13x7 "101 Stewart Ave"
+  door 780,1711
+place house 800,1705 13x7 "103 Stewart Ave"
+  door 806,1711
+place house 826,1705 13x7 "105 Stewart Ave"
+  door 832,1711
+place house 774,1744 13x7 "102 Stewart Ave"
+  door 780,1744
+place house 826,1744 13x7 "106 Stewart Ave"
+  door 832,1744
 place house 774,1830 13x7 "101 Mckibben Ave"
   door 780,1836
 place house 800,1830 13x7 "103 Mckibben Ave"
@@ -1619,66 +1619,66 @@ place house 774,1869 13x7 "102 Mckibben Ave"
   door 780,1869
 place house 826,1869 13x7 "106 Mckibben Ave"
   door 832,1869
-place house 774,1948 13x7 "101 Dale Ave"
-  door 780,1954
-place house 800,1948 13x7 "103 Dale Ave"
-  door 806,1954
-place house 826,1948 13x7 "105 Dale Ave"
-  door 832,1954
-place house 774,1987 13x7 "102 Dale Ave"
-  door 780,1987
-place house 800,1987 13x7 "104 Dale Ave"
-  door 806,1987
-place house 826,1987 13x7 "106 Dale Ave"
-  door 832,1987
-place house 774,2070 13x7 "101 Thompson Ave"
-  door 780,2076
-place house 800,2070 13x7 "103 Thompson Ave"
-  door 806,2076
-place house 826,2070 13x7 "105 Thompson Ave"
-  door 832,2076
-place house 774,2109 13x7 "102 Thompson Ave"
-  door 780,2109
-place house 826,2109 13x7 "106 Thompson Ave"
-  door 832,2109
-place house 774,2187 13x7 "101 Earlcourt Ave"
-  door 780,2193
-place house 800,2187 13x7 "103 Earlcourt Ave"
-  door 806,2193
-place house 826,2187 13x7 "105 Earlcourt Ave"
-  door 832,2193
-place house 868,998 13x7 "202 E Green Ave"
-  door 874,998
-place house 894,998 13x7 "204 E Green Ave"
-  door 900,998
-place house 894,1090 13x7 "203 E Benton Ave"
-  door 900,1096
-place house 920,1090 13x7 "205 E Benton Ave"
-  door 926,1096
-place house 868,1129 13x7 "202 E Benton Ave"
-  door 874,1129
-place house 894,1129 13x7 "204 E Benton Ave"
-  door 900,1129
-place house 868,1186 13x7 "201 Holmes Ave"
-  door 874,1192
-place house 920,1186 13x7 "205 Holmes Ave"
-  door 926,1192
-place house 868,1225 13x7 "202 Holmes Ave"
-  door 874,1225
-place house 894,1225 13x7 "204 Holmes Ave"
-  door 900,1225
-place house 920,1225 13x7 "206 Holmes Ave"
-  door 926,1225
-place house 868,1302 13x7 "201 E Attica Ave"
-  door 874,1308
-place house 894,1302 13x7 "203 E Attica Ave"
-  door 900,1308
-place house 920,1302 13x7 "205 E Attica Ave"
-  door 926,1308
-place house 894,1361 13x7 "204 E Attica Ave"
-  door 900,1361
-place house 920,1361 13x7 "206 E Attica Ave"
-  door 926,1361
+place house 774,1957 13x7 "101 Dale Ave"
+  door 780,1963
+place house 800,1957 13x7 "103 Dale Ave"
+  door 806,1963
+place house 826,1957 13x7 "105 Dale Ave"
+  door 832,1963
+place house 774,1996 13x7 "102 Dale Ave"
+  door 780,1996
+place house 800,1996 13x7 "104 Dale Ave"
+  door 806,1996
+place house 826,1996 13x7 "106 Dale Ave"
+  door 832,1996
+place house 774,2078 13x7 "101 Thompson Ave"
+  door 780,2084
+place house 800,2078 13x7 "103 Thompson Ave"
+  door 806,2084
+place house 826,2078 13x7 "105 Thompson Ave"
+  door 832,2084
+place house 774,2117 13x7 "102 Thompson Ave"
+  door 780,2117
+place house 826,2117 13x7 "106 Thompson Ave"
+  door 832,2117
+place house 774,2202 13x7 "101 Earlcourt Ave"
+  door 780,2208
+place house 800,2202 13x7 "103 Earlcourt Ave"
+  door 806,2208
+place house 826,2202 13x7 "105 Earlcourt Ave"
+  door 832,2208
+place house 868,993 13x7 "202 E Green Ave"
+  door 874,993
+place house 894,993 13x7 "204 E Green Ave"
+  door 900,993
+place house 894,1076 13x7 "203 E Benton Ave"
+  door 900,1082
+place house 920,1076 13x7 "205 E Benton Ave"
+  door 926,1082
+place house 868,1115 13x7 "202 E Benton Ave"
+  door 874,1115
+place house 894,1115 13x7 "204 E Benton Ave"
+  door 900,1115
+place house 868,1203 13x7 "201 Holmes Ave"
+  door 874,1209
+place house 920,1203 13x7 "205 Holmes Ave"
+  door 926,1209
+place house 868,1242 13x7 "202 Holmes Ave"
+  door 874,1242
+place house 894,1242 13x7 "204 Holmes Ave"
+  door 900,1242
+place house 920,1242 13x7 "206 Holmes Ave"
+  door 926,1242
+place house 868,1320 13x7 "201 E Attica Ave"
+  door 874,1326
+place house 894,1320 13x7 "203 E Attica Ave"
+  door 900,1326
+place house 920,1320 13x7 "205 E Attica Ave"
+  door 926,1326
+place house 894,1379 13x7 "204 E Attica Ave"
+  door 900,1379
+place house 920,1379 13x7 "206 E Attica Ave"
+  door 926,1379
 place house 868,1455 13x7 "201 Maple Ave"
   door 874,1461
 place house 920,1455 13x7 "205 Maple Ave"
@@ -1689,26 +1689,26 @@ place house 894,1494 13x7 "204 Maple Ave"
   door 900,1494
 place house 920,1494 13x7 "206 Maple Ave"
   door 926,1494
-place house 868,1560 13x7 "201 Gilbert Ave"
-  door 874,1566
-place house 894,1560 13x7 "203 Gilbert Ave"
-  door 900,1566
-place house 868,1599 13x7 "202 Gilbert Ave"
-  door 874,1599
-place house 894,1599 13x7 "204 Gilbert Ave"
-  door 900,1599
-place house 920,1599 13x7 "206 Gilbert Ave"
-  door 926,1599
-place house 868,1699 13x7 "201 Stewart Ave"
-  door 874,1705
-place house 894,1699 13x7 "203 Stewart Ave"
-  door 900,1705
-place house 920,1699 13x7 "205 Stewart Ave"
-  door 926,1705
-place house 868,1738 13x7 "202 Stewart Ave"
-  door 874,1738
-place house 894,1738 13x7 "204 Stewart Ave"
-  door 900,1738
+place house 868,1580 13x7 "201 Gilbert Ave"
+  door 874,1586
+place house 894,1580 13x7 "203 Gilbert Ave"
+  door 900,1586
+place house 868,1619 13x7 "202 Gilbert Ave"
+  door 874,1619
+place house 894,1619 13x7 "204 Gilbert Ave"
+  door 900,1619
+place house 920,1619 13x7 "206 Gilbert Ave"
+  door 926,1619
+place house 868,1705 13x7 "201 Stewart Ave"
+  door 874,1711
+place house 894,1705 13x7 "203 Stewart Ave"
+  door 900,1711
+place house 920,1705 13x7 "205 Stewart Ave"
+  door 926,1711
+place house 868,1744 13x7 "202 Stewart Ave"
+  door 874,1744
+place house 894,1744 13x7 "204 Stewart Ave"
+  door 900,1744
 place house 894,1830 13x7 "203 Mckibben Ave"
   door 900,1836
 place house 920,1830 13x7 "205 Mckibben Ave"
@@ -1717,86 +1717,86 @@ place house 868,1869 13x7 "202 Mckibben Ave"
   door 874,1869
 place house 894,1869 13x7 "204 Mckibben Ave"
   door 900,1869
-place house 868,1948 13x7 "201 Dale Ave"
-  door 874,1954
-place house 894,1948 13x7 "203 Dale Ave"
-  door 900,1954
-place house 920,1948 13x7 "205 Dale Ave"
-  door 926,1954
-place house 868,1987 13x7 "202 Dale Ave"
-  door 874,1987
-place house 894,1987 13x7 "204 Dale Ave"
-  door 900,1987
-place house 920,1987 13x7 "206 Dale Ave"
-  door 926,1987
-place house 894,2070 13x7 "203 Thompson Ave"
-  door 900,2076
-place house 920,2070 13x7 "205 Thompson Ave"
-  door 926,2076
-place house 868,2109 13x7 "202 Thompson Ave"
-  door 874,2109
-place house 894,2109 13x7 "204 Thompson Ave"
-  door 900,2109
-place house 868,2187 13x7 "201 Earlcourt Ave"
-  door 874,2193
-place house 894,2187 13x7 "203 Earlcourt Ave"
-  door 900,2193
-place house 920,2187 13x7 "205 Earlcourt Ave"
-  door 926,2193
-place house 977,998 13x7 "302 E Green Ave"
-  door 983,998
-place house 1003,998 13x7 "304 E Green Ave"
-  door 1009,998
-place house 977,1090 13x7 "301 E Benton Ave"
-  door 983,1096
-place house 1003,1090 13x7 "303 E Benton Ave"
-  door 1009,1096
-place house 977,1129 13x7 "302 E Benton Ave"
-  door 983,1129
-place house 1003,1129 13x7 "304 E Benton Ave"
-  door 1009,1129
-place house 1029,1129 13x7 "306 E Benton Ave"
-  door 1035,1129
-place house 1055,1129 13x7 "308 E Benton Ave"
-  door 1061,1129
-place house 977,1186 13x7 "301 Holmes Ave"
-  door 983,1192
-place house 1003,1186 13x7 "303 Holmes Ave"
-  door 1009,1192
-place house 1029,1186 13x7 "305 Holmes Ave"
-  door 1035,1192
-place house 1055,1186 13x7 "307 Holmes Ave"
-  door 1061,1192
-place house 1081,1186 13x7 "309 Holmes Ave"
-  door 1087,1192
-place house 977,1225 13x7 "302 Holmes Ave"
-  door 983,1225
-place house 1029,1225 13x7 "306 Holmes Ave"
-  door 1035,1225
-place house 1055,1225 13x7 "308 Holmes Ave"
-  door 1061,1225
-place house 1081,1225 13x7 "310 Holmes Ave"
-  door 1087,1225
-place house 1107,1225 13x7 "312 Holmes Ave"
-  door 1113,1225
-place house 1003,1302 13x7 "303 E Attica Ave"
-  door 1009,1308
-place house 1029,1302 13x7 "305 E Attica Ave"
-  door 1035,1308
-place house 1055,1302 13x7 "307 E Attica Ave"
-  door 1061,1308
-place house 1081,1302 13x7 "309 E Attica Ave"
-  door 1087,1308
-place house 1107,1302 13x7 "311 E Attica Ave"
-  door 1113,1308
-place house 977,1361 13x7 "302 E Attica Ave"
-  door 983,1361
-place house 1003,1361 13x7 "304 E Attica Ave"
-  door 1009,1361
-place house 1055,1361 13x7 "308 E Attica Ave"
-  door 1061,1361
-place house 1081,1361 13x7 "310 E Attica Ave"
-  door 1087,1361
+place house 868,1957 13x7 "201 Dale Ave"
+  door 874,1963
+place house 894,1957 13x7 "203 Dale Ave"
+  door 900,1963
+place house 920,1957 13x7 "205 Dale Ave"
+  door 926,1963
+place house 868,1996 13x7 "202 Dale Ave"
+  door 874,1996
+place house 894,1996 13x7 "204 Dale Ave"
+  door 900,1996
+place house 920,1996 13x7 "206 Dale Ave"
+  door 926,1996
+place house 894,2078 13x7 "203 Thompson Ave"
+  door 900,2084
+place house 920,2078 13x7 "205 Thompson Ave"
+  door 926,2084
+place house 868,2117 13x7 "202 Thompson Ave"
+  door 874,2117
+place house 894,2117 13x7 "204 Thompson Ave"
+  door 900,2117
+place house 868,2202 13x7 "201 Earlcourt Ave"
+  door 874,2208
+place house 894,2202 13x7 "203 Earlcourt Ave"
+  door 900,2208
+place house 920,2202 13x7 "205 Earlcourt Ave"
+  door 926,2208
+place house 977,993 13x7 "302 E Green Ave"
+  door 983,993
+place house 1003,993 13x7 "304 E Green Ave"
+  door 1009,993
+place house 977,1076 13x7 "301 E Benton Ave"
+  door 983,1082
+place house 1003,1076 13x7 "303 E Benton Ave"
+  door 1009,1082
+place house 977,1115 13x7 "302 E Benton Ave"
+  door 983,1115
+place house 1003,1115 13x7 "304 E Benton Ave"
+  door 1009,1115
+place house 1029,1115 13x7 "306 E Benton Ave"
+  door 1035,1115
+place house 1055,1115 13x7 "308 E Benton Ave"
+  door 1061,1115
+place house 977,1203 13x7 "301 Holmes Ave"
+  door 983,1209
+place house 1003,1203 13x7 "303 Holmes Ave"
+  door 1009,1209
+place house 1029,1203 13x7 "305 Holmes Ave"
+  door 1035,1209
+place house 1055,1203 13x7 "307 Holmes Ave"
+  door 1061,1209
+place house 1081,1203 13x7 "309 Holmes Ave"
+  door 1087,1209
+place house 977,1242 13x7 "302 Holmes Ave"
+  door 983,1242
+place house 1029,1242 13x7 "306 Holmes Ave"
+  door 1035,1242
+place house 1055,1242 13x7 "308 Holmes Ave"
+  door 1061,1242
+place house 1081,1242 13x7 "310 Holmes Ave"
+  door 1087,1242
+place house 1107,1242 13x7 "312 Holmes Ave"
+  door 1113,1242
+place house 1003,1320 13x7 "303 E Attica Ave"
+  door 1009,1326
+place house 1029,1320 13x7 "305 E Attica Ave"
+  door 1035,1326
+place house 1055,1320 13x7 "307 E Attica Ave"
+  door 1061,1326
+place house 1081,1320 13x7 "309 E Attica Ave"
+  door 1087,1326
+place house 1107,1320 13x7 "311 E Attica Ave"
+  door 1113,1326
+place house 977,1379 13x7 "302 E Attica Ave"
+  door 983,1379
+place house 1003,1379 13x7 "304 E Attica Ave"
+  door 1009,1379
+place house 1055,1379 13x7 "308 E Attica Ave"
+  door 1061,1379
+place house 1081,1379 13x7 "310 E Attica Ave"
+  door 1087,1379
 place house 977,1455 13x7 "301 Maple Ave"
   door 983,1461
 place house 1003,1455 13x7 "303 Maple Ave"
@@ -1819,48 +1819,48 @@ place house 1081,1494 13x7 "310 Maple Ave"
   door 1087,1494
 place house 1107,1494 13x7 "312 Maple Ave"
   door 1113,1494
-place house 977,1560 13x7 "301 Gilbert Ave"
-  door 983,1566
-place house 1003,1560 13x7 "303 Gilbert Ave"
-  door 1009,1566
-place house 1029,1560 13x7 "305 Gilbert Ave"
-  door 1035,1566
-place house 1055,1560 13x7 "307 Gilbert Ave"
-  door 1061,1566
-place house 1081,1560 13x7 "309 Gilbert Ave"
-  door 1087,1566
-place house 1107,1560 13x7 "311 Gilbert Ave"
-  door 1113,1566
-place house 977,1599 13x7 "302 Gilbert Ave"
-  door 983,1599
-place house 1003,1599 13x7 "304 Gilbert Ave"
-  door 1009,1599
-place house 1055,1599 13x7 "308 Gilbert Ave"
-  door 1061,1599
-place house 1081,1599 13x7 "310 Gilbert Ave"
-  door 1087,1599
-place house 1107,1599 13x7 "312 Gilbert Ave"
-  door 1113,1599
-place house 977,1699 13x7 "301 Stewart Ave"
-  door 983,1705
-place house 1003,1699 13x7 "303 Stewart Ave"
-  door 1009,1705
-place house 1055,1699 13x7 "307 Stewart Ave"
-  door 1061,1705
-place house 1081,1699 13x7 "309 Stewart Ave"
-  door 1087,1705
-place house 1107,1699 13x7 "311 Stewart Ave"
-  door 1113,1705
-place house 977,1738 13x7 "302 Stewart Ave"
-  door 983,1738
-place house 1003,1738 13x7 "304 Stewart Ave"
-  door 1009,1738
-place house 1029,1738 13x7 "306 Stewart Ave"
-  door 1035,1738
-place house 1055,1738 13x7 "308 Stewart Ave"
-  door 1061,1738
-place house 1107,1738 13x7 "312 Stewart Ave"
-  door 1113,1738
+place house 977,1580 13x7 "301 Gilbert Ave"
+  door 983,1586
+place house 1003,1580 13x7 "303 Gilbert Ave"
+  door 1009,1586
+place house 1029,1580 13x7 "305 Gilbert Ave"
+  door 1035,1586
+place house 1055,1580 13x7 "307 Gilbert Ave"
+  door 1061,1586
+place house 1081,1580 13x7 "309 Gilbert Ave"
+  door 1087,1586
+place house 1107,1580 13x7 "311 Gilbert Ave"
+  door 1113,1586
+place house 977,1619 13x7 "302 Gilbert Ave"
+  door 983,1619
+place house 1003,1619 13x7 "304 Gilbert Ave"
+  door 1009,1619
+place house 1055,1619 13x7 "308 Gilbert Ave"
+  door 1061,1619
+place house 1081,1619 13x7 "310 Gilbert Ave"
+  door 1087,1619
+place house 1107,1619 13x7 "312 Gilbert Ave"
+  door 1113,1619
+place house 977,1705 13x7 "301 Stewart Ave"
+  door 983,1711
+place house 1003,1705 13x7 "303 Stewart Ave"
+  door 1009,1711
+place house 1055,1705 13x7 "307 Stewart Ave"
+  door 1061,1711
+place house 1081,1705 13x7 "309 Stewart Ave"
+  door 1087,1711
+place house 1107,1705 13x7 "311 Stewart Ave"
+  door 1113,1711
+place house 977,1744 13x7 "302 Stewart Ave"
+  door 983,1744
+place house 1003,1744 13x7 "304 Stewart Ave"
+  door 1009,1744
+place house 1029,1744 13x7 "306 Stewart Ave"
+  door 1035,1744
+place house 1055,1744 13x7 "308 Stewart Ave"
+  door 1061,1744
+place house 1107,1744 13x7 "312 Stewart Ave"
+  door 1113,1744
 place house 977,1830 13x7 "301 Mckibben Ave"
   door 983,1836
 place house 1003,1830 13x7 "303 Mckibben Ave"
@@ -1881,58 +1881,58 @@ place house 1055,1869 13x7 "308 Mckibben Ave"
   door 1061,1869
 place house 1107,1869 13x7 "312 Mckibben Ave"
   door 1113,1869
-place house 977,1948 13x7 "301 Dale Ave"
-  door 983,1954
-place house 1003,1948 13x7 "303 Dale Ave"
-  door 1009,1954
-place house 1029,1948 13x7 "305 Dale Ave"
-  door 1035,1954
-place house 1055,1948 13x7 "307 Dale Ave"
-  door 1061,1954
-place house 1081,1948 13x7 "309 Dale Ave"
-  door 1087,1954
-place house 1107,1948 13x7 "311 Dale Ave"
-  door 1113,1954
-place house 977,1987 13x7 "302 Dale Ave"
-  door 983,1987
-place house 1029,1987 13x7 "306 Dale Ave"
-  door 1035,1987
-place house 1055,1987 13x7 "308 Dale Ave"
-  door 1061,1987
-place house 1107,1987 13x7 "312 Dale Ave"
-  door 1113,1987
-place house 977,2070 13x7 "301 Thompson Ave"
-  door 983,2076
-place house 1003,2070 13x7 "303 Thompson Ave"
-  door 1009,2076
-place house 1055,2070 13x7 "307 Thompson Ave"
-  door 1061,2076
-place house 1081,2070 13x7 "309 Thompson Ave"
-  door 1087,2076
-place house 1107,2070 13x7 "311 Thompson Ave"
-  door 1113,2076
-place house 977,2109 13x7 "302 Thompson Ave"
-  door 983,2109
-place house 1003,2109 13x7 "304 Thompson Ave"
-  door 1009,2109
-place house 1029,2109 13x7 "306 Thompson Ave"
-  door 1035,2109
-place house 1055,2109 13x7 "308 Thompson Ave"
-  door 1061,2109
-place house 1107,2109 13x7 "312 Thompson Ave"
-  door 1113,2109
-place house 977,2187 13x7 "301 Earlcourt Ave"
-  door 983,2193
-place house 1029,2187 13x7 "305 Earlcourt Ave"
-  door 1035,2193
-place house 1055,2187 13x7 "307 Earlcourt Ave"
-  door 1061,2193
-place house 1107,2187 13x7 "311 Earlcourt Ave"
-  door 1113,2193
-place house 1163,1225 13x7 "408 Holmes Ave"
-  door 1169,1225
-place house 1163,1302 13x7 "401 E Attica Ave"
-  door 1169,1308
+place house 977,1957 13x7 "301 Dale Ave"
+  door 983,1963
+place house 1003,1957 13x7 "303 Dale Ave"
+  door 1009,1963
+place house 1029,1957 13x7 "305 Dale Ave"
+  door 1035,1963
+place house 1055,1957 13x7 "307 Dale Ave"
+  door 1061,1963
+place house 1081,1957 13x7 "309 Dale Ave"
+  door 1087,1963
+place house 1107,1957 13x7 "311 Dale Ave"
+  door 1113,1963
+place house 977,1996 13x7 "302 Dale Ave"
+  door 983,1996
+place house 1029,1996 13x7 "306 Dale Ave"
+  door 1035,1996
+place house 1055,1996 13x7 "308 Dale Ave"
+  door 1061,1996
+place house 1107,1996 13x7 "312 Dale Ave"
+  door 1113,1996
+place house 977,2078 13x7 "301 Thompson Ave"
+  door 983,2084
+place house 1003,2078 13x7 "303 Thompson Ave"
+  door 1009,2084
+place house 1055,2078 13x7 "307 Thompson Ave"
+  door 1061,2084
+place house 1081,2078 13x7 "309 Thompson Ave"
+  door 1087,2084
+place house 1107,2078 13x7 "311 Thompson Ave"
+  door 1113,2084
+place house 977,2117 13x7 "302 Thompson Ave"
+  door 983,2117
+place house 1003,2117 13x7 "304 Thompson Ave"
+  door 1009,2117
+place house 1029,2117 13x7 "306 Thompson Ave"
+  door 1035,2117
+place house 1055,2117 13x7 "308 Thompson Ave"
+  door 1061,2117
+place house 1107,2117 13x7 "312 Thompson Ave"
+  door 1113,2117
+place house 977,2202 13x7 "301 Earlcourt Ave"
+  door 983,2208
+place house 1029,2202 13x7 "305 Earlcourt Ave"
+  door 1035,2208
+place house 1055,2202 13x7 "307 Earlcourt Ave"
+  door 1061,2208
+place house 1107,2202 13x7 "311 Earlcourt Ave"
+  door 1113,2208
+place house 1163,1242 13x7 "408 Holmes Ave"
+  door 1169,1242
+place house 1163,1320 13x7 "401 E Attica Ave"
+  door 1169,1326
 place house 1163,1494 13x7 "402 Maple Ave"
   door 1169,1494
 place house 1189,1494 13x7 "404 Maple Ave"
@@ -1945,48 +1945,48 @@ place house 1267,1494 13x7 "410 Maple Ave"
   door 1273,1494
 place house 1293,1494 13x7 "412 Maple Ave"
   door 1299,1494
-place house 1163,1560 13x7 "401 Gilbert Ave"
-  door 1169,1566
-place house 1189,1560 13x7 "403 Gilbert Ave"
-  door 1195,1566
-place house 1215,1560 13x7 "405 Gilbert Ave"
-  door 1221,1566
-place house 1241,1560 13x7 "407 Gilbert Ave"
-  door 1247,1566
-place house 1267,1560 13x7 "409 Gilbert Ave"
-  door 1273,1566
-place house 1293,1560 13x7 "411 Gilbert Ave"
-  door 1299,1566
-place house 1163,1599 13x7 "402 Gilbert Ave"
-  door 1169,1599
-place house 1215,1599 13x7 "406 Gilbert Ave"
-  door 1221,1599
-place house 1241,1599 13x7 "408 Gilbert Ave"
-  door 1247,1599
-place house 1267,1599 13x7 "410 Gilbert Ave"
-  door 1273,1599
-place house 1293,1599 13x7 "412 Gilbert Ave"
-  door 1299,1599
-place house 1163,1699 13x7 "401 Stewart Ave"
-  door 1169,1705
-place house 1215,1699 13x7 "405 Stewart Ave"
-  door 1221,1705
-place house 1241,1699 13x7 "407 Stewart Ave"
-  door 1247,1705
-place house 1267,1699 13x7 "409 Stewart Ave"
-  door 1273,1705
-place house 1293,1699 13x7 "411 Stewart Ave"
-  door 1299,1705
-place house 1163,1738 13x7 "402 Stewart Ave"
-  door 1169,1738
-place house 1189,1738 13x7 "404 Stewart Ave"
-  door 1195,1738
-place house 1215,1738 13x7 "406 Stewart Ave"
-  door 1221,1738
-place house 1267,1738 13x7 "410 Stewart Ave"
-  door 1273,1738
-place house 1293,1738 13x7 "412 Stewart Ave"
-  door 1299,1738
+place house 1163,1580 13x7 "401 Gilbert Ave"
+  door 1169,1586
+place house 1189,1580 13x7 "403 Gilbert Ave"
+  door 1195,1586
+place house 1215,1580 13x7 "405 Gilbert Ave"
+  door 1221,1586
+place house 1241,1580 13x7 "407 Gilbert Ave"
+  door 1247,1586
+place house 1267,1580 13x7 "409 Gilbert Ave"
+  door 1273,1586
+place house 1293,1580 13x7 "411 Gilbert Ave"
+  door 1299,1586
+place house 1163,1619 13x7 "402 Gilbert Ave"
+  door 1169,1619
+place house 1215,1619 13x7 "406 Gilbert Ave"
+  door 1221,1619
+place house 1241,1619 13x7 "408 Gilbert Ave"
+  door 1247,1619
+place house 1267,1619 13x7 "410 Gilbert Ave"
+  door 1273,1619
+place house 1293,1619 13x7 "412 Gilbert Ave"
+  door 1299,1619
+place house 1163,1705 13x7 "401 Stewart Ave"
+  door 1169,1711
+place house 1215,1705 13x7 "405 Stewart Ave"
+  door 1221,1711
+place house 1241,1705 13x7 "407 Stewart Ave"
+  door 1247,1711
+place house 1267,1705 13x7 "409 Stewart Ave"
+  door 1273,1711
+place house 1293,1705 13x7 "411 Stewart Ave"
+  door 1299,1711
+place house 1163,1744 13x7 "402 Stewart Ave"
+  door 1169,1744
+place house 1189,1744 13x7 "404 Stewart Ave"
+  door 1195,1744
+place house 1215,1744 13x7 "406 Stewart Ave"
+  door 1221,1744
+place house 1267,1744 13x7 "410 Stewart Ave"
+  door 1273,1744
+place house 1293,1744 13x7 "412 Stewart Ave"
+  door 1299,1744
 place house 1163,1830 13x7 "401 Mckibben Ave"
   door 1169,1836
 place house 1215,1830 13x7 "405 Mckibben Ave"
@@ -2007,66 +2007,66 @@ place house 1267,1869 13x7 "410 Mckibben Ave"
   door 1273,1869
 place house 1293,1869 13x7 "412 Mckibben Ave"
   door 1299,1869
-place house 1163,1948 13x7 "401 Dale Ave"
-  door 1169,1954
-place house 1189,1948 13x7 "403 Dale Ave"
-  door 1195,1954
-place house 1215,1948 13x7 "405 Dale Ave"
-  door 1221,1954
-place house 1241,1948 13x7 "407 Dale Ave"
-  door 1247,1954
-place house 1267,1948 13x7 "409 Dale Ave"
-  door 1273,1954
-place house 1293,1948 13x7 "411 Dale Ave"
-  door 1299,1954
-place house 1163,2070 13x7 "401 Thompson Ave"
-  door 1169,2076
-place house 1215,2070 13x7 "405 Thompson Ave"
-  door 1221,2076
-place house 1241,2070 13x7 "407 Thompson Ave"
-  door 1247,2076
-place house 1267,2070 13x7 "409 Thompson Ave"
-  door 1273,2076
-place house 1293,2070 13x7 "411 Thompson Ave"
-  door 1299,2076
-place house 1163,2109 13x7 "402 Thompson Ave"
-  door 1169,2109
-place house 1189,2109 13x7 "404 Thompson Ave"
-  door 1195,2109
-place house 1215,2109 13x7 "406 Thompson Ave"
-  door 1221,2109
-place house 1267,2109 13x7 "410 Thompson Ave"
-  door 1273,2109
-place house 1293,2109 13x7 "412 Thompson Ave"
-  door 1299,2109
-place house 1189,2187 13x7 "403 Earlcourt Ave"
-  door 1195,2193
-place house 1215,2187 13x7 "405 Earlcourt Ave"
-  door 1221,2193
-place house 1267,2187 13x7 "409 Earlcourt Ave"
-  door 1273,2193
-place house 1293,2187 13x7 "411 Earlcourt Ave"
-  door 1299,2193
-place house 1344,1560 13x7 "501 Gilbert Ave"
-  door 1350,1566
-place house 1344,1599 13x7 "502 Gilbert Ave"
-  door 1350,1599
-place house 1396,1599 13x7 "506 Gilbert Ave"
-  door 1402,1599
-place house 1344,1699 13x7 "501 Stewart Ave"
-  door 1350,1705
-place house 1396,1699 13x7 "505 Stewart Ave"
-  door 1402,1705
-place house 1344,1738 13x7 "502 Stewart Ave"
-  door 1350,1738
-place house 1370,1738 13x7 "504 Stewart Ave"
-  door 1376,1738
-place house 1396,1738 13x7 "506 Stewart Ave"
-  door 1402,1738
-place house 1448,1738 13x7 "510 Stewart Ave"
-  door 1454,1738
-place house 1474,1738 13x7 "512 Stewart Ave"
-  door 1480,1738
+place house 1163,1957 13x7 "401 Dale Ave"
+  door 1169,1963
+place house 1189,1957 13x7 "403 Dale Ave"
+  door 1195,1963
+place house 1215,1957 13x7 "405 Dale Ave"
+  door 1221,1963
+place house 1241,1957 13x7 "407 Dale Ave"
+  door 1247,1963
+place house 1267,1957 13x7 "409 Dale Ave"
+  door 1273,1963
+place house 1293,1957 13x7 "411 Dale Ave"
+  door 1299,1963
+place house 1163,2078 13x7 "401 Thompson Ave"
+  door 1169,2084
+place house 1215,2078 13x7 "405 Thompson Ave"
+  door 1221,2084
+place house 1241,2078 13x7 "407 Thompson Ave"
+  door 1247,2084
+place house 1267,2078 13x7 "409 Thompson Ave"
+  door 1273,2084
+place house 1293,2078 13x7 "411 Thompson Ave"
+  door 1299,2084
+place house 1163,2117 13x7 "402 Thompson Ave"
+  door 1169,2117
+place house 1189,2117 13x7 "404 Thompson Ave"
+  door 1195,2117
+place house 1215,2117 13x7 "406 Thompson Ave"
+  door 1221,2117
+place house 1267,2117 13x7 "410 Thompson Ave"
+  door 1273,2117
+place house 1293,2117 13x7 "412 Thompson Ave"
+  door 1299,2117
+place house 1189,2202 13x7 "403 Earlcourt Ave"
+  door 1195,2208
+place house 1215,2202 13x7 "405 Earlcourt Ave"
+  door 1221,2208
+place house 1267,2202 13x7 "409 Earlcourt Ave"
+  door 1273,2208
+place house 1293,2202 13x7 "411 Earlcourt Ave"
+  door 1299,2208
+place house 1344,1580 13x7 "501 Gilbert Ave"
+  door 1350,1586
+place house 1344,1619 13x7 "502 Gilbert Ave"
+  door 1350,1619
+place house 1396,1619 13x7 "506 Gilbert Ave"
+  door 1402,1619
+place house 1344,1705 13x7 "501 Stewart Ave"
+  door 1350,1711
+place house 1396,1705 13x7 "505 Stewart Ave"
+  door 1402,1711
+place house 1344,1744 13x7 "502 Stewart Ave"
+  door 1350,1744
+place house 1370,1744 13x7 "504 Stewart Ave"
+  door 1376,1744
+place house 1396,1744 13x7 "506 Stewart Ave"
+  door 1402,1744
+place house 1448,1744 13x7 "510 Stewart Ave"
+  door 1454,1744
+place house 1474,1744 13x7 "512 Stewart Ave"
+  door 1480,1744
 place house 1344,1830 13x7 "501 Mckibben Ave"
   door 1350,1836
 place house 1396,1830 13x7 "505 Mckibben Ave"
@@ -2087,294 +2087,295 @@ place house 1448,1869 13x7 "510 Mckibben Ave"
   door 1454,1869
 place house 1474,1869 13x7 "512 Mckibben Ave"
   door 1480,1869
-place house 1344,1948 13x7 "501 Dale Ave"
-  door 1350,1954
-place house 1396,1948 13x7 "505 Dale Ave"
-  door 1402,1954
-place house 1422,1948 13x7 "507 Dale Ave"
-  door 1428,1954
-place house 1448,1948 13x7 "509 Dale Ave"
-  door 1454,1954
-place house 1474,1948 13x7 "511 Dale Ave"
-  door 1480,1954
-place house 1344,1987 13x7 "502 Dale Ave"
-  door 1350,1987
-place house 1370,1987 13x7 "504 Dale Ave"
-  door 1376,1987
-place house 1396,1987 13x7 "506 Dale Ave"
-  door 1402,1987
-place house 1448,1987 13x7 "510 Dale Ave"
-  door 1454,1987
-place house 1474,1987 13x7 "512 Dale Ave"
-  door 1480,1987
-place house 1344,2070 13x7 "501 Thompson Ave"
-  door 1350,2076
-place house 1396,2070 13x7 "505 Thompson Ave"
-  door 1402,2076
-place house 1422,2070 13x7 "507 Thompson Ave"
-  door 1428,2076
-place house 1474,2070 13x7 "511 Thompson Ave"
-  door 1480,2076
-place house 1344,2109 13x7 "502 Thompson Ave"
-  door 1350,2109
-place house 1370,2109 13x7 "504 Thompson Ave"
-  door 1376,2109
-place house 1396,2109 13x7 "506 Thompson Ave"
-  door 1402,2109
-place house 1422,2109 13x7 "508 Thompson Ave"
-  door 1428,2109
-place house 1448,2109 13x7 "510 Thompson Ave"
-  door 1454,2109
-place house 1474,2109 13x7 "512 Thompson Ave"
-  door 1480,2109
-place house 1344,2187 13x7 "501 Earlcourt Ave"
-  door 1350,2193
-place house 1370,2187 13x7 "503 Earlcourt Ave"
-  door 1376,2193
-place house 1396,2187 13x7 "505 Earlcourt Ave"
-  door 1402,2193
-place house 1448,2187 13x7 "509 Earlcourt Ave"
-  door 1454,2193
-place house 1474,2187 13x7 "511 Earlcourt Ave"
-  door 1480,2193
+place house 1344,1957 13x7 "501 Dale Ave"
+  door 1350,1963
+place house 1396,1957 13x7 "505 Dale Ave"
+  door 1402,1963
+place house 1422,1957 13x7 "507 Dale Ave"
+  door 1428,1963
+place house 1448,1957 13x7 "509 Dale Ave"
+  door 1454,1963
+place house 1474,1957 13x7 "511 Dale Ave"
+  door 1480,1963
+place house 1344,1996 13x7 "502 Dale Ave"
+  door 1350,1996
+place house 1370,1996 13x7 "504 Dale Ave"
+  door 1376,1996
+place house 1396,1996 13x7 "506 Dale Ave"
+  door 1402,1996
+place house 1448,1996 13x7 "510 Dale Ave"
+  door 1454,1996
+place house 1474,1996 13x7 "512 Dale Ave"
+  door 1480,1996
+place house 1344,2078 13x7 "501 Thompson Ave"
+  door 1350,2084
+place house 1396,2078 13x7 "505 Thompson Ave"
+  door 1402,2084
+place house 1422,2078 13x7 "507 Thompson Ave"
+  door 1428,2084
+place house 1474,2078 13x7 "511 Thompson Ave"
+  door 1480,2084
+place house 1344,2117 13x7 "502 Thompson Ave"
+  door 1350,2117
+place house 1370,2117 13x7 "504 Thompson Ave"
+  door 1376,2117
+place house 1396,2117 13x7 "506 Thompson Ave"
+  door 1402,2117
+place house 1422,2117 13x7 "508 Thompson Ave"
+  door 1428,2117
+place house 1448,2117 13x7 "510 Thompson Ave"
+  door 1454,2117
+place house 1474,2117 13x7 "512 Thompson Ave"
+  door 1480,2117
+place house 1344,2202 13x7 "501 Earlcourt Ave"
+  door 1350,2208
+place house 1370,2202 13x7 "503 Earlcourt Ave"
+  door 1376,2208
+place house 1396,2202 13x7 "505 Earlcourt Ave"
+  door 1402,2208
+place house 1448,2202 13x7 "509 Earlcourt Ave"
+  door 1454,2208
+place house 1474,2202 13x7 "511 Earlcourt Ave"
+  door 1480,2208
 
 # ==========================================================================
 #  THE COUNTRY - corn, beans, and about seven people to the square mile
 # ==========================================================================
 
-place farm 12,8 15x16 "Home Farm"
-  door 19,23
+place farm 11,8 15x16 "Home Farm"
+  door 18,23
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 37,6 15x16 "Wicker End"
-  door 44,21
+place farm 36,6 15x16 "Wicker End"
+  door 43,21
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 55,7 30x28 "the yard"
+place farmyard 54,7 30x28 "the yard"
   human Mud, diesel and forty years of things that might come in useful.
-place barn 98,7 18x39 "the big barn"
-  door 107,7
+place barn 97,7 18x39 "the big barn"
+  door 106,7
   human Big enough to lose a car in, and dark enough at noon that you would.
-place barn 9,53 11x14 "the old barn"
-  door 14,66
+place barn 8,53 11x14 "the old barn"
+  door 13,66
   human Half the roof is down and the half that is not is worse.
-place silo 26,55 7x7 "the near silo"
+place silo 25,55 7x7 "the near silo"
   human It booms when you knock on it.
-place silo 50,60 7x7 "the far silo"
+place silo 49,60 7x7 "the far silo"
   human Empty since the wet year, and the ladder up the side is still sound.
-place cornfield 6,272 70x50 "the top field"
+place cornfield 5,272 70x50 "the top field"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 8,332 70x50 "the long field"
+place cornfield 7,332 70x50 "the long field"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 9,397 70x50 "the bottom field"
+place cornfield 8,397 70x50 "the bottom field"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 7,456 70x50 "the far acre"
+place cornfield 6,456 70x50 "the far acre"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 5,529 50x70 "the far field"
+place cornfield 4,529 50x70 "the far field"
   human Nobody watches this one from anywhere.
-place cornfield 7,1442 70x50 "the top of the hill"
+place cornfield 7,1460 70x50 "the top of the hill"
   human It catches the weather first and everything here is a week behind.
-place cornfield 7,1494 70x50 "the middle field"
+place cornfield 7,1512 70x50 "the middle field"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 10,1572 70x50 "the near paddock"
+place paddock 10,1590 70x50 "the near paddock"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 10,1624 70x50 "the far paddock"
+place paddock 10,1642 70x50 "the far paddock"
   human You cannot see this one from the road, or the road from it.
-place paddock 6,1695 70x50 "the long acre"
+place paddock 6,1713 70x50 "the long acre"
   human Fenced for horses that were sold years ago.
-place orchard 11,1758 70x50 "the orchard"
+place orchard 11,1776 70x50 "the orchard"
   human Planted in rows by somebody who is dead now.
-place orchard 264,9 50x70 "the old orchard"
+place orchard 263,9 50x70 "the old orchard"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 271,270 70x50 "the west belt"
+place copse 270,270 70x50 "the west belt"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 270,328 70x50 "the west belt, middle"
+place copse 269,328 70x50 "the west belt, middle"
   human The stretch between the two roads, and the darkest of the three.
-place copse 265,400 70x50 "the west belt, south"
+place copse 264,400 70x50 "the west belt, south"
   human It gives out where the ground turns wet.
-place copse 271,454 70x50 "the west belt, end"
+place copse 270,454 70x50 "the west belt, end"
   human Somebody has been cutting firewood out of this one.
-place copse 266,529 50x70 "the far spinney"
+place copse 265,529 50x70 "the far spinney"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 271,657 70x50 "the east wood"
+place copse 270,657 70x50 "the east wood"
   human Older than the town, and the boundary bank round it is older still.
-place copse 272,715 70x50 "the east wood, lower"
+place copse 272,712 70x50 "the east wood, lower"
   human The same wood, on the other side of the road that was put through it.
-place allotments 4,79 30x40 "the west allotments"
+place allotments 3,79 30x40 "the west allotments"
   human Thirty plots, four of them worked properly and the rest an argument.
-place allotments 45,81 50x40 "the east allotments"
+place allotments 44,81 50x40 "the east allotments"
   human Sheds built from doors, and every one of them locked.
-place allotments 7,606 50x14 "the south allotments"
+place allotments 6,606 50x14 "the south allotments"
   human The best soil in Vermilion County and everybody knows it.
-place churchyard 70,609 30x24 "the old burial ground"
+place churchyard 69,609 30x24 "the old burial ground"
   human Older than anything still standing, and the names have gone off the stones.
-place memorial 104,609 3x3 "the cross on the Bishop road"
+place memorial 103,609 3x3 "the cross on the Bishop road"
   human Somebody replaces the flowers. Nobody has ever been seen doing it.
-place memorial 266,88 3x3 "the cross at the county line"
+place memorial 265,88 3x3 "the cross at the county line"
   human It has been there longer than the road surface it stands on.
-place standing 285,92 4x4 "the high seat"
+place standing 284,92 4x4 "the high seat"
   human A platform over the long field. Whoever built it did not build it for deer.
-place standing 295,92 4x4 "the seat above Wicker End"
+place standing 294,92 4x4 "the seat above Wicker End"
   human It looks at the orchard and at the back of the house, which is a choice.
-place camp 311,91 5x5 "the pitch in the east wood"
+place camp 310,91 5x5 "the pitch in the east wood"
   human The fire is out. How long it has been out is the question.
-place camp 323,91 5x5 "the far pitch"
+place camp 322,91 5x5 "the far pitch"
   human A bedroll, a case left open, and no track in or out that anybody has found.
-place farm 340,86 15x16 "Home Farm 2"
-  door 347,101
+place farm 339,86 15x16 "Home Farm 2"
+  door 346,101
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 368,86 15x16 "Wicker End 3"
-  door 375,101
+place farm 367,86 15x16 "Wicker End 3"
+  door 374,101
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 271,610 30x28 "the yard 4"
+place farmyard 270,610 30x28 "the yard 4"
   human Mud, diesel and forty years of things that might come in useful.
-place barn 349,716 18x39 "the big barn 5"
-  door 358,716
+place barn 349,713 18x39 "the big barn 5"
+  door 358,713
   human Big enough to lose a car in, and dark enough at noon that you would.
-place barn 306,607 11x14 "the old barn 6"
-  door 311,620
+place barn 305,607 11x14 "the old barn 6"
+  door 310,620
   human Half the roof is down and the half that is not is worse.
-place silo 270,112 7x7 "the near silo 7"
+place silo 269,112 7x7 "the near silo 7"
   human It booms when you knock on it.
-place silo 284,111 7x7 "the far silo 8"
+place silo 283,111 7x7 "the far silo 8"
   human Empty since the wet year, and the ladder up the side is still sound.
-place farm 326,610 15x16 "Home Farm 9"
-  door 333,625
+place farm 325,610 15x16 "Home Farm 9"
+  door 332,625
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 350,608 15x16 "Wicker End 10"
-  door 357,623
+place farm 349,608 15x16 "Wicker End 10"
+  door 356,623
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 272,790 30x28 "the yard 11"
+place farmyard 272,787 30x28 "the yard 11"
   human Mud, diesel and forty years of things that might come in useful.
-place cornfield 310,784 70x50 "the top field 2"
+place cornfield 310,781 70x50 "the top field 2"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 272,847 70x50 "the long field 3"
+place cornfield 272,844 70x50 "the long field 3"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 266,1699 70x50 "the bottom field 4"
+place cornfield 266,1717 70x50 "the bottom field 4"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 268,1757 70x50 "the far acre 5"
+place cornfield 268,1755 70x50 "the far acre 5"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 268,1826 50x70 "the far field 6"
+place cornfield 268,1824 50x70 "the far field 6"
   human Nobody watches this one from anywhere.
-place cornfield 271,1961 70x50 "the top of the hill 7"
+place cornfield 271,1959 70x50 "the top of the hill 7"
   human It catches the weather first and everything here is a week behind.
-place cornfield 269,2022 70x50 "the middle field 8"
+place cornfield 269,2020 70x50 "the middle field 8"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 270,2215 70x50 "the near paddock 9"
+place paddock 270,2213 70x50 "the near paddock 9"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 265,2281 70x50 "the far paddock 10"
+place paddock 265,2279 70x50 "the far paddock 10"
   human You cannot see this one from the road, or the road from it.
-place paddock 400,10 70x50 "the long acre 11"
+place paddock 399,10 70x50 "the long acre 11"
   human Fenced for horses that were sold years ago.
-place orchard 399,70 70x50 "the orchard 12"
+place orchard 398,70 70x50 "the orchard 12"
   human Planted in rows by somebody who is dead now.
-place orchard 401,271 50x70 "the old orchard 13"
+place orchard 400,271 50x70 "the old orchard 13"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 402,396 70x50 "the west belt 14"
+place copse 401,396 70x50 "the west belt 14"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 394,457 70x50 "the west belt, middle 15"
+place copse 393,457 70x50 "the west belt, middle 15"
   human The stretch between the two roads, and the darkest of the three.
-place copse 397,525 70x50 "the west belt, south 16"
+place copse 396,525 70x50 "the west belt, south 16"
   human It gives out where the ground turns wet.
-place copse 398,588 70x50 "the west belt, end 17"
+place copse 397,588 70x50 "the west belt, end 17"
   human Somebody has been cutting firewood out of this one.
-place copse 529,12 50x70 "the far spinney 18"
+place copse 528,12 50x70 "the far spinney 18"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 529,270 70x50 "the east wood 19"
+place copse 528,270 70x50 "the east wood 19"
   human Older than the town, and the boundary bank round it is older still.
-place copse 531,332 70x50 "the east wood, lower 20"
+place copse 530,332 70x50 "the east wood, lower 20"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 530,402 70x50 "the top field 21"
+place cornfield 529,402 70x50 "the top field 21"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 527,456 70x50 "the long field 22"
+place cornfield 526,456 70x50 "the long field 22"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 524,529 70x50 "the bottom field 23"
+place cornfield 523,529 70x50 "the bottom field 23"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 531,590 70x50 "the far acre 24"
+place cornfield 530,590 70x50 "the far acre 24"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 787,11 50x70 "the far field 25"
+place cornfield 786,11 50x70 "the far field 25"
   human Nobody watches this one from anywhere.
-place cornfield 787,272 70x50 "the top of the hill 26"
+place cornfield 786,272 70x50 "the top of the hill 26"
   human It catches the weather first and everything here is a week behind.
-place cornfield 788,328 70x50 "the middle field 27"
+place cornfield 787,328 70x50 "the middle field 27"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 792,398 70x50 "the near paddock 28"
+place paddock 792,395 70x50 "the near paddock 28"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 786,459 70x50 "the far paddock 29"
+place paddock 786,456 70x50 "the far paddock 29"
   human You cannot see this one from the road, or the road from it.
-place paddock 790,526 70x50 "the long acre 30"
+place paddock 790,523 70x50 "the long acre 30"
   human Fenced for horses that were sold years ago.
-place orchard 789,586 70x50 "the orchard 31"
+place orchard 789,583 70x50 "the orchard 31"
   human Planted in rows by somebody who is dead now.
-place orchard 921,5 50x70 "the old orchard 32"
+place orchard 920,5 50x70 "the old orchard 32"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 921,266 70x50 "the west belt 33"
+place copse 899,266 70x50 "the west belt 33"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 921,324 70x50 "the west belt, middle 34"
+place copse 899,324 70x50 "the west belt, middle 34"
   human The stretch between the two roads, and the darkest of the three.
-place copse 918,394 70x50 "the west belt, south 35"
+place copse 896,394 70x50 "the west belt, south 35"
   human It gives out where the ground turns wet.
-place copse 920,459 70x50 "the west belt, end 36"
+place copse 898,459 70x50 "the west belt, end 36"
   human Somebody has been cutting firewood out of this one.
-place copse 921,529 50x70 "the far spinney 37"
+place copse 899,529 50x70 "the far spinney 37"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 1052,11 70x50 "the east wood 38"
+place copse 1051,11 70x50 "the east wood 38"
   human Older than the town, and the boundary bank round it is older still.
-place copse 1046,66 70x50 "the east wood, lower 39"
+place copse 1045,66 70x50 "the east wood, lower 39"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 1047,271 70x50 "the top field 40"
+place cornfield 1025,271 70x50 "the top field 40"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 1044,329 70x50 "the long field 41"
+place cornfield 1022,329 70x50 "the long field 41"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 1050,398 70x50 "the bottom field 42"
+place cornfield 1028,398 70x50 "the bottom field 42"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 1048,454 70x50 "the far acre 43"
+place cornfield 1026,454 70x50 "the far acre 43"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 1048,524 50x70 "the far field 44"
+place cornfield 1026,524 50x70 "the far field 44"
   human Nobody watches this one from anywhere.
-place cornfield 1180,8 70x50 "the top of the hill 45"
+place cornfield 1158,8 70x50 "the top of the hill 45"
   human It catches the weather first and everything here is a week behind.
-place cornfield 1177,65 70x50 "the middle field 46"
+place cornfield 1155,65 70x50 "the middle field 46"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 1179,271 70x50 "the near paddock 47"
+place paddock 1157,271 70x50 "the near paddock 47"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 1182,326 70x50 "the far paddock 48"
+place paddock 1160,326 70x50 "the far paddock 48"
   human You cannot see this one from the road, or the road from it.
-place paddock 1175,399 70x50 "the long acre 49"
+place paddock 1175,402 70x50 "the long acre 49"
   human Fenced for horses that were sold years ago.
-place orchard 1178,458 70x50 "the orchard 50"
+place orchard 1178,461 70x50 "the orchard 50"
   human Planted in rows by somebody who is dead now.
-place orchard 1174,524 50x70 "the old orchard 51"
+place orchard 1174,527 50x70 "the old orchard 51"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 1304,7 70x50 "the west belt 52"
+place copse 1304,10 70x50 "the west belt 52"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 1312,70 70x50 "the west belt, middle 53"
+place copse 1312,73 70x50 "the west belt, middle 53"
   human The stretch between the two roads, and the darkest of the three.
-place copse 1305,272 70x50 "the west belt, south 54"
+place copse 1305,275 70x50 "the west belt, south 54"
   human It gives out where the ground turns wet.
-place copse 1305,329 70x50 "the west belt, end 55"
+place copse 1305,332 70x50 "the west belt, end 55"
   human Somebody has been cutting firewood out of this one.
-place copse 1309,398 50x70 "the far spinney 56"
+place copse 1309,401 50x70 "the far spinney 56"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 1310,530 70x50 "the east wood 57"
+place copse 1310,533 70x50 "the east wood 57"
   human Older than the town, and the boundary bank round it is older still.
-place copse 1309,590 70x50 "the east wood, lower 58"
+place copse 1309,593 70x50 "the east wood, lower 58"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 1442,8 70x50 "the top field 59"
+place cornfield 1460,8 70x50 "the top field 59"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 1437,72 70x50 "the long field 60"
+place cornfield 1455,72 70x50 "the long field 60"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 1440,266 70x50 "the bottom field 61"
+place cornfield 1458,266 70x50 "the bottom field 61"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 1434,325 70x50 "the far acre 62"
+place cornfield 1452,325 70x50 "the far acre 62"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 1434,399 50x70 "the far field 63"
+place cornfield 1452,399 50x70 "the far field 63"
   human Nobody watches this one from anywhere.
-place cornfield 1439,532 70x50 "the top of the hill 64"
+place cornfield 1457,532 70x50 "the top of the hill 64"
   human It catches the weather first and everything here is a week behind.
-place cornfield 1438,585 70x50 "the middle field 65"
+place cornfield 1456,585 70x50 "the middle field 65"
   human Split by a hedge somebody grubbed out and never finished.
+

@@ -21,6 +21,22 @@ namespace Noir.Unity
         private GUIStyle _panel, _head, _row, _rowOff, _preset;
         private bool _styled;
 
+        /// <summary>
+        /// Where this panel is on screen, in GUI coordinates, or an empty rect when it is shut.
+        ///
+        /// THE CAMERA HAS TO KNOW. OrbitCamera turns a left click into a selection unless
+        /// VillageUI.PointerOverUI says the pointer is over an overlay, and that test only ever
+        /// knew about the top bar and the right-hand inspector. This panel is drawn top LEFT, so
+        /// every click on a layer row ALSO fell through to the town underneath and opened the
+        /// parcel inspector on whatever happened to be behind the button.
+        ///
+        /// Published rather than tested here, so there is still one place that decides what
+        /// counts as UI. Read by VillageUI.
+        /// </summary>
+        public static Rect Bounds { get; private set; }
+
+        private void OnDisable() => Bounds = new Rect();
+
         public static LayerPanel Create(Transform parent)
         {
             var go = new GameObject("LayerPanel");
@@ -73,7 +89,9 @@ namespace Noir.Unity
             if (!_open)
             {
                 // A hint, always, or the feature is invisible and might as well not exist -
-                // which is exactly how the built-town switch went unfound twice.
+                // which is exactly how the built-town switch went unfound twice. It is a LABEL,
+                // nothing to click, so it does not claim the pointer.
+                Bounds = new Rect();
                 GUI.Label(new Rect(F(12), Screen.height - F(30), F(260), F(24)),
                           "<color=#9aa>L — layers (" + Layers.CountOn() + "/" + Layers.All.Length + ")</color>",
                           _head);
@@ -81,8 +99,14 @@ namespace Noir.Unity
             }
 
             float w = F(240);
-            float h = F(96) + Layers.All.Length * F(30);
-            GUILayout.BeginArea(new Rect(F(12), F(12), w, h), _panel);
+            float h = F(126) + Layers.All.Length * F(30);   // 126 covers the second preset row
+            var area = new Rect(F(12), F(12), w, h);
+
+            // Claimed BEFORE the buttons are drawn, so the click that lands on a row this frame
+            // is already known to be a UI click by the time the camera looks.
+            Bounds = area;
+
+            GUILayout.BeginArea(area, _panel);
 
             GUILayout.Label("<color=#d8d4c8>Layers</color>  <color=#8a8>"
                           + Layers.CountOn() + "/" + Layers.All.Length + "</color>", _head);
@@ -92,6 +116,11 @@ namespace Noir.Unity
             if (GUILayout.Button("None", _preset)) Layers.SetAll(false);
             if (GUILayout.Button("Ground + roads", _preset)) Layers.GroundAndRoadsOnly();
             GUILayout.EndHorizontal();
+
+            // Its own row rather than a fourth button on the one above: three already crowd 240 px
+            // and this is the preset that gets used most while the plat is being checked.
+            if (GUILayout.Button("Street layout — roads, rail, parcels, names", _preset))
+                Layers.StreetLayoutOnly();
 
             GUILayout.Space(F(6));
 

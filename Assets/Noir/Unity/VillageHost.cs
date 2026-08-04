@@ -156,6 +156,50 @@ namespace Noir.Unity
         public static bool ShowPlanRoads = false;
         public static bool ShowPlanFootprints = false;
 
+        /// <summary>
+        /// Whether the GROUND paints a building's slab and walls, or just the land underneath.
+        ///
+        /// WHY IT IS OFF. Buildings are drawn twice: once as objects, which the layer panel can
+        /// switch off, and once as `Wall` and `Floor` TERRAIN baked into the ground mesh - 19,722
+        /// and 23,151 tiles of it. The second copy has no switch, so asking for "roads and lot
+        /// lines only" still produced a map covered in building-coloured rectangles, and there was
+        /// no way to see whether a street was on its right of way underneath them.
+        ///
+        /// It is off while the ROADS and PARCELS are being brought into agreement, on the owner's
+        /// direction: houses are authored at positions inherited from the old wrong roads, so they
+        /// are not evidence about anything until they are re-derived. Turn it back on then.
+        ///
+        /// Read at BUILD time, like ShowBuildings - the ground is one baked mesh, so this cannot
+        /// be a runtime layer toggle. It takes effect on the next Play.
+        /// </summary>
+        public static bool ShowBuildingFootprints = false;
+
+        /// <summary>
+        /// Paint the whole map one green, water excepted.
+        ///
+        /// FLAT COLOUR, NOT FLAT LAND. The elevation grid is untouched and the ground keeps every
+        /// foot of its relief - the owner was explicit: "when I say flat I do not want to lose the
+        /// elevation". What goes is the PAINT: field against town grass, the GroundZoning scatter
+        /// that reads as bushes strewn over the map, wooded ground, the dark paved yards inside
+        /// blocks, the churchyard, and road terrain.
+        ///
+        /// This is a drawing to JUDGE STREET ALIGNMENT by. Six kinds of ground texture and a
+        /// scatter of detail are honest about what the land is and are noise against the one
+        /// question being asked, which is whether a centreline sits on its right of way.
+        /// </summary>
+        public static bool FlatGroundColour = true;
+
+        /// <summary>
+        /// Draw each road as a thin line down its middle instead of laying real road tiles.
+        ///
+        /// A 33 ft band of textured asphalt covers the lot lines it is supposed to be judged
+        /// against, and CityStreets' junction pieces snap square, so a road that is slightly off
+        /// its right of way reads as a road that is fine. The centreline hides nothing.
+        ///
+        /// Turn it off to get the built streets back - see RoadCentrelines.
+        /// </summary>
+        public static bool RoadsAsCentrelines = true;
+
         private GameObject _village;
         private XRay _xray;
         private AgentMeshView _agentView;
@@ -340,12 +384,27 @@ namespace Noir.Unity
                 // EACH ONE REGISTERED AS ITS OWN LAYER, and each baked separately further down.
                 // The switch is on the root, so a layer can be taken away at runtime without a
                 // rebuild - see Layers, which explains why the bake had to be split to allow it.
-                Layers.Register(Layers.Kind.Streets, CityStreets.Build(World, city.transform));
-                profile.Done("CityStreets");
-                Layers.Register(Layers.Kind.Parking, CityParking.Build(World, city.transform));
-                profile.Done("CityParking");
-                Layers.Register(Layers.Kind.Signs, CitySigns.Build(World, city.transform));
-                profile.Done("CitySigns");
+                // Alleys come back on their own root either way, so they can be switched off
+                // while the streets are being judged - see Layers.Kind.Alleys.
+                GameObject alleyRoot;
+                if (RoadsAsCentrelines)
+                {
+                    Layers.Register(Layers.Kind.Streets,
+                                    RoadCentrelines.Build(World, city.transform, out alleyRoot));
+                    Layers.Register(Layers.Kind.Alleys, alleyRoot);
+                    profile.Done("RoadCentrelines");
+                }
+                else
+                {
+                    Layers.Register(Layers.Kind.Streets,
+                                    CityStreets.Build(World, city.transform, out alleyRoot));
+                    Layers.Register(Layers.Kind.Alleys, alleyRoot);
+                    profile.Done("CityStreets");
+                    Layers.Register(Layers.Kind.Parking, CityParking.Build(World, city.transform));
+                    profile.Done("CityParking");
+                    Layers.Register(Layers.Kind.Signs, CitySigns.Build(World, city.transform));
+                    profile.Done("CitySigns");
+                }
             }
             // BUILDINGS OFF, LOT LINES ON. The Universal Pack holds exactly two house families
             // and both are Chicago brownstones - bay fronts, stoops, fire escapes - so a village
@@ -388,12 +447,29 @@ namespace Noir.Unity
                 // features.txt, which is the same line the survey plan draws.
                 Layers.Register(Layers.Kind.RailBed, CityRailBed.Build(World, city.transform));
                 profile.Done("CityRailBed");
-                Layers.Register(Layers.Kind.Farm, CityFarm.Build(World, city.transform));
-                profile.Done("CityFarm");
-                Layers.Register(Layers.Kind.Powerlines, CityPowerlines.Build(World, city.transform));
-                profile.Done("CityPowerlines");
-                Layers.Register(Layers.Kind.Trees, CityGreenery.Build(World, city.transform));
-                profile.Done("CityGreenery");
+                // SKIPPED ENTIRELY WHEN SWITCHED OFF, not built and hidden. Layers is a way of
+                // LOOKING at the town and deliberately does not touch the simulation - but these
+                // three are scenery with no simulation behind them at all, and building them to
+                // hide them cost 17,405 farm pieces, 12,804 trees and 789 poles of geometry that
+                // nothing was ever going to see. On a survey view that is the whole frame budget.
+                //
+                // The cost: switching one back on needs a rebuild rather than being free. That is
+                // the trade, and it is the right way round for scenery.
+                if (Layers.IsOn(Layers.Kind.Farm))
+                {
+                    Layers.Register(Layers.Kind.Farm, CityFarm.Build(World, city.transform));
+                    profile.Done("CityFarm");
+                }
+                if (Layers.IsOn(Layers.Kind.Powerlines))
+                {
+                    Layers.Register(Layers.Kind.Powerlines, CityPowerlines.Build(World, city.transform));
+                    profile.Done("CityPowerlines");
+                }
+                if (Layers.IsOn(Layers.Kind.Trees))
+                {
+                    Layers.Register(Layers.Kind.Trees, CityGreenery.Build(World, city.transform));
+                    profile.Done("CityGreenery");
+                }
             }
 
             // BEFORE the bake, because it measures the buildings the bake is about to destroy,
@@ -424,9 +500,23 @@ namespace Noir.Unity
             //
             // It was also slower. Re-combining already-combined meshes by chunk and material
             // turned 10,226 layer meshes into 7,796 worse ones.
+            // A dead root is SKIPPED, not walked into. Bake destroys the originals it consumes,
+            // so a root that carried its own renderer destroys itself - and one throw here aborts
+            // Awake half way and leaves a black screen with the town built but no camera. The
+            // renderer-on-a-child rule is the real fix (see RoadCentrelines); this is so the next
+            // one costs a log line instead of the whole session.
             foreach (var kind in Layers.All)
                 foreach (var root in Layers.RootsOf(kind))
+                {
+                    if (root == null)
+                    {
+                        Debug.LogWarning($"[layers] the '{Layers.Label(kind)}' root was destroyed "
+                                       + "before the bake reached it - its renderer is on the root "
+                                       + "itself, and CityChunker.Bake removes what it consumes.");
+                        continue;
+                    }
                     CityChunker.Bake(root);
+                }
             profile.Done("CityChunker.Bake (all layers)");
 
             // Anything parented to `city` that no layer claimed is left unbaked on purpose - it
@@ -500,9 +590,18 @@ namespace Noir.Unity
             // only decides whether they are DRAWN. Turned off while the city itself is being
             // built out: a few hundred figures walking through a downtown that is still being
             // laid is noise over the thing actually being looked at.
-            if (ShowPeople) _agentView = AgentMeshView.Create(this, transform);
+            // The People LAYER is honoured here too, for the same reason the scenery builders
+            // are: 763 bought, animated figures are built and skinned every frame whether or not
+            // anything draws them, and on a survey view that is a large slice of the budget spent
+            // on people who are switched off. The simulation is untouched either way.
+            if (ShowPeople && Layers.IsOn(Layers.Kind.People))
+                _agentView = AgentMeshView.Create(this, transform);
             profile.Done("AgentMeshView (the people)");
             if (_agentView != null) Layers.Register(Layers.Kind.People, _agentView.gameObject);
+
+            // Built before the camera, so a build that goes wrong further down still leaves a
+            // frame counter on screen to diagnose it with.
+            PerfHud.Create(this, transform);
 
             _rig = OrbitCamera.Create(this);
 

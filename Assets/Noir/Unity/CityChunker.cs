@@ -141,6 +141,23 @@ namespace Noir.Unity
             {
                 if (r == null || !consumed.Contains(r.gameObject)) continue;
                 if (r.transform.IsChildOf(baked.transform)) continue;
+
+                // NEVER DESTROY THE ROOT WE WERE ASKED TO BAKE. A builder is free to put its
+                // mesh straight onto the node it returns - CityOutlines does, and so did
+                // RoadCentrelines - and that node is also the LAYER root the switches hold.
+                // Destroying it took the layer's switch with it and threw on the very next line
+                // of this method, which aborted VillageHost.Awake half built and left a black
+                // screen with no camera. Strip the drawing off it instead; the baked copy is
+                // already parented under it, so nothing is lost and nothing draws twice.
+                if (r.gameObject == root)
+                {
+                    var mf = r.GetComponent<MeshFilter>();
+                    Object.DestroyImmediate(r);
+                    if (mf != null) Object.DestroyImmediate(mf);
+                    removed++;
+                    continue;
+                }
+
                 Object.DestroyImmediate(r.gameObject);
                 removed++;
             }

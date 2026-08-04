@@ -35,6 +35,16 @@ namespace Noir.Unity
         public enum Kind
         {
             Streets,        // asphalt, kerbs, painted lanes, crossings
+
+            /// <summary>
+            /// The alleys, split out from Streets so they can be taken away on their own.
+            ///
+            /// They were on their own switch the day the streets were being judged and the alleys
+            /// were still known to be in the wrong place - an alley laid across a lot is exactly
+            /// the sort of thing that makes a correct street look wrong.
+            /// </summary>
+            Alleys,
+
             Parking,        // lay-bys and parking aprons
             Signs,          // road signs and street nameplates
             Signals,        // traffic light heads and their posts
@@ -50,6 +60,19 @@ namespace Noir.Unity
             Lamps,          // street lighting fixtures and window glazing
             Traffic,        // moving vehicles
             People,         // the citizens
+
+            /// <summary>
+            /// VillageMesh's own generated geometry - walls, roofs, furniture, frontage planting,
+            /// the countryside scatter. The primitive stand-in town, drawn from the map rather
+            /// than bought.
+            ///
+            /// It gets a switch because it did not have one. All six builders hung off the same
+            /// root as the GROUND, so this geometry was drawn underneath the bought prefabs and no
+            /// combination of the other seventeen switches could take it away - "roads and lot
+            /// lines only" still came up full of houses. The ground itself stays outside the
+            /// switch, because a plan needs a surface to dim to near-black.
+            /// </summary>
+            Massing,
 
             /// <summary>
             /// The county's own lot lines, drawn over whatever is standing on them.
@@ -74,10 +97,11 @@ namespace Noir.Unity
         /// <summary>How the panel labels each one, and the order it lists them in.</summary>
         public static readonly Kind[] All =
         {
-            Kind.Streets, Kind.Parking, Kind.Signs, Kind.Signals,
+            Kind.Streets, Kind.Alleys, Kind.Parking, Kind.Signs, Kind.Signals,
             Kind.RailBed, Kind.Rail, Kind.Powerlines, Kind.Farm,
             Kind.Buildings, Kind.Districts, Kind.Houses, Kind.Story,
-            Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Plan, Kind.Labels,
+            Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Massing,
+            Kind.Plan, Kind.Labels,
         };
 
         public static string Label(Kind k)
@@ -85,6 +109,7 @@ namespace Noir.Unity
             switch (k)
             {
                 case Kind.Streets:    return "Streets";
+                case Kind.Alleys:     return "Alleys";
                 case Kind.Parking:    return "Parking";
                 case Kind.Signs:      return "Road signs";
                 case Kind.Signals:    return "Traffic lights";
@@ -100,6 +125,7 @@ namespace Noir.Unity
                 case Kind.Lamps:      return "Street lighting";
                 case Kind.Traffic:    return "Traffic";
                 case Kind.People:     return "People";
+                case Kind.Massing:    return "Generated massing";
                 case Kind.Plan:       return "Parcel lines";
                 case Kind.Labels:     return "Street names";
                 default:              return k.ToString();
@@ -225,6 +251,31 @@ namespace Noir.Unity
             Set(Kind.Streets, true);
             Set(Kind.Parking, true);
             Set(Kind.RailBed, true);
+        }
+
+        /// <summary>
+        /// THE STREET LAYOUT AND NOTHING ELSE: road and alley surfaces, the railroad, the county
+        /// lot lines, and the names.
+        ///
+        /// Different question from GroundAndRoadsOnly, which is about the LAND - it keeps parking
+        /// aprons and drops the lot lines. This one is for reading the PLAT: where the streets and
+        /// alleys run, how they sit against the parcels, and what each one is called. It is the
+        /// view somebody who grew up in the town can check against their own memory, which is a
+        /// better instrument than anything in this repo and the only one that has caught every
+        /// error so far.
+        ///
+        /// Names are included on purpose. "Alley 3 is wrong" is a bug report; "one of the alleys
+        /// is wrong" is a search. Turn them off with one click if they get in the way.
+        /// </summary>
+        public static void StreetLayoutOnly()
+        {
+            SetAll(false);
+            Set(Kind.Streets, true);
+            Set(Kind.RailBed, true);
+            Set(Kind.Plan, true);
+            Set(Kind.Labels, true);
+            // ALLEYS DELIBERATELY OFF. They are still laid wrong, and an alley across a lot makes
+            // a correct street look wrong. Add them from the panel when they are worth looking at.
         }
 
         /// <summary>How many layers are currently drawn, for the panel's header.</summary>

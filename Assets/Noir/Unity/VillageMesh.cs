@@ -59,14 +59,29 @@ namespace Noir.Unity
             HouseLayers.Install(world);
 
             BuildGround(world, root.transform);
-            if (showDressing)
+
+            // The Massing layer decides whether this is BUILT, not just whether it is shown.
+            // Walls, roofs, furniture, frontage and the countryside scatter are 45,510 props and
+            // 9,172 country objects; building them to hide them was most of a second and a great
+            // deal of memory for geometry nothing would draw.
+            if (showDressing && Layers.IsOn(Layers.Kind.Massing))
             {
-                BuildWalls(world, root.transform);
-                BuildFurniture(world, root.transform);
-                BuildProps(world, root.transform);
-                RoofBuilder.Build(world, root.transform);
-                Frontage.Build(world, root.transform);
-                Countryside.Build(world, root.transform);
+                // ONE ROOT OVER ALL OF IT, SO IT CAN BE SWITCHED OFF. Every one of these six used
+                // to hang straight off `root`, which is the ground as well - so the generated
+                // massing was drawn UNDER the bought prefabs with no way to remove it, and asking
+                // the panel for "roads and lot lines only" still gave a town full of primitive
+                // houses. The ground stays outside the switch: a plan needs a surface to dim.
+                var dressing = new GameObject("Dressing");
+                dressing.transform.SetParent(root.transform, false);
+
+                BuildWalls(world, dressing.transform);
+                BuildFurniture(world, dressing.transform);
+                BuildProps(world, dressing.transform);
+                RoofBuilder.Build(world, dressing.transform);
+                Frontage.Build(world, dressing.transform);
+                Countryside.Build(world, dressing.transform);
+
+                Layers.Register(Layers.Kind.Massing, dressing);
             }
 
             // Reported AFTER building, not before. Textures load lazily when the first
@@ -479,15 +494,42 @@ namespace Noir.Unity
             for (int gx = 0; gx < world.Width; gx++)
             {
                 var terrain = world.Grid.TerrainAt(gx, gy);
+
+                // A building's slab and walls are TERRAIN, not objects, so no layer switch can
+                // take them away - see VillageHost.ShowBuildingFootprints. Painted as the land
+                // they stand on instead, which also drops the 2 cm step up into a floor, so the
+                // ground reads as one surface and a road on it can actually be judged.
+                if (!VillageHost.ShowBuildingFootprints
+                    && (terrain == Terrain.Wall || terrain == Terrain.Floor))
+                    terrain = Terrain.Grass;
+
                 float h00 = corner[gy, gx];
                 float h10 = corner[gy, gx + 1];
                 float h11 = corner[gy + 1, gx + 1];
                 float h01 = corner[gy + 1, gx];
 
-                submeshGrid[gy, gx] = (terrain == Terrain.Grass || terrain == Terrain.Field)
-                    ? SubmeshForLook(GroundZoning.LookAt(world, gx, gy, terrain, h00, h10, h01, h11))
-                    : SubmeshFor(terrain);
-                flatGrid[gy, gx] = HeightOf(terrain);
+                if (VillageHost.FlatGroundColour)
+                {
+                    // ONE COLOUR, NOT ONE HEIGHT. h00..h11 above come from `corner`, which is the
+                    // USGS elevation, and nothing here touches it - the land keeps every foot of
+                    // its relief. What goes away is the PAINT: field against town grass, the
+                    // GroundZoning scatter that reads as bushes, wooded ground, paved yards, the
+                    // churchyard, and the road terrain. All of it one green, so a centreline can
+                    // be judged against a lot line with nothing else competing.
+                    //
+                    // Water is the one exception, kept blue on the owner's call: the North Fork
+                    // is a landmark you navigate the map by.
+                    bool wet = terrain == Terrain.Water;
+                    submeshGrid[gy, gx] = SubmeshFor(wet ? Terrain.Water : Terrain.Grass);
+                    flatGrid[gy, gx] = HeightOf(wet ? Terrain.Water : Terrain.Grass);
+                }
+                else
+                {
+                    submeshGrid[gy, gx] = (terrain == Terrain.Grass || terrain == Terrain.Field)
+                        ? SubmeshForLook(GroundZoning.LookAt(world, gx, gy, terrain, h00, h10, h01, h11))
+                        : SubmeshFor(terrain);
+                    flatGrid[gy, gx] = HeightOf(terrain);
+                }
             }
 
             // ---- merge into runs, greedily, bounded two ways ----

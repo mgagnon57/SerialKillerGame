@@ -121,7 +121,39 @@ owner says otherwise.
    seen a town where the alley runs right through their back yard."* This is assertable and is now
    asserted: see §5.
 
-3. *(space kept for the owner to add)*
+   > **ENFORCEMENT SUSPENDED 2026-08-04, by the owner, until the houses are re-derived.** *"I think
+   > the house placement is getting in your way of road/alley and lot plotting... allow the
+   > houses/buildings to be separate from the road, parcel, train tracks."*
+   >
+   > **The fact is not in question — only what it is being enforced against.** House positions are
+   > authored and they inherited the OLD, wrong road positions. Holding this rule while the houses
+   > were still wrong meant the houses were deciding where the alleys went: five alleys had already
+   > been put back onto known-wrong ground to satisfy it. Released, alleys 2, 3 and 4 went straight
+   > onto their right of way and the off-right-of-way count fell from 8 to 5.
+   >
+   > `RoadsSitOnPublicLandTests` now compares against an exact list of five alleys that may cross a
+   > building. **That list may shrink and must never grow.** When the houses are re-seated against
+   > the corrected streets it goes back to empty and the assertion goes back to `Is.Empty`.
+
+3. **Harrison Street turns at the Benton junction. Green and Benton stop at Route 1.** Owner,
+   2026-08-04, both called before either was measured:
+
+   > *"look at Harrison street, it angles at the Harrison/Benton junction and it is assuming
+   > straight at that jct and it is not"*
+
+   Measured after the fact: Harrison's right of way runs 0.2° off north–south above Benton and
+   **15.7° below it — a 15.4° corner at the junction**, walking 204 ft east by its south end. It
+   was drawn as one straight line, so its whole southern half was off; 74% of it sat on private
+   lots, now 0%. It is fitted as two straight legs meeting at the junction, **not smoothed** — it
+   is a street corner and rounding it off would be inventing a curve.
+
+   Green and Benton do reach Route 1 and terminate there, and their west ends **swing north** to
+   meet it — 104 ft and 123 ft respectively. That part is data-led rather than owner-stated and is
+   marked provisional in the tests until confirmed.
+
+   **The pattern:** a square plat meeting a diagonal highway distorts near the join. The project
+   previously asserted that only Chicago St and Railroad Ave bend; that was a Phase A regression
+   guard, not a survey fact, and three roads have now broken it with the owner calling each one.
 
 4. *(space kept for the owner to add)*
 
@@ -142,6 +174,53 @@ lines. Two different kinds of thing are in there and they have different authori
 is, the parcels win and the road gets moved.** Because houses are placed at a setback from roads,
 moving a road means re-seating its lot rows in the same pass — see `POSTMORTEM-2026-08-03-ROADS.md`
 §6 for why all four steps go together.
+
+### THE REFIT LANDED, 2026-08-04
+
+| | before | after | after decoupling |
+|---|---|---|---|
+| roads off their own right of way | 26 | 8 | **5** |
+| median share of a road on private land | 80% | **0%** | **0%** |
+| alleys crossing a building | 0 | 0 | 5 *(suspended, §3)* |
+| buildings on no parcel | 100 | **76** | 76 |
+| junctions | 115 | 125 | 126 |
+| roads whose surface covers a building | 2 | 6 | 11 |
+
+The last column is after the owner decoupled house placement from the road fit — see §3 fact 2. The
+five roads still off are **alley 1, alley 12, Attica, Green and Railroad Ave**. Attica, Green and
+Railroad each fit at a shift of 1–4 ft, meaning they are already on their strip; their reading comes
+from the country stretches where the parcels tile farmland and "inside a lot" means nothing. Only
+alley 1 and alley 12 are genuinely unplaced.
+
+**Places move with the street they are ADDRESSED on.** A house sits at some setback from its street,
+so shifting the house by the same amount as the street preserves the setback and lands it on the
+right lot. The address names the street, so the pairing is authored rather than guessed; the
+handful with no street in their name fall back to the nearest one, and that fallback is where most
+of the residual damage is. 408 Holmes Ave went from sitting on **no parcel at all** to sitting on
+parcel 777 — same lot, same block, same address.
+
+Three things the refit taught, all of them the hard way:
+
+1. **Moving a road breaks the junctions it used to make.** A street that dead-ended *at* another
+   street stops reaching it once that street moves; the junction count fell 115 → 89 before anyone
+   looked. Road ends are now extended to their cross street and 16 ft past it — an end that stops
+   *on* a centreline only touches it, and the intersection finder wants a real crossing.
+2. **An alley that cannot be laid without crossing a house is left where it was.** alley 1, 2, 3, 4
+   and 12 are still off their right of way for exactly this reason. §3 fact 2 has no exemption list
+   and stays at zero; being wrong in a recorded way beats being wrong in a hidden one.
+3. **Ann is a lane, not a street** — owner's call, confirmed by its right of way measuring 25 ft
+   against the 66 ft every platted street here gets. Reclassified, and its carriageway narrowed
+   from 33 ft to 13 ft so it fits inside its own strip.
+
+Per-road offsets: `docs/research/road-refit-deltas.txt`.
+
+To compare against the town as it was before the refit, take it out of git rather than keeping a
+second copy in `Content/` — a spare town file beside the real one is the exact ambiguity §1 exists
+to prevent:
+
+```
+git show ece3f5a:Content/city.txt > /tmp/city-before-refit.txt
+```
 
 ---
 

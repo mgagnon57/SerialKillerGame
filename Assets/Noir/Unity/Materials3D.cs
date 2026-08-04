@@ -103,7 +103,13 @@ namespace Noir.Unity
 
         private static Material Plan(Material m)
         {
-            if (VillageHost.ShowBuildings || ShowGroundColour || m == null) return m;
+            // FlatGroundColour wins over the dimming. It exists to give the owner one readable
+            // GREEN under the lot lines - "not just green grass or whatever" was the ask - and
+            // dimming that to near-black produces a handsome survey drawing that is not the thing
+            // he asked for. The two settings are answering different questions and this one is
+            // the more specific.
+            if (VillageHost.ShowBuildings || ShowGroundColour || VillageHost.FlatGroundColour
+                || m == null) return m;
 
             var dim = new Color(PlanGround, PlanGround, PlanGround, 1f);
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", dim);

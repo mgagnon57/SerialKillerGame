@@ -1,0 +1,54 @@
+# Perpendicular shift that puts each road on its own right of way.
+# Measured 2026-08-04 against Content/parcels.txt. Village metres.
+#
+# Samples within 28 m of ANOTHER road are discarded: at a junction the two rights of
+# way merge and a perpendicular scan grabs the cross street's strip instead. Without
+# that filter every road looked like it 'drifts' and the strips measured 30-47 m wide;
+# with it, streets come out at 19.6 m and alleys at 4.5 m, which is what
+# docs/SOURCES-OF-TRUTH.md section 2 already recorded.
+#
+# The candidate strip must also be the right WIDTH for the road's own class, or an
+# alley happily fits itself to the street two lots over.
+#
+# confident    = 10-90% spread under 5 m. Apply as a single rigid shift.
+# uncertain    = wider spread. Needs looking at one at a time.
+# no-clean-sample = every sample sat near a junction. Left alone.
+#
+# name	class	dx	dy	spread	confidence	n
+alley1	Alley	-14.50	0.00	69.5	uncertain	45 samples
+alley10	Alley	0.00	5.25	2.0	confident	35 samples
+alley11	Alley	-0.75	0.00	0.5	already-right	16 samples
+alley12	Alley	0.00	-14.50	0.5	confident	13 samples
+alley13	Alley	0.00	4.75	2.5	confident	29 samples
+alley14	Alley	0.00	3.75	2.0	confident	25 samples
+alley15	Alley	0.00	14.75	1.0	confident	17 samples
+alley2	Alley	11.25	0.00	0.8	confident	19 samples
+alley3	Alley	-12.75	0.00	1.5	confident	52 samples (junction guard relaxed to 26 ft; same answer at 46 ft)
+alley4	Alley	12.25	0.00	3.8	confident	18 samples
+alley5	Alley	-6.75	0.00	3.5	confident	27 samples
+alley6	Alley	0.00	6.25	2.5	confident	30 samples
+alley7	Alley	8.25	0.00	2.3	confident	40 samples
+alley8	Alley	-7.75	0.00	4.0	confident	33 samples
+alley9	Alley	0.00	6.25	1.0	confident	29 samples
+ann	Lane	4.00	0.00	1.8	confident	43 samples (OWNER: Ann is a narrow lane, not a street - its right of way measures 25 ft, so it is fitted as an alley and its class in city.txt should follow)
+attica	Mainroad	0.00	17.75	39.3	uncertain	27 samples
+benton	Street	0.00	-13.75	34.8	uncertain	26 samples
+chicago	Mainroad	-1.21	0.33	9.8	already-right	32 samples
+church	Street	11.00	0.00	9.0	uncertain	24 samples
+dale	Street	0.00	9.25	2.8	confident	30 samples
+earlcourt	Street	0.00	14.75	2.3	confident	42 samples
+gilbert	Street	0.00	19.75	3.5	confident	25 samples
+goodwine	Street	30.75	0.00	0.5	confident	16 samples
+green	Street	0.00	-5.25	40.3	uncertain	33 samples
+greenwood	Street	0.00	-2.25	5.0	uncertain	68 samples
+grove	Street	13.75	0.00	10.8	uncertain	27 samples
+harrison	Street	-21.50	0.00	1.5	confident	32 samples
+henderson	Street	0.00	3.25	5.0	uncertain	46 samples
+holmes	Street	0.00	17.00	5.8	uncertain	29 samples
+maple	Street	0.00	-0.25	3.3	already-right	27 samples
+mckibben	Street	0.00	0.25	5.5	already-right	38 samples
+railroad	Street	-17.74	13.43	13.0	uncertain	27 samples
+stewart	Street	0.00	5.75	4.0	confident	33 samples
+summit	Street	12.75	0.00	11.0	uncertain	19 samples
+thompson	Street	0.00	8.25	1.5	confident	30 samples
+york	Street	0.00	-3.25	1.8	confident	48 samples
