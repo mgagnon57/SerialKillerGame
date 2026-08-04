@@ -157,7 +157,7 @@ namespace Noir.Core.Contracts
         public int DaylightMinutes { get { Civil(out _, out int m, out int d); return Daylight.Length(m, d); } }
 
         /// <summary>How light it is outside right now.</summary>
-        public Light Light
+        public LightLevel Light
         {
             get { Civil(out _, out int m, out int d); return Daylight.At(m, d, MinuteOfDay); }
         }
@@ -169,7 +169,7 @@ namespace Noir.Core.Contracts
         /// where it gets interesting, and "she thought it was him" is a different testimony from
         /// "she saw nothing".
         /// </summary>
-        public bool IsDark => Light == Light.Night;
+        public bool IsDark => Light == LightLevel.Night;
 
         // ---- daylight saving -------------------------------------------------------------
         //

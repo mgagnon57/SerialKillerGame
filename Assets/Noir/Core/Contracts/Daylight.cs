@@ -4,7 +4,7 @@ namespace Noir.Core.Contracts
     /// How light it is outside. The order is deliberate: Night &lt; Dawn/Dusk &lt; Day, so a
     /// witness rule can say "brighter than Night" without listing cases.
     /// </summary>
-    public enum Light : byte
+    public enum LightLevel : byte
     {
         /// <summary>Sun more than 6 degrees below the horizon. You cannot recognise a face.</summary>
         Night = 0,
@@ -101,15 +101,15 @@ namespace Noir.Core.Contracts
         /// How light it is at a given minute of a given date. minuteOfDay is local STANDARD time,
         /// which is what the simulation clock counts.
         /// </summary>
-        public static Light At(int month, int dayOfMonth, int minuteOfDay)
+        public static LightLevel At(int month, int dayOfMonth, int minuteOfDay)
         {
             int i = IndexOf(month, dayOfMonth);
             int rise = SunriseTable[i], set = SunsetTable[i], tw = TwilightTable[i];
 
-            if (minuteOfDay >= rise && minuteOfDay < set) return Light.Day;
-            if (minuteOfDay >= rise - tw && minuteOfDay < rise) return Light.Dawn;
-            if (minuteOfDay >= set && minuteOfDay < set + tw) return Light.Dusk;
-            return Light.Night;
+            if (minuteOfDay >= rise && minuteOfDay < set) return LightLevel.Day;
+            if (minuteOfDay >= rise - tw && minuteOfDay < rise) return LightLevel.Dawn;
+            if (minuteOfDay >= set && minuteOfDay < set + tw) return LightLevel.Dusk;
+            return LightLevel.Night;
         }
 
         // ---- the tables ------------------------------------------------------------------

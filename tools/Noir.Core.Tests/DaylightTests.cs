@@ -162,7 +162,7 @@ namespace Noir.Core.Tests
             Assert.That(new GameClock(GameClock.TickOn(1991, 6, 21, At(19, 30))).IsDark, Is.False);
             Assert.That(new GameClock(GameClock.TickOn(1991, 6, 21, At(19, 30))).WallClock, Is.EqualTo("20:30"));
             Assert.That(new GameClock(GameClock.TickOn(1991, 12, 21, At(16, 30))).Light,
-                        Is.EqualTo(Light.Night).Or.EqualTo(Light.Dusk));
+                        Is.EqualTo(LightLevel.Night).Or.EqualTo(LightLevel.Dusk));
             Assert.That(new GameClock(GameClock.TickOn(1991, 12, 21, At(17, 0))).IsDark, Is.True,
                         "sun down 16:27, civil twilight over well before five");
         }
@@ -252,22 +252,22 @@ namespace Noir.Core.Tests
             int dawn = Daylight.Dawn(month, day), rise = Daylight.Sunrise(month, day);
             int set = Daylight.Sunset(month, day), dusk = Daylight.Dusk(month, day);
 
-            Assert.That(Daylight.At(month, day, dawn - 1), Is.EqualTo(Light.Night));
-            Assert.That(Daylight.At(month, day, dawn), Is.EqualTo(Light.Dawn));
-            Assert.That(Daylight.At(month, day, rise - 1), Is.EqualTo(Light.Dawn));
-            Assert.That(Daylight.At(month, day, rise), Is.EqualTo(Light.Day));
-            Assert.That(Daylight.At(month, day, set - 1), Is.EqualTo(Light.Day));
-            Assert.That(Daylight.At(month, day, set), Is.EqualTo(Light.Dusk));
-            Assert.That(Daylight.At(month, day, dusk - 1), Is.EqualTo(Light.Dusk));
-            Assert.That(Daylight.At(month, day, dusk), Is.EqualTo(Light.Night));
+            Assert.That(Daylight.At(month, day, dawn - 1), Is.EqualTo(LightLevel.Night));
+            Assert.That(Daylight.At(month, day, dawn), Is.EqualTo(LightLevel.Dawn));
+            Assert.That(Daylight.At(month, day, rise - 1), Is.EqualTo(LightLevel.Dawn));
+            Assert.That(Daylight.At(month, day, rise), Is.EqualTo(LightLevel.Day));
+            Assert.That(Daylight.At(month, day, set - 1), Is.EqualTo(LightLevel.Day));
+            Assert.That(Daylight.At(month, day, set), Is.EqualTo(LightLevel.Dusk));
+            Assert.That(Daylight.At(month, day, dusk - 1), Is.EqualTo(LightLevel.Dusk));
+            Assert.That(Daylight.At(month, day, dusk), Is.EqualTo(LightLevel.Night));
 
             // Midnight either end of every day is night, all year - no gaps and no overlaps in
             // the state machine.
             for (int m = 1; m <= 12; m++)
                 for (int d = 1; d <= DaysIn(m); d++)
                 {
-                    Assert.That(Daylight.At(m, d, 0), Is.EqualTo(Light.Night), $"midnight on {d:00}/{m:00}");
-                    Assert.That(Daylight.At(m, d, 1439), Is.EqualTo(Light.Night), $"23:59 on {d:00}/{m:00}");
+                    Assert.That(Daylight.At(m, d, 0), Is.EqualTo(LightLevel.Night), $"midnight on {d:00}/{m:00}");
+                    Assert.That(Daylight.At(m, d, 1439), Is.EqualTo(LightLevel.Night), $"23:59 on {d:00}/{m:00}");
                 }
         }
 
@@ -279,7 +279,7 @@ namespace Noir.Core.Tests
             // that distinction lives.
             var duskOnTheFifteenth = new GameClock(
                 GameClock.TickOn(1991, 10, 15, Daylight.Sunset(10, 15) + 5));
-            Assert.That(duskOnTheFifteenth.Light, Is.EqualTo(Light.Dusk));
+            Assert.That(duskOnTheFifteenth.Light, Is.EqualTo(LightLevel.Dusk));
             Assert.That(duskOnTheFifteenth.IsDark, Is.False, "five minutes after sunset you can still see");
 
             var afterTwilight = new GameClock(
@@ -308,7 +308,7 @@ namespace Noir.Core.Tests
 
             // And 29 February itself is a real, sensible day rather than an index crash.
             var leapDay = new GameClock(GameClock.TickOn(2004, 2, 29, 720));
-            Assert.That(leapDay.Light, Is.EqualTo(Light.Day));
+            Assert.That(leapDay.Light, Is.EqualTo(LightLevel.Day));
             Assert.That(leapDay.DaylightMinutes, Is.InRange(11 * 60, 11 * 60 + 30));
         }
 
@@ -329,10 +329,10 @@ namespace Noir.Core.Tests
             // Half past five on a late-February evening is the last of the light: the sun goes
             // down at 17:38, and civil twilight is over by ten past six.
             Assert.That(t.IsDaylightSaving, Is.False, "February is never daylight time");
-            Assert.That(t.Light, Is.EqualTo(Light.Day));
+            Assert.That(t.Light, Is.EqualTo(LightLevel.Day));
             Assert.That(t.Sunset, Is.EqualTo(At(17, 38)));
             Assert.That(new GameClock(GameClock.TickOn(2004, 2, 27, At(17, 45))).Light,
-                        Is.EqualTo(Light.Dusk));
+                        Is.EqualTo(LightLevel.Dusk));
             Assert.That(new GameClock(GameClock.TickOn(2004, 2, 27, At(18, 15))).IsDark, Is.True);
         }
 
