@@ -233,9 +233,10 @@ namespace Noir.Unity
             }
             if (name == "railroad") return "RAILROAD AVE";
 
-            // AN ALLEY HAS NO NAME AND SHOULD NOT BORROW ONE. `alley7` is a line number in
-            // city.txt, not something anybody calls it, and "ALLEY7 ST" is worse than nothing.
-            if (name.StartsWith("alley")) return "ALLEY";
+            // AN ALLEY HAS NO NAME AND SHOULD NOT BORROW ONE - "ALLEY7 ST" is worse than nothing.
+            // But it DOES need its number on it, because the number is how the owner reports one:
+            // "alley 3 is wrong" is only actionable if alley 3 says so on the ground.
+            if (name.StartsWith("alley")) return "ALLEY " + name.Substring("alley".Length);
 
             // SAY UNKNOWN RATHER THAN GUESS. These four are deliberate placeholders - the section
             // roads and crossroads were never identified against anything, and calling them
