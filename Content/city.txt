@@ -1223,43 +1223,46 @@ road railroad 10 1396,1581 1464,1683 1479,1705 1546,1805 1548,1819 1578,1824 159
 # agree on position; the offsets below are 31 to 91 m off the nearest street,
 # which is mid-block for a 117 m block.
 #
-# SIX METRES, on its own road class. These first went in at ten - the Track width -
-# and every block read as though it had a second street down the middle of it. An
-# alley is two ruts and room for one vehicle and the bins, so RoadClass.Alley exists
-# now and carries a six-metre corridor. They lay in dirt with no markings and no
-# crosswalks, which is what an alley behind a house looks like.
+# FOUR METRES, on its own road class. These first went in at ten - the Track width -
+# and every block read as though it had a second street down the middle of it. Six
+# was the next try and was still a residential street: twenty feet. A platted alley
+# here is a sixteen-foot right of way with about ten feet of gravel run down the
+# middle, so the corridor is four metres and CityStreets squeezes the dirt tile -
+# which is 7.1 m across whatever it is asked to be - to half its width for alleys
+# alone. They lay in dirt with no markings and no crosswalks, which is what an alley
+# behind a house looks like.
 #
 # One OSM alley was dropped: it lies exactly on Greenwood Street rather than
 # mid-block, so it is Greenwood, not an alley beside it.
-road alley1 6 823,1113 823,1478   # NS, -31m off x=854
+road alley1 4 823,1113 823,1478   # NS, -31m off x=854
   class alley
-road alley2 6 893,982 893,1113   # NS, +39m off x=854
+road alley2 4 893,982 893,1113   # NS, +39m off x=854
   class alley
-road alley3 6 928,1478 928,1722   # NS, -35m off x=963
+road alley3 4 928,1478 928,1722   # NS, -35m off x=963
   class alley
-road alley4 6 1058,982 1058,1478   # NS, -91m off x=1149
+road alley4 4 1058,982 1058,1478   # NS, -91m off x=1149
   class alley
-road alley5 6 1079,1478 1079,2093   # NS, -70m off x=1149
+road alley5 4 1079,1478 1079,2093   # NS, -70m off x=1149
   class alley
-road alley6 6 854,1157 1149,1157   # EW, +44m off y=1113
+road alley6 4 854,1157 1149,1157   # EW, +44m off y=1113
   class alley
-road alley7 6 1240,846 1240,1209   # NS, -90m off x=1330
+road alley7 4 1240,846 1240,1209   # NS, -90m off x=1330
   class alley
-road alley8 6 1269,1478 1269,2144   # NS, -61m off x=1330
+road alley8 4 1269,1478 1269,2144   # NS, -61m off x=1330
   class alley
-road alley9 6 854,1283 1149,1283   # EW, -52m off y=1335
+road alley9 4 854,1283 1149,1283   # EW, -52m off y=1335
   class alley
-road alley10 6 854,1410 1149,1410   # EW, -68m off y=1478
+road alley10 4 854,1410 1149,1410   # EW, -68m off y=1478
   class alley
-road alley11 6 1437,1209 1437,1335   # NS, -63m off x=1500
+road alley11 4 1437,1209 1437,1335   # NS, -63m off x=1500
   class alley
-road alley12 6 602,1443 747,1443   # EW, -35m off y=1478
+road alley12 4 602,1443 747,1443   # EW, -35m off y=1478
   class alley
-road alley13 6 854,1536 1149,1536   # EW, -47m off y=1583
+road alley13 4 854,1536 1149,1536   # EW, -47m off y=1583
   class alley
-road alley14 6 854,1663 1149,1663   # EW, -59m off y=1722
+road alley14 4 854,1663 1149,1663   # EW, -59m off y=1722
   class alley
-road alley15 6 1149,1776 1330,1776   # EW, +54m off y=1722
+road alley15 4 1149,1776 1330,1776   # EW, +54m off y=1722
   class alley
 
 # ---- the section roads -----------------------------------------------------

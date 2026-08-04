@@ -71,11 +71,27 @@ namespace Noir.Unity
             // long. Laid every ten metres it therefore overlaps its neighbour by nearly four,
             // which on a rutted track is not a fault - it is what stops the joins showing.
             // Seating by measured bounds is what makes that harmless.
+            //
+            // 7.1m ACROSS IS 23 FEET, which is a residential street, not an alley. A platted
+            // alley in a town like this is a sixteen-foot right of way with about ten feet of
+            // gravel run down the middle of it. See Narrow() - the tile is squeezed laterally so
+            // what is drawn is the track and not the whole easement, and RoadClass.Alley's
+            // corridor came down to four metres to match.
             RoadClass.Alley    => Dirt + "Road_Dirt_B_Straight_10x10m.prefab",
             RoadClass.Track    => Dirt + "Road_Dirt_A_Straight_10x10m.prefab",
 
             _                  => Kit + "Road_Straight_10x10_City.prefab",
         };
+
+        /// <summary>
+        /// How much of its own width a class's tile keeps.
+        ///
+        /// The dirt tile is 7.1m across whatever it is used for, and that is right for a farm
+        /// track and much too wide for an alley - it made every block read as though it had a
+        /// second street down the middle of it. Squeezed across only: the length is left alone so
+        /// the deliberate overlap between consecutive tiles still hides the joins.
+        /// </summary>
+        private static float Narrow(RoadClass klass) => klass == RoadClass.Alley ? 0.5f : 1f;
 
         private static string Crosswalk(RoadClass klass) => klass switch
         {
@@ -435,7 +451,7 @@ namespace Noir.Unity
                 }
 
                 string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
-                var t = SeatAt(parent, piece, at.X, at.Y, yaw);
+                var t = SeatAt(parent, piece, at.X, at.Y, yaw, Narrow(line.Class));
                 if (t != null) { if (line.Class == RoadClass.Street) Verge(t); laid++; }
             }
 
@@ -510,7 +526,8 @@ namespace Noir.Unity
 
         private static Material _verge, _plainTop;
 
-        private static GameObject SeatAt(Transform parent, string path, float mx, float my, float yaw)
+        private static GameObject SeatAt(Transform parent, string path, float mx, float my, float yaw,
+                                         float lateral = 1f)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) { Debug.LogWarning("[streets] missing " + path); return null; }
@@ -518,6 +535,10 @@ namespace Noir.Unity
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // Across only, and BEFORE the bounds are measured - the seat below works off the
+            // measured footprint, so squeezing afterwards would leave the tile off its centre line.
+            if (lateral != 1f) go.transform.localScale = new Vector3(lateral, 1f, 1f);
 
             var rends = go.GetComponentsInChildren<Renderer>();
             if (rends.Length == 0) return go;

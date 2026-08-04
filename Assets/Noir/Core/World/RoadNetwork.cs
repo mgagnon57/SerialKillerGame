@@ -53,7 +53,7 @@ namespace Noir.Core.World
         /// of the models and is measured off the mesh by the renderer, not asserted here.
         /// </summary>
         public static int CorridorWidth(RoadClass klass) =>
-            klass == RoadClass.Alley ? 6
+            klass == RoadClass.Alley ? 4
           : klass == RoadClass.Street || klass == RoadClass.Track ? 10 : 30;
 
         /// <summary>

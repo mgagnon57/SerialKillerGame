@@ -44,8 +44,15 @@ namespace Noir.Core.Tests
     /// separately as `service=alley`. Both agree on where they run.
     ///
     /// They went in at ten metres, the Track width, and every block read as though it had a
-    /// second street down its middle. RoadClass.Alley now carries a SIX-metre corridor, which
-    /// moves every alley lane and is why the counts hold but the checksum moved.
+    /// second street down its middle. RoadClass.Alley took a SIX-metre corridor, which moved
+    /// every alley lane and is why the counts held but the checksum moved.
+    ///
+    /// SIX WAS STILL TOO WIDE and it is FOUR now, which moved the checksum again for the same
+    /// reason and again without touching a count. Six metres is twenty feet - a residential
+    /// street. A platted alley here is a sixteen-foot right of way with about ten feet of gravel
+    /// run down it, and the rendered width was worse than the corridor anyway: the dirt tile
+    /// measures 7.1 m across whatever it is asked to be, so CityStreets.Narrow now squeezes it
+    /// to half that for alleys alone.
     ///
     /// Then RAILROAD AVENUE, which was missing from both sources. It runs at +36.4 degrees off
     /// north-south against the CSX line's 33.9 - parallel within two and a half degrees, because
@@ -239,6 +246,6 @@ namespace Noir.Core.Tests
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "6CB2CDF906EBBCBA759B5C723EA9663EED6722AB525BF5C3A300A22A7C44A408";
+            "CC11CF0309C8A192036893FB53F82350E5FDB0D15A64D5AF75BC7DAF6164697E";
     }
 }
