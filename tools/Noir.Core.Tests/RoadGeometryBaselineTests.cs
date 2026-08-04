@@ -47,6 +47,13 @@ namespace Noir.Core.Tests
     /// second street down its middle. RoadClass.Alley now carries a SIX-metre corridor, which
     /// moves every alley lane and is why the counts hold but the checksum moved.
     ///
+    /// Then RAILROAD AVENUE, which was missing from both sources. It runs at +36.4 degrees off
+    /// north-south against the CSX line's 33.9 - parallel within two and a half degrees, because
+    /// it is the street that serves the track, and the 1940 aerial shows the rail-side industry
+    /// set at the rail's angle rather than the grid's. rossville-streets.json could never have
+    /// held it: that file gives one latitude or longitude per street and cannot express a
+    /// diagonal. 40 roads to 41.
+    ///
     /// What was actually wrong was the DOWNTOWN, which was authored on a straight line while
     /// the road curved away from it - the centreline passed inside the barber and the steam
     /// laundry and left the west shop row 94 m behind. The buildings moved, not the road. See
@@ -77,7 +84,7 @@ namespace Noir.Core.Tests
             TestContext.Out.WriteLine($"turns      = {graph.Turns.Count}");
             TestContext.Out.WriteLine($"entries    = {graph.Entries.Count}");
 
-            Assert.That(world.Roads.Lines.Count, Is.EqualTo(40), "roads in city.txt");
+            Assert.That(world.Roads.Lines.Count, Is.EqualTo(41), "roads in city.txt");
             Assert.That(world.Roads.Junctions.Count, Is.EqualTo(BaselineJunctions));
             Assert.That(graph.Segments.Count, Is.EqualTo(BaselineSegments));
             Assert.That(graph.Turns.Count, Is.EqualTo(BaselineTurns));
@@ -132,11 +139,15 @@ namespace Noir.Core.Tests
             // to be "every road in the map is straight"; Chicago Street / Illinois Route 1 now
             // follows its real surveyed alignment (Content/city.txt), a 14-point polyline, and
             // is a deliberate, permanent exception to it. This checks the narrower premise both
-            // ways - chicago bends and nothing else does - so it fails just as loudly whether a
-            // second road loses its straightness or chicago gets straightened back out.
+            // ways - chicago and railroad bend, nothing else does - so it fails just as loudly
+            // whether a third road loses its straightness or one of these is straightened out.
+            // RAILROAD AVENUE is the second exception, added 2026-08-03. It runs at +36.4
+            // degrees off north-south against the CSX line's 33.9 - parallel within two and a
+            // half degrees, because it is the street that serves the track. Its bend is the
+            // rail's bend, not an error.
             foreach (var line in RealCity().Roads.Lines)
             {
-                bool shouldBeStraight = line.Name != "chicago";
+                bool shouldBeStraight = line.Name != "chicago" && line.Name != "railroad";
                 Assert.That(line.IsStraight, Is.EqualTo(shouldBeStraight),
                             shouldBeStraight ? line.Name + " should be straight"
                                               : line.Name + " should bend");
@@ -219,15 +230,15 @@ namespace Noir.Core.Tests
         //     curvature-induced misclassification would bias one direction, because a curve
         //     bends one way; the symmetry is evidence the tangent-based turn classification is
         //     not skewed by it.
-        private const int BaselineJunctions = 113;
-        private const int BaselineSegments = 448;
-        private const int BaselineTurns = 1110;
-        private const int BaselineEntries = 38;
+        private const int BaselineJunctions = 115;
+        private const int BaselineSegments = 456;
+        private const int BaselineTurns = 1122;
+        private const int BaselineEntries = 39;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "B313FB5EB3834B2EA100867F6480DC927618E5D3F0E29C5B70F828CBAFB7A328";
+            "6CB2CDF906EBBCBA759B5C723EA9663EED6722AB525BF5C3A300A22A7C44A408";
     }
 }

@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Noir.Core.World;
 
 namespace Noir.Core.Tests
@@ -132,7 +132,8 @@ namespace Noir.Core.Tests
             // the one deliberate exception rather than a blanket True.
             foreach (var line in world.Roads.Lines)
             {
-                Assert.That(line.IsStraight, Is.EqualTo(line.Name != "chicago"),
+                Assert.That(line.IsStraight,
+                            Is.EqualTo(line.Name != "chicago" && line.Name != "railroad"),
                             $"{line.Name} straightness");
                 Assert.That(line.Width, Is.EqualTo(RoadClasses.CorridorWidth(line.Class)),
                             $"{line.Name} is the width its class requires");

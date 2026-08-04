@@ -1189,6 +1189,26 @@ road earlcourt 10 1068,2210 1330,2210   # -875m
   class street
 
 
+
+# ---- the street that follows the rail --------------------------------------
+# RAILROAD AVENUE IS NOT ON THE GRID, and that is the point of it. It runs at
+# +36.4 degrees off north-south; the CSX line through the same ground runs 33.9.
+# Parallel within two and a half degrees, because it is the street that serves
+# the track.
+#
+# The 1940 aerial says the same thing from the air: industry is strung along the
+# rail at the south-east in large sheds set at THE RAIL'S angle rather than the
+# street grid's, while the houses stay cardinal. This is the road that serves
+# those sheds, and the town has been built without it until now.
+#
+# It was missing from BOTH sources. tools/rossville-streets.json holds 29
+# streets and this is not one of them - that file gives a single latitude or
+# longitude per street, which cannot express a diagonal, so a road like this one
+# could never have been in it. Found by widening to OpenStreetMap, which has it
+# as two ways (22031735 residential, 22031737 unclassified). Geometry is theirs.
+road railroad 10 1396,1581 1464,1683 1479,1705 1546,1805 1548,1819 1578,1824 1598,1830 1615,1850 1789,2111 1809,2141
+  class street
+
 # ---- the alleys ------------------------------------------------------------
 # A MIDWESTERN PLATTED TOWN IS SPLIT DOWN THE MIDDLE OF EVERY BLOCK, and without
 # these the blocks are twice the depth they should be and every lot backs onto
@@ -1258,6 +1278,26 @@ road alley15 6 1149,1776 1330,1776   # EW, +54m off y=1722
 # section lines. Each crosses a main road, so none is an island - an isolated road
 # has lanes and no junction at either end, and its traffic drives off the tarmac
 # and out of the world.
+# THESE FOUR NAMES ARE PLACEHOLDERS AND SHOULD LOOK LIKE IT.
+# Vermilion County numbers its rural roads on the Illinois grid - East 3550
+# North Road, 3330 North Road, 1050 East Road - where the number is distance
+# from a baseline in hundreds of feet. In the fields a road is a number; in town
+# it is a surname.
+#
+# We have exactly ONE anchor: OSM puts `East 3550 North Road` at y 1308-1326,
+# eighteen metres off Attica Street, running west off the map. That is not a
+# separate road - it is ATTICA'S RURAL CONTINUATION, the same relationship
+# Chicago Street has with Route 1, on the other axis.
+#
+# One anchor is not a grid. The blotter also names 3330 North Road, but that
+# would sit some 6.7 km from 3550 on a straight hundreds-of-feet reading, well
+# off a 2.4 km map - so either the numbering is not uniform here or those roads
+# are outside our bounds, and nothing available settles which. The owner does
+# not know the local numbers either.
+#
+# So they stay `section0` and `crossroad0`. A convincing invented number is
+# worse than an obvious placeholder: it would read as researched and be fiction,
+# which is exactly how the TIGER curve cost two days.
 road section0 10 0,220 2099,220
   class track
 road section1 10 0,2180 2099,2180
