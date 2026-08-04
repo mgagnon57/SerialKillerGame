@@ -434,7 +434,8 @@ namespace Noir.Unity
                 }
 
                 string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
-                var t = Seat(parent, piece, cx - half, cy - half, module, module, yaw);
+                var t = Seat(parent, piece, cx - half, cy - half, module, module, yaw,
+                             Narrow(line.Class, piece));
                 if (t != null) { if (line.Class == RoadClass.Street) Verge(t); laid++; }
             }
             return laid;
@@ -615,7 +616,8 @@ namespace Noir.Unity
         /// Village y runs into Unity -z, as everywhere else.
         /// </summary>
         private static GameObject Seat(Transform parent, string path,
-                                       float x, float y, float w, float h, float yaw)
+                                       float x, float y, float w, float h, float yaw,
+                                       float lateral = 1f)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) { Debug.LogWarning("[streets] missing " + path); return null; }
@@ -623,6 +625,12 @@ namespace Noir.Unity
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.transform.SetParent(parent, false);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // SIZE BEFORE MEASURING. w and h say where the tile GOES, never how big it is - this
+            // method has only ever positioned. That is why narrowing the alley corridor changed
+            // nothing on screen: every straight road comes through here, and a 7.1m dirt tile
+            // centred on a 4m patch is still 7.1m of dirt. See Narrow().
+            if (lateral != 1f) go.transform.localScale = new Vector3(lateral, 1f, 1f);
 
             var rends = go.GetComponentsInChildren<Renderer>();
             if (rends.Length == 0) return go;
