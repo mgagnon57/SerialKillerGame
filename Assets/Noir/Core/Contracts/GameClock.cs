@@ -129,6 +129,106 @@ namespace Noir.Core.Contracts
             }
         }
 
+
+        // ---- daylight --------------------------------------------------------------------
+        //
+        // THE CLOCK RUNS IN LOCAL STANDARD TIME - CST - ALL YEAR, AND THIS IS LOAD-BEARING.
+        // Tick is a monotonic counter and Day is Tick / TicksPerDay, so every day must be exactly
+        // 1440 minutes. If the simulation itself sprang forward in April, one day would be 1380
+        // minutes and one in October 1500, and DayOfWeek, TickOn and every OpenWindow in the
+        // content would slide by an hour twice a year. So daylight saving never moves the
+        // simulation. It is a fact ABOUT the date that presentation adds on top - see
+        // IsDaylightSaving and WallClockMinute - and the daylight table is in standard time to
+        // match, so IsDark can compare against MinuteOfDay directly with no conversion at all.
+
+        /// <summary>Sunrise today, in minutes after midnight, local standard time.</summary>
+        public int Sunrise { get { Civil(out _, out int m, out int d); return Daylight.Sunrise(m, d); } }
+
+        /// <summary>Sunset today, in minutes after midnight, local standard time.</summary>
+        public int Sunset { get { Civil(out _, out int m, out int d); return Daylight.Sunset(m, d); } }
+
+        /// <summary>Start of civil twilight today, local standard time.</summary>
+        public int Dawn { get { Civil(out _, out int m, out int d); return Daylight.Dawn(m, d); } }
+
+        /// <summary>End of civil twilight today, local standard time.</summary>
+        public int Dusk { get { Civil(out _, out int m, out int d); return Daylight.Dusk(m, d); } }
+
+        /// <summary>Minutes of sun today. 557 at the winter solstice, 904 at the summer one.</summary>
+        public int DaylightMinutes { get { Civil(out _, out int m, out int d); return Daylight.Length(m, d); } }
+
+        /// <summary>How light it is outside right now.</summary>
+        public Light Light
+        {
+            get { Civil(out _, out int m, out int d); return Daylight.At(m, d, MinuteOfDay); }
+        }
+
+        /// <summary>
+        /// True below civil twilight - the sun more than 6 degrees down, and too dark to
+        /// recognise a face across a street without a lamp. THIS IS THE WITNESS GATE. Twilight
+        /// deliberately counts as light: WHO-SEES-WHOM.md's whole point is that the margins are
+        /// where it gets interesting, and "she thought it was him" is a different testimony from
+        /// "she saw nothing".
+        /// </summary>
+        public bool IsDark => Light == Light.Night;
+
+        // ---- daylight saving -------------------------------------------------------------
+        //
+        // THE PERIOD RULE, NOT THE ONE YOU REMEMBER. The US moved to the second Sunday in March
+        // in 2007. This game ends in 2006. Every year it covers - 1991 to 2006 - runs under the
+        // Energy Policy Act's predecessor: FIRST SUNDAY IN APRIL to LAST SUNDAY IN OCTOBER. In
+        // 1991 that is 7 April to 27 October, so the last week of March is standard time, not
+        // daylight time.
+        //
+        // This is not pedantry, and it caught a real error: THE-YEAR.md's daylight table gives
+        // 21 March as 06:54/19:03, an hour later than the sun is actually up, because it was
+        // computed with the modern rule. Seven of its eight rows are right to the minute; that
+        // one is an era mismatch. Daylight.cs carries the note.
+
+        /// <summary>Day of the month of the first Sunday in April - the year's DST changeover.</summary>
+        public static int FirstSundayOfApril(int year)
+        {
+            int w = WeekdayOf(DaysFromCivil(year, 4, 1));        // 0 = Sunday
+            return 1 + (7 - w) % 7;
+        }
+
+        /// <summary>Day of the month of the last Sunday in October - when the clocks go back.</summary>
+        public static int LastSundayOfOctober(int year) => 31 - WeekdayOf(DaysFromCivil(year, 10, 31));
+
+        /// <summary>Weekday of a days-since-1970 count, 0 = Sunday. 1970-01-01 was a Thursday.</summary>
+        private static int WeekdayOf(int z) => (z + 4) % 7;
+
+        /// <summary>
+        /// Whether the town's clocks are an hour forward right now. The simulation is unaffected;
+        /// this is what the kitchen clock says. Spring forward is 02:00 standard on the April
+        /// Sunday; fall back is 02:00 daylight, which is 01:00 standard, on the October one.
+        /// </summary>
+        public bool IsDaylightSaving
+        {
+            get
+            {
+                Civil(out int y, out int m, out int d);
+                int today = DaysFromCivil(y, m, d);
+                int begins = DaysFromCivil(y, 4, FirstSundayOfApril(y));
+                int ends = DaysFromCivil(y, 10, LastSundayOfOctober(y));
+
+                if (today < begins || today > ends) return false;
+                if (today == begins) return MinuteOfDay >= 120;      // 02:00 standard -> 03:00 daylight
+                if (today == ends) return MinuteOfDay < 60;          // 02:00 daylight -> 01:00 standard
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Minute of day as a clock on the wall shows it - standard time plus an hour in summer.
+        /// Wraps at midnight, so on a summer night 23:30 standard reads 00:30 and belongs to the
+        /// NEXT calendar day. Display code that shows a date beside this has to account for that;
+        /// nothing in the simulation does, because nothing in the simulation uses this.
+        /// </summary>
+        public int WallClockMinute => (MinuteOfDay + (IsDaylightSaving ? 60 : 0)) % 1440;
+
+        /// <summary>The wall clock, as a person in the town would read it out.</summary>
+        public string WallClock => $"{WallClockMinute / 60:00}:{WallClockMinute % 60:00}";
+
         private void Civil(out int y, out int m, out int d) => CivilFromDays(EpochDays + Day, out y, out m, out d);
 
         /// <summary>
