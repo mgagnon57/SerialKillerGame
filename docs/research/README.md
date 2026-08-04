@@ -49,6 +49,7 @@ in **time, senses and people**:
 | **`THE-YEAR.md`** | the crop calendar era-matched to the 1990s, the weather, daylight by date, and the canopy. **The fields are most of the map and they are a sequence, not a texture** |
 | **`WHO-SEES-WHOM.md`** | the observation network — who is out, who is looking, which month hides what. Synthesis of the rest, aimed at the game's actual mechanic |
 | **`WHO-LIVES-THERE.md`** | settlement origin, the denominational fingerprint, the surname pool, and the high school that closes in 2006 |
+| **`INSIDE-THE-HOUSES.md`** | rooms, ceiling heights and the standard plan — the front door opens into the living room, and the back door faces the alley |
 | **`WHAT-IT-SOUNDS-LIKE.md`** | the railroad as metronome, harvest as the loud season, and the one cicada year in the window |
 | **`POLICE-AND-INCIDENT.md`** | four officers, five arrests a year, **no homicides at all** — and the blotter as texture. No person named |
 | **`photos/`** | **the town from the air in 1940**, plus 29 photographs of the standing buildings. Reference only |
