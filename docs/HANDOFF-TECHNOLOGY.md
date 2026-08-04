@@ -161,6 +161,49 @@ Two smaller notes from the same pass:
 **Suggested action: none yet, beyond a comment.** A line on `CityBuildings.Build` saying what
 `AgentMeshView` already says would stop the next person rediscovering this.
 
+### DONE 2026-08-03 — reply to NEXT, items 1 and 2
+
+**1. The verification pass, all four:**
+
+```
+1.  dotnet test -c Release tools/Noir.Core.Tests   323 / 325   (was 316/318; +7 ageing tests)
+                                                   the 2 failures are TwoToOneTests, by design
+2.  headless Unity compile                         exit 0, ZERO "error CS"
+3.  PlayMode, -assemblyNames Noir.PlayTests        12 of 13
+4.  press Play and look at it                      OWNER'S — Unity was closed for #2 and #3
+```
+
+**The one PlayMode failure is `TrafficPlayTests.NoVehicleEverLeavesTheRoad`** — a car 8.60 m past
+the asphalt at (650.33, −1.78, −983.50). That is the **documented pre-existing one**, recorded at
+`HANDOFF-PEOPLE-SESSION.md:58` as *"a car ~9m off the asphalt mid-junction"* and marked there as the
+terrain session's. Not touched by this work, and the count is **better** than the 11/13 that handoff
+records — `PeopleDiagnostics.WhyAreThePeopleNotAnimating` now passes, because `ShowPeople` was
+flipped.
+
+**And the `Light` lesson paid for itself immediately.** The netstandard gate has no UnityEngine, so
+it cannot see half the project — this refactor broke `AgentFigure` and `VillageUI` in ways
+`dotnet test` reported as perfectly green. Both were caught by running #2. **Do not skip it.**
+
+**2. One year, not two — done** (`5667b3b`). `Citizen.BirthYear` is stored; `AgeIn` / `StageIn` /
+`IsChildIn` / `BaseSpeedIn` derive from `GameClock.Year`. `Households.Year` is **deleted**, and
+`GameClock.EpochYear` is now the only 1991 in the codebase — with a test asserting `Citizen` has no
+`Age` field left. `DayPlanner` derives the year from the `day` it was already given, so nothing had
+to be threaded in from outside.
+
+The thresholds (school leaving 16, retirement 65) reproduce the generator exactly — it picks a stage
+and draws an age inside it, 5–15 / 21–64 / 65–88 — so **the 1991 village did not move**, which was
+the whole safety argument. Twenty files, Core + Unity + tools.
+
+**A flagged gap, written as a test rather than a paragraph.** Ageing with no births and no deaths is
+half a town: the youngest person in 1991 is 20 in 2006, everybody over 65 is over 80 and none has
+died, and **the school that closes in 2006 has no pupils left to lose**. `THE-TRAJECTORY.md` has the
+town losing 117 people across the decade and none of that is modelled.
+`AgeingTests.TheWholeTownIsFifteenYearsOlderAndNOBODYHasBeenBornOrDied` asserts the arithmetic that
+is *correct as implemented and wrong as a town*, so the day demography arrives it fails and gets
+read. **That pass is the necessary follow-up to this one.**
+
+**3 (reachability) not started.** It is the next thing.
+
 ### Queued behind those, not now
 
 - **`particulars.txt` is still English, 1979** — 914 clauses, and the biggest content problem in the
