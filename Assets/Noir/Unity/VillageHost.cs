@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
@@ -248,6 +249,24 @@ namespace Noir.Unity
                 // covers the enum but not the content, so a barber authored in village.txt
                 // would fail here as an unknown kind while working perfectly in the tools.
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
+
+                // What the town has, and when it gets it. Without this line every citizen lives in
+                // 1991 for the whole fifteen years.
+                //
+                // CAUGHT, NOT FATAL, and the asymmetry is the design: a technology with no row is
+                // a technology the town does not have, so a missing file means the opening world
+                // rather than a village that will not load. The kind table one line up is the
+                // opposite and throws, because a kind with no row is a building with no rooms.
+                // A MALFORMED file still stops here, though - Parse throws, and an authoring
+                // mistake is a different thing from an absence.
+                try
+                {
+                    TechnologyTable.Install(TechnologyTable.Parse(ContentLoader.Read("technology.txt")));
+                }
+                catch (FileNotFoundException)
+                {
+                    Debug.LogWarning("[era] no Content/technology.txt - the town stays in 1991.");
+                }
 
                 var layout = VillageParser.Parse(ContentLoader.Read(MapFile));
                 World = WorldBuilder.Build(layout);

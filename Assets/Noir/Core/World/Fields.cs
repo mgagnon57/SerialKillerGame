@@ -192,7 +192,7 @@ namespace Noir.Core.World
                 {
                     int from = PlantedOn(crop, rank) + Emergence, to = FullHeightOn(crop, rank);
                     float t = to > from ? (dayOfYear - from) / (float)(to - from) : 1f;
-                    return full * (0.06f + 0.94f * Clamp01(t));
+                    return full * (0.06f + 0.94f * Era.Clamp01(t));
                 }
                 case FieldState.Standing:
                 case FieldState.Turning: return full;
@@ -223,60 +223,53 @@ namespace Noir.Core.World
         //   50% turned          ~18 Sep     ~5 Sep
         //   50% harvested       ~17 Oct     ~8 Oct
 
-        private static readonly short[] CornPlantedDays = { 100, 110, 120, 130, 140, 150, 166 };
-        private static readonly byte[] CornPlantedPct = { 0, 8, 30, 63, 78, 90, 100 };
+        private static readonly int[] CornPlantedDays = { 100, 110, 120, 130, 140, 150, 166 };
+        private static readonly float[] CornPlantedPct = { 0, 8, 30, 63, 78, 90, 100 };
 
-        private static readonly short[] CornTallDays = { 171, 181, 191, 201, 211, 222, 232 };
-        private static readonly byte[] CornTallPct = { 0, 3, 16, 45, 79, 93, 100 };
+        private static readonly int[] CornTallDays = { 171, 181, 191, 201, 211, 222, 232 };
+        private static readonly float[] CornTallPct = { 0, 3, 16, 45, 79, 93, 100 };
 
-        private static readonly short[] CornTurnDays = { 222, 232, 242, 253, 263, 273, 283, 293 };
-        private static readonly byte[] CornTurnPct = { 0, 4, 11, 28, 54, 80, 95, 100 };
+        private static readonly int[] CornTurnDays = { 222, 232, 242, 253, 263, 273, 283, 293 };
+        private static readonly float[] CornTurnPct = { 0, 4, 11, 28, 54, 80, 95, 100 };
 
-        private static readonly short[] CornCutDays = { 253, 263, 273, 283, 293, 303, 314, 334, 344 };
-        private static readonly byte[] CornCutPct = { 0, 9, 20, 35, 56, 77, 90, 97, 100 };
+        private static readonly int[] CornCutDays = { 253, 263, 273, 283, 293, 303, 314, 334, 344 };
+        private static readonly float[] CornCutPct = { 0, 9, 20, 35, 56, 77, 90, 97, 100 };
 
-        private static readonly short[] BeanPlantedDays = { 110, 120, 130, 140, 150, 161, 171, 182 };
-        private static readonly byte[] BeanPlantedPct = { 0, 2, 12, 36, 61, 79, 91, 100 };
+        private static readonly int[] BeanPlantedDays = { 110, 120, 130, 140, 150, 161, 171, 182 };
+        private static readonly float[] BeanPlantedPct = { 0, 2, 12, 36, 61, 79, 91, 100 };
 
-        private static readonly short[] BeanTallDays = { 171, 181, 191, 201, 211, 222, 232 };
-        private static readonly byte[] BeanTallPct = { 0, 9, 26, 51, 75, 90, 100 };
+        private static readonly int[] BeanTallDays = { 171, 181, 191, 201, 211, 222, 232 };
+        private static readonly float[] BeanTallPct = { 0, 9, 26, 51, 75, 90, 100 };
 
-        private static readonly short[] BeanTurnDays = { 222, 232, 242, 253, 263, 273 };
-        private static readonly byte[] BeanTurnPct = { 0, 6, 27, 67, 89, 100 };
+        private static readonly int[] BeanTurnDays = { 222, 232, 242, 253, 263, 273 };
+        private static readonly float[] BeanTurnPct = { 0, 6, 27, 67, 89, 100 };
 
-        private static readonly short[] BeanCutDays = { 253, 263, 273, 283, 293, 303, 314, 324 };
-        private static readonly byte[] BeanCutPct = { 0, 6, 22, 55, 79, 93, 98, 100 };
+        private static readonly int[] BeanCutDays = { 253, 263, 273, 283, 293, 303, 314, 324 };
+        private static readonly float[] BeanCutPct = { 0, 6, 22, 55, 79, 93, 98, 100 };
 
-        private static short[] PlantedDays(Crop c) => c == Crop.Corn ? CornPlantedDays : BeanPlantedDays;
-        private static byte[] PlantedPercent(Crop c) => c == Crop.Corn ? CornPlantedPct : BeanPlantedPct;
-        private static short[] TallDays(Crop c) => c == Crop.Corn ? CornTallDays : BeanTallDays;
-        private static byte[] TallPercent(Crop c) => c == Crop.Corn ? CornTallPct : BeanTallPct;
-        private static short[] TurnDays(Crop c) => c == Crop.Corn ? CornTurnDays : BeanTurnDays;
-        private static byte[] TurnPercent(Crop c) => c == Crop.Corn ? CornTurnPct : BeanTurnPct;
-        private static short[] CutDays(Crop c) => c == Crop.Corn ? CornCutDays : BeanCutDays;
-        private static byte[] CutPercent(Crop c) => c == Crop.Corn ? CornCutPct : BeanCutPct;
+        private static int[] PlantedDays(Crop c) => c == Crop.Corn ? CornPlantedDays : BeanPlantedDays;
+        private static float[] PlantedPercent(Crop c) => c == Crop.Corn ? CornPlantedPct : BeanPlantedPct;
+        private static int[] TallDays(Crop c) => c == Crop.Corn ? CornTallDays : BeanTallDays;
+        private static float[] TallPercent(Crop c) => c == Crop.Corn ? CornTallPct : BeanTallPct;
+        private static int[] TurnDays(Crop c) => c == Crop.Corn ? CornTurnDays : BeanTurnDays;
+        private static float[] TurnPercent(Crop c) => c == Crop.Corn ? CornTurnPct : BeanTurnPct;
+        private static int[] CutDays(Crop c) => c == Crop.Corn ? CornCutDays : BeanCutDays;
+        private static float[] CutPercent(Crop c) => c == Crop.Corn ? CornCutPct : BeanCutPct;
 
         /// <summary>
         /// The day on which the acreage curve passes this field's rank - i.e. this field's own
         /// date for that stage. Inverting the curve rather than sampling it is the whole point:
         /// see the class remarks.
+        ///
+        /// The inversion itself is <see cref="Era.Crossing"/>, shared with the technology adoption
+        /// curves, which are the same idea one domain over. ROUNDED TO NEAREST here, where
+        /// <see cref="Adoption.YearWhen"/> takes the ceiling, and the difference is real rather
+        /// than sloppy: a planting date is a point on a calendar and the nearest day is the best
+        /// answer, whereas a year is a bucket you are either inside or outside.
         /// </summary>
-        private static int DayWhen(short[] days, byte[] percent, float rank)
-        {
-            float target = Clamp01(rank) * 100f;
-            for (int i = 1; i < days.Length; i++)
-            {
-                if (target > percent[i]) continue;
-                int span = percent[i] - percent[i - 1];
-                if (span <= 0) return days[i];
-                float t = (target - percent[i - 1]) / span;
-                return days[i - 1] + (int)(t * (days[i] - days[i - 1]) + 0.5f);
-            }
-            return days[days.Length - 1];
-        }
+        private static int DayWhen(int[] days, float[] percent, float rank) =>
+            (int)(Era.Crossing(days, percent, Era.Clamp01(rank) * 100f) + 0.5f);
 
         private static int AtLeast(int value, int floor) => value < floor ? floor : value;
-
-        private static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
     }
 }

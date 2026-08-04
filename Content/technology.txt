@@ -1,0 +1,192 @@
+# ============================================================================
+#  WHAT THE TOWN HAS, AND WHEN IT GETS IT
+#
+#  One row per technology:  <name>  <scope>  <year:percent> <year:percent> ...
+#
+#  ADDING A TECHNOLOGY IS A LINE HERE AND NOTHING ELSE. No C#, no enum, no
+#  switch. Ask for it by name -
+#
+#      TechnologyTable.Has("dialup", year, householdKey)
+#
+#  and a name nothing answers to returns false rather than throwing, so a row
+#  can be added, removed or renamed without breaking anybody who asks. LEAVING
+#  THE KEY OUT ASKS A DIFFERENT QUESTION - "is this ordinary this year", i.e.
+#  does over half the town have it - which is what the dialogue prompt wants
+#  when it is describing the period rather than a person.
+#
+#  THE CURVE IS A DISTRIBUTION, NOT AN AVERAGE. "40% of rural households had a
+#  computer in 1998" is not a coin to flip per household per year; it is a
+#  statement about WHICH households, and therefore about when each one bought
+#  theirs. Every key takes a fixed place in the queue and the curve is inverted
+#  to give that key its own year. So a household that gets a computer in 1997
+#  still has it in 2003, and nobody flickers. Core/World/Era.cs does the work,
+#  and Fields does the identical thing with planting dates.
+#
+#  WAYPOINTS ARE LINEAR BETWEEN AND FLAT OUTSIDE. `1994:20 1998:40` means 20%
+#  in 1994, 40% in 1998, 30% in 1996, 20% in 1970 and 40% in 2050. Years must
+#  ascend. Percentages need not - see `payphone`, which is a technology that
+#  LEAVES.
+#
+#  SCOPES:
+#    town       everybody or nobody. The key is ignored; the row should be a
+#               0-or-100 curve, and `Has` asks whether the curve is past 50.
+#    household  one answer per dwelling
+#    person     one answer per citizen
+#    farm       one answer per farm. NOTE there are far fewer farms than
+#               households, so 15% is a very small number of actual machines.
+#    business   one answer per business
+#
+#  EVERY NUMBER HERE IS TRACEABLE. docs/research/TECHNOLOGY.md has the sourcing
+#  and marks each curve MEASURED or INFERRED. Those markings are carried into
+#  the comments below and are not decoration: three rows in this file are known
+#  to be weak and are labelled so, and the difference between a figure the US
+#  government measured in this window and one somebody reasoned to is the
+#  difference between a fact and a guess that looks like one.
+#
+#  THE RULE FOR CORRECTING A ROW, from the top of TECHNOLOGY.md:
+#
+#      AFFORDABILITY-LIMITED TECHNOLOGIES SHOW A SMALL RURAL LAG.
+#      COVERAGE-LIMITED ONES SHOW A LARGE ONE.
+#
+#  Rural households were two points behind the nation on computers in 1998 and
+#  had converged by 2000 - if you could afford one you bought one. But a mobile
+#  phone in 1996 is a TOWER question, not a price question, and cable never
+#  reached a village of 1,200 at all.
+# ============================================================================
+
+# ---- household and personal ------------------------------------------------
+
+# MEASURED (NTIA, rural). 94.3% and flat for years - HIGHER than the national
+# average. The number is not the interesting part; what a telephone WAS in 1991
+# is. It is fixed to the house, so to check on somebody you go there and an
+# unanswered ring means nothing. WHO-SEES-WHOM.md section 5.
+telephone       household   1991:94  2006:95
+
+# INFERRED, AND THE WEAKEST THREE CURVES IN THIS FILE. No rural series was
+# found for any of them. Answering machines were common by 1991 and cordless
+# handsets spreading; caller ID needed the exchange to support it AND was billed
+# as an extra, so it is coverage-limited and pay-limited at once and lags hard.
+# First thing to correct if a better source turns up.
+answermachine   household   1991:45  1996:65  2006:70
+cordless        household   1991:30  1997:60  2006:80
+callerid        household   1993:2   1998:20  2006:50
+
+# THE MOST CONSEQUENTIAL GUESS IN THIS FILE. National subscriber counts (CTIA)
+# are measured - 7.6M in 1991, 33.8M in 1995, 109.5M in 2000, 207.9M in 2005 -
+# but the rural correction is inferred and it is LARGE, because coverage is the
+# binding constraint here and not price. Shifted markedly later than national.
+#
+# WHO-SEES-WHOM.md builds the game's whole information arc on this row: in 1991
+# you cannot reach a person who is not at home and an unanswered phone means
+# nothing; by 2006 a person is reachable and there is a log. The same
+# disappearance is a different event at the two ends of this game.
+#
+# STILL UNRESEARCHED: when cellular coverage physically reached this part of
+# downstate Illinois. That is the number that would settle this row.
+mobilephone     person      1991:0   1996:3   2000:18  2003:40  2006:60
+
+# MEASURED (NTIA, rural, era-exact) - the best two rows in the file. Rural
+# computer ownership 39.9% (1998) to 50.4% (2000); rural internet 22.2% (1998)
+# to 38.9% (2000), a 75% rise in two years.
+#
+# AND THIS IS THE ROW THAT MATTERS FOR THE STORY. THE-TRAJECTORY.md has eBay
+# eroding the antique trade "from 1995 onward" - but only 22% of rural
+# households were online in 1998. The trade was not killed by Rossville getting
+# the internet. It was killed by EVERYBODY ELSE getting it, and buyers no
+# longer needing to drive here.
+computer        household   1994:20  1998:40  2000:50  2006:65
+
+# dialup turns over at the end on purpose: broadband displaces it after ~2004,
+# slowly and mostly by satellite in a village this size. A falling tail is not a
+# mistake - see payphone.
+#
+# `needs computer` MEANS IT RANKS OFF THE COMPUTER QUEUE INSTEAD OF ITS OWN, so
+# the households that bought a machine first are the ones that went online
+# first and everybody with dialup necessarily owns something to read it on.
+# Without that the two curves were independent draws and about a SIXTH of the
+# town had the internet and no computer - which every test passed, because each
+# curve was individually perfect. The printing diagnostic caught it, not the
+# suite. The load refuses a child curve that ever rises above its parent.
+dialup          household   1995:1   1998:22  2000:39  2004:50  2006:45  needs computer
+
+# answermachine, cordless and callerid are deliberately NOT `needs telephone`,
+# and it is a judgement rather than an oversight. Telephone sits at 94-95%, so
+# independent queues put caller ID in a house with no line about 2.5% of the
+# time - thirteen households. Sharing telephone's queue would remove those but
+# nest all four rows perfectly, so every house would be an exact rung on one
+# ladder: cordless implies answering machine implies caller ID, always. Scatter
+# with a small impossible corner reads more like a town than a tidy hierarchy
+# does. Revisit if anything ever enumerates a household's whole inventory.
+
+# MEASURED nationally (Nielsen) for vcr and dvd; satellite INFERRED.
+# Satellite matters here out of proportion to its number, because cable almost
+# certainly never served a village of 1,200: if a Rossville house has many
+# channels in 1998 it has a DISH, and that is a roof-line fact the day props
+# arrive. DBS launched 1994.
+vcr             household   1991:72  1999:89  2006:85
+dvd             household   1997:0   1999:7   2002:30  2006:81
+satellite       household   1994:1   2000:15  2006:30
+
+# A TECHNOLOGY CAN LEAVE, and the shape of a falling curve is the point: the
+# ranks that keep a payphone longest are the LOWEST ones, because the curve is
+# read the same way up either direction. INFERRED.
+payphone        town        1970:100 1998:60  2005:10
+
+# ---- investigative and forensic --------------------------------------------
+
+# WELL ESTABLISHED. The FBI's national DNA index went live in 1998. Before
+# that there is no database to search - only a sample to compare against a
+# suspect you already have. That is a different investigation.
+codis           town        1997:0   1998:100
+
+# A NEGATIVE TECHNOLOGY, AND IT BELONGS HERE AS ONE. A village of 1,200 with
+# four officers and five arrests a year has essentially no camera coverage in
+# this era: no municipal system, no ATM cameras outside the bank, and Casey's
+# does not exist until after 2004. A search that returns nothing is a finding.
+# Written down as zero, explicitly, so nothing downstream assumes footage.
+cctv            town        1991:0
+
+# e911address IS DELIBERATELY NOT IN THIS FILE. The mechanism is certain -
+# Illinois counties assigned rural addresses on a grid, ~1,000 per mile, evens
+# one side and odds the other, which is exactly the "East 3550 North Road" form
+# in POLICE-AND-INCIDENT.md - but NO DATE WAS FOUND FOR VERMILION COUNTY, and
+# the plan's instruction was not to ship the placeholder.
+#
+# IT MATTERS WHICH WAY THIS FALLS. If rural addressing arrived mid-window then a
+# farm in 1991 HAS NO STREET ADDRESS AT ALL, which changes how anybody out there
+# is found, directed to, or reported missing. Absent from the file, every query
+# answers false, which is itself the claim that it never arrived - so this is a
+# known-wrong answer standing in for an unknown-correct one, on purpose, where
+# it is visible.
+#
+# The route to the real date is the Vermilion County ETSB or county board
+# minutes at Danville. Not another web search.
+#
+#   e911address   town      1991:0   ????:100
+
+# ---- farm ------------------------------------------------------------------
+
+# INFERRED, AND WEAKLY. Yield monitors appeared on new combines mid-1990s; GPS
+# guidance followed at the end of the decade at a price only larger operations
+# could carry. No Illinois or Vermilion County series was found - USDA's ARMS
+# surveys track precision agriculture and would settle it properly.
+#
+# The social one is not a machine: the mobile phone in the tractor cab is what
+# changes how isolated a farmer is, and it arrives on the mobilephone row.
+yieldmonitor    farm        1992:0   1996:3   2000:15  2006:35
+gpsguidance     farm        1997:0   2000:3   2003:12  2006:30
+
+# ---- commercial ------------------------------------------------------------
+
+# INFERRED. Debit cards spread through the 1990s and a small-town shop is a late
+# adopter. The point is not the machine, it is the record:
+#
+#     A CARD TRANSACTION SAYS WHERE SOMEBODY WAS. IN 1991, CASH LEAVES NOTHING.
+cardreader      business    1991:15  1997:45  2004:80
+atm             town        1991:100
+
+# A PLACE GATE RATHER THAN A TECHNOLOGY, and it is here because the mechanism is
+# identical. Casey's is built on the corner cleared by the February 2004 fire
+# (THE-TRAJECTORY.md), so it must not exist before then. This row is the
+# argument for kinds.txt eventually sharing this mechanism.
+caseys          town        2004:0   2006:100
