@@ -32,7 +32,6 @@ namespace Noir.Unity
         private int _noteDraftFor = int.MinValue;
         private Vector2 _noteScroll;
 
-        private const float PanelWidth = 340f;
 
         // ============================ READABILITY ============================
         //
@@ -99,16 +98,25 @@ namespace Noir.Unity
         /// width it had been given. Centred, it lands where your eye already is.
         ///
         /// Sized against the window rather than fixed, and capped so it never fills a big screen
-        /// edge to edge: a dialog that covers the map is worse than one you have to look across.
-        /// The cap GROWS WITH Scale - at 2x text a 760px panel would scroll for no reason other
-        /// than the width it was given, which is the same mistake the right rail made.
+        /// edge to edge. The cap GROWS WITH Scale - at 2x text a 760px panel would scroll for no
+        /// reason other than the width it was given, which is the mistake the old 340px rail made.
+        ///
+        /// A RIGHT-HAND RAIL, AND IT WENT BACK TO BEING ONE. It was centred for a while, on the
+        /// reasoning that a dialog you look across beats one that covers the map. That is true of
+        /// a DIALOG - see DrawHelp, which is still centred and should be - and false of an
+        /// inspector, because an inspector is read WHILE looking at the thing it describes. Centred
+        /// it lands on top of whatever was just clicked, and on a 5120px ultrawide it sits in the
+        /// middle of the screen with two thousand pixels of empty map either side of it.
+        ///
+        /// What the centring pass got right is kept: ONE rect for all three inspectors instead of
+        /// three hand-rolled ones, hit-testing against the real rectangle rather than "anywhere
+        /// right of 340px", and a width that scales with the text.
         /// </summary>
         private static Rect PanelRect()
         {
             float w = Mathf.Min(S(760f), Screen.width - 80f);
-            float h = Mathf.Min(S(880f), Screen.height - BarHeight - 60f);
-            return new Rect((Screen.width - w) * 0.5f,
-                            BarHeight + (Screen.height - BarHeight - h) * 0.5f, w, h);
+            float h = Screen.height - BarHeight - S(20f);
+            return new Rect(Screen.width - w - S(12f), BarHeight + S(8f), w, h);
         }
 
         private static float BarHeight => S(48f);

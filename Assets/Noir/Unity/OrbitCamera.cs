@@ -21,9 +21,22 @@ namespace Noir.Unity
         private Camera _camera;
 
         private Vector3 _target;
-        private float _yaw = 45f;
-        private float _pitch = 50f;
-        private float _distance = 90f;
+
+        /// <summary>
+        /// THE OPENING SHOT IS SOUTH DOWN CHICAGO STREET, which is the view the town is about.
+        ///
+        /// 162 degrees, not 180. Space3D maps village (x,y) to world (x, h, -y), so due south is
+        /// -Z and yaw 180 - but Chicago Street is not due south. It is the 1829 Hubbard Trail and
+        /// it runs about 18 degrees east of south through the crossing and the downtown, which is
+        /// the whole reason the grid and the highway disagree. Pointing the camera at 180 would
+        /// put the one road the town was built along at a slant across the frame.
+        ///
+        /// A low pitch on purpose: 50 degrees looks DOWN ON a street, and the ask was to look
+        /// ALONG one.
+        /// </summary>
+        private float _yaw = 162f;
+        private float _pitch = 24f;
+        private float _distance = 330f;
 
         private const float MinPitch = 12f;    // below this you are looking through the ground
         private const float MaxPitch = 89f;
@@ -96,7 +109,11 @@ namespace Noir.Unity
             var rig = cam.gameObject.AddComponent<OrbitCamera>();
             rig._host = host;
             rig._camera = cam;
-            rig._target = Space3D.Centre(host.World.Width, host.World.Height);
+            // The Chicago x Attica crossing when the massing layer has worked it out from the
+            // road network, and the middle of the map before that - which is what it always was.
+            rig._target = HouseLayers.Installed
+                ? Space3D.ToWorld(new Vec2(HouseLayers.Centre.x, HouseLayers.Centre.y), 0f)
+                : Space3D.Centre(host.World.Width, host.World.Height);
             rig.Apply();
             return rig;
         }

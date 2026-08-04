@@ -442,10 +442,16 @@ namespace Noir.Unity
             // AFTER the bake and OUTSIDE the node it bakes: a combined mesh cannot move or
             // change colour, so anything that drives - or that goes red and green - has to be
             // built once the static city is already frozen.
+            // THE PARCEL LINES ARE AN OVERLAY, NOT AN ALTERNATIVE. This used to sit inside the
+            // `if (!ShowBuildings)` below, so the county's own lot lines and the town that stands
+            // on them could never be on screen together - which is backwards for the one question
+            // they answer best: IS THIS HOUSE WHERE THE PARCEL SAYS IT IS. Now it is built either
+            // way and switched with Layers.Kind.Plan like everything else.
+            Layers.Register(Layers.Kind.Plan,
+                            CityOutlines.Build(World, transform, ShowPlanRoads, ShowPlanFootprints));
+
             if (!ShowBuildings)
             {
-                CityOutlines.Build(World, transform, ShowPlanRoads, ShowPlanFootprints);
-
                 // The names, without which the drawing is anonymous: every line in it is right
                 // and none of it is legible to somebody standing in the street.
                 PlanLabels.Create(this, transform);

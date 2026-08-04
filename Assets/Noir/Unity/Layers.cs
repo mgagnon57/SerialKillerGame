@@ -50,6 +50,17 @@ namespace Noir.Unity
             Lamps,          // street lighting fixtures and window glazing
             Traffic,        // moving vehicles
             People,         // the citizens
+
+            /// <summary>
+            /// The county's own lot lines, drawn over whatever is standing on them.
+            ///
+            /// This used to be an EITHER/OR - CityOutlines only built when ShowBuildings was
+            /// false, so you got the survey plan or the town and never both. That is exactly
+            /// backwards for the question it answers best, which is "is this house where the
+            /// parcel says it is". Now it is a layer like the rest - on by default, off with one
+            /// click, and the choice remembered.
+            /// </summary>
+            Plan,
         }
 
         /// <summary>How the panel labels each one, and the order it lists them in.</summary>
@@ -58,7 +69,7 @@ namespace Noir.Unity
             Kind.Streets, Kind.Parking, Kind.Signs, Kind.Signals,
             Kind.RailBed, Kind.Rail, Kind.Powerlines, Kind.Farm,
             Kind.Buildings, Kind.Districts, Kind.Houses, Kind.Story,
-            Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People,
+            Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Plan,
         };
 
         public static string Label(Kind k)
@@ -81,6 +92,7 @@ namespace Noir.Unity
                 case Kind.Lamps:      return "Street lighting";
                 case Kind.Traffic:    return "Traffic";
                 case Kind.People:     return "People";
+                case Kind.Plan:       return "Parcel lines";
                 default:              return k.ToString();
             }
         }
