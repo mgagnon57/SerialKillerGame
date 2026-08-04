@@ -117,6 +117,50 @@ now. *"Can this person be telephoned away from home"* is the exact mechanic
 `WHO-SEES-WHOM.md` §5 says the game's whole information arc turns on, and `mobilephone`,
 `answermachine` and `cordless` are already in the table waiting for it.
 
+### 4. An audit finding, added after the above — the town cannot be built
+
+Asked to check how assets are applied when the town is built. **The mechanics are careful; the
+packaging is not, and nothing records it.**
+
+**What is right, and worth not undoing.** Most loading is `AssetDatabase.LoadAssetAtPath` with
+explicit paths — the safest form. `FindAssets` survives in only two places, `SunRig` (Lamps City)
+and `CityTraffic` (Cars City / Cars Trucks), and all three of those folders have **zero
+subfolders**, so `PACK.md`'s recursion trap cannot bite. Where a folder is mixed,
+`CityGreenery.Species(folder, params wanted)` curates by explicit name list. That trap has been
+handled, not merely documented.
+
+**What is not.** `AssetDatabase` and `PrefabUtility` are `UnityEditor` APIs and do not exist in a
+player. So `CityBuildings`, `CityStreets`, `CityGreenery`, `CityTraffic`, `CityParking`, `CitySigns`
+and `SunRig` all sit behind `#if UNITY_EDITOR`. Only `CityStreets` has an `#else`, and it covers one
+*measurement* — the asphalt half-width falls back to arithmetic — not placement.
+
+**In a standalone build today you would get** the procedural survey plan (`VillageMesh`, fine),
+primitive capsule people, and **no bought props at all**.
+
+Two things stop this being urgent. `ShowBuildings` is `false`, so the bought town is not drawn even
+in the editor. And the people path shows the pattern is already understood — `AgentBody` is
+`#if UNITY_EDITOR` with an explicit `?? AgentFigure.Build(...)` fallback and a comment saying *"a
+bought person if there is one, and the primitives if there is not."*
+
+**The gap is that the town got the same treatment silently.** `AgentMeshView` says it out loud;
+`CityBuildings` just compiles to nothing. And `docs/` records none of it — the only `AssetDatabase`
+mentions anywhere are about the recursion trap. **Nothing anywhere says the game cannot currently be
+built.**
+
+Not a flag flip. The eventual fix is the standard one — `Resources/`, Addressables, or a serialized
+`ScriptableObject` catalogue — and it is real work. **Cheap to write down now, expensive to discover
+the week a playable build is wanted.**
+
+Two smaller notes from the same pass:
+
+- `CityChunker` has **no** editor guard, so the mesh-combining that gets 13,000 renderers down to
+  1,700 would run in a player — combining an empty scene.
+- The `Layers.Register` calls for Streets, Buildings and Story all sit **inside** `if (ShowBuildings)`,
+  so with the flag off those switches register nothing. That may be why the `L` panel looks sparse.
+
+**Suggested action: none yet, beyond a comment.** A line on `CityBuildings.Build` saying what
+`AgentMeshView` already says would stop the next person rediscovering this.
+
 ### Queued behind those, not now
 
 - **`particulars.txt` is still English, 1979** — 914 clauses, and the biggest content problem in the
