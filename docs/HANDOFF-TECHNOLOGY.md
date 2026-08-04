@@ -204,6 +204,28 @@ read. **That pass is the necessary follow-up to this one.**
 
 **3 (reachability) not started.** It is the next thing.
 
+### 5. And the one after that — **`docs/plans/observation-wiring.md`**
+
+Looked at what to do after the technology layer. **The game's central mechanic is built, tested,
+firewalled — and has never run, because nothing records where the player was.**
+
+`Recollection.WhatTheySaw` answers *"everything one villager could tell you about the player, for
+one day"*, and is called by nothing, because its `PlayerTrack` argument is never populated.
+`Player.cs` walks a character around Rossville and writes down nothing. **That is the entire gap** —
+one missing link at the head of the chain, not a missing system.
+
+Two things found on the way that matter more than the gap:
+
+- **There is a firewall and it is excellent.** `Observation` references *Contracts only*, so it
+  **provably cannot read ground truth**; `Witness` is the producer side that may see both. It is
+  enforced three ways — asmdef, a transitive reflection walk for the netstandard build where
+  asmdefs mean nothing, and a test pinning the reference list. **The plan requires no asmdef change
+  at all.** If a step seems to need one, the step is wrong.
+- **`Sightlines` predates `Daylight` and `Fields`** and still uses a hand-rolled 3-band
+  `LightAt(minuteOfDay)`. Real sunrise/sunset on the pre-2007 DST rule exists now, and
+  `Fields.BlocksSightline` — built so standing corn blocks sight — is **read by nobody**. Both are
+  already reachable from `Witness`.
+
 ### Queued behind those, not now
 
 - **`particulars.txt` is still English, 1979** — 914 clauses, and the biggest content problem in the
