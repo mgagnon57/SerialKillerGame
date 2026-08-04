@@ -84,14 +84,64 @@ namespace Noir.Unity
         };
 
         /// <summary>
-        /// How much of its own width a class's tile keeps.
+        /// Scale a tile across so that what is DRAWN is exactly as wide as the corridor the
+        /// simulation reasons about.
         ///
-        /// The dirt tile is 7.1m across whatever it is used for, and that is right for a farm
-        /// track and much too wide for an alley - it made every block read as though it had a
-        /// second street down the middle of it. Squeezed across only: the length is left alone so
-        /// the deliberate overlap between consecutive tiles still hides the joins.
+        /// THE CORRIDOR IS THE ONE SOURCE OF TRUTH AND THIS IS WHAT MAKES IT ONE. Until now the
+        /// rendered width of a road was whatever its prefab happened to measure and the corridor
+        /// was a separate number in Core, and the two were free to disagree - which they did, in
+        /// both directions and silently:
+        ///
+        ///     Road_Straight_10x10_City      10.0m tile,  10m corridor    agreed by luck
+        ///     Mainroad_Straight_30x30_City  30.0m tile,  30m corridor    agreed by luck
+        ///     Road_Dirt_B (alley)            7.1m tile,   4m corridor    77% too wide
+        ///     Road_Dirt_A (track)            7.1m tile,  10m corridor    29% too narrow
+        ///
+        /// The alley one is what made every block read as though it had a second street down the
+        /// middle of it, and narrowing the CORRIDOR alone did nothing because the corridor was
+        /// never the thing on screen. The track one is the same fault the other way up: cars on
+        /// the outer lane of a farm track drive on grass, because the sim puts the lane at 5m out
+        /// and the asphalt stops at 3.55m.
+        ///
+        /// So the ratio is measured off the prefab rather than guessed at, and a tile whose width
+        /// already matches its corridor is left completely alone - the two city tiles scale by
+        /// exactly 1.0 and nothing about the streets or Route 1 moves.
+        ///
+        /// ACROSS ONLY. The length is untouched, so the deliberate overlap between consecutive
+        /// dirt tiles still hides the joins.
+        ///
+        /// If a stretched dirt tile ever reads badly, THE ANSWER IS TO CHANGE THE CORRIDOR, not to
+        /// special-case the renderer again - that is how the two numbers drifted apart in the
+        /// first place.
         /// </summary>
-        private static float Narrow(RoadClass klass) => klass == RoadClass.Alley ? 0.5f : 1f;
+        private static float Narrow(RoadClass klass, string path)
+        {
+            if (!_tileWidth.TryGetValue(path, out float measured))
+            {
+                measured = 0f;
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab != null)
+                {
+                    var probe = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                    var rends = probe.GetComponentsInChildren<Renderer>();
+                    if (rends.Length > 0)
+                    {
+                        var b = rends[0].bounds;
+                        for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                        measured = b.size.x;
+                    }
+                    Object.DestroyImmediate(probe);
+                }
+                _tileWidth[path] = measured;
+            }
+
+            if (measured < 0.01f) return 1f;
+            float want = RoadClasses.CorridorWidth(klass);
+            float scale = want / measured;
+            return Mathf.Abs(scale - 1f) < 0.02f ? 1f : scale;      // already right: leave it be
+        }
+
+        private static readonly Dictionary<string, float> _tileWidth = new Dictionary<string, float>();
 
         private static string Crosswalk(RoadClass klass) => klass switch
         {
@@ -451,7 +501,7 @@ namespace Noir.Unity
                 }
 
                 string piece = atCrossing ? Crosswalk(line.Class) : Straight(line.Class);
-                var t = SeatAt(parent, piece, at.X, at.Y, yaw, Narrow(line.Class));
+                var t = SeatAt(parent, piece, at.X, at.Y, yaw, Narrow(line.Class, piece));
                 if (t != null) { if (line.Class == RoadClass.Street) Verge(t); laid++; }
             }
 
