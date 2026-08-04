@@ -75,11 +75,19 @@ layer later; building props first would mean inventing this layer anyway.
 
 **2. Assembly direction, checked.** `Noir.Core.Contracts` has **zero** references and
 `noEngineReferences: true`. `Noir.Core.World` → Contracts. `Noir.Core.People` → Contracts + World.
-So `Era.cs` goes in **Contracts** and `TechnologyTable.cs` in **World**.
+**Both `Era.cs` and `TechnologyTable.cs` go in `World`** — parsing needs `ContentText`, which is
+`internal` to `Noir.Core.World`, and the curve inversion being generalised lives in `Fields`, also
+World. Contracts is for zero-dependency primitives.
 
-**3. Copy the per-key idiom from `AgentAnimation.ClipFor`** — a hash of the citizen key giving a
-stable per-person pick. It is the same shape as the adoption percentile and the project already has
-it. Do not invent a second one.
+**3. `Fields` already built this mechanism — generalise it, do not write a second one.**
+`Fields.RankOf(key)` gives a fixed rank in [0,1) (note the `>> 11`: low bits are avoided on purpose
+to stop striping), and the private `Fields.DayWhen(days, percent, rank)` inverts a
+*percent-reached-by-date* curve to give one entity its own date. That is exactly this design, one
+domain over. Lift `DayWhen` into `Era`, express it in years, and have `Fields` call the general one.
+**`Fields`' existing tests staying green is the regression check for that step.**
+
+**3b. Core bans transcendentals for replay determinism.** `Daylight` embeds a 365-entry table rather
+than call six of them. Linear interpolation and integer hashing only — no `Math.Pow` to shape a curve.
 
 **4. DO NOT TOUCH THE WITNESS LAYER.** `PersonDescription.CarriedThing` is deliberately vague —
 *Bag, Case, Bundle, LongObject* — because a witness says "something in his hand", not "a Nokia".
@@ -117,25 +125,28 @@ never reached a village of 1,200 at all.
 
 ## Suggested order
 
-1. `Core/Contracts/Era.cs` — the notation and the percentile. Test it alone first; it is pure
-   arithmetic and hashing and every later step depends on it being right.
+1. `Core/World/Era.cs` — generalise `Fields.DayWhen` into a shared curve inverter, plus `RankOf`.
+   Do this first and get `Fields` onto it while its tests are there to prove you did not break it.
 2. `Content/technology.txt` — the table, with the header in the style of `animations.txt`:
-   *adding a technology is a line here and nothing else.*
-3. `Core/World/TechnologyTable.cs` — `Parse` / `Install` / `Has` / `Adopted`.
-4. The tests. All nine are listed in the plan.
+   *adding a technology is a line here and nothing else.* Parse with `ContentText.Tokenise`.
+3. `Core/World/TechnologyTable.cs` — `Parse` / `Install` / `Has` / `AdoptsIn` / `Adopted`.
+4. The tests. Ten are listed in the plan, including the `Fields`-stays-green one.
 5. The two consumers — the LLM dialogue prompt first, it is the highest-value one.
-6. `Noir/Check The Technology`, in the style of `Editor/AnimationCheck.cs`. Needs the editor, so it
-   can come last and wait for a free moment.
+6. `tools/Noir.Core.Tests/TechnologyDiagnostic.cs` — an `[Explicit]` printing test in the style of
+   `CountrysideDiagnostic.cs`, showing the town's adoption year by year. **Not** a Unity editor
+   command; that was in the first draft and it broke this pass's own Unity-free promise.
 
 ---
 
 ## Things that will bite you
 
-- **Monotonicity is the point.** A household must not flicker in and out of owning something as the
-  years advance. That is why the percentile is fixed per key and only the curve moves. If you find
-  yourself storing state per household per year, the design has gone wrong.
+- **Monotonicity should be structural, not argued.** Invert the curve — *this household adopts in
+  1999* — rather than comparing a percentile against each year in turn. One crossing year, computed
+  once, and nothing can flicker. This is what `Fields.PlantedOn` does. If you find yourself storing
+  state per household per year, the design has gone wrong.
 - **A falling curve is not a bug.** `payphone` goes 100 → 60 → 10 because payphones *left*. The
-  households that keep it longest are the lowest percentiles, which is the right shape.
+  households that keep it longest are the lowest ranks, which is the right shape — and it means a
+  falling curve needs both ends inverted, adoption and loss.
 - **`town` scope ignores the key entirely.** CODIS going national in 1998 is true for everybody or
   nobody; there is no adoption curve on it.
 - **Inert when absent.** An unknown technology name returns `false` and does not throw — same
