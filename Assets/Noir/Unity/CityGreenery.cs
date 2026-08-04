@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.World;
@@ -57,7 +57,24 @@ namespace Noir.Unity
             root.transform.SetParent(parent, false);
 
 #if UNITY_EDITOR
-            var broadleaf = Species("Trees", "Oak", "Beech", "Birch", "Willow_Weeping", "Poplar");
+            // BEECH AND BIRCH ARE NOT ILLINOIS TREES and were quietly making the wrong forest.
+            // American beech is an eastern/Appalachian species and birch is northern; neither
+            // belongs on the east-central Illinois prairie edge. Oak, poplar and willow do - the
+            // willow along the North Fork especially, which the 1940 aerial shows as a wide dark
+            // wooded ribbon down the west side.
+            //
+            // WHAT THE TOWN ACTUALLY HAD IS NOT IN THIS PACK, and that is worth writing down
+            // rather than pretending. The 1940 aerial shows Rossville almost entirely under
+            // canopy and in 1940 that canopy was AMERICAN ELM - the Midwestern street tree,
+            // planted in arching avenues. Dutch elm disease took them through the 1950s-70s and
+            // the towns that replanted used silver maple, hackberry, honey locust and enormous
+            // quantities of green ash. The emerald ash borer did not reach Illinois until about
+            // 2006, so IN 1991 THE ASH ARE ALIVE and the canopy is thicker than today's.
+            //
+            // The pack ships none of elm, ash, maple or hackberry. So this is the closest
+            // honest set, not the right one, and the gap is a content-pack problem rather than
+            // a code one. See docs/research/THE-YEAR.md.
+            var broadleaf = Species("Trees", "Oak", "Willow_Weeping", "Poplar");
             var conifer = Species("Trees", "Spruce", "Pine", "Juniper", "Cypress");
             var deadwood = Fallen();
             var topiary = All(Nature + "Hedges");

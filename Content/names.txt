@@ -1,12 +1,28 @@
-# Names for Rossville, Illinois - 1991.
+﻿# Names for Rossville, Illinois - 1991.
 # One directive per line: male | female | male-child | female-child | surname
 #
 # RETUNED TWICE OVER, on 2026-08-01. This pool used to be Ashcombe's: West Country English
 # surnames for an English village in 1979. Both halves of that are now wrong. The town is
-# Rossville, Vermilion County, Illinois - settled out of Kentucky, Ohio and Indiana with a
-# heavy later German layer and an Irish minority that came for the railroad - and the year is
-# 1991. A Cornish Trelawny in eastern Illinois reads as a mistake the way nothing else on the
-# map does.
+# Rossville, Vermilion County, Illinois - settled out of Kentucky, Ohio and Indiana, with an
+# Irish minority that came for the railroad - and the year is 1991. A Cornish Trelawny in
+# eastern Illinois reads as a mistake the way nothing else on the map does.
+#
+# THE "HEAVY LATER GERMAN LAYER" THAT USED TO BE ON THIS LINE IS GONE, corrected 2026-08-03,
+# and the evidence was already in this repo. Denominations are a demographic fingerprint:
+# German settlement in the nineteenth-century Midwest shows up in churches before it shows up
+# anywhere else, as German Lutheran and German Catholic congregations, often with services in
+# German. Rossville's four are Presbyterian (Scots-Irish), Methodist Episcopal (the frontier
+# circuit-rider church), Christian/Disciples (Stone-Campbell, born on the Kentucky-Ohio
+# frontier) and United Brethren (German in ORIGIN but English-speaking and widespread by then).
+#
+# NO LUTHERAN CHURCH. NO CATHOLIC PARISH. And not for want of Germans in the county - Danville,
+# fifteen miles south, has both, including a German Catholic church holding services in German,
+# and the county's five Catholic parishes are at Hoopeston, Danville twice, Westville and
+# Georgetown. None in Rossville. The German population is real and it concentrated at the
+# county seat, not here.
+#
+# A few German families in a town this size is fine and likely. A HEAVY layer would have built
+# a Lutheran church, and there isn't one. See docs/research/WHO-LIVES-THERE.md.
 #
 # PETHICK, HALLORAN AND IVEY MUST STAY. Content/village.txt - Ashcombe, still parsed by the
 # older editor tools - names its shop, its surgery and its garage after them, and
