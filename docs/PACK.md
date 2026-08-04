@@ -9,7 +9,9 @@ Written because the useful things kept turning up one at a time. `City/Roads Cit
 the entire city had been built out of the generic 10m `Modular Parts/Roads`. Then 486 farm
 prefabs. Then 174 survival props. Then a 13-piece rail kit of which five were in use.
 
-**Check this file before building, generating or buying anything.**
+**Check this file before building, generating or buying anything** — and read **`ASSET-GAPS.md`**
+beside it, which re-audits the folders this one used to dismiss and says what is actually worth
+buying. Between them the answer is usually *"we already own that."*
 
 The Asset Store page is no help: its content list is loaded by script and comes back empty. The
 filesystem is the authority, and this was generated from it.
@@ -43,7 +45,7 @@ Ordered by what I think is worth most to this game.
 |---|---:|---|
 | **`Survival`** | **174** | `Tree_Stand` (a hunting platform), `Bear_Trap`, `Cross_Wood` for a roadside memorial, `Road_Flare`, 3 signposts, abandoned suitcases, bedrolls, storm lanterns, a radio transceiver, tents, a generator. **The best-matched folder in the pack for this game.** |
 | `City/Signs City` | 171 | 171 signs and the city uses a handful |
-| `Farm/Crops Farm` | 166 | *(partly used)* — a dozen crops at growth stages |
+| `Farm/Crops Farm` | 166 | *(partly used)* — a dozen crops at growth stages. **Corn has four stages** (`Sprout`, `Seedling`, `Young`, three `Ripe_Fieldcorn`), and **wheat ships as 1 m² tileable squares in five stages including `Harvested`** — that is the field-tile technique, already owned. **No soybeans anywhere**, and corn has no tile equivalent |
 | `City/Park City` | 33 | proper park furniture |
 | `City/Playground City` + `SkatePark City` | 46 | *(used, via CityStreets)* |
 | `Racetrack` | 152 | a modular track kit: 25 road pieces, 91 fences, control gate, overpass, reflectors. Needs land. |
@@ -53,7 +55,7 @@ Ordered by what I think is worth most to this game.
 | `City/Lamps City` | 16 | *(used)* street lighting |
 | `City/Poles City` | 9 | utility poles — a rural road wants these |
 | `City/Beach City` | 39 | no coast on this map |
-| `Modular Parts/Walls` | **421** | the biggest single folder in the pack |
+| `Modular Parts/Walls` | 421 | **not the house kit this number suggests.** Recursive, and dominated by Fantasy/Steampunk/Survival variants — the usable modern set is **35 walls, 4 City windows, 4 City doors**. Do not plan a procedural house kit around it. The `Roof_Regular` 1 m² roof system *is* good |
 | `Modular Parts/Roofs` | 340 | |
 | `Modular Parts/Towers` | 73 | |
 | `Modular Parts/Ramparts` | 50 | |
@@ -71,11 +73,73 @@ Ordered by what I think is worth most to this game.
 | `Terrains` | 24 | prefab ground planes, hills, slopes, rivers, lakes |
 | `Movie Set` | 91 | greenscreens, tripods, lighting rigs |
 
-## Wrong genre for Northgate
+## The "wrong genre" folders, re-audited 2026-08-03 — and most of them are not
 
-Real content, but a modern American town is not the place for it: `Fantasy` (1,374 across 28
-subfolders), `Steampunk` (479), `Primeval` (105), and the seasonal sets — `Christmas` 120,
-`Easter` 108, `Halloween` 80, `4July` 80, `Valentine` 71. **458 seasonal prefabs.**
+**This section used to read "Wrong genre for Northgate" and write off 2,416 prefabs in three
+sentences. It was wrong, and it was the most misleading page in these docs.**
+
+It was written against an English village called Northgate, in a simulation that had no calendar.
+The town is now Rossville, Illinois, and `GameClock` has `Year`, `Month` and `DayOfYear`. **Both
+premises expired.** Opening the folders shows the genre labels describe *which tab of the store the
+content shipped in*, not what the models are.
+
+Full working in **`ASSET-GAPS.md`**. The short version:
+
+### Steampunk is largely Victorian — and this town sells Victorian for a living
+
+Rossville is the **Antique Capital of Illinois**; that is its identity and part of its economy at
+the 1991 opening.
+
+| folder | n | what is actually in it |
+|---|---:|---|
+| **`Steampunk/Furniture`** | **120** | `Chest_Of_Drawers_Victorian`, `Chandelier_Victorian_Lit/Unlit`, `Desk_Kneehole`, `Cabinet_Specimen`, `Book_Stack`. **Antique-shop stock and older-house furniture.** Barely a gear in sight |
+| **`Steampunk/Signboard`** | **21** | `Signboard_Bank`, `_Barber`, `_Bakery`, `_Apothecary`, `_Doctor`, `_Books`, `_Mechanic`. **The documented trades of the 1913 downtown**, as hanging shop signs |
+| **`Steampunk/Bathroom`** | **19** | `Bathtub_Victorian`, `Sink_Victorian`, `Sitz_Bath_Victorian`. **The one bathroom in a pre-1950 house** |
+| **`Steampunk/Trophies`** | **22** | mounted `Deer`, `Coyote`, `Fox`, `Trout` — farmhouse, tavern, Legion hall |
+| `Steampunk/Library` | 47 | bookshelves and books |
+| `Steampunk/Pipes` | 45 | grain elevator, boiler room, basement |
+
+### Fantasy holds a farmyard and a main street under a medieval label
+
+| folder | n | what is actually in it |
+|---|---:|---|
+| **`Fantasy/Wood`** | **21** | `Sawhorse`, `Wood_Logs_Stacked`, `Wood_Pile`, `Axe_Chopping`. Pure farmyard |
+| **`Fantasy/Smith`** | **30** | `Anvil`, `Bellows`, `Forge`, `Grind_Stone` — the 1913 sheet labels a blacksmith |
+| **`Fantasy/Butcher`** | **25** | hanging beef, pork and chicken — farm butchering, and there was a meat market |
+| **`Fantasy/Vegetable`** | **19** | produce crates and baskets — the produce stand |
+| `Fantasy/Cooking` | 87 | a generic kitchen |
+| `Fantasy/Furniture` | 107 | mixed — benches and baths yes, battlemaps no |
+
+**Still genuinely unusable:** Fantasy `Buildings` (125), `Tents` (102), `Palisade` (67),
+`Statues` (53), `Battlefield` (35), `Siege` (20), `Castle` (17), `Portals` (5), most of `Prison`
+(26 — but `Door_Bars` and `Handcuffs` survive, and the historical society museum has a two-cell
+jail), and all of **`Primeval`** (105).
+
+### The 458 seasonal prefabs were cut for a reason that has expired
+
+They were dismissed when the simulation had no calendar. It has one now, and `Fields` already drives
+the crops off it.
+
+| pack | n | verdict |
+|---|---:|---|
+| **`4July`** | **80** | **Direct hit.** `Balloon_Small_Flag_American`, `Bench_Garden_Long`, `Bottle_Beer`, `Burger`, **`Corn_Slice_Grilled`**, plastic cups. The welcome-sign photograph shows US flags downtown |
+| **`Christmas`** | **120** | **Directly attested.** The Rossville Community Organization runs *"Christmas in the Village"* at Christman Park with a drive-through lighted display. Every candle ships `Lit` and `Unlit` |
+| **`Halloween`** | **80** | pumpkins and candy, in the month `WHO-SEES-WHOM.md` calls the darkest of the year |
+| `Easter` | 108 | spring baskets and eggs |
+| `Valentine` | 71 | weakest — but the candles, bottles and perfume are generic props under a pink label |
+
+A large share of **every** seasonal pack is candles in `Lit`/`Unlit`/`Used` variants plus generic
+food, bottles, cups, benches and chairs. Neither seasonal nor era-specific.
+
+> **Decorations are era-gated content.** Christmas lights in 1991 are not the lights of 2005. The
+> same `Era` curve being built for `technology.txt` should drive seasonal dressing — one mechanism,
+> two uses.
+
+### The lesson for this file
+
+**Roughly 400–500 usable prefabs were written off on the strength of a folder name.** Before
+dismissing anything here again, open it. The counts in the tables above are recursive and the labels
+are the vendor's, not ours.
 
 ## Two traps, both of which have already cost time
 
