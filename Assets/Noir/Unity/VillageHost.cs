@@ -31,6 +31,19 @@ namespace Noir.Unity
         public Simulation Sim { get; private set; }
         public string LoadError { get; private set; }
 
+        /// <summary>
+        /// The year the simulation is in. THE ONLY ONE - there used to be a second, a frozen
+        /// `Households.Year = 1991` const that ages were worked against because the clock had no
+        /// calendar when it was written. It has one now, so this is it.
+        ///
+        /// Presentation code needs this because how old somebody is decides how tall they are
+        /// drawn, what the panel prints, and whether they are called a child. Falls back to the
+        /// epoch before the host exists, which is what a prototype scene or an editor tool that
+        /// never pressed Play is looking at anyway.
+        /// </summary>
+        public static int Year =>
+            Instance != null && Instance.Sim != null ? Instance.Sim.Clock.Year : GameClock.EpochYear;
+
         public CitizenId Selected { get; set; } = CitizenId.None;
         public bool Following { get; set; }
 

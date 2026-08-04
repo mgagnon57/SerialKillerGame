@@ -25,6 +25,13 @@ namespace Noir.Sim
     public static class EconomyReport
     {
         /// <summary>
+        /// The year this describes. These are reports about the village AS GENERATED, and a
+        /// VillageContext has no clock in it - so the epoch, which is the year the population was
+        /// drawn for. Anything wanting the town in 2003 needs a simulation, not a context.
+        /// </summary>
+        private const int Year = GameClock.EpochYear;
+
+        /// <summary>
         /// A sane walk to the shop, in metres, one way. One tile is one metre — village.txt.
         ///
         /// Eight hundred is ten minutes at an adult's 1.35 m/s, which is about as far as anybody
@@ -80,7 +87,7 @@ namespace Noir.Sim
             r.Line($"            hours reachable     {DefaultReachablePercent}% of the working population, or it is a warning");
             r.Line();
             r.Line($"          COST — {people.Count * 7:#,0} day plans and roughly "
-                 + $"{people.HouseholdCount * world.PlacesOfKind(PlaceKind.Shop).Count + people.CountOfStage(LifeStage.Child):#,0} "
+                 + $"{people.HouseholdCount * world.PlacesOfKind(PlaceKind.Shop).Count + people.CountOfStage(LifeStage.Child, Year):#,0} "
                  + "A* queries.");
             r.Line("          No simulation is ticked: every figure below comes from the world, the");
             r.Line("          population and DayPlanner, all of which are pure functions of the seed.");
@@ -144,7 +151,7 @@ namespace Noir.Sim
                           gap > 0 ? "SHORT " + gap : "");
             }
 
-            int adults = people.CountOfStage(LifeStage.Adult);
+            int adults = people.CountOfStage(LifeStage.Adult, Year);
             int employed = people.WorkingCount;
             int idle = adults - employed;
 
@@ -203,7 +210,7 @@ namespace Noir.Sim
             for (int i = 0; i < people.Count; i++)
             {
                 var c = people.Get(new CitizenId(i));
-                if (!c.IsChild) continue;
+                if (!c.IsChildIn(Year)) continue;
                 children++;
 
                 var household = people.HouseholdOf(c);

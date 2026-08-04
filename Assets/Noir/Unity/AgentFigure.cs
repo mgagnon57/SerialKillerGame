@@ -41,17 +41,17 @@ namespace Noir.Unity
         /// <summary>Metres covered by one full stride - a left step and a right step together.</summary>
         public float Stride => Height * 0.82f;
 
-        public static AgentLook Of(Citizen who)
+        public static AgentLook Of(Citizen who, int year)
         {
             int id = who.Id.Value;
 
             // Children are sized by age rather than by stage: a six-year-old and a ten-year-old
             // are not the same shape, and a school emptying should not look like one clone class.
             float baseline;
-            switch (who.Stage)
+            switch (who.StageIn(year))
             {
                 case LifeStage.Child:
-                    baseline = Mathf.Lerp(1.02f, 1.58f, Mathf.InverseLerp(5f, 15f, who.Age));
+                    baseline = Mathf.Lerp(1.02f, 1.58f, Mathf.InverseLerp(5f, 15f, who.AgeIn(year)));
                     break;
                 case LifeStage.Elder:
                     baseline = 1.63f;
@@ -63,16 +63,16 @@ namespace Noir.Unity
 
             float height = baseline * (0.95f + Fraction(id, 11) * 0.10f);
             float breadth = 0.90f + Fraction(id, 23) * 0.28f;
-            float headScale = who.IsChild
-                ? Mathf.Lerp(1.24f, 1.04f, Mathf.InverseLerp(5f, 15f, who.Age))
+            float headScale = who.IsChildIn(year)
+                ? Mathf.Lerp(1.24f, 1.04f, Mathf.InverseLerp(5f, 15f, who.AgeIn(year)))
                 : 1f;
-            float stoop = who.Stage == LifeStage.Elder
+            float stoop = who.StageIn(year) == LifeStage.Elder
                 ? 5f + Fraction(id, 31) * 8f
                 : Fraction(id, 31) * 2.5f;
 
             // Grey is common in the old and not universal - a village full of white heads is as
             // wrong as a village with none.
-            bool greying = who.Stage == LifeStage.Elder && Fraction(id, 67) < 0.8f;
+            bool greying = who.StageIn(year) == LifeStage.Elder && Fraction(id, 67) < 0.8f;
 
             return new AgentLook(
                 height, breadth, headScale, stoop, Fraction(id, 71) * Mathf.PI * 2f,

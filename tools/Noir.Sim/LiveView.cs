@@ -126,8 +126,8 @@ namespace Noir.Sim
             var sim = new Simulation(ctx.World, ctx.People, ctx.Seed, startHour * 60);
             var sb = new StringBuilder();
 
-            sb.AppendLine($"{citizen.FullName}, {citizen.Age} — "
-                        + $"{(citizen.Works ? ctx.World.GetPlace(citizen.Work).Name : citizen.IsChild ? "at school" : "not in work")}");
+            sb.AppendLine($"{citizen.FullName}, {citizen.AgeIn(sim.Clock.Year)} — "
+                        + $"{(citizen.Works ? ctx.World.GetPlace(citizen.Work).Name : citizen.IsChildIn(sim.Clock.Year) ? "at school" : "not in work")}");
             sb.AppendLine($"home: {ctx.World.GetPlace(citizen.Home).Name}");
             sb.AppendLine();
 

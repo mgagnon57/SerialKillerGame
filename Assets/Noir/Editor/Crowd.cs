@@ -62,7 +62,7 @@ namespace Noir.Editor
             for (int i = 0; i < people.Count; i++)
             {
                 var citizen = people.Get(new CitizenId(i));
-                var look = AgentLook.Of(citizen);
+                var look = AgentLook.Of(citizen, VillageHost.Year);
 
                 crowd._looks[i] = look;
                 crowd._figures[i] = AgentFigure.Build(root.transform, citizen.FullName, look, crowd._block);

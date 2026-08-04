@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Noir.Core.Contracts;
 using Noir.Core.People;
 
 namespace Noir.Unity
@@ -49,9 +50,15 @@ namespace Noir.Unity
                                                           : "the " + Surname + "s";
         }
 
-        /// <summary>The year the game is set. Ages are worked out against this, not against
-        /// whatever year the machine thinks it is.</summary>
-        public const int Year = 1991;
+        // THE `Year = 1991` CONST THAT WAS HERE IS GONE. It said ages were worked out against
+        // it "not against whatever year the machine thinks it is", which was right when the clock
+        // had no calendar and is wrong now that it has one. GameClock.EpochYear is the only 1991
+        // in the codebase.
+        //
+        // These households do not age, and that is deliberate rather than overlooked: this is a
+        // snapshot of who was on a parcel when the town was generated, drawn from the shape of the
+        // county record, and the panel that shows it says "in 1991" for that reason. If they ever
+        // need to age, Person gets a birth year the same way Citizen did.
 
         private static NameTable _names;
         private static Dictionary<int, Household> _cache;

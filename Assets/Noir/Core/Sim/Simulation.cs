@@ -851,7 +851,7 @@ namespace Noir.Core.Sim
                 var leader = People.Get(_agents[index].WalkingWith);
                 if (leader != null) pace = leader;
             }
-            float speed = pace.BaseSpeed / cost;
+            float speed = pace.BaseSpeedIn(_clock.Year) / cost;
 
             var delta = target - pos;
             float distSq = delta.LengthSquared;
@@ -1032,7 +1032,7 @@ namespace Noir.Core.Sim
             var tile = pos.ToTile();
             float cost = World.Grid.InBounds(tile) ? World.Grid.MoveCost(tile.X, tile.Y) : 1.3f;
             if (cost > 100f) cost = 1.3f;
-            float step = citizen.BaseSpeed / cost * dt;
+            float step = citizen.BaseSpeedIn(_clock.Year) / cost * dt;
 
             _agents[index].PreviousPosition = pos;
 

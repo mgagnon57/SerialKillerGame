@@ -115,7 +115,21 @@ namespace Noir.Core.People
 
         public readonly string Forename;
         public readonly string Surname;
-        public readonly int Age;
+
+        /// <summary>
+        /// The year they were born, which is identity. AGE IS NOT, AND USED TO BE STORED HERE.
+        ///
+        /// This class opens by saying it holds what is fixed for the life of the simulation and
+        /// that everything which changes lives in the simulation state. Age was a `readonly int`
+        /// sitting in the middle of it, so over a fifteen-year game a seven-year-old stayed seven,
+        /// a schoolchild never left school, and the 1991 cohorts in names.txt quietly became wrong
+        /// for everybody. There was a second frozen year to go with it - `Households.Year = 1991`,
+        /// a const, with a comment explaining that ages were worked against it rather than against
+        /// "whatever year the machine thinks it is". That was true before the clock had a calendar.
+        ///
+        /// Now there is one year and it is <see cref="GameClock.Year"/>. Ask <see cref="AgeIn"/>.
+        /// </summary>
+        public readonly int BirthYear;
 
         /// <summary>
         /// Which forename list they were drawn from.
@@ -135,7 +149,6 @@ namespace Noir.Core.People
         /// different words.
         /// </summary>
         public readonly bool Male;
-        public readonly LifeStage Stage;
         public readonly Occupation Job;
 
         public readonly HouseholdId Household;
@@ -168,15 +181,15 @@ namespace Noir.Core.People
         /// </summary>
         public readonly Beat Beats;
 
-        public Citizen(CitizenId id, string forename, string surname, int age, LifeStage stage,
+        public Citizen(CitizenId id, string forename, string surname, int birthYear,
                        Occupation job, HouseholdId household, PlaceId home, PlaceId work, byte shift,
                        sbyte punctuality, byte pace, byte sociability, int[] particulars,
                        Beat beats = Beat.None, bool? male = null)
-            : this(id, CitizenKey.None, 0, forename, surname, age, stage, job, household, home,
+            : this(id, CitizenKey.None, 0, forename, surname, birthYear, job, household, home,
                    work, shift, punctuality, pace, sociability, particulars, beats, male) { }
 
         public Citizen(CitizenId id, CitizenKey key, int birthOrder,
-                       string forename, string surname, int age, LifeStage stage,
+                       string forename, string surname, int birthYear,
                        Occupation job, HouseholdId household, PlaceId home, PlaceId work, byte shift,
                        sbyte punctuality, byte pace, byte sociability, int[] particulars,
                        Beat beats = Beat.None, bool? male = null)
@@ -188,8 +201,7 @@ namespace Noir.Core.People
             Id = id;
             Forename = forename;
             Surname = surname;
-            Age = age;
-            Stage = stage;
+            BirthYear = birthYear;
             Job = job;
             Household = household;
             Home = home;
@@ -216,22 +228,47 @@ namespace Noir.Core.People
 
         public string FullName => Forename + " " + Surname;
 
-        public bool IsChild => Stage == LifeStage.Child;
         public bool Works => Work.IsValid;
 
-        /// <summary>Walking speed in tiles per second, before terrain.</summary>
-        public float BaseSpeed
+        /// <summary>Age at school leaving. Below this they are at school and counted as a child.</summary>
+        public const int SchoolLeaving = 16;
+
+        /// <summary>Age at retirement, matching the census bracket the research is written in.</summary>
+        public const int Retirement = 65;
+
+        /// <summary>How old they are in a given calendar year. Pass <see cref="GameClock.Year"/>.</summary>
+        public int AgeIn(int year) => year - BirthYear;
+
+        /// <summary>
+        /// What that age makes them.
+        ///
+        /// Derived rather than stored, and the thresholds are chosen to reproduce the generator
+        /// exactly at the epoch: it picks a stage FIRST and then draws an age inside it - 5 to 15
+        /// for a child, 21 to 64 for an adult, 65 to 88 for an elder - so these boundaries put
+        /// every generated person back in the stage they were generated as. The 1991 village is
+        /// therefore bit-identical to the one before age moved, which is the regression check.
+        /// </summary>
+        public LifeStage StageIn(int year)
         {
-            get
-            {
-                float baseline = Stage == LifeStage.Child ? 1.15f
-                               : Stage == LifeStage.Elder ? 0.95f
-                               : 1.35f;
-                float variation = 0.88f + (Pace / 255f) * 0.24f;
-                return baseline * variation;
-            }
+            int age = AgeIn(year);
+            return age < SchoolLeaving ? LifeStage.Child
+                 : age < Retirement ? LifeStage.Adult
+                 : LifeStage.Elder;
         }
 
-        public override string ToString() => $"{FullName} ({Age})";
+        public bool IsChildIn(int year) => StageIn(year) == LifeStage.Child;
+
+        /// <summary>Walking speed in tiles per second, before terrain.</summary>
+        public float BaseSpeedIn(int year)
+        {
+            var stage = StageIn(year);
+            float baseline = stage == LifeStage.Child ? 1.15f
+                           : stage == LifeStage.Elder ? 0.95f
+                           : 1.35f;
+            float variation = 0.88f + (Pace / 255f) * 0.24f;
+            return baseline * variation;
+        }
+
+        public override string ToString() => $"{FullName} (b. {BirthYear})";
     }
 }

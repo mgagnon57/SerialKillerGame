@@ -43,7 +43,7 @@ namespace Noir.Core.Tests
         }
 
         private static Citizen Villager(byte sociability, Beat beats = Beat.None) =>
-            new Citizen(new CitizenId(7), "Ada", "Reed", 44, LifeStage.Adult, Occupation.Shopkeeper,
+            new Citizen(new CitizenId(7), "Ada", "Reed", GameClock.EpochYear - 44, Occupation.Shopkeeper,
                         new HouseholdId(3), new PlaceId(1), new PlaceId(2), 0,
                         0, 128, sociability, new int[0], beats, male: false);
 

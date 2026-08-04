@@ -529,7 +529,7 @@ namespace Noir.Unity
             var generated = Households.For(parcelId);
             if (generated != null && string.IsNullOrWhiteSpace(_draftNames))
             {
-                GUILayout.Label($"<color=#8a8a86>in {Households.Year}, {generated.Family} "
+                GUILayout.Label($"<color=#8a8a86>in {GameClock.EpochYear}, {generated.Family} "
                               + $"{(generated.Rented ? "rented here" : "lived here")}</color>", _small);
                 foreach (var person in generated.Members)
                     GUILayout.Label($"<color=#75736e>   {person.Forename} {generated.Surname}, "
@@ -983,7 +983,7 @@ namespace Noir.Unity
             var household = _host.People.HouseholdOf(citizen);
 
             GUILayout.Label(citizen.FullName, _title);
-            GUILayout.Label($"{citizen.Age}   ·   {Stage(citizen)}", _small);
+            GUILayout.Label($"{citizen.AgeIn(VillageHost.Year)}   ·   {Stage(citizen)}", _small);
             GUILayout.Space(S(10f));
 
             // ---- what they are doing, right now ----
@@ -1019,8 +1019,8 @@ namespace Noir.Unity
                 GUILayout.Label($"<color=#8a8a86>works as</color>  {Pretty(citizen.Job)} "
                               + $"<color=#8a8a86>at</color> {_host.World.GetPlace(citizen.Work)?.Name}"
                               + (citizen.Shift > 0 ? "  <color=#8a8a86>(late shift)</color>" : ""), _label);
-            else if (citizen.IsChild) GUILayout.Label("<color=#8a8a86>at school</color>", _label);
-            else if (citizen.Stage == LifeStage.Elder) GUILayout.Label("<color=#8a8a86>retired</color>", _label);
+            else if (citizen.IsChildIn(VillageHost.Year)) GUILayout.Label("<color=#8a8a86>at school</color>", _label);
+            else if (citizen.StageIn(VillageHost.Year) == LifeStage.Elder) GUILayout.Label("<color=#8a8a86>retired</color>", _label);
 
             GUILayout.Space(S(12f));
 
@@ -1062,7 +1062,7 @@ namespace Noir.Unity
 
         private static string Stage(Citizen c)
         {
-            switch (c.Stage)
+            switch (c.StageIn(VillageHost.Year))
             {
                 case LifeStage.Child: return "a child";
                 case LifeStage.Elder: return "elderly";

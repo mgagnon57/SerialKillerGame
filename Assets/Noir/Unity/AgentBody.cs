@@ -125,7 +125,7 @@ namespace Noir.Unity
         /// </summary>
         public static AgentBody Build(Transform parent, Citizen who, in AgentLook look)
         {
-            var set = who.IsChild ? (who.Male ? Boys() : Girls())
+            var set = who.IsChildIn(VillageHost.Year) ? (who.Male ? Boys() : Girls())
                                   : (who.Male ? Men() : Women());
             if (set.Count == 0) return null;
 

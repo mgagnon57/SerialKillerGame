@@ -105,8 +105,7 @@ namespace Noir.Core.Tests
                 // Punctuality zero on everybody: they all wake at the same minute, so the only
                 // thing spreading their errands out is the planner's own jitter — which is what
                 // gets several of them to the counter inside the same few minutes.
-                citizens[i] = new Citizen(id, "Customer", (i + 1).ToString(), 34 + i % 30,
-                                          LifeStage.Adult,
+                citizens[i] = new Citizen(id, "Customer", (i + 1).ToString(), GameClock.EpochYear - (34 + i % 30),
                                           keeper ? Occupation.Shopkeeper : Occupation.None,
                                           house, homes[i], keeper ? shop : PlaceId.None, 0, 0,
                                           (byte)(110 + i * 5), (byte)(40 + i * 8), null,

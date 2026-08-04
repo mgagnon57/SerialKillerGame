@@ -11,6 +11,13 @@ namespace Noir.Sim
     /// before there is anything to look at.</summary>
     public static class Reports
     {
+        /// <summary>
+        /// The year this describes. These are reports about the village AS GENERATED, and a
+        /// VillageContext has no clock in it - so the epoch, which is the year the population was
+        /// drawn for. Anything wanting the town in 2003 needs a simulation, not a context.
+        /// </summary>
+        private const int Year = GameClock.EpochYear;
+
         public static string Households(VillageContext ctx)
         {
             var sb = new StringBuilder();
@@ -25,10 +32,10 @@ namespace Noir.Sim
                 {
                     var c = ctx.People.Get(id);
                     string job = c.Job == Occupation.None
-                        ? (c.IsChild ? "at school" : c.Stage == LifeStage.Elder ? "retired" : "—")
+                        ? (c.IsChildIn(Year) ? "at school" : c.StageIn(Year) == LifeStage.Elder ? "retired" : "—")
                         : Occupations.NameOf(c.Job);
                     string work = c.Work.IsValid ? ctx.World.GetPlace(c.Work).Name : "";
-                    sb.AppendLine($"    {c.FullName,-26} {c.Age,3}  {job,-12} {work}");
+                    sb.AppendLine($"    {c.FullName,-26} {c.AgeIn(Year),3}  {job,-12} {work}");
                 }
                 sb.AppendLine();
             }
@@ -169,9 +176,9 @@ namespace Noir.Sim
             sb.AppendLine(new string('-', 46));
             sb.AppendLine($"people          {p.Count}");
             sb.AppendLine($"households      {p.HouseholdCount}");
-            sb.AppendLine($"  children      {p.CountOfStage(LifeStage.Child)}");
-            sb.AppendLine($"  adults        {p.CountOfStage(LifeStage.Adult)}");
-            sb.AppendLine($"  elders        {p.CountOfStage(LifeStage.Elder)}");
+            sb.AppendLine($"  children      {p.CountOfStage(LifeStage.Child, Year)}");
+            sb.AppendLine($"  adults        {p.CountOfStage(LifeStage.Adult, Year)}");
+            sb.AppendLine($"  elders        {p.CountOfStage(LifeStage.Elder, Year)}");
             sb.AppendLine($"in work         {p.WorkingCount} of {ctx.World.TotalJobSlots} jobs");
             sb.AppendLine();
             sb.AppendLine($"map             {ctx.World.Width} x {ctx.World.Height}");
@@ -215,13 +222,13 @@ namespace Noir.Sim
             var household = ctx.People.HouseholdOf(c);
 
             var sb = new StringBuilder();
-            sb.AppendLine($"{c.FullName}, {c.Age}");
+            sb.AppendLine($"{c.FullName}, {c.AgeIn(Year)}");
             sb.AppendLine($"  {household}, at {ctx.World.GetPlace(c.Home).Name}");
             if (c.Works)
                 sb.AppendLine($"  {Occupations.NameOf(c.Job)} at {ctx.World.GetPlace(c.Work).Name}"
                             + (c.Shift > 0 ? "  (late shift)" : ""));
-            else if (c.IsChild) sb.AppendLine("  at school");
-            else if (c.Stage == LifeStage.Elder) sb.AppendLine("  retired");
+            else if (c.IsChildIn(Year)) sb.AppendLine("  at school");
+            else if (c.StageIn(Year) == LifeStage.Elder) sb.AppendLine("  retired");
 
             sb.AppendLine();
             foreach (int p in c.Particulars)

@@ -197,6 +197,10 @@ namespace Noir.Core.People
                 ? names.Male[rng.NextInt(names.Male.Count)]
                 : names.Female[rng.NextInt(names.Female.Count)];
 
+            // THE DRAW IS UNCHANGED AND MUST STAY UNCHANGED - the same three calls in the same
+            // order off the same stream, so the 1991 village is bit-identical to the one built
+            // before age became a birth year. Only what is STORED changed: an age at the epoch is
+            // a fact that expires, and Citizen holds what does not.
             int age;
             switch (stage)
             {
@@ -204,6 +208,7 @@ namespace Noir.Core.People
                 case LifeStage.Elder: age = 65 + rng.NextInt(24); break;  // 65..88
                 default: age = 21 + rng.NextInt(44); break;               // 21..64
             }
+            int birthYear = GameClock.EpochYear - age;
 
             // Two or three particulars each, distinct.
             int wanted = 2 + (rng.Chance(0.4f) ? 1 : 0);
@@ -221,7 +226,7 @@ namespace Noir.Core.People
             foreach (int p in chosen) beats |= particulars.BeatAt(p);
 
             citizens.Add(new Citizen(
-                id, key, birthOrder, forename, surname, age, stage,
+                id, key, birthOrder, forename, surname, birthYear,
                 Occupation.None, household, dwelling, PlaceId.None, 0,
                 punctuality: (sbyte)(rng.NextInt(-15, 16)),
                 pace: (byte)rng.NextInt(256),
@@ -268,7 +273,10 @@ namespace Noir.Core.People
             // Working-age adults, shuffled so the same people are not always employed.
             var candidates = new List<int>();
             for (int i = 0; i < citizens.Count; i++)
-                if (citizens[i].Stage == LifeStage.Adult) candidates.Add(i);
+                // Jobs are handed out at generation, which happens in the epoch year. A person
+                // who retires in 1998 keeps the job they were given in 1991 - nobody is rehired
+                // or retired by this pass, and that is the demography gap flagged in the handoff.
+                if (citizens[i].StageIn(GameClock.EpochYear) == LifeStage.Adult) candidates.Add(i);
 
             for (int i = candidates.Count - 1; i > 0; i--)
             {
@@ -319,7 +327,7 @@ namespace Noir.Core.People
                     shift = (byte)(slot % 2);
 
                 citizens[candidates[n]] = new Citizen(
-                    old.Id, old.Key, old.BirthOrder, old.Forename, old.Surname, old.Age, old.Stage,
+                    old.Id, old.Key, old.BirthOrder, old.Forename, old.Surname, old.BirthYear,
                     job, old.Household, old.Home, place.Id, shift,
                     old.Punctuality, old.Pace, old.Sociability, old.Particulars, old.Beats);
 

@@ -85,10 +85,15 @@ namespace Noir.Core.People
             return h != null ? h.Members : (IReadOnlyList<CitizenId>)Empty;
         }
 
-        public int CountOfStage(LifeStage stage)
+        /// <summary>
+        /// How many are at this stage of life IN A GIVEN YEAR. The year is not optional and used
+        /// not to exist: a stage is now derived from a birth year, so "how many children are
+        /// there" is a question about a date and the count genuinely changes across the game.
+        /// </summary>
+        public int CountOfStage(LifeStage stage, int year)
         {
             int n = 0;
-            foreach (var c in _citizens) if (c.Stage == stage) n++;
+            foreach (var c in _citizens) if (c.StageIn(year) == stage) n++;
             return n;
         }
 

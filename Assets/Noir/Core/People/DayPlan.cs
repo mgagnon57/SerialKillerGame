@@ -127,6 +127,14 @@ namespace Noir.Core.People
             // A stream unique to this person AND this day, so yesterday does not shift today.
             var rng = new Xoshiro256ss(Mix(seed, (ulong)who.Id.Value, (ulong)day));
             int dayOfWeek = day % 7;
+
+            // WHICH YEAR IT IS, because how old somebody is decides most of what follows and a
+            // fifteen-year game moves people between stages. A child planned in 1991 is planned as
+            // an adult in 2005 - they leave school, stop being walked there, and start keeping
+            // adult hours. Derived from `day` rather than passed in, so there is no second way to
+            // be wrong about it.
+            int year = new GameClock(GameClock.TickAt(day, 0)).Year;
+
             bool weekend = dayOfWeek >= 5;
             bool sunday = dayOfWeek == 6;
 
@@ -134,8 +142,8 @@ namespace Noir.Core.People
             int jitter = who.Punctuality;
 
             // ---- sleep: everyone starts the day in bed ----
-            int wake = WakeTime(who, weekend) + jitter;
-            int bed = BedTime(who, weekend) + jitter / 2;
+            int wake = WakeTime(who, year, weekend) + jitter;
+            int bed = BedTime(who, year, weekend) + jitter / 2;
             blocks.Add(new Block(0, wake, who.Home, Activity.Asleep));
 
             int cursor = wake;
@@ -150,7 +158,7 @@ namespace Noir.Core.People
             //
             // This is also the first thing that uses the `population` argument, which the
             // signature has always taken and the body never touched.
-            if (!weekend && !who.IsChild && HasInfant(population, who))
+            if (!weekend && !who.IsChildIn(year) && HasInfant(population, who, year))
             {
                 var school = Catchment(world, population, who, PlaceKind.School);
                 if (school.IsValid)
@@ -172,7 +180,7 @@ namespace Noir.Core.People
             }
 
             // ---- the obligation: work or school ----
-            if (who.IsChild && !weekend)
+            if (who.IsChildIn(year) && !weekend)
             {
                 var school = Catchment(world, population, who, PlaceKind.School);
                 if (school.IsValid)
@@ -183,7 +191,7 @@ namespace Noir.Core.People
                     if (start > cursor) blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
 
                     int in_ = Math.Max(cursor, start);
-                    AddObligation(blocks, world, who, school, Activity.AtSchool,
+                    AddObligation(blocks, world, who, year, school, Activity.AtSchool,
                                   in_, end, jitter, dayOfWeek, rng);
                     cursor = end;
                 }
@@ -198,7 +206,7 @@ namespace Noir.Core.People
                     if (start > cursor) blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
                     if (end > start)
                     {
-                        AddObligation(blocks, world, who, who.Work, Activity.AtWork,
+                        AddObligation(blocks, world, who, year, who.Work, Activity.AtWork,
                                       Math.Max(cursor, start), end, jitter, dayOfWeek, rng);
                         cursor = end;
                     }
@@ -213,7 +221,7 @@ namespace Noir.Core.People
                 // The draw happens unconditionally, before any test that could skip it, so that
                 // adding or changing conditions here never shifts the RNG stream for everything
                 // downstream. Cheap discipline; it is what keeps a seed reproducible.
-                bool attends = rng.Chance(ChurchChance(who));
+                bool attends = rng.Chance(ChurchChance(who, year));
 
                 if (church.IsValid && attends)
                 {
@@ -236,7 +244,7 @@ namespace Noir.Core.People
             }
 
             // ---- discretionary time, until bed ----
-            int errands = ErrandCount(who, weekend, bed - cursor, rng);
+            int errands = ErrandCount(who, year, weekend, bed - cursor, rng);
             for (int e = 0; e < errands && cursor < bed - 40; e++)
             {
                 // SPREAD ACROSS WHAT IS LEFT, NOT STACKED AT THE FRONT.
@@ -265,7 +273,7 @@ namespace Noir.Core.People
                 // with two greens and no shops came out with 238 of 365 indoors at three in the
                 // afternoon: the first empty list stopped everything behind it. Trying the next
                 // slot instead costs one wasted draw and the loop still ends, because `e` counts.
-                var chosen = ChooseErrand(world, who, dayOfWeek, start, bed, rng);
+                var chosen = ChooseErrand(world, who, year, dayOfWeek, start, bed, rng);
                 if (!chosen.HasValue) continue;
 
                 var (place, activity, duration) = chosen.Value;
@@ -321,7 +329,7 @@ namespace Noir.Core.People
         /// If nothing suitable is open and near, there is no break and the block stays whole.
         /// A farm hand at the far end of the fields genuinely does eat where he is standing.
         /// </summary>
-        private static void AddObligation(List<Block> blocks, WorldModel world, Citizen who,
+        private static void AddObligation(List<Block> blocks, WorldModel world, Citizen who, int year,
                                           PlaceId where, Activity what,
                                           int from, int until, int jitter, int dayOfWeek, IRng rng)
         {
@@ -338,7 +346,7 @@ namespace Noir.Core.People
 
             if (straddles)
             {
-                var (place, activity) = DinnerPlace(world, who, where, dayOfWeek, start, roll);
+                var (place, activity) = DinnerPlace(world, who, year, where, dayOfWeek, start, roll);
                 if (place.IsValid)
                 {
                     blocks.Add(new Block(from, start, where, what));
@@ -355,7 +363,7 @@ namespace Noir.Core.People
         /// Where the dinner hour is spent. Measured from the workplace door, not the house —
         /// you go out from where you already are.
         /// </summary>
-        private static (PlaceId, Activity) DinnerPlace(WorldModel world, Citizen who, PlaceId workplace,
+        private static (PlaceId, Activity) DinnerPlace(WorldModel world, Citizen who, int year, PlaceId workplace,
                                                        int dayOfWeek, int from, float roll)
         {
             var door = Locality.AnchorOf(world.GetPlace(workplace));
@@ -374,7 +382,7 @@ namespace Noir.Core.People
             Offer(PlaceKind.Green);
             Offer(PlaceKind.Churchyard);
 
-            if (who.IsChild)
+            if (who.IsChildIn(year))
             {
                 Offer(PlaceKind.Playground);
             }
@@ -400,7 +408,7 @@ namespace Noir.Core.People
 
         // ---- the shape of a day ----
 
-        private static int WakeTime(Citizen who, bool weekend)
+        private static int WakeTime(Citizen who, int year, bool weekend)
         {
             switch (who.Job)
             {
@@ -408,21 +416,21 @@ namespace Noir.Core.People
                 case Occupation.FarmHand: return 5 * 60;                      // milking
                 case Occupation.MillHand: return who.Shift == 0 ? 5 * 60 + 15 : 8 * 60;
                 default:
-                    if (who.Stage == LifeStage.Elder) return 6 * 60 + 30;
+                    if (who.StageIn(year) == LifeStage.Elder) return 6 * 60 + 30;
                     return weekend ? 8 * 60 : 7 * 60;
             }
         }
 
-        private static int BedTime(Citizen who, bool weekend)
+        private static int BedTime(Citizen who, int year, bool weekend)
         {
-            if (who.IsChild) return 20 * 60 + 30;
-            if (who.Stage == LifeStage.Elder) return 22 * 60;
+            if (who.IsChildIn(year)) return 20 * 60 + 30;
+            if (who.StageIn(year) == LifeStage.Elder) return 22 * 60;
             if (who.Job == Occupation.MillHand && who.Shift == 1) return 23 * 60 + 30;
             return weekend ? 23 * 60 + 30 : 22 * 60 + 45;
         }
 
-        private static float ChurchChance(Citizen who) =>
-            who.Stage == LifeStage.Elder ? 0.7f : who.IsChild ? 0.35f : 0.3f;
+        private static float ChurchChance(Citizen who, int year) =>
+            who.StageIn(year) == LifeStage.Elder ? 0.7f : who.IsChildIn(year) ? 0.35f : 0.3f;
 
         /// <summary>
         /// How many errands this person has in them today.
@@ -437,16 +445,16 @@ namespace Noir.Core.People
         /// One more errand per four free hours, so a working day out ends up with four or five
         /// things in it and a short evening still has one.
         /// </summary>
-        private static int ErrandCount(Citizen who, bool weekend, int free, IRng rng)
+        private static int ErrandCount(Citizen who, int year, bool weekend, int free, IRng rng)
         {
             float social = who.Sociability / 255f;
             int n = rng.Chance(0.35f + social * 0.4f) ? 2 : 1;
             if (weekend && rng.Chance(0.4f)) n++;
-            if (who.IsChild) n = rng.Chance(0.7f) ? 1 : 0;
+            if (who.IsChildIn(year)) n = rng.Chance(0.7f) ? 1 : 0;
 
             // Drawn AFTER the rolls above so none of them shift, for the same reason the errand
             // list is appended to rather than inserted into.
-            if (!who.IsChild && free > 0) n += Math.Min(4, free / 240);
+            if (!who.IsChildIn(year) && free > 0) n += Math.Min(4, free / 240);
             return n;
         }
 
@@ -463,7 +471,7 @@ namespace Noir.Core.People
         /// Weighted pick over what is actually open and plausible for this person.
         /// <paramref name="from"/> is the real arrival minute, not an estimate.
         /// </summary>
-        private static (PlaceId, Activity, int)? ChooseErrand(WorldModel world, Citizen who,
+        private static (PlaceId, Activity, int)? ChooseErrand(WorldModel world, Citizen who, int year,
                                                               int dayOfWeek, int from, int until, IRng rng)
         {
             var options = new List<(PlaceId place, Activity act, int minutes, int weight)>();
@@ -509,7 +517,7 @@ namespace Noir.Core.People
 
             float social = who.Sociability / 255f;
 
-            if (who.IsChild)
+            if (who.IsChildIn(year))
             {
                 Consider(PlaceKind.Playground, Activity.AtThePlayground, 60, 60);
                 Consider(PlaceKind.Green, Activity.Walking, 45, 30);
@@ -521,14 +529,14 @@ namespace Noir.Core.People
                 Consider(PlaceKind.PostOffice, Activity.Shopping, 20, 18);
                 Consider(PlaceKind.Green, Activity.Walking, 40, 20);
                 Consider(PlaceKind.Allotments, Activity.OnTheAllotment, 90,
-                         who.Stage == LifeStage.Elder ? 45 : 22);
+                         who.StageIn(year) == LifeStage.Elder ? 45 : 22);
                 Consider(PlaceKind.VillageHall, Activity.Visiting, 100, (int)(18 * social));
 
                 if (from >= evening - 120)
                     Consider(PlaceKind.Pub, Activity.AtThePub, 90 + rng.NextInt(60),
                              (int)(20 + 70 * social));
 
-                if (who.Stage == LifeStage.Elder)
+                if (who.StageIn(year) == LifeStage.Elder)
                     Consider(PlaceKind.Churchyard, Activity.Visiting, 30, 20);
             }
 
@@ -555,8 +563,8 @@ namespace Noir.Core.People
             // the green for an hour indoors where nobody can see you.
             ConsiderThese(NeighboursOf(world, who), Activity.Visiting,
                           25 + rng.NextInt(35),
-                          who.IsChild ? (int)(3 + 9 * social)
-                                      : (int)(3 + 12 * social) + (who.Stage == LifeStage.Elder ? 6 : 0));
+                          who.IsChildIn(year) ? (int)(3 + 9 * social)
+                                      : (int)(3 + 12 * social) + (who.StageIn(year) == LifeStage.Elder ? 6 : 0));
 
             // ---- what Northgate has that Ashcombe never did ----
             //
@@ -571,7 +579,7 @@ namespace Noir.Core.People
             ConsiderNamed("diner", Activity.AtThePub, 40, 26);
             ConsiderNamed("newsstand", Activity.Shopping, 10, 20);
 
-            if (!who.IsChild)
+            if (!who.IsChildIn(year))
             {
                 // Both are evening places, and the casino is the one that is open when nothing
                 // else is - which is the whole reason to have one on a map about a killer.
@@ -688,7 +696,7 @@ namespace Noir.Core.People
         /// morning. The escort is simply the first adult in the household - deterministic, and
         /// it means the same parent does it every day, which is also what happens.
         /// </summary>
-        private static bool HasInfant(Population population, Citizen who)
+        private static bool HasInfant(Population population, Citizen who, int year)
         {
             if (population == null) return false;
 
@@ -701,9 +709,9 @@ namespace Noir.Core.People
                 var member = population.Get(household[i]);
                 if (member == null) continue;
 
-                if (member.IsChild)
+                if (member.IsChildIn(year))
                 {
-                    if (member.Age <= 9) anyInfant = true;
+                    if (member.AgeIn(year) <= 9) anyInfant = true;
                     continue;
                 }
                 if (!escort.IsValid) escort = member.Id;

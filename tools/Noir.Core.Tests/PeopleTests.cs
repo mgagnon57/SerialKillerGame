@@ -50,6 +50,9 @@ namespace Noir.Core.Tests
     [TestFixture]
     public class PopulationTests
     {
+        /// <summary>The village fixture is the one the generator builds, which is the epoch year.</summary>
+        private const int Year = GameClock.EpochYear;
+
         [Test]
         public void VillageSizedPopulation()
         {
@@ -76,11 +79,11 @@ namespace Noir.Core.Tests
         {
             foreach (var c in Village.People.Citizens)
             {
-                if (!c.IsChild) continue;
+                if (!c.IsChildIn(Year)) continue;
                 bool guardian = false;
                 foreach (var id in Village.People.HouseholdMembers(c))
-                    if (!Village.People.Get(id).IsChild) { guardian = true; break; }
-                Assert.That(guardian, Is.True, $"{c.FullName} ({c.Age}) lives with no adult");
+                    if (!Village.People.Get(id).IsChildIn(Year)) { guardian = true; break; }
+                Assert.That(guardian, Is.True, $"{c.FullName} ({c.AgeIn(Year)}) lives with no adult");
             }
         }
 
@@ -111,8 +114,8 @@ namespace Noir.Core.Tests
         public void ChildrenAndEldersDoNotHoldJobs()
         {
             foreach (var c in Village.People.Citizens)
-                if (c.IsChild || c.Stage == LifeStage.Elder)
-                    Assert.That(c.Works, Is.False, $"{c.FullName} ({c.Stage}) should not be employed");
+                if (c.IsChildIn(Year) || c.StageIn(Year) == LifeStage.Elder)
+                    Assert.That(c.Works, Is.False, $"{c.FullName} ({c.StageIn(Year)}) should not be employed");
         }
 
         [Test]
@@ -130,7 +133,7 @@ namespace Noir.Core.Tests
                 var x = a.Get(new CitizenId(i));
                 var y = b.Get(new CitizenId(i));
                 Assert.That(y.FullName, Is.EqualTo(x.FullName), $"citizen {i} differs");
-                Assert.That(y.Age, Is.EqualTo(x.Age));
+                Assert.That(y.BirthYear, Is.EqualTo(x.BirthYear));
                 Assert.That(y.Job, Is.EqualTo(x.Job));
                 Assert.That(y.Home, Is.EqualTo(x.Home));
             }
@@ -219,6 +222,9 @@ namespace Noir.Core.Tests
     [TestFixture]
     public class DayPlanTests
     {
+        /// <summary>The village fixture is the one the generator builds, which is the epoch year.</summary>
+        private const int Year = GameClock.EpochYear;
+
         private const int Days = 28;
 
         /// <summary>Every minute of every day belongs to exactly one block. This is the test
@@ -389,7 +395,7 @@ namespace Noir.Core.Tests
 
             foreach (var citizen in Village.People.Citizens)
             {
-                if (!citizen.IsChild) continue;
+                if (!citizen.IsChildIn(Year)) continue;
 
                 for (int day = 0; day < Days; day++)
                 {

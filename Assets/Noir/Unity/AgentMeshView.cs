@@ -68,7 +68,7 @@ namespace Noir.Unity
             for (int i = 0; i < n; i++)
             {
                 var citizen = host.People.Get(new CitizenId(i));
-                var look = AgentLook.Of(citizen);
+                var look = AgentLook.Of(citizen, VillageHost.Year);
 
                 _looks[i] = look;
 

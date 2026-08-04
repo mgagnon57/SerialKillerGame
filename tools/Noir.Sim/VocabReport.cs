@@ -690,7 +690,7 @@ namespace Noir.Sim
             {
                 var a = tagged.Get(new CitizenId(i));
                 var b = real.Get(new CitizenId(i));
-                if (a.Age != b.Age || a.Stage != b.Stage || a.Household != b.Household) return false;
+                if (a.BirthYear != b.BirthYear || a.Household != b.Household) return false;
                 if (a.Particulars.Length != b.Particulars.Length) return false;
 
                 string tag = a.Forename;
