@@ -1,0 +1,44 @@
+For each road: the widest PARCEL-FREE strip within 30m of its centreline,
+as (centre offset, width). Offset 0 = the road is already on it.
+
+chicago       Mainroad  corridor 30m   strip at    0.0m,  20.0m wide   ON IT
+attica        Mainroad  corridor 30m   strip at   18.3m,  19.5m wide   OFF BY 18.3m
+ann           Street    corridor 10m   strip at   -4.0m,  10.0m wide   OFF BY 4.0m
+harrison      Street    corridor 10m   strip at   17.3m,  20.5m wide   OFF BY 17.3m
+church        Street    corridor 10m   strip at  -10.3m,  19.5m wide   OFF BY 10.3m
+summit        Street    corridor 10m   strip at  -14.8m,  19.5m wide   OFF BY 14.8m
+grove         Street    corridor 10m   strip at  -12.3m,  19.5m wide   OFF BY 12.3m
+goodwine      Street    corridor 10m   strip at  -25.5m,   9.0m wide   OFF BY 25.5m
+york          Street    corridor 10m   strip at   -3.3m,  19.5m wide   OFF BY 3.3m
+henderson     Street    corridor 10m   strip at    1.8m,  19.5m wide   ON IT
+green         Street    corridor 10m   strip at   -6.5m,  19.5m wide   OFF BY 6.5m
+benton        Street    corridor 10m   strip at  -13.5m,  20.0m wide   OFF BY 13.5m
+holmes        Street    corridor 10m   strip at   16.5m,  19.5m wide   OFF BY 16.5m
+maple         Street    corridor 10m   strip at   -0.3m,  19.5m wide   ON IT
+gilbert       Street    corridor 10m   strip at   18.8m,  19.5m wide   OFF BY 18.8m
+stewart       Street    corridor 10m   strip at    5.3m,  19.5m wide   OFF BY 5.3m
+mckibben      Street    corridor 10m   strip at    0.5m,  20.0m wide   ON IT
+dale          Street    corridor 10m   strip at    8.5m,  19.5m wide   OFF BY 8.5m
+greenwood     Street    corridor 10m   strip at   -1.8m,  15.0m wide   ON IT
+thompson      Street    corridor 10m   strip at    8.3m,  19.5m wide   OFF BY 8.3m
+earlcourt     Street    corridor 10m   strip at   14.8m,  19.5m wide   OFF BY 14.8m
+railroad      Street    corridor 10m   strip at   20.3m,   2.5m wide   OFF BY 20.3m
+alley1        Alley     corridor  4m   strip at    0.0m,   5.5m wide   ON IT
+alley2        Alley     corridor  4m   strip at  -11.3m,   4.5m wide   OFF BY 11.3m
+alley3        Alley     corridor  4m   strip at   12.3m,   4.5m wide   OFF BY 12.3m
+alley4        Alley     corridor  4m   strip at  -13.3m,   4.5m wide   OFF BY 13.3m
+alley5        Alley     corridor  4m   strip at    6.8m,   4.5m wide   OFF BY 6.8m
+alley6        Alley     corridor  4m   strip at    6.3m,   4.5m wide   OFF BY 6.3m
+alley7        Alley     corridor  4m   strip at   -9.3m,   4.5m wide   OFF BY 9.3m
+alley8        Alley     corridor  4m   strip at    7.8m,   4.5m wide   OFF BY 7.8m
+alley9        Alley     corridor  4m   strip at    6.3m,   4.5m wide   OFF BY 6.3m
+alley10       Alley     corridor  4m   strip at    5.3m,   4.5m wide   OFF BY 5.3m
+alley11       Alley     corridor  4m   strip at    0.8m,   4.5m wide   ON IT
+alley12       Alley     corridor  4m   strip at  -14.5m,   6.0m wide   OFF BY 14.5m
+alley13       Alley     corridor  4m   strip at    4.8m,   4.5m wide   OFF BY 4.8m
+alley14       Alley     corridor  4m   strip at    3.8m,   4.5m wide   OFF BY 3.8m
+alley15       Alley     corridor  4m   strip at   14.3m,   4.5m wide   OFF BY 14.3m
+section0      Track     corridor 10m   strip at    0.0m,  60.0m wide   ON IT
+section1      Track     corridor 10m   strip at    2.0m,  42.5m wide   ON IT
+crossroad0    Track     corridor 10m   strip at    0.0m,   0.0m wide   ON IT
+crossroad1    Track     corridor 10m   strip at    0.0m,  60.0m wide   ON IT
