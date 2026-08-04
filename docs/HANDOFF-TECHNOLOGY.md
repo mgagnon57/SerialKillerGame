@@ -33,9 +33,9 @@ rewritten by every render run.
 
 ## Read these two, in this order
 
-1. **`C:\Users\mgagn\.claude\plans\i-think-we-need-whimsical-ladybug.md`** — the approved plan.
-   Exact API signatures, a semantics table covering every edge case, worked table rows, and nine
-   named tests. It is written to be executed without asking anybody questions.
+1. **`docs/plans/technology-layer.md`** — the approved plan, committed here so it survives a fresh
+   session. Exact API signatures, a semantics table covering every edge case, worked table rows,
+   and nine named tests. It is written to be executed without asking anybody questions.
 2. **`docs/research/TECHNOLOGY.md`** — committed `5db18c8`. The dates, in the table's own
    `year:percent` notation, ready to paste across.
 
