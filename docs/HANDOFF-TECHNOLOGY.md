@@ -58,6 +58,75 @@ gate has no UnityEngine, so there was no second `Light` to collide with. Renamed
 
 ---
 
+## NEXT 2026-08-03 — reply from the research session
+
+**The `needs` addition was right, and it is the best argument for Step 6 that anyone could have
+made.** Two curves each individually perfect, every test green, and a sixth of the town online with
+nothing to read it on — that is precisely the fault a diagnostic catches and a test cannot. It is
+the same lesson `CountrysideDiagnostic` records about `CommercialRow`'s infill, found twice
+independently now.
+
+Refusing Step 5 was also right. Inventing a consumer to justify the layer is the same mistake as
+building props before facts, one level up.
+
+### 1. First, a verification pass — on your own `Light` lesson
+
+*"A green `dotnet test` is not evidence that Unity compiles"* deserves acting on, not just
+recording. And **`ShowPeople` is `true` now**, so PlayMode is heavier than any baseline in this
+file — 763 rigged prefabs per city build roughly doubled those runs last time they were measured.
+
+Run all four and post the numbers:
+
+```
+1.  dotnet test -c Release tools/Noir.Core.Tests          expect 316 / 318
+2.  headless Unity compile, then grep the log for "error CS"
+3.  -runTests -testPlatform PlayMode -assemblyNames Noir.PlayTests
+        -assemblyNames is NOT optional. Do NOT pass -nographics.
+4.  press Play and look at it
+```
+
+Core tests are blind to an entire class of failure — the `Light` collision proved it. If all four
+are clean, say so and move on.
+
+### 2. Then: one year, not two
+
+You have built a layer whose whole premise is that **the year matters**, and there are now two
+"current year" concepts sitting beside each other:
+
+| | |
+|---|---|
+| `GameClock.Year` | real, advances, and `TechnologyTable` reads it |
+| `Households.Year = 1991` | a `const`, frozen, and ages are computed against it |
+
+`Citizen.Age` is a fixed `readonly int` set at generation. **Over a fifteen-year game a seven-year-old
+stays seven**, a schoolchild never leaves school, and `names.txt`'s carefully-built 1991 cohorts
+slowly become wrong for everybody.
+
+**Fix direction:** store a **birth year** on the citizen and derive `Age` from `GameClock.Year`.
+`Households.Year` should **stop existing** rather than be updated — one source of truth. Core-only,
+so no editor contention.
+
+**Watch for:** anything assuming `Age` is immutable, and the `AgeBand` / `IsChild` logic. A child
+ageing out of school mid-story is correct behaviour and may surprise the day planner.
+
+### 3. Then, if you want the technology layer to stop being inert
+
+`TechnologyTable` is currently consumed by nothing but its own loader line. **`DayPlan` has no
+reachability concept** — which you were right not to invent on the spot, but it is worth inventing
+now. *"Can this person be telephoned away from home"* is the exact mechanic
+`WHO-SEES-WHOM.md` §5 says the game's whole information arc turns on, and `mobilephone`,
+`answermachine` and `cordless` are already in the table waiting for it.
+
+### Queued behind those, not now
+
+- **`particulars.txt` is still English, 1979** — 914 clauses, and the biggest content problem in the
+  project. Content work rather than code.
+- **`ShowBuildings` is still `false`** because there is no Illinois house. See **`docs/ASSET-GAPS.md`**
+  — that one needs a purchase decision, not code, and the re-audit there found 400–500 usable
+  prefabs already owned that nobody knew about.
+
+---
+
 > **Re-evaluated 2026-08-03, after `Fields`, `Railroad` and `Daylight` landed.** Five things
 > changed and two of them matter: **`Fields` already invented this adoption model** (a fixed rank
 > in [0,1), curve inverted per entity) so Step 2 generalises `Fields.DayWhen` rather than writing a
