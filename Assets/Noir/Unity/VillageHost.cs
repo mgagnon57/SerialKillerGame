@@ -450,12 +450,15 @@ namespace Noir.Unity
             Layers.Register(Layers.Kind.Plan,
                             CityOutlines.Build(World, transform, ShowPlanRoads, ShowPlanFootprints));
 
+            // THE NAMES GO ON EITHER WAY. Like the parcel lines above, these were built only in
+            // survey-plan mode - so the built town, which is what anybody actually looks at, was
+            // the one view with no street names in it. That is backwards: a name is more useful
+            // over a town than over a drawing, because the drawing has nothing else to confuse it
+            // with. Switched with Layers.Kind.Labels.
+            Layers.Register(Layers.Kind.Labels, PlanLabels.Create(this, transform).gameObject);
+
             if (!ShowBuildings)
             {
-                // The names, without which the drawing is anonymous: every line in it is right
-                // and none of it is legible to somebody standing in the street.
-                PlanLabels.Create(this, transform);
-
                 // The one thing a baked mesh cannot do for itself - a selection changes on
                 // every click, and CityOutlines is built once and frozen.
                 SelectionHighlight.Create(this, transform);

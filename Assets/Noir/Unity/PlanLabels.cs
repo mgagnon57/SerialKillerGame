@@ -92,16 +92,24 @@ namespace Noir.Unity
             // ---- the streets ----
             foreach (var line in _host.World.Roads.Lines)
             {
-                if (line == null || !line.IsStraight || string.IsNullOrEmpty(line.Name)) continue;
+                if (line == null || string.IsNullOrEmpty(line.Name)) continue;
 
-                for (float along = line.From; along <= line.To; along += Repeat)
+                // WALKED ALONG THE PATH, NOT THE AXIS. This used to skip anything that was not
+                // straight, which quietly meant THE TWO MOST IMPORTANT ROADS ON THE MAP HAD NEVER
+                // BEEN LABELLED - Chicago Street, which is Route 1 and the reason the town is
+                // where it is, and Railroad Avenue. Both bend, so both were dropped by the guard
+                // and nobody noticed, because a missing label looks exactly like a label that is
+                // off screen.
+                var path = line.Path;
+                if (path == null || path.Length < 1f) continue;
+
+                for (float d = Mathf.Min(Repeat * 0.5f, path.Length * 0.5f);
+                     d < path.Length; d += Repeat)
                 {
-                    var at = line.IsNorthSouth
-                        ? new Vector2(line.Centre, along)
-                        : new Vector2(along, line.Centre);
-                    var ahead = line.IsNorthSouth
-                        ? new Vector2(line.Centre, along + 10f)
-                        : new Vector2(along + 10f, line.Centre);
+                    var p = path.PointAt(d);
+                    var q = path.PointAt(Mathf.Min(path.Length, d + 10f));
+                    var at = new Vector2(p.X, p.Y);
+                    var ahead = new Vector2(q.X, q.Y);
 
                     // Five of these change name partway - see StreetAddressing.RealName for why
                     // that is resolved by position here rather than by a second RoadLine.
@@ -223,7 +231,19 @@ namespace Noir.Unity
                 case "dale":        return "DALE";
                 case "greenwood":   return "GREENWOOD";
             }
-            if (name.StartsWith("section") || name.StartsWith("crossroad")) return "SECTION RD";
+            if (name == "railroad") return "RAILROAD AVE";
+
+            // AN ALLEY HAS NO NAME AND SHOULD NOT BORROW ONE. `alley7` is a line number in
+            // city.txt, not something anybody calls it, and "ALLEY7 ST" is worse than nothing.
+            if (name.StartsWith("alley")) return "ALLEY";
+
+            // SAY UNKNOWN RATHER THAN GUESS. These four are deliberate placeholders - the section
+            // roads and crossroads were never identified against anything, and calling them
+            // "SECTION RD" on the drawing states more than is known. The placeholder id is kept
+            // beside it so the owner can say which one he is looking at.
+            if (name.StartsWith("section") || name.StartsWith("crossroad"))
+                return "UNKNOWN  ·  " + name;
+
             return name.ToUpperInvariant() + " ST";
         }
     }

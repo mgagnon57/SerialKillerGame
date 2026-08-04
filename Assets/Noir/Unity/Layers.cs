@@ -61,6 +61,14 @@ namespace Noir.Unity
             /// click, and the choice remembered.
             /// </summary>
             Plan,
+
+            /// <summary>
+            /// Street names and addresses, drawn in screen space over whatever is standing.
+            ///
+            /// Its own switch rather than riding on Plan: the names are wanted with the built town
+            /// up and the lot lines off, which is the view the owner reads the map in.
+            /// </summary>
+            Labels,
         }
 
         /// <summary>How the panel labels each one, and the order it lists them in.</summary>
@@ -69,7 +77,7 @@ namespace Noir.Unity
             Kind.Streets, Kind.Parking, Kind.Signs, Kind.Signals,
             Kind.RailBed, Kind.Rail, Kind.Powerlines, Kind.Farm,
             Kind.Buildings, Kind.Districts, Kind.Houses, Kind.Story,
-            Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Plan,
+            Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Plan, Kind.Labels,
         };
 
         public static string Label(Kind k)
@@ -93,6 +101,7 @@ namespace Noir.Unity
                 case Kind.Traffic:    return "Traffic";
                 case Kind.People:     return "People";
                 case Kind.Plan:       return "Parcel lines";
+                case Kind.Labels:     return "Street names";
                 default:              return k.ToString();
             }
         }
