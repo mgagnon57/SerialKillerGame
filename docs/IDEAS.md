@@ -665,3 +665,12 @@ fire** — see `docs/HANDOFF.md`.
   in the 30 m width (lane counts, corridor coverage, `EvenWidthCentresOnTheDeclaredCoordinate`),
   not just their fixtures. Attempted 2026-08-03 and reverted rather than leave the suite red;
   it is a scoped job of its own. — *2026-08-03*
+- [ ] **The CSX line is drawn ~32 m off its own right-of-way, in town.** The owner confirmed the
+  lots stop short of the track, and the parcel data shows it: through the platted town there is a
+  consistent 18.5–25.5 m corridor (61–84 ft, a standard railroad ROW) lying about 32 m to one side
+  of where `features.txt` puts the rail. Measured at (1294,1340) −35.3 m, (1277,1315) −34.6,
+  (1254,1281) −32.0, (1205,1210) −32.3, (1123,1089) −25.4. Zero of 28 in-town samples sit in a
+  corridor that contains the rail. The two short spur features are legitimate — the owner confirmed
+  spurs exist and those run through parcelled ground as they should. Fixing it means shifting the
+  `rail` polyline in `features.txt`, which also moves the ballast, the four level crossings and
+  anything referencing them — so it goes with the road refit, not before it. — *2026-08-04*
