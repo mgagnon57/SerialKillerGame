@@ -7,6 +7,13 @@ already finished and committed. Steps 2–6 are what you are picking up.
 
 ---
 
+> **Re-evaluated 2026-08-03, after `Fields`, `Railroad` and `Daylight` landed.** Five things
+> changed and two of them matter: **`Fields` already invented this adoption model** (a fixed rank
+> in [0,1), curve inverted per entity) so Step 2 generalises `Fields.DayWhen` rather than writing a
+> second inverter; and **Step 6 is now an `[Explicit]` Core diagnostic instead of a Unity editor
+> command**, which was quietly breaking this pass's own Unity-free promise. `Era` also moves from
+> `Contracts` to `World`. Details in the plan.
+
 ## The one rule, and this time it is a gift
 
 **This pass is Core-only and Unity-free.** No prefabs, no art, no scene work, no editor. Everything

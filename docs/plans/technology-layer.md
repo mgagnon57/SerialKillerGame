@@ -1,157 +1,166 @@
 # Year-specific technology, 1991 onward
 
+**Revised 2026-08-03 after re-reading the code**, once `Fields`, `Railroad` and `Daylight` had
+landed. Five things changed; the two marked **CHANGED** are the ones that matter.
+
 ## Context
 
-The game opens in 1991 and runs to about 2006. `GameClock` now knows it — a real civil calendar
-with `Year`, `Month`, `DayOfYear` and `Season`, epoch Monday 7 January 1991. **Almost nothing
-consumes it.** The only year in the simulation's behaviour is a hardcoded `Households.Year = 1991`.
+The game opens in 1991 and runs to about 2006. `GameClock` knows it — a real civil calendar, epoch
+Monday 7 January 1991. `Daylight` and `Fields` now consume it. **Nothing else does.** The only other
+year in the simulation's behaviour is a hardcoded `Households.Year = 1991`.
 
-So the town is era-blind: a citizen in 2005 lives in exactly the 1991 world — same objects, same
-reachability, same everything. For a story whose shape is *the town declines around the player*
-(`docs/research/THE-TRAJECTORY.md`) and whose mechanic is *who knew what, when*
-(`docs/research/WHO-SEES-WHOM.md`), that is the wrong kind of static. The sharpest instance is
-already written down:
+So the town is still era-blind in everything but crops and darkness: a citizen in 2005 has the same
+objects and the same reachability as in 1991. The sharpest instance is already written down in
+`docs/research/WHO-SEES-WHOM.md` §5:
 
 > In 1991 you cannot reach a person who is not at home, and an unanswered phone means nothing. By
 > 2006 a person is reachable, and there is a log. **The same disappearance is a different event at
 > the two ends of this game.**
 
-This pass builds a **year-gated fact layer**. Core-only, Unity-free, no art. It answers *"does this
+This pass builds a **year-gated fact layer**: Core-only, Unity-free, no art. It answers *"does this
 household have a mobile phone in 1999?"* so the day plan, the dialogue prompt and the investigation
-can consult it.
-
-**Author against the record, not against the art.** A technology goes in the table because the town
-had it, not because a prefab exists. Asset packs come later; the facts should be waiting.
+can consult it. **Author against the record, not against the art** — asset packs come later, and
+`Fields` already proves the point by shipping six states when the pack can render one.
 
 ---
 
-## What already exists — do not rebuild these
+## The mechanism already exists in this codebase — do not write a second one
 
-| thing | where | why it matters here |
+**`Fields` invented the same idea independently**, and its commit message states it better than the
+original draft of this plan did:
+
+> *"The percentages are a distribution, and that is the trick. The state tabulates what fraction of
+> acreage has reached each stage by each date, and that curve is not an average to apply to every
+> field — it IS the spread of dates across fields. So each field gets a fixed rank in [0,1) and its
+> own planting date is read off by inverting the curve."*
+
+That is exactly the adoption model this plan needs, one domain over. Two pieces exist:
+
+| piece | where | what it does |
 |---|---|---|
-| civil calendar | `Core/Contracts/GameClock.cs` | `Year`, `Month`, `DayOfYear`, `Season`, `TickOn(y,m,d)` |
-| era-specific time rule | `Core/Contracts/Daylight.cs` | already handles **pre-2007 US DST** (first Sunday in April, not March). Precedent: rules themselves are year-specific |
-| table parse idiom | `Core/World/PlaceKindTable.cs` | `Parse(string)` + `Install(...)`, static, no file I/O |
-| per-key stable choice | `Unity/AgentAnimation.cs` `ClipFor` | hash of a citizen key → stable per-person pick. **Copy this idiom, don't invent one** |
-| deterministic hashing | `Core/Contracts/Rng.cs` | already in the base assembly |
+| `Fields.RankOf(key)` | `Core/World/Fields.cs:140` | `((key >> 11) & 0xFFFF) / 65536f` — a fixed rank in [0,1) from a key. Note the shift: the low bits are avoided deliberately to stop striping |
+| `Fields.DayWhen(days, percent, rank)` | `Core/World/Fields.cs:264` | **private.** Inverts a `% reached by date` curve to give *this* entity's own date |
 
-**Assembly direction (checked):** `Noir.Core.Contracts` has *zero* references and
-`noEngineReferences: true`. `Noir.Core.World` → Contracts. `Noir.Core.People` → Contracts + World.
+**CHANGED — Step 2 is now "generalise `DayWhen`", not "write a new inverter."** Lift it into a
+shared `Era`, express it in years instead of days, and have `Fields` call the general one. One idea
+in the codebase, not two that agree by coincidence — which is the exact argument `ContentText`'s own
+header makes about parsers.
 
-**`ContentLoader` is Unity-side** (`Assets/Noir/Unity/ContentLoader.cs`, uses `Application.dataPath`).
-**Core cannot read files.** Follow the existing pattern — the Unity caller does
+---
+
+## What else exists — do not rebuild these
+
+| thing | where | why it matters |
+|---|---|---|
+| civil calendar | `Core/Contracts/GameClock.cs` | `Year`, `Month`, `DayOfYear`, `Season` |
+| shared content syntax | `Core/World/ContentText.cs` | `SplitLines`, `Tokenise`, numbers, times. **`internal` to `Noir.Core.World`** |
+| table parse idiom | `Core/World/PlaceKindTable.cs` | `Parse(string)` + `Install(...)`, no file I/O |
+| era-specific rule precedent | `Core/Contracts/Daylight.cs` | pre-2007 US DST. Rules are year-specific too |
+| looking at it | `tools/Noir.Core.Tests/CountrysideDiagnostic.cs` | `[Explicit]` printing test — see Step 6 |
+
+**CHANGED — `Era` goes in `Core/World`, not `Contracts`.** The original plan put it in Contracts.
+That is wrong now: parsing needs `ContentText`, which is `internal` to `Noir.Core.World`, and the
+curve inversion it generalises lives in `Fields`, also World. Contracts is for zero-dependency
+primitives. `Noir.Core.People` references World, so the day-plan and dialogue consumers still see it.
+
+**`ContentLoader` is still Unity-side** (`Assets/Noir/Unity/ContentLoader.cs`, uses
+`Application.dataPath`). Core cannot read files. `ContentText` is a *parser*, not a loader — the
+Unity caller still does
 `TechnologyTable.Install(TechnologyTable.Parse(ContentLoader.Read("technology.txt")))`.
+
+**Core bans transcendentals for replay determinism.** `Daylight` embeds a 365-entry table precisely
+because the NOAA solar algorithm needs six of them. Linear interpolation and integer hashing are
+fine; do not reach for `Math.Pow` to shape a curve.
 
 ---
 
 ## Non-goals
 
-- **No prefabs, no art, nothing rendered.** The town looks identical in 2005 and 1991; only its
-  reasoning changes. Props read from this layer later.
+- **No prefabs, no art.** The town looks identical in 2005 and 1991; only its reasoning changes.
 - **Do not touch the witness layer.** `PersonDescription.CarriedThing` is deliberately vague — *Bag,
-  Case, Bundle, LongObject* — because a witness says "something in his hand", not "a Nokia".
-  Technology must not leak identifiable objects into observation.
-- **Do not fix the ageing bug or rewrite `particulars.txt`** — both flagged at the bottom, both
-  their own pass.
+  Case, Bundle, LongObject* — because a witness says "something in his hand", not "a Nokia". That
+  vagueness is the type's whole design. **This is the one item not negotiable.**
+- **Do not fix the ageing bug or rewrite `particulars.txt`.** Both flagged at the bottom.
 
 ---
 
-## Step 1 — Research the dates (no code)
+## Step 1 — DONE
 
-**New: `docs/research/TECHNOLOGY.md`**, house style: sourced, confidence marked, inference labelled.
-
-This project does not invent numbers, and most of these dates are unknown. Two are already recorded
-as unresearched and **must not be guessed**:
-
-- **When cellular actually reached downstate Illinois** — `WHO-SEES-WHOM.md` §5. Direction sound,
-  dates unknown.
-- **E911 rural addressing in Vermilion County** — chase this hardest. Rural Illinois addresses like
-  *"1050 East Road"* (`POLICE-AND-INCIDENT.md`) were largely assigned *as part of* E911 rollout in
-  the 1990s. **If true here, a farm in 1991 may have no street address at all**, which changes how
-  anyone is found, directed or reported.
-
-Also: cable vs satellite in a village of 1,200 (rural means satellite; the small dish arrives 1994);
-home computer and dial-up; when eBay actually bit the antique trade; DNA/CODIS national (1998); farm
-GPS and yield monitors; debit-card acceptance.
-
-**Done when:** every row that will go in the table has a dated curve and a source, or is explicitly
-marked inferred.
+`docs/research/TECHNOLOGY.md`, committed `5db18c8`. Curves in `year:percent` notation, each marked
+**measured** or **inferred**, with the rural-correction rule at the top. Three rows are deliberately
+not final: `mobilephone`, the `answermachine`/`cordless`/`callerid` trio, and `e911address`.
 
 ---
 
-## Step 2 — `Core/Contracts/Era.cs`
+## Step 2 — `Core/World/Era.cs`
 
-General, so `particulars.txt` and `kinds.txt` can use it later without a second mechanism.
+Generalise `Fields.DayWhen` and express adoption as a year.
 
 ```csharp
-namespace Noir.Core.Contracts
+namespace Noir.Core.World
 {
-    /// year:percent waypoints. Linear between, flat outside.
+    /// A "percent reached by year" curve. Linear between waypoints, flat outside.
     public readonly struct Adoption
     {
-        public static Adoption Parse(string waypoints);  // "1996:2 2000:20 2003:55 2006:80"
-        public float PercentIn(int year);                // 0..100
         public bool  IsEmpty { get; }
+        public float PercentIn(int year);      // 0..100, for tests and UI
+        public int   YearWhen(float rank);     // invert: this rank's own year. Cf. Fields.DayWhen
     }
 
     public static class Era
     {
-        /// Stable 0..100 draw for a key within one named thing. Same inputs, same answer, forever.
-        public static float Percentile(ulong key, string salt);
+        /// Fixed rank in [0,1) for a key within one named thing.
+        /// Mirror Fields.RankOf — avoid the low bits.
+        public static float RankOf(ulong key, string salt);
     }
 }
 ```
+
+**CHANGED — invert, do not compare.** The original plan computed `PercentIn(year) >= percentile`.
+Inverting instead — *this household adopts in 1999* — makes **monotonicity structural rather than
+emergent**: a household cannot flicker because there is one crossing year, computed once. It also
+matches `Fields.PlantedOn` exactly.
+
+A falling curve needs both ends: `YearWhen` on the rise gives adoption, on the fall gives loss.
+`payphone` is the test case.
 
 **Semantics to implement exactly:**
 
 | case | result |
 |---|---|
-| year before first waypoint | first waypoint's percent (flat) |
-| year after last waypoint | last waypoint's percent (flat) |
-| single waypoint | constant at that percent |
-| empty / unparseable | `IsEmpty`, `PercentIn` → 0 |
-| between waypoints | linear interpolation |
-
-**Why a percentile and not a coin flip.** Each key draws a *fixed* percentile from
-`Era.Percentile(key, name)`. It has the thing when `PercentIn(year) >= percentile`. That gives:
-
-- **determinism** — same seed, same town, same answer forever
-- **monotonicity on a rising curve** — nobody flickers in and out, because the percentile never moves
-- **correct loss on a falling curve** — the last to give a thing up are the lowest percentiles
-- **no stored state** — one hash per query
+| year before first waypoint | first waypoint's percent |
+| year after last waypoint | last waypoint's percent |
+| single waypoint | constant |
+| empty / unparseable | `IsEmpty`; `PercentIn` → 0 |
+| between waypoints | linear |
 
 ---
 
 ## Step 3 — `Content/technology.txt`
 
-Header in the style of `animations.txt` / `kinds.txt`: **adding a technology is a line here and
-nothing else.**
+Header in the style of `animations.txt`: **adding a technology is a line here and nothing else.**
+Parse with `ContentText.Tokenise` — do not hand-roll.
 
 ```
 # name         scope      curve
-mobilephone    person     1996:2  2000:20  2003:55  2006:80
-answermachine  household  1985:15 1991:45  2000:70
-cordless       household  1988:10 1995:55  2004:80
-callerid       household  1993:2  1998:25  2005:55
-vcr            household  1985:40 1991:95  2006:90
-dvd            household  1998:1  2002:25  2006:65
-satellite      household  1994:3  2000:22  2006:35
-computer       household  1991:8  1997:30  2003:55
-dialup         household  1995:1  1999:22  2003:45  2006:38
+mobilephone    person     1991:0  1996:3  2000:18  2003:40  2006:60
+computer       household  1994:20 1998:40 2000:50  2006:65
+dialup         household  1995:1  1998:22 2000:39  2004:50  2006:45
 payphone       town       1900:100 1998:60 2005:10      # a technology can LEAVE
-codis          town       1998:100
-cctv           town       1991:0                        # never arrives. A negative fact.
-gpsguidance    farm       1998:1  2002:12  2006:35
-cardreader     business   1991:10 1997:45  2004:85
+codis          town       1997:0  1998:100
+cctv           town       1991:0                        # never arrives. A negative fact
 ```
 
-**Scopes:** `town` · `household` · `person` · `farm` · `business`.
-`town` ignores the key entirely — `Has` returns `PercentIn(year) >= 50`. Town rows should be
-0-or-100 curves.
+Full set and sourcing in `docs/research/TECHNOLOGY.md`. **Carry the measured/inferred markings into
+the comments — do not flatten them.**
 
-**All four domains go in** (as chosen): household & personal, investigative & forensic, farm &
-agricultural, commercial & retail. The numbers above are **placeholders pending Step 1** — do not
-ship them unsourced.
+**A deliberate divergence, worth knowing:** `Fields` hardcodes its crop curves in C# rather than a
+content file. That is defensible — they are fixed research constants. Technology goes in a content
+file because adding one should be a line, which is this project's stated doctrine everywhere else.
+If that reads as inconsistent, it is a considered inconsistency and not an oversight.
+
+**Scopes:** `town` · `household` · `person` · `farm` · `business`. `town` ignores the key —
+`Has` returns `PercentIn(year) >= 50`, and town rows should be 0-or-100 curves.
 
 ---
 
@@ -162,61 +171,67 @@ Mirror `PlaceKindTable`: static, `Parse` + `Install`, no file I/O.
 ```csharp
 public static TechnologyTable Parse(string text);
 public static void Install(TechnologyTable table);
-public static bool Has(string name, int year, ulong key = 0);
-public static float Adopted(string name, int year);   // 0..100, for UI and tests
+public static bool  Has(string name, int year, ulong key = 0);
+public static int   AdoptsIn(string name, ulong key);   // the crossing year itself
+public static float Adopted(string name, int year);     // 0..100
 ```
 
-**Inert when absent**, matching `AgentAnimation`'s stated principle: an unknown name returns
-`false` rather than throwing, so a half-authored table is safe to run. A missing or unreadable file
-means every query is false — which is exactly the 1991 world, and therefore a safe failure.
+**Inert when absent** — unknown name returns false, does not throw. A missing file means every query
+is false, which is exactly the 1991 world and therefore a safe failure.
 
 ---
 
 ## Step 5 — Wire two consumers, not ten
 
-1. **The LLM dialogue prompt** (the port in `Noir.Core`). A citizen's prompt carries what they have
-   and what is ordinary this year. **Highest-value consumer** — it is what makes a 1991 conversation
-   differ from a 2005 one.
-2. **Reachability in the day plan** — can this person be telephoned away from home? In 1991, no,
-   and an unanswered call means nothing.
+1. **The LLM dialogue prompt.** A citizen's prompt carries what they have and what is ordinary this
+   year. Highest-value consumer — it is what makes a 1991 conversation differ from a 2005 one.
+2. **Reachability in the day plan.** Can this person be telephoned away from home? In 1991, no.
 
 ---
 
-## Step 6 — `Noir/Check The Technology`
+## Step 6 — CHANGED: an `[Explicit]` diagnostic, not an editor command
 
-Editor command in the established style of `Noir/Check The Animations` (`Editor/AnimationCheck.cs`):
-list technologies nothing consumes, and names referenced in code but absent from the table. Writes a
-short report. This is how the project keeps content tables honest.
+The original plan had `Noir/Check The Technology` as a Unity editor command, which **broke the
+pass's own Unity-free promise.** `CountrysideDiagnostic.cs` is the better precedent and its rationale
+applies directly:
+
+> *"NOT AN ASSERTION — it is a way of looking at the thing, which is the only way some faults ever
+> get found here. `CommercialRow`'s infill was laid under the lodge halls with all fourteen of its
+> tests green."*
+
+So: **`tools/Noir.Core.Tests/TechnologyDiagnostic.cs`**, `[Explicit]`, printing the town year by
+year — how many households have each technology in 1991, 1995, 2000, 2006. Read it and check it
+looks like a town rather than a spreadsheet. Runs under `dotnet test`, needs no editor.
 
 ---
 
 ## Tests — `tools/Noir.Core.Tests`
 
-Baseline is **227 pass / 2 fail** (the two `TwoToOneTests` fail by design). Add:
+**Re-measure the baseline before starting.** It was 227/2 earlier today and a great deal has landed
+since — `FieldsTests` alone is 327 lines. The two `TwoToOneTests` failures are by design.
 
-- **determinism** — same name, year and key give the same answer, repeatedly
-- **monotonicity** — sweep 1991→2006; no key loses a technology while its curve rises
-- **loss** — on a falling curve (`payphone`), keys *do* lose it, lowest percentiles last
-- **boundaries** — the year before the first waypoint, the year of, the year after the last
-- **interpolation** — a midpoint year lands halfway between waypoints
+- **determinism** — same name, year, key → same answer, repeatedly
+- **monotonicity** — sweep 1991→2006; nobody loses a technology while its curve rises
+- **loss** — on a falling curve (`payphone`) keys *do* lose it, lowest ranks last
+- **boundaries** — year before first waypoint, year of, year after last
+- **interpolation** — a midpoint year lands halfway
 - **distribution** — over ≥10,000 keys the adopted fraction tracks `PercentIn` within ~2%
 - **scopes** — `town` ignores the key; `person`/`household` do not
 - **inertness** — unknown name → false, no throw; empty table → all false
-- **end to end** — *no household has a mobile phone in 1991; most do by 2006*
+- **agreement with `Fields`** — if `DayWhen` is generalised, `Fields`' existing tests must stay green.
+  **That is the real regression check for Step 2.**
+- **end to end** — no household has a mobile phone in 1991; most do by 2006
 
 ---
 
 ## Verification
 
-**The whole pass is Core-only and Unity-free**, so it does not contend for the editor while the
-other session has it.
-
 ```
 dotnet test -c Release tools/Noir.Core.Tests
+dotnet test -c Release tools/Noir.Core.Tests --filter "Name=PrintTheTechnologyYears" -l "console;verbosity=detailed"
 ```
 
-Expect **227 + new tests passing, 2 failing by design**. Then `Noir/Check The Technology` once the
-editor is free.
+**The whole pass is now genuinely Unity-free** — that was the point of the Step 6 change.
 
 ---
 
@@ -225,18 +240,15 @@ editor is free.
 **1. Nobody ages.** `Citizen.Age` is a fixed `readonly int` set at generation, and
 `Households.Year = 1991` is a second hardcoded year whose comment says ages are worked against it
 *"not against whatever year the machine thinks it is"* — true before the clock had a calendar.
-**Over a fifteen-year game a seven-year-old stays seven.** Fix direction: store a birth year, derive
-age from `GameClock.Year`. Era-adjacent, not technology.
+**Over a fifteen-year game a seven-year-old stays seven.** Fix: store a birth year, derive from
+`GameClock.Year`. Era-adjacent, not technology.
 
-**2. `particulars.txt` is still English, 1979 — the biggest content problem in the project.**
-914 clauses, drawn 2.4 per citizen, so *every person in Rossville* is described with British
-details: the shipping forecast, the pools, **Button B in the phone box**, the immersion, the *Radio
-Times*, the **Home Service** (renamed 1967), the mobile shop, the mobile library, cricket on the
-radio, and **Marlbury** — Ashcombe's neighbouring town. The file's own header still states its rule
-as *"1979, rural England."*
+**2. `particulars.txt` is still English, 1979.** 914 clauses, 2.4 per citizen, so *every person in
+Rossville* gets the shipping forecast, the pools, **Button B in the phone box**, the immersion, the
+*Radio Times*, the **Home Service**, the mobile shop, cricket on the radio, and **Marlbury** —
+Ashcombe's neighbouring town. Its own header still says *"1979, rural England."* `names.txt` was
+retuned twice and says the Ashcombe pool was wrong on both counts; particulars never got that pass.
 
-`names.txt` was retuned twice and says outright the Ashcombe pool was wrong on both counts;
-`particulars.txt` never got that pass. About nineteen clauses reference technology directly, so it
-is era-coupled as well as country-wrong — **which is precisely why Step 2 builds `Era` general**.
-When particulars are rewritten for Illinois the clauses can carry era ranges with no second
-mechanism. The rewrite is a large pass and should be scoped on its own.
+About nineteen clauses reference technology directly, so it is era-coupled as well as
+country-wrong — **which is why `Era` is built general.** When particulars are rewritten for Illinois
+the clauses can carry era ranges with no second mechanism. Large pass; scope it on its own.
