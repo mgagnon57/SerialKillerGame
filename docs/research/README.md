@@ -7,8 +7,13 @@ rest.** A fresh session needs nothing from any prior conversation.
 
 ## The three decisions already made
 
-1. **The town is built as it stood around 2000** — before the February 2004 downtown fire, before
-   the 2006 high-school closure. Both fall inside the story's 1995–2006 window.
+1. **The game opens in 1991 and runs forward** — through the February 2004 downtown fire and the
+   2006 high-school closure, both of which fall inside the story's window and are things the player
+   watches happen. *(This line used to read "built as it stood around 2000". That is still right for
+   **fabric** — the downtown row is whole from 1898 until 2004, so 1991 and 2000 are identical in
+   brick — but it is wrong for **use**: in 1991 the antique trade is alive and is the town's
+   identity, and the high school has fifteen years left. Fabric from 1913, use from 1991, both
+   decaying forward on the calendar in `THE-TRAJECTORY.md`.)*
 2. **Each element is sourced from whichever era documents it best.**
    *Take the fabric from whoever measured it, and the use from whoever lived in it.*
    → **`SOURCING.md`** has the table: which source, which year, for every part of the town.
@@ -34,6 +39,19 @@ rest.** A fresh session needs nothing from any prior conversation.
 | **`LANDMARKS-1906.md`** | the two brick schools (one towered) and the tile works that drained the prairie |
 | `agent-reports/` | three deeper research passes: transport, buildings, economy |
 | `sanborn/` | nine map sheets (1898, 1906, 1913), enlarged crops, and two machine-classified renders |
+
+The documents above are the town's **fabric** — what is built and where. Added 2026-08-03, the town
+in **time, senses and people**:
+
+| file | what is in it |
+|---|---|
+| **`THE-TRAJECTORY.md`** | **the game opens in 1991 and the town declines around the player** — the dated calendar of what closes, and the slower drift that shows on the houses. **Read this third.** |
+| **`THE-YEAR.md`** | the crop calendar era-matched to the 1990s, the weather, daylight by date, and the canopy. **The fields are most of the map and they are a sequence, not a texture** |
+| **`WHO-SEES-WHOM.md`** | the observation network — who is out, who is looking, which month hides what. Synthesis of the rest, aimed at the game's actual mechanic |
+| **`WHO-LIVES-THERE.md`** | settlement origin, the denominational fingerprint, the surname pool, and the high school that closes in 2006 |
+| **`WHAT-IT-SOUNDS-LIKE.md`** | the railroad as metronome, harvest as the loud season, and the one cicada year in the window |
+| **`POLICE-AND-INCIDENT.md`** | four officers, five arrests a year, **no homicides at all** — and the blotter as texture. No person named |
+| **`photos/`** | **the town from the air in 1940**, plus 29 photographs of the standing buildings. Reference only |
 
 ---
 
