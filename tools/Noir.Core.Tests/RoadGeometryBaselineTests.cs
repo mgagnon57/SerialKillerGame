@@ -54,6 +54,13 @@ namespace Noir.Core.Tests
     /// measures 7.1 m across whatever it is asked to be, so CityStreets.Narrow now squeezes it
     /// to half that for alleys alone.
     ///
+    /// AND THEN FIVE OF THEM MOVED, which is this checksum. alley2, 3, 4, 5 and 8 - the
+    /// north-south ones - were laid ACROSS HOUSES: 162 samples of alley surface sitting on a
+    /// building between them, alley8 the worst at 60. Shifts of one to eight metres clear every
+    /// one, and the count is 0 now. Measured against BUILDING FOOTPRINTS and not the county
+    /// parcels, because the parcels include the right of way and tile straight through the
+    /// streets - they call every road on this map an intruder, so they cannot judge one.
+    ///
     /// Then RAILROAD AVENUE, which was missing from both sources. It runs at +36.4 degrees off
     /// north-south against the CSX line's 33.9 - parallel within two and a half degrees, because
     /// it is the street that serves the track, and the 1940 aerial shows the rail-side industry
@@ -246,6 +253,6 @@ namespace Noir.Core.Tests
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded alongside the counts above, for the same Phase B change.
         private const string BaselineSegmentChecksum =
-            "CC11CF0309C8A192036893FB53F82350E5FDB0D15A64D5AF75BC7DAF6164697E";
+            "9D51DFF87D934AD79B52DE324EFFF33A0058B4DAA5D00B9FDBB187265D4F743D";
     }
 }

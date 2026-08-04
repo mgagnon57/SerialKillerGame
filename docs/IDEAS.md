@@ -651,3 +651,17 @@ fire** — see `docs/HANDOFF.md`.
 - [ ] A layered visibility toggle system for the town view: independently switch off/on trees, buildings, and other dressing layers, graduating all the way down to the bare black survey-plan layout (roads + lot boundaries only), and a single control to restore everything back to full detail at once. — *2026-08-02*
 
 ## Ad hoc
+
+## Roads
+
+- [ ] **Chicago Street's 30 m corridor runs through 47 buildings** — measured against building
+  footprints (not the county parcels, which include the right of way and tile through every
+  street, so they judge nothing). 415 samples of carriageway sit on a building: the Opera House,
+  the Rossville bank, the village office, the G.A.R. and I.O.O.F. halls, the grain office,
+  Henderson's — most of the downtown row it is meant to run *past* — plus a dozen houses on York,
+  Henderson, Gilbert, Stewart, McKibben, Dale, Thompson and Earlcourt. Thirty metres is 98 ft of
+  surface; Route 1 through a village of 1,200 is two lanes and a shoulder. Dropping
+  `RoadClass.Mainroad` to 14 m takes it to 126 — but it fails 19 road tests whose ASSERTIONS bake
+  in the 30 m width (lane counts, corridor coverage, `EvenWidthCentresOnTheDeclaredCoordinate`),
+  not just their fixtures. Attempted 2026-08-03 and reverted rather than leave the suite red;
+  it is a scoped job of its own. — *2026-08-03*
