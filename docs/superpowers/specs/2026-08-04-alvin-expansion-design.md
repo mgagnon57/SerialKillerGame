@@ -1,5 +1,22 @@
 # The Alvin expansion
 
+> ## ⏸ PARKED — DO NOT START THIS
+>
+> **Status, set by the owner 2026-08-04, the day it was written: this is a look-ahead document.
+> Rossville is not finished, and finishing Rossville will change parts of this plan.**
+>
+> Nothing here is scheduled. No phase in §10 is open. If you are a session looking for work, this
+> is not it — go to `docs/IDEAS.md` and the Rossville road refit.
+>
+> **The research is the durable part.** §1–§7, §9, §11–§13 are measurements and history, and they do
+> not rot: Alvin's lots, grid angle, use codes, elevation, railroads and tornado are as true in a
+> year as today. **The engineering is the provisional part** — §8 especially. See §0 for exactly
+> which decisions are expected to move.
+>
+> Revisit when Rossville is done.
+
+---
+
 **Written 2026-08-04.** Alvin, Illinois — six miles south-south-east of Rossville, the other half of
 the school district, and the first town added to the map since Rossville became the only one.
 
@@ -7,6 +24,45 @@ This is the design. It covers the whole expansion and it is **five implementatio
 §10 says which. Everything measured here was measured in Rossville's own coordinate frame — metres
 about the crossing of Chicago Street and Attica Street, `40.3793 N / −87.66897 W` — so no number in
 this document needs converting before it is used.
+
+---
+
+## 0. What finishing Rossville will settle, that this document had to guess
+
+The reason this is parked rather than scheduled. Each of these is a real dependency, not a caveat —
+the answer changes the plan rather than decorating it.
+
+**1. Whether the 1940 aerial can be georeferenced at all.** This is the serious one. §6 rests
+Alvin's *entire fabric doctrine* on that photograph, because Alvin has no Sanborn survey and the
+aerial is the only footprint source that could exist. But `SOURCES-OF-TRUTH.md` already records
+that georeferencing it **failed four times** for Rossville's alleys, and the ruling there is to use
+it only for *relative* structure — mid-block lines — and never for absolute position. If that never
+gets solved, **§5 and §6 collapse together**: no aerial means no 1940 footprints, which means no
+before-picture for the tornado swath, which means the swath is invented rather than checked. The
+fallback is parcels-plus-tornado-report alone, and it is a much weaker document.
+
+**2. What the house grammars can actually express.** §11 forbids building Alvin from Rossville's
+grammars at 25% scale. That is the right instinct and it may also be unaffordable — until the
+grammars are finished it is not known whether they can produce a 1942–50 rebuild layer *at all*, or
+whether "Alvin's houses" means new grammar work rather than new parameters.
+
+**3. The road-derivation method.** 17 of 22 Rossville streets are off their own right-of-way, and
+the refit will establish how a road centreline gets derived from parcel geometry. **Phase C should
+use whatever that pass invents, not invent its own.** Doing Alvin first would mean writing that
+method twice and reconciling two answers.
+
+**4. The real performance numbers.** §8.2's 13.7× is arithmetic on a renderer count, not a
+measurement. Scatter falloff, people LOD and chunk streaming all get built and measured on Rossville
+first — and their measured yield decides whether a full live rectangle is affordable at all, or
+whether the corridor-dumbbell option that was considered and rejected comes back.
+
+**5. The authored/derived split in `city.txt`.** Still being worked out for one town. Alvin doubles
+whatever that answer turns out to be, and a second town is the point at which "the file is
+hand-authored" stops scaling.
+
+> **The honest summary:** §8 was written against a Rossville that is mid-refit, and it should be
+> re-read rather than trusted once Rossville is standing. The research half of this document was
+> written against Alvin, which is not going to change.
 
 ---
 
