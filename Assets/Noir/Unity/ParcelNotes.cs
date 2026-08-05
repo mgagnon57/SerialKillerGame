@@ -43,11 +43,28 @@ namespace Noir.Unity
         /// Age rather than a birth year, because what the author remembers is "he'd have been
         /// about sixty" and not a date. Zero means not recorded.
         /// </summary>
+        /// <summary>
+        /// Man, woman, or nobody wrote it down.
+        ///
+        /// Unrecorded is a real answer and the default one. Most of what gets authored here is
+        /// half-remembered, and a field that forces a guess collects guesses.
+        ///
+        /// Core already has this as Citizen.Male, a plain bool, because a generated citizen
+        /// always has one. An AUTHORED person does not, which is the whole difference between
+        /// the two and the reason this is three states rather than a bool.
+        /// </summary>
+        public enum Sex { Unrecorded, Man, Woman }
+
         public sealed class Person
         {
             public string First = "";
             public string Last = "";
             public int Age;
+
+            /// <summary>Who the mother is, when a child needs a surname - and what the witness
+            /// layer needs to describe somebody as a man, a woman or a figure. See
+            /// Noir.Core.Observation.PersonDescription, which already reports apparent sex.</summary>
+            public Sex Which = Sex.Unrecorded;
 
             /// <summary>A child of the household rather than an adult in it. Not derived from
             /// Age: a nineteen-year-old still at home is somebody's kid in a village, and a
@@ -62,7 +79,8 @@ namespace Noir.Unity
 
             public Person Copy()
             {
-                var c = new Person { First = First, Last = Last, Age = Age, Child = Child };
+                var c = new Person { First = First, Last = Last, Age = Age, Child = Child,
+                                     Which = Which };
                 c.Traits.AddRange(Traits);
                 return c;
             }
@@ -351,6 +369,13 @@ namespace Noir.Unity
                 foreach (var t in traits.Split('|'))
                     if (!string.IsNullOrWhiteSpace(t)) who.Traits.Add(t.Trim());
 
+            // Optional, and absent on anything written before the field existed. Spelled out
+            // as well as abbreviated because this file is meant to be edited by hand and "man"
+            // is what somebody would type.
+            string sex = NextField(ref rest).Trim().ToLowerInvariant();
+            if (sex == "m" || sex == "man" || sex == "male") who.Which = Sex.Man;
+            else if (sex == "f" || sex == "woman" || sex == "female") who.Which = Sex.Woman;
+
             if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
                 note.People.Add(who);
         }
@@ -461,9 +486,14 @@ namespace Noir.Unity
                 {
                     if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last))
                         continue;
+                    // Sex goes LAST, as a bare m/f/- after the traits, so that a line written
+                    // before this field existed - or typed by hand without it - still reads back
+                    // as a whole person with the sex simply unrecorded. ReadPerson takes the
+                    // fields in order and stops when the line does.
                     sb.AppendLine($"parcel {id} person {(who.Child ? "child" : "adult")} "
                                 + $"\"{Quote(who.First ?? "")}\" \"{Quote(who.Last ?? "")}\" "
-                                + $"{who.Age} \"{Quote(string.Join("|", who.Traits))}\"");
+                                + $"{who.Age} \"{Quote(string.Join("|", who.Traits))}\" "
+                                + $"{(who.Which == Sex.Man ? "m" : who.Which == Sex.Woman ? "f" : "-")}");
                 }
 
                 if (!string.IsNullOrWhiteSpace(note.Names))

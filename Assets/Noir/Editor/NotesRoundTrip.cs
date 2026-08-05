@@ -100,16 +100,22 @@ namespace Noir.Editor
             try
             {
                 // ---- the household that goes in ----
+                // The third adult is deliberately left Unrecorded: that is the default state of
+                // every person typed into the editor before somebody touches the M/F button, so
+                // it is the one that has to survive the trip, not just the two decided ones.
                 var wanted = new List<ParcelNotes.Person>
                 {
-                    Person("Testcase", "Ninepenny", 47, false, "curtain-twitcher", "night owl"),
-                    Person("Probe", "Ninepenny", 44, false, "light sleeper"),
-                    Person("Smallfry", "Ninepenny", 8, true),
+                    Person("Testcase", "Ninepenny", 47, false, ParcelNotes.Sex.Man,
+                           "curtain-twitcher", "night owl"),
+                    Person("Probe", "Ninepenny", 44, false, ParcelNotes.Sex.Woman,
+                           "light sleeper"),
+                    Person("Lodger", "Tenthpenny", 31, false, ParcelNotes.Sex.Unrecorded),
+                    Person("Smallfry", "Ninepenny", 8, true, ParcelNotes.Sex.Woman),
                 };
 
                 var note = new ParcelNotes.Note
                 {
-                    Adults = 2,
+                    Adults = 3,
                     Kids = 1,
                     Character = "written by NotesRoundTrip, deleted again on the next line",
                     Zoning = ParcelNotes.Zoning.Residential,
@@ -126,10 +132,15 @@ namespace Noir.Editor
                     if (line.StartsWith("parcel " + TestId + " person ")) personLines.Add(line);
                 }
 
+                // COUNTED FROM THE HOUSEHOLD, not written down again. This said "3" while the
+                // household above grew to four, and failed a run in which every single field had
+                // round-tripped correctly - a constant sized against another number, rotting the
+                // moment that number moved, inside the probe written to catch that.
                 log.AppendLine("---- 1. did person lines reach the file? ----");
-                log.AppendLine("person lines written : " + personLines.Count + " (want 3)");
+                log.AppendLine("person lines written : " + personLines.Count
+                             + " (want " + wanted.Count + ")");
                 foreach (var line in personLines) log.AppendLine("   " + line);
-                if (personLines.Count != 3) { failures++; log.AppendLine("   ** FAIL"); }
+                if (personLines.Count != wanted.Count) { failures++; log.AppendLine("   ** FAIL"); }
                 else log.AppendLine("   ok");
                 log.AppendLine();
 
@@ -148,7 +159,8 @@ namespace Noir.Editor
                 }
                 else
                 {
-                    log.AppendLine("people read back : " + back.People.Count + " (want 3)");
+                    log.AppendLine("people read back : " + back.People.Count
+                                 + " (want " + wanted.Count + ")");
                     if (back.People.Count != wanted.Count) failures++;
 
                     int n = Mathf.Min(back.People.Count, wanted.Count);
@@ -158,14 +170,15 @@ namespace Noir.Editor
                         var b = back.People[i];
                         bool same = a.First == b.First && a.Last == b.Last
                                  && a.Age == b.Age && a.Child == b.Child
+                                 && a.Which == b.Which
                                  && SameTraits(a.Traits, b.Traits);
                         if (!same) failures++;
-                        log.AppendLine(string.Format("   {0} {1} {2}, {3}, age {4}, [{5}]",
-                            same ? "ok  " : "FAIL", b.First, b.Last,
+                        log.AppendLine(string.Format("   {0} {1} {2}, {3}, {4}, age {5}, [{6}]",
+                            same ? "ok  " : "FAIL", b.First, b.Last, b.Which,
                             b.Child ? "child" : "adult", b.Age, string.Join("|", b.Traits.ToArray())));
                         if (!same)
-                            log.AppendLine(string.Format("        wanted {0} {1}, {2}, age {3}, [{4}]",
-                                a.First, a.Last, a.Child ? "child" : "adult", a.Age,
+                            log.AppendLine(string.Format("        wanted {0} {1}, {2}, {3}, age {4}, [{5}]",
+                                a.First, a.Last, a.Which, a.Child ? "child" : "adult", a.Age,
                                 string.Join("|", a.Traits.ToArray())));
                     }
                 }
@@ -208,9 +221,10 @@ namespace Noir.Editor
         }
 
         private static ParcelNotes.Person Person(string first, string last, int age, bool child,
-                                                 params string[] traits)
+                                                 ParcelNotes.Sex which, params string[] traits)
         {
-            var p = new ParcelNotes.Person { First = first, Last = last, Age = age, Child = child };
+            var p = new ParcelNotes.Person { First = first, Last = last, Age = age, Child = child,
+                                             Which = which };
             foreach (var t in traits) p.Traits.Add(t);
             return p;
         }

@@ -584,7 +584,8 @@ namespace Noir.Unity
             {
                 var a = live[i];
                 var b = saved.People[i];
-                if (a.First != b.First || a.Last != b.Last || a.Age != b.Age || a.Child != b.Child)
+                if (a.First != b.First || a.Last != b.Last || a.Age != b.Age || a.Child != b.Child
+                    || a.Which != b.Which)
                     return true;
                 if (a.Traits.Count != b.Traits.Count) return true;
                 for (int t = 0; t < a.Traits.Count; t++)
@@ -682,6 +683,28 @@ namespace Noir.Unity
                 if (n > bestCount) { bestCount = n; best = a.Last; }
             }
             return best;
+        }
+
+        /// <summary>
+        /// The surname a CHILD of this house takes: its mother's.
+        ///
+        /// Which is a different question from HouseholdSurname above, and the difference only
+        /// shows up in the households worth authoring. Where everyone shares a name the two
+        /// agree; where they do not - a second marriage, a partner who kept her name, a lodger
+        /// with a child - the commonest surname is as likely to be the man's, and picking it
+        /// silently gave the kid the wrong father. It was returning the FIRST person's name in
+        /// that case, which is just whichever row happened to be typed first.
+        ///
+        /// Falls back to the household surname when no adult woman is recorded, so a house
+        /// nobody has finished filling in still saves typing rather than refusing to guess.
+        /// </summary>
+        private string MothersSurname()
+        {
+            foreach (var a in _draftPeople)
+                if (!a.Child && a.Which == ParcelNotes.Sex.Woman
+                    && !string.IsNullOrWhiteSpace(a.Last))
+                    return a.Last;
+            return HouseholdSurname();
         }
 
         /// <summary>
@@ -785,7 +808,14 @@ namespace Noir.Unity
                             First = person.Forename,
                             Last = generated.Surname,
                             Age = person.Age,
-                            Child = person.Age < 18,
+
+                            // The GENERATOR's answer, not an age test. It decided this when it
+                            // built the household - a nineteen-year-old it placed as somebody's
+                            // kid is one, and Person.Child says in as many words that it is not
+                            // derived from age. Reading `person.Age < 18` here quietly disagreed
+                            // with the thing that made the household.
+                            Child = person.IsChild,
+                            Which = person.IsMan ? ParcelNotes.Sex.Man : ParcelNotes.Sex.Woman,
                         });
                 }
                 GUILayout.Space(S(6f));
@@ -804,12 +834,23 @@ namespace Noir.Unity
                 var who = _draftPeople[i];
 
                 GUILayout.BeginHorizontal();
-                who.First = GUILayout.TextField(who.First, GUILayout.Width(S(96f)));
-                who.Last = GUILayout.TextField(who.Last, GUILayout.Width(S(96f)));
+                who.First = GUILayout.TextField(who.First, GUILayout.Width(S(88f)));
+                who.Last = GUILayout.TextField(who.Last, GUILayout.Width(S(88f)));
 
                 string age = GUILayout.TextField(who.Age > 0 ? who.Age.ToString() : "",
-                                                 GUILayout.Width(S(34f)));
+                                                 GUILayout.Width(S(32f)));
                 who.Age = int.TryParse(age, out int years) ? Mathf.Clamp(years, 0, 120) : 0;
+
+                // M / F / not recorded. Cycles rather than opening a list: three states in a
+                // 24px box is not a dropdown, and it sits beside the adult/child button it reads
+                // like. The dot is the unrecorded state and is meant to look unset rather than
+                // look like a third sex.
+                string mark = who.Which == ParcelNotes.Sex.Man ? "M"
+                            : who.Which == ParcelNotes.Sex.Woman ? "F" : "·";
+                if (GUILayout.Button(mark, _button, GUILayout.Width(S(24f))))
+                    who.Which = who.Which == ParcelNotes.Sex.Unrecorded ? ParcelNotes.Sex.Man
+                              : who.Which == ParcelNotes.Sex.Man ? ParcelNotes.Sex.Woman
+                              : ParcelNotes.Sex.Unrecorded;
 
                 if (GUILayout.Button(who.Child ? "child" : "adult", _button, GUILayout.Width(S(52f))))
                     who.Child = !who.Child;
@@ -852,7 +893,7 @@ namespace Noir.Unity
             // every lot. Still editable; it is a default, not a rule.
             if (GUILayout.Button("+ child", _button, GUILayout.Height(S(22f))))
                 _draftPeople.Add(new ParcelNotes.Person
-                    { Last = HouseholdSurname(), Child = true, Age = 0 });
+                    { Last = MothersSurname(), Child = true, Age = 0 });
             GUILayout.EndHorizontal();
 
             GUILayout.Space(S(4f));

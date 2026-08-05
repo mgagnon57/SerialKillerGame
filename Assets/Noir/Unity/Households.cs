@@ -31,6 +31,12 @@ namespace Noir.Unity
             public string Forename;
             public int Age;
             public bool IsChild;
+
+            /// <summary>Which name list the forename came out of. It was decided here anyway -
+            /// every member below picks a male or a female name - and used to be thrown away the
+            /// moment the name was drawn, so "use this household" could not fill the editor's
+            /// sex column and a child could not be given its mother's surname.</summary>
+            public bool IsMan;
         }
 
         public sealed class Household
@@ -191,6 +197,7 @@ namespace Noir.Unity
                     Forename = Pick(boy ? _names.MaleChild : _names.FemaleChild, ref seed),
                     Age = age,
                     IsChild = true,
+                    IsMan = boy,
                 });
             }
         }
@@ -211,6 +218,7 @@ namespace Noir.Unity
             Forename = Pick(man ? _names.Male : _names.Female, ref seed),
             Age = age < 18 ? 18 : age,
             IsChild = false,
+            IsMan = man,
         };
 
         private static string Pick(IReadOnlyList<string> from, ref uint seed) =>
