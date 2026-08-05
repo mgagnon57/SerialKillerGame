@@ -45,10 +45,20 @@ namespace Noir.Unity
         /// <summary>
         /// How far above the ground it floats.
         ///
-        /// Small enough to read as paint on the grass and large enough to beat z-fighting with
-        /// the ground mesh, which is flat and exactly coincident everywhere else.
+        /// Small enough to read as paint on the grass and large enough to clear the ground mesh.
+        ///
+        /// 0.06 was right when the ground was flat and exactly coincident. It is not enough on
+        /// real terrain, and subdividing the line was only half the answer: the ground is drawn
+        /// as MERGED quads that take their height at their own corners and interpolate straight
+        /// across everything between, while this line samples the true elevation every metre.
+        /// The two surfaces agree at the quad corners and part company in between - and wherever
+        /// the ground dips between them, the quad's flat span rides above the true surface and
+        /// swallows the line. Convex ground never showed it; dished ground did.
+        ///
+        /// A quarter of a metre clears that gap and is still nothing from a survey view. It has
+        /// to stay below RoadCentrelines.Lift, which sits above these on purpose.
         /// </summary>
-        private const float Lift = 0.06f;
+        private const float Lift = 0.25f;
 
         /// <summary>
         /// showRoads and showFootprints default true so nothing outside VillageHost/CityShot -
@@ -66,6 +76,12 @@ namespace Noir.Unity
             var verts = new List<Vector3>();
             var cols = new List<Color>();
             var tris = new List<int>();
+
+            // Decided here, before a single vertex is written, and the material is built from the
+            // same answer below. The two paths disagree about where a vertex goes, so this may
+            // not be re-asked halfway through.
+            var paint = Paint();
+            _tangents.Clear();
 
             // ---- the real lots, from the county's records ----
             int parcels = Parcels(verts, cols, tris);
@@ -105,12 +121,24 @@ namespace Noir.Unity
                 : UnityEngine.Rendering.IndexFormat.UInt16 };
             mesh.SetVertices(verts);
             mesh.SetColors(cols);
+            if (ScreenSpace) mesh.SetUVs(0, _tangents);
             mesh.SetTriangles(tris, 0);
+
+            // The screen-space line has no width until the shader gives it one, so its vertices
+            // all sit exactly on the centre line and the bounds come out a hair too tight. A
+            // parcel whose bounds are a flat sliver gets culled the moment the camera is square
+            // on to it, which reads as whole blocks of the plan blinking out while you orbit.
             mesh.RecalculateBounds();
+            if (ScreenSpace)
+            {
+                var b = mesh.bounds;
+                b.Expand(2f);
+                mesh.bounds = b;
+            }
 
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = Paint();
+            renderer.sharedMaterial = paint;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
@@ -153,7 +181,17 @@ namespace Noir.Unity
                     "stream"  => (new Color(0.32f, 0.66f, 0.98f), 2.0f, false),
                     "ditch"   => (new Color(0.28f, 0.50f, 0.78f), 1.2f, false),
                     "water"   => (new Color(0.35f, 0.72f, 1.00f), 2.0f, true),    // the ponds
-                    "school"  => (new Color(0.95f, 0.45f, 0.85f), 2.4f, true),
+
+                    // NO `school`. There was a pink outline round two OpenStreetMap school
+                    // polygons and it was removed at the owner's word: "it is easier to see
+                    // where it is by the parcel lots than with a pink outline not right." He is
+                    // right on both counts. The polygons were never checked against anything -
+                    // same unverified OSM as the roads that put a quarter of the houses on the
+                    // wrong side of the tracks - and the county lot lines already draw the
+                    // school ground correctly, because those come from the assessor.
+                    //
+                    // The two school BUILDINGS are places in city.txt and are unaffected. The
+                    // ground they stand on is a parcel, and a parcel is drawn by the parcel pass.
 
                     // A short tick across the rail, at the four OSM-tagged level crossings only
                     // (Henderson, Green, Benton, Attica) - not every street reaches the far side.
@@ -303,13 +341,69 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// One ribbon between two points, at any angle. The rectangle version below cannot draw
-        /// a lot line that is not square to the map, and almost none of them are. See Ribbon for
-        /// the shared implementation - three other small renderers need exactly this shape.
+        /// How often the line takes the ground's height again, in metres.
+        ///
+        /// A ribbon is a flat quad, and its corners are the only places it asks the terrain how
+        /// high it is. Drawn as ONE quad, a parcel edge hundreds of metres long is a straight
+        /// plane stretched between its two ends - so every hill in between rises through it and
+        /// eats the line. That is what the breaks in the lot lines were: not a boundary that
+        /// stops, not a gap in the record, just a rise of more than the 6 cm of Lift somewhere
+        /// along a chord that had no business being straight.
+        ///
+        /// One metre, not two. Two fixed most of them and left the rest, because the spacing
+        /// decides how closely the line traces the contour and a lot line crosses ground the
+        /// roads never do - open field, ditches, the fall towards the creek. At one metre the
+        /// line reads as laid ON the slope rather than across it, which is the point: a boundary
+        /// running down a bank should show you the bank.
+        /// </summary>
+        private const float FollowGroundEvery = 1f;
+
+        /// <summary>
+        /// One ribbon between two points, at any angle, laid along the ground rather than across
+        /// it. The rectangle version below cannot draw a lot line that is not square to the map,
+        /// and almost none of them are. See Ribbon for the shared implementation - three other
+        /// small renderers need exactly this shape.
         /// </summary>
         private static void Edge(List<Vector3> verts, List<Color> cols, List<int> tris,
-                                 Vector2 a, Vector2 b, Color colour, float stroke = Stroke) =>
-            Ribbon.Edge(verts, cols, tris, a, b, colour, stroke, Lift);
+                                 Vector2 a, Vector2 b, Color colour, float stroke = Stroke)
+        {
+            float length = (b - a).magnitude;
+            if (length <= FollowGroundEvery)
+            {
+                if (ScreenSpace) Ribbon.ScreenEdge(verts, cols, _tangents, tris, a, b, colour, Lift);
+                else Ribbon.Edge(verts, cols, tris, a, b, colour, stroke, Lift);
+                return;
+            }
+
+            // Ceil, so the last piece is short rather than missing. A run that divided evenly
+            // would otherwise stop one step before the corner and leave a gap at every junction
+            // of two lot lines - which is the very fault being fixed.
+            int steps = Mathf.CeilToInt(length / FollowGroundEvery);
+            var previous = a;
+            for (int i = 1; i <= steps; i++)
+            {
+                var next = Vector2.Lerp(a, b, i / (float)steps);
+                if (ScreenSpace) Ribbon.ScreenEdge(verts, cols, _tangents, tris, previous, next, colour, Lift);
+                else Ribbon.Edge(verts, cols, tris, previous, next, colour, stroke, Lift);
+                previous = next;
+            }
+        }
+
+        /// <summary>
+        /// Whether the pixel-width shader is available, decided once per build.
+        ///
+        /// It has to be decided BEFORE any geometry is written, because the two paths lay out
+        /// their vertices differently - one puts them a stroke apart in metres, the other puts
+        /// them both on the centre line and lets the shader separate them. Half a mesh of each
+        /// would draw as a plan with every other line missing.
+        ///
+        /// Falling back rather than failing is deliberate: a shader that did not import is a
+        /// reason for coarse lines, not for a blank county.
+        /// </summary>
+        private static bool ScreenSpace;
+
+        /// <summary>Direction-and-side per vertex, for the screen-space path only.</summary>
+        private static readonly List<Vector4> _tangents = new List<Vector4>();
 
         /// <summary>
         /// Four ribbons round a rectangle. Drawn as quads laid flat rather than as lines,
@@ -327,6 +421,23 @@ namespace Noir.Unity
         private static void Bar(List<Vector3> verts, List<Color> cols, List<int> tris,
                                 float x, float y, float w, float h, Color colour)
         {
+            // A bar is a rectangle one stroke thick, and a stroke has no width in metres once
+            // the shader is deciding that - so it collapses to its own centre line. Routed back
+            // through Edge rather than written here, so it subdivides along the ground like
+            // every other line and keeps the tangent list in step with the vertex list. Writing
+            // four vertices straight into the mesh here would leave those two lists a different
+            // length, and the mesh would take the tangents of whatever came next.
+            if (ScreenSpace)
+            {
+                if (w >= h)
+                    Edge(verts, cols, tris, new Vector2(x, y + h * 0.5f),
+                         new Vector2(x + w, y + h * 0.5f), colour);
+                else
+                    Edge(verts, cols, tris, new Vector2(x + w * 0.5f, y),
+                         new Vector2(x + w * 0.5f, y + h), colour);
+                return;
+            }
+
             int n = verts.Count;
 
             // Village y runs south, world z runs north, so the quad is wound the other way round
@@ -396,7 +507,29 @@ namespace Noir.Unity
         /// Unlit and vertex-coloured, so a plan reads the same at noon and at midnight and the
         /// sun does not decide whether you can see the town.
         /// </summary>
+        /// <summary>How wide a lot line reads on screen, in pixels, at any distance.</summary>
+        private const float WidthPixels = 2.5f;
+
         private static Material Paint()
+        {
+            // The pixel-width line first. Everything below is the fallback it replaces.
+            var screen = Shader.Find("Noir/ScreenSpaceLine");
+            ScreenSpace = screen != null;
+            if (ScreenSpace)
+            {
+                var line = new Material(screen) { name = "Outline Paint (pixel width)" };
+                line.SetFloat("_WidthPixels", WidthPixels);
+                line.SetColor("_Color", Color.white);
+                line.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry + 50;
+                return line;
+            }
+
+            Debug.LogWarning("[outlines] Noir/ScreenSpaceLine not found - falling back to lines "
+                           + "with a fixed width in metres, which thin out with distance.");
+            return WorldWidthPaint();
+        }
+
+        private static Material WorldWidthPaint()
         {
             // Sprites/Default, which is an odd-looking choice and is the right one: it is unlit,
             // it MULTIPLIES BY VERTEX COLOUR, and it ships with every Unity install including

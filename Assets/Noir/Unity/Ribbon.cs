@@ -42,5 +42,38 @@ namespace Noir.Unity
             Edge(verts, tris, a, b, stroke, lift);
             for (int i = before; i < verts.Count; i++) cols.Add(colour);
         }
+
+        /// <summary>
+        /// The same segment, but built for Noir/ScreenSpaceLine: no width in metres at all.
+        ///
+        /// Both vertices of a side sit ON the centre line, and the shader pushes them apart by a
+        /// fixed number of pixels once it knows where the camera is. So this writes each end
+        /// twice - once for each side - and hands the shader the direction the line runs and
+        /// which side each vertex belongs to.
+        ///
+        /// Nothing here decides how wide the line looks. That is the entire point: a width in
+        /// metres is a width that dwindles to nothing across a two kilometre map, and a boundary
+        /// that fades out is a boundary that lies.
+        /// </summary>
+        public static void ScreenEdge(List<Vector3> verts, List<Color> cols, List<Vector4> tangents,
+                                      List<int> tris, Vector2 a, Vector2 b, Color colour, float lift)
+        {
+            var pa = Space3D.ToWorld(new Noir.Core.Contracts.Vec2(a.x, a.y), lift);
+            var pb = Space3D.ToWorld(new Noir.Core.Contracts.Vec2(b.x, b.y), lift);
+
+            var along = pb - pa;
+            if (along.sqrMagnitude < 1e-6f) return;
+            along.Normalize();
+
+            int n = verts.Count;
+            verts.Add(pa); tangents.Add(new Vector4(along.x, along.y, along.z, -1f));
+            verts.Add(pb); tangents.Add(new Vector4(along.x, along.y, along.z, -1f));
+            verts.Add(pb); tangents.Add(new Vector4(along.x, along.y, along.z, +1f));
+            verts.Add(pa); tangents.Add(new Vector4(along.x, along.y, along.z, +1f));
+            for (int i = 0; i < 4; i++) cols.Add(colour);
+
+            tris.Add(n); tris.Add(n + 2); tris.Add(n + 1);
+            tris.Add(n); tris.Add(n + 3); tris.Add(n + 2);
+        }
     }
 }

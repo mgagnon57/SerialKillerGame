@@ -30,9 +30,10 @@ namespace Noir.Unity
         /// narrow enough that a 66 ft right of way is still readable either side of it.</summary>
         private const float Stroke = 2.0f;
 
-        /// <summary>Clear of the ground, and above the parcel lines' own 0.06 lift so a road
-        /// reads as crossing a lot boundary rather than disappearing under it.</summary>
-        private const float Lift = 0.10f;
+        /// <summary>Clear of the ground, and above the parcel lines' own 0.25 lift so a road
+        /// reads as crossing a lot boundary rather than disappearing under it. Raised with them:
+        /// the two have to move together or the roads go under the lot lines instead.</summary>
+        private const float Lift = 0.32f;
 
         public static GameObject Build(WorldModel world, Transform parent, out GameObject alleys)
         {
@@ -52,7 +53,14 @@ namespace Noir.Unity
             var verts = new List<Vector3>();
             var cols = new List<Color>();
             var tris = new List<int>();
+            var tangents = new List<Vector4>();
             int n = 0;
+
+            // Matched to CityOutlines on purpose. Roads at a fixed width in metres beside lot
+            // lines at a fixed width in PIXELS would part company as the camera pulls back - the
+            // roads thinning to dashes over a plan whose boundaries stayed crisp, which reads as
+            // the roads being the thing that is broken.
+            var paint = Paint(out bool screenSpace);
 
             foreach (var line in world.Roads.Lines)
             {
@@ -68,9 +76,14 @@ namespace Noir.Unity
                 for (float d = 2f; d <= line.Path.Length; d += 2f)
                 {
                     var here = line.Path.PointAt(Mathf.Min(d, line.Path.Length));
-                    Ribbon.Edge(verts, cols, tris,
-                                new Vector2(prev.X, prev.Y), new Vector2(here.X, here.Y),
-                                colour, Stroke, Lift);
+                    if (screenSpace)
+                        Ribbon.ScreenEdge(verts, cols, tangents, tris,
+                                          new Vector2(prev.X, prev.Y), new Vector2(here.X, here.Y),
+                                          colour, Lift);
+                    else
+                        Ribbon.Edge(verts, cols, tris,
+                                    new Vector2(prev.X, prev.Y), new Vector2(here.X, here.Y),
+                                    colour, Stroke, Lift);
                     prev = here;
                 }
                 n++;
@@ -85,8 +98,18 @@ namespace Noir.Unity
             };
             mesh.SetVertices(verts);
             mesh.SetColors(cols);
+            if (screenSpace) mesh.SetUVs(0, tangents);
             mesh.SetTriangles(tris, 0);
+
+            // A pixel-width line has no width in the mesh, so a dead straight road comes out as
+            // bounds with no thickness and gets culled the moment you look along it.
             mesh.RecalculateBounds();
+            if (screenSpace)
+            {
+                var bounds = mesh.bounds;
+                bounds.Expand(2f);
+                mesh.bounds = bounds;
+            }
 
             // THE MESH GOES ON A CHILD, NOT ON THE LAYER ROOT. CityChunker.Bake combines every
             // renderer under a root and then DestroyImmediates the originals it consumed. Put the
@@ -97,7 +120,7 @@ namespace Noir.Unity
             holder.transform.SetParent(go.transform, false);
             holder.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = holder.AddComponent<MeshRenderer>();
-            r.sharedMaterial = Paint();
+            r.sharedMaterial = paint;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
             return n;
@@ -121,8 +144,24 @@ namespace Noir.Unity
 
         /// <summary>Unlit and vertex-coloured, the same material argument CityOutlines makes:
         /// a plan reads the same at noon and at midnight.</summary>
-        private static Material Paint()
+        /// <summary>How wide a centreline reads on screen, in pixels, at any distance. Above
+        /// CityOutlines' 2.5 for the same reason Lift is above theirs: a road crossing a lot
+        /// boundary should read as the road.</summary>
+        private const float WidthPixels = 3.0f;
+
+        private static Material Paint(out bool screenSpace)
         {
+            var line = Shader.Find("Noir/ScreenSpaceLine");
+            screenSpace = line != null;
+            if (screenSpace)
+            {
+                var pixels = new Material(line) { name = "Centreline Paint (pixel width)" };
+                pixels.SetFloat("_WidthPixels", WidthPixels);
+                pixels.SetColor("_Color", Color.white);
+                pixels.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry + 60;
+                return pixels;
+            }
+
             var shader = Shader.Find("Sprites/Default")
                       ?? Shader.Find("Universal Render Pipeline/Unlit")
                       ?? Shader.Find("Unlit/Color");
