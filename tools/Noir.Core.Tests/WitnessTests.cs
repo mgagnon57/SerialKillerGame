@@ -114,6 +114,109 @@ namespace Noir.Core.Tests
               + "again, which is the whole thing this replaced");
         }
 
+        /// <summary>Stands in for a field between two people, so the gate can be tested without
+        /// building a world - which is the reason Sightlines asks rather than works it out.</summary>
+        private sealed class AWallOfCorn : ISightBlocked
+        {
+            public bool Between(Tile watcher, Tile subject, GameClock when) => true;
+        }
+
+        private sealed class OpenGround : ISightBlocked
+        {
+            public bool Between(Tile watcher, Tile subject, GameClock when) => false;
+        }
+
+        /// <summary>
+        /// CORN IS A WALL, NOT A HAZE. A person on the far side of standing corn is not seen
+        /// poorly, they are not seen - so it gates whether there was a statement at all rather
+        /// than shading how good one was. Same answer as "too far away", different reason.
+        /// </summary>
+        [Test]
+        public void StandingCornIsNoStatementRatherThanAPoorOne()
+        {
+            var watcher = new Tile(0, 0);
+            var subject = new Tile(5, 0);          // close enough to be Clear in the open
+            var august = On(8, 15, 12 * 60);
+
+            var look = Sightlines.HowGoodALook(watcher, subject, august, Villager(128));
+            Assert.That(look, Is.EqualTo(SightingClarity.Clear),
+                "the clarity is about distance and light; corn does not shade it");
+
+            Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject, august, new OpenGround()),
+                Is.True, "nothing in the way, so the sighting stands");
+
+            Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject, august, new AWallOfCorn()),
+                Is.False, "two and a half metres of corn between them is not a partial view");
+
+            Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject, august),
+                Is.True, "no blocker passed means nothing blocks - every other test relies on it");
+        }
+
+        /// <summary>
+        /// The same field, the same two people, in August and in April.
+        ///
+        /// THE-YEAR.md calls corn the same mechanic as darkness: a 2.5m barrier over half the map
+        /// from July to October, and then gone in three weeks. A sightline model that cannot tell
+        /// those two dates apart is wrong for a quarter of the year.
+        /// </summary>
+        [Test]
+        public void TheFieldBlocksInAugustAndNotInApril()
+        {
+            var probe = new Noir.Core.World.FieldCondition(
+                Noir.Core.World.Crop.Corn, Noir.Core.World.FieldState.Standing, 2.5f);
+            Assert.That(probe.BlocksSightline, Is.True, "standing corn is over eye level");
+
+            // A POINT THAT IS ACTUALLY UNDER CORN THIS YEAR. The crops rotate, so any fixed
+            // coordinate is corn some years and beans others - the first draft of this test
+            // picked a spot that was soybean in 1991 and failed for a reason that was nothing
+            // to do with sightlines.
+            float fx = 0f, fy = 0f;
+            bool foundCorn = false;
+            for (int x = 100; x < 900 && !foundCorn; x += 37)
+            for (int y = 100; y < 900 && !foundCorn; y += 37)
+                if (Noir.Core.World.Fields.At(x, y, GameClock.EpochYear, 227).Crop
+                    == Noir.Core.World.Crop.Corn)
+                {
+                    fx = x; fy = y; foundCorn = true;
+                }
+            Assert.That(foundCorn, Is.True, "no corn anywhere in the epoch year - check CropOn");
+
+            var august = Noir.Core.World.Fields.At(fx, fy, GameClock.EpochYear, 227);
+            var april = Noir.Core.World.Fields.At(fx, fy, GameClock.EpochYear, 105);
+
+            Assert.That(august.BlocksSightline, Is.True,
+                $"mid-August corn should be over eye level, was {august}");
+            Assert.That(april.BlocksSightline, Is.False,
+                $"mid-April is bare soil or seedlings, was {april}");
+        }
+
+        /// <summary>
+        /// AND BEANS ARE NEVER A WALL, which is why the barrier is patchy rather than total.
+        ///
+        /// Soybeans top out around a metre - waist high, and you see straight over them. Corn is
+        /// two and a half. So in any given year roughly half the fields block and half do not,
+        /// and which is which moves with the rotation. A model that treated "cropland" as one
+        /// thing would make the whole countryside opaque every August.
+        /// </summary>
+        [Test]
+        public void SoybeansAreWaistHighAndHideNobody()
+        {
+            var tallest = Noir.Core.World.Fields.At(0f, 0f, GameClock.EpochYear, 1);
+            bool sawBeans = false;
+            for (int x = 100; x < 900; x += 37)
+            for (int y = 100; y < 900; y += 37)
+            {
+                var f = Noir.Core.World.Fields.At(x, y, GameClock.EpochYear, 227);
+                if (f.Crop != Noir.Core.World.Crop.Soybean) continue;
+                sawBeans = true;
+                if (f.Height > tallest.Height) tallest = f;
+            }
+
+            Assert.That(sawBeans, Is.True, "no soybeans anywhere in the epoch year");
+            Assert.That(tallest.BlocksSightline, Is.False,
+                $"the tallest beans on the map still should not block sight, were {tallest}");
+        }
+
         [Test]
         public void BeyondSixtyTilesNobodySeesAnything()
         {

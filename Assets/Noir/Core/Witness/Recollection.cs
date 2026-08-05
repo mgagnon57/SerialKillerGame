@@ -53,7 +53,8 @@ namespace Noir.Core.Witness
         /// </summary>
         public static Sighting[] WhatTheySaw(WorldModel world, Population population,
                                              Citizen who, int day, PlayerTrack track, ulong seed,
-                                             INightWitnesses nightWitnesses = null)
+                                             INightWitnesses nightWitnesses = null,
+                                             ISightBlocked blocked = null)
         {
             DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
             var found = new List<Sighting>();
@@ -94,7 +95,7 @@ namespace Noir.Core.Witness
                 // takes the clock rather than a minute-of-day.
                 var when = new GameClock(GameClock.TickAt(day, minuteOfDay));
                 SightingClarity clarity = Sightlines.HowGoodALook(watcher, step.Where, when, who);
-                if (!Sightlines.SawAnythingAtAll(clarity, watcher, step.Where))
+                if (!Sightlines.SawAnythingAtAll(clarity, watcher, step.Where, when, blocked))
                 {
                     inSight = false;
                     continue;

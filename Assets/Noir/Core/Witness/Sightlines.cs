@@ -61,9 +61,21 @@ namespace Noir.Core.Witness
         /// <summary>
         /// False when there was nothing to remember. Separate from the clarity itself because
         /// Glimpsed is a real, useful, common statement and "out of range" is not a statement.
+        ///
+        /// STANDING CORN BELONGS HERE AND NOT IN THE CLARITY. A 2.5 metre wall between two people
+        /// does not make the look Partial - there is nothing to be partial about. It is the same
+        /// kind of answer as "too far": no statement rather than a poor one.
+        ///
+        /// `blocked` is null in every test that only cares about range and light, which is most
+        /// of them, and null means nothing is in the way. See ISightBlocked for why this is asked
+        /// rather than worked out here.
         /// </summary>
-        public static bool SawAnythingAtAll(SightingClarity clarity, Tile watcher, Tile subject) =>
-            Tile.ChebyshevDistance(watcher, subject) <= NeverBeyond;
+        public static bool SawAnythingAtAll(SightingClarity clarity, Tile watcher, Tile subject,
+                                            GameClock when = default, ISightBlocked blocked = null)
+        {
+            if (Tile.ChebyshevDistance(watcher, subject) > NeverBeyond) return false;
+            return blocked == null || !blocked.Between(watcher, subject, when);
+        }
 
         /// <summary>
         /// 2 in daylight, 1 in civil twilight, 0 in the dark. Street lighting here is not lighting.

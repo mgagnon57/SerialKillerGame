@@ -137,7 +137,13 @@ namespace Noir.Core.Tests
                 for (int i = 0; i < people.Count; i++)
                 {
                     var who = people.Get(new CitizenId(i));
-                    var seen = Recollection.WhatTheySaw(world, people, who, Day, track, seed, night);
+                    // STANDING CORN IS CONSULTED NOW. It is expected to change nothing on this
+                    // particular walk - the track runs door to door in the town and the corn is
+                    // out in the country - and that is the answer to read it for. If a walk down
+                    // Attica Street starts losing witnesses to a cornfield, the crop is being
+                    // asked about tiles that are not fields.
+                    var seen = Recollection.WhatTheySaw(world, people, who, Day, track, seed,
+                                                        night, new StandingCrop(world));
 
                     if (seen.Length == 0) { sawNothing++; continue; }
                     sawSomething++;
