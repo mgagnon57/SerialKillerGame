@@ -1128,6 +1128,36 @@ namespace Noir.Unity
             if (showing == NoteTab.Lot)
             {
 
+            // ---- WHICH OF THESE FIELDS THIS LOT CAN EVEN HAVE ----
+            //
+            // Every field was shown on every lot, which meant asking 524 houses - two thirds of
+            // the town - for a business name and a trade, and asking 58 storefronts how many
+            // bedrooms they had. Both were reported, and both were always going to be, because
+            // an editor that asks impossible questions trains you to ignore it.
+            //
+            // CAPTURED BEFORE THE ZONING DROPDOWN BELOW CAN CHANGE IT, for the reason that
+            // dropdown's own comment gives: picking a zoning sets the field during the click
+            // pass, and reading the fresh value would draw a different number of controls than
+            // Layout allowed for. The form settles on the next frame.
+            //
+            // Unset shows everything on purpose - not knowing what a lot is yet is not the same
+            // as knowing it is nothing.
+            var zonedAs = _draftZoning;
+
+            bool showTrade = zonedAs != ParcelNotes.Zoning.Residential
+                          && zonedAs != ParcelNotes.Zoning.Vacant;
+
+            // Agricultural keeps the dwelling fields as well as the trade ones: a farmstead is a
+            // house AND a business, and at 16 lots showing both costs nothing.
+            bool showDwelling = zonedAs == ParcelNotes.Zoning.Residential
+                             || zonedAs == ParcelNotes.Zoning.Agricultural
+                             || zonedAs == ParcelNotes.Zoning.Unset;
+
+            // 118 lots are zoned Vacant and the county records a building on precisely none of
+            // them. Condition, stories, square feet and year built are all questions about a
+            // building that is not there.
+            bool showBuilding = zonedAs != ParcelNotes.Zoning.Vacant;
+
             // AN EMPTY LOT SAYS SO, AND OFFERS THE WAY IN. This is the "add occupants" route for
             // a lot nobody lives on: the tab strip sent you here BECAUSE it is empty, so the one
             // thing this tab must not do is leave you hunting for where the people went.
@@ -1153,57 +1183,61 @@ namespace Noir.Unity
             // No source names what was in these units in 1991 - everything written about the
             // commercial row post-dates the 2004 fire and mourns it rather than listing it - so
             // the only way it gets recorded is somebody who was there typing it in.
-            GUILayout.Label("<color=#8a8a86>business - the sign over the door</color>", _small);
-            _draftBusiness = GUILayout.TextField(_draftBusiness, GUILayout.Height(S(22f)));
+            if (showTrade)
+            {
+                GUILayout.Label("<color=#8a8a86>business - the sign over the door</color>", _small);
+                _draftBusiness = GUILayout.TextField(_draftBusiness, GUILayout.Height(S(22f)));
 
-            GUILayout.Space(S(4f));
-            GUILayout.Label("<color=#8a8a86>trade - what it actually was</color>", _small);
-            _draftTrade = GUILayout.TextField(_draftTrade, GUILayout.Height(S(22f)));
+                GUILayout.Space(S(4f));
+                GUILayout.Label("<color=#8a8a86>trade - what it actually was</color>", _small);
+                _draftTrade = GUILayout.TextField(_draftTrade, GUILayout.Height(S(22f)));
 
-            GUILayout.Space(S(10f));
+                GUILayout.Space(S(10f));
+            }
 
-            // WHETHER THERE IS A HOUSING FIELD AT ALL IS DECIDED BEFORE THE ZONING DROPDOWN RUNS,
-            // not after it. Picking a zoning sets _draftZoning during the CLICK event pass, and
-            // IMGUI has already laid that pass out from the value the field held during Layout.
-            // Reading the fresh value here draws one field more - or fewer - than the layout
-            // allowed for, and the reward is the "Mismatched LayoutGroup" tear that EnumField is
-            // written to avoid, undone two lines below it by its own caller.
-            //
-            // So the housing field appears or disappears on the NEXT frame. Same one-frame lag the
-            // trait picker takes, for the same reason, and invisible at any frame rate.
-            bool housingApplies = _draftZoning == ParcelNotes.Zoning.Residential;
+            // Zoning itself always shows - it is the thing that decides all of the above, so it
+            // is the one control that can never be hidden by its own answer.
             _draftZoning = EnumField("zoning", "zoning", _draftZoning, Pretty);
 
-            if (housingApplies)
+            if (showDwelling)
             {
                 GUILayout.Space(S(4f));
                 _draftHousing = EnumField("housing", "housing type", _draftHousing, Pretty);
             }
 
-            GUILayout.Space(S(4f));
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("stories", _small, GUILayout.Width(S(50f)));
-            if (GUILayout.Button("-", _button, GUILayout.Width(S(28f)))) _draftStories = Mathf.Max(0, _draftStories - 1);
-            GUILayout.Label(_draftStories.ToString(), _label, GUILayout.Width(S(20f)));
-            if (GUILayout.Button("+", _button, GUILayout.Width(S(28f)))) _draftStories++;
-            GUILayout.Space(S(10f));
-            if (GUILayout.Button(_draftBasement ? "basement: yes" : "basement: no", _button))
-                _draftBasement = !_draftBasement;
-            GUILayout.EndHorizontal();
+            if (showBuilding)
+            {
+                GUILayout.Space(S(4f));
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("stories", _small, GUILayout.Width(S(50f)));
+                if (GUILayout.Button("-", _button, GUILayout.Width(S(28f)))) _draftStories = Mathf.Max(0, _draftStories - 1);
+                GUILayout.Label(_draftStories.ToString(), _label, GUILayout.Width(S(20f)));
+                if (GUILayout.Button("+", _button, GUILayout.Width(S(28f)))) _draftStories++;
+                GUILayout.Space(S(10f));
+                if (GUILayout.Button(_draftBasement ? "basement: yes" : "basement: no", _button))
+                    _draftBasement = !_draftBasement;
+                GUILayout.EndHorizontal();
 
-            GUILayout.Space(S(4f));
-            _draftQuality = EnumField("condition", "condition", _draftQuality, Pretty);
+                GUILayout.Space(S(4f));
+                _draftQuality = EnumField("condition", "condition", _draftQuality, Pretty);
+            }
 
             // ---- the house itself ----
-            GUILayout.Space(S(8f));
-            GUILayout.Label("<color=#8a8a86>rooms</color>", _small);
-            Counter("beds", ref _draftBedrooms, 1);
-            Counter("baths", ref _draftBaths, 1);
-            Counter("half", ref _draftHalfBaths, 1);
+            if (showDwelling)
+            {
+                GUILayout.Space(S(8f));
+                GUILayout.Label("<color=#8a8a86>rooms</color>", _small);
+                Counter("beds", ref _draftBedrooms, 1);
+                Counter("baths", ref _draftBaths, 1);
+                Counter("half", ref _draftHalfBaths, 1);
+            }
 
-            GUILayout.Space(S(4f));
-            Counter("sq ft", ref _draftSquareFeet, 50);
-            Counter("built", ref _draftYearBuilt, 1, 1830);
+            if (showBuilding)
+            {
+                GUILayout.Space(S(4f));
+                Counter("sq ft", ref _draftSquareFeet, 50);
+                Counter("built", ref _draftYearBuilt, 1, 1830);
+            }
 
             // WHAT THE COUNTY WOULD SAY ABOUT THAT NUMBER. The assessor publishes no square
             // footage anywhere, but it does publish what the dwelling is assessed at, and
