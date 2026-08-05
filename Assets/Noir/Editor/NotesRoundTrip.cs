@@ -238,11 +238,120 @@ namespace Noir.Editor
                 ParcelNotes.Save(SpareId, new ParcelNotes.Note());
                 log.AppendLine();
 
+                // ---- 4. somebody who lives nowhere ----
+                //
+                // The roster is the entire reason people have ids, and it is the case the old
+                // parcel-owned format could not express at all: there was no line you could
+                // write for a person with no lot.
+                log.AppendLine("---- 4. a person with no lot ----");
+                var drifter = new ParcelNotes.Note();
+                ParcelNotes.SetResidents(drifter, new List<ParcelNotes.Person>
+                {
+                    Person("Nomad", "Fifteenpenny", 33, false, ParcelNotes.Sex.Man, "drinks alone"),
+                });
+                ParcelNotes.Save(SpareId, drifter);
+                int drifterId = drifter.Lives[0];
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note());   // the lot goes away
+                byId.SetValue(null, null);                           // genuine re-read
+
+                bool adrift = false;
+                foreach (var p in ParcelNotes.Unhoused()) if (p.Id == drifterId) adrift = true;
+                var stillThere = ParcelNotes.PersonById(drifterId);
+                bool kept = adrift && stillThere != null
+                         && stillThere.First == "Nomad" && stillThere.Traits.Count == 1;
+                log.AppendLine("lot emptied, person still here and unhoused : "
+                             + (kept ? "ok" : "** FAIL"));
+                if (!kept) failures++;
+                ParcelNotes.DeletePerson(drifterId);
+                log.AppendLine();
+
+                // ---- 5. a father and a son with the same name ----
+                //
+                // What a value-identified format cannot do. Two people alike in every visible
+                // field must come back as two people, not one applied twice - and in a village
+                // a Junior and a Senior is an ordinary thing rather than a corner case.
+                log.AppendLine("---- 5. same name, different people ----");
+                var pairNote = new ParcelNotes.Note { Adults = 2 };
+                ParcelNotes.SetResidents(pairNote, new List<ParcelNotes.Person>
+                {
+                    Person("Junior", "Sixteenpenny", 58, false, ParcelNotes.Sex.Man,
+                           "on the village board"),
+                    Person("Junior", "Sixteenpenny", 19, false, ParcelNotes.Sex.Man, "night owl"),
+                });
+                ParcelNotes.Save(SpareId, pairNote);
+                byId.SetValue(null, null);
+
+                var readPair = ParcelNotes.Residents(ParcelNotes.For(SpareId));
+                bool distinct = readPair.Count == 2
+                             && readPair[0].Id != readPair[1].Id
+                             && readPair[0].Age != readPair[1].Age
+                             && readPair[0].Traits.Count == 1 && readPair[1].Traits.Count == 1
+                             && readPair[0].Traits[0] != readPair[1].Traits[0];
+                log.AppendLine("two of them stayed apart : " + (distinct ? "ok" : "** FAIL"));
+                if (!distinct) failures++;
+                foreach (var p in readPair) ParcelNotes.DeletePerson(p.Id);
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note());
+                log.AppendLine();
+
+                // ---- 6. the highest id stays dead ----
+                //
+                // Deleting a MIDDLE id proves nothing here: max+1 survives that and fails this.
+                // This is the check that would have caught the derived counter that got into the
+                // first draft of the spec, and it is why `nextperson` is written to the file.
+                log.AppendLine("---- 6. a deleted id is not handed out again ----");
+                var counting = new ParcelNotes.Note();
+                ParcelNotes.SetResidents(counting, new List<ParcelNotes.Person>
+                {
+                    Person("Alpha", "Seventeenpenny", 40, false, ParcelNotes.Sex.Woman),
+                    Person("Beta", "Seventeenpenny", 41, false, ParcelNotes.Sex.Man),
+                });
+                ParcelNotes.Save(SpareId, counting);
+                int highest = 0;
+                foreach (int id in counting.Lives) if (id > highest) highest = id;
+
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note());
+                foreach (int id in counting.Lives) ParcelNotes.DeletePerson(id);
+                byId.SetValue(null, null);                          // genuine re-read
+
+                var afterDelete = new ParcelNotes.Note();
+                ParcelNotes.SetResidents(afterDelete, new List<ParcelNotes.Person>
+                {
+                    Person("Gamma", "Seventeenpenny", 42, false, ParcelNotes.Sex.Woman),
+                });
+                int minted = afterDelete.Lives.Count > 0 ? afterDelete.Lives[0] : -1;
+                bool fresh = minted > highest;
+                log.AppendLine($"deleted up to id {highest}, next minted {minted} : "
+                             + (fresh ? "ok" : "** FAIL"));
+                if (!fresh) failures++;
+                if (minted > 0) ParcelNotes.DeletePerson(minted);
+                log.AppendLine();
+
+                // ---- 7. a lives line naming nobody ----
+                //
+                // Refusing to load a file that is otherwise fine would be worse than losing the
+                // one resident. The lot must keep its zoning and everybody else.
+                log.AppendLine("---- 7. dangling lives id ----");
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note
+                                          { Zoning = ParcelNotes.Zoning.Residential });
+                File.WriteAllText(notesPath, File.ReadAllText(notesPath)
+                    + "\nparcel " + SpareId + " lives 999999\n");
+                byId.SetValue(null, null);
+
+                var survivor = ParcelNotes.For(SpareId);
+                bool heldUp = survivor != null
+                           && survivor.Zoning == ParcelNotes.Zoning.Residential
+                           && survivor.Lives.Count == 0;
+                log.AppendLine("lot kept its zoning and dropped the ghost : "
+                             + (heldUp ? "ok" : "** FAIL"));
+                if (!heldUp) failures++;
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note());
+                log.AppendLine();
+
                 // ---- and put the lot back ----
                 ParcelNotes.Save(TestId, new ParcelNotes.Note());
                 byId.SetValue(null, null);
 
-                log.AppendLine("---- 4. cleanup ----");
+                log.AppendLine("---- 8. cleanup ----");
                 log.AppendLine("test note removed : " + (ParcelNotes.For(TestId) == null ? "ok" : "** FAIL"));
                 if (ParcelNotes.For(TestId) != null) failures++;
             }
@@ -261,7 +370,7 @@ namespace Noir.Editor
 
             string after = File.Exists(notesPath) ? File.ReadAllText(notesPath) : null;
             log.AppendLine();
-            log.AppendLine("---- 5. the real file is untouched ----");
+            log.AppendLine("---- 9. the real file is untouched ----");
             bool intact = original == after;
             if (!intact) failures++;
             log.AppendLine("bytes after     : " + (after == null ? "(no file)" : after.Length.ToString()));

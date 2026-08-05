@@ -265,6 +265,45 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>
+        /// Everybody no lot points at, in id order. The roster.
+        ///
+        /// COMPUTED, NEVER STORED. An "unhoused" flag sitting beside a residents list is two
+        /// facts that can disagree, and the one that disagrees quietly is the one that loses
+        /// somebody's evening. Walking the notes cannot go stale, and at a few hundred people
+        /// over 794 lots it is beneath measurement.
+        /// </summary>
+        public static List<Person> Unhoused()
+        {
+            Load();
+            var housed = new HashSet<int>();
+            foreach (var note in _byId.Values)
+                foreach (int id in note.Lives) housed.Add(id);
+
+            var list = new List<Person>();
+            foreach (var pair in _people)
+                if (!housed.Contains(pair.Key)) list.Add(pair.Value);
+            list.Sort((a, b) => a.Id.CompareTo(b.Id));
+            return list;
+        }
+
+        /// <summary>
+        /// Remove somebody permanently. The ONLY thing in the project that deletes a person -
+        /// the editor's x button unhouses instead, so no single click destroys a household.
+        ///
+        /// Their id is not returned to the pool: _nextPersonId only ever goes up, so a stale
+        /// `lives` line naming the dead id - in a hand edit, or in the .bak beside the file -
+        /// cannot resurrect a stranger into somebody's house.
+        /// </summary>
+        public static void DeletePerson(int id)
+        {
+            Load();
+            if (!_people.Remove(id)) return;
+            foreach (var note in _byId.Values) note.Lives.Remove(id);
+            Write();
+            Changed?.Invoke();
+        }
+
         public static Note For(int parcelId)
         {
             Load();
