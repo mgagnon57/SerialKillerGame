@@ -20,11 +20,32 @@ namespace Noir.Unity
         /// <summary>Heavier than a lot line, so the selected one still reads as THE one.</summary>
         private const float Stroke = 1.6f;
 
-        /// <summary>Above CityOutlines' own lines (0.06) so the highlight always wins the depth
-        /// fight against the boundary it is tracing over.</summary>
-        private const float Lift = 0.09f;
+        /// <summary>Pixels wide when the pixel-width shader is there. Heavier than the hover's
+        /// 3.5: a selection is the standing state and should outweigh the thing you are merely
+        /// pointing at.</summary>
+        private const float WidthPixels = 5.0f;
 
-        private static readonly Color Green = new Color(0.30f, 1.00f, 0.35f);
+        /// <summary>
+        /// Above the lot lines, and this WAS 0.09 AND BROKEN.
+        ///
+        /// 0.09 cleared CityOutlines when its own lift was 0.06. That lift went to 0.25 when the
+        /// lot lines were made to follow the contour, and nothing brought this with it - so the
+        /// selection mark spent the evening drawing UNDERNEATH the boundary it was tracing, and
+        /// clicking a lot appeared to do almost nothing. Reported as "when clicking I should
+        /// make more clear", which it was: it was buried.
+        ///
+        /// Ordering now, lowest first: lot lines 0.25, roads 0.32, THIS 0.36, hover 0.40.
+        /// </summary>
+        private const float Lift = 0.36f;
+
+        /// <summary>
+        /// AMBER, not green, and that is the point.
+        ///
+        /// This was the same green as HoverHighlight to within a few hundredths, so the lot you
+        /// had open and the lot you were pointing at were the same colour and told you nothing
+        /// apart. Green means "about to", amber means "is".
+        /// </summary>
+        private static readonly Color Green = new Color(1.00f, 0.72f, 0.20f);
 
         private VillageHost _host;
         private MeshFilter _mf;
@@ -74,6 +95,7 @@ namespace Noir.Unity
             // there is, so trace that rather than showing no selection at all.
             var verts = new List<Vector3>();
             var tris = new List<int>();
+            _cols.Clear(); _tangents.Clear();
             Edge(verts, tris, new Vector2(b.X, b.Y), new Vector2(b.X + b.W, b.Y));
             Edge(verts, tris, new Vector2(b.X + b.W, b.Y), new Vector2(b.X + b.W, b.Y + b.H));
             Edge(verts, tris, new Vector2(b.X + b.W, b.Y + b.H), new Vector2(b.X, b.Y + b.H));
@@ -85,6 +107,7 @@ namespace Noir.Unity
         {
             var verts = new List<Vector3>();
             var tris = new List<int>();
+            _cols.Clear(); _tangents.Clear();
             var pts = parcel.Points;
             for (int i = 0; i < pts.Length; i++)
                 Edge(verts, tris, pts[i], pts[(i + 1) % pts.Length]);
@@ -95,16 +118,58 @@ namespace Noir.Unity
         {
             var mesh = new Mesh { name = "SelectionHighlight" };
             mesh.SetVertices(verts);
+            if (_screenSpace)
+            {
+                mesh.SetColors(_cols);
+                mesh.SetUVs(0, _tangents);
+            }
             mesh.SetTriangles(tris, 0);
             mesh.RecalculateBounds();
+
+            // Zero-thickness mesh seen edge on would be culled. Same guard as the lot lines.
+            if (_screenSpace)
+            {
+                var b = mesh.bounds;
+                b.Expand(2f);
+                mesh.bounds = b;
+            }
             return mesh;
         }
 
-        private static void Edge(List<Vector3> verts, List<int> tris, Vector2 a, Vector2 b) =>
-            Ribbon.Edge(verts, tris, a, b, Stroke, Lift);
+        /// <summary>Subdivided at 2 m so it follows the ground, like every other line on this
+        /// plan - one flat quad across a long boundary is eaten by the first rise it crosses.</summary>
+        private static void Edge(List<Vector3> verts, List<int> tris, Vector2 a, Vector2 b)
+        {
+            int steps = Mathf.Max(1, Mathf.CeilToInt((b - a).magnitude / 2f));
+            var previous = a;
+            for (int i = 1; i <= steps; i++)
+            {
+                var next = Vector2.Lerp(a, b, i / (float)steps);
+                if (_screenSpace) Ribbon.ScreenEdge(verts, _cols, _tangents, tris, previous, next, Green, Lift);
+                else Ribbon.Edge(verts, tris, previous, next, Stroke, Lift);
+                previous = next;
+            }
+        }
+
+        private static readonly List<Color> _cols = new List<Color>();
+        private static readonly List<Vector4> _tangents = new List<Vector4>();
+
+        /// <summary>True when the pixel-width shader bound, so the mesh carries tangents.</summary>
+        private static bool _screenSpace;
 
         private static Material Paint()
         {
+            var line = Shader.Find("Noir/ScreenSpaceLine");
+            _screenSpace = line != null;
+            if (_screenSpace)
+            {
+                var pixels = new Material(line) { name = "Selection Paint (pixel width)" };
+                pixels.SetFloat("_WidthPixels", WidthPixels);
+                pixels.SetColor("_Color", Color.white);
+                pixels.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry + 60;
+                return pixels;
+            }
+
             var shader = Shader.Find("Sprites/Default")
                       ?? Shader.Find("Universal Render Pipeline/Unlit")
                       ?? Shader.Find("Unlit/Color");

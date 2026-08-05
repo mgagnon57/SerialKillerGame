@@ -137,12 +137,16 @@ namespace Noir.Unity
             HandleOrbit();
             HandlePan();
             HandleSelection();
+            HandleHover();
             HandleFollow();
             Apply();
         }
 
         private void HandleModeSwitch()
         {
+            // Keys belong to the text field while one has focus - see
+            // VillageUI.KeyboardCaptured. WASD/QE/R/F/Tab are all bound here.
+            if (VillageUI.KeyboardCaptured) return;
             var keyboard = Keyboard.current;
             if (keyboard == null || !keyboard.tabKey.wasPressedThisFrame) return;
 
@@ -182,6 +186,9 @@ namespace Noir.Unity
 
         private void HandleWalk()
         {
+            // Keys belong to the text field while one has focus - see
+            // VillageUI.KeyboardCaptured. WASD/QE/R/F/Tab are all bound here.
+            if (VillageUI.KeyboardCaptured) return;
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -224,7 +231,9 @@ namespace Noir.Unity
         private void HandleOrbit()
         {
             var mouse = Mouse.current;
-            var keyboard = Keyboard.current;
+            // Mouse orbit stays live while typing - you want to look at the lot you
+            // are describing. Only the KEY half is withheld.
+            var keyboard = VillageUI.KeyboardCaptured ? null : Keyboard.current;
 
             // Q and E snap-free rotate; right-drag orbits freely.
             if (keyboard != null)
@@ -263,6 +272,9 @@ namespace Noir.Unity
 
         private void HandlePan()
         {
+            // Keys belong to the text field while one has focus - see
+            // VillageUI.KeyboardCaptured. WASD/QE/R/F/Tab are all bound here.
+            if (VillageUI.KeyboardCaptured) return;
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -286,6 +298,34 @@ namespace Noir.Unity
             float speed = Mathf.Lerp(10f, 300f, _distance / MaxDistance);
             _target += (flatForward * move.z + flatRight * move.x).normalized
                      * speed * Time.unscaledDeltaTime;
+        }
+
+        /// <summary>
+        /// Which lot the cursor is over, every frame.
+        ///
+        /// Cheap enough to do per frame and worth checking, given the evening this file has had:
+        /// ParcelIndex.Find rejects on a bounding box first, so 794 lots cost 794 rectangle
+        /// tests and one polygon test. The ray is the same Space3D.GroundHit the click uses, so
+        /// what you hover and what you would select are the same lot - a hover that highlighted
+        /// one lot and a click that took its neighbour would be worse than no hover at all.
+        ///
+        /// Cleared while the pointer is over a panel, so moving the mouse up to the inspector
+        /// does not leave a lot lit up behind it.
+        /// </summary>
+        private void HandleHover()
+        {
+            var mouse = Mouse.current;
+            if (mouse == null || VillageUI.PointerOverUI
+                || (_host.Footprint != null && _host.Footprint.Active))
+            {
+                _host.HoveredParcel = null;
+                return;
+            }
+
+            var ray = _camera.ScreenPointToRay(mouse.position.ReadValue());
+            _host.HoveredParcel = Space3D.GroundHit(ray, out Vector3 hit)
+                ? ParcelIndex.Find(GroundPoint(hit))
+                : null;
         }
 
         private void HandleSelection()
@@ -349,6 +389,9 @@ namespace Noir.Unity
 
         private void HandleFollow()
         {
+            // Keys belong to the text field while one has focus - see
+            // VillageUI.KeyboardCaptured. WASD/QE/R/F/Tab are all bound here.
+            if (VillageUI.KeyboardCaptured) return;
             var keyboard = Keyboard.current;
             if (keyboard != null && keyboard.fKey.wasPressedThisFrame
                 && !keyboard.leftShiftKey.isPressed && _host.Selected.IsValid)
