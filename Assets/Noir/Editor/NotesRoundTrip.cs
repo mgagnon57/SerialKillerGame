@@ -384,11 +384,60 @@ namespace Noir.Editor
                 ParcelNotes.DeletePerson(moverId);
                 log.AppendLine();
 
+                // ---- 9. a man lives at one address and keeps a shop at another ----
+                //
+                // The thing a business needed and a household list could not say. A shop has an
+                // owner and staff, not residents, and the owner sleeps somewhere else - so ONE
+                // person is pointed at by two different lots, in two different ways, and both
+                // are true. No format where a person is a line underneath a lot can express it.
+                log.AppendLine("---- 9. lives at one lot, runs a shop at another ----");
+                byId.SetValue(null, null);
+
+                var house = new ParcelNotes.Note { Adults = 1 };
+                ParcelNotes.SetResidents(house, new List<ParcelNotes.Person>
+                {
+                    Person("Keeper", "Nineteenpenny", 54, false, ParcelNotes.Sex.Man,
+                           "runs a business in town"),
+                });
+                ParcelNotes.Save(TestId, house);
+                int keeperId = house.Lives[0];
+
+                var shop = new ParcelNotes.Note { Business = "the hardware" };
+                var owner = ParcelNotes.PersonById(keeperId).Copy();
+                owner.Proprietor = true;
+                var hand = Person("Help", "Twentypenny", 19, false, ParcelNotes.Sex.Man);
+                hand.Proprietor = false;
+                ParcelNotes.SetWorkers(shop, new List<ParcelNotes.Person> { owner, hand });
+                ParcelNotes.Save(SpareId, shop);
+                byId.SetValue(null, null);                          // genuine re-read
+
+                var stillHome = ParcelNotes.Residents(ParcelNotes.For(TestId));
+                var keeping = ParcelNotes.Workers(ParcelNotes.For(SpareId));
+                bool bothTrue = stillHome.Count == 1 && stillHome[0].Id == keeperId
+                             && keeping.Count == 2
+                             && keeping[0].Id == keeperId && keeping[0].Proprietor
+                             && !keeping[1].Proprietor
+                             && ParcelNotes.For(SpareId).Lives.Count == 0;
+                log.AppendLine("one person, a home and a shop, no residents at the shop : "
+                             + (bothTrue ? "ok" : "** FAIL"));
+                if (!bothTrue) failures++;
+
+                // And the person record itself must not have picked up the ownership - it is a
+                // fact about the link, and he is nobody's proprietor at home.
+                var record = ParcelNotes.PersonById(keeperId);
+                bool clean = record != null && !record.Proprietor;
+                log.AppendLine("the record itself claims no ownership : " + (clean ? "ok" : "** FAIL"));
+                if (!clean) failures++;
+
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note());
+                foreach (var p in keeping) ParcelNotes.DeletePerson(p.Id);
+                log.AppendLine();
+
                 // ---- and put the lot back ----
                 ParcelNotes.Save(TestId, new ParcelNotes.Note());
                 byId.SetValue(null, null);
 
-                log.AppendLine("---- 9. cleanup ----");
+                log.AppendLine("---- 10. cleanup ----");
                 log.AppendLine("test note removed : " + (ParcelNotes.For(TestId) == null ? "ok" : "** FAIL"));
                 if (ParcelNotes.For(TestId) != null) failures++;
             }
@@ -407,7 +456,7 @@ namespace Noir.Editor
 
             string after = File.Exists(notesPath) ? File.ReadAllText(notesPath) : null;
             log.AppendLine();
-            log.AppendLine("---- 10. the real file is untouched ----");
+            log.AppendLine("---- 11. the real file is untouched ----");
             bool intact = original == after;
             if (!intact) failures++;
             log.AppendLine("bytes after     : " + (after == null ? "(no file)" : after.Length.ToString()));

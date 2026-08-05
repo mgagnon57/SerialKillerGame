@@ -650,14 +650,20 @@ namespace Noir.Unity
             // The ID is compared too, because two people can now be identical in every visible
             // field and still be different people - a father and a son with the same name, which
             // is exactly the case a lot points at rather than contains.
-            var onFile = ParcelNotes.Residents(saved);
+            // AGAINST THE LIST THIS LOT ACTUALLY USES. A shop's people are on `owns`/`works`, so
+            // comparing its drafts against an empty residents list would report a difference on
+            // every frame and save on every click.
+            var onFile = PeopleWorkHere(_draftZoning)
+                ? ParcelNotes.Workers(saved)
+                : ParcelNotes.Residents(saved);
+
             if (live.Count != onFile.Count) return true;
             for (int i = 0; i < live.Count; i++)
             {
                 var a = live[i];
                 var b = onFile[i];
                 if (a.Id != b.Id || a.First != b.First || a.Last != b.Last || a.Age != b.Age
-                    || a.Child != b.Child || a.Which != b.Which)
+                    || a.Child != b.Child || a.Which != b.Which || a.Proprietor != b.Proprietor)
                     return true;
                 if (a.Traits.Count != b.Traits.Count) return true;
                 for (int t = 0; t < a.Traits.Count; t++)
@@ -693,6 +699,23 @@ namespace Noir.Unity
             _noteScroll = Vector2.zero;   // a new lot opens at the top, not where the last one sat
 
             var saved = ParcelNotes.For(parcelId);
+
+            // THE COUNTY'S ANSWER IS THE STARTING VALUE where nobody has authored one. Its class
+            // code says what the assessor thinks the lot is, for all 776 matched parcels, which
+            // beats making somebody set `residential` by hand 517 times. An authored value always
+            // wins - this only fills a blank.
+            //
+            // Resolved FIRST, before the people, because the zoning decides whether this lot has
+            // residents or a proprietor and there is no way to load the right list without it.
+            var county = CountyRecord.For(parcelId);
+            _draftZoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset;
+            if (_draftZoning == ParcelNotes.Zoning.Unset && county != null)
+                _draftZoning = county.Zoning;
+
+            _draftHousing = saved?.Housing ?? ParcelNotes.HousingType.Unset;
+            if (_draftHousing == ParcelNotes.HousingType.Unset && county != null)
+                _draftHousing = county.Housing;
+
             _draftAdults = saved?.Adults ?? 0;
             _draftKids = saved?.Kids ?? 0;
             _draftNames = saved?.Names ?? "";
@@ -700,7 +723,10 @@ namespace Noir.Unity
             _traitsOpenFor = -1;
             _rosterOpen = false;
             if (saved != null)
-                foreach (var who in ParcelNotes.Residents(saved)) _draftPeople.Add(who.Copy());
+                foreach (var who in PeopleWorkHere(_draftZoning)
+                                        ? ParcelNotes.Workers(saved)
+                                        : ParcelNotes.Residents(saved))
+                    _draftPeople.Add(who.Copy());
 
             // WHICH TAB THIS LOT OPENS ON. Asked here, where the occupancy is known and before
             // anything is drawn. An occupied lot opens on the people and an empty one on the
@@ -719,20 +745,24 @@ namespace Noir.Unity
             _draftHalfBaths = saved?.HalfBaths ?? 0;
             _draftSquareFeet = saved?.SquareFeet ?? 0;
             _draftYearBuilt = saved?.YearBuilt ?? 0;
-
-            // THE COUNTY'S ANSWER IS THE STARTING VALUE where nobody has authored one. Its class
-            // code says what the assessor thinks the lot is, for all 776 matched parcels, which
-            // beats making somebody set `residential` by hand 517 times. An authored value always
-            // wins - this only fills a blank.
-            var county = CountyRecord.For(parcelId);
-            _draftZoning = saved?.Zoning ?? ParcelNotes.Zoning.Unset;
-            if (_draftZoning == ParcelNotes.Zoning.Unset && county != null)
-                _draftZoning = county.Zoning;
-
-            _draftHousing = saved?.Housing ?? ParcelNotes.HousingType.Unset;
-            if (_draftHousing == ParcelNotes.HousingType.Unset && county != null)
-                _draftHousing = county.Housing;
         }
+
+        /// <summary>
+        /// Whether the people on this lot WORK there rather than live there.
+        ///
+        /// A shop, a works or the school has an owner and staff; a house has a household. Nobody
+        /// lives at the hardware store, which is the whole distinction - and the owner sleeps at
+        /// an address of his own, which the ids can now say.
+        ///
+        /// Agricultural sits with the houses deliberately: a farm here is somebody's home first,
+        /// and all 16 of them in this town are farmsteads rather than operations. Vacant and
+        /// Unset take the household reading too, because "nobody knows yet" is a bad moment to
+        /// start asking who the proprietor is.
+        /// </summary>
+        private static bool PeopleWorkHere(ParcelNotes.Zoning z) =>
+            z == ParcelNotes.Zoning.Commercial
+         || z == ParcelNotes.Zoning.Industrial
+         || z == ParcelNotes.Zoning.Civic;
 
         /// <summary>Everything in the drafts, as a note ready to write. The footprint is not a
         /// draft - FootprintDrawer owns it and saves it separately - so it is carried across from
@@ -859,9 +889,16 @@ namespace Noir.Unity
         /// view and the bottom of the list becomes unreachable. This file has learned that once
         /// already and the comment on EnumField says so.
         /// </summary>
-        private void DrawRoster()
+        private void DrawRoster(bool worksHere)
         {
-            var loose = ParcelNotes.Unhoused();
+            // A DIFFERENT LIST FOR A BUSINESS. On a house you are placing somebody who lives
+            // nowhere, so the roster is the unhoused. On a shop you are naming who KEEPS it -
+            // and he lives at an address of his own, so restricting that list to people with no
+            // home would exclude everybody you actually want. The whole village is offered.
+            var loose = worksHere
+                ? new System.Collections.Generic.List<ParcelNotes.Person>(ParcelNotes.AllPeople.Values)
+                : ParcelNotes.Unhoused();
+            if (worksHere) loose.Sort((a, b) => a.Id.CompareTo(b.Id));
 
             // ANYBODY ALREADY IN THE ROWS ABOVE IS NOT OFFERED AGAIN. They are still unhoused on
             // disk until the save lands, so without this somebody you just placed sits in their
@@ -887,7 +924,9 @@ namespace Noir.Unity
             }
 
             if (shown == 0)
-                GUILayout.Label("<color=#75736e>   nobody is between houses</color>", _small);
+                GUILayout.Label(worksHere
+                    ? "<color=#75736e>   nobody has been written down yet</color>"
+                    : "<color=#75736e>   nobody is between houses</color>", _small);
 
             // BOTH DEFERRED OUT OF THE LOOP. Adding to the drafts or deleting a record mid-draw
             // changes how many controls IMGUI lays out between its Layout and Repaint passes,
@@ -915,7 +954,11 @@ namespace Noir.Unity
                 Bedrooms = _draftBedrooms, Baths = _draftBaths, HalfBaths = _draftHalfBaths,
                 SquareFeet = _draftSquareFeet, YearBuilt = _draftYearBuilt
             };
-            ParcelNotes.SetResidents(note, _draftPeople);
+            // WHICH LINK THE PEOPLE GET depends on what the lot is. Both setters clear the other
+            // lists, so re-zoning a shop as a house and typing a family in cannot leave the old
+            // staff pointed at by somebody's home.
+            if (PeopleWorkHere(_draftZoning)) ParcelNotes.SetWorkers(note, _draftPeople);
+            else ParcelNotes.SetResidents(note, _draftPeople);
             return note;
         }
 
@@ -950,8 +993,13 @@ namespace Noir.Unity
             // the lot and 330px was not enough for either. This way each gets all 760.
             var showing = _noteTab;
 
+            // The zoning is captured here as well, and for the same reason - the dropdown that
+            // changes it lives on the other tab, but the tab STRIP is drawn every pass and its
+            // label depends on the answer.
+            bool worksHere = PeopleWorkHere(_draftZoning);
+
             GUILayout.BeginHorizontal();
-            if (TabButton("who lives here", showing == NoteTab.Occupants))
+            if (TabButton(worksHere ? "who runs it" : "who lives here", showing == NoteTab.Occupants))
             {
                 _noteTab = NoteTab.Occupants;
                 _tabPinned = true;
@@ -1059,7 +1107,18 @@ namespace Noir.Unity
                               : who.Which == ParcelNotes.Sex.Man ? ParcelNotes.Sex.Woman
                               : ParcelNotes.Sex.Unrecorded;
 
-                if (GUILayout.Button(who.Child ? "child" : "adult", _button, GUILayout.Width(S(62f))))
+                // THE SAME SLOT ASKS A DIFFERENT QUESTION ON A BUSINESS. A shop has no children
+                // in it; it has whoever keeps it and whoever it employs. `worksHere` was captured
+                // at the top of the panel, so the number of controls in this row does not change
+                // within a pass however the zoning is edited.
+                if (worksHere)
+                {
+                    if (GUILayout.Button(who.Proprietor ? "owner" : "staff", _button,
+                                         GUILayout.Width(S(62f))))
+                        who.Proprietor = !who.Proprietor;
+                }
+                else if (GUILayout.Button(who.Child ? "child" : "adult", _button,
+                                          GUILayout.Width(S(62f))))
                     who.Child = !who.Child;
 
                 // The remove is last and narrow, so it is never the button you were reaching for.
@@ -1098,6 +1157,15 @@ namespace Noir.Unity
             }
 
             GUILayout.BeginHorizontal();
+            if (worksHere)
+            {
+                if (GUILayout.Button("+ owner", _button, GUILayout.Height(S(22f))))
+                    _draftPeople.Add(new ParcelNotes.Person { Proprietor = true });
+                if (GUILayout.Button("+ staff", _button, GUILayout.Height(S(22f))))
+                    _draftPeople.Add(new ParcelNotes.Person());
+            }
+            else
+            {
             if (GUILayout.Button("+ adult", _button, GUILayout.Height(S(22f))))
                 _draftPeople.Add(new ParcelNotes.Person { Last = HouseholdSurname(), Age = 0 });
 
@@ -1107,17 +1175,19 @@ namespace Noir.Unity
             if (GUILayout.Button("+ child", _button, GUILayout.Height(S(22f))))
                 _draftPeople.Add(new ParcelNotes.Person
                     { Last = MothersSurname(), Child = true, Age = 0 });
+            }
 
             // CAPTURED BEFORE THE BUTTON THAT CHANGES IT, for the same reason as the tabs: the
             // list below is a different number of controls, and deciding on the fresh value
             // would draw more of them than the layout pass allowed for.
             bool rosterShowing = _rosterOpen;
-            if (GUILayout.Button(rosterShowing ? "from roster ▲" : "from roster ▾", _button,
+            string rosterLabel = worksHere ? "from the village" : "from roster";
+            if (GUILayout.Button(rosterShowing ? rosterLabel + " ▲" : rosterLabel + " ▾", _button,
                                  GUILayout.Height(S(22f))))
                 _rosterOpen = !rosterShowing;
             GUILayout.EndHorizontal();
 
-            if (rosterShowing) DrawRoster();
+            if (rosterShowing) DrawRoster(worksHere);
 
             GUILayout.Space(S(4f));
             GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
@@ -1167,9 +1237,12 @@ namespace Noir.Unity
             // not being drawn.
             if (_draftPeople.Count == 0)
             {
-                GUILayout.Label("<color=#8a8a86>nobody lives here yet</color>", _small);
-                if (GUILayout.Button("add occupants", _button,
-                                     GUILayout.Height(S(22f)), GUILayout.Width(S(160f))))
+                GUILayout.Label(PeopleWorkHere(zonedAs)
+                    ? "<color=#8a8a86>nobody runs this yet</color>"
+                    : "<color=#8a8a86>nobody lives here yet</color>", _small);
+                if (GUILayout.Button(PeopleWorkHere(zonedAs) ? "say who ran it" : "add occupants",
+                                     _button,
+                                     GUILayout.Height(S(22f)), GUILayout.Width(S(180f))))
                 {
                     _noteTab = NoteTab.Occupants;
                     _tabPinned = true;
@@ -1634,16 +1707,18 @@ namespace Noir.Unity
                     house.Append(house.Length > 0 ? "   ·   " : "").Append("built ").Append(note.YearBuilt);
                 if (house.Length > 0) body.Append("\n<color=#9fb6c8>").Append(house).Append("</color>");
 
-                // ---- who lives here ----
+                // ---- who lives here, or who ran it ----
                 var residents = ParcelNotes.Residents(note);
-                if (residents.Count > 0)
+                var atWork = ParcelNotes.Workers(note);
+                if (residents.Count > 0 || atWork.Count > 0)
                 {
                     body.Append("\n");
-                    foreach (var who in residents)
+                    foreach (var who in residents.Count > 0 ? residents : atWork)
                     {
                         body.Append("\n<color=#d8cfa8>  ").Append(who.FullName);
                         if (who.Age > 0) body.Append(", ").Append(who.Age);
-                        if (who.Child) body.Append("  <i>(child)</i>");
+                        if (who.Proprietor) body.Append("  <i>(owner)</i>");
+                        else if (who.Child) body.Append("  <i>(child)</i>");
                         body.Append("</color>");
                         if (who.Traits.Count > 0)
                             body.Append("\n<color=#8f8a66>      ")

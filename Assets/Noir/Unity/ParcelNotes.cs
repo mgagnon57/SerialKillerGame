@@ -79,6 +79,16 @@ namespace Noir.Unity
             /// Noir.Core.Observation.PersonDescription, which already reports apparent sex.</summary>
             public Sex Which = Sex.Unrecorded;
 
+            /// <summary>
+            /// Runs the business on the lot being looked at, rather than working in it.
+            ///
+            /// NOT A FACT ABOUT THE PERSON, and never written on a person line. It is a fact
+            /// about the LINK between this person and one lot - the same man owns the hardware
+            /// store and is nobody in particular at home - so it lives in WHICH LIST the lot puts
+            /// him in, `owns` or `works`, and is set here every time a lot's people are read.
+            /// </summary>
+            public bool Proprietor;
+
             /// <summary>A child of the household rather than an adult in it. Not derived from
             /// Age: a nineteen-year-old still at home is somebody's kid in a village, and a
             /// twelve-year-old in a household of one is not a child of anybody here.</summary>
@@ -93,7 +103,7 @@ namespace Noir.Unity
             public Person Copy()
             {
                 var c = new Person { Id = Id, First = First, Last = Last, Age = Age,
-                                     Child = Child, Which = Which };
+                                     Child = Child, Which = Which, Proprietor = Proprietor };
                 c.Traits.AddRange(Traits);
                 return c;
             }
@@ -159,6 +169,18 @@ namespace Noir.Unity
             /// <see cref="ParcelNotes.SetResidents"/>.
             /// </summary>
             public readonly List<int> Lives = new List<int>();
+
+            /// <summary>
+            /// Who RUNS the business here, and who works in it. Separate from Lives because a
+            /// business does not have residents - it has an owner and employees, and the owner
+            /// sleeps somewhere else.
+            ///
+            /// Which is a thing the ids made possible: the same person can be pointed at by the
+            /// house they live in AND by the shop they keep, and both are true at once. A format
+            /// where a person is a line underneath a lot cannot say that at all.
+            /// </summary>
+            public readonly List<int> Owns = new List<int>();
+            public readonly List<int> Works = new List<int>();
 
             public Vector2[] Footprint;    // null if nobody has drawn one
 
@@ -254,16 +276,93 @@ namespace Noir.Unity
         {
             Load();
             note.Lives.Clear();
+
+            // AND CLEARS THE BUSINESS LISTS. A lot is one thing or the other here: changing a
+            // shop's zoning to residential and typing a family into it must not leave the old
+            // staff pointed at by a house. The two are mutually exclusive by construction rather
+            // than by anybody remembering.
+            note.Owns.Clear();
+            note.Works.Clear();
+
             foreach (var who in people)
             {
-                if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last))
-                    continue;
-                int id = who.Id > 0 ? who.Id : _nextPersonId++;
-                var stored = who.Copy();
-                stored.Id = id;
-                _people[id] = stored;
-                note.Lives.Add(id);
+                int id = Store(who);
+                if (id > 0) note.Lives.Add(id);
             }
+        }
+
+        /// <summary>
+        /// Who runs this business and who works in it, from one list ordered owners-first.
+        ///
+        /// The Proprietor flag on each person decides which list they land in. It is a fact about
+        /// the link rather than about them, so it is not written on their person line - being the
+        /// owner here says nothing about who they are at home.
+        /// </summary>
+        public static void SetWorkers(Note note, System.Collections.Generic.IEnumerable<Person> people)
+        {
+            Load();
+            note.Lives.Clear();
+            note.Owns.Clear();
+            note.Works.Clear();
+
+            foreach (var who in people)
+            {
+                int id = Store(who);
+                if (id <= 0) continue;
+                if (who.Proprietor) note.Owns.Add(id);
+                else note.Works.Add(id);
+            }
+        }
+
+        /// <summary>
+        /// Put one drafted person into the store and return their id, or 0 if they are a blank
+        /// row rather than a person. Shared by SetResidents and SetWorkers so the two cannot
+        /// drift apart on how somebody gets an id.
+        /// </summary>
+        private static int Store(Person who)
+        {
+            if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last))
+                return 0;
+
+            int id = who.Id > 0 ? who.Id : _nextPersonId++;
+            var stored = who.Copy();
+            stored.Id = id;
+
+            // Proprietor is about a link and this is the record, which is not on either end of
+            // one. Cleared so a person line can never claim to own something.
+            stored.Proprietor = false;
+
+            _people[id] = stored;
+            return id;
+        }
+
+        /// <summary>
+        /// Who keeps this business, owners first, then staff - with Proprietor set to say which.
+        ///
+        /// Returns COPIES, because the flag is a fact about this lot's link to them and writing
+        /// it onto the shared record would follow them to every other lot they appear on.
+        /// </summary>
+        public static List<Person> Workers(Note note)
+        {
+            Load();
+            var list = new List<Person>();
+            if (note == null) return list;
+
+            foreach (int id in note.Owns)
+                if (_people.TryGetValue(id, out var p))
+                {
+                    var c = p.Copy();
+                    c.Proprietor = true;
+                    list.Add(c);
+                }
+            foreach (int id in note.Works)
+                if (_people.TryGetValue(id, out var p))
+                {
+                    var c = p.Copy();
+                    c.Proprietor = false;
+                    list.Add(c);
+                }
+            return list;
         }
 
         /// <summary>
@@ -326,6 +425,7 @@ namespace Noir.Unity
                        && string.IsNullOrWhiteSpace(note.Trade)
                        && string.IsNullOrWhiteSpace(note.Names)
                        && note.Lives.Count == 0
+                       && note.Owns.Count == 0 && note.Works.Count == 0
                        && note.Adults == 0 && note.Kids == 0
                        && note.Zoning == Zoning.Unset && note.Housing == HousingType.Unset
                        && note.Stories == 0 && !note.Basement && note.Condition == Quality.Unset
@@ -412,6 +512,16 @@ namespace Noir.Unity
                     if (int.TryParse(rest.Substring(6).Trim(), out int personId))
                         note.Lives.Add(personId);
                 }
+                else if (rest.StartsWith("owns "))
+                {
+                    if (int.TryParse(rest.Substring(5).Trim(), out int ownerId))
+                        note.Owns.Add(ownerId);
+                }
+                else if (rest.StartsWith("works "))
+                {
+                    if (int.TryParse(rest.Substring(6).Trim(), out int workerId))
+                        note.Works.Add(workerId);
+                }
                 else if (rest.StartsWith("names "))
                     note.Names = Unquote(rest.Substring(6)).Replace("|", "\n");
                 else if (rest.StartsWith("household "))
@@ -487,13 +597,11 @@ namespace Noir.Unity
             // zoning, its shape and everybody else. Must run AFTER MigrateNames, which mints ids
             // of its own and would otherwise have its people dropped as ghosts.
             foreach (var pair in _byId)
-                for (int i = pair.Value.Lives.Count - 1; i >= 0; i--)
-                    if (!_people.ContainsKey(pair.Value.Lives[i]))
-                    {
-                        Debug.LogWarning($"[notes] parcel {pair.Key} lists person "
-                                       + $"{pair.Value.Lives[i]}, who has no record. Dropped.");
-                        pair.Value.Lives.RemoveAt(i);
-                    }
+            {
+                DropGhosts(pair.Key, "lives", pair.Value.Lives);
+                DropGhosts(pair.Key, "owns", pair.Value.Owns);
+                DropGhosts(pair.Key, "works", pair.Value.Works);
+            }
         }
 
         /// <summary>
@@ -504,6 +612,18 @@ namespace Noir.Unity
         /// only the kind and a name are really required. A line with no id at all is a pre-id
         /// line and is minted one.
         /// </summary>
+        /// <summary>Strip ids from one of a lot's people lists that no person record matches.</summary>
+        private static void DropGhosts(int parcelId, string keyword, List<int> ids)
+        {
+            for (int i = ids.Count - 1; i >= 0; i--)
+                if (!_people.ContainsKey(ids[i]))
+                {
+                    Debug.LogWarning($"[notes] parcel {parcelId} {keyword} person {ids[i]}, "
+                                   + "who has no record. Dropped.");
+                    ids.RemoveAt(i);
+                }
+        }
+
         /// <param name="attachTo">
         /// Non-null only for a LEGACY line written underneath a lot, which has no id where one
         /// would now be. The person is minted an id and made a resident of that lot.
@@ -685,6 +805,14 @@ namespace Noir.Unity
                 // underneath a lot.
                 foreach (int resident in note.Lives)
                     sb.AppendLine($"parcel {id} lives {resident}");
+
+                // A BUSINESS HAS AN OWNER AND EMPLOYEES, NOT RESIDENTS. Written as separate
+                // links so the same person can be pointed at by the house they sleep in and by
+                // the shop they keep, and both are true at once.
+                foreach (int owner in note.Owns)
+                    sb.AppendLine($"parcel {id} owns {owner}");
+                foreach (int worker in note.Works)
+                    sb.AppendLine($"parcel {id} works {worker}");
 
                 if (!string.IsNullOrWhiteSpace(note.Names))
                     sb.AppendLine($"parcel {id} names \"{Quote(note.Names.Replace("\n", "|"))}\"");
