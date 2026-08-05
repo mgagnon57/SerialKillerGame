@@ -134,9 +134,25 @@ namespace Noir.Core.World
         {
             if (!InBounds(x, y)) return;
             int i = Index(x, y);
+
+            // Only a change to WALKABILITY moves the revision. Repainting grass as gravel does
+            // not alter who can reach whom, and bumping the stamp for it would throw away a
+            // region map that is still perfectly true.
+            if (((_flags[i] ^ flags) & TileFlags.Walkable) != 0) WalkabilityRevision++;
+
             _terrain[i] = terrain;
             _flags[i] = flags;
         }
+
+        /// <summary>
+        /// Bumped whenever a tile's walkability changes, so anything derived from the shape of
+        /// the walkable space can tell that it has gone stale.
+        ///
+        /// The builder writes this grid tile by tile long before anybody paths on it, and a
+        /// derived map that silently outlived an edit would be worse than no map at all: it
+        /// would refuse journeys that had just become possible, and nothing would say why.
+        /// </summary>
+        public int WalkabilityRevision { get; private set; }
 
         public void SetPlace(int x, int y, PlaceId place)
         {

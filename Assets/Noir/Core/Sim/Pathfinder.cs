@@ -83,6 +83,28 @@ namespace Noir.Core.Sim
 
         public int LastNodesExamined { get; private set; }
 
+        private WalkableRegions _regions;
+
+        /// <summary>
+        /// The map of which tiles can reach which, built on demand and rebuilt when the grid's
+        /// walkable shape changes underneath it.
+        ///
+        /// Lazy rather than built in the constructor because the builder makes a Pathfinder and
+        /// then keeps carving doorways, and a region map from before the doors were cut would
+        /// refuse every journey through one. Keyed on the grid's own revision so it cannot go
+        /// quietly out of date - the failure mode of a stale map is a town where nobody can
+        /// travel and nothing says why.
+        /// </summary>
+        public WalkableRegions Regions
+        {
+            get
+            {
+                if (_regions == null || _regions.BuiltAtRevision != _grid.WalkabilityRevision)
+                    _regions = new WalkableRegions(_grid);
+                return _regions;
+            }
+        }
+
         /// <param name="maxNodesExamined">Zero, the normal case, scales the cap with the map.</param>
         public Pathfinder(TileGrid grid, int maxNodesExamined = 0,
                           float heuristicWeight = DefaultHeuristicWeight)
@@ -122,6 +144,12 @@ namespace Noir.Core.Sim
             if (!_grid.InBounds(from) || !_grid.InBounds(to)) return PathOutcome.NoRouteExists;
             if (!_grid.IsWalkable(from) || !_grid.IsWalkable(to)) return PathOutcome.NoRouteExists;
             if (from == to) return PathOutcome.Found;
+
+            // Two array lookups instead of exhausting the map. Somebody whose destination is
+            // walled off used to cost a full 415 ms search on EVERY retry, for ever, because a
+            // search can only prove a route absent by trying everything. Now it costs nothing,
+            // and it says NoRouteExists - which the caller is entitled to treat as final.
+            if (!Regions.Connected(from, to)) return PathOutcome.NoRouteExists;
 
             NextStamp();
             _heapCount = 0;
