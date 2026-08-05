@@ -652,6 +652,13 @@ namespace Noir.Unity
             _traitsOpenFor = -1;
             if (saved != null)
                 foreach (var who in ParcelNotes.Residents(saved)) _draftPeople.Add(who.Copy());
+
+            // WHICH TAB THIS LOT OPENS ON. Asked here, where the occupancy is known and before
+            // anything is drawn. An occupied lot opens on the people and an empty one on the
+            // lot, which is the "ask me which one" rule applied rather than asked - until
+            // somebody picks a tab themselves, after which it is theirs.
+            if (!_tabPinned)
+                _noteTab = _draftPeople.Count > 0 ? NoteTab.Occupants : NoteTab.Lot;
             _draftCharacter = saved?.Character ?? "";
             _draftBusiness = saved?.Business ?? "";
             _draftTrade = saved?.Trade ?? "";
@@ -687,6 +694,20 @@ namespace Noir.Unity
 
         /// <summary>Which person's trait picker is open, by index. -1 for none.</summary>
         private int _traitsOpenFor = -1;
+
+        private enum NoteTab { Occupants, Lot }
+
+        private NoteTab _noteTab = NoteTab.Lot;
+
+        /// <summary>
+        /// True once somebody has clicked a tab by hand.
+        ///
+        /// Before that, selecting a lot picks the tab by occupancy - the people if anybody lives
+        /// there, the lot if not. After it, the choice sticks: authoring a street is ten lots on
+        /// the same tab, and a rule that sometimes overrides you is worse than one that always
+        /// obeys you after the first click. Clicking the other tab re-pins to that one.
+        /// </summary>
+        private bool _tabPinned;
 
         /// <summary>
         /// The surname a new member of this household most likely takes.
@@ -814,14 +835,39 @@ namespace Noir.Unity
             bool drawingHere = drawer != null && drawer.Active && drawer.TargetParcelId == parcelId;
             var saved = ParcelNotes.For(parcelId);
 
+            // ---- THE TAB STRIP ----
+            //
+            // WHICH TAB IS DRAWN IS DECIDED BEFORE THE BUTTONS THAT CHANGE IT. Clicking a tab
+            // sets _noteTab during the click event pass, and IMGUI has already laid that pass
+            // out from the value the field held during Layout. Reading the fresh value below
+            // would draw a different set of controls than the layout allowed for, which is the
+            // "Mismatched LayoutGroup" tear. So the strip switches on the NEXT frame - the same
+            // one-frame lag the trait picker and the zoning dropdown take, invisible at any
+            // frame rate.
+            //
+            // Two tabs rather than two columns because each of these is a whole question about
+            // the lot and 330px was not enough for either. This way each gets all 760.
+            var showing = _noteTab;
+
+            GUILayout.BeginHorizontal();
+            if (TabButton("who lives here", showing == NoteTab.Occupants))
+            {
+                _noteTab = NoteTab.Occupants;
+                _tabPinned = true;
+            }
+            if (TabButton("the lot", showing == NoteTab.Lot))
+            {
+                _noteTab = NoteTab.Lot;
+                _tabPinned = true;
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(S(8f));
+
             _noteScroll = GUILayout.BeginScrollView(_noteScroll);
 
-            // TWO COLUMNS, because the panel is centred and 760 wide now rather than a 340px
-            // rail. WHO LIVES HERE on the left and WHAT THE BUILDING IS on the right: they are
-            // two separate questions about the same lot, and stacking them made a form you had
-            // to scroll past the people to reach the house.
-            GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(S(330f)));
+            if (showing == NoteTab.Occupants)
+            {
 
             // ---- who lives here ----
             //
@@ -874,11 +920,14 @@ namespace Noir.Unity
                 var who = _draftPeople[i];
 
                 GUILayout.BeginHorizontal();
-                who.First = GUILayout.TextField(who.First, GUILayout.Width(S(88f)));
-                who.Last = GUILayout.TextField(who.Last, GUILayout.Width(S(88f)));
+                // Wider than they were, because the tab owns the panel's full 760 rather than
+                // sharing it with a second column. Six controls in 330px was the crowding that
+                // made this row hard to use the moment it gained a sex button.
+                who.First = GUILayout.TextField(who.First, GUILayout.Width(S(150f)));
+                who.Last = GUILayout.TextField(who.Last, GUILayout.Width(S(150f)));
 
                 string age = GUILayout.TextField(who.Age > 0 ? who.Age.ToString() : "",
-                                                 GUILayout.Width(S(32f)));
+                                                 GUILayout.Width(S(44f)));
                 who.Age = int.TryParse(age, out int years) ? Mathf.Clamp(years, 0, 120) : 0;
 
                 // M / F / not recorded. Cycles rather than opening a list: three states in a
@@ -887,12 +936,12 @@ namespace Noir.Unity
                 // look like a third sex.
                 string mark = who.Which == ParcelNotes.Sex.Man ? "M"
                             : who.Which == ParcelNotes.Sex.Woman ? "F" : "·";
-                if (GUILayout.Button(mark, _button, GUILayout.Width(S(24f))))
+                if (GUILayout.Button(mark, _button, GUILayout.Width(S(30f))))
                     who.Which = who.Which == ParcelNotes.Sex.Unrecorded ? ParcelNotes.Sex.Man
                               : who.Which == ParcelNotes.Sex.Man ? ParcelNotes.Sex.Woman
                               : ParcelNotes.Sex.Unrecorded;
 
-                if (GUILayout.Button(who.Child ? "child" : "adult", _button, GUILayout.Width(S(52f))))
+                if (GUILayout.Button(who.Child ? "child" : "adult", _button, GUILayout.Width(S(62f))))
                     who.Child = !who.Child;
 
                 // The remove is last and narrow, so it is never the button you were reaching for.
@@ -940,10 +989,10 @@ namespace Noir.Unity
             GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
             _draftCharacter = GUILayout.TextArea(_draftCharacter, GUILayout.Height(S(60f)));
 
-            // ---- what the lot is: the right-hand column ----
-            GUILayout.EndVertical();
-            GUILayout.Space(S(24f));
-            GUILayout.BeginVertical(GUILayout.Width(S(330f)));
+            }   // end of the occupants tab
+
+            if (showing == NoteTab.Lot)
+            {
 
             // ---- WHAT TRADED HERE ----
             //
@@ -1018,9 +1067,7 @@ namespace Noir.Unity
                               + (odd ? " - outside what this town sells for" : "") + "</color>", _small);
             }
 
-            GUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            }   // end of the lot tab
 
             GUILayout.EndScrollView();
 
@@ -1103,6 +1150,17 @@ namespace Noir.Unity
         /// returning the moment a button reports a click draws fewer, and the reward is a
         /// "Mismatched LayoutGroup" exception rather than a working menu.
         /// </summary>
+        /// <summary>A tab in the parcel panel's strip. Lit when it is the one being shown.</summary>
+        private bool TabButton(string label, bool active)
+        {
+            var was = GUI.backgroundColor;
+            if (active) GUI.backgroundColor = new Color(0.36f, 0.52f, 0.38f);
+            bool hit = GUILayout.Button(active ? "• " + label : label, _button,
+                                        GUILayout.Height(S(26f)), GUILayout.Width(S(180f)));
+            GUI.backgroundColor = was;
+            return hit;
+        }
+
         private T EnumField<T>(string id, string label, T value, System.Func<T, string> pretty)
             where T : struct, System.Enum
         {
