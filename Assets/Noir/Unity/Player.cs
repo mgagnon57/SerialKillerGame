@@ -48,6 +48,21 @@ namespace Noir.Unity
 
         public bool Walking { get; private set; }
 
+        /// <summary>
+        /// Where the body is standing, in world space, or null when nobody is in it.
+        ///
+        /// DELIBERATELY A UNITY TYPE AND NOTHING MORE. VillageHost writes the observation track
+        /// and is the only file in the game allowed to name the witness assembly - see
+        /// WitnessFirewallTests. Handing it a Vector3, rather than recording from in here, is
+        /// what keeps this file out of that assembly and the exception down to one file.
+        ///
+        /// (The guard is a plain text scan for the assembly's full name, so this comment cannot
+        /// spell it. That bluntness is the point: a check that understood the difference between
+        /// code and prose would also be a check somebody could talk their way around.)
+        /// </summary>
+        public Vector3? Where =>
+            Walking && _body != null ? _body.transform.position : (Vector3?)null;
+
         public static Player Create(VillageHost host, Transform parent)
         {
             var go = new GameObject("Player");

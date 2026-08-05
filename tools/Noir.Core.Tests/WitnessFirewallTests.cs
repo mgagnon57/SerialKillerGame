@@ -52,23 +52,58 @@ namespace Noir.Core.Tests
                 "under dotnet test; a UnityEngine reference ends that.");
         }
 
+        /// <summary>
+        /// The ONE file allowed to name Noir.Core.Witness, by name.
+        ///
+        /// This test used to say "nothing in the game references Witness yet", and said that the
+        /// caller which eventually would "must never become a list". On 2026-08-05 that caller
+        /// arrived: VillageHost records the player's track, which is the one thing the whole
+        /// observation system was waiting on - Recollection.WhatTheySaw can answer nothing
+        /// without it, and until then this assembly had never run.
+        ///
+        /// IT IS STILL NOT A LIST, AND MUST NOT BECOME ONE. A second name here means somebody
+        /// wanted the investigation's machinery somewhere convenient, and the whole point of the
+        /// firewall is that convenience is exactly how ground truth leaks into testimony.
+        /// Player.cs deliberately hands VillageHost a Vector3 rather than recording for itself,
+        /// so that it stays out of this - that is what keeping it to one file costs, and it is
+        /// cheap.
+        /// </summary>
         [Test]
-        public void NothingInTheGameReferencesWitnessYet()
+        public void OnlyTheOneCallerReferencesWitness()
         {
+            const string TheCaller = "Assets/Noir/Unity/VillageHost.cs";
+
             var offenders = new List<string>();
+            bool foundTheCaller = false;
+
             foreach (string file in Directory.GetFiles(Path.Combine(RepoRoot(), "Assets", "Noir"),
                                                        "*.cs", SearchOption.AllDirectories))
             {
-                if (file.Replace('\\', '/').Contains("/Core/Witness/")) continue;
+                string slashed = file.Replace('\\', '/');
+                if (slashed.Contains("/Core/Witness/")) continue;
+
                 string text = File.ReadAllText(file);
-                if (text.Contains("Noir.Core.Witness")) offenders.Add(file);
+                if (!text.Contains("Noir.Core.Witness")) continue;
+
+                if (slashed.EndsWith(TheCaller)) foundTheCaller = true;
+                else offenders.Add(file);
             }
 
             Assert.That(offenders, Is.Empty,
                 "These files reference Noir.Core.Witness:\n  " + string.Join("\n  ", offenders) + "\n\n" +
-                "Nothing may consume this assembly except the caller that asks it a question, and\n" +
-                "that caller does not exist yet. When it does, this test changes to name it — one\n" +
-                "file, deliberately, with a reason in the commit. It must never become a list.");
+                "Exactly one file in the game may consume this assembly - the caller that asks it\n" +
+                "a question - and that file is " + TheCaller + ". Adding a second is not a\n" +
+                "convenience, it is the failure this firewall exists to prevent: not\n" +
+                "Sighting.Culprit, but a convenience field three types deep added years from now\n" +
+                "by somebody who never read any of this.\n\n" +
+                "If the new caller is the right one and VillageHost is not, MOVE the name. Do not\n" +
+                "add to it.");
+
+            Assert.That(foundTheCaller, Is.True,
+                TheCaller + " no longer references Noir.Core.Witness.\n\n" +
+                "If the player's track has moved somewhere else, move the name above with it. If\n" +
+                "it has been deleted, the observation system is back to never running and this\n" +
+                "test should go back to asserting nothing in the game references Witness at all.");
         }
 
         private static string RepoRoot()

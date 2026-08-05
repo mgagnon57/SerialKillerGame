@@ -6,6 +6,7 @@
         "Noir.Core.World",
         "Noir.Core.People",
         "Noir.Core.Sim",
+        "Noir.Core.Witness",
         "Unity.InputSystem",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Universal.2D.Runtime",

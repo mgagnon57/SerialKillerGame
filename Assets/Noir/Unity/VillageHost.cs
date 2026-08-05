@@ -6,6 +6,12 @@ using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
 using Noir.Core.People;
 using Noir.Core.Sim;
+
+// THE ONE FILE IN THE GAME THAT NAMES THIS ASSEMBLY. WitnessFirewallTests holds the line and
+// this is the exception it was written to expect: the caller that asks the observation system a
+// question. It records where the player was; nothing else in Assets may reference Witness, and
+// the test names this file rather than allowing a pattern.
+using Noir.Core.Witness;
 using Noir.Core.World;
 
 namespace Noir.Unity
@@ -29,6 +35,29 @@ namespace Noir.Unity
         public Population People { get; private set; }
         public ParticularsTable Particulars { get; private set; }
         public Simulation Sim { get; private set; }
+
+        /// <summary>
+        /// WHERE THE PLAYER HAS BEEN, one entry a minute. The simulation's only genuine history.
+        ///
+        /// Everybody else is recomputable - DayPlanner.Plan is a pure function of (seed, citizen,
+        /// day), so any villager's past can be replayed and none of it needs storing. The player
+        /// has no plan and no key, so this is the one thing that has to be written down, and
+        /// Recollection.WhatTheySaw cannot answer anything without it.
+        ///
+        /// It is the missing link the observation system has been waiting on: the machinery is
+        /// built, tested and firewalled, and has never run because nothing recorded this.
+        /// </summary>
+        public PlayerTrack Track { get; } = new PlayerTrack();
+
+        private Player _player;
+
+        /// <summary>The last minute written to the track, so a frame does not write it twice.</summary>
+        private int _lastTrackedMinute = -1;
+
+        /// <summary>Where the body was last frame, and the fastest it has moved since the last
+        /// entry - both only so `Visibly.Quickly` can be answered from something real.</summary>
+        private Vector3? _trackedFrom;
+        private float _fastestSinceEntry;
         public string LoadError { get; private set; }
 
         /// <summary>
@@ -712,7 +741,7 @@ namespace Noir.Unity
             // P drops you into the town at eye height with a body, and P again lifts you back
             // out. Nothing is spawned until the first press: a rigged character standing in the
             // street costs nothing to nobody who never asks for it.
-            Player.Create(this, transform);
+            _player = Player.Create(this, transform);
             profile.Done("Player");
             _lighting = SunRig.Create(this, transform);
             profile.Done("SunRig");
@@ -862,6 +891,79 @@ namespace Noir.Unity
             Debug.Log($"[plan] {off} renderers hidden - people and traffic still running.");
         }
 
+        /// <summary>
+        /// Write down where the player was, once a sim minute, while they are in the body.
+        ///
+        /// ONCE A MINUTE, NOT ONCE A FRAME. Sighting.Minute is stamped in minutes and the sim
+        /// runs at 20 Hz, so sampling per frame would make a track 1,200 times bigger than it
+        /// needs to be and stamp most of it with the same number - entries fighting each other
+        /// for one slot, and only the last surviving.
+        ///
+        /// NOTHING IS RECORDED WHILE ORBITING. A camera is not a body: nobody can see it, and a
+        /// track of where the view was pointed is not evidence of anywhere a person stood.
+        ///
+        /// A skipped hour leaves a GAP rather than a run of identical entries. The player did not
+        /// walk anywhere during it, and inventing minutes they were not present for is exactly
+        /// what Recollection refuses to do for travelling villagers.
+        /// </summary>
+        private void RecordWhereThePlayerWas()
+        {
+            var at = _player == null ? null : _player.Where;
+            if (at == null)
+            {
+                _lastTrackedMinute = -1;
+                _trackedFrom = null;
+                _fastestSinceEntry = 0f;
+                return;
+            }
+
+            // How fast they are actually moving, watched every frame and remembered at its
+            // highest until the minute is written. A single sample on the minute boundary would
+            // catch whatever they happened to be doing at that instant and call it the minute.
+            if (_trackedFrom.HasValue && Time.unscaledDeltaTime > 0f)
+            {
+                float metresPerSecond =
+                    Vector3.Distance(at.Value, _trackedFrom.Value) / Time.unscaledDeltaTime;
+                if (metresPerSecond > _fastestSinceEntry) _fastestSinceEntry = metresPerSecond;
+            }
+            _trackedFrom = at;
+
+            int minute = Sim.Clock.Day * (GameClock.TicksPerDay / GameClock.TicksPerMinute)
+                       + Sim.Clock.MinuteOfDay;
+            if (minute == _lastTrackedMinute) return;
+            if (minute < _lastTrackedMinute) return;   // a track runs forwards; PlayerTrack throws
+
+            // ---- WHAT WAS VISIBLY TRUE, from things that are actually known ----
+            //
+            // Every flag has to be perceptible from across a road - that is Visibly's own rule.
+            // Filled from real facts rather than passed as a constant, because this is the
+            // player's own contribution to being seen, and a constant would make every walk
+            // identical to every other.
+            var looked = Visibly.Nothing;
+
+            // Running rather than walking. A body moving at a pace is the thing a witness
+            // notices first and remembers longest.
+            if (_fastestSinceEntry > RunningPace) looked |= Visibly.Quickly;
+
+            // Somebody else within a few metres. Not who - Visibly cannot say who, and neither
+            // can the witness - only that they were not on their own.
+            if (_agentView != null && _agentView.Pick(at.Value, InCompanyMetres).IsValid)
+                looked |= Visibly.InCompany;
+
+            // Visibly.Carrying is deliberately never set. There is nothing in the game to carry
+            // yet, and a flag guessed at is worse than one left honest - this is evidence.
+
+            Track.Record(minute, Space3D.TileAt(at.Value), looked);
+            _lastTrackedMinute = minute;
+            _fastestSinceEntry = 0f;
+        }
+
+        /// <summary>Above a walk. Starter Assets walks at 2 m/s and sprints at 5.3.</summary>
+        private const float RunningPace = 3.2f;
+
+        /// <summary>Near enough that a witness would say they were with somebody.</summary>
+        private const float InCompanyMetres = 6f;
+
         private void Update()
         {
             if (Sim == null) return;
@@ -898,6 +1000,8 @@ namespace Noir.Unity
                 }
             }
             SimMs = slice.Elapsed.TotalMilliseconds;
+
+            RecordWhereThePlayerWas();
 
             if (_agentView != null) _agentView.Refresh();
             RefreshMs = slice.Elapsed.TotalMilliseconds - SimMs;
