@@ -57,6 +57,18 @@ namespace Noir.Unity
 
         public sealed class Person
         {
+            /// <summary>
+            /// Stable for the life of this person, and never reused once assigned - see the
+            /// `nextperson` line in the file. Zero means "not in the store yet": a row typed
+            /// into the editor has no id until it is saved.
+            ///
+            /// The reason people have ids at all is that they OUTLIVE LOTS. Somebody between
+            /// houses cannot be written down by a format that only knows `parcel N person ...`,
+            /// and moving a family without an id means retyping them, which is how their traits
+            /// and their ages get lost.
+            /// </summary>
+            public int Id;
+
             public string First = "";
             public string Last = "";
             public int Age;
@@ -79,8 +91,8 @@ namespace Noir.Unity
 
             public Person Copy()
             {
-                var c = new Person { First = First, Last = Last, Age = Age, Child = Child,
-                                     Which = Which };
+                var c = new Person { Id = Id, First = First, Last = Last, Age = Age,
+                                     Child = Child, Which = Which };
                 c.Traits.AddRange(Traits);
                 return c;
             }
@@ -135,8 +147,17 @@ namespace Noir.Unity
             /// First and last separately because a household is not a list of full names: a wife
             /// may not share the surname, a lodger certainly does not, and a child defaults to
             /// its mother's - which the editor can only do for you if it can see the parts.
+            ///
+            /// BY ID, NOT BY VALUE. A lot points AT its residents rather than containing them,
+            /// which is the whole thing that lets somebody exist while living nowhere: a person
+            /// no lot points at is unhoused, and that needs no flag and no second list. It also
+            /// means moving a family is changing which lot points at them, so their ages and
+            /// their traits come along instead of being retyped.
+            ///
+            /// Resolve through <see cref="ParcelNotes.Residents"/>; write through
+            /// <see cref="ParcelNotes.SetResidents"/>.
             /// </summary>
-            public readonly List<Person> People = new List<Person>();
+            public readonly List<int> Lives = new List<int>();
 
             public Vector2[] Footprint;    // null if nobody has drawn one
 
@@ -177,26 +198,72 @@ namespace Noir.Unity
 
             public int YearBuilt;
 
-            /// <summary>
-            /// Fill People from a draft list, COPYING each person.
-            ///
-            /// Copied rather than referenced because the editor holds live objects the user is
-            /// typing into. Handing those same objects to the saved note would mean the "saved"
-            /// state and the draft are one thing - so the dirty check could never see a
-            /// difference, the save button would never light, and `revert` would revert to the
-            /// edits it was meant to discard.
-            /// </summary>
-            public Note WithPeople(System.Collections.Generic.IEnumerable<Person> people)
-            {
-                People.Clear();
-                foreach (var who in people)
-                    if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
-                        People.Add(who.Copy());
-                return this;
-            }
         }
 
         private static Dictionary<int, Note> _byId;
+
+        /// <summary>Everybody authored, by id, whether or not they live anywhere.</summary>
+        private static Dictionary<int, Person> _people;
+
+        /// <summary>
+        /// The next id to hand out. STORED in the file rather than derived from what is in it.
+        ///
+        /// `max(existing) + 1` walks backwards the moment the highest-numbered person is
+        /// deleted: delete 19, reload, and the next person created is 19 again - inheriting any
+        /// stale `lives 19` sitting in a hand edit or in parcel-notes.bak, which puts a stranger
+        /// in somebody's house. So it is written out and only ever increased.
+        /// </summary>
+        private static int _nextPersonId = 1;
+
+        /// <summary>Everybody, housed or not. See <see cref="Unhoused"/> for the roster.</summary>
+        public static IReadOnlyDictionary<int, Person> AllPeople { get { Load(); return _people; } }
+
+        /// <summary>One person by id, or null if no record has that id.</summary>
+        public static Person PersonById(int id)
+        {
+            Load();
+            return _people.TryGetValue(id, out var p) ? p : null;
+        }
+
+        /// <summary>The people living on this note, resolved. Ids with no record are skipped -
+        /// Load has already dropped and reported those, so this only sees them mid-edit.</summary>
+        public static List<Person> Residents(Note note)
+        {
+            Load();
+            var list = new List<Person>();
+            if (note == null) return list;
+            foreach (int id in note.Lives)
+                if (_people.TryGetValue(id, out var p)) list.Add(p);
+            return list;
+        }
+
+        /// <summary>
+        /// Put these people in the store and make them this note's residents.
+        ///
+        /// COPIES them in, for the reason the old WithPeople copied: the editor holds live
+        /// objects somebody is typing into, and handing those same objects to the saved state
+        /// would make the saved state and the draft one thing - so the dirty check could never
+        /// see a difference, the save button would never light, and `revert` would revert to the
+        /// edits it was meant to discard.
+        ///
+        /// Anybody arriving without an id is new and gets one. A row with neither a forename nor
+        /// a surname is scaffolding rather than a person and is skipped.
+        /// </summary>
+        public static void SetResidents(Note note, System.Collections.Generic.IEnumerable<Person> people)
+        {
+            Load();
+            note.Lives.Clear();
+            foreach (var who in people)
+            {
+                if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last))
+                    continue;
+                int id = who.Id > 0 ? who.Id : _nextPersonId++;
+                var stored = who.Copy();
+                stored.Id = id;
+                _people[id] = stored;
+                note.Lives.Add(id);
+            }
+        }
 
         public static Note For(int parcelId)
         {
@@ -218,7 +285,7 @@ namespace Noir.Unity
                        && string.IsNullOrWhiteSpace(note.Business)
                        && string.IsNullOrWhiteSpace(note.Trade)
                        && string.IsNullOrWhiteSpace(note.Names)
-                       && note.People.Count == 0
+                       && note.Lives.Count == 0
                        && note.Adults == 0 && note.Kids == 0
                        && note.Zoning == Zoning.Unset && note.Housing == HousingType.Unset
                        && note.Stories == 0 && !note.Basement && note.Condition == Quality.Unset
@@ -246,6 +313,8 @@ namespace Noir.Unity
         {
             if (_byId != null) return;
             _byId = new Dictionary<int, Note>();
+            _people = new Dictionary<int, Person>();
+            _nextPersonId = 1;
 
             string text;
             try { text = ContentLoader.Read("parcel-notes.txt"); }
@@ -255,6 +324,21 @@ namespace Noir.Unity
             {
                 var line = raw.Trim();
                 if (line.Length == 0 || line[0] == '#') continue;
+
+                // TOP-LEVEL LINES, which are not about any parcel. They have to be handled before
+                // the `parcel` guard below, which drops every line that does not start with that
+                // word - people are no longer owned by a lot, so their records are not either.
+                if (line.StartsWith("nextperson "))
+                {
+                    if (int.TryParse(line.Substring(11).Trim(), out int next))
+                        _nextPersonId = System.Math.Max(_nextPersonId, next);
+                    continue;
+                }
+                if (line.StartsWith("person "))
+                {
+                    ReadPerson(line.Substring(7));
+                    continue;
+                }
 
                 var parts = line.Split(new[] { ' ' }, 3);
                 if (parts.Length < 3 || parts[0] != "parcel") continue;
@@ -270,7 +354,24 @@ namespace Noir.Unity
                 else if (rest.StartsWith("trade "))
                     note.Trade = Unquote(rest.Substring(6));
                 else if (rest.StartsWith("person "))
-                    ReadPerson(note, rest.Substring(7));
+                {
+                    // LEGACY: a person written UNDERNEATH a lot, from before people had records
+                    // of their own. Written by this file only between the morning of 2026-08-05
+                    // and the id change the same afternoon, so the window is a few hours - and
+                    // dropping it silently would still have cost somebody a household they had
+                    // sat and typed. Minted an id and attached to this lot, once, on load; the
+                    // next save writes them out in the current form and this stops mattering.
+                    ReadPerson(rest.Substring(7), note);
+                }
+                else if (rest.StartsWith("lives "))
+                {
+                    // ONE ID PER LINE, so a single corrupt entry costs one resident rather than
+                    // a household. Resolved against the person store at the end of Load, not
+                    // here - the file does not promise that people come before the lots that
+                    // list them, and it should not have to.
+                    if (int.TryParse(rest.Substring(6).Trim(), out int personId))
+                        note.Lives.Add(personId);
+                }
                 else if (rest.StartsWith("names "))
                     note.Names = Unquote(rest.Substring(6)).Replace("|", "\n");
                 else if (rest.StartsWith("household "))
@@ -336,27 +437,49 @@ namespace Noir.Unity
                 }
             }
 
-            // Everything authored before the structured editor existed becomes People here, once,
+            // Everything authored before the structured editor existed becomes people here, once,
             // after the whole file is in hand. Done at the end rather than per line because a
             // note's `names` and its `person` lines can appear in either order.
             foreach (var note in _byId.Values) MigrateNames(note);
+
+            // A `lives` line naming somebody with no record. Costs that one resident and says so,
+            // rather than refusing to load a file that is otherwise fine - the lot keeps its
+            // zoning, its shape and everybody else. Must run AFTER MigrateNames, which mints ids
+            // of its own and would otherwise have its people dropped as ghosts.
+            foreach (var pair in _byId)
+                for (int i = pair.Value.Lives.Count - 1; i >= 0; i--)
+                    if (!_people.ContainsKey(pair.Value.Lives[i]))
+                    {
+                        Debug.LogWarning($"[notes] parcel {pair.Key} lists person "
+                                       + $"{pair.Value.Lives[i]}, who has no record. Dropped.");
+                        pair.Value.Lives.RemoveAt(i);
+                    }
         }
 
         /// <summary>
-        /// `adult|child "first" "last" age "trait|trait"` - the tail of a person line.
+        /// `<id> adult|child "first" "last" age "trait|trait" m|f|-` - the tail of a person line.
         ///
         /// Hand-tolerant on purpose. This file is meant to be editable in a text editor, so a
-        /// line missing its age or its traits still yields a person rather than nothing; only
-        /// the kind and the first name are really required.
+        /// line missing its age, its traits or its sex still yields a person rather than nothing;
+        /// only the kind and a name are really required. A line with no id at all is a pre-id
+        /// line and is minted one.
         /// </summary>
-        private static void ReadPerson(Note note, string rest)
+        /// <param name="attachTo">
+        /// Non-null only for a LEGACY line written underneath a lot, which has no id where one
+        /// would now be. The person is minted an id and made a resident of that lot.
+        /// </param>
+        private static void ReadPerson(string rest, Note attachTo = null)
         {
             var who = new Person();
-            int at = rest.IndexOf(' ');
-            if (at < 0) return;
 
-            who.Child = rest.Substring(0, at).Trim().Equals("child", System.StringComparison.OrdinalIgnoreCase);
-            rest = rest.Substring(at + 1).Trim();
+            if (attachTo == null)
+            {
+                string idField = NextField(ref rest).Trim();
+                if (int.TryParse(idField, out int givenId) && givenId > 0) who.Id = givenId;
+            }
+
+            who.Child = NextField(ref rest).Trim()
+                            .Equals("child", System.StringComparison.OrdinalIgnoreCase);
 
             who.First = Unquote(NextField(ref rest));
             who.Last = Unquote(NextField(ref rest));
@@ -376,8 +499,20 @@ namespace Noir.Unity
             if (sex == "m" || sex == "man" || sex == "male") who.Which = Sex.Man;
             else if (sex == "f" || sex == "woman" || sex == "female") who.Which = Sex.Woman;
 
-            if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
-                note.People.Add(who);
+            if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last)) return;
+
+            if (who.Id <= 0) who.Id = _nextPersonId++;
+            if (_people.ContainsKey(who.Id))
+                Debug.LogWarning($"[notes] two person records share id {who.Id}; "
+                               + "the later one wins. The next save rewrites the file cleanly.");
+            _people[who.Id] = who;
+
+            // The counter never goes backwards, whatever the file said - a `nextperson` line that
+            // is missing, or lower than a person actually in the file, would otherwise hand out
+            // an id somebody already has.
+            _nextPersonId = System.Math.Max(_nextPersonId, who.Id + 1);
+
+            attachTo?.Lives.Add(who.Id);
         }
 
         /// <summary>Take the next `"quoted field"` or bare token off the front of a line.</summary>
@@ -423,7 +558,7 @@ namespace Noir.Unity
         /// </summary>
         private static void MigrateNames(Note note)
         {
-            if (note.People.Count > 0 || string.IsNullOrWhiteSpace(note.Names)) return;
+            if (note.Lives.Count > 0 || string.IsNullOrWhiteSpace(note.Names)) return;
 
             foreach (var line in note.Names.Split('\n'))
             {
@@ -431,11 +566,14 @@ namespace Noir.Unity
                 if (name.Length == 0) continue;
 
                 int space = name.LastIndexOf(' ');
-                note.People.Add(new Person
+                var who = new Person
                 {
+                    Id = _nextPersonId++,
                     First = space > 0 ? name.Substring(0, space) : name,
                     Last = space > 0 ? name.Substring(space + 1) : "",
-                });
+                };
+                _people[who.Id] = who;
+                note.Lives.Add(who.Id);
             }
         }
 
@@ -457,6 +595,35 @@ namespace Noir.Unity
             sb.AppendLine("# ============================================================================");
             sb.AppendLine();
 
+            // ---- THE PEOPLE, before any lot, because lots only point at them ----
+            //
+            // The counter goes first and is never allowed to go backwards. Deriving it as
+            // max+1 on load would reissue the id of whoever was highest the moment they were
+            // deleted, and any stale `lives` line naming that id - in a hand edit, or in the
+            // .bak sitting beside this file - would put a stranger in somebody's house.
+            sb.AppendLine($"nextperson {_nextPersonId}");
+            sb.AppendLine();
+
+            var personIds = new List<int>(_people.Keys);
+            personIds.Sort();
+            foreach (int personId in personIds)
+            {
+                var who = _people[personId];
+                if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last))
+                    continue;
+
+                // The traits field is written even when it is empty, so the age token in front
+                // of it always has a space behind it and the line keeps one shape whether
+                // somebody has traits or not - NextField reads a bare token by looking for that
+                // space. Sex goes LAST, so a line written before that field existed, or typed by
+                // hand without it, still reads back as a whole person with the sex unrecorded.
+                sb.AppendLine($"person {who.Id} {(who.Child ? "child" : "adult")} "
+                            + $"\"{Quote(who.First ?? "")}\" \"{Quote(who.Last ?? "")}\" "
+                            + $"{who.Age} \"{Quote(string.Join("|", who.Traits))}\" "
+                            + $"{(who.Which == Sex.Man ? "m" : who.Which == Sex.Woman ? "f" : "-")}");
+            }
+            if (personIds.Count > 0) sb.AppendLine();
+
             var ids = new List<int>(_byId.Keys);
             ids.Sort();
             foreach (int id in ids)
@@ -471,30 +638,13 @@ namespace Noir.Unity
                 if (note.Adults != 0 || note.Kids != 0)
                     sb.AppendLine($"parcel {id} household {note.Adults} {note.Kids}");
 
-                // THE PEOPLE THEMSELVES. This was missing, and its absence is the whole reason
-                // the household editor could not keep anything: a name typed into it lived in
-                // memory, survived being clicked away from - because the drafts carry - and was
-                // dropped on the floor the moment it reached disk. Only the derived Adults/Kids
-                // counts above went out, so a reload gave back "two adults and a child" with no
-                // idea who they were. ReadPerson had been written to parse these lines and was
-                // never called by anything, at either end.
-                //
-                // The traits field is written even when it is empty, so the age token in front of
-                // it always has a space after it and the line keeps one shape whether somebody
-                // has traits or not. NextField reads a bare token by looking for that space.
-                foreach (var who in note.People)
-                {
-                    if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last))
-                        continue;
-                    // Sex goes LAST, as a bare m/f/- after the traits, so that a line written
-                    // before this field existed - or typed by hand without it - still reads back
-                    // as a whole person with the sex simply unrecorded. ReadPerson takes the
-                    // fields in order and stops when the line does.
-                    sb.AppendLine($"parcel {id} person {(who.Child ? "child" : "adult")} "
-                                + $"\"{Quote(who.First ?? "")}\" \"{Quote(who.Last ?? "")}\" "
-                                + $"{who.Age} \"{Quote(string.Join("|", who.Traits))}\" "
-                                + $"{(who.Which == Sex.Man ? "m" : who.Which == Sex.Woman ? "f" : "-")}");
-                }
+                // WHO LIVES HERE, by id. One per line rather than a list, so a single corrupt
+                // entry costs one resident instead of a household. The people themselves were
+                // written above, once each, however many lots point at them - which is nothing
+                // clever, just what happens when a person is a record rather than a line
+                // underneath a lot.
+                foreach (int resident in note.Lives)
+                    sb.AppendLine($"parcel {id} lives {resident}");
 
                 if (!string.IsNullOrWhiteSpace(note.Names))
                     sb.AppendLine($"parcel {id} names \"{Quote(note.Names.Replace("\n", "|"))}\"");

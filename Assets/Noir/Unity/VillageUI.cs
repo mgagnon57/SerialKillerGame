@@ -599,13 +599,17 @@ namespace Noir.Unity
                 if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
                     live.Add(who);
 
-            if (live.Count != saved.People.Count) return true;
+            // The ID is compared too, because two people can now be identical in every visible
+            // field and still be different people - a father and a son with the same name, which
+            // is exactly the case a lot points at rather than contains.
+            var onFile = ParcelNotes.Residents(saved);
+            if (live.Count != onFile.Count) return true;
             for (int i = 0; i < live.Count; i++)
             {
                 var a = live[i];
-                var b = saved.People[i];
-                if (a.First != b.First || a.Last != b.Last || a.Age != b.Age || a.Child != b.Child
-                    || a.Which != b.Which)
+                var b = onFile[i];
+                if (a.Id != b.Id || a.First != b.First || a.Last != b.Last || a.Age != b.Age
+                    || a.Child != b.Child || a.Which != b.Which)
                     return true;
                 if (a.Traits.Count != b.Traits.Count) return true;
                 for (int t = 0; t < a.Traits.Count; t++)
@@ -646,7 +650,8 @@ namespace Noir.Unity
             _draftNames = saved?.Names ?? "";
             _draftPeople.Clear();
             _traitsOpenFor = -1;
-            if (saved != null) foreach (var who in saved.People) _draftPeople.Add(who.Copy());
+            if (saved != null)
+                foreach (var who in ParcelNotes.Residents(saved)) _draftPeople.Add(who.Copy());
             _draftCharacter = saved?.Character ?? "";
             _draftBusiness = saved?.Business ?? "";
             _draftTrade = saved?.Trade ?? "";
@@ -764,18 +769,33 @@ namespace Noir.Unity
             }
         }
 
-        private ParcelNotes.Note DraftNote(ParcelNotes.Note saved) => new ParcelNotes.Note
+        /// <summary>
+        /// The drafts as a note ready to write.
+        ///
+        /// SetResidents also puts the drafted people into the store, minting ids for any that are
+        /// new, which means building a note has a side effect on the world. That is deliberate:
+        /// every caller of this saves the result immediately, and somebody typed during an edit
+        /// that is then abandoned arrives in the roster - recoverable - rather than being
+        /// discarded, which is not.
+        /// </summary>
+        private ParcelNotes.Note DraftNote(ParcelNotes.Note saved)
         {
-            // Adults/Kids stay derived so anything still reading them - Households, the
-            // inspector summary - keeps working while People is the real answer.
-            Adults = CountPeople(false), Kids = CountPeople(true), Names = "",
-            Character = _draftCharacter, Footprint = saved?.Footprint,
-            Business = _draftBusiness, Trade = _draftTrade,
-            Zoning = _draftZoning, Housing = _draftHousing, Condition = _draftQuality,
-            Stories = _draftStories, Basement = _draftBasement,
-            Bedrooms = _draftBedrooms, Baths = _draftBaths, HalfBaths = _draftHalfBaths,
-            SquareFeet = _draftSquareFeet, YearBuilt = _draftYearBuilt
-        }.WithPeople(_draftPeople);
+            var note = new ParcelNotes.Note
+            {
+                // Adults/Kids stay derived so anything still reading them - Households, the
+                // inspector summary, the county cross-check - keeps working while the people
+                // themselves are the real answer.
+                Adults = CountPeople(false), Kids = CountPeople(true), Names = "",
+                Character = _draftCharacter, Footprint = saved?.Footprint,
+                Business = _draftBusiness, Trade = _draftTrade,
+                Zoning = _draftZoning, Housing = _draftHousing, Condition = _draftQuality,
+                Stories = _draftStories, Basement = _draftBasement,
+                Bedrooms = _draftBedrooms, Baths = _draftBaths, HalfBaths = _draftHalfBaths,
+                SquareFeet = _draftSquareFeet, YearBuilt = _draftYearBuilt
+            };
+            ParcelNotes.SetResidents(note, _draftPeople);
+            return note;
+        }
 
         private int CountPeople(bool children)
         {
@@ -1141,11 +1161,11 @@ namespace Noir.Unity
             GUILayout.EndHorizontal();
         }
 
-        /// <summary>Whether the drafts hold anything worth saving, for a parcel that has nothing
-        /// on file yet - mirrors ParcelNotes.Save's own emptiness test, so `save *` never lights
-        /// up for a note that would be discarded as empty the moment it was written.</summary>
         /// <summary>
         /// Whether the drafts hold ANYTHING, for a lot the file has no note for yet.
+        ///
+        /// Mirrors ParcelNotes.Save's own emptiness test, so `save *` never lights up for a note
+        /// that would be discarded as empty the moment it was written.
         ///
         /// PEOPLE ARE CHECKED HERE and were not, which was the same bug as losing edits on a
         /// lot change, reintroduced by the feature that replaced the thing it was fixed for.
@@ -1376,10 +1396,11 @@ namespace Noir.Unity
                 if (house.Length > 0) body.Append("\n<color=#9fb6c8>").Append(house).Append("</color>");
 
                 // ---- who lives here ----
-                if (note.People.Count > 0)
+                var residents = ParcelNotes.Residents(note);
+                if (residents.Count > 0)
                 {
                     body.Append("\n");
-                    foreach (var who in note.People)
+                    foreach (var who in residents)
                     {
                         body.Append("\n<color=#d8cfa8>  ").Append(who.FullName);
                         if (who.Age > 0) body.Append(", ").Append(who.Age);

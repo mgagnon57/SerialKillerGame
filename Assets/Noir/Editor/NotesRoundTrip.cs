@@ -37,6 +37,9 @@ namespace Noir.Editor
         /// <summary>Well outside any real parcel id, so a mistake cannot land on a real lot.</summary>
         private const int TestId = 900001;
 
+        /// <summary>A second one, for the checks that need two lots - moving house, mainly.</summary>
+        private const int SpareId = 900002;
+
         static NotesRoundTrip()
         {
             // SAYS WHY IT DID NOT RUN. The first attempt left the marker sitting there and the
@@ -119,17 +122,27 @@ namespace Noir.Editor
                     Kids = 1,
                     Character = "written by NotesRoundTrip, deleted again on the next line",
                     Zoning = ParcelNotes.Zoning.Residential,
-                }.WithPeople(wanted);
+                };
+                ParcelNotes.SetResidents(note, wanted);
 
                 ParcelNotes.Save(TestId, note);
 
                 // ---- what actually reached the file ----
+                // ONLY THE PEOPLE THIS TEST MADE. Person lines are top-level now rather than
+                // sitting under a parcel, so a bare `StartsWith("person ")` counts the whole
+                // town's residents and fails a run in which everything worked - which it did,
+                // the first time this ran against a file somebody had actually authored into.
+                // Scoped by the ids this lot points at.
                 string onDisk = File.ReadAllText(notesPath);
+                var mine = new HashSet<int>(note.Lives);
                 var personLines = new List<string>();
                 foreach (var raw in onDisk.Split('\n'))
                 {
                     var line = raw.Trim();
-                    if (line.StartsWith("parcel " + TestId + " person ")) personLines.Add(line);
+                    if (!line.StartsWith("person ")) continue;
+                    var bits = line.Split(' ');
+                    if (bits.Length >= 2 && int.TryParse(bits[1], out int pid) && mine.Contains(pid))
+                        personLines.Add(line);
                 }
 
                 // COUNTED FROM THE HOUSEHOLD, not written down again. This said "3" while the
@@ -141,6 +154,17 @@ namespace Noir.Editor
                              + " (want " + wanted.Count + ")");
                 foreach (var line in personLines) log.AppendLine("   " + line);
                 if (personLines.Count != wanted.Count) { failures++; log.AppendLine("   ** FAIL"); }
+                else log.AppendLine("   ok");
+
+                // AND THAT THE LOT POINTS AT THEM. The person lines above prove the people were
+                // written; they say nothing about whether anybody lives anywhere. Those are two
+                // separate lines in the file now, and either could be written without the other.
+                int livesLines = 0;
+                foreach (var raw in onDisk.Split('\n'))
+                    if (raw.Trim().StartsWith("parcel " + TestId + " lives ")) livesLines++;
+                log.AppendLine("lives lines written  : " + livesLines
+                             + " (want " + wanted.Count + ")");
+                if (livesLines != wanted.Count) { failures++; log.AppendLine("   ** FAIL"); }
                 else log.AppendLine("   ok");
                 log.AppendLine();
 
@@ -159,15 +183,16 @@ namespace Noir.Editor
                 }
                 else
                 {
-                    log.AppendLine("people read back : " + back.People.Count
+                    var backPeople = ParcelNotes.Residents(back);
+                    log.AppendLine("people read back : " + backPeople.Count
                                  + " (want " + wanted.Count + ")");
-                    if (back.People.Count != wanted.Count) failures++;
+                    if (backPeople.Count != wanted.Count) failures++;
 
-                    int n = Mathf.Min(back.People.Count, wanted.Count);
+                    int n = Mathf.Min(backPeople.Count, wanted.Count);
                     for (int i = 0; i < n; i++)
                     {
                         var a = wanted[i];
-                        var b = back.People[i];
+                        var b = backPeople[i];
                         bool same = a.First == b.First && a.Last == b.Last
                                  && a.Age == b.Age && a.Child == b.Child
                                  && a.Which == b.Which
@@ -184,11 +209,40 @@ namespace Noir.Editor
                 }
                 log.AppendLine();
 
+                // ---- 3. a household written in the OLD shape still loads ----
+                //
+                // People used to be written UNDERNEATH a lot, with no id: `parcel N person adult
+                // "..." "..." age "..." m`. The spec said there was nothing to migrate because
+                // the file held no person lines - true when it was written that morning, and
+                // false a few hours later once somebody had used the editor. A lot carrying only
+                // one of those lines, with no `names` blob to fall back on, would have lost its
+                // household in silence.
+                log.AppendLine("---- 3. a legacy person line, written under a lot ----");
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note
+                                          { Zoning = ParcelNotes.Zoning.Residential });
+                File.WriteAllText(notesPath, File.ReadAllText(notesPath)
+                    + "\nparcel " + SpareId + " person adult \"Legacy\" \"Fourteenpenny\" 61 "
+                    + "\"keeps chickens\" m\n");
+                byId.SetValue(null, null);
+
+                var oldShape = ParcelNotes.Residents(ParcelNotes.For(SpareId));
+                bool migrated = oldShape.Count == 1
+                             && oldShape[0].Id > 0
+                             && oldShape[0].First == "Legacy"
+                             && oldShape[0].Age == 61
+                             && oldShape[0].Which == ParcelNotes.Sex.Man
+                             && oldShape[0].Traits.Count == 1;
+                log.AppendLine("picked up, given an id, nothing lost : "
+                             + (migrated ? "ok" : "** FAIL"));
+                if (!migrated) failures++;
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note());
+                log.AppendLine();
+
                 // ---- and put the lot back ----
                 ParcelNotes.Save(TestId, new ParcelNotes.Note());
                 byId.SetValue(null, null);
 
-                log.AppendLine("---- 3. cleanup ----");
+                log.AppendLine("---- 4. cleanup ----");
                 log.AppendLine("test note removed : " + (ParcelNotes.For(TestId) == null ? "ok" : "** FAIL"));
                 if (ParcelNotes.For(TestId) != null) failures++;
             }
@@ -207,7 +261,7 @@ namespace Noir.Editor
 
             string after = File.Exists(notesPath) ? File.ReadAllText(notesPath) : null;
             log.AppendLine();
-            log.AppendLine("---- 4. the real file is untouched ----");
+            log.AppendLine("---- 5. the real file is untouched ----");
             bool intact = original == after;
             if (!intact) failures++;
             log.AppendLine("bytes after     : " + (after == null ? "(no file)" : after.Length.ToString()));
