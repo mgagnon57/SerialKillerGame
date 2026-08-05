@@ -328,11 +328,30 @@ namespace Noir.Unity
                 : null;
         }
 
+        /// <summary>
+        /// How near the cursor a person has to be to win the click, IN PIXELS.
+        ///
+        /// Pixels rather than metres because that is the tolerance a hand experiences. See
+        /// HandleSelection for what it replaced and why that could not hold.
+        /// </summary>
+        private const float PickPixels = 14f;
+
         private void HandleSelection()
         {
             var mouse = Mouse.current;
             if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
             if (VillageUI.PointerOverUI) return;
+
+            // A CLICK THAT LEAVES A TEXT FIELD DOES NOT ALSO SELECT SOMETHING ELSE.
+            //
+            // VillageUI tells you, on screen, to click the map to stop typing - and that same
+            // click was landing on the village, picking whoever was nearby and throwing the lot
+            // you were editing off the panel. So the documented way out of the keyboard guard
+            // was also the way to lose the thing you were typing into.
+            //
+            // First click leaves the field, second click selects. That is what every other text
+            // field on a computer does, and it costs nothing when no field has focus.
+            if (VillageUI.KeyboardCaptured) return;
 
             var ray = _camera.ScreenPointToRay(mouse.position.ReadValue());
 
@@ -353,7 +372,25 @@ namespace Noir.Unity
 
             if (view != null && Space3D.GroundHit(ray, out Vector3 groundPoint))
             {
-                float radius = Mathf.Max(1.5f, _distance * 0.03f);
+                // HOW CLOSE IS CLOSE ENOUGH, MEASURED ON SCREEN RATHER THAN ON THE GROUND.
+                //
+                // Was `Mathf.Max(1.5f, _distance * 0.03f)`. The camera opens at 330m, so that is
+                // a TEN METRE grab radius before you touch anything. A lot in this town is about
+                // 20 by 40, which made a click meant for a lot depend on whether any of 148
+                // walking citizens happened to be standing within a third of it - reported, and
+                // accurately, as "it just changes screens to a person sometimes". Zoomed out it
+                // got worse in proportion, which is the tell: the constant was tuned close in and
+                // nothing said so.
+                //
+                // One pixel covers (2 * range * tan(fov/2)) / screenHeight metres at the point
+                // under the cursor. Deriving the radius from the camera means it cannot rot when
+                // the camera moves, and it is stated in the units the hand actually works in.
+                float range = Vector3.Distance(_camera.transform.position, groundPoint);
+                float metresPerPixel = 2f * range
+                    * Mathf.Tan(_camera.fieldOfView * 0.5f * Mathf.Deg2Rad)
+                    / Mathf.Max(1, Screen.height);
+                float radius = Mathf.Max(1f, PickPixels * metresPerPixel);
+
                 var picked = view.Pick(groundPoint, radius);
                 if (picked.IsValid)
                 {

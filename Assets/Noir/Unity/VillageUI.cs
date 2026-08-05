@@ -878,9 +878,20 @@ namespace Noir.Unity
             _draftTrade = GUILayout.TextField(_draftTrade, GUILayout.Height(S(22f)));
 
             GUILayout.Space(S(10f));
+
+            // WHETHER THERE IS A HOUSING FIELD AT ALL IS DECIDED BEFORE THE ZONING DROPDOWN RUNS,
+            // not after it. Picking a zoning sets _draftZoning during the CLICK event pass, and
+            // IMGUI has already laid that pass out from the value the field held during Layout.
+            // Reading the fresh value here draws one field more - or fewer - than the layout
+            // allowed for, and the reward is the "Mismatched LayoutGroup" tear that EnumField is
+            // written to avoid, undone two lines below it by its own caller.
+            //
+            // So the housing field appears or disappears on the NEXT frame. Same one-frame lag the
+            // trait picker takes, for the same reason, and invisible at any frame rate.
+            bool housingApplies = _draftZoning == ParcelNotes.Zoning.Residential;
             _draftZoning = EnumField("zoning", "zoning", _draftZoning, Pretty);
 
-            if (_draftZoning == ParcelNotes.Zoning.Residential)
+            if (housingApplies)
             {
                 GUILayout.Space(S(4f));
                 _draftHousing = EnumField("housing", "housing type", _draftHousing, Pretty);
