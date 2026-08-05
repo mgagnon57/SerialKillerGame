@@ -1072,16 +1072,36 @@ namespace Noir.Unity
         /// <summary>Whether the drafts hold anything worth saving, for a parcel that has nothing
         /// on file yet - mirrors ParcelNotes.Save's own emptiness test, so `save *` never lights
         /// up for a note that would be discarded as empty the moment it was written.</summary>
+        /// <summary>
+        /// Whether the drafts hold ANYTHING, for a lot the file has no note for yet.
+        ///
+        /// PEOPLE ARE CHECKED HERE and were not, which was the same bug as losing edits on a
+        /// lot change, reintroduced by the feature that replaced the thing it was fixed for.
+        /// The old counters _draftAdults/_draftKids are DERIVED at save time now and nothing
+        /// edits them, so they sit at zero however many people are typed in - and a household
+        /// entered on a fresh lot read as "no changes": the save button stayed dark, the
+        /// carry-forward declined to fire, and the household went in the bin on the next click.
+        /// They are not consulted any more; the list is.
+        /// </summary>
         private bool DraftIsAnything() =>
-            !string.IsNullOrWhiteSpace(_draftCharacter) || !string.IsNullOrWhiteSpace(_draftNames)
+            AnyPersonTyped()
+            || !string.IsNullOrWhiteSpace(_draftCharacter) || !string.IsNullOrWhiteSpace(_draftNames)
             || !string.IsNullOrWhiteSpace(_draftBusiness) || !string.IsNullOrWhiteSpace(_draftTrade)
-            || _draftAdults != 0 || _draftKids != 0
             || _draftZoning != ParcelNotes.Zoning.Unset
             || _draftHousing != ParcelNotes.HousingType.Unset
             || _draftQuality != ParcelNotes.Quality.Unset
             || _draftStories != 0 || _draftBasement
             || _draftBedrooms != 0 || _draftBaths != 0 || _draftHalfBaths != 0
             || _draftSquareFeet != 0 || _draftYearBuilt != 0;
+
+        /// <summary>A row with a name in it. Blank rows are scaffolding, not a household.</summary>
+        private bool AnyPersonTyped()
+        {
+            foreach (var who in _draftPeople)
+                if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
+                    return true;
+            return false;
+        }
 
         private static string Pretty(ParcelNotes.Quality q)
         {

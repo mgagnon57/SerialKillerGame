@@ -361,7 +361,16 @@ namespace Noir.Unity
 
             if (rest[0] == '"')
             {
-                int close = rest.IndexOf('"', 1);
+                // SKIP ESCAPED QUOTES. Quote() writes a quote inside a field as \" and a plain
+                // IndexOf finds that one first - so a nickname like Bob "Red" Fuller truncated
+                // the field and ate every field after it on the line. Villages are full of
+                // nicknames; this will be typed.
+                int close = -1;
+                for (int i = 1; i < rest.Length; i++)
+                {
+                    if (rest[i] == '\\') { i++; continue; }
+                    if (rest[i] == '"') { close = i; break; }
+                }
                 if (close < 0) { var whole = rest; rest = ""; return whole; }
                 var field = rest.Substring(0, close + 1);
                 rest = rest.Substring(close + 1);
