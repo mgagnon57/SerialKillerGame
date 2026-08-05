@@ -412,7 +412,27 @@ namespace Noir.Unity
             // PlacePicker.
             _host.Selected = Noir.Core.Contracts.CitizenId.None;
             _host.Following = false;
-            var place = PlacePicker.Pick(_host.World, ray);
+
+            // BUT NOT WHEN THE BUILDINGS ARE HIDDEN, and they are hidden by default - the survey
+            // plan is the view this town is usually looked at in.
+            //
+            // A place exists in the world model whether or not anything draws it, so PlacePicker
+            // walked the ray through houses that were not on screen. Clicking a lot from a
+            // shallow camera angle sent that ray clipping through the invisible house on the
+            // NEXT lot along, selected that, and the amber outline appeared one plot over -
+            // reported exactly that way: "it appears when I click on the lot to the left of it".
+            //
+            // Worse, a third of those houses sit outside any parcel at all (152 of 477: the
+            // generated grid does not line up with the county's real boundaries), so the
+            // selection could not even fall back to a lot outline and drew the house's own small
+            // footprint instead - a little rectangle floating on a verge, belonging to nothing
+            // you had clicked.
+            //
+            // You cannot mean to click a thing you cannot see. With the plan up, a click is
+            // about the LOT, which is the only thing drawn.
+            var place = VillageHost.ShowBuildings
+                ? PlacePicker.Pick(_host.World, ray)
+                : Noir.Core.Contracts.PlaceId.None;
             _host.SelectedPlace = place;
 
             if (place.IsValid) { _host.SelectedParcel = null; return; }
