@@ -221,6 +221,12 @@ namespace Noir.Unity
             var mouse = Mouse.current;
             if (mouse == null) return;
 
+            // THE WHEEL BELONGS TO WHATEVER IS UNDER IT. Every other handler in this file asks
+            // this and this one never did, so scrolling down a long parcel panel zoomed the town
+            // out from under it instead of moving the list. The panel scrolls itself; the map is
+            // only the wheel's business when the pointer is actually on the map.
+            if (VillageUI.PointerOverUI) return;
+
             float scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) < 0.01f) return;
 

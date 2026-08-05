@@ -199,12 +199,27 @@ namespace Noir.Unity
             }
             if (_host.Sim == null) return;
 
-            DrawTopBar();
-            DrawInspector();
-            DrawHelp();
-            DrawHoverTip();
-
-            // Let the camera know not to treat a click on the panel as a click on the village.
+            // ---- WHERE THE POINTER IS, SETTLED BEFORE A SINGLE THING IS DRAWN ----
+            //
+            // This was computed at the END of OnGUI, underneath the drawing that depends on it,
+            // so everything reading it was reading it a pass late. Three separate complaints,
+            // one cause:
+            //
+            //   - the hovered lot's address flashed up BEHIND the behaviour box while somebody
+            //     was typing into it, because DrawHoverTip ran before the answer existed;
+            //   - OrbitCamera.HandleSelection runs in Update, which is before OnGUI, so a click
+            //     on the panel was tested against where the pointer had been a frame earlier.
+            //     When that lost, the click carried on to PlacePicker, selected the building
+            //     standing on the lot and set SelectedParcel to null - the panel shutting itself
+            //     mid-edit, on a click that never left the panel;
+            //   - and the wheel zoomed the map while you were scrolling the panel, though that
+            //     one was simply never asking (see OrbitCamera.HandleZoom).
+            //
+            // Nothing in it needs anything drawn first - it is the mouse against three
+            // rectangles, all pure geometry. So it goes first and everything below can trust it.
+            // The KEYBOARD half stays at the bottom, where it has to be: keyboardControl is only
+            // meaningful once the controls exist.
+            //
             // Tested against the panel's REAL rectangle now that it is centred - the old check
             // was "anywhere right of 340px from the edge", which was only ever a stand-in for
             // the rail's own bounds and would swallow half the map if it were left alone.
@@ -220,6 +235,11 @@ namespace Noir.Unity
                          || (anyPanel && PanelRect().Contains(mouse))
                          || LayerPanel.Bounds.Contains(mouse)
                          || PerfHud.Bounds.Contains(mouse);
+
+            DrawTopBar();
+            DrawInspector();
+            DrawHelp();
+            DrawHoverTip();
 
             // ---- AND THE KEYBOARD, which was not guarded at all ----
             //
@@ -1263,6 +1283,13 @@ namespace Noir.Unity
         {
             var hovered = _host.HoveredParcel;
             if (hovered == null) return;
+
+            // NOTHING WHILE THE POINTER IS ON THE PANEL. OrbitCamera.HandleHover already clears
+            // the hovered lot for this, but it runs in Update and reads PointerOverUI from the
+            // frame before, so moving onto the panel left one frame in which a lot was still
+            // hovered and this drew it - a grey address card blinking behind the behaviour box
+            // on every keystroke. Asked here as well, where the answer is current.
+            if (PointerOverUI) return;
 
             // Nothing while a panel is open on the SAME lot - the inspector already says all of
             // this and more, an arm's length away, and two copies of one address is clutter.
