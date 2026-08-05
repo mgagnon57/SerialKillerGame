@@ -50,6 +50,25 @@ namespace Noir.Core.Sim
         public const int MinimumNodeCap = 20_000;
 
         /// <summary>
+        /// The most any ONE search may examine, whatever the map's size.
+        ///
+        /// Scaling the guard with the map fixed a real bug and introduced a worse one, because
+        /// the cap was only ever reasoned about in tiles. On Ashcombe a quarter of the grid was
+        /// 5,100 nodes; Rossville's grid is 5,040,000 tiles, so the same rule produced 1,260,000
+        /// - and a node costs 329 nanoseconds, measured. That is 415 MILLISECONDS inside a
+        /// single tick, from a single search, which is what the town's stutter turned out to be.
+        ///
+        /// Neither PathBudgetPerTick nor PathNodeBudgetPerTick could ever have caught it: both
+        /// are consulted BEFORE a search starts and never once it is running, so one search is
+        /// free to spend twenty-one times the whole tick's node budget on its own.
+        ///
+        /// 40,000 nodes is about 13 ms - a dropped frame at 60 fps, not a freeze - and it is
+        /// twice what the village has ever been observed to need. A journey that genuinely
+        /// cannot be found inside it is one nobody should be waiting on anyway.
+        /// </summary>
+        public const int HardNodeCeiling = 40_000;
+
+        /// <summary>
         /// Deliberate overweighting of the heuristic, which trades route quality for search cost.
         ///
         /// At 1.0 A* is admissible and returns the true shortest path; above it, the search is
@@ -75,7 +94,7 @@ namespace Noir.Core.Sim
 
             MaxNodesExamined = maxNodesExamined > 0
                 ? maxNodesExamined
-                : Math.Max(_count / 4, MinimumNodeCap);
+                : Math.Min(Math.Max(_count / 4, MinimumNodeCap), HardNodeCeiling);
             HeuristicWeight = heuristicWeight;
 
             _gScore = new float[_count];

@@ -110,6 +110,33 @@ namespace Noir.Unity
         private const int MaxTicksPerFrame = 24000;   // ~20 game minutes; stops a death spiral
 
         /// <summary>
+        /// How long the simulation is allowed to hold the frame, in milliseconds.
+        ///
+        /// A tick over the whole town costs about 5 ms under Mono in the editor, and the
+        /// accumulator asks for speed x 20 of them per second of real time. Multiply those out
+        /// and the feedback of one frame on the next is exactly speed x 0.1: harmless at 1x,
+        /// EXACTLY ONE at the default 10x, and explosive at 60x. Unity gain is the worst place
+        /// to sit - a stall neither grows nor decays, so a single hiccup sustains itself for as
+        /// long as it likes. Measured: 38 stalls in a minute at 10x, the worst 3.5 seconds,
+        /// every one of them frame time = ticks x 5 ms to within one percent.
+        ///
+        /// MaxTicksPerFrame cannot prevent this. At 24,000 it is sized for fast-forwarding a
+        /// whole day, and the worst stall measured ran 696 ticks - nowhere near it. A count
+        /// cannot bound a frame when the cost per tick is what varies; only time can.
+        ///
+        /// So the frame gets a slice and the simulation keeps whatever it can finish inside it.
+        /// Six milliseconds leaves room for a 60 fps frame with the renderer's share intact.
+        /// </summary>
+        private const double SimBudgetMs = 6.0;
+
+        /// <summary>
+        /// Ticks between budget checks. The clock is not free to read, and checking it after
+        /// every single tick would cost more than the tick. Eight is about 40 ms of overshoot
+        /// in the worst case, which is a dropped frame rather than a freeze.
+        /// </summary>
+        private const int TickChunk = 8;
+
+        /// <summary>
         /// Whether the citizens are DRAWN. They are simulated regardless.
         ///
         /// Off while the city is being built out, and off again now while the focus is the town
@@ -560,10 +587,36 @@ namespace Noir.Unity
                 Footprint = FootprintDrawer.Create(transform);
             }
 
-            var signals = CitySignals.Create(World, transform);
-            profile.Done("CitySignals");
-            var traffic = CityTraffic.Create(World, transform, signals);
-            profile.Done("CityTraffic");
+            // SKIPPED WHEN BOTH LAYERS ARE OFF, and this is a deliberate reversal of the note
+            // below - which is kept because its reasoning was sound for the case it was written
+            // about, and this is a different case.
+            //
+            // The owner's report was "runs smooth for the first 5 seconds then goes to shit",
+            // and that shape is not a startup cost - it is something RAMPING UP. 88 vehicles
+            // begin mid-block, where they are cheap, and within a few seconds they are all at
+            // junctions, where the solver has 2,766 conflicting turn pairs over 1,218 turns to
+            // resolve. CityTraffic.Update drives up to twelve 1/30 s slices per frame off
+            // Time.deltaTime, and it does that whether or not a single car is drawn.
+            //
+            // Gating it on the LAYERS rather than on a plan flag is what makes this safe where
+            // the earlier attempt was not: the layer state is read from PlayerPrefs before Awake
+            // runs, so a test or a preset can set it and be obeyed.
+            CitySignals signals = null;
+            CityTraffic traffic = null;
+            bool wantTraffic = Layers.IsOn(Layers.Kind.Traffic) || Layers.IsOn(Layers.Kind.Signals);
+            if (wantTraffic)
+            {
+                signals = CitySignals.Create(World, transform);
+                profile.Done("CitySignals");
+                traffic = CityTraffic.Create(World, transform, signals);
+                profile.Done("CityTraffic");
+            }
+            else
+            {
+                Debug.Log("[host] traffic and signals are both switched off, so neither is built. "
+                        + "88 vehicles and 2,766 junction conflict pairs are not being solved "
+                        + "every frame. Switch either layer on and re-enter Play to get them back.");
+            }
 
             // The two that MOVE. Registered like the rest, and switching them off hides them
             // exactly as HideActors always did - the cars keep driving their lanes and the
@@ -598,6 +651,18 @@ namespace Noir.Unity
                 _agentView = AgentMeshView.Create(this, transform);
             profile.Done("AgentMeshView (the people)");
             if (_agentView != null) Layers.Register(Layers.Kind.People, _agentView.gameObject);
+
+            // THE CURTAIN. Up before anything can be mistaken for the game running, down only
+            // when the frames have actually settled - and it holds the clock while it is up, so
+            // nothing has quietly started behind it. See BootScreen.
+            BootScreen.Phase = "Loading assets and shaders";
+            BootScreen.Create(this, transform);
+
+            // EVERY SHADER THE TOWN NEEDS, COMPILED NOW, before a single frame is presented.
+            // Otherwise each variant compiles the first time something needs to draw with it,
+            // which stops the frame dead - and lands as a freeze three seconds into looking at
+            // something rather than as an honest pause at startup. See ShaderWarmup.
+            ShaderWarmup.Run(_village);
 
             // Built before the camera, so a build that goes wrong further down still leaves a
             // frame counter on screen to diagnose it with.
@@ -770,6 +835,12 @@ namespace Noir.Unity
                 return;
             }
 
+            // Timed in three parts because inference has repeatedly got this wrong. Capping the
+            // tick count bounded the simulation and left the frame at 418 ms anyway, so the cost
+            // is in one of the other two calls - and guessing which has not worked. These read
+            // the clock three times a frame, which is nothing against what they are measuring.
+            var slice = System.Diagnostics.Stopwatch.StartNew();
+
             float speed = Speeds[Mathf.Clamp(SpeedIndex, 0, Speeds.Length - 1)];
             if (speed > 0f)
             {
@@ -779,13 +850,62 @@ namespace Noir.Unity
                 {
                     _tickAccumulator -= ticks;
                     if (ticks > MaxTicksPerFrame) ticks = MaxTicksPerFrame;
-                    Sim.Tick(ticks);
+                    RunWithinBudget(ticks);
                 }
             }
+            SimMs = slice.Elapsed.TotalMilliseconds;
 
             if (_agentView != null) _agentView.Refresh();
+            RefreshMs = slice.Elapsed.TotalMilliseconds - SimMs;
+
             _rig.Tick();
+            RigMs = slice.Elapsed.TotalMilliseconds - SimMs - RefreshMs;
         }
+
+        /// <summary>What the last frame's simulation ticks cost, in milliseconds.</summary>
+        public double SimMs { get; private set; }
+
+        /// <summary>What the last frame's figure refresh cost, in milliseconds.</summary>
+        public double RefreshMs { get; private set; }
+
+        /// <summary>What the last frame's rig tick cost, in milliseconds.</summary>
+        public double RigMs { get; private set; }
+
+        /// <summary>
+        /// Run up to <paramref name="ticks"/> simulation ticks, stopping when the frame's slice
+        /// is spent, and report what could not be afforded.
+        ///
+        /// The unaffordable remainder is DROPPED, not carried: the accumulator was already
+        /// drained by the caller. That is the same bargain the old tick ceiling struck - when
+        /// the machine cannot keep up, the town's clock runs slow rather than the window
+        /// freezing - and it is the right way round. A stopped picture with a correct clock is
+        /// worth nothing to somebody trying to watch the place.
+        /// </summary>
+        private void RunWithinBudget(int ticks)
+        {
+            var slice = System.Diagnostics.Stopwatch.StartNew();
+            int done = 0;
+
+            // At least one chunk always runs, whatever the clock says. A budget that can starve
+            // the simulation to a standstill would stop the town dead on a slow machine, which
+            // is a worse bug than the one being fixed.
+            do
+            {
+                int chunk = Mathf.Min(TickChunk, ticks - done);
+                Sim.Tick(chunk);
+                done += chunk;
+            }
+            while (done < ticks && slice.Elapsed.TotalMilliseconds < SimBudgetMs);
+
+            TicksDropped = ticks - done;
+            TicksRun = done;
+        }
+
+        /// <summary>Ticks the last frame asked for and could not afford. Zero when keeping up.</summary>
+        public int TicksDropped { get; private set; }
+
+        /// <summary>Ticks the last frame actually ran.</summary>
+        public int TicksRun { get; private set; }
 
         private long _skipTicksRemaining;
 

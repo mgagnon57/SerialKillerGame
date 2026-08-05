@@ -397,7 +397,28 @@ namespace Noir.Core.Sim
             // Once a second is plenty - people do not decide to stop for a chat twenty times
             // a second, and it keeps the pair scan off the per-tick path entirely.
             if (_clock.Tick % GameClock.TicksPerSecond == 0) LookForConversations();
+
+            if (_pathNodesThisTick > WorstPathNodesInATick)
+                WorstPathNodesInATick = _pathNodesThisTick;
+            if (_pathsThisTick > WorstPathsInATick) WorstPathsInATick = _pathsThisTick;
         }
+
+        /// <summary>
+        /// The most A* nodes any single tick has expanded since this was last reset, and the most
+        /// journeys any single tick started.
+        ///
+        /// Here to size PathNodeBudgetPerTick against measurement instead of guesswork. The
+        /// budget bounds a tick's search work in nodes, but nobody has ever checked what a node
+        /// COSTS, and a bound whose units you cannot convert to milliseconds is not a bound on
+        /// the frame - which is the thing that actually stutters.
+        /// </summary>
+        public int WorstPathNodesInATick { get; private set; }
+
+        /// <summary>Companion to <see cref="WorstPathNodesInATick"/>.</summary>
+        public int WorstPathsInATick { get; private set; }
+
+        /// <summary>Start a fresh high-water measurement.</summary>
+        public void ResetPathHighWater() { WorstPathNodesInATick = 0; WorstPathsInATick = 0; }
 
         // ---- what the tick is allowed to roll for ----
         //
