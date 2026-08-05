@@ -219,12 +219,16 @@ namespace Noir.Unity
         {
             switch (zoning)
             {
-                case ParcelNotes.Zoning.Residential:  return new Color32(0xB0, 0x9C, 0x54, 0xFF);
-                case ParcelNotes.Zoning.Commercial:   return new Color32(0xA8, 0x5F, 0x4E, 0xFF);
-                case ParcelNotes.Zoning.Industrial:   return new Color32(0x7E, 0x66, 0x8E, 0xFF);
-                case ParcelNotes.Zoning.Civic:        return new Color32(0x53, 0x7C, 0x99, 0xFF);
-                case ParcelNotes.Zoning.Agricultural: return new Color32(0x86, 0x8E, 0x50, 0xFF);
-                case ParcelNotes.Zoning.Vacant:       return new Color32(0x77, 0x78, 0x70, 0xFF);
+                case ParcelNotes.Zoning.Residential:  return new Color32(0xD8, 0xBE, 0x5C, 0xFF);
+                case ParcelNotes.Zoning.Commercial:   return new Color32(0xC8, 0x6A, 0x50, 0xFF);
+                case ParcelNotes.Zoning.Industrial:   return new Color32(0x99, 0x79, 0xB4, 0xFF);
+                case ParcelNotes.Zoning.Civic:        return new Color32(0x5E, 0x93, 0xBE, 0xFF);
+                // Green, and deliberately LIGHTER and more saturated than PlainGreen below - the
+                // unzoned ground is that green, so farmland has to be obviously a choice rather
+                // than obviously nothing. It is also the one that could be mistaken for the
+                // residential yellow if it stayed olive, which is where it started.
+                case ParcelNotes.Zoning.Agricultural: return new Color32(0x8F, 0xC0, 0x62, 0xFF);
+                case ParcelNotes.Zoning.Vacant:       return new Color32(0x91, 0x92, 0x88, 0xFF);
                 default:                              return PlainGreen;
             }
         }
@@ -247,25 +251,46 @@ namespace Noir.Unity
         {
             if (_byZoning.TryGetValue(zoning, out var found)) return found;
 
-            // THE TINT GOES ON AFTER ApplyPack, NOT BEFORE. ApplyPack sets _BaseColor and _Color
-            // to WHITE whenever it binds a texture - reasonably, since a pack's albedo carries
-            // its own colour and a tint on top would double it. Set the colour in Make() above it,
-            // the way Pasture and Grass do, and the pack wipes it a line later: the material comes
-            // out identical to grass and the shading is invisible. That is exactly what happened
-            // the first time this was written.
-            //
-            // Grass texture at the garden tiling for all of them, deliberately. A zoned patch with
-            // no texture beside grass with one does not read as a differently coloured patch of
-            // the same field; it reads as a hole.
-            var tint = ShowZoningColours ? ColourOf(zoning) : PlainGreen;
-            var m = Make("Zoned " + zoning, tint, 0.05f);
-            SurfaceTextures.ApplyPack(m, "grass", 4f);
-            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tint);
-            if (m.HasProperty("_Color")) m.SetColor("_Color", tint);
-
-            Plan(m);
+            var m = Make("Zoned " + zoning, ColourOf(zoning), 0.05f);
+            Paint(m, zoning);
             _byZoning[zoning] = m;
             return m;
+        }
+
+        /// <summary>
+        /// Bind the right albedo and the right colour for the current state of the switch.
+        ///
+        /// A TINT MULTIPLIES THE ALBEDO, SO THE ALBEDO DECIDES WHICH COLOURS ARE POSSIBLE. The
+        /// first version of this painted all six over the grass pack, and reported back as "they
+        /// do not match colors at all, I see no yellow or blue". Measured, that is arithmetic
+        /// rather than opinion - the average of each albedo in this pack:
+        ///
+        ///     grass      RGB  104 121  58      almost no red, and barely any blue
+        ///     concrete   RGB  218 205 189      near white
+        ///
+        /// Multiplication can only ever take light away. Blue over grass is 83/255 x 104 in red,
+        /// 153/255 x 58 in blue - (34, 59, 35), a dark murky green with no blue anywhere in it.
+        /// No tint can put a channel back into a photograph that never had one.
+        ///
+        /// So the coloured state paints over CONCRETE, which is near enough white to pass a tint
+        /// through almost unchanged, and keeps a fine grain so a lot still reads as ground rather
+        /// than as a flat sticker.
+        ///
+        /// AND THE OFF STATE GOES BACK TO GRASS. The point of switching the colours off is that a
+        /// lot looks like the ground around it, and a green-tinted slab of concrete does not.
+        /// </summary>
+        private static void Paint(Material m, ParcelNotes.Zoning zoning)
+        {
+            // THE COLOUR GOES ON AFTER ApplyPack, NOT BEFORE. ApplyPack sets _BaseColor and
+            // _Color to WHITE whenever it binds a texture - reasonably, since a pack's albedo
+            // carries its own colour and a tint on top would double it. Set it in Make() above
+            // and the pack wipes it a line later, which is how the shading came out invisible
+            // the first time this was written.
+            var tint = ShowZoningColours ? ColourOf(zoning) : PlainGreen;
+            SurfaceTextures.ApplyPack(m, ShowZoningColours ? "floor" : "grass", 4f);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tint);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", tint);
+            Plan(m);
         }
 
         /// <summary>
@@ -278,13 +303,7 @@ namespace Noir.Unity
         /// </summary>
         public static void RetintZoning()
         {
-            foreach (var pair in _byZoning)
-            {
-                var tint = ShowZoningColours ? ColourOf(pair.Key) : PlainGreen;
-                if (pair.Value.HasProperty("_BaseColor")) pair.Value.SetColor("_BaseColor", tint);
-                if (pair.Value.HasProperty("_Color")) pair.Value.SetColor("_Color", tint);
-                Plan(pair.Value);
-            }
+            foreach (var pair in _byZoning) Paint(pair.Value, pair.Key);
         }
 
         public static Material Wall
