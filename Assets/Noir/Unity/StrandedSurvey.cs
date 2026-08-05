@@ -42,6 +42,9 @@ namespace Noir.Unity
             if (sim.GaveUpTotal > 0)
                 sb.AppendLine("      ^ these are REACHABLE destinations refused by the node "
                             + "ceiling. Any at all is somebody who did not set off.");
+            sb.AppendLine($"   worst SUCCESSFUL : {sim.WorstNodesFound:N0} nodes"
+                        + $"   (ceiling is {Noir.Core.Sim.Pathfinder.HardNodeCeiling:N0})");
+            sb.AppendLine("      ^ the ceiling has to clear this or honest journeys get refused.");
             sb.AppendLine();
 
             // The shape of the walkable space. One region is a healthy town; more than one

@@ -62,11 +62,30 @@ namespace Noir.Core.Sim
         /// are consulted BEFORE a search starts and never once it is running, so one search is
         /// free to spend twenty-one times the whole tick's node budget on its own.
         ///
-        /// 40,000 nodes is about 13 ms - a dropped frame at 60 fps, not a freeze - and it is
-        /// twice what the village has ever been observed to need. A journey that genuinely
-        /// cannot be found inside it is one nobody should be waiting on anyway.
+        /// 40,000 was the first attempt and it was far too mean: 73% of every search in the town
+        /// abandoned, forty-four people unable to reach the burial ground because it sits at the
+        /// west edge and nothing had measured how far a real journey reaches. A ceiling below
+        /// what honest journeys need does not bound a cost, it deletes the journeys - which is
+        /// the fault the old map-sized cap was written to avoid, arrived at from the other side.
+        ///
+        /// It can afford to be generous now. The region map takes the impossible journeys first
+        /// and answers them in O(1), so nothing reaches this ceiling by exhausting a walled-off
+        /// map any more; what reaches it is a long walk that is genuinely findable. Sized from
+        /// Simulation.WorstNodesFound - the most any search that SUCCEEDED had to look at - with
+        /// room over the top, rather than from what sounded affordable.
+        ///
+        /// Measured at the weight this actually ships with: the worst journey Rossville has ever
+        /// SUCCESSFULLY found took 56,015 nodes, and no search in a twenty thousand frame run
+        /// reached this ceiling at all. Not much more than a factor of two over the observed
+        /// worst, which is deliberate - it is about 36 ms for a search that is going to fail
+        /// anyway, and a ceiling that can never be hit is not a guard.
+        ///
+        /// The number is weight-dependent and must be re-measured with it. At 1.35 the worst
+        /// successful journey was 19,418 nodes; at 1.15 it was 99,267 and a fifth of the town
+        /// could not travel. Quoting a headroom figure from one weight while shipping another is
+        /// how the 40,000 above came to be wrong.
         /// </summary>
-        public const int HardNodeCeiling = 40_000;
+        public const int HardNodeCeiling = 100_000;
 
         /// <summary>
         /// Deliberate overweighting of the heuristic, which trades route quality for search cost.
@@ -76,8 +95,23 @@ namespace Noir.Core.Sim
         /// per cent longer. Measured on the synthetic grids, 1.35 takes nodes examined per tile
         /// of path from about 16 to about 7. Nobody watching a village can tell that a man took
         /// the next lane over, and everybody would notice him never leaving the house.
+        ///
+        /// THE WEIGHT ONLY MEANS THAT AGAINST THE COST OF THE GROUND. Those synthetic grids cost
+        /// 1.0 a tile; the real map is mostly grass at 1.3, so a heuristic of octile x 1.35 was
+        /// working out at an effective 1.038 out in the country - unweighted A* in all but name,
+        /// flooding outwards precisely where the journeys are longest. One walk to the burial
+        /// ground examined 350,278 nodes. Hence the TypicalMoveCost factor in Heuristic: the
+        /// weight is applied to what a step really costs, not to what it cost on a test fixture.
+        ///
+        /// 1.30 rather than 1.35, chosen against the watched ratio rather than by taste. Once
+        /// the scaling was corrected, 1.35 was greedy enough to cost route quality: the tenth
+        /// percentile of the watched ratio fell to 0.39 against a recorded floor of 0.40, which
+        /// is the ratchet in TwoToOneTests doing exactly what it was built for. 1.15 bought that
+        /// back and far too much else with it - 99,267 nodes on the worst journey against
+        /// 19,418, and 22% of every search in the town refused. 1.30 clears the floor and keeps
+        /// the speed. The floor itself was not touched; a number moved instead.
         /// </summary>
-        public const float DefaultHeuristicWeight = 1.35f;
+        public const float DefaultHeuristicWeight = 1.30f;
 
         public readonly float HeuristicWeight;
 
@@ -253,7 +287,8 @@ namespace Noir.Core.Sim
             int dy = a.Y - b.Y; if (dy < 0) dy = -dy;
             int min = dx < dy ? dx : dy;
             int max = dx < dy ? dy : dx;
-            return ((max - min) * Straight + min * Diagonal) * HeuristicWeight;
+            return ((max - min) * Straight + min * Diagonal)
+                   * TileGrid.TypicalMoveCost * HeuristicWeight;
         }
 
         private void Reconstruct(int goal, List<Tile> result)

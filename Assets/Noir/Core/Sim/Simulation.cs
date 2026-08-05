@@ -515,14 +515,30 @@ namespace Noir.Core.Sim
         private long _gaveUpTotal;
         private long _pathsFoundTotal;
         private long _noRouteTotal;
+        private int _worstNodesFound;
 
         /// <summary>Book-keeping for every search, so the give-up count has a denominator.</summary>
         private void Record(PathOutcome outcome)
         {
             if (outcome == PathOutcome.GaveUp) _gaveUpTotal++;
-            else if (outcome == PathOutcome.Found) _pathsFoundTotal++;
+            else if (outcome == PathOutcome.Found)
+            {
+                _pathsFoundTotal++;
+
+                // The most any journey that actually WORKED had to look at. This is the number
+                // the node ceiling has to clear, and the only honest way to size it: set the
+                // ceiling below this and the search starts refusing walks people can make,
+                // which is what 40,000 did - 73% of every search in the town abandoned, and
+                // forty-four people unable to reach the burial ground because it is a long way
+                // west and nothing was measuring how far.
+                int nodes = _pathfinder.LastNodesExamined;
+                if (nodes > _worstNodesFound) _worstNodesFound = nodes;
+            }
             else _noRouteTotal++;
         }
+
+        /// <summary>The most nodes any SUCCESSFUL search has examined. Sizes the node ceiling.</summary>
+        public int WorstNodesFound => _worstNodesFound;
 
         /// <summary>
         /// The backoff schedule: 2 ticks, then 4, 8, and so on to a minute.

@@ -116,6 +116,19 @@ namespace Noir.Core.World
         public bool BlocksSight(Tile t) => BlocksSight(t.X, t.Y);
 
         /// <summary>Movement cost multiplier. Roads and paths are quick; rough ground is slow.</summary>
+        /// <summary>
+        /// What a step across ordinary ground costs, which is what a heuristic has to be scaled
+        /// against to mean anything.
+        ///
+        /// The cheapest terrain is a road at 1.0, but almost none of a journey between two
+        /// distant places is on one - the countryside is grass at 1.3, and the map is nearly all
+        /// countryside. A heuristic built on the CHEAPEST cost is therefore barely a heuristic at
+        /// all out there, and A* degenerates towards Dijkstra exactly where the distances are
+        /// longest. Scaling to the typical cost instead keeps the search pointed at the goal on
+        /// the ground people actually cross.
+        /// </summary>
+        public const float TypicalMoveCost = 1.3f;   // open grass, below
+
         public float MoveCost(int x, int y)
         {
             if (!InBounds(x, y)) return float.MaxValue;
