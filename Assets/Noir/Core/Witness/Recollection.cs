@@ -52,10 +52,15 @@ namespace Noir.Core.Witness
         /// Walking witnesses need routing and are a later piece of work; the gap is deliberate.
         /// </summary>
         public static Sighting[] WhatTheySaw(WorldModel world, Population population,
-                                             Citizen who, int day, PlayerTrack track, ulong seed)
+                                             Citizen who, int day, PlayerTrack track, ulong seed,
+                                             INightWitnesses nightWitnesses = null)
         {
             DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
             var found = new List<Sighting>();
+
+            // ASKED ONCE, not per minute: whether somebody is a light sleeper is a fact about
+            // the person, not about the moment. Null means nobody is, which is the default.
+            bool seesWhileAsleep = nightWitnesses != null && nightWitnesses.AwakeEnough(who.Id);
 
             bool inSight = false;
 
@@ -67,6 +72,19 @@ namespace Noir.Core.Witness
 
                 Block block = plan.At(minuteOfDay);
                 if (block.What == Activity.TravellingTo) { inSight = false; continue; }
+
+                // ASLEEP IS A GATE, and until 2026-08-05 it was not - which made the night
+                // BUSIER than the morning. Only TravellingTo was skipped, so at 02:00 the whole
+                // village counted as a stationary witness standing at its own front door: the
+                // diagnostic printed 148 of 148 at two in the morning against 135 of 148 at
+                // nine, because at nine the ones who are out or between places drop out.
+                //
+                // A village asleep witnesses nothing. The exception is authored per person -
+                // the light sleeper, the man with the scanner on, the one who walks the dog
+                // late - and comes in through INightWitnesses, because who those people are is
+                // a thing somebody decided and not a rule.
+                if (block.What == Activity.Asleep && !seesWhileAsleep)
+                { inSight = false; continue; }
                 if (!block.Where.IsValid) { inSight = false; continue; }
 
                 Tile watcher = world.GetPlace(block.Where).Door;

@@ -64,6 +64,25 @@ namespace Noir.Core.Tests
     ///
     /// Fixing 2 without 1 would still print 148 of 148.
     /// </summary>
+
+    /// <summary>
+    /// Stands in for the authored traits until there is a real caller to carry them.
+    ///
+    /// The traits that make somebody a night witness - "light sleeper", "keeps a police scanner
+    /// on" - are typed into the parcel editor and live in the Unity layer, which Core cannot
+    /// see and must not. The adapter that reads them belongs with the thing that calls
+    /// Recollection, and WitnessFirewallTests.NothingInTheGameReferencesWitnessYet is explicit
+    /// that the first file in Assets to reference this assembly must be THAT caller, named
+    /// deliberately, and never a list. It does not exist yet, so this proves the hook works
+    /// without spending the precedent on the wrong file.
+    /// </summary>
+    internal sealed class EveryNthSleeperIsLight : INightWitnesses
+    {
+        private readonly int _n;
+        public EveryNthSleeperIsLight(int n) { _n = n; }
+        public bool AwakeEnough(CitizenId who) => _n > 0 && who.Value % _n == 0;
+    }
+
     [TestFixture, Explicit("Diagnostic - prints what villagers saw, asserts nothing")]
     public class ObservationDiagnostic
     {
@@ -89,6 +108,7 @@ namespace Noir.Core.Tests
             doors.Sort((a, b) => a.X != b.X ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y));
 
             foreach (int startMinute in new[] { 9 * 60, 2 * 60 })
+            foreach (var night in new INightWitnesses[] { null, new EveryNthSleeperIsLight(12) })
             {
                 var track = new PlayerTrack();
                 int walked = 0;
@@ -105,8 +125,10 @@ namespace Noir.Core.Tests
 
                 Console.WriteLine();
                 Console.WriteLine("=================================================================");
-                Console.WriteLine("  A WALK OF {0} MINUTES PAST {0} FRONT DOORS, STARTING {1:00}:00",
-                                  walked, startMinute / 60);
+                Console.WriteLine("  A WALK OF {0} MINUTES PAST {0} FRONT DOORS, STARTING {1:00}:00   ({2})",
+                                  walked, startMinute / 60,
+                                  night == null ? "nobody is a light sleeper"
+                                                : "one villager in twelve is");
                 Console.WriteLine("=================================================================");
 
                 int sawSomething = 0, sawNothing = 0, sightings = 0;
@@ -115,7 +137,7 @@ namespace Noir.Core.Tests
                 for (int i = 0; i < people.Count; i++)
                 {
                     var who = people.Get(new CitizenId(i));
-                    var seen = Recollection.WhatTheySaw(world, people, who, Day, track, seed);
+                    var seen = Recollection.WhatTheySaw(world, people, who, Day, track, seed, night);
 
                     if (seen.Length == 0) { sawNothing++; continue; }
                     sawSomething++;

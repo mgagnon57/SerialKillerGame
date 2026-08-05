@@ -53,7 +53,7 @@ namespace Noir.Unity
                 "never locks the door", "shotgun behind the door", "no telephone"),
 
             new Group("odd",
-                "talks to the dog", "eccentric dresser", "writes letters to the paper",
+                "light sleeper", "talks to the dog", "eccentric dresser", "writes letters to the paper",
                 "sworn off television", "keeps bees", "afraid of the tracks",
                 "won't cross the county line", "believes the fire was set",
                 "still keeps her husband's chair", "drinks alone", "seen at strange hours"),
@@ -64,6 +64,32 @@ namespace Noir.Unity
                 "runs a business in town", "on the village board", "in the historical society",
                 "nobody quite knows what he does"),
         };
+
+        /// <summary>
+        /// The traits that let somebody witness something while their plan has them asleep.
+        ///
+        /// A village asleep witnesses nothing - see Recollection's Asleep gate, added after the
+        /// diagnostic found the night busier than the morning. These are the exceptions, and
+        /// they are exceptions somebody CHOSE by typing them onto a person: the light sleeper,
+        /// the man with the scanner on, the one out with the dog at midnight, the shift worker
+        /// whose hours are wrong for everybody else.
+        ///
+        /// Every one of them is already in the list above, because a trait invented for this
+        /// would be a rule wearing a trait's clothes. If a person has none of these, the night
+        /// is genuinely dark for them, which is the whole point of having a night.
+        /// </summary>
+        public static readonly System.Collections.Generic.HashSet<string> SeeAtNight =
+            new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+            {
+                "light sleeper",
+                "night owl",
+                "up before the paper comes",
+                "walks the dog late",
+                "keeps a police scanner on",
+                "shift work - odd hours",
+                "seen at strange hours",
+                "drinks alone",
+            };
 
         /// <summary>Every trait, flattened - for the parser, which does not care about groups.</summary>
         public static System.Collections.Generic.IEnumerable<string> Flat()
