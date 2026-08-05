@@ -37,6 +37,37 @@ namespace Noir.Unity
         /// a street as a derelict house is.</summary>
         public enum Quality { Unset, Derelict, Poor, Fair, Good, Excellent }
 
+        /// <summary>
+        /// One person in a household.
+        ///
+        /// Age rather than a birth year, because what the author remembers is "he'd have been
+        /// about sixty" and not a date. Zero means not recorded.
+        /// </summary>
+        public sealed class Person
+        {
+            public string First = "";
+            public string Last = "";
+            public int Age;
+
+            /// <summary>A child of the household rather than an adult in it. Not derived from
+            /// Age: a nineteen-year-old still at home is somebody's kid in a village, and a
+            /// twelve-year-old in a household of one is not a child of anybody here.</summary>
+            public bool Child;
+
+            /// <summary>From VillageTraits, or typed. See the picker in VillageUI.</summary>
+            public readonly List<string> Traits = new List<string>();
+
+            public string FullName =>
+                string.IsNullOrWhiteSpace(Last) ? First.Trim() : (First + " " + Last).Trim();
+
+            public Person Copy()
+            {
+                var c = new Person { First = First, Last = Last, Age = Age, Child = Child };
+                c.Traits.AddRange(Traits);
+                return c;
+            }
+        }
+
         public sealed class Note
         {
             /// <summary>What the family is like - the seed for behaviour, not just flavour text.
@@ -44,13 +75,50 @@ namespace Noir.Unity
             /// existing "useless human detail" system this is meant to feed the same way.</summary>
             public string Character = "";
 
+            /// <summary>
+            /// What TRADED on this lot in the build year, and what it sold.
+            ///
+            /// The one thing about the downtown that no source has. Everything written about
+            /// Rossville's commercial row was written after the February 2004 fire and mourns
+            /// the block rather than naming what was in it - see docs/research/DOWNTOWN-1991.md,
+            /// where exactly one 1991 business could be identified from the whole open web.
+            ///
+            /// So it is captured HERE instead, by the one person who was standing in it: click
+            /// the lot, type the shop. The owner asked for it in those words - "if there is a
+            /// way for me to add that when I click the shop then yes".
+            ///
+            /// Business is the sign over the door, Trade is what it actually was. Both, because
+            /// a name alone does not tell a generator what to build and a trade alone does not
+            /// tell a player what they are looking at.
+            /// </summary>
+            public string Business = "";
+            public string Trade = "";
+
             public int Adults;
             public int Kids;
 
             /// <summary>One name per line, adults then kids, in no particular enforced count -
             /// entering three names for two adults and one kid is the author's business, not a
-            /// rule this file polices.</summary>
+            /// rule this file polices.
+            ///
+            /// SUPERSEDED BY <see cref="People"/>. Kept so notes written before the structured
+            /// editor existed still load and still show something; migrated into People on read,
+            /// and never written back out. Do not add to it.</summary>
             public string Names = "";
+
+            /// <summary>
+            /// Who lives here, one entry each, with the name split.
+            ///
+            /// Replaces the free-text Names blob. A blob was fine when the only question was
+            /// "who lived on this lot" and hopeless the moment anything wanted to KNOW something
+            /// about a person - their age, whether they are a child, what they are like. Every
+            /// one of those was a parsing guess against a line somebody typed.
+            ///
+            /// First and last separately because a household is not a list of full names: a wife
+            /// may not share the surname, a lodger certainly does not, and a child defaults to
+            /// its mother's - which the editor can only do for you if it can see the parts.
+            /// </summary>
+            public readonly List<Person> People = new List<Person>();
 
             public Vector2[] Footprint;    // null if nobody has drawn one
 
@@ -90,6 +158,24 @@ namespace Noir.Unity
             public int SquareFeet;
 
             public int YearBuilt;
+
+            /// <summary>
+            /// Fill People from a draft list, COPYING each person.
+            ///
+            /// Copied rather than referenced because the editor holds live objects the user is
+            /// typing into. Handing those same objects to the saved note would mean the "saved"
+            /// state and the draft are one thing - so the dirty check could never see a
+            /// difference, the save button would never light, and `revert` would revert to the
+            /// edits it was meant to discard.
+            /// </summary>
+            public Note WithPeople(System.Collections.Generic.IEnumerable<Person> people)
+            {
+                People.Clear();
+                foreach (var who in people)
+                    if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
+                        People.Add(who.Copy());
+                return this;
+            }
         }
 
         private static Dictionary<int, Note> _byId;
@@ -111,7 +197,10 @@ namespace Noir.Unity
             Load();
             bool empty = note == null
                       || (string.IsNullOrWhiteSpace(note.Character)
+                       && string.IsNullOrWhiteSpace(note.Business)
+                       && string.IsNullOrWhiteSpace(note.Trade)
                        && string.IsNullOrWhiteSpace(note.Names)
+                       && note.People.Count == 0
                        && note.Adults == 0 && note.Kids == 0
                        && note.Zoning == Zoning.Unset && note.Housing == HousingType.Unset
                        && note.Stories == 0 && !note.Basement && note.Condition == Quality.Unset
@@ -158,6 +247,10 @@ namespace Noir.Unity
 
                 if (rest.StartsWith("character "))
                     note.Character = Unquote(rest.Substring(10));
+                else if (rest.StartsWith("business "))
+                    note.Business = Unquote(rest.Substring(9));
+                else if (rest.StartsWith("trade "))
+                    note.Trade = Unquote(rest.Substring(6));
                 else if (rest.StartsWith("names "))
                     note.Names = Unquote(rest.Substring(6)).Replace("|", "\n");
                 else if (rest.StartsWith("household "))
@@ -222,6 +315,92 @@ namespace Noir.Unity
                     if (pts.Count >= 3) note.Footprint = pts.ToArray();
                 }
             }
+
+            // Everything authored before the structured editor existed becomes People here, once,
+            // after the whole file is in hand. Done at the end rather than per line because a
+            // note's `names` and its `person` lines can appear in either order.
+            foreach (var note in _byId.Values) MigrateNames(note);
+        }
+
+        /// <summary>
+        /// `adult|child "first" "last" age "trait|trait"` - the tail of a person line.
+        ///
+        /// Hand-tolerant on purpose. This file is meant to be editable in a text editor, so a
+        /// line missing its age or its traits still yields a person rather than nothing; only
+        /// the kind and the first name are really required.
+        /// </summary>
+        private static void ReadPerson(Note note, string rest)
+        {
+            var who = new Person();
+            int at = rest.IndexOf(' ');
+            if (at < 0) return;
+
+            who.Child = rest.Substring(0, at).Trim().Equals("child", System.StringComparison.OrdinalIgnoreCase);
+            rest = rest.Substring(at + 1).Trim();
+
+            who.First = Unquote(NextField(ref rest));
+            who.Last = Unquote(NextField(ref rest));
+
+            string age = NextField(ref rest);
+            if (int.TryParse(age, out int years)) who.Age = years;
+
+            string traits = Unquote(NextField(ref rest));
+            if (!string.IsNullOrWhiteSpace(traits))
+                foreach (var t in traits.Split('|'))
+                    if (!string.IsNullOrWhiteSpace(t)) who.Traits.Add(t.Trim());
+
+            if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
+                note.People.Add(who);
+        }
+
+        /// <summary>Take the next `"quoted field"` or bare token off the front of a line.</summary>
+        private static string NextField(ref string rest)
+        {
+            rest = rest.TrimStart();
+            if (rest.Length == 0) return "";
+
+            if (rest[0] == '"')
+            {
+                int close = rest.IndexOf('"', 1);
+                if (close < 0) { var whole = rest; rest = ""; return whole; }
+                var field = rest.Substring(0, close + 1);
+                rest = rest.Substring(close + 1);
+                return field;
+            }
+
+            int space = rest.IndexOf(' ');
+            if (space < 0) { var whole = rest; rest = ""; return whole; }
+            var token = rest.Substring(0, space);
+            rest = rest.Substring(space + 1);
+            return token;
+        }
+
+        /// <summary>
+        /// Turn a pre-structured-editor `names` blob into People, once, on load.
+        ///
+        /// Everything authored before the editor could tell a first name from a last one is a
+        /// list of lines like "Russell Fuller". Splitting on the LAST space is the least wrong
+        /// rule: "Mary Ellen Stufflebeam" gives Mary Ellen / Stufflebeam, which is right, and a
+        /// single word gives a first name and no surname, which is also right. Nobody's typing
+        /// is thrown away and nothing is invented - no ages, no traits, no guesses about who is
+        /// a child.
+        /// </summary>
+        private static void MigrateNames(Note note)
+        {
+            if (note.People.Count > 0 || string.IsNullOrWhiteSpace(note.Names)) return;
+
+            foreach (var line in note.Names.Split('\n'))
+            {
+                var name = line.Trim();
+                if (name.Length == 0) continue;
+
+                int space = name.LastIndexOf(' ');
+                note.People.Add(new Person
+                {
+                    First = space > 0 ? name.Substring(0, space) : name,
+                    Last = space > 0 ? name.Substring(space + 1) : "",
+                });
+            }
         }
 
         private static void Write()
@@ -247,6 +426,10 @@ namespace Noir.Unity
             foreach (int id in ids)
             {
                 var note = _byId[id];
+                if (!string.IsNullOrWhiteSpace(note.Business))
+                    sb.AppendLine($"parcel {id} business \"{Quote(note.Business)}\"");
+                if (!string.IsNullOrWhiteSpace(note.Trade))
+                    sb.AppendLine($"parcel {id} trade \"{Quote(note.Trade)}\"");
                 if (!string.IsNullOrWhiteSpace(note.Character))
                     sb.AppendLine($"parcel {id} character \"{Quote(note.Character)}\"");
                 if (note.Adults != 0 || note.Kids != 0)
@@ -274,7 +457,22 @@ namespace Noir.Unity
                 }
             }
 
-            File.WriteAllText(Path.Combine(ContentLoader.Root, "parcel-notes.txt"), sb.ToString());
+            // WRITE BESIDE IT, THEN SWAP. This file is the only Content file the game writes
+            // rather than reads, it is rewritten WHOLE on every save, and it is the sole copy of
+            // everything anybody has authored about the town - who lived on a lot, what traded
+            // there, the house shapes drawn by hand. A plain WriteAllText truncates the real file
+            // first and fills it afterwards, so a crash, a full disk or Unity being killed
+            // mid-save leaves a half file and takes the lot with it.
+            //
+            // File.Replace keeps the previous contents as parcel-notes.bak, which costs nothing
+            // and means even a failure between the two steps leaves a complete file to go back to.
+            string path = Path.Combine(ContentLoader.Root, "parcel-notes.txt");
+            string temp = path + ".tmp";
+            string backup = path + ".bak";
+
+            File.WriteAllText(temp, sb.ToString());
+            if (File.Exists(path)) File.Replace(temp, path, backup);
+            else File.Move(temp, path);
         }
 
         private static string Quote(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"")

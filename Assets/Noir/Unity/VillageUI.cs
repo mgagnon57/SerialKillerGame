@@ -202,6 +202,7 @@ namespace Noir.Unity
             DrawTopBar();
             DrawInspector();
             DrawHelp();
+            DrawHoverTip();
 
             // Let the camera know not to treat a click on the panel as a click on the village.
             // Tested against the panel's REAL rectangle now that it is centred - the old check
@@ -219,7 +220,75 @@ namespace Noir.Unity
                          || (anyPanel && PanelRect().Contains(mouse))
                          || LayerPanel.Bounds.Contains(mouse)
                          || PerfHud.Bounds.Contains(mouse);
+
+            // ---- AND THE KEYBOARD, which was not guarded at all ----
+            //
+            // PointerOverUI is a MOUSE test. It stops a click on the panel falling through to
+            // the map and does nothing whatever about typing, so every game shortcut stayed live
+            // while a text field had focus. Typing "hardware" into the business field panned the
+            // camera left, tilted it, panned right, panned forward and orbited - a, r, d, w, e
+            // are all bound - and typing a house number jumped the clock, because 1 to 6 are the
+            // skip-to-hour keys. Tab dropped to street level. Space paused the town.
+            //
+            // GUIUtility.keyboardControl is IMGUI's focused control, and zero when nothing has
+            // focus. Everything that reads the keyboard for the GAME now asks this first.
+            KeyboardCaptured = GUIUtility.keyboardControl != 0;
+
+            // ---- WAYS OUT, and a sign saying so ----
+            //
+            // The guard above is correct and was, on its own, a trap: with a field focused the
+            // camera and the clock stop answering, nothing explains why, and the only exit was a
+            // key nobody had been told about. Reported exactly that way - "I did not know, it
+            // never told me, and then I could not click it any more like it locked it."
+            //
+            // So: Escape releases it, clicking the MAP releases it, and while it is held there
+            // is a line on screen saying what is happening. A mode with no indicator is a bug
+            // however well it works.
+            if (KeyboardCaptured && Event.current.type == EventType.KeyDown
+                && Event.current.keyCode == KeyCode.Escape)
+            {
+                GUIUtility.keyboardControl = 0;
+                KeyboardCaptured = false;
+                Event.current.Use();
+            }
+
+            // Clicking anywhere that is not the panel means you are done typing. This is what
+            // most people will reach for before they think of Escape.
+            if (KeyboardCaptured && !PointerOverUI
+                && Event.current.type == EventType.MouseDown)
+            {
+                GUIUtility.keyboardControl = 0;
+                KeyboardCaptured = false;
+            }
+
+            if (KeyboardCaptured) DrawTypingNotice();
         }
+
+        /// <summary>The sign that says why the keys have stopped working.</summary>
+        private void DrawTypingNotice()
+        {
+            const string text = "typing — the camera and clock keys are paused   ·   "
+                              + "Esc or click the map to give them back";
+            var content = new GUIContent(text);
+            var size = _small.CalcSize(content);
+            float w = size.x + S(28f), h = size.y + S(14f);
+            var rect = new Rect((Screen.width - w) * 0.5f, BarHeight + S(10f), w, h);
+
+            var was = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.90f, 0.62f, 0.25f, 0.95f);
+            GUI.Box(rect, GUIContent.none, _panel);
+            GUI.backgroundColor = was;
+            GUI.Label(new Rect(rect.x + S(14f), rect.y + S(7f), rect.width, rect.height),
+                      text, _small);
+        }
+
+        /// <summary>
+        /// True while a text field has the keyboard, so the game's own shortcuts must not fire.
+        ///
+        /// Read by VillageHost.HandleHotkeys and by every OrbitCamera handler that reads a key.
+        /// Escape releases it.
+        /// </summary>
+        public static bool KeyboardCaptured { get; private set; }
 
         private void DrawTopBar()
         {
@@ -457,6 +526,7 @@ namespace Noir.Unity
         /// format a saved household is written as.
         /// </summary>
         private string _draftCharacter = "", _draftNames = "";
+        private string _draftBusiness = "", _draftTrade = "";
         private int _draftAdults, _draftKids;
         private ParcelNotes.Zoning _draftZoning;
         private ParcelNotes.HousingType _draftHousing;
@@ -476,16 +546,89 @@ namespace Noir.Unity
         /// no stories, no basement and no housing type at all, and nothing suggesting that clicking
         /// `edit` would reveal them. Everything is on screen now.
         /// </summary>
+        /// <summary>
+        /// Whether the drafts say something the file does not.
+        ///
+        /// Pulled out of DrawNoteEditor because SeedDrafts needs the same answer when the
+        /// selection moves to another lot - it decides whether the outgoing lot's edits are
+        /// carried to disk or thrown away, and that question must be asked with exactly the
+        /// comparison the save button uses. Two copies of it would drift, and the failure mode
+        /// of drifting is silently losing somebody's typing.
+        /// </summary>
+        private bool DraftsDifferFromDisk(int parcelId)
+        {
+            var saved = ParcelNotes.For(parcelId);
+            if (saved == null) return DraftIsAnything();
+
+            return PeopleDiffer(saved) || _draftCharacter != saved.Character
+                || _draftBusiness != saved.Business || _draftTrade != saved.Trade
+                || _draftZoning != saved.Zoning || _draftHousing != saved.Housing
+                || _draftQuality != saved.Condition
+                || _draftStories != saved.Stories || _draftBasement != saved.Basement
+                || _draftBedrooms != saved.Bedrooms || _draftBaths != saved.Baths
+                || _draftHalfBaths != saved.HalfBaths || _draftSquareFeet != saved.SquareFeet
+                || _draftYearBuilt != saved.YearBuilt;
+        }
+
+        /// <summary>Field by field, because a household is the thing most likely to be edited
+        /// and most expensive to lose.</summary>
+        private bool PeopleDiffer(ParcelNotes.Note saved)
+        {
+            var live = new System.Collections.Generic.List<ParcelNotes.Person>();
+            foreach (var who in _draftPeople)
+                if (!string.IsNullOrWhiteSpace(who.First) || !string.IsNullOrWhiteSpace(who.Last))
+                    live.Add(who);
+
+            if (live.Count != saved.People.Count) return true;
+            for (int i = 0; i < live.Count; i++)
+            {
+                var a = live[i];
+                var b = saved.People[i];
+                if (a.First != b.First || a.Last != b.Last || a.Age != b.Age || a.Child != b.Child)
+                    return true;
+                if (a.Traits.Count != b.Traits.Count) return true;
+                for (int t = 0; t < a.Traits.Count; t++)
+                    if (a.Traits[t] != b.Traits[t]) return true;
+            }
+            return false;
+        }
+
         private void SeedDrafts(int parcelId)
         {
             if (_noteDraftFor == parcelId) return;
+
+            // CARRY THE LAST LOT'S EDITS TO DISK BEFORE LOADING THIS ONE.
+            //
+            // This used to reseed straight over the drafts, so clicking a second lot threw away
+            // whatever had been typed into the first with no prompt and no trace. The `dirty`
+            // flag existed and was used only to COLOUR the save button. For someone naming a
+            // street's worth of shops - click, type, click the next one - that is losing a name
+            // every time, and never noticing which.
+            //
+            // Saved rather than prompted because that is the shape of the job: authoring, not
+            // filling in a form. `revert` is still there for a lot, and ParcelNotes.Save treats
+            // an all-blank note as a deletion, so an accidental keystroke that gets cleared
+            // again does not leave a husk behind.
+            if (_noteDraftFor != int.MinValue && DraftsDifferFromDisk(_noteDraftFor))
+            {
+                ParcelNotes.Save(_noteDraftFor, DraftNote(ParcelNotes.For(_noteDraftFor)));
+                Debug.Log($"[notes] carried unsaved edits on parcel {_noteDraftFor} to disk "
+                        + $"when the selection moved to {parcelId}.");
+            }
+
             _noteDraftFor = parcelId;
+            _noteScroll = Vector2.zero;   // a new lot opens at the top, not where the last one sat
 
             var saved = ParcelNotes.For(parcelId);
             _draftAdults = saved?.Adults ?? 0;
             _draftKids = saved?.Kids ?? 0;
             _draftNames = saved?.Names ?? "";
+            _draftPeople.Clear();
+            _traitsOpenFor = -1;
+            if (saved != null) foreach (var who in saved.People) _draftPeople.Add(who.Copy());
             _draftCharacter = saved?.Character ?? "";
+            _draftBusiness = saved?.Business ?? "";
+            _draftTrade = saved?.Trade ?? "";
             _draftQuality = saved?.Condition ?? ParcelNotes.Quality.Unset;
             _draftStories = saved?.Stories ?? 0;
             _draftBasement = saved?.Basement ?? false;
@@ -512,15 +655,91 @@ namespace Noir.Unity
         /// <summary>Everything in the drafts, as a note ready to write. The footprint is not a
         /// draft - FootprintDrawer owns it and saves it separately - so it is carried across from
         /// whatever is already on file rather than being overwritten with nothing.</summary>
+        // ---- the structured household ----
+        private readonly System.Collections.Generic.List<ParcelNotes.Person> _draftPeople =
+            new System.Collections.Generic.List<ParcelNotes.Person>();
+
+        /// <summary>Which person's trait picker is open, by index. -1 for none.</summary>
+        private int _traitsOpenFor = -1;
+
+        /// <summary>
+        /// The surname a new member of this household most likely takes.
+        ///
+        /// The commonest surname already in the house, or the first person's if they all differ.
+        /// A guess, and the right kind: it saves typing on the ordinary case - a family - and
+        /// costs one correction on the lodger.
+        /// </summary>
+        private string HouseholdSurname()
+        {
+            string best = "";
+            int bestCount = 0;
+            foreach (var a in _draftPeople)
+            {
+                if (string.IsNullOrWhiteSpace(a.Last)) continue;
+                int n = 0;
+                foreach (var b in _draftPeople)
+                    if (string.Equals(a.Last, b.Last, System.StringComparison.OrdinalIgnoreCase)) n++;
+                if (n > bestCount) { bestCount = n; best = a.Last; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// The trait list, grouped, as toggles.
+        ///
+        /// Toggles rather than a menu because a person has SEVERAL - the man who sits on the
+        /// porch is also the man who knows everyone's business, and that combination is the
+        /// character. Drawn inline for the same reason the enum dropdowns are: a floating popup
+        /// inside a scroll view is clipped by it.
+        /// </summary>
+        private void DrawTraitPicker(ParcelNotes.Person who)
+        {
+            foreach (var group in VillageTraits.All)
+            {
+                GUILayout.Label($"<color=#75736e>   {group.Name}</color>", _small);
+
+                int perRow = 2, inRow = 0;
+                GUILayout.BeginHorizontal();
+                foreach (var trait in group.Traits)
+                {
+                    if (inRow == perRow) { GUILayout.EndHorizontal(); GUILayout.BeginHorizontal(); inRow = 0; }
+
+                    bool has = who.Traits.Contains(trait);
+                    var was = GUI.backgroundColor;
+                    if (has) GUI.backgroundColor = new Color(0.72f, 0.58f, 0.28f);
+                    if (GUILayout.Button((has ? "• " : "") + trait, _button,
+                                         GUILayout.Width(S(148f)), GUILayout.Height(S(20f))))
+                    {
+                        if (has) who.Traits.Remove(trait);
+                        else who.Traits.Add(trait);
+                    }
+                    GUI.backgroundColor = was;
+                    inRow++;
+                }
+                while (inRow++ < perRow) GUILayout.Label("", _small, GUILayout.Width(S(148f)));
+                GUILayout.EndHorizontal();
+            }
+        }
+
         private ParcelNotes.Note DraftNote(ParcelNotes.Note saved) => new ParcelNotes.Note
         {
-            Adults = _draftAdults, Kids = _draftKids, Names = _draftNames,
+            // Adults/Kids stay derived so anything still reading them - Households, the
+            // inspector summary - keeps working while People is the real answer.
+            Adults = CountPeople(false), Kids = CountPeople(true), Names = "",
             Character = _draftCharacter, Footprint = saved?.Footprint,
+            Business = _draftBusiness, Trade = _draftTrade,
             Zoning = _draftZoning, Housing = _draftHousing, Condition = _draftQuality,
             Stories = _draftStories, Basement = _draftBasement,
             Bedrooms = _draftBedrooms, Baths = _draftBaths, HalfBaths = _draftHalfBaths,
             SquareFeet = _draftSquareFeet, YearBuilt = _draftYearBuilt
-        };
+        }.WithPeople(_draftPeople);
+
+        private int CountPeople(bool children)
+        {
+            int n = 0;
+            foreach (var who in _draftPeople) if (who.Child == children) n++;
+            return n;
+        }
 
         private void DrawNoteEditor(int parcelId)
         {
@@ -550,7 +769,7 @@ namespace Noir.Unity
             // reads as a suggestion rather than as saved data; typing anything below replaces
             // it for this parcel and nothing else.
             var generated = Households.For(parcelId);
-            if (generated != null && string.IsNullOrWhiteSpace(_draftNames))
+            if (generated != null && _draftPeople.Count == 0)
             {
                 GUILayout.Label($"<color=#8a8a86>in {GameClock.EpochYear}, {generated.Family} "
                               + $"{(generated.Rented ? "rented here" : "lived here")}</color>", _small);
@@ -559,32 +778,82 @@ namespace Noir.Unity
                                   + $"{person.Age}</color>", _small);
                 if (GUILayout.Button("use this household", _button, GUILayout.Height(S(22f))))
                 {
-                    var lines = new System.Text.StringBuilder();
+                    _draftPeople.Clear();
                     foreach (var person in generated.Members)
-                        lines.Append(person.Forename).Append(' ').Append(generated.Surname).Append('\n');
-                    _draftNames = lines.ToString().TrimEnd('\n');
-                    _draftAdults = generated.Adults;
-                    _draftKids = generated.Kids;
+                        _draftPeople.Add(new ParcelNotes.Person
+                        {
+                            First = person.Forename,
+                            Last = generated.Surname,
+                            Age = person.Age,
+                            Child = person.Age < 18,
+                        });
                 }
                 GUILayout.Space(S(6f));
             }
 
+            // ---- WHO LIVES HERE, one row each ----
+            //
+            // Was a counter for adults, a counter for kids and a free-text box of names, which is
+            // three things that could disagree with each other and did. A row per person cannot:
+            // the count IS the number of rows, and every field belongs to somebody.
             GUILayout.Label("<color=#8a8a86>household</color>", _small);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("adults", _small, GUILayout.Width(S(50f)));
-            if (GUILayout.Button("-", _button, GUILayout.Width(S(28f)))) _draftAdults = Mathf.Max(0, _draftAdults - 1);
-            GUILayout.Label(_draftAdults.ToString(), _label, GUILayout.Width(S(20f)));
-            if (GUILayout.Button("+", _button, GUILayout.Width(S(28f)))) _draftAdults++;
-            GUILayout.Space(S(10f));
-            GUILayout.Label("kids", _small, GUILayout.Width(S(34f)));
-            if (GUILayout.Button("-", _button, GUILayout.Width(S(28f)))) _draftKids = Mathf.Max(0, _draftKids - 1);
-            GUILayout.Label(_draftKids.ToString(), _label, GUILayout.Width(S(20f)));
-            if (GUILayout.Button("+", _button, GUILayout.Width(S(28f)))) _draftKids++;
-            GUILayout.EndHorizontal();
 
-            GUILayout.Space(S(4f));
-            GUILayout.Label("<color=#8a8a86>names, one per line</color>", _small);
-            _draftNames = GUILayout.TextArea(_draftNames, GUILayout.Height(S(50f)));
+            int removeAt = -1;
+            for (int i = 0; i < _draftPeople.Count; i++)
+            {
+                var who = _draftPeople[i];
+
+                GUILayout.BeginHorizontal();
+                who.First = GUILayout.TextField(who.First, GUILayout.Width(S(96f)));
+                who.Last = GUILayout.TextField(who.Last, GUILayout.Width(S(96f)));
+
+                string age = GUILayout.TextField(who.Age > 0 ? who.Age.ToString() : "",
+                                                 GUILayout.Width(S(34f)));
+                who.Age = int.TryParse(age, out int years) ? Mathf.Clamp(years, 0, 120) : 0;
+
+                if (GUILayout.Button(who.Child ? "child" : "adult", _button, GUILayout.Width(S(52f))))
+                    who.Child = !who.Child;
+
+                // The remove is last and narrow, so it is never the button you were reaching for.
+                if (GUILayout.Button("×", _button, GUILayout.Width(S(24f)))) removeAt = i;
+                GUILayout.EndHorizontal();
+
+                // ---- traits ----
+                bool traitsOpen = _traitsOpenFor == i;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(who.Traits.Count == 0
+                        ? "<color=#75736e>   no traits</color>"
+                        : $"<color=#b9a87e>   {string.Join(", ", who.Traits)}</color>",
+                    _small, GUILayout.Width(S(238f)));
+                if (GUILayout.Button(traitsOpen ? "traits ▲" : "traits ▾", _button,
+                                     GUILayout.Width(S(66f))))
+                    _traitsOpenFor = traitsOpen ? -1 : i;
+                GUILayout.EndHorizontal();
+
+                if (traitsOpen) DrawTraitPicker(who);
+                GUILayout.Space(S(4f));
+            }
+
+            // Removal deferred out of the loop: mutating the list mid-draw changes how many
+            // controls IMGUI lays out between its Layout and Repaint passes, and the reward for
+            // that is a torn layout rather than a deleted person.
+            if (removeAt >= 0)
+            {
+                _draftPeople.RemoveAt(removeAt);
+                _traitsOpenFor = -1;
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("+ adult", _button, GUILayout.Height(S(22f))))
+                _draftPeople.Add(new ParcelNotes.Person { Last = HouseholdSurname(), Age = 0 });
+
+            // A CHILD TAKES THE HOUSEHOLD SURNAME by default - in a village that is right far
+            // more often than it is wrong, and it is one less thing to type for every kid on
+            // every lot. Still editable; it is a default, not a rule.
+            if (GUILayout.Button("+ child", _button, GUILayout.Height(S(22f))))
+                _draftPeople.Add(new ParcelNotes.Person
+                    { Last = HouseholdSurname(), Child = true, Age = 0 });
+            GUILayout.EndHorizontal();
 
             GUILayout.Space(S(4f));
             GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
@@ -595,16 +864,26 @@ namespace Noir.Unity
             GUILayout.Space(S(24f));
             GUILayout.BeginVertical(GUILayout.Width(S(330f)));
 
-            GUILayout.Label("<color=#8a8a86>zoning</color>", _small);
-            if (GUILayout.Button(Pretty(_draftZoning), _button, GUILayout.Height(S(24f))))
-                _draftZoning = Cycle(_draftZoning);
+            // ---- WHAT TRADED HERE ----
+            //
+            // First in this column, above zoning, because for the downtown it is the question.
+            // No source names what was in these units in 1991 - everything written about the
+            // commercial row post-dates the 2004 fire and mourns it rather than listing it - so
+            // the only way it gets recorded is somebody who was there typing it in.
+            GUILayout.Label("<color=#8a8a86>business - the sign over the door</color>", _small);
+            _draftBusiness = GUILayout.TextField(_draftBusiness, GUILayout.Height(S(22f)));
+
+            GUILayout.Space(S(4f));
+            GUILayout.Label("<color=#8a8a86>trade - what it actually was</color>", _small);
+            _draftTrade = GUILayout.TextField(_draftTrade, GUILayout.Height(S(22f)));
+
+            GUILayout.Space(S(10f));
+            _draftZoning = EnumField("zoning", "zoning", _draftZoning, Pretty);
 
             if (_draftZoning == ParcelNotes.Zoning.Residential)
             {
                 GUILayout.Space(S(4f));
-                GUILayout.Label("<color=#8a8a86>housing type</color>", _small);
-                if (GUILayout.Button(Pretty(_draftHousing), _button, GUILayout.Height(S(24f))))
-                    _draftHousing = Cycle(_draftHousing);
+                _draftHousing = EnumField("housing", "housing type", _draftHousing, Pretty);
             }
 
             GUILayout.Space(S(4f));
@@ -619,9 +898,7 @@ namespace Noir.Unity
             GUILayout.EndHorizontal();
 
             GUILayout.Space(S(4f));
-            GUILayout.Label("<color=#8a8a86>condition</color>", _small);
-            if (GUILayout.Button(Pretty(_draftQuality), _button, GUILayout.Height(S(24f))))
-                _draftQuality = Cycle(_draftQuality);
+            _draftQuality = EnumField("condition", "condition", _draftQuality, Pretty);
 
             // ---- the house itself ----
             GUILayout.Space(S(8f));
@@ -659,16 +936,7 @@ namespace Noir.Unity
             //
             // SAVED IS NOT AUTOMATIC. Every control above writes to a draft and nothing else, so
             // cycling zoning to see what the options are does not commit anything until asked.
-            bool dirty = saved == null
-                ? DraftIsAnything()
-                : (_draftAdults != saved.Adults || _draftKids != saved.Kids
-                || _draftNames != saved.Names || _draftCharacter != saved.Character
-                || _draftZoning != saved.Zoning || _draftHousing != saved.Housing
-                || _draftQuality != saved.Condition
-                || _draftStories != saved.Stories || _draftBasement != saved.Basement
-                || _draftBedrooms != saved.Bedrooms || _draftBaths != saved.Baths
-                || _draftHalfBaths != saved.HalfBaths || _draftSquareFeet != saved.SquareFeet
-                || _draftYearBuilt != saved.YearBuilt);
+            bool dirty = DraftsDifferFromDisk(parcelId);
 
             GUILayout.Space(S(4f));
             GUILayout.BeginHorizontal();
@@ -720,6 +988,57 @@ namespace Noir.Unity
             return values[(idx + 1) % values.Length];
         }
 
+        /// <summary>Which dropdown is showing its options, by field id. One at a time.</summary>
+        private string _openDropdown;
+
+        /// <summary>
+        /// A labelled enum field that OPENS A LIST, rather than a button you click repeatedly
+        /// until the value you wanted comes round again.
+        ///
+        /// Cycling was fine when zoning had three values and nobody used it. Quality has six and
+        /// zoning has seven, so setting one to the value two before the current one meant five
+        /// clicks and reading the label after each - and if you overshot, five more. It also
+        /// hides the options: there is no way to learn what a field can be except to click
+        /// through the whole ring.
+        ///
+        /// The list is drawn INLINE, pushing the rest of the column down, rather than floating
+        /// over it. A floating popup inside a GUILayout scroll view has to be drawn in a second
+        /// pass with absolute coordinates or it is clipped by the view it opened in, and that is
+        /// a lot of machinery for a form with three of these on it.
+        ///
+        /// Never returns early out of the option loop. IMGUI runs Layout and Repaint as separate
+        /// passes over the same code and requires them to draw the SAME NUMBER of controls;
+        /// returning the moment a button reports a click draws fewer, and the reward is a
+        /// "Mismatched LayoutGroup" exception rather than a working menu.
+        /// </summary>
+        private T EnumField<T>(string id, string label, T value, System.Func<T, string> pretty)
+            where T : struct, System.Enum
+        {
+            GUILayout.Label($"<color=#8a8a86>{label}</color>", _small);
+
+            bool open = _openDropdown == id;
+            if (GUILayout.Button($"{pretty(value)}    {(open ? "▲" : "▼")}", _button,
+                                 GUILayout.Height(S(24f))))
+                _openDropdown = open ? null : id;
+
+            if (!open) return value;
+
+            var chosen = value;
+            foreach (T option in (T[])System.Enum.GetValues(typeof(T)))
+            {
+                bool current = option.Equals(value);
+                var was = GUI.backgroundColor;
+                if (current) GUI.backgroundColor = new Color(0.36f, 0.52f, 0.38f);
+                if (GUILayout.Button((current ? "•  " : "    ") + pretty(option), _button,
+                                     GUILayout.Height(S(22f))))
+                    chosen = option;
+                GUI.backgroundColor = was;
+            }
+
+            if (!chosen.Equals(value)) _openDropdown = null;
+            return chosen;
+        }
+
         private static string Pretty(ParcelNotes.Zoning z)
         {
             switch (z)
@@ -755,6 +1074,7 @@ namespace Noir.Unity
         /// up for a note that would be discarded as empty the moment it was written.</summary>
         private bool DraftIsAnything() =>
             !string.IsNullOrWhiteSpace(_draftCharacter) || !string.IsNullOrWhiteSpace(_draftNames)
+            || !string.IsNullOrWhiteSpace(_draftBusiness) || !string.IsNullOrWhiteSpace(_draftTrade)
             || _draftAdults != 0 || _draftKids != 0
             || _draftZoning != ParcelNotes.Zoning.Unset
             || _draftHousing != ParcelNotes.HousingType.Unset
@@ -855,6 +1175,148 @@ namespace Noir.Unity
         /// real answer on file, and showing it even where the county DOES have one was
         /// indistinguishable from the guess being wrong.
         /// </summary>
+        /// <summary>
+        /// Two lines beside the cursor: whose address this lot is, and whether anyone is in it.
+        ///
+        /// Deliberately not the inspector. The inspector is what you get when you commit to a
+        /// lot; this is what you get for pointing at one, and it answers only the two questions
+        /// worth answering without a click. Everything else - PIN, acreage, assessed value,
+        /// notes - stays behind the click, or the map becomes unreadable the moment the mouse
+        /// crosses it.
+        ///
+        /// It follows the cursor and disappears on its own when the lot changes to another or to
+        /// none, because it is drawn from HoveredParcel every frame and never cached.
+        /// </summary>
+        private void DrawHoverTip()
+        {
+            var hovered = _host.HoveredParcel;
+            if (hovered == null) return;
+
+            // Nothing while a panel is open on the SAME lot - the inspector already says all of
+            // this and more, an arm's length away, and two copies of one address is clutter.
+            if (_host.SelectedParcel.HasValue
+                && _host.SelectedParcel.Value.Id == hovered.Value.Id) return;
+
+            var parcel = hovered.Value;
+            var county = CountyRecord.For(parcel.Id);
+            var centre = new Vector2(parcel.Bounds.x + parcel.Bounds.width / 2f,
+                                     parcel.Bounds.y + parcel.Bounds.height / 2f);
+
+            string address = county?.Address
+                          ?? StreetAddressing.Estimate(_host.World, centre)
+                          ?? "Undeveloped lot";
+
+            // OCCUPIED IS A CLAIM ABOUT PEOPLE, so it says only what the record supports. A lot
+            // with no building is empty ground and says so; a lot with a building the county has
+            // no occupancy for says the building is there and stops, rather than guessing at
+            // somebody living in it.
+            string state;
+            if (county == null) state = "no county record";
+            else if (!county.HasBuilding) state = "vacant - no building assessed";
+            else switch (county.Occupied)
+            {
+                case CountyRecord.Occupancy.Owner:
+                    state = "occupied - owner lives here"; break;
+                case CountyRecord.Occupancy.Absentee:
+                    state = "occupied - tax bill goes elsewhere, likely rented"; break;
+                default:
+                    state = "building stands here - occupancy not recorded"; break;
+            }
+
+            // AUTHORED SHOP FIRST, when there is one. If somebody has typed what traded here,
+            // that is the most interesting true thing about the lot and it outranks a class
+            // code - the county says "commercial", the author says "Market Place Shoppes".
+            var note = ParcelNotes.For(parcel.Id);
+            string shop = note != null && !string.IsNullOrWhiteSpace(note.Business)
+                ? note.Business + (string.IsNullOrWhiteSpace(note.Trade) ? "" : $" — {note.Trade}")
+                : null;
+
+            // EVERYTHING KNOWN, not a summary. Asked for in those words - "I just want all the
+            // details popup while I am hovering" - and it is the right call for authoring: the
+            // question while sweeping a street is "is this one done yet", and a tip that shows
+            // only an address cannot answer it. The panel is for CHANGING things; this is for
+            // reading them without losing the one you already have open.
+            var body = new StringBuilder();
+            body.Append("<b>").Append(address).Append("</b>");
+
+            if (shop != null) body.Append("\n<color=#e8d9a8>").Append(shop).Append("</color>");
+            body.Append("\n<color=#b9d8b0>").Append(state).Append("</color>");
+
+            // ---- the lot ----
+            float wFt = parcel.Bounds.width * MetresToFeet;
+            float hFt = parcel.Bounds.height * MetresToFeet;
+            body.Append("\n<color=#8a8a86>").Append(Mathf.RoundToInt(wFt)).Append(" x ")
+                .Append(Mathf.RoundToInt(hFt)).Append(" ft");
+            if (county != null && county.Acres > 0f) body.Append("   ·   ").Append(county.Acres.ToString("0.00")).Append(" acres");
+            if (county?.ClassName != null) body.Append("   ·   ").Append(county.ClassName.ToLowerInvariant());
+            body.Append("</color>");
+
+            // ---- what has been authored about it ----
+            if (note != null)
+            {
+                var lot = new StringBuilder();
+                if (note.Zoning != ParcelNotes.Zoning.Unset) lot.Append(Pretty(note.Zoning));
+                if (note.Housing != ParcelNotes.HousingType.Unset)
+                    lot.Append(lot.Length > 0 ? "   ·   " : "").Append(Pretty(note.Housing));
+                if (note.Condition != ParcelNotes.Quality.Unset)
+                    lot.Append(lot.Length > 0 ? "   ·   " : "").Append(Pretty(note.Condition));
+                if (note.Stories > 0)
+                    lot.Append(lot.Length > 0 ? "   ·   " : "").Append(note.Stories).Append(" storey");
+                if (note.Basement) lot.Append(lot.Length > 0 ? "   ·   " : "").Append("basement");
+                if (lot.Length > 0) body.Append("\n<color=#9fb6c8>").Append(lot).Append("</color>");
+
+                var house = new StringBuilder();
+                if (note.Bedrooms > 0) house.Append(note.Bedrooms).Append(" bed");
+                if (note.Baths > 0 || note.HalfBaths > 0)
+                    house.Append(house.Length > 0 ? "   ·   " : "").Append(note.Baths)
+                         .Append(note.HalfBaths > 0 ? "." + note.HalfBaths : "").Append(" bath");
+                if (note.SquareFeet > 0)
+                    house.Append(house.Length > 0 ? "   ·   " : "").Append(note.SquareFeet.ToString("N0")).Append(" sq ft");
+                if (note.YearBuilt > 0)
+                    house.Append(house.Length > 0 ? "   ·   " : "").Append("built ").Append(note.YearBuilt);
+                if (house.Length > 0) body.Append("\n<color=#9fb6c8>").Append(house).Append("</color>");
+
+                // ---- who lives here ----
+                if (note.People.Count > 0)
+                {
+                    body.Append("\n");
+                    foreach (var who in note.People)
+                    {
+                        body.Append("\n<color=#d8cfa8>  ").Append(who.FullName);
+                        if (who.Age > 0) body.Append(", ").Append(who.Age);
+                        if (who.Child) body.Append("  <i>(child)</i>");
+                        body.Append("</color>");
+                        if (who.Traits.Count > 0)
+                            body.Append("\n<color=#8f8a66>      ")
+                                .Append(string.Join(", ", who.Traits)).Append("</color>");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(note.Character))
+                    body.Append("\n\n<color=#a89f8a><i>").Append(note.Character.Trim()).Append("</i></color>");
+            }
+
+            body.Append("\n\n<color=#6f6d68>click to edit</color>");
+            var tip = new GUIContent(body.ToString());
+            var size = _label.CalcSize(tip);
+            float w = Mathf.Min(size.x + S(24f), S(420f));
+            float h = _label.CalcHeight(tip, w - S(24f)) + S(18f);
+
+            // Offset off the cursor so the pointer itself never covers the first character, and
+            // flipped back inside the screen near the right and bottom edges - a tip that runs
+            // off the edge is unreadable exactly where the map's own edge lots are.
+            var m = Event.current.mousePosition;
+            float x = m.x + S(18f);
+            float y = m.y + S(18f);
+            if (x + w > Screen.width - S(8f)) x = m.x - w - S(12f);
+            if (y + h > Screen.height - S(8f)) y = m.y - h - S(12f);
+
+            var rect = new Rect(x, y, w, h);
+            GUI.Box(rect, GUIContent.none, _panel);
+            GUI.Label(new Rect(rect.x + S(12f), rect.y + S(9f), rect.width - S(24f),
+                               rect.height - S(18f)), tip, _label);
+        }
+
         private void DrawParcelInspector(ParcelIndex.Parcel parcel)
         {
             var rect = PanelRect();
