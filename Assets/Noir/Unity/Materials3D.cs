@@ -195,30 +195,97 @@ namespace Noir.Unity
         /// beside grass with one does not read as a darker patch of the same field; it reads as
         /// a hole.
         /// </summary>
-        public static Material Dwelling
+        public static Material Dwelling => ForZoning(ParcelNotes.Zoning.Residential);
+
+        /// <summary>
+        /// WHAT EACH ZONING LOOKS LIKE ON THE PLAN, and the colours are chosen rather than picked.
+        ///
+        /// The planning convention nearly everybody has seen on a zoning map: yellow is where
+        /// people live, red is trade, purple is industry, blue is public, olive is farmland, grey
+        /// is nothing. Guessable before you have read the legend, which is the point of a
+        /// convention.
+        ///
+        /// ALL OF THEM MUTED, AND ALL AT ROUGHLY ONE VALUE. GroundZoning's own comment warns
+        /// about "exactly the debug colour look this stream exists to avoid", and six saturated
+        /// hues over a survey plan is precisely that. These are dirty, low-saturation versions
+        /// sitting in the same brightness band as the plan's green, so the lot lines and the
+        /// roads still read on top of them and the town still looks like a drawing.
+        ///
+        /// Unset is not in here. A tile on no parcel - a street, an alley, the gap the survey
+        /// never drew - keeps the plain green, because "we do not know" should look like nothing
+        /// rather than like a seventh category.
+        /// </summary>
+        public static Color32 ColourOf(ParcelNotes.Zoning zoning)
         {
-            get
+            switch (zoning)
             {
-                if (_dwelling != null) return _dwelling;
-
-                // THE TINT GOES ON AFTER ApplyPack, NOT BEFORE. ApplyPack sets _BaseColor and
-                // _Color to WHITE whenever it binds a texture - reasonably, since a pack's albedo
-                // carries its own colour and a tint on top would double it. Set the green in
-                // Make() above it, the way Pasture and Grass do, and the pack wipes it a line
-                // later: the material comes out identical to grass and the shading is invisible.
-                // That is exactly what happened the first time this was written.
-                var tint = new Color32(0x6A, 0x7E, 0x58, 0xFF);
-                _dwelling = Make("Dwelling", tint, 0.05f);
-                SurfaceTextures.ApplyPack(_dwelling, "grass", 4f);
-                if (_dwelling.HasProperty("_BaseColor")) _dwelling.SetColor("_BaseColor", tint);
-                if (_dwelling.HasProperty("_Color")) _dwelling.SetColor("_Color", tint);
-
-                Plan(_dwelling);
-                return _dwelling;
+                case ParcelNotes.Zoning.Residential:  return new Color32(0xB0, 0x9C, 0x54, 0xFF);
+                case ParcelNotes.Zoning.Commercial:   return new Color32(0xA8, 0x5F, 0x4E, 0xFF);
+                case ParcelNotes.Zoning.Industrial:   return new Color32(0x7E, 0x66, 0x8E, 0xFF);
+                case ParcelNotes.Zoning.Civic:        return new Color32(0x53, 0x7C, 0x99, 0xFF);
+                case ParcelNotes.Zoning.Agricultural: return new Color32(0x86, 0x8E, 0x50, 0xFF);
+                case ParcelNotes.Zoning.Vacant:       return new Color32(0x77, 0x78, 0x70, 0xFF);
+                default:                              return PlainGreen;
             }
         }
 
-        private static Material _dwelling;
+        /// <summary>What an unzoned tile is, and what every lot goes back to when the colouring
+        /// is switched off.</summary>
+        public static readonly Color32 PlainGreen = new Color32(0x6A, 0x7E, 0x58, 0xFF);
+
+        /// <summary>
+        /// Whether the lots are painted by zoning at all. Flipping it re-tints the materials in
+        /// place - no mesh work, because the submeshes are already there and only their colour
+        /// changes. See VillageUI's legend, which is drawn on the same switch.
+        /// </summary>
+        public static bool ShowZoningColours = true;
+
+        private static readonly Dictionary<ParcelNotes.Zoning, Material> _byZoning =
+            new Dictionary<ParcelNotes.Zoning, Material>();
+
+        public static Material ForZoning(ParcelNotes.Zoning zoning)
+        {
+            if (_byZoning.TryGetValue(zoning, out var found)) return found;
+
+            // THE TINT GOES ON AFTER ApplyPack, NOT BEFORE. ApplyPack sets _BaseColor and _Color
+            // to WHITE whenever it binds a texture - reasonably, since a pack's albedo carries
+            // its own colour and a tint on top would double it. Set the colour in Make() above it,
+            // the way Pasture and Grass do, and the pack wipes it a line later: the material comes
+            // out identical to grass and the shading is invisible. That is exactly what happened
+            // the first time this was written.
+            //
+            // Grass texture at the garden tiling for all of them, deliberately. A zoned patch with
+            // no texture beside grass with one does not read as a differently coloured patch of
+            // the same field; it reads as a hole.
+            var tint = ShowZoningColours ? ColourOf(zoning) : PlainGreen;
+            var m = Make("Zoned " + zoning, tint, 0.05f);
+            SurfaceTextures.ApplyPack(m, "grass", 4f);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tint);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", tint);
+
+            Plan(m);
+            _byZoning[zoning] = m;
+            return m;
+        }
+
+        /// <summary>
+        /// Re-tint every zoning material in place, for the toggle.
+        ///
+        /// NO MESH IS REBUILT. The ground is one baked mesh of five million tiles and a submesh
+        /// per zoning; those submeshes exist whether or not anybody is looking at the colours, so
+        /// turning the colouring off is six SetColor calls rather than a rebuild that would take
+        /// seconds and stall the frame.
+        /// </summary>
+        public static void RetintZoning()
+        {
+            foreach (var pair in _byZoning)
+            {
+                var tint = ShowZoningColours ? ColourOf(pair.Key) : PlainGreen;
+                if (pair.Value.HasProperty("_BaseColor")) pair.Value.SetColor("_BaseColor", tint);
+                if (pair.Value.HasProperty("_Color")) pair.Value.SetColor("_Color", tint);
+                Plan(pair.Value);
+            }
+        }
 
         public static Material Wall
         {

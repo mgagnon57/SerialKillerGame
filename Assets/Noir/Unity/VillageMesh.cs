@@ -443,17 +443,27 @@ namespace Noir.Unity
             int zonedKinds = System.Enum.GetValues(typeof(Materials3D.ZonedGround)).Length;
             int pasture = baseKinds + zonedKinds;
 
-            // One more after the pasture: the darker green a dwelling's footprint is painted in
-            // when the buildings themselves are switched off. Appended rather than folded into
-            // GroundOrder for the same reason the zoned kinds are - it is not a terrain anybody
-            // placed on the map, it is a way of drawing one.
-            int dwelling = pasture + 1;
-            int submeshes = dwelling + 1;
+            // ONE MORE AFTER THE PASTURE FOR EVERY ZONING THERE IS - residential, commercial,
+            // industrial, civic, agricultural, vacant. Appended rather than folded into
+            // GroundOrder for the same reason the zoned kinds are: none of them is a terrain
+            // anybody placed on the map, they are ways of drawing one.
+            //
+            // This used to be a single `dwelling` submesh, because residential was the only
+            // zoning painted. Six submeshes cost six draw calls on a mesh that already has a
+            // dozen, and they are what lets the colouring be TOGGLED at all: the geometry is
+            // sorted by zoning once at build time, so switching the colours off afterwards is
+            // re-tinting six materials rather than rebuilding five million tiles.
+            //
+            // Zoning.Unset is index 0 and gets no submesh - a tile on no parcel keeps plain
+            // grass. So zoning z lives at zoneBase + (z - 1).
+            int zoneCount = System.Enum.GetValues(typeof(ParcelNotes.Zoning)).Length - 1;
+            int zoneBase = pasture + 1;
+            int submeshes = zoneBase + zoneCount;
 
             var materials = new Material[submeshes];
             for (int i = 0; i < submeshes; i++)
-                materials[i] = i == dwelling
-                    ? Materials3D.Dwelling
+                materials[i] = i >= zoneBase
+                    ? Materials3D.ForZoning((ParcelNotes.Zoning)(i - zoneBase + 1))
                     : i == pasture
                         ? Materials3D.Pasture
                         : i < baseKinds
@@ -471,8 +481,8 @@ namespace Noir.Unity
             // here. Rasterised per parcel over its own bounding box rather than asked per tile,
             // because 5,040,000 tiles against 794 polygons is a hundred million point-in-polygon
             // tests and this is a few hundred thousand.
-            var residential = VillageHost.FlatGroundColour
-                ? ResidentialMask(world.Width, world.Height) : null;
+            var zoned = VillageHost.FlatGroundColour
+                ? ZoningMask(world.Width, world.Height) : null;
 
             // The far rim is inclusive because the riser pass below walks one PAST the last
             // tile on both axes: a riser at x == world.Width is the cut edge of the last column
@@ -525,7 +535,7 @@ namespace Noir.Unity
                     && (terrain == Terrain.Wall || terrain == Terrain.Floor))
                     terrain = Terrain.Grass;
 
-                bool isResidential = residential != null && residential[gy, gx];
+                byte zoneHere = zoned == null ? (byte)0 : zoned[gy, gx];
 
                 float h00 = corner[gy, gx];
                 float h10 = corner[gy, gx + 1];
@@ -543,14 +553,14 @@ namespace Noir.Unity
                     //
                     // Water is the one exception, kept blue on the owner's call: the North Fork
                     // is a landmark you navigate the map by.
-                    // A residentially zoned LOT is the third exception, after water: the same
-                    // green a quarter darker, so where the town actually lives reads at a
-                    // glance. Its HEIGHT is still grass - hiding the footprints was about losing
-                    // the 2 cm step into a floor, and a patch that read darker but stood proud
-                    // would put that straight back.
+                    // A ZONED LOT is the third exception, after water: painted by what it is for,
+                    // so where the town lives, trades, works and worships reads at a glance
+                    // instead of having to be clicked one lot at a time. Its HEIGHT is still
+                    // grass - hiding the footprints was about losing the 2 cm step into a floor,
+                    // and a patch that read differently but stood proud would put that back.
                     bool wet = terrain == Terrain.Water;
                     submeshGrid[gy, gx] = wet ? SubmeshFor(Terrain.Water)
-                                        : isResidential ? dwelling
+                                        : zoneHere != 0 ? zoneBase + zoneHere - 1
                                         : SubmeshFor(Terrain.Grass);
                     flatGrid[gy, gx] = HeightOf(wet ? Terrain.Water : Terrain.Grass);
                 }
@@ -956,25 +966,40 @@ namespace Noir.Unity
         /// records, so the caller draws plain grass and nothing pretends to know a zoning it
         /// does not have.
         /// </summary>
-        private static bool[,] ResidentialMask(int width, int height)
+        private static byte[,] ZoningMask(int width, int height)
         {
             var parcels = ParcelIndex.All;
             if (parcels.Count == 0) return null;
 
-            var mask = new bool[height, width];
+            var mask = new byte[height, width];
             int lots = 0, tiles = 0;
+            var perZoning = new Dictionary<ParcelNotes.Zoning, int>();
 
             int unrecorded = 0;
             foreach (var parcel in parcels)
             {
-                // EIGHTEEN OF THE 794 HAVE NO COUNTY RECORD. parcel-county.txt says so on its
-                // second line - 776 matched by nearest centroid - and For() returns null for the
-                // rest. Unguarded that is a NullReferenceException inside BuildGround, which
-                // aborts VillageHost.Awake half built and shows as a black screen.
-                var record = CountyRecord.For(parcel.Id);
-                if (record == null) { unrecorded++; continue; }
-                if (record.Zoning != ParcelNotes.Zoning.Residential) continue;
+                // THE AUTHOR OVERRULES THE COUNTY, the same rule GroundZoning.ZoningAt and
+                // CountyRecord both state. Somebody who has typed a zoning onto a lot in the
+                // parcel editor has looked at it; the class code is only ever the starting guess.
+                var note = ParcelNotes.For(parcel.Id);
+                var zoning = note != null && note.Zoning != ParcelNotes.Zoning.Unset
+                    ? note.Zoning
+                    : ParcelNotes.Zoning.Unset;
+
+                if (zoning == ParcelNotes.Zoning.Unset)
+                {
+                    // EIGHTEEN OF THE 794 HAVE NO COUNTY RECORD. parcel-county.txt says so on its
+                    // second line - 776 matched by nearest centroid - and For() returns null for
+                    // the rest. Unguarded that is a NullReferenceException inside BuildGround,
+                    // which aborts VillageHost.Awake half built and shows as a black screen.
+                    var record = CountyRecord.For(parcel.Id);
+                    if (record == null) { unrecorded++; continue; }
+                    zoning = record.Zoning;
+                }
+
+                if (zoning == ParcelNotes.Zoning.Unset) continue;
                 lots++;
+                perZoning[zoning] = perZoning.TryGetValue(zoning, out int n) ? n + 1 : 1;
 
                 var p = parcel.Points;
                 var b = parcel.Bounds;
@@ -989,14 +1014,17 @@ namespace Noir.Unity
                     // Tile centres, so a lot line running along a tile edge lands on one side of
                     // it rather than on both - neighbouring lots would otherwise each claim the
                     // shared boundary and the seam would read a tile wide.
-                    if (mask[y, x] || !Inside(p, x + 0.5f, y + 0.5f)) continue;
-                    mask[y, x] = true;
+                    if (mask[y, x] != 0 || !Inside(p, x + 0.5f, y + 0.5f)) continue;
+                    mask[y, x] = (byte)zoning;
                     tiles++;
                 }
             }
 
-            Debug.Log($"[zoning] {lots} of {parcels.Count} lots are residential in the county's "
-                    + $"class codes - {tiles:N0} tiles shaded"
+            var counts = new List<string>();
+            foreach (var pair in perZoning) counts.Add($"{pair.Value} {pair.Key.ToString().ToLowerInvariant()}");
+            counts.Sort();
+            Debug.Log($"[zoning] {lots} of {parcels.Count} lots zoned - {string.Join(", ", counts)}"
+                    + $" - {tiles:N0} tiles shaded"
                     + (unrecorded > 0 ? $"; {unrecorded} lots the county has no record for." : "."));
             return lots == 0 ? null : mask;
         }

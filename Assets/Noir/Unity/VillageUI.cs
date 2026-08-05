@@ -279,14 +279,17 @@ namespace Noir.Unity
             // was missing from this test, so every click on a layer row fell through and opened
             // the parcel inspector on whatever was behind the button - which is worse than a
             // no-op, because it changes the selection while you are trying to change the view.
+            var legend = ZoningLegendRect();
             PointerOverUI = mouse.y < BarHeight
                          || (anyPanel && PanelRect().Contains(mouse))
                          || LayerPanel.Bounds.Contains(mouse)
-                         || PerfHud.Bounds.Contains(mouse);
+                         || PerfHud.Bounds.Contains(mouse)
+                         || (legend.HasValue && legend.Value.Contains(mouse));
 
             DrawTopBar();
             DrawInspector();
             DrawHelp();
+            DrawZoningLegend();
             DrawHoverTip();
 
             // ---- AND THE KEYBOARD, which was not guarded at all ----
@@ -330,6 +333,85 @@ namespace Noir.Unity
             }
 
             if (KeyboardCaptured) DrawTypingNotice();
+        }
+
+        /// <summary>
+        /// What each colour on the ground means, bottom right.
+        ///
+        /// SHOWN ONLY WHEN THE COLOURS ARE. A legend for paint nobody is looking at is furniture,
+        /// and this corner is the one bit of screen the panel never covers.
+        ///
+        /// It reads the colours from Materials3D rather than restating them, so a swatch here
+        /// cannot drift from the ground it is describing - which is the whole failure mode of a
+        /// legend. The one before this was a comment in a shader.
+        ///
+        /// Only drawn on the survey plan, because that is the only view the shading exists in -
+        /// with the buildings up, the lots are under houses and the colour is not visible anyway.
+        /// </summary>
+        private static readonly ParcelNotes.Zoning[] Legend =
+        {
+            ParcelNotes.Zoning.Residential, ParcelNotes.Zoning.Commercial,
+            ParcelNotes.Zoning.Industrial,  ParcelNotes.Zoning.Civic,
+            ParcelNotes.Zoning.Agricultural, ParcelNotes.Zoning.Vacant,
+        };
+
+        /// <summary>
+        /// Where the legend sits, or null when it is not up.
+        ///
+        /// Its own method because PointerOverUI needs the same rectangle: a click on the legend
+        /// is a click on the UI, and without that it falls straight through and selects whatever
+        /// lot happens to be underneath. That is not hypothetical - it is exactly what the layer
+        /// panel did before it was added to the same test.
+        /// </summary>
+        private static Rect? ZoningLegendRect()
+        {
+            if (!Materials3D.ShowZoningColours || !VillageHost.FlatGroundColour) return null;
+
+            float rowH = S(18f), pad = S(12f);
+            float w = S(186f);
+            // Header, one row each, and the footer that names the key - all three counted, or
+            // the footer draws on top of the last swatch.
+            float h = pad * 2f + rowH * (Legend.Length + 2);
+            return new Rect(Screen.width - w - S(16f), Screen.height - h - S(16f), w, h);
+        }
+
+        private void DrawZoningLegend()
+        {
+            var maybe = ZoningLegendRect();
+            if (maybe == null) return;
+
+            var zonings = Legend;
+            float rowH = S(18f), pad = S(12f), swatch = S(14f);
+            var rect = maybe.Value;
+            float w = rect.width;
+
+            GUI.Box(rect, GUIContent.none, _panel);
+
+            float y = rect.y + pad;
+            GUI.Label(new Rect(rect.x + pad, y, w - pad * 2f, rowH),
+                      "<color=#8a8a86>what the lots are for</color>", _small);
+            y += rowH;
+
+            foreach (var z in zonings)
+            {
+                var c = Materials3D.ColourOf(z);
+                var box = new Rect(rect.x + pad, y + S(2f), swatch, swatch);
+
+                // The swatch is the material's own colour, drawn as a flat rect. GUI.color tints
+                // whatever texture is bound, and the built-in white pixel is the one thing that
+                // multiplies to exactly the colour asked for.
+                var was = GUI.color;
+                GUI.color = c;
+                GUI.DrawTexture(box, Texture2D.whiteTexture);
+                GUI.color = was;
+
+                GUI.Label(new Rect(box.xMax + S(8f), y, w - swatch - pad * 3f, rowH),
+                          Pretty(z), _small);
+                y += rowH;
+            }
+
+            GUI.Label(new Rect(rect.x + pad, y + S(2f), w - pad * 2f, rowH),
+                      "<color=#6f6d68>Z to hide</color>", _small);
         }
 
         /// <summary>The sign that says why the keys have stopped working.</summary>
@@ -1889,7 +1971,8 @@ namespace Noir.Unity
                   + "<b>R</b>/<b>Shift+F</b> tilt   ·   <b>WASD</b> move   ·   wheel zoom", _small);
                 GUI.Label(new Rect(S(16f), Screen.height - S(40f), S(900f), S(22f)),
                     "<b>Space</b> pause   ·   <b>[</b> <b>]</b> speed   ·   <b>1</b>–<b>6</b> skip to hour   ·   "
-                  + "click anyone, any building, or any lot   ·   <b>F</b> follow   ·   <b>H</b> for help", _small);
+                  + "click anyone, any building, or any lot   ·   <b>F</b> follow   ·   "
+                  + "<b>Z</b> zoning   ·   <b>H</b> for help", _small);
                 return;
             }
 

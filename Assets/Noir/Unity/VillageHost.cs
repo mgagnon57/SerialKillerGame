@@ -826,6 +826,18 @@ namespace Noir.Unity
             for (int i = 0; i < digits.Length && i < SkipHours.Length; i++)
                 if (digits[i].wasPressedThisFrame) { SkipToHour(SkipHours[i]); return; }
 
+            // Z paints the lots by what they are zoned for, and takes the legend with it.
+            //
+            // A RE-TINT, NOT A REBUILD. The ground is one baked mesh with a submesh per zoning,
+            // so the geometry is already sorted by what each lot is for whether or not anybody is
+            // looking at the colours - switching them off is six SetColor calls. Rebuilding five
+            // million tiles to change a colour would stall the frame for seconds.
+            if (keyboard.zKey.wasPressedThisFrame)
+            {
+                Materials3D.ShowZoningColours = !Materials3D.ShowZoningColours;
+                Materials3D.RetintZoning();
+            }
+
             // [ and ] step the speed; space pauses and resumes.
             if (keyboard.leftBracketKey.wasPressedThisFrame)
                 SpeedIndex = Mathf.Max(0, SpeedIndex - 1);
