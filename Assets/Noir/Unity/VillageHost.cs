@@ -627,6 +627,10 @@ namespace Noir.Unity
             // The one thing a baked mesh cannot do for itself: a selection changes on every
             // click, and CityOutlines is built once and frozen.
             SelectionHighlight.Create(this, transform);
+
+            // AFTER THE GROUND IS BAKED, and that matters: it snapshots what the baked mesh is
+            // showing per lot, so it can draw only the ones you have re-zoned since.
+            ZoningPatch.Create(this, transform);
             HoverHighlight.Create(this, transform);
 
             if (!ShowBuildings)
