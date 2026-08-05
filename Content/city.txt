@@ -1348,8 +1348,8 @@ place postoffice 706,1137 14x16 "Rossville Post Office"
 place diner 726,1371 11x20 "the Chicago Street diner"
   door 736,1381
   human Open before anyone needs it to be, and the same four faces are in it at six.
-place gasstation 732,1375 11x20 "the pumps"
-  door 742,1385
+place gasstation 714,1370 11x20 "the pumps"
+  door 724,1380
   human Somebody is always sitting in a car here not buying anything.
 place shop 737,1397 12x16 "the drug store"
   door 748,1405
@@ -1378,8 +1378,8 @@ place shop 786,1540 12x16 "the general merchandise"
 place postoffice 792,1558 12x16 "the north sub-office"
   door 803,1566
   human One window, one clerk, and a scale that has been condemned twice.
-place icecream 776,1371 11x16 "the ice cream parlour"
-  door 776,1379
+place icecream 804,1371 11x16 "the ice cream parlour"
+  door 804,1379
   human Shut half the year, and the queue at Easter goes round the corner.
 place shop 781,1371 10x13 "the jeweller"
   door 781,1377
@@ -2263,7 +2263,7 @@ place cornfield 272,844 70x50 "the long field 3"
   human It floods at the bottom corner every spring and nobody has ever drained it.
 place cornfield 266,1717 70x50 "the bottom field 4"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 268,1755 70x50 "the far acre 5"
+place cornfield 268,1768 70x50 "the far acre 5"
   human The last field before the road, and the one nobody bothers to walk.
 place cornfield 268,1824 50x70 "the far field 6"
   human Nobody watches this one from anywhere.
