@@ -71,6 +71,16 @@ namespace Noir.Unity
         /// </summary>
         public ParcelIndex.Parcel? SelectedParcel { get; set; }
 
+        /// <summary>
+        /// The lot under the cursor right now, or null when the cursor is off the map or over a
+        /// panel. Rewritten every frame by OrbitCamera; nothing else should set it.
+        ///
+        /// Separate from SelectedParcel on purpose. Hovering is a question - "what is this one?"
+        /// - and clicking is a commitment. A hover that quietly became a selection would replace
+        /// whatever you had open just by moving the mouse across the map to reach it.
+        /// </summary>
+        public ParcelIndex.Parcel? HoveredParcel { get; set; }
+
         /// <summary>Null outside plan mode - there is nothing to draw a house shape onto when
         /// the real building models are up. See VillageHost.Awake.</summary>
         public FootprintDrawer Footprint { get; private set; }
@@ -574,12 +584,21 @@ namespace Noir.Unity
             // with. Switched with Layers.Kind.Labels.
             Layers.Register(Layers.Kind.Labels, PlanLabels.Create(this, transform).gameObject);
 
+            // THE MARKS GO ON EITHER WAY, for exactly the reason the lot lines and the street
+            // names above do. These lived inside `if (!ShowBuildings)` and so did not exist in
+            // the built town - which is the view most of the time is spent in, and the view where
+            // the buildings can be switched off by LAYER while ShowBuildings is still true. In
+            // that state the map looks like a survey plan, hovering a lot did nothing at all, and
+            // there was no error to explain why. Pointing at a lot is a question worth answering
+            // over a town as much as over a drawing.
+            //
+            // The one thing a baked mesh cannot do for itself: a selection changes on every
+            // click, and CityOutlines is built once and frozen.
+            SelectionHighlight.Create(this, transform);
+            HoverHighlight.Create(this, transform);
+
             if (!ShowBuildings)
             {
-                // The one thing a baked mesh cannot do for itself - a selection changes on
-                // every click, and CityOutlines is built once and frozen.
-                SelectionHighlight.Create(this, transform);
-
                 // What somebody who grew up here can add: who lived on a lot, and the shape of
                 // the house if they can still picture it. AuthoredFootprints shows every one
                 // that has been drawn; Footprint is the pen for drawing the next.
@@ -758,6 +777,11 @@ namespace Noir.Unity
         /// </summary>
         private void HandleHotkeys()
         {
+            // NOT WHILE SOMEBODY IS TYPING. Space, x, the digits and the brackets are all bound
+            // here, and 1-6 skip the clock to an hour - so entering a house number used to time
+            // travel. See VillageUI.KeyboardCaptured.
+            if (VillageUI.KeyboardCaptured) return;
+
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
 
