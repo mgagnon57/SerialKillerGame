@@ -1304,14 +1304,6 @@ road alley15 4 1149,1791 1351,1791   # EW, +54m off y=1722
 # So they stay `section0` and `crossroad0`. A convincing invented number is
 # worse than an obvious placeholder: it would read as researched and be fiction,
 # which is exactly how the TIGER curve cost two days.
-road section0 10 0,220 2099,220
-  class track
-road section1 10 0,2180 2099,2180
-  class track
-road crossroad0 10 220,0 220,2399
-  class track
-road crossroad1 10 1880,0 1880,2399
-  class track
 
 # ==========================================================================
 #  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET
@@ -1433,9 +1425,24 @@ place apartment 826,1510 8x6 "the rooms over the laundry"
 place firestation 694,734 28x27 "the Rossville fire house"
   door 708,760
   human The doors are open in all weather and the crew watch the street from inside them.
-place school 533,1121 47x18 "Rossville Elementary"
+place school 533,1121 47x18 "Rossville Grade School"
   door 556,1138
   human Painted every summer and scuffed back to the undercoat by October.
+
+# THE TWO SCHOOLS FACE EACH OTHER ACROSS CHICAGO STREET, which is how the village is
+# actually laid out and what the two OSM school polygons in features.txt have always
+# said: the west one holds the grade school, the east one runs from Green down to
+# Benton - and until now had no school on it at all. That is why the drawing read
+# wrong. Both buildings still stand today with other things in them; this is the 1991
+# arrangement, not the 1906 one in LANDMARKS-1906.md, where the two brick buildings
+# still shared one ground.
+#
+# Kind `school` for both, deliberately. kinds.txt records what splitting it cost the
+# last time somebody tried: a second kind meant PlaceKind.School matched only one of
+# them and Rossville's 165 children had nowhere to go.
+place school 700,1020 60x38 "Rossville-Alvin High School"
+  door 700,1039
+  human The gym doors are propped open on match nights and you can hear it from Benton.
 place watertower 840,854 18x18 "the water tower"
   human The name is painted on it and reads from the section road.
 place elevator 1171,1353 24x34 "the Rossville elevator"

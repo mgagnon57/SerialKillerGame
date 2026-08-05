@@ -98,7 +98,7 @@ namespace Noir.Core.Tests
             TestContext.Out.WriteLine($"turns      = {graph.Turns.Count}");
             TestContext.Out.WriteLine($"entries    = {graph.Entries.Count}");
 
-            Assert.That(world.Roads.Lines.Count, Is.EqualTo(41), "roads in city.txt");
+            Assert.That(world.Roads.Lines.Count, Is.EqualTo(37), "roads in city.txt");
             Assert.That(world.Roads.Junctions.Count, Is.EqualTo(BaselineJunctions));
             Assert.That(graph.Segments.Count, Is.EqualTo(BaselineSegments));
             Assert.That(graph.Turns.Count, Is.EqualTo(BaselineTurns));
@@ -296,15 +296,32 @@ namespace Noir.Core.Tests
         // Freed of having to dodge buildings that are themselves still at pre-refit positions,
         // alleys 2, 3 and 4 moved onto their own right of way and the off-right-of-way count fell
         // from 8 to 5. Junctions 125 -> 126, turns 1216 -> 1212, entries 38 -> 37.
-        private const int BaselineJunctions = 123;
-        private const int BaselineSegments = 494;
-        private const int BaselineTurns = 1218;
-        private const int BaselineEntries = 44;
+        // Re-recorded again after the four placeholder country roads were deleted from
+        // Content/city.txt at the owner's instruction: "remove the unknown cross roads. no idea
+        // what they are." They were section0, section1, crossroad0 and crossroad1 - two dead
+        // straight lines the full width of the map at y=220 and y=2180, two the full height at
+        // x=220 and x=1880. Nothing was ever identified against them: PlanLabels already refused
+        // to name them and drew "UNKNOWN - section0" instead, and RoadsSitOnPublicLandTests
+        // already excluded tracks from the right-of-way check because they run through farmland
+        // the county parcels tile. A road nobody can identify, drawn across the whole plan, costs
+        // more than it tells - and this is a survey drawing of a real town.
+        //
+        // Everything here falls by exactly what four map-length roads were carrying:
+        //   roads     41 -> 37
+        //   junctions 123 -> 111: twelve crossings gone, theirs with each other and the streets.
+        //   segments  494 -> 442
+        //   turns    1218 -> 1088
+        //   entries    44 -> 38
+        private const int BaselineJunctions = 111;
+        private const int BaselineSegments = 442;
+        private const int BaselineTurns = 1088;
+        private const int BaselineEntries = 38;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
-        // Re-recorded for the road refit described above.
+        // Re-recorded for the road refit described above, and again for the removal of the four
+        // placeholder country roads.
         private const string BaselineSegmentChecksum =
-            "55E754FF7D8CF2EFCDB9F2CAC9FDB106ACD59E86EA33C2B6DAB60A3D1FF62F39";
+            "8FCD6CD7D6878747EE26A2B262F7097FF752C4AE7809A66584C939D6B69F35EC";
     }
 }
