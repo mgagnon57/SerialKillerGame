@@ -1,0 +1,225 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
+using Noir.Unity;
+
+namespace Noir.Editor
+{
+    /// <summary>
+    /// Proves that a household typed into the parcel editor survives the trip to disk and back.
+    ///
+    /// WHY THIS EXISTS AS A SCRIPT RATHER THAN AS A CLICK: the household editor never wrote a
+    /// single person. Write() serialised the derived Adults/Kids counts and not note.People, and
+    /// Read() had no `person` branch at all - ReadPerson was written, commented, and called by
+    /// nothing. Within one Play session the drafts carry from lot to lot correctly, so the whole
+    /// failure is invisible until Play stops, which is exactly why it survived a night of
+    /// testing. A round trip that runs without a human is the only honest check.
+    ///
+    /// Runs on a marker file and a domain reload, the same way PerfProbeAutostart does and for
+    /// the same reason - the editor's dynamic-command host does not execute in this project.
+    ///
+    /// SAFETY: Content/parcel-notes.txt is the sole copy of everything anybody has authored about
+    /// this town. The real bytes are read into memory first and written back in a finally, and
+    /// the test parcel id is far outside any real one. Nothing here is allowed to cost a name.
+    /// </summary>
+    [InitializeOnLoad]
+    internal static class NotesRoundTrip
+    {
+        private static readonly string Marker =
+            Path.Combine(Path.GetTempPath(), "noir-notes-roundtrip-please.txt");
+
+        private static readonly string ReportPath =
+            Path.Combine(Path.GetTempPath(), "noir-notes-roundtrip.txt");
+
+        /// <summary>Well outside any real parcel id, so a mistake cannot land on a real lot.</summary>
+        private const int TestId = 900001;
+
+        static NotesRoundTrip()
+        {
+            // SAYS WHY IT DID NOT RUN. The first attempt left the marker sitting there and the
+            // report never appeared, and there are three different reasons that can happen -
+            // no marker, the callback thrown away by a second domain reload, or the editor in
+            // Play. Guessing between them is what wasted a night last time; the log says which.
+            Debug.Log("[notes-roundtrip] loaded. marker=" + File.Exists(Marker));
+            if (!File.Exists(Marker)) return;
+
+            EditorApplication.delayCall += () =>
+            {
+                Debug.Log("[notes-roundtrip] delayCall. marker=" + File.Exists(Marker)
+                        + " isPlaying=" + EditorApplication.isPlaying);
+                if (!File.Exists(Marker)) return;
+
+                // IN PLAY IS A WAIT, NOT A REFUSAL. Play mode is the normal state of this editor
+                // while anybody is testing, and returning here simply lost the request until
+                // somebody happened to reload again. Now it queues itself for the moment Play
+                // stops, which is when the check can actually run.
+                if (EditorApplication.isPlaying)
+                {
+                    EditorApplication.playModeStateChanged += WhenPlayStops;
+
+                    // AND STOPS IT, rather than waiting for somebody to come and do it. Driving
+                    // this from outside meant AppActivate followed by SendKeys("^p"), which has
+                    // to land on the right one of three Unity windows to mean anything - twice it
+                    // did not, and reported success both times, because AppActivate returning
+                    // true says a window was raised and nothing about where the keystroke went.
+                    // There is an API for this and it does not care about focus.
+                    EditorApplication.isPlaying = false;
+                    return;
+                }
+
+                File.Delete(Marker);
+                Run();
+            };
+        }
+
+        private static void WhenPlayStops(PlayModeStateChange change)
+        {
+            if (change != PlayModeStateChange.EnteredEditMode) return;
+            EditorApplication.playModeStateChanged -= WhenPlayStops;
+            if (!File.Exists(Marker)) return;
+            File.Delete(Marker);
+            Run();
+        }
+
+        private static void Run()
+        {
+            var log = new StringBuilder();
+            string notesPath = Path.Combine(ContentLoader.Root, "parcel-notes.txt");
+            string original = File.Exists(notesPath) ? File.ReadAllText(notesPath) : null;
+            int failures = 0;
+
+            log.AppendLine("PARCEL NOTES ROUND TRIP");
+            log.AppendLine("=======================");
+            log.AppendLine("file            : " + notesPath);
+            log.AppendLine("bytes before    : " + (original == null ? "(no file)" : original.Length.ToString()));
+            log.AppendLine();
+
+            try
+            {
+                // ---- the household that goes in ----
+                var wanted = new List<ParcelNotes.Person>
+                {
+                    Person("Testcase", "Ninepenny", 47, false, "curtain-twitcher", "night owl"),
+                    Person("Probe", "Ninepenny", 44, false, "light sleeper"),
+                    Person("Smallfry", "Ninepenny", 8, true),
+                };
+
+                var note = new ParcelNotes.Note
+                {
+                    Adults = 2,
+                    Kids = 1,
+                    Character = "written by NotesRoundTrip, deleted again on the next line",
+                    Zoning = ParcelNotes.Zoning.Residential,
+                }.WithPeople(wanted);
+
+                ParcelNotes.Save(TestId, note);
+
+                // ---- what actually reached the file ----
+                string onDisk = File.ReadAllText(notesPath);
+                var personLines = new List<string>();
+                foreach (var raw in onDisk.Split('\n'))
+                {
+                    var line = raw.Trim();
+                    if (line.StartsWith("parcel " + TestId + " person ")) personLines.Add(line);
+                }
+
+                log.AppendLine("---- 1. did person lines reach the file? ----");
+                log.AppendLine("person lines written : " + personLines.Count + " (want 3)");
+                foreach (var line in personLines) log.AppendLine("   " + line);
+                if (personLines.Count != 3) { failures++; log.AppendLine("   ** FAIL"); }
+                else log.AppendLine("   ok");
+                log.AppendLine();
+
+                // ---- force a genuine re-read, not the cache ----
+                var byId = typeof(ParcelNotes).GetField("_byId",
+                    BindingFlags.NonPublic | BindingFlags.Static);
+                byId.SetValue(null, null);
+
+                var back = ParcelNotes.For(TestId);
+
+                log.AppendLine("---- 2. does it come back? ----");
+                if (back == null)
+                {
+                    failures++;
+                    log.AppendLine("   ** FAIL - the note did not come back at all");
+                }
+                else
+                {
+                    log.AppendLine("people read back : " + back.People.Count + " (want 3)");
+                    if (back.People.Count != wanted.Count) failures++;
+
+                    int n = Mathf.Min(back.People.Count, wanted.Count);
+                    for (int i = 0; i < n; i++)
+                    {
+                        var a = wanted[i];
+                        var b = back.People[i];
+                        bool same = a.First == b.First && a.Last == b.Last
+                                 && a.Age == b.Age && a.Child == b.Child
+                                 && SameTraits(a.Traits, b.Traits);
+                        if (!same) failures++;
+                        log.AppendLine(string.Format("   {0} {1} {2}, {3}, age {4}, [{5}]",
+                            same ? "ok  " : "FAIL", b.First, b.Last,
+                            b.Child ? "child" : "adult", b.Age, string.Join("|", b.Traits.ToArray())));
+                        if (!same)
+                            log.AppendLine(string.Format("        wanted {0} {1}, {2}, age {3}, [{4}]",
+                                a.First, a.Last, a.Child ? "child" : "adult", a.Age,
+                                string.Join("|", a.Traits.ToArray())));
+                    }
+                }
+                log.AppendLine();
+
+                // ---- and put the lot back ----
+                ParcelNotes.Save(TestId, new ParcelNotes.Note());
+                byId.SetValue(null, null);
+
+                log.AppendLine("---- 3. cleanup ----");
+                log.AppendLine("test note removed : " + (ParcelNotes.For(TestId) == null ? "ok" : "** FAIL"));
+                if (ParcelNotes.For(TestId) != null) failures++;
+            }
+            catch (System.Exception e)
+            {
+                failures++;
+                log.AppendLine("** THREW: " + e);
+            }
+            finally
+            {
+                // The real file goes back byte for byte whatever happened above.
+                if (original != null) File.WriteAllText(notesPath, original);
+                typeof(ParcelNotes).GetField("_byId", BindingFlags.NonPublic | BindingFlags.Static)
+                    .SetValue(null, null);
+            }
+
+            string after = File.Exists(notesPath) ? File.ReadAllText(notesPath) : null;
+            log.AppendLine();
+            log.AppendLine("---- 4. the real file is untouched ----");
+            bool intact = original == after;
+            if (!intact) failures++;
+            log.AppendLine("bytes after     : " + (after == null ? "(no file)" : after.Length.ToString()));
+            log.AppendLine("identical       : " + (intact ? "ok" : "** FAIL - RESTORE DID NOT HOLD"));
+            log.AppendLine();
+            log.AppendLine(failures == 0 ? "ALL CHECKS PASSED" : failures + " CHECK(S) FAILED");
+
+            File.WriteAllText(ReportPath, log.ToString());
+            Debug.Log("[notes-roundtrip] " + (failures == 0 ? "PASSED" : failures + " FAILED")
+                    + " - report at " + ReportPath);
+        }
+
+        private static ParcelNotes.Person Person(string first, string last, int age, bool child,
+                                                 params string[] traits)
+        {
+            var p = new ParcelNotes.Person { First = first, Last = last, Age = age, Child = child };
+            foreach (var t in traits) p.Traits.Add(t);
+            return p;
+        }
+
+        private static bool SameTraits(List<string> a, List<string> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++) if (a[i] != b[i]) return false;
+            return true;
+        }
+    }
+}
