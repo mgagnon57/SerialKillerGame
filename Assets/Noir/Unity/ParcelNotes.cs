@@ -38,12 +38,6 @@ namespace Noir.Unity
         public enum Quality { Unset, Derelict, Poor, Fair, Good, Excellent }
 
         /// <summary>
-        /// One person in a household.
-        ///
-        /// Age rather than a birth year, because what the author remembers is "he'd have been
-        /// about sixty" and not a date. Zero means not recorded.
-        /// </summary>
-        /// <summary>
         /// Man, woman, or nobody wrote it down.
         ///
         /// Unrecorded is a real answer and the default one. Most of what gets authored here is
@@ -55,6 +49,13 @@ namespace Noir.Unity
         /// </summary>
         public enum Sex { Unrecorded, Man, Woman }
 
+        /// <summary>
+        /// One person. Named for the household editor it was built for, though a person is not
+        /// owned by a lot any more - a lot points at them, and they may be pointed at by none.
+        ///
+        /// Age rather than a birth year, because what the author remembers is "he'd have been
+        /// about sixty" and not a date. Zero means not recorded.
+        /// </summary>
         public sealed class Person
         {
             /// <summary>
