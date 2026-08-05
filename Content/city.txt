@@ -1358,7 +1358,7 @@ place shop 743,1415 12x16 "the bakery"
   door 754,1423
   human Sells out by ten and does not bake more, on principle.
 place shop 750,1433 12x16 "vacant storefront - was the printing office"
-  door 760,1441
+  door 761,1441
   human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has a printing office here; nobody has said what traded here in 1991.
 place shop 755,1451 12x16 "the hardware"
   door 766,1459

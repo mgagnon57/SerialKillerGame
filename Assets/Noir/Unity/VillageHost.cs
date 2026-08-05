@@ -366,8 +366,11 @@ namespace Noir.Unity
                 World = WorldBuilder.Build(layout);
 
                 var report = WorldValidator.Validate(World);
-                foreach (var problem in report.Errors) Debug.LogError("village.txt: " + problem);
-                foreach (var warning in report.Warnings) Debug.LogWarning("village.txt: " + warning);
+                // NAMED FROM MapFile, not written out. These said "village.txt:" while the game
+                // has loaded city.txt for months, and an error that names the wrong file sends
+                // whoever reads it to go and look at the wrong one - which it did.
+                foreach (var problem in report.Errors) Debug.LogError(MapFile + ": " + problem);
+                foreach (var warning in report.Warnings) Debug.LogWarning(MapFile + ": " + warning);
 
                 var names = NameTable.Parse(ContentLoader.Read("names.txt"));
                 Particulars = ParticularsTable.Parse(ContentLoader.Read("particulars.txt"));
