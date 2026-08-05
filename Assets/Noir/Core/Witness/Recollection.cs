@@ -89,8 +89,11 @@ namespace Noir.Core.Witness
 
                 Tile watcher = world.GetPlace(block.Where).Door;
 
-                SightingClarity clarity = Sightlines.HowGoodALook(watcher, step.Where,
-                                                                  minuteOfDay, who);
+                // THE DATE GOES WITH THE HOUR. Sightlines needs to know the season to know how
+                // dark it is - sunset here moves nearly four hours between the solstices - so it
+                // takes the clock rather than a minute-of-day.
+                var when = new GameClock(GameClock.TickAt(day, minuteOfDay));
+                SightingClarity clarity = Sightlines.HowGoodALook(watcher, step.Where, when, who);
                 if (!Sightlines.SawAnythingAtAll(clarity, watcher, step.Where))
                 {
                     inSight = false;

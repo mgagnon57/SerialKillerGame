@@ -47,20 +47,71 @@ namespace Noir.Core.Tests
                         new HouseholdId(3), new PlaceId(1), new PlaceId(2), 0,
                         0, 128, sociability, new int[0], beats, male: false);
 
+        /// <summary>
+        /// The clock at a given calendar date and minute of the day.
+        ///
+        /// Found by walking forward from the epoch rather than by arithmetic, so these tests do
+        /// not have to know how GameClock maps a day number onto a date. They only have to be
+        /// able to say WHICH SEASON they mean, which is the entire reason Sightlines takes a
+        /// clock instead of a minute now.
+        ///
+        /// minuteOfDay is local standard time, matching both GameClock and Daylight.At.
+        /// </summary>
+        private static GameClock On(int month, int dayOfMonth, int minuteOfDay)
+        {
+            for (int day = 0; day < 800; day++)
+            {
+                var clock = new GameClock(GameClock.TickAt(day, minuteOfDay));
+                if (clock.Month == month && clock.DayOfMonth == dayOfMonth) return clock;
+            }
+            throw new System.ArgumentException(
+                $"no {month}/{dayOfMonth} within two years of the epoch");
+        }
+
         [Test]
         public void CloseAndInDaylightIsAClearLook()
         {
-            var look = Sightlines.HowGoodALook(new Tile(0, 0), new Tile(5, 0), 12 * 60,
-                                               Villager(128));
+            var look = Sightlines.HowGoodALook(new Tile(0, 0), new Tile(5, 0),
+                                               On(6, 21, 12 * 60), Villager(128));
             Assert.That(look, Is.EqualTo(SightingClarity.Clear));
         }
 
         [Test]
         public void TheSameLookAtNightIsWorse()
         {
-            var look = Sightlines.HowGoodALook(new Tile(0, 0), new Tile(5, 0), 2 * 60,
-                                               Villager(128));
+            var look = Sightlines.HowGoodALook(new Tile(0, 0), new Tile(5, 0),
+                                               On(6, 21, 2 * 60), Villager(128));
             Assert.That(look, Is.EqualTo(SightingClarity.Partial));
+        }
+
+        /// <summary>
+        /// THE POINT OF GIVING SIGHTLINES A DATE. Half past six in the evening is broad daylight
+        /// in June and long dark in December at this latitude - sunset moves nearly four hours
+        /// between the solstices - so the same walk past the same gate at the same hour is
+        /// witnessed in one season and unwitnessed in the other.
+        ///
+        /// That sentence is the argument of WHO-SEES-WHOM.md, and the three-band constant this
+        /// replaced could not express any of it: it called 18:30 daylight all year round.
+        /// </summary>
+        [Test]
+        public void TheSameEveningWalkIsSeenInJuneAndNotInDecember()
+        {
+            var watcher = new Tile(0, 0);
+            var subject = new Tile(5, 0);
+            const int HalfPastSix = 18 * 60 + 30;
+
+            var june = Sightlines.HowGoodALook(watcher, subject,
+                                               On(6, 21, HalfPastSix), Villager(128));
+            var december = Sightlines.HowGoodALook(watcher, subject,
+                                                   On(12, 21, HalfPastSix), Villager(128));
+
+            Assert.That(june, Is.EqualTo(SightingClarity.Clear),
+                "the sun is still up over this crossing at half six on midsummer's day");
+            Assert.That(december, Is.EqualTo(SightingClarity.Partial),
+                "it set before half four on the shortest day - this is two hours into the dark");
+            Assert.That(june, Is.Not.EqualTo(december),
+                "if these are equal the date is being ignored and the light model is a constant "
+              + "again, which is the whole thing this replaced");
         }
 
         [Test]
@@ -68,7 +119,7 @@ namespace Noir.Core.Tests
         {
             var watcher = new Tile(0, 0);
             var subject = new Tile(61, 0);
-            var look = Sightlines.HowGoodALook(watcher, subject, 12 * 60, Villager(128));
+            var look = Sightlines.HowGoodALook(watcher, subject, On(6, 21, 12 * 60), Villager(128));
             Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject), Is.False);
         }
 
@@ -78,8 +129,8 @@ namespace Noir.Core.Tests
             var watcher = new Tile(0, 0);
             var subject = new Tile(20, 0);   // the Partial band in daylight
 
-            var ordinary = Sightlines.HowGoodALook(watcher, subject, 12 * 60, Villager(128));
-            var lingerer = Sightlines.HowGoodALook(watcher, subject, 12 * 60,
+            var ordinary = Sightlines.HowGoodALook(watcher, subject, On(6, 21, 12 * 60), Villager(128));
+            var lingerer = Sightlines.HowGoodALook(watcher, subject, On(6, 21, 12 * 60),
                                                    Villager(128, Beat.Lingers));
 
             Assert.That(ordinary, Is.EqualTo(SightingClarity.Partial));
@@ -92,7 +143,7 @@ namespace Noir.Core.Tests
             var watcher = new Tile(0, 0);
             var subject = new Tile(20, 0);
 
-            var withdrawn = Sightlines.HowGoodALook(watcher, subject, 12 * 60, Villager(32));
+            var withdrawn = Sightlines.HowGoodALook(watcher, subject, On(6, 21, 12 * 60), Villager(32));
             Assert.That(withdrawn, Is.EqualTo(SightingClarity.Glimpsed));
         }
 
@@ -109,7 +160,7 @@ namespace Noir.Core.Tests
             var watcher = new Tile(0, 0);
             var subject = new Tile(45, 0);
 
-            var look = Sightlines.HowGoodALook(watcher, subject, 2 * 60, Villager(128));
+            var look = Sightlines.HowGoodALook(watcher, subject, On(6, 21, 2 * 60), Villager(128));
 
             Assert.That(look, Is.EqualTo(SightingClarity.Glimpsed));
             Assert.That(Sightlines.SawAnythingAtAll(look, watcher, subject), Is.True);
