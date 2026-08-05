@@ -1063,6 +1063,25 @@ namespace Noir.Unity
             if (showing == NoteTab.Lot)
             {
 
+            // AN EMPTY LOT SAYS SO, AND OFFERS THE WAY IN. This is the "add occupants" route for
+            // a lot nobody lives on: the tab strip sent you here BECAUSE it is empty, so the one
+            // thing this tab must not do is leave you hunting for where the people went.
+            //
+            // Safe to make conditional on the draft count because nothing in this pass changes
+            // it - every control that adds or removes a person lives on the other tab, which is
+            // not being drawn.
+            if (_draftPeople.Count == 0)
+            {
+                GUILayout.Label("<color=#8a8a86>nobody lives here yet</color>", _small);
+                if (GUILayout.Button("add occupants", _button,
+                                     GUILayout.Height(S(22f)), GUILayout.Width(S(160f))))
+                {
+                    _noteTab = NoteTab.Occupants;
+                    _tabPinned = true;
+                }
+                GUILayout.Space(S(8f));
+            }
+
             // ---- WHAT TRADED HERE ----
             //
             // First in this column, above zoning, because for the downtown it is the question.

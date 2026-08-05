@@ -347,11 +347,48 @@ namespace Noir.Editor
                 ParcelNotes.Save(SpareId, new ParcelNotes.Note());
                 log.AppendLine();
 
+                // ---- 8. a move keeps the whole person ----
+                //
+                // The reason ids exist at all. Traits, age and sex must survive changing houses,
+                // because the alternative - retyping them at the other end - is exactly how they
+                // get lost, and it is what the old parcel-owned format forced.
+                log.AppendLine("---- 8. moving house ----");
+                byId.SetValue(null, null);
+                var fromLot = new ParcelNotes.Note();
+                ParcelNotes.SetResidents(fromLot, new List<ParcelNotes.Person>
+                {
+                    Person("Mover", "Eighteenpenny", 52, false, ParcelNotes.Sex.Woman,
+                           "keeps bees", "won't cross the county line"),
+                });
+                ParcelNotes.Save(TestId, fromLot);
+                int moverId = fromLot.Lives[0];
+
+                ParcelNotes.Save(TestId, new ParcelNotes.Note());      // leaves the first house
+                var toLot = new ParcelNotes.Note();
+                ParcelNotes.SetResidents(toLot, new List<ParcelNotes.Person>
+                                                { ParcelNotes.PersonById(moverId).Copy() });
+                ParcelNotes.Save(SpareId, toLot);
+                byId.SetValue(null, null);                             // genuine re-read
+
+                var moved = ParcelNotes.Residents(ParcelNotes.For(SpareId));
+                bool wholeMove = moved.Count == 1
+                              && moved[0].Id == moverId
+                              && moved[0].First == "Mover"
+                              && moved[0].Age == 52
+                              && moved[0].Which == ParcelNotes.Sex.Woman
+                              && moved[0].Traits.Count == 2
+                              && moved[0].Traits.Contains("keeps bees");
+                log.AppendLine("same id, same traits, new lot : " + (wholeMove ? "ok" : "** FAIL"));
+                if (!wholeMove) failures++;
+                ParcelNotes.Save(SpareId, new ParcelNotes.Note());
+                ParcelNotes.DeletePerson(moverId);
+                log.AppendLine();
+
                 // ---- and put the lot back ----
                 ParcelNotes.Save(TestId, new ParcelNotes.Note());
                 byId.SetValue(null, null);
 
-                log.AppendLine("---- 8. cleanup ----");
+                log.AppendLine("---- 9. cleanup ----");
                 log.AppendLine("test note removed : " + (ParcelNotes.For(TestId) == null ? "ok" : "** FAIL"));
                 if (ParcelNotes.For(TestId) != null) failures++;
             }
@@ -370,7 +407,7 @@ namespace Noir.Editor
 
             string after = File.Exists(notesPath) ? File.ReadAllText(notesPath) : null;
             log.AppendLine();
-            log.AppendLine("---- 9. the real file is untouched ----");
+            log.AppendLine("---- 10. the real file is untouched ----");
             bool intact = original == after;
             if (!intact) failures++;
             log.AppendLine("bytes after     : " + (after == null ? "(no file)" : after.Length.ToString()));
