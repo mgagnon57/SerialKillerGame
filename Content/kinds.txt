@@ -584,6 +584,31 @@ kind icecream
   catchment no
   describe  yes
 
+# A COIN LAUNDRY, which is not a carwash however the row above reads. The building on Attica
+# was carrying the 1913 name "steam laundry" over a carwash's kind and a carwash's description -
+# three things disagreeing - and the man who grew up here says it was a laundromat.
+#
+# No counter, because nobody serves you: you feed the machine and wait, which is the difference
+# between this and every other shop in town. And the long hours are the point of having it on a
+# map about a killer - it is lit and open when the rest of the street is dark, so somebody
+# sitting in it at eleven at night is an ordinary sight rather than a suspicious one.
+kind laundry
+  words     laundry laundromat
+  form      building
+  rooms     auto
+  grammar   open
+  roof      yes
+  frontage  shop
+  massing   shopfront
+  props     none
+  counter   no
+  hours     06:00-22:00
+  jobs      1
+  roles     attendant
+  shifts    one
+  catchment no
+  describe  yes
+
 kind carwash
   words     carwash
   form      building

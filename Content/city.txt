@@ -1312,9 +1312,9 @@ road alley15 4 1149,1791 1351,1791   # EW, +54m off y=1722
 place casino 694,1282 22x35 "the Opera House"
   door 715,1299
   human Open all night, and the carpet is loud enough that nobody notices the hour.
-place cinema 684,1258 22x22 "the Motion Picture house"
+place shop 684,1258 22x22 "vacant - was the Motion Picture house"
   door 705,1269
-  human Two screens, one of which has been showing the same film since spring.
+  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. A picture house this size did not survive to 1991 in a town of 1,300 - most of them shut in the sixties - but the building is a real 22 by 22 on the plan and something was in it.
 place bank 675,1227 22x29 "the Rossville bank"
   door 696,1241
   human Marble that was meant to look permanent.
@@ -1390,18 +1390,15 @@ place shop 785,1386 10x13 "the meat market"
 place shop 790,1401 10x13 "the barber"
   door 790,1407
   human A tailor who has outlived three fashions and expects to outlive a fourth.
-place carwash 794,1416 13x10 "the steam laundry"
+place laundry 794,1416 13x10 "the laundromat"
   door 794,1421
-  human A place people leave a car and walk away from for ten minutes.
+  human Washers along one wall, dryers along the other, and whoever is waiting on them. Open when nothing else on the street is.
 place restroom 799,1428 8x14 "the rest room"
   door 799,1435
   human Council-green tile and a door that does not lock.
-place shop 804,1444 10x11 "the second drug store"
+place shop 804,1444 10x11 "vacant storefront - was the second drug store"
   door 804,1449
-  human The window has not changed since the coronation and neither has the smell.
-place newsstand 808,1457 3x7 "the news stand"
-  door 808,1460
-  human Papers, cigarettes, and the man who knows who bought which.
+  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. There was one drug store in this town and it is a block north; nobody has said what traded here in 1991.
 place apartment 818,1486 8x6 "the rooms over the grocer"
   door 818,1489
   units 3
