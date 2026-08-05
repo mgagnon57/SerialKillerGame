@@ -20,6 +20,10 @@ namespace Noir.Unity
 
         private VillageHost _host;
         private GUIStyle _panel, _label, _title, _small, _button, _clock;
+
+        /// <summary>The tab strip: the selected tab, an unselected one, and the rule under
+        /// them that joins the selected one to the panel below it.</summary>
+        private GUIStyle _tabOn, _tabOff, _tabRule;
         private bool _stylesReady;
         private bool _scaleLoaded;
         private Vector2 _scroll;
@@ -163,6 +167,50 @@ namespace Noir.Unity
             _small.normal.textColor = new Color(0.72f, 0.72f, 0.70f);
 
             _button = new GUIStyle(GUI.skin.button) { fontSize = F(13), richText = true };
+
+            // ---- TABS, WHICH HAVE TO LOOK LIKE TABS ----
+            //
+            // Tinting two ordinary buttons green did not read as a tab strip - it read as two
+            // buttons, which is what it was. What makes a tab a tab is that it JOINS the thing
+            // below it: no gap between them, the selected one the same colour as the panel it
+            // opens onto, the unselected one recessed and dim, and a rule along the bottom that
+            // the selected tab sits on rather than above.
+            //
+            // Margins are zeroed so the two touch. A one-pixel texture stretches with no border,
+            // which is all the shape this needs.
+            int tabPad = Mathf.RoundToInt(S(8f));
+            var lit = new Color(0.20f, 0.27f, 0.22f, 1f);
+
+            _tabOn = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = F(13), richText = true, fontStyle = FontStyle.Bold,
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(tabPad, tabPad, tabPad, tabPad),
+                border = new RectOffset(0, 0, 0, 0),
+            };
+            _tabOn.normal.background = SolidTexture(lit);
+            _tabOn.hover.background = _tabOn.normal.background;
+            _tabOn.active.background = _tabOn.normal.background;
+            _tabOn.onNormal.background = _tabOn.normal.background;
+            _tabOn.normal.textColor = new Color(0.96f, 0.94f, 0.88f);
+            _tabOn.hover.textColor = _tabOn.normal.textColor;
+            _tabOn.active.textColor = _tabOn.normal.textColor;
+
+            _tabOff = new GUIStyle(_tabOn) { fontStyle = FontStyle.Normal };
+            _tabOff.normal.background = SolidTexture(new Color(0.10f, 0.11f, 0.12f, 1f));
+            _tabOff.hover.background = SolidTexture(new Color(0.15f, 0.17f, 0.18f, 1f));
+            _tabOff.active.background = _tabOff.hover.background;
+            _tabOff.normal.textColor = new Color(0.58f, 0.57f, 0.53f);
+            _tabOff.hover.textColor = new Color(0.86f, 0.84f, 0.79f);
+            _tabOff.active.textColor = _tabOff.hover.textColor;
+
+            _tabRule = new GUIStyle
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                border = new RectOffset(0, 0, 0, 0),
+            };
+            _tabRule.normal.background = SolidTexture(lit);
 
             // The clock is the one thing you should never have to hunt for.
             _clock = new GUIStyle(_label) { fontSize = F(26), fontStyle = FontStyle.Bold };
@@ -915,7 +963,14 @@ namespace Noir.Unity
             }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
-            GUILayout.Space(S(8f));
+
+            // The rule the selected tab sits ON. Drawn immediately under the strip with no gap,
+            // in the same colour as the selected tab, so that tab joins the panel below it and
+            // the other one is left standing above the line. That join is the whole difference
+            // between a tab strip and two buttons in a row.
+            GUILayout.Box(GUIContent.none, _tabRule, GUILayout.Height(S(3f)),
+                          GUILayout.ExpandWidth(true));
+            GUILayout.Space(S(10f));
 
             _noteScroll = GUILayout.BeginScrollView(_noteScroll);
 
@@ -933,12 +988,22 @@ namespace Noir.Unity
             var generated = Households.For(parcelId);
             if (generated != null && _draftPeople.Count == 0)
             {
-                GUILayout.Label($"<color=#8a8a86>in {GameClock.EpochYear}, {generated.Family} "
+                // SAID PLAINLY, because it was read as a mode switch. It is not: the rows below
+                // are always editable and there is no view mode to leave. This is a MADE-UP
+                // household the generator works out from the county's record for this lot -
+                // owner-occupied or rented, over-65 exemption or not, how much dwelling is
+                // assessed - with the names drawn from names.txt. It is not saved and nobody
+                // lives here because of it. The button copies it into the rows below so there is
+                // something to correct rather than something to type from nothing.
+                GUILayout.Label("<color=#8a8a86><b>a guess, not saved</b> - the generator's idea of "
+                              + $"{GameClock.EpochYear} from the county record</color>", _small);
+                GUILayout.Label($"<color=#8a8a86>   {generated.Family} "
                               + $"{(generated.Rented ? "rented here" : "lived here")}</color>", _small);
                 foreach (var person in generated.Members)
-                    GUILayout.Label($"<color=#75736e>   {person.Forename} {generated.Surname}, "
+                    GUILayout.Label($"<color=#75736e>      {person.Forename} {generated.Surname}, "
                                   + $"{person.Age}</color>", _small);
-                if (GUILayout.Button("use this household", _button, GUILayout.Height(S(22f))))
+                if (GUILayout.Button("copy this into the rows below", _button,
+                                     GUILayout.Height(S(22f)), GUILayout.Width(S(240f))))
                 {
                     _draftPeople.Clear();
                     foreach (var person in generated.Members)
@@ -1238,16 +1303,10 @@ namespace Noir.Unity
         /// returning the moment a button reports a click draws fewer, and the reward is a
         /// "Mismatched LayoutGroup" exception rather than a working menu.
         /// </summary>
-        /// <summary>A tab in the parcel panel's strip. Lit when it is the one being shown.</summary>
-        private bool TabButton(string label, bool active)
-        {
-            var was = GUI.backgroundColor;
-            if (active) GUI.backgroundColor = new Color(0.36f, 0.52f, 0.38f);
-            bool hit = GUILayout.Button(active ? "• " + label : label, _button,
-                                        GUILayout.Height(S(26f)), GUILayout.Width(S(180f)));
-            GUI.backgroundColor = was;
-            return hit;
-        }
+        /// <summary>One tab in the parcel panel's strip. See _tabOn/_tabOff in BuildStyles.</summary>
+        private bool TabButton(string label, bool active) =>
+            GUILayout.Button(label, active ? _tabOn : _tabOff,
+                             GUILayout.Height(S(30f)), GUILayout.Width(S(190f)));
 
         private T EnumField<T>(string id, string label, T value, System.Func<T, string> pretty)
             where T : struct, System.Enum
