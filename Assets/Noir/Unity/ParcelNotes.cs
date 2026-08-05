@@ -251,6 +251,8 @@ namespace Noir.Unity
                     note.Business = Unquote(rest.Substring(9));
                 else if (rest.StartsWith("trade "))
                     note.Trade = Unquote(rest.Substring(6));
+                else if (rest.StartsWith("person "))
+                    ReadPerson(note, rest.Substring(7));
                 else if (rest.StartsWith("names "))
                     note.Names = Unquote(rest.Substring(6)).Replace("|", "\n");
                 else if (rest.StartsWith("household "))
@@ -443,6 +445,27 @@ namespace Noir.Unity
                     sb.AppendLine($"parcel {id} character \"{Quote(note.Character)}\"");
                 if (note.Adults != 0 || note.Kids != 0)
                     sb.AppendLine($"parcel {id} household {note.Adults} {note.Kids}");
+
+                // THE PEOPLE THEMSELVES. This was missing, and its absence is the whole reason
+                // the household editor could not keep anything: a name typed into it lived in
+                // memory, survived being clicked away from - because the drafts carry - and was
+                // dropped on the floor the moment it reached disk. Only the derived Adults/Kids
+                // counts above went out, so a reload gave back "two adults and a child" with no
+                // idea who they were. ReadPerson had been written to parse these lines and was
+                // never called by anything, at either end.
+                //
+                // The traits field is written even when it is empty, so the age token in front of
+                // it always has a space after it and the line keeps one shape whether somebody
+                // has traits or not. NextField reads a bare token by looking for that space.
+                foreach (var who in note.People)
+                {
+                    if (string.IsNullOrWhiteSpace(who.First) && string.IsNullOrWhiteSpace(who.Last))
+                        continue;
+                    sb.AppendLine($"parcel {id} person {(who.Child ? "child" : "adult")} "
+                                + $"\"{Quote(who.First ?? "")}\" \"{Quote(who.Last ?? "")}\" "
+                                + $"{who.Age} \"{Quote(string.Join("|", who.Traits))}\"");
+                }
+
                 if (!string.IsNullOrWhiteSpace(note.Names))
                     sb.AppendLine($"parcel {id} names \"{Quote(note.Names.Replace("\n", "|"))}\"");
                 if (note.Zoning != Zoning.Unset)
