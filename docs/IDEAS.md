@@ -564,6 +564,15 @@ fire** — see `docs/HANDOFF.md`.
 
 - [x] ~~Downtown block interiors are flat paving.~~ DONE - `CityDistrict.Interior`, 753 things across the twenty-three blocks that get a perimeter. Laid on a seven-metre lattice, one thing to a cell, and every piece MEASURED to fit inside one, so nothing can reach its neighbour and no clearance check is needed - the same guarantee the parking bays got two items up, arrived at the same way. Forty-four percent of cells stay empty (a yard packed to its edges is a car park) and one column is kept clear end to end, because a yard nothing can drive into is a courtyard. LOW BUILDINGS WERE TRIED AND DROPPED: `Squarehouse_Garage_City` is the pack's only low outbuilding and almost all of it is on `M_Universal_A` - the same sand-coloured atlas behind the tan slab - so a yard of them renders as featureless cream boxes from directly overhead, which is how this game is looked at half the time. Blank placeholder geometry is a worse answer than the bare paving it was meant to fix, so the yards are bins, skips, boxes and vehicles: things that read as themselves from above. If a low outbuilding is ever wanted here it needs a model that is not on the universal atlas. `block-yard.png` added to the CityShot set. MapAudit clean, PlayMode 7/7. — *2026-07-31*
 
+- [ ] Age the town across the 1991-2013 window. The build targets 1991 (see
+  `docs/research/THE-ERA.md`); the twenty-two years after it are a separate feature and this is
+  it. The events are already sourced and dated: the February 2004 fire takes about a quarter of
+  the downtown commercial block, Rossville-Alvin High School closes in 2006, and the antique
+  district that carries downtown in 1991 is gone by the end. Deterioration is not only decay -
+  a shop empties, a roof goes, a lot clears, but the school building stays up with something
+  else in it. The owner: *"For now I want it as close to 1991 as possible. Add deterioration
+  later."* — *2026-08-04*
+
 ## People
 
 - [x] ~~The people are capsules.~~ DONE - `AgentBody`, 365 of them, bought and animated, and NO

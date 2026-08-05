@@ -25,14 +25,22 @@ namespace Noir.Editor
         static PerfProbeAutostart()
         {
             if (!File.Exists(Marker)) return;
-            File.Delete(Marker);
 
             // Not from the static constructor itself. The editor is still assembling itself at
             // that point and setting isPlaying here is unreliable; delayCall runs once the
             // editor has finished coming up.
             EditorApplication.delayCall += () =>
             {
+                // The marker is deleted HERE, at the moment of actually going, and not in the
+                // constructor above. Deleting it early loses the request outright whenever a
+                // second domain reload lands before this callback fires - a .meta import is
+                // enough - because the reload throws the callback away and the marker it would
+                // have re-read is already gone. Observed: "marker consumed" reported, and no
+                // probe ever ran.
+                if (!File.Exists(Marker)) return;
                 if (EditorApplication.isPlaying) return;
+                File.Delete(Marker);
+
                 Debug.Log("[probe] autostart marker found - beginning probe.");
                 PerfProbe.Begin();
             };

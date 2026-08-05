@@ -13,14 +13,37 @@
 #  these numbers in code (see CountyRecord.cs), never baked in here, so the
 #  derivation can be corrected without the source data being touched.
 #
-#  NO OWNER NAMES, DELIBERATELY. The county publishes them and this file could
-#  trivially carry them. It does not, and must not: Rossville is a real town of
-#  about 1,300 real people, this is a game about someone murdering the
-#  residents of it, and the same records flag which owners are over 65 and
-#  which live alone. Real addresses are geography. Real names at those
-#  addresses would make real, identifiable, living people into the victims of
-#  a murder simulation without their knowledge. Households are generated from
-#  Content/names.txt instead. Do not "improve" this by adding the name field.
+#  OWNER NAMES: RULE CHANGED BY THE OWNER, 2026-08-04.
+#
+#  This file used to say NO OWNER NAMES, DELIBERATELY, on the grounds that real
+#  names at real addresses would make identifiable living people into the
+#  victims of a murder simulation. The owner has reversed that, in his words:
+#  "this will never ship with any real names ... this is just for researching
+#  who lived where ... note to not ship it out to sources with real names, but
+#  I need them for design."
+#
+#  So the rule is now about WHERE A NAME MAY GO, not whether one may be looked
+#  up. Three things hold, and they are the whole of it:
+#
+#    1. NOTHING SHIPS WITH A REAL NAME. Households in the built game are
+#       generated from Content/names.txt, which is tuned for Rossville in 1991
+#       - Kentucky/Ohio/Indiana stock with an Irish railroad minority. A real
+#       name may inform which household goes where; it may not BE the household.
+#
+#    2. NO REAL NAME LEAVES THIS MACHINE. Not into a web search, not into an
+#       API call, not into a bug report, not into a commit message. Research a
+#       name locally and it stays local. This is the "no shipping it out to
+#       sources" the owner asked to have written down.
+#
+#    3. THE ANALYSIS THAT WORRIED US STILL WORRIES US. TXOV65 and TXOWOC flag
+#       which owners are over 65 and which live alone. Joining those to real
+#       names produces a list of isolated elderly people at real addresses.
+#       That join is not design research and there is no version of this game
+#       that needs it.
+#
+#  The name field is still not in this file, because the source download does
+#  not contain one - see the FIELDS list below. Adding names is a separate,
+#  deliberate act against a separate source, not something to slip in here.
 #
 #  FIELDS
 #    pin        the county's parcel identification number

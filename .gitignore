@@ -85,3 +85,30 @@ Assets/InitTestScene*.unity.meta
 
 # A report about a Unity account. Redacted, but not something to commit.
 ai-probe.txt
+
+# ---- REAL NAMES STAY ON THIS MACHINE ----
+#
+# The owner reversed the old NO OWNER NAMES rule on 2026-08-04 so that real 1991
+# residents can be researched for design - who lived where, how households sat on
+# the street. See the header of Content/parcel-county.txt for the full wording.
+#
+# Two of his three conditions are about where a name may GO: nothing ships with a
+# real name, and no real name leaves this machine. THIS REPO PUSHES TO
+# github.com/mgagnon57/SerialKillerGame, which is exactly the kind of leaving he
+# meant - a public remote, and git never forgets. So the rule gets a mechanism
+# instead of a memory: anything holding a real name lives in one of these and is
+# ignored here, so forgetting is not enough to publish it.
+Content/private/
+docs/research/private/
+*.private.txt
+*.private.md
+
+# THE AUTHORED NOTES ARE LOCAL. Content/parcel-notes.txt is written by the game's own
+# parcel editor and now carries NAMES - who lived on a lot, what traded there. This repo
+# pushes to a public GitHub remote, so a tracked notes file means every name typed into
+# the editor is published on the next push. Untracked 2026-08-04 for that reason; see the
+# header of Content/parcel-county.txt for the rule it belongs to. Keep your own backup -
+# it is the only copy of everything you have authored.
+Content/parcel-notes.txt
+Content/parcel-notes.txt.bak
+Content/parcel-notes.txt.tmp

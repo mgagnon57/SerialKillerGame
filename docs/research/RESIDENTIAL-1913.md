@@ -90,7 +90,7 @@ Roughly **60% of platted lots carry a house** in 1913. The current generator fil
 given. Leaving four lots in ten empty is not a shortcut — it is what the record shows, and it is
 also why the county parcel data (median lot 1,011 m², a quarter acre) reads as generous.
 
-By **2000**, the game's setting, occupancy is higher — the 1920s–40s bungalow layer filled much of
+By the **1991–2013** window (see `THE-ERA.md`), occupancy is higher — the 1920s–40s bungalow layer filled much of
 that gap, which is why the median build year is 1943. So: **1913 fabric, 2000 density.** The empty
 lots of 1913 are where the bungalows went.
 

@@ -201,7 +201,8 @@ to encourage redevelopment.
 Sources: [News-Gazette](https://www.news-gazette.com/living/rossville-changes-after-2004-fire-with-times/article_5002a309-9179-4bf2-8bea-b2d43addf418.html),
 [HIYOB](https://historyinyourownbackyard.com/video/historic-rossville-illinois/).
 
-> For a game set in **1995–2006**, the 2004 fire falls *inside the story's window*. The downtown
+> For a game set in **1991–2013** (see `THE-ERA.md`, which is canonical), the 2004 fire
+> falls *inside the story's window*. The downtown
 > changes shape partway through the period being simulated.
 
 **And the antique trade was already dying when it burned.** eBay had been eroding the small-town
