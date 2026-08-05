@@ -650,6 +650,7 @@ namespace Noir.Unity
             _draftNames = saved?.Names ?? "";
             _draftPeople.Clear();
             _traitsOpenFor = -1;
+            _rosterOpen = false;
             if (saved != null)
                 foreach (var who in ParcelNotes.Residents(saved)) _draftPeople.Add(who.Copy());
 
@@ -694,6 +695,9 @@ namespace Noir.Unity
 
         /// <summary>Which person's trait picker is open, by index. -1 for none.</summary>
         private int _traitsOpenFor = -1;
+
+        /// <summary>Whether the unhoused list is showing. Drawn inline - see DrawRoster.</summary>
+        private bool _rosterOpen;
 
         private enum NoteTab { Occupants, Lot }
 
@@ -799,6 +803,55 @@ namespace Noir.Unity
         /// that is then abandoned arrives in the roster - recoverable - rather than being
         /// discarded, which is not.
         /// </summary>
+        /// <summary>
+        /// The people who live nowhere, with a way to put one in this house.
+        ///
+        /// Drawn INLINE rather than as a floating window, like the trait picker and the enum
+        /// dropdowns above it, because a popup inside a scroll view is clipped by the scroll
+        /// view and the bottom of the list becomes unreachable. This file has learned that once
+        /// already and the comment on EnumField says so.
+        /// </summary>
+        private void DrawRoster()
+        {
+            var loose = ParcelNotes.Unhoused();
+
+            // ANYBODY ALREADY IN THE ROWS ABOVE IS NOT OFFERED AGAIN. They are still unhoused on
+            // disk until the save lands, so without this somebody you just placed sits in their
+            // own roster, one line below themselves.
+            var drafted = new System.Collections.Generic.HashSet<int>();
+            foreach (var who in _draftPeople) if (who.Id > 0) drafted.Add(who.Id);
+
+            int shown = 0;
+            int placeId = -1, deleteId = -1;
+
+            foreach (var who in loose)
+            {
+                if (drafted.Contains(who.Id)) continue;
+                shown++;
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"<color=#d8cfa8>   {who.FullName}</color>"
+                              + (who.Age > 0 ? $"<color=#75736e>, {who.Age}</color>" : ""),
+                                _small, GUILayout.Width(S(300f)));
+                if (GUILayout.Button("place", _button, GUILayout.Width(S(64f)))) placeId = who.Id;
+                if (GUILayout.Button("delete", _button, GUILayout.Width(S(64f)))) deleteId = who.Id;
+                GUILayout.EndHorizontal();
+            }
+
+            if (shown == 0)
+                GUILayout.Label("<color=#75736e>   nobody is between houses</color>", _small);
+
+            // BOTH DEFERRED OUT OF THE LOOP. Adding to the drafts or deleting a record mid-draw
+            // changes how many controls IMGUI lays out between its Layout and Repaint passes,
+            // and the reward for that is a torn panel rather than a placed lodger.
+            if (placeId > 0)
+            {
+                var who = ParcelNotes.PersonById(placeId);
+                if (who != null) _draftPeople.Add(who.Copy());
+            }
+            if (deleteId > 0) ParcelNotes.DeletePerson(deleteId);
+        }
+
         private ParcelNotes.Note DraftNote(ParcelNotes.Note saved)
         {
             var note = new ParcelNotes.Note
@@ -964,9 +1017,15 @@ namespace Noir.Unity
                 GUILayout.Space(S(4f));
             }
 
-            // Removal deferred out of the loop: mutating the list mid-draw changes how many
-            // controls IMGUI lays out between its Layout and Repaint passes, and the reward for
-            // that is a torn layout rather than a deleted person.
+            // REMOVED FROM THE HOUSE, NOT FROM THE WORLD. Dropping somebody from the drafts means
+            // the next save writes a residents list without them - and since nothing here deletes
+            // their record, they turn up in the roster below. That is also how you move a family:
+            // remove them here, place them there, and their age and traits come with them.
+            // The only thing in the project that deletes a person is the roster's own button.
+            //
+            // Deferred out of the loop: mutating the list mid-draw changes how many controls
+            // IMGUI lays out between its Layout and Repaint passes, and the reward for that is a
+            // torn layout rather than a removed person.
             if (removeAt >= 0)
             {
                 _draftPeople.RemoveAt(removeAt);
@@ -983,7 +1042,17 @@ namespace Noir.Unity
             if (GUILayout.Button("+ child", _button, GUILayout.Height(S(22f))))
                 _draftPeople.Add(new ParcelNotes.Person
                     { Last = MothersSurname(), Child = true, Age = 0 });
+
+            // CAPTURED BEFORE THE BUTTON THAT CHANGES IT, for the same reason as the tabs: the
+            // list below is a different number of controls, and deciding on the fresh value
+            // would draw more of them than the layout pass allowed for.
+            bool rosterShowing = _rosterOpen;
+            if (GUILayout.Button(rosterShowing ? "from roster ▲" : "from roster ▾", _button,
+                                 GUILayout.Height(S(22f))))
+                _rosterOpen = !rosterShowing;
             GUILayout.EndHorizontal();
+
+            if (rosterShowing) DrawRoster();
 
             GUILayout.Space(S(4f));
             GUILayout.Label("<color=#8a8a86>what they're like - the seed for behaviour</color>", _small);
