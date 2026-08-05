@@ -442,15 +442,37 @@ namespace Noir.Unity
             int baseKinds = Materials3D.GroundOrder.Length;
             int zonedKinds = System.Enum.GetValues(typeof(Materials3D.ZonedGround)).Length;
             int pasture = baseKinds + zonedKinds;
-            int submeshes = pasture + 1;
+
+            // One more after the pasture: the darker green a dwelling's footprint is painted in
+            // when the buildings themselves are switched off. Appended rather than folded into
+            // GroundOrder for the same reason the zoned kinds are - it is not a terrain anybody
+            // placed on the map, it is a way of drawing one.
+            int dwelling = pasture + 1;
+            int submeshes = dwelling + 1;
 
             var materials = new Material[submeshes];
             for (int i = 0; i < submeshes; i++)
-                materials[i] = i == pasture
-                    ? Materials3D.Pasture
-                    : i < baseKinds
-                        ? Materials3D.ForTerrain(Materials3D.GroundOrder[i])
-                        : Materials3D.ForZoned((Materials3D.ZonedGround)(i - baseKinds));
+                materials[i] = i == dwelling
+                    ? Materials3D.Dwelling
+                    : i == pasture
+                        ? Materials3D.Pasture
+                        : i < baseKinds
+                            ? Materials3D.ForTerrain(Materials3D.GroundOrder[i])
+                            : Materials3D.ForZoned((Materials3D.ZonedGround)(i - baseKinds));
+
+            // WHICH LOTS THE COUNTY CALLS RESIDENTIAL, rasterised once into a mask.
+            //
+            // The lot, not the house on it. A dwelling's own footprint is a few tiles and reads
+            // as nothing from a survey view; the LOT is what the eye is looking for when the
+            // question is "which parts of town are people living in".
+            //
+            // Zoning is CountyRecord's reading of the assessor's class codes - 0011 Homesite,
+            // 0040 Improved Residential Lot, 0050 six-units-and-over - not anything invented
+            // here. Rasterised per parcel over its own bounding box rather than asked per tile,
+            // because 5,040,000 tiles against 794 polygons is a hundred million point-in-polygon
+            // tests and this is a few hundred thousand.
+            var residential = VillageHost.FlatGroundColour
+                ? ResidentialMask(world.Width, world.Height) : null;
 
             // The far rim is inclusive because the riser pass below walks one PAST the last
             // tile on both axes: a riser at x == world.Width is the cut edge of the last column
@@ -503,6 +525,8 @@ namespace Noir.Unity
                     && (terrain == Terrain.Wall || terrain == Terrain.Floor))
                     terrain = Terrain.Grass;
 
+                bool isResidential = residential != null && residential[gy, gx];
+
                 float h00 = corner[gy, gx];
                 float h10 = corner[gy, gx + 1];
                 float h11 = corner[gy + 1, gx + 1];
@@ -519,8 +543,15 @@ namespace Noir.Unity
                     //
                     // Water is the one exception, kept blue on the owner's call: the North Fork
                     // is a landmark you navigate the map by.
+                    // A residentially zoned LOT is the third exception, after water: the same
+                    // green a quarter darker, so where the town actually lives reads at a
+                    // glance. Its HEIGHT is still grass - hiding the footprints was about losing
+                    // the 2 cm step into a floor, and a patch that read darker but stood proud
+                    // would put that straight back.
                     bool wet = terrain == Terrain.Water;
-                    submeshGrid[gy, gx] = SubmeshFor(wet ? Terrain.Water : Terrain.Grass);
+                    submeshGrid[gy, gx] = wet ? SubmeshFor(Terrain.Water)
+                                        : isResidential ? dwelling
+                                        : SubmeshFor(Terrain.Grass);
                     flatGrid[gy, gx] = HeightOf(wet ? Terrain.Water : Terrain.Grass);
                 }
                 else
@@ -911,6 +942,77 @@ namespace Noir.Unity
                              + "chunk and will vanish from angles it should be visible at.");
                 return;
             }
+        }
+
+        /// <summary>
+        /// Every tile inside a lot the county's class code calls residential.
+        ///
+        /// Scanline point-in-polygon, per parcel, over that parcel's own bounding box. A lot is
+        /// tens of metres across and there are 794 of them, so this touches a few hundred
+        /// thousand tiles once - against the hundred million tests that asking every tile which
+        /// parcel it is in would cost.
+        ///
+        /// Returns null rather than an empty mask when there are no parcels or no county
+        /// records, so the caller draws plain grass and nothing pretends to know a zoning it
+        /// does not have.
+        /// </summary>
+        private static bool[,] ResidentialMask(int width, int height)
+        {
+            var parcels = ParcelIndex.All;
+            if (parcels.Count == 0) return null;
+
+            var mask = new bool[height, width];
+            int lots = 0, tiles = 0;
+
+            int unrecorded = 0;
+            foreach (var parcel in parcels)
+            {
+                // EIGHTEEN OF THE 794 HAVE NO COUNTY RECORD. parcel-county.txt says so on its
+                // second line - 776 matched by nearest centroid - and For() returns null for the
+                // rest. Unguarded that is a NullReferenceException inside BuildGround, which
+                // aborts VillageHost.Awake half built and shows as a black screen.
+                var record = CountyRecord.For(parcel.Id);
+                if (record == null) { unrecorded++; continue; }
+                if (record.Zoning != ParcelNotes.Zoning.Residential) continue;
+                lots++;
+
+                var p = parcel.Points;
+                var b = parcel.Bounds;
+                int x0 = Mathf.Max(0, Mathf.FloorToInt(b.xMin));
+                int x1 = Mathf.Min(width - 1, Mathf.CeilToInt(b.xMax));
+                int y0 = Mathf.Max(0, Mathf.FloorToInt(b.yMin));
+                int y1 = Mathf.Min(height - 1, Mathf.CeilToInt(b.yMax));
+
+                for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    // Tile centres, so a lot line running along a tile edge lands on one side of
+                    // it rather than on both - neighbouring lots would otherwise each claim the
+                    // shared boundary and the seam would read a tile wide.
+                    if (mask[y, x] || !Inside(p, x + 0.5f, y + 0.5f)) continue;
+                    mask[y, x] = true;
+                    tiles++;
+                }
+            }
+
+            Debug.Log($"[zoning] {lots} of {parcels.Count} lots are residential in the county's "
+                    + $"class codes - {tiles:N0} tiles shaded"
+                    + (unrecorded > 0 ? $"; {unrecorded} lots the county has no record for." : "."));
+            return lots == 0 ? null : mask;
+        }
+
+        /// <summary>Crossing number, the standard one. Points are a closed ring.</summary>
+        private static bool Inside(Vector2[] poly, float x, float y)
+        {
+            bool inside = false;
+            for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+            {
+                if ((poly[i].y > y) == (poly[j].y > y)) continue;
+                float t = (poly[j].y - poly[i].y);
+                if (Mathf.Abs(t) < 1e-9f) continue;
+                if (x < (poly[j].x - poly[i].x) * (y - poly[i].y) / t + poly[i].x) inside = !inside;
+            }
+            return inside;
         }
 
         private static int SubmeshFor(Terrain t)

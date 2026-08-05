@@ -1,15 +1,20 @@
 # ============================================================================
 #  WHAT IS NOT A ROAD AND NOT A LOT
 #
-#  The railway, the water and the schools, from OpenStreetMap, converted to
-#  metres about the Chicago x Attica crossing like everything else and clipped
-#  to the map.
+#  The railway and the water, from OpenStreetMap, converted to metres about the
+#  Chicago x Attica crossing like everything else and clipped to the map.
+#
+#  THE SCHOOL GROUNDS WERE HERE AND ARE NOT ANY MORE. Two OSM school polygons
+#  drew a pink outline round the grade school and the high school; removed
+#  2026-08-04 because they were never checked against anything and the county
+#  parcel lines already show that ground, from the assessor, correctly. The two
+#  school buildings are places in city.txt and are not affected by this.
 #
 #  Named things in here, so they can be recognised on the ground:
 #    the CSX Woodland Subdivision - the line down the east side of the village
 #    the North Fork Vermilion River - outside town to the west
 #    Middle Branch - the stream out east
-#    the ponds behind the school campus, west of the elementary
+#    the ponds behind the school campus, west of the grade school
 #    seventeen field DITCHES, which is what eastern Illinois has instead of
 #      streams: the land is till plain and drains by being dug.
 #
@@ -19,7 +24,7 @@
 #  Thompson and Earlcourt do not, whatever the rest of their run looks like on this plan. When
 #  a train is simulated, these four are where a car can be caught waiting and nowhere else is.
 #
-#  `rail` and the waterways are open polylines; `water`, `school` and `crossing` close.
+#  `rail` and the waterways are open polylines; `water` and `crossing` close.
 # ============================================================================
 # CENTRED IN THE RIGHT OF WAY, 2026-08-04. The county records the railroad's own land as three
 # parcels - 779, 781 and 785, three strips 28-34 m wide chained end to end for about 2 km. A
@@ -49,8 +54,6 @@ crossing green 1061.5,975.6 1049.7,983.2
 crossing benton 1145.0,1109.4 1133.3,1116.8
 crossing attica 1292.5,1334.1 1280.9,1342.1
 river -100.8,715.0 -56.2,708.7 -14.4,713.2 8.4,720.5 33.0,719.6 66.6,708.7 84.8,699.6 102.1,697.8 115.8,710.5 117.6,732.3 115.8,751.3 116.7,775.0 112.1,794.9 122.1,813.1 129.4,822.2 132.1,843.1 135.8,853.9 144.0,861.2 149.4,880.3 148.5,899.3 147.6,912.1 134.9,918.4 125.8,921.1 74.8,913.9 41.1,909.3 27.5,924.8 22.9,947.5 28.4,956.5 39.3,968.4 63.0,972.9 78.4,1004.7 83.0,1022.8 88.5,1069.1 81.2,1122.7 88.5,1169.9 90.3,1189.0 83.9,1208.1 57.5,1223.5 55.7,1249.8 60.2,1266.2 106.7,1294.3 119.4,1314.3 132.1,1347.0 144.9,1377.9 189.4,1423.3 245.9,1448.7 276.8,1497.7 277.7,1534.9 254.0,1569.5 249.5,1602.1 247.7,1638.5 248.6,1673.0 227.7,1718.4 200.4,1736.5 194.0,1778.3 119.4,1917.2 101.2,1946.3 53.0,2071.6 49.3,2101.6 53.9,2118.8 62.1,2134.3 61.2,2151.5 40.2,2215.1 12.9,2263.2 -8.9,2285.0 -64.4,2325.0
-school 812.6,980.0 760.3,982.9 727.3,995.8 713.7,1001.1 685.6,1011.3 644.2,1026.3 653.5,1051.4 675.0,1109.6 680.0,1123.0 686.5,1140.8 716.8,1129.4 779.9,1105.6 818.0,1091.2 812.6,980.0
 water 312.1,949.7 324.2,963.2 323.8,977.8 316.4,984.9 248.0,983.3 244.0,961.2 258.8,949.9 279.3,946.1 312.1,949.7
 water 313.2,1017.5 329.0,1067.1 324.4,1082.1 333.1,1122.7 329.5,1138.1 339.4,1183.5 324.4,1201.4 322.5,1223.6 313.3,1237.7 301.6,1231.2 293.5,1215.2 280.2,1187.3 283.6,1151.6 275.7,1131.3 284.3,1108.1 313.2,1017.5
-school 346.7,999.5 368.7,1085.7 355.7,1085.3 344.5,1116.4 353.9,1173.7 412.2,1199.6 435.9,1246.4 463.8,1262.0 481.6,1267.7 644.0,1270.3 645.2,1236.1 638.6,1209.6 629.4,1184.8 606.6,1166.3 597.8,1141.2 658.9,1117.7 658.3,1116.0 649.1,1091.4 642.7,1074.1 622.9,1021.0 616.2,1003.0 346.7,999.5
 water 378.8,1552.5 377.3,1535.0 364.9,1511.7 348.0,1484.5 343.0,1461.2 368.1,1450.2 388.0,1448.5 404.4,1457.6 413.4,1467.8 417.0,1481.0 412.6,1492.1 421.3,1505.0 422.6,1518.5 415.2,1529.3 422.3,1543.0 414.1,1558.8 386.7,1578.6 354.4,1599.9 337.8,1604.2 332.9,1601.1 323.0,1594.9 306.3,1576.2 303.6,1554.9 338.1,1540.2 355.1,1544.4 366.3,1554.4 378.8,1552.5

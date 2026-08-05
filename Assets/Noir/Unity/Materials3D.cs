@@ -181,6 +181,45 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>
+        /// The ground a DWELLING stands on, in the flat plan view: the same green, a quarter
+        /// darker.
+        ///
+        /// With the buildings switched off, a house is painted as the land it stands on and
+        /// disappears - which is right for judging a road against a lot line, and useless for
+        /// seeing which lots are built on. This is the compromise the owner asked for: dark
+        /// enough to notice, close enough in hue that it still reads as ground rather than as
+        /// another kind of paint competing with the lot lines.
+        ///
+        /// Grass texture at the garden tiling, deliberately. A dwelling patch with no texture
+        /// beside grass with one does not read as a darker patch of the same field; it reads as
+        /// a hole.
+        /// </summary>
+        public static Material Dwelling
+        {
+            get
+            {
+                if (_dwelling != null) return _dwelling;
+
+                // THE TINT GOES ON AFTER ApplyPack, NOT BEFORE. ApplyPack sets _BaseColor and
+                // _Color to WHITE whenever it binds a texture - reasonably, since a pack's albedo
+                // carries its own colour and a tint on top would double it. Set the green in
+                // Make() above it, the way Pasture and Grass do, and the pack wipes it a line
+                // later: the material comes out identical to grass and the shading is invisible.
+                // That is exactly what happened the first time this was written.
+                var tint = new Color32(0x6A, 0x7E, 0x58, 0xFF);
+                _dwelling = Make("Dwelling", tint, 0.05f);
+                SurfaceTextures.ApplyPack(_dwelling, "grass", 4f);
+                if (_dwelling.HasProperty("_BaseColor")) _dwelling.SetColor("_BaseColor", tint);
+                if (_dwelling.HasProperty("_Color")) _dwelling.SetColor("_Color", tint);
+
+                Plan(_dwelling);
+                return _dwelling;
+            }
+        }
+
+        private static Material _dwelling;
+
         public static Material Wall
         {
             get
