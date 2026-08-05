@@ -664,6 +664,23 @@ namespace Noir.Unity
             // something rather than as an honest pause at startup. See ShaderWarmup.
             ShaderWarmup.Run(_village);
 
+            // THE MAP OF WHO CAN REACH WHOM, worked out now for the same reason as the shaders.
+            //
+            // It is a flood fill of five million tiles and it costs about a third of a second.
+            // Built lazily it lands on whichever frame happens to contain the first journey of
+            // the day, which measured as a single 314 ms stall a minute into play - the one and
+            // only stall left in a sixteen thousand frame run. Behind the curtain it costs
+            // nothing anybody can see.
+            if (Sim != null)
+            {
+                BootScreen.Phase = "Working out the walkable town";
+                var regions = Sim.Regions;
+                if (regions.RegionCount > 1)
+                    Debug.LogWarning($"[regions] the walkable map is in {regions.RegionCount} "
+                        + "pieces - somewhere is sealed off. Noir > Report Stranded People "
+                        + "says where and who it strands.");
+            }
+
             // Built before the camera, so a build that goes wrong further down still leaves a
             // frame counter on screen to diagnose it with.
             PerfHud.Create(this, transform);

@@ -419,13 +419,13 @@ namespace Noir.Unity
             {
                 sb.AppendLine($"agents simulated: {host.Sim.AgentCount}");
 
-                // A search that runs to the node cap is a search for somewhere that cannot be
-                // reached. If these are climbing, the stall is a MAP fault being paid for over
-                // and over - somebody's door is walled off - and capping the search only makes
-                // the symptom affordable. The town still has a person who can never get home.
-                sb.AppendLine($"stranded now    : {host.Sim.StrandedCount}");
-                sb.AppendLine($"searches gave up: {host.Sim.GaveUpTotal}");
             }
+            sb.AppendLine();
+
+            // A search that runs to the node cap is a search for somewhere that cannot be
+            // reached. Capping the search only made that affordable; the town still has people
+            // who can never get home, and this says which doors are the reason.
+            if (host != null) sb.AppendLine(StrandedSurvey.Describe(host));
             sb.AppendLine();
             Machine(sb);
             sb.AppendLine("phase          frames    mean     p50     p99    worst    fps   draws     tris");

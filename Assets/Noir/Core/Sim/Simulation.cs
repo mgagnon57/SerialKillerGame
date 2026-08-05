@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Noir.Core.Contracts;
 using Noir.Core.People;
@@ -312,6 +312,53 @@ namespace Noir.Core.Sim
         /// number means the map has outgrown the budget, not that the map is broken.</summary>
         public long GaveUpTotal => _gaveUpTotal;
 
+        /// <summary>
+        /// Searches that came back with a route, and ones that came back with a definite no.
+        ///
+        /// GaveUpTotal on its own cannot be judged. A thousand abandoned searches beside a
+        /// million successful ones is a rounding error; beside ten thousand it means the cap is
+        /// refusing journeys people could walk, which is the very fault the cap was widened to
+        /// fix in the first place. The denominator has to be there or the number is unreadable.
+        /// </summary>
+        public long PathsFoundTotal => _pathsFoundTotal;
+
+        /// <summary>Searches answered "there is no route" without looking, from the region map.</summary>
+        public long NoRouteTotal => _noRouteTotal;
+
+        /// <summary>The walkable areas of the map, for anything that wants to ask why somebody
+        /// is stranded rather than merely count them.</summary>
+        public WalkableRegions Regions => _pathfinder.Regions;
+
+        /// <summary>
+        /// Everyone who cannot reach where they are trying to be, and where that is.
+        ///
+        /// StrandedCount says how bad it is; this says WHERE, which is the only form of the
+        /// answer anybody can act on. A stranded person is not a simulation fault - it is a
+        /// map fault, a door with no route to it, and it stays until the map is repaired.
+        /// </summary>
+        public IEnumerable<(CitizenId Who, PlaceId Where, Tile At, Tile Standing,
+                            int TheirRegion, int ItsRegion)> StrandedPeople()
+        {
+            var regions = Regions;
+            for (int i = 0; i < _agents.Length; i++)
+            {
+                if (!_agents[i].Stranded) continue;
+
+                var citizen = People.Get(new CitizenId(i));
+                var block = _plans[i].At(_clock.MinuteOfDay);
+                var here = _agents[i].Position.ToTile();
+                var there = TargetIn(block, citizen);
+
+                // BOTH ends, because either can be the fault and they need opposite repairs.
+                // A destination in a sealed pocket is a door to reconnect; a PERSON in one is
+                // somebody the map has built a wall around, and the first version of this
+                // reported only the destination - which said 70 of 77 were fine when they were
+                // not, because it was looking at the wrong end of the journey.
+                yield return (new CitizenId(i), block.Where, there, here,
+                              regions.RegionAt(here), regions.RegionAt(there));
+            }
+        }
+
         public AgentState GetAgent(int index) => _agents[index];
         public AgentState GetAgent(CitizenId id) => _agents[id.Value];
 
@@ -466,6 +513,16 @@ namespace Noir.Core.Sim
 
         private int _strandedCount;
         private long _gaveUpTotal;
+        private long _pathsFoundTotal;
+        private long _noRouteTotal;
+
+        /// <summary>Book-keeping for every search, so the give-up count has a denominator.</summary>
+        private void Record(PathOutcome outcome)
+        {
+            if (outcome == PathOutcome.GaveUp) _gaveUpTotal++;
+            else if (outcome == PathOutcome.Found) _pathsFoundTotal++;
+            else _noRouteTotal++;
+        }
 
         /// <summary>
         /// The backoff schedule: 2 ticks, then 4, 8, and so on to a minute.
@@ -740,7 +797,7 @@ namespace Noir.Core.Sim
             _scratchPath.Clear();
             var outcome = _pathfinder.FindPath(from, to, _scratchPath);
             _pathNodesThisTick += _pathfinder.LastNodesExamined;
-            if (outcome == PathOutcome.GaveUp) _gaveUpTotal++;
+            Record(outcome);
 
             if (outcome != PathOutcome.Found)
             {
@@ -1200,7 +1257,7 @@ namespace Noir.Core.Sim
             _scratchPath.Clear();
             var outcome = _pathfinder.FindPath(from, to, _scratchPath);
             _pathNodesThisTick += _pathfinder.LastNodesExamined;
-            if (outcome == PathOutcome.GaveUp) _gaveUpTotal++;
+            Record(outcome);
 
             if (outcome != PathOutcome.Found || _scratchPath.Count == 0) return false;
             _pathsThisTick++;
