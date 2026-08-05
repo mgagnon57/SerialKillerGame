@@ -614,6 +614,17 @@ fire** — see `docs/HANDOFF.md`.
   Same fault the leg swing had, and the same lesson: a renderer may know the frame rate and
   nothing that DECIDES anything may. — *2026-07-31*
 
+- [ ] **Decide whether a sleeping villager is a witness.** `ObservationDiagnostic` walked a
+  player past thirty front doors and found MORE people see you at 02:00 than at 09:00 - 148 of
+  148 against 135 of 148. The cause is that `Recollection` skips a witness only while their
+  block is `TravellingTo`, so at two in the morning the whole village is `Asleep` at home,
+  standing at its own front door, watching the street. At nine the ones who are out or between
+  places drop out and the number FALLS. Not patched, because it is a design question with the
+  investigation hanging off it: a light sleeper at a front bedroom is a real witness and
+  "everyone in bed sees the street" is not. Same class of deliberate gap as the walking-witness
+  limit in `Recollection`. See `docs/plans/observation-wiring.md`. — *2026-08-05*
+
+
 ## Story
 
 - [x] ~~`Survival` is 174 prefabs and nothing has ever placed one.~~ DONE - `Assets/Noir/Unity/CityStory.cs`,
