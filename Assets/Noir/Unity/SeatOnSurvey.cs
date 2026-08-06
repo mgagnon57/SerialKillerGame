@@ -90,12 +90,24 @@ namespace Noir.Unity
                 }
             }
 
-            // A building moved onto its measurement can land on one that has already moved onto
-            // its own. Rare - four pairs on today's data - and the smaller one gives way, because
-            // leaving two sets of walls in the same tiles is worse than one building being where
-            // the generator put it.
+            // A building moved onto its measurement can land on another building. The bigger one
+            // keeps its ground and the smaller gives way, because two sets of walls in the same
+            // tiles is worse than one building being where the generator put it.
+            //
+            // THE GROUND THAT IS NOT MOVING IS CLAIMED FIRST, and that is the half this was
+            // missing. The guard compared a seated building only against other SEATED ones, so
+            // anything that stayed put - a building with no measured footprint on its lot, which
+            // is 77 of them - could be built straight over. Downtown is where it showed: a single
+            // FEMA polygon there routinely covers a whole run of joined brick, so seating one
+            // shopfront onto it laid that shopfront across three of its neighbours, and the plan
+            // came out as a tangle of overlapping outlines along Chicago Street.
+            var moving = new HashSet<PlaceSpec>();
+            foreach (var s in seated) moving.Add(s.Place);
+
             seated.Sort((a, b) => b.Now.Area.CompareTo(a.Now.Area));
             var taken = new List<TileRect>(seated.Count);
+            foreach (var place in layout.Places)
+                if (place.IsBuilding && !moving.Contains(place)) taken.Add(place.Bounds);
             int moved = 0, yielded = 0, shaped = 0;
             foreach (var s in seated)
             {
