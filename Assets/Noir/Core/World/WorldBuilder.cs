@@ -68,7 +68,8 @@ namespace Noir.Core.World
 
                 var place = new Place(id, spec.Kind, spec.Name, spec.Human,
                                       spec.Bounds, spec.Door, spec.Hours.ToArray(),
-                                      spec.JobSlots, spec.Units, spec.Key);
+                                      spec.JobSlots, spec.Units, spec.Key,
+                                      shaped ? spec.Outline : null);
                 places.Add(place);
 
                 if (keys.TryGetValue(place.Key, out int clash))

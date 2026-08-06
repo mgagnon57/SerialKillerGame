@@ -152,9 +152,29 @@ namespace Noir.Unity
 
                 var row = kinds.Row(place.Kind);
                 var colour = ColourOf(row.Name, row.IsHome);
-                var b = place.Bounds;
 
-                Outline(verts, cols, tris, b.X, b.Y, b.W, b.H, colour);
+                // THE BUILDING, NOT THE BOX ROUND IT. A measured footprint keeps its real outline
+                // - see Place.Outline - and its Bounds is deliberately the full bounding box,
+                // because the outline is what removes the parts that are not the building. Tracing
+                // the box drew a house's plan line out across the street it fronts, on every lot
+                // where the building sits at an angle to the grid. Along a road that runs
+                // diagonally, that is most of them.
+                var ring = place.Outline;
+                if (ring != null && ring.Length >= 3)
+                {
+                    for (int i = 0; i < ring.Length; i++)
+                    {
+                        var from = ring[i];
+                        var to = ring[(i + 1) % ring.Length];
+                        Edge(verts, cols, tris,
+                             new Vector2(from.X, from.Y), new Vector2(to.X, to.Y), colour);
+                    }
+                }
+                else
+                {
+                    var b = place.Bounds;
+                    Outline(verts, cols, tris, b.X, b.Y, b.W, b.H, colour);
+                }
 
                 // A doorway is a gap in the line and a stub pointing into the plot, which is how
                 // a plan says which way a building faces. It is also the only way to tell, on a

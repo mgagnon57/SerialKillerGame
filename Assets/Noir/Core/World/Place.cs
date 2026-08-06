@@ -95,6 +95,19 @@ namespace Noir.Core.World
         public readonly int JobSlots;
 
         /// <summary>
+        /// The building's real outline in tiles, or null for a plain rectangle - carried through
+        /// from PlaceSpec.Outline so anything DRAWING a place can trace the building rather than
+        /// the box around it.
+        ///
+        /// <see cref="Bounds"/> stays the rectangle everything measures by, and for a shaped
+        /// building it is deliberately the full bounding box: the outline is what removes the
+        /// parts that are not the building. Drawing the box instead put a house's plan line
+        /// across the street it fronts, on every lot where the building sits at an angle to the
+        /// grid - which along a road that runs diagonally is most of them.
+        /// </summary>
+        public readonly Tile[] Outline;
+
+        /// <summary>
         /// What this building is called, in the only sense the generators care about: a stable
         /// 64-bit name that does not move when the file around it does.
         ///
@@ -137,7 +150,13 @@ namespace Noir.Core.World
         public Place(PlaceId id, PlaceKind kind, string name, string human,
                      TileRect bounds, Tile door, OpenWindow[] hours, int jobSlots, int units,
                      string keySource)
+            : this(id, kind, name, human, bounds, door, hours, jobSlots, units, keySource, null) { }
+
+        public Place(PlaceId id, PlaceKind kind, string name, string human,
+                     TileRect bounds, Tile door, OpenWindow[] hours, int jobSlots, int units,
+                     string keySource, Tile[] outline)
         {
+            Outline = outline;
             Units = units < 1 ? 1 : units;
             Id = id;
             Kind = kind;
