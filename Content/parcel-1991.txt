@@ -1,0 +1,573 @@
+# ============================================================================
+#  WHAT STOOD ON THIS LOT IN 1991 - THE OWNER'S OWN RULING
+#
+#  AUTHORED, not derived. Everything else about these lots is measured: the county's
+#  tax roll, the federal imagery, the parcel geometry. None of them can answer this
+#  one. The earliest tax year Vermilion County publishes is 2007 and the imagery is
+#  2016, and the game is set around 2000 - so where the sources disagree about what
+#  was on a lot, the tie is broken by somebody who was there.
+#
+#  Written by the browser map (docs/rossville-buildings.html, served by
+#  tools/serve-viewer.py): click a lot, say what was there, and it lands here.
+#  Hand-editing is fine - the file is read back on the next load.
+#
+#  THIS FILE IS THE ONE THING HERE NO RE-RUN CAN REBUILD. seat-buildings.py,
+#  build-roads.py and the rest can all be regenerated from the downloads; a
+#  recollection cannot. Do not let a tool overwrite it.
+#
+#  FIELDS, one per line, keyed by parcel id
+#    parcel <id> was built|vacant|unsure|absent
+#      built   a building stood here in 1991
+#      vacant  the lot was there and nothing stood on it
+#      absent  THERE WAS NO SUCH LOT IN 1991, which is not the same as vacant: the
+#              parcel itself did not exist. The county's boundaries are TODAY'S, and
+#              ground subdivided out of a field in 1998 has no business on a map of
+#              1991. A lot marked absent stops being drawn as a lot.
+#      unsure  looked at, and not settled
+#    parcel <id> kind <word>        what it was. The game's own place kinds where one
+#                                   fits - school, church, shop, dwelling, elevator -
+#                                   see Content/kinds.txt. Free text is allowed and is
+#                                   the right answer when nothing in that list is what
+#                                   was actually there.
+#    parcel <id> property "<name>"  WHICH PROPERTY THIS LOT IS PART OF, and this is how
+#                                   several lots become one building. The county splits
+#                                   ground for its own reasons: the grade school stands
+#                                   on parcels 719, 718 and 590, which is three lots and
+#                                   one school. Give them the same property name and
+#                                   they are the same property. There is no group id to
+#                                   keep in step - the name IS the grouping.
+#    parcel <id> note "<text>"      anything else worth saying
+#
+#  Parcel id is the line number in parcels.txt, 0-based, comments and blanks not
+#  counted - the same key parcel-county.txt and parcel-buildings.txt use.
+# ============================================================================
+
+parcel 7 was built
+parcel 7 kind dwelling
+
+parcel 10 was absent
+
+parcel 12 was built
+parcel 12 kind shop
+parcel 12 property "101-105 N Chicago"
+parcel 12 note "FEMA traces this whole run of joined brick as ONE polygon; the neighbouring lots read empty because of it, not because they were"
+
+parcel 13 was built
+parcel 13 kind shop
+parcel 13 property "the Attica Street row"
+
+parcel 22 was built
+parcel 22 property "113 S Chicago"
+
+parcel 23 was built
+parcel 23 kind diner
+
+parcel 28 was built
+parcel 28 kind municipal
+
+parcel 30 was built
+parcel 30 kind dwelling
+
+parcel 46 was absent
+
+parcel 47 was absent
+
+parcel 48 was absent
+
+parcel 49 was absent
+
+parcel 50 was absent
+
+parcel 54 was built
+parcel 54 kind dwelling
+
+parcel 65 was built
+parcel 65 kind dwelling
+
+parcel 73 was built
+parcel 73 kind dwelling
+
+parcel 88 was built
+parcel 88 kind dwelling
+
+parcel 99 was built
+parcel 99 kind dwelling
+
+parcel 106 was built
+parcel 106 kind dwelling
+
+parcel 122 was built
+parcel 122 property "111 E Maple"
+parcel 122 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 123 was built
+parcel 123 kind dwelling
+
+parcel 126 was built
+parcel 126 kind dwelling
+
+parcel 128 was built
+parcel 128 kind apartment
+
+parcel 133 was built
+parcel 133 kind apartment
+
+parcel 138 was built
+parcel 138 kind dwelling
+
+parcel 139 was built
+parcel 139 kind dwelling
+
+parcel 152 was built
+parcel 152 kind dwelling
+
+parcel 153 was built
+parcel 153 kind dwelling
+
+parcel 164 was built
+parcel 164 property "113 E Maple"
+
+parcel 177 was built
+parcel 177 kind dwelling
+
+parcel 178 was built
+parcel 178 kind dwelling
+
+parcel 187 was built
+parcel 187 kind dwelling
+
+parcel 191 was built
+parcel 191 property "201 E Maple"
+parcel 191 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 192 was built
+parcel 192 property "203 E Maple"
+parcel 192 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 193 was built
+parcel 193 property "205 E Maple"
+parcel 193 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 194 was built
+parcel 194 property "211 E Maple"
+parcel 194 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 207 was built
+parcel 207 kind dwelling
+
+parcel 218 was built
+parcel 218 kind shop
+parcel 218 property "101-105 N Chicago"
+
+parcel 219 was built
+parcel 219 kind shop
+parcel 219 property "101-105 N Chicago"
+
+parcel 222 was built
+parcel 222 kind shop
+parcel 222 property "104-108 N Chicago"
+
+parcel 224 was built
+parcel 224 kind shop
+parcel 224 property "104-108 N Chicago"
+parcel 224 note "FEMA traces this whole run of joined brick as ONE polygon; the neighbouring lots read empty because of it, not because they were"
+
+parcel 229 was absent
+
+parcel 230 was built
+parcel 230 kind dwelling
+
+parcel 236 was built
+parcel 236 property "109 W Attica"
+parcel 236 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 238 was built
+parcel 238 kind shop
+parcel 238 property "the Chicago Street terrace, west side"
+
+parcel 239 was built
+parcel 239 kind shop
+parcel 239 property "the Chicago Street terrace, west side"
+
+parcel 240 was built
+parcel 240 kind shop
+parcel 240 property "the Chicago Street terrace, west side"
+
+parcel 241 was built
+parcel 241 kind shop
+
+parcel 242 was built
+parcel 242 kind firestation
+
+parcel 244 was built
+parcel 244 property "109 W Attica"
+parcel 244 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 245 was absent
+
+parcel 246 was built
+parcel 246 kind cemetery
+
+parcel 247 was built
+parcel 247 kind park
+
+parcel 249 was built
+parcel 249 kind shop
+parcel 249 property "the Chicago Street terrace, west side"
+
+parcel 262 was built
+parcel 262 kind factory
+
+parcel 263 was built
+parcel 263 kind railway
+
+parcel 275 was built
+parcel 275 kind dwelling
+
+parcel 277 was built
+parcel 277 kind dwelling
+
+parcel 285 was absent
+
+parcel 295 was built
+parcel 295 kind dwelling
+
+parcel 297 was built
+parcel 297 property "103 E Maple"
+
+parcel 298 was vacant
+
+parcel 300 was built
+parcel 300 property "103 E Maple"
+parcel 300 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 307 was built
+parcel 307 kind apartment
+
+parcel 322 was built
+parcel 322 kind dwelling
+
+parcel 331 was absent
+
+parcel 337 was absent
+
+parcel 340 was built
+parcel 340 kind shop
+parcel 340 property "the Attica Street row"
+
+parcel 341 was built
+parcel 341 kind shop
+parcel 341 property "the Attica Street row"
+parcel 341 note "FEMA traces this whole run of joined brick as ONE polygon; the neighbouring lots read empty because of it, not because they were"
+
+parcel 343 was vacant
+
+parcel 344 was built
+parcel 344 kind dwelling
+
+parcel 351 was built
+parcel 351 property "109 W Attica"
+parcel 351 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 354 was built
+parcel 354 property "109 W Attica"
+
+parcel 358 was built
+parcel 358 kind shop
+parcel 358 property "the Chicago Street terrace, west side"
+
+parcel 359 was built
+parcel 359 kind shop
+parcel 359 property "the Chicago Street terrace, west side"
+
+parcel 381 was absent
+
+parcel 382 was absent
+
+parcel 383 was absent
+
+parcel 384 was absent
+
+parcel 385 was absent
+
+parcel 387 was built
+parcel 387 kind dwelling
+
+parcel 395 was built
+parcel 395 kind dwelling
+
+parcel 402 was built
+parcel 402 kind dwelling
+
+parcel 411 was built
+parcel 411 kind dwelling
+
+parcel 418 was absent
+
+parcel 423 was built
+parcel 423 property "105 E Maple"
+
+parcel 424 was built
+parcel 424 property "107 E Maple"
+
+parcel 425 was built
+parcel 425 property "111 E Maple"
+
+parcel 426 was built
+parcel 426 property "105 E Maple"
+parcel 426 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 427 was built
+parcel 427 property "107 E Maple"
+parcel 427 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 428 was built
+parcel 428 property "113 E Maple"
+parcel 428 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 444 was built
+parcel 444 kind church
+
+parcel 453 was built
+parcel 453 kind dwelling
+
+parcel 454 was absent
+
+parcel 457 was built
+parcel 457 kind dwelling
+
+parcel 459 was absent
+
+parcel 466 was built
+parcel 466 kind dwelling
+
+parcel 476 was built
+parcel 476 property "205 E Maple"
+
+parcel 477 was built
+parcel 477 property "207 E Maple"
+
+parcel 479 was built
+parcel 479 property "207 E Maple"
+parcel 479 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 480 was built
+parcel 480 property "209 E Maple"
+parcel 480 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 481 was built
+parcel 481 property "213 E Maple"
+parcel 481 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 503 was built
+parcel 503 kind dwelling
+
+parcel 511 was built
+parcel 511 property "201 E Maple"
+
+parcel 512 was built
+parcel 512 property "203 E Maple"
+
+parcel 513 was built
+parcel 513 property "213 E Maple"
+
+parcel 514 was built
+parcel 514 property "205 Summit"
+
+parcel 515 was built
+parcel 515 property "305 E Maple"
+
+parcel 516 was built
+parcel 516 kind dwelling
+parcel 516 property "307 E Maple"
+
+parcel 517 was built
+parcel 517 kind dwelling
+
+parcel 525 was built
+parcel 525 kind dwelling
+
+parcel 538 was built
+parcel 538 kind dwelling
+
+parcel 541 was built
+parcel 541 kind dwelling
+
+parcel 542 was built
+parcel 542 kind apartment
+
+parcel 547 was built
+parcel 547 property "209 E Maple"
+
+parcel 548 was built
+parcel 548 kind dwelling
+parcel 548 property "211 E Maple"
+
+parcel 568 was built
+parcel 568 kind dwelling
+
+parcel 590 was built
+parcel 590 kind school
+parcel 590 property "Grade School"
+
+parcel 591 was absent
+
+parcel 592 was absent
+
+parcel 593 was absent
+
+parcel 594 was absent
+
+parcel 595 was absent
+
+parcel 596 was absent
+
+parcel 598 was built
+parcel 598 kind dwelling
+
+parcel 604 was built
+parcel 604 kind dwelling
+
+parcel 609 was built
+parcel 609 kind railway
+
+parcel 610 was absent
+
+parcel 618 was built
+parcel 618 kind shop
+parcel 618 property "the Attica Street row"
+
+parcel 620 was built
+parcel 620 kind shop
+parcel 620 property "the Attica Street row"
+
+parcel 621 was built
+parcel 621 kind shop
+parcel 621 property "104-108 N Chicago"
+
+parcel 631 was built
+parcel 631 kind dwelling
+
+parcel 636 was built
+parcel 636 kind shop
+parcel 636 property "the Chicago Street terrace, west side"
+parcel 636 note "FEMA traces this whole run of joined brick as ONE polygon; the neighbouring lots read empty because of it, not because they were"
+
+parcel 641 was built
+parcel 641 kind school
+
+parcel 642 was built
+parcel 642 kind memorial
+
+parcel 644 was built
+parcel 644 kind municipal
+
+parcel 657 was built
+parcel 657 kind church
+
+parcel 658 was absent
+
+parcel 661 was absent
+
+parcel 662 was absent
+
+parcel 663 was absent
+
+parcel 664 was absent
+
+parcel 668 was built
+parcel 668 kind dwelling
+
+parcel 679 was absent
+
+parcel 683 was built
+parcel 683 kind cornfield
+
+parcel 684 was absent
+
+parcel 690 was built
+parcel 690 kind dwelling
+
+parcel 700 was absent
+
+parcel 707 was built
+parcel 707 property "205 Summit"
+parcel 707 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 713 was built
+parcel 713 property "305 E Maple"
+parcel 713 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 717 was built
+parcel 717 property "205 Summit"
+parcel 717 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 718 was built
+parcel 718 kind school
+parcel 718 property "Grade School"
+
+parcel 719 was built
+parcel 719 kind school
+parcel 719 property "Grade School"
+
+parcel 720 was absent
+
+parcel 726 was built
+parcel 726 kind shop
+parcel 726 property "the Chicago Street terrace, south end"
+
+parcel 728 was unsure
+parcel 728 kind shop
+parcel 728 property "the Chicago Street terrace, south end"
+
+parcel 733 was built
+parcel 733 kind dwelling
+
+parcel 735 was built
+parcel 735 property "307 E Maple"
+parcel 735 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 747 was built
+parcel 747 kind shop
+parcel 747 property "the Chicago Street terrace, west side"
+
+parcel 748 was built
+parcel 748 kind shop
+parcel 748 property "the Chicago Street terrace, west side"
+
+parcel 749 was built
+parcel 749 kind shop
+parcel 749 property "the Chicago Street terrace, south end"
+
+parcel 750 was built
+parcel 750 property "113 S Chicago"
+parcel 750 note "back of the lot; ran to the alley in 1991, split off later"
+
+parcel 751 was built
+parcel 751 kind shop
+parcel 751 property "the Chicago Street terrace, west side"
+
+parcel 752 was built
+parcel 752 kind farm
+
+parcel 761 was absent
+
+parcel 762 was built
+parcel 762 kind shop
+parcel 762 property "the Chicago Street terrace, south end"
+parcel 762 note "FEMA traces this whole run of joined brick as ONE polygon; the neighbouring lots read empty because of it, not because they were"
+
+parcel 764 was built
+parcel 764 kind shop
+parcel 764 property "the Chicago Street terrace, west side"
+
+parcel 777 was absent
+
+parcel 779 was built
+parcel 779 kind railway
+parcel 779 note "railroad right of way, not a house lot - see SOURCES-OF-TRUTH 2.1. The dwelling the join put here is 208 Summit's, 46 ft away"
+
+parcel 782 was built
+parcel 782 kind shop
+parcel 782 property "the Attica Street row"
+
