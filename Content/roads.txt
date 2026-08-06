@@ -58,13 +58,15 @@
 #  behind a grass verge on Chicago Street, and nothing establishes it street by street.
 #  The easement is what a later pass needs to lay one without crossing a lot line.
 #
-#  FORMAT  road <name> <corridor width, metres> x,y x,y ...   then an indented class
-#          and, where it could be measured, an easement in metres.
+#  FORMAT  road <name> <corridor width, metres> x,y x,y ...   then an indented class,
+#          a `carries` where the road's job outranks the ground it has, and, where it
+#          could be measured, an easement in metres.
 #  Village metres, the same frame as parcels.txt and city.txt.
 # ============================================================================
 
 road 3550north 10 0,1298 457,1324   # county, right of way 30.0 m measured, county classes it mainroad
   class street
+  carries mainroad
   easement 30.0
 
 road abner 10 510,1589 509,1483   # county, right of way 20.0 m measured
@@ -77,6 +79,7 @@ road ann 4 691,1587 690,1431   # county, right of way 10.0 m measured, county cl
 
 road attica 10 457,1324 974,1352 2100,1367   # county, right of way 20.0 m measured, county classes it mainroad
   class street
+  carries mainroad
   easement 20.0
 
 road benton 10 686,1149 824,1102 1435,1095 1775,1093   # county, right of way 20.0 m measured
@@ -196,6 +199,7 @@ road york 10 545,727 832,724   # county, right of way 20.0 m measured
 
 road chicago 10 313,0 370,177 465,470 592,855 674,1109 746,1332 775,1423 798,1491 838,1607 856,1687 862,1740 871,1876 880,2049 898,2399   # authored, right of way 13.4 m measured, county classes it mainroad
   class street
+  carries mainroad
   easement 13.4
 
 road alley1 4 992,1918 1064,1917 1124,1918 1149,1916 1178,1916 1335,1916 1364,1914 1445,1914 1464,1914 1619,1912   # parcels, right of way 6.0 m measured

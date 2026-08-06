@@ -61,6 +61,15 @@ namespace Noir.Core.World
             Class ?? (Width >= RoadClasses.CorridorWidth(RoadClass.Mainroad)
                           ? RoadClass.Mainroad
                           : RoadClass.Street);
+
+        /// <summary>
+        /// What the road CARRIES, when that is not what it is paved to. See RoadLine.Carries for
+        /// why the two are allowed to disagree - a county highway on a village street's ground.
+        /// </summary>
+        public RoadClass? Carries;
+
+        /// <summary>The function this road actually has: what was declared, or its own class.</summary>
+        public RoadClass EffectiveCarries => Carries ?? EffectiveClass;
     }
 
     public sealed class PlaceSpec

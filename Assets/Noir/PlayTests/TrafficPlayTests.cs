@@ -312,7 +312,30 @@ namespace Noir.PlayTests
                     if (gap < closest)
                     {
                         closest = gap;
-                        where = $"{cars[a].name} and {cars[b].name} came within {gap:0.00}m";
+
+                        // WHERE, not just who. "Two cars came within 0.15m" is unactionable:
+                        // the conflict model is per-junction, so the first thing anybody needs
+                        // to know is whether this happened AT a junction - where the model
+                        // should have caught it - or out on open road between two centrelines
+                        // that simply run close, which the model never looks at.
+                        var mid = (cars[a].position + cars[b].position) * 0.5f;
+                        var at = Space3D.FromWorld(mid);
+                        float toJunction = float.MaxValue;
+                        string named = "none";
+                        var world = CityUnderTest.World;
+                        if (world != null)
+                            foreach (var j in world.Roads.Junctions)
+                            {
+                                float d = Mathf.Sqrt((j.X - at.X) * (j.X - at.X)
+                                                   + (j.Y - at.Y) * (j.Y - at.Y));
+                                if (d >= toJunction) continue;
+                                toJunction = d;
+                                named = $"{j.NorthSouth.Name} x {j.EastWest.Name}";
+                            }
+
+                        where = $"{cars[a].name} and {cars[b].name} came within {gap:0.00}m "
+                              + $"at {at.X:0},{at.Y:0} - {toJunction:0.0}m from the nearest "
+                              + $"junction ({named})";
                     }
                 }
             });

@@ -240,8 +240,16 @@ namespace Noir.Unity
         /// is arbitrary ON THE MAP as well as in here - CitySigns reads this same answer, so
         /// what the junction does and what the junction says can never drift apart.
         /// </summary>
+        /// <remarks>
+        /// CARRIES, NOT CLASS. Which road runs through is about what the roads DO, and on the
+        /// surveyed network no road is paved to a main road's corridor - Attica is a county
+        /// highway on a village street's right of way. Comparing the corridor made every road in
+        /// town equal, so the tie below fired at all 64 junctions at once and every north-south
+        /// arm in Rossville gave way permanently to an east-west stream that never yielded back.
+        /// Measured: nine tenths of stopped vehicles waited 119.9 s with clear road ahead.
+        /// </remarks>
         public static bool GiveWayAxisOf(Junction j) =>
-            j.NorthSouth.Class <= j.EastWest.Class;      // true: north-south gives way
+            j.NorthSouth.Carries <= j.EastWest.Carries;  // true: north-south gives way
 
 #if UNITY_EDITOR
         private void Erect(WorldModel world)
@@ -270,8 +278,12 @@ namespace Noir.Unity
                 // Both arms have to be a main road. That makes the answer follow the map: class
                 // a second street up to Mainroad in city.txt and it earns its own lights, with
                 // nothing here to change.
-                bool crossroads = j.NorthSouth.Class >= RoadClass.Mainroad
-                               && j.EastWest.Class >= RoadClass.Mainroad;
+                // Asked of what the arms CARRY rather than what they are paved to, for the reason
+                // GiveWayAxisOf gives: on the surveyed network nothing is paved to a main road's
+                // corridor, so reading Class here signalised nothing at all and the town lost the
+                // one set of lights it had.
+                bool crossroads = j.NorthSouth.Carries >= RoadClass.Mainroad
+                               && j.EastWest.Carries >= RoadClass.Mainroad;
                 bool town = crossroads && InTheTown(world, j);
 
                 // EVERY junction gets a node, signalised or not. LaneSegment.ToJunction indexes

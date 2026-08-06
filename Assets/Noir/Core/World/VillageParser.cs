@@ -209,6 +209,28 @@ namespace Noir.Core.World
                     break;
                 }
 
+                case "carries":
+                {
+                    // WHAT THE ROAD'S JOB IS, which is a different question from what it is
+                    // paved to and is the reason this exists at all.
+                    //
+                    // `class` above pins the corridor to the road kit's tile sizes and throws if
+                    // the two disagree. That is right for geometry and wrong for function: Attica
+                    // is a county highway with a village street's right of way, so it can never
+                    // be declared `class mainroad` without laying asphalt across private lots.
+                    // Priority, signals and ambient traffic ask this instead.
+                    //
+                    // NO WIDTH CHECK HERE, deliberately. The whole point is to say something the
+                    // width cannot support.
+                    if (tokens.Count < 2 || !RoadClasses.TryParse(tokens[1], out var carries))
+                        throw new VillageParseException(
+                            lineNo, $"unknown road class '{(tokens.Count > 1 ? tokens[1] : "")}' "
+                                  + "after `carries` - expected street, mainroad or freeway");
+
+                    road.Carries = carries;
+                    break;
+                }
+
                 case "easement":
                 {
                     // HOW MUCH PUBLIC LAND THIS ROAD HAS, which is a different thing from how

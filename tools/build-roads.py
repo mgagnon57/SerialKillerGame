@@ -536,8 +536,9 @@ def main():
     w_("#  behind a grass verge on Chicago Street, and nothing establishes it street by street.")
     w_("#  The easement is what a later pass needs to lay one without crossing a lot line.")
     w_("#")
-    w_("#  FORMAT  road <name> <corridor width, metres> x,y x,y ...   then an indented class")
-    w_("#          and, where it could be measured, an easement in metres.")
+    w_("#  FORMAT  road <name> <corridor width, metres> x,y x,y ...   then an indented class,")
+    w_("#          a `carries` where the road's job outranks the ground it has, and, where it")
+    w_("#          could be measured, an easement in metres.")
     w_("#  Village metres, the same frame as parcels.txt and city.txt.")
     w_("# " + "=" * 76)
     w_("")
@@ -546,10 +547,42 @@ def main():
         note = f"   # {srcname}" + (f", right of way {row:.1f} m measured" if row else "")
         if county_class.get(n) and county_class[n] != klass:
             note += f", county classes it {county_class[n]}"
+        # THE COUNTY'S CLASSIFICATION IS WRITTEN DOWN, NOT JUST MENTIONED.
+        #
+        # The class above is stepped DOWN until the corridor fits the right of way, which is
+        # right and is the whole point of the ladder - a county highway on a 67 ft right of way
+        # is paved as a street or it lays asphalt across private lots. But the road's JOB does
+        # not step down with its width, and until now the county's answer was noted in a trailing
+        # comment and thrown away.
+        #
+        # Everything that decides how a junction behaves read the corridor: priority, where the
+        # signals go, how much traffic a road is given. So on the surveyed network no road was a
+        # main road, the town lost the only set of lights it had, and every north-south arm gave
+        # way permanently to an east-west stream that never yielded - nine tenths of stopped
+        # cars waiting two minutes with clear road ahead.
+        #
+        # `carries` says the function and has no width check, because saying something the width
+        # cannot support is exactly what it is for. Written only when the two disagree.
+        # ONLY EVER UP TO A MAIN ROAD, never up to a street.
+        #
+        # The first cut wrote `carries` wherever the county disagreed, which also promoted Ann
+        # and Watson - both fitted as alleys - to street, and put ambient traffic straight back
+        # onto them. Standing fact 4 says an alley is not for cars, and the owner called Ann by
+        # eye: "a narrow lane, its right of way measures 25 ft, so it is fitted as an alley".
+        # A county centreline file does not overrule the man who rode a bike down it.
+        #
+        # The case this exists for is the arterial with no ground: a state route or county
+        # highway that has to be paved as a street because that is all the right of way there is.
+        # Anything below that, the fitted class is already the honest answer.
+        carries = county_class.get(n)
+        if carries not in ("mainroad", "freeway"):
+            carries = None
         for pl in lines:
             pts = " ".join(f"{int(round(x))},{int(round(y))}" for x, y in pl)
             w_(f"road {n} {width:g} {pts}{note}")
             w_(f"  class {klass}")
+            if carries and carries != klass:
+                w_(f"  carries {carries}")
             if row and row >= width:
                 w_(f"  easement {row:.1f}")
         w_("")

@@ -567,7 +567,10 @@ namespace Noir.Unity
             var pitch = new List<int>();
             for (int i = 0; i < Graph.Segments.Count; i++)
             {
-                var klass = world.Roads.Lines[Graph.Segments[i].Line].Class;
+                // CARRIES, not Class: how busy a road is follows what it is FOR, not how wide it
+                // was paved. See RoadLine.Carries - the route through this town is a county
+                // highway on a village street's right of way.
+                var klass = world.Roads.Lines[Graph.Segments[i].Line].Carries;
                 // Zero for an alley, so no car is ever introduced on a back lane - see
                 // RoadClasses.AmbientTrafficWeight. The turn scoring reads the same table.
                 int weight = RoadClasses.AmbientTrafficWeight(klass);
@@ -1234,7 +1237,7 @@ namespace Noir.Unity
         {
             var into = Graph.Segments[Graph.Turns[turn].To];
             var klass = _world != null && into.Line >= 0 && into.Line < _world.Roads.Lines.Count
-                ? _world.Roads.Lines[into.Line].Class
+                ? _world.Roads.Lines[into.Line].Carries    // what it carries - see the spawn pitch
                 : RoadClass.Street;
 
             // Alleys score 0, so nothing turns down one on its way somewhere - see

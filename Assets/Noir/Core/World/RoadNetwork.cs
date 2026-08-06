@@ -131,6 +131,25 @@ namespace Noir.Core.World
         public readonly string Name;
         public readonly RoadClass Class;
 
+        /// <summary>
+        /// WHAT THIS ROAD CARRIES, which is not always what it is paved to.
+        ///
+        /// Class is a fact about the GROUND: the corridor the road kit's tiles are built to, and
+        /// VillageParser refuses any road declared a width its class does not have. Carries is a
+        /// fact about the ROAD'S JOB - the route through town, the county highway - and the two
+        /// genuinely disagree here. Attica Street is a county highway whose right of way measures
+        /// 67 ft, the same as every other street in Rossville; paving it to a main road's 98 ft
+        /// would lay 16 ft of asphalt across private lots down its whole length, which is the
+        /// exact fault the survey was done to remove. Being a county highway does not make the
+        /// ground any wider.
+        ///
+        /// So the corridor steps down to fit the ground and this carries the function. Priority
+        /// at a junction, where the signals go, and how much ambient traffic a road is given all
+        /// read THIS; only the geometry reads Class. Defaults to Class, so every map that never
+        /// mentions it behaves exactly as it did.
+        /// </summary>
+        public readonly RoadClass Carries;
+
         /// <summary>Corridor width in tiles, as declared.</summary>
         public readonly int Width;
 
@@ -166,10 +185,14 @@ namespace Noir.Core.World
         /// </summary>
         public readonly RoadPath Path;
 
-        public RoadLine(string name, RoadClass klass, int width, IReadOnlyList<Tile> points)
+        /// <param name="carries">What the road's job is, when that differs from its corridor.
+        /// Null means the two agree, which is every road on every map written before this.</param>
+        public RoadLine(string name, RoadClass klass, int width, IReadOnlyList<Tile> points,
+                        RoadClass? carries = null)
         {
             Name = name ?? "";
             Class = klass;
+            Carries = carries ?? klass;
             Width = width;
             Points = points ?? Array.Empty<Tile>();
 
