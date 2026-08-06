@@ -42,7 +42,18 @@ namespace Noir.Editor
             try
             {
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read("city.txt"));
+                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
+
+                // THE SAME ROADS THE GAME BUILDS, or this audits a town nobody plays.
+                //
+                // VillageHost.Awake swaps city.txt's roads for the surveyed ones when
+                // Content/roads.txt is there. This built the world straight from city.txt and
+                // never made that swap, so every number below described the OLD network - it
+                // reported 37 roads and 56 places lying over one while the game was building 61
+                // and a different set of overlaps. An audit that measures a different town than
+                // the one on screen is worse than no audit, because it is believed.
+                SurveyRoads.Apply(layout);
+
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
                 var kinds = PlaceKindTable.Current;
 

@@ -34,11 +34,31 @@ namespace Noir.PlayTests
         private static CityTraffic _traffic;
         private static CitySignals _signals;
 
+        /// <summary>
+        /// INACTIVE ONES COUNT, and leaving them out broke the entire suite.
+        ///
+        /// FindFirstObjectByType skips deactivated objects by default. VillageHost builds signals
+        /// and traffic whenever EITHER layer is on, and then hands each object to
+        /// Layers.Register, whose last act is `root.SetActive(IsOn(kind))`. So with the Traffic
+        /// layer on and the Signals layer off - which is what was stored in PlayerPrefs -
+        /// CitySignals is built, immediately deactivated, and then cannot be found.
+        ///
+        /// WaitUntilBuilt requires both, so it spun for 4000 frames and every one of the thirteen
+        /// tests failed in SetUp with "the city was still not built (host=up, traffic=up)" - a
+        /// message that never mentioned the one thing that was null. The city was fine. The
+        /// suite was reading a UI preference as if it were test state.
+        ///
+        /// A test has no business caring which layers somebody left switched on.
+        /// </summary>
         public static CityTraffic Traffic =>
-            _traffic != null ? _traffic : _traffic = Object.FindFirstObjectByType<CityTraffic>();
+            _traffic != null ? _traffic
+                             : _traffic = Object.FindFirstObjectByType<CityTraffic>(
+                                   FindObjectsInactive.Include);
 
         public static CitySignals Signals =>
-            _signals != null ? _signals : _signals = Object.FindFirstObjectByType<CitySignals>();
+            _signals != null ? _signals
+                             : _signals = Object.FindFirstObjectByType<CitySignals>(
+                                   FindObjectsInactive.Include);
 
         /// <summary>
         /// Wait until the city is up, or give up loudly.
