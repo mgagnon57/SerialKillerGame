@@ -404,6 +404,11 @@ namespace Noir.Unity
                 // walks AllPlaces afterwards sees one town.
                 RuledAway.Apply(layout);
 
+                // And what is left stands where it was measured standing, at the size it was
+                // measured being - rather than on the generator's 13x7 box. After RuledAway, so
+                // nothing is carefully seated and then taken down again.
+                SeatOnSurvey.Apply(layout);
+
                 World = WorldBuilder.Build(layout);
 
                 var report = WorldValidator.Validate(World);
