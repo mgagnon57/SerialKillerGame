@@ -70,8 +70,18 @@ namespace Noir.Unity
             // was there, it ticked, and no house ever appeared. See Layers.RegisterLazy.
             if (showDressing)
             {
+                // THREE SWITCHES, NOT ONE, and each is the switch whose label describes the thing.
+                //
+                // All six of these used to hang off Massing, so asking for the generated buildings
+                // also planted every tree, bush, hedge and fence in the town and scattered the
+                // countryside over the fields - while a layer called "Trees & hedges" sat next to
+                // it doing something else. The greenery was split across two switches by an
+                // implementation detail: CityGreenery takes the prop kinds it handles, and every
+                // kind it does not fell through to the massing.
                 var under = root.transform;
-                Layers.RegisterLazy(Layers.Kind.Massing, () => BuildDressing(world, under));
+                Layers.RegisterLazy(Layers.Kind.Massing, () => BuildMassing(world, under));
+                Layers.RegisterLazy(Layers.Kind.Trees, () => BuildPlanting(world, under));
+                Layers.RegisterLazy(Layers.Kind.Farm, () => BuildCountryside(world, under));
             }
 
             // Reported AFTER building, not before. Textures load lazily when the first
@@ -89,19 +99,41 @@ namespace Noir.Unity
         /// still gave a town full of primitive houses. The ground stays outside the switch: a plan
         /// needs a surface to dim.
         /// </summary>
-        private static GameObject BuildDressing(WorldModel world, Transform parent)
+        /// <summary>The built town: walls, what is inside them, what is on top of them, and the
+        /// doors and signs on the front. Frontage belongs here and not with the planting - a
+        /// hanging pub sign is part of the pub.</summary>
+        private static GameObject BuildMassing(WorldModel world, Transform parent)
         {
             var dressing = new GameObject("Dressing");
             dressing.transform.SetParent(parent, false);
 
             BuildWalls(world, dressing.transform);
             BuildFurniture(world, dressing.transform);
-            BuildProps(world, dressing.transform);
             RoofBuilder.Build(world, dressing.transform);
             Frontage.Build(world, dressing.transform);
-            Countryside.Build(world, dressing.transform);
 
             return dressing;
+        }
+
+        /// <summary>The trees, bushes, hedges and fences the greenery builder does not take -
+        /// see BuildProps, which skips every kind CityGreenery handles. Both halves are on the
+        /// same switch now, which is the one the panel calls "Trees &amp; hedges".</summary>
+        private static GameObject BuildPlanting(WorldModel world, Transform parent)
+        {
+            var planting = new GameObject("Planting");
+            planting.transform.SetParent(parent, false);
+            BuildProps(world, planting.transform);
+            return planting;
+        }
+
+        /// <summary>The fields the village stands in. Scenery beyond the town rather than part of
+        /// it, so it answers to Farm - the switch that already carries the crops.</summary>
+        private static GameObject BuildCountryside(WorldModel world, Transform parent)
+        {
+            var country = new GameObject("Countryside");
+            country.transform.SetParent(parent, false);
+            Countryside.Build(world, country.transform);
+            return country;
         }
 
         // ---------- props ----------

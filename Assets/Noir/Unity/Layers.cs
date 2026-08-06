@@ -140,7 +140,7 @@ namespace Noir.Unity
                 case Kind.Districts:  return "Downtown blocks";
                 case Kind.Houses:     return "Houses";
                 case Kind.Story:      return "Story props";
-                case Kind.Trees:      return "Trees & hedges";
+                case Kind.Trees:      return "Trees, hedges & fences";
                 case Kind.Lamps:      return "Street lighting";
                 case Kind.Traffic:    return "Traffic";
                 case Kind.People:     return "People";
