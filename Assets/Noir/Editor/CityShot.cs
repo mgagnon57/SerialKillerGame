@@ -91,6 +91,7 @@ namespace Noir.Editor
                 // the one artefact anybody LOOKS at shows a town that no longer exists - and
                 // looking at it is the whole point of the render.
                 SurveyRoads.Apply(layout);
+                RuledAway.Apply(layout);        // the same reason: render the town the game builds
 
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
 
@@ -158,6 +159,7 @@ namespace Noir.Editor
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
                 var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
                 SurveyRoads.Apply(layout);      // the same reason as above
+                RuledAway.Apply(layout);
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
                 Debug.Log($"[cityshot] loaded {world.Width}x{world.Height}, {world.PlaceCount} places.");
 

@@ -399,6 +399,11 @@ namespace Noir.Unity
                 // by sliding a ruled line sideways. No-ops if the file is not there.
                 SurveyRoads.Apply(layout);
 
+                // The buildings on lots the owner ruled had none in 1991. Same reasoning as the
+                // roads above and the same seam: decided on the layout, once, so everything that
+                // walks AllPlaces afterwards sees one town.
+                RuledAway.Apply(layout);
+
                 World = WorldBuilder.Build(layout);
 
                 var report = WorldValidator.Validate(World);

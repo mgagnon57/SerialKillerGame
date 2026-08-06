@@ -108,6 +108,25 @@ namespace Noir.Unity
             return null;
         }
 
+        /// <summary>
+        /// The parcel under a point WHATEVER its date, including lots ruled absent.
+        ///
+        /// For the one job that has to reach a lot the town has stopped drawing: deciding whether
+        /// a building is standing on ground that was not a lot in 1991. Asking <see cref="Find"/>
+        /// that question can only ever answer no, because the lot in question is precisely the one
+        /// it filters out. Not for picking - a click should fall through those lots.
+        /// </summary>
+        public static Parcel? FindIncludingGone(Vector2 at)
+        {
+            Load();
+            foreach (var p in _all)
+            {
+                if (!p.Bounds.Contains(at)) continue;
+                if (Inside(p.Points, at)) return p;
+            }
+            return null;
+        }
+
         private static void Load()
         {
             if (_all != null) return;
