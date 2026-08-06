@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEditor;
 using UnityEngine;
 using Noir.Core.People;
@@ -29,7 +29,7 @@ namespace Noir.Editor
 
             try
             {
-                Log("--- Ashcombe smoke test ---");
+                Log("--- smoke test ---");
 
                 if (!ContentLoader.Exists)
                     throw new Exception($"content not found at {ContentLoader.Root}");
@@ -67,6 +67,13 @@ namespace Noir.Editor
                 var sim = new Simulation(world, people, VillageHost.Seed, 6 * 60);
                 sim.Tick(Noir.Core.Contracts.GameClock.TicksPerMinute * 120);
                 Log($"sim        ran two hours, clock at {sim.Clock}");
+
+                // EVERY LAYER ON. A smoke test exists to run the code that only breaks when it
+                // runs, so building a town with the scenery switched off tests the half nobody
+                // was worried about. The massing is built lazily now - see Layers.RegisterLazy -
+                // so with it off VillageMesh puts up the ground and nothing else, and the x-ray
+                // check below then finds nothing to hide and fails saying so.
+                foreach (var kind in Layers.All) Layers.Set(kind, true);
 
                 // The part that only breaks at runtime: meshes, materials, shaders, primitives.
                 root = new GameObject("SmokeTestVillage");

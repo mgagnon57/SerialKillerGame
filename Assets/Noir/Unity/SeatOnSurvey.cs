@@ -101,22 +101,51 @@ namespace Noir.Unity
             // FEMA polygon there routinely covers a whole run of joined brick, so seating one
             // shopfront onto it laid that shopfront across three of its neighbours, and the plan
             // came out as a tangle of overlapping outlines along Chicago Street.
-            var moving = new HashSet<PlaceSpec>();
-            foreach (var s in seated) moving.Add(s.Place);
+            // EVERY BUILDING'S CURRENT GROUND IS CLAIMED FIRST, its own included, and a building
+            // that moves gives its old ground up as it goes.
+            //
+            // Claiming only the ones that were NOT moving was still not enough. A building whose
+            // measured box clashed gave way and STAYED WHERE IT WAS - and its old position could
+            // overlap the box another building had already moved onto, so the yield created the
+            // very collision it was meant to avoid. The smoke test found the survivors on the
+            // real town: Henderson's lying across the Attica Street market, the old printing
+            // office across the hardware, 302 Thompson across 304.
+            //
+            // So the ledger holds where everything stands right now. A seated building lifts its
+            // own claim, asks whether the new ground is clear, and puts one or the other back.
+            // EVERY place, not only the buildings. A field is ground somebody has already spoken
+            // for, and the world validator counts a barn standing inside one as an overlapping
+            // place exactly as it counts two shops in the same tiles - which is how Home Farm 9
+            // and Wicker End 10 came to be seated into the middle of the west belt.
+            var taken = new List<TileRect>(layout.Places.Count);
+            var claim = new Dictionary<PlaceSpec, int>();
+            foreach (var place in layout.Places)
+            {
+                claim[place] = taken.Count;
+                taken.Add(place.Bounds);
+            }
 
             seated.Sort((a, b) => b.Now.Area.CompareTo(a.Now.Area));
-            var taken = new List<TileRect>(seated.Count);
-            foreach (var place in layout.Places)
-                if (place.IsBuilding && !moving.Contains(place)) taken.Add(place.Bounds);
             int moved = 0, yielded = 0, shaped = 0;
+            var nowhere = new TileRect(0, 0, 0, 0);   // an empty rect overlaps nothing
             foreach (var s in seated)
             {
+                int mine = claim[s.Place];
+                var wasClaiming = taken[mine];
+                taken[mine] = nowhere;                // stand aside while asking about the new spot
+
                 bool clash = false;
                 foreach (var t in taken)
                     if (s.Now.Overlaps(t)) { clash = true; break; }
-                if (clash) { yielded++; continue; }
 
-                taken.Add(s.Now);
+                if (clash)
+                {
+                    taken[mine] = wasClaiming;        // stay put, and keep holding the old ground
+                    yielded++;
+                    continue;
+                }
+
+                taken[mine] = s.Now;
                 s.Place.Bounds = s.Now;
                 if (s.Door.IsValid) s.Place.Door = s.Door;
                 s.Place.Outline = s.Outline;
