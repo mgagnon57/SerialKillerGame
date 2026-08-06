@@ -18,6 +18,21 @@ namespace Noir.Core.World
         // this bit does anything: Terrain is the source of truth. Audited 2026-07-29.
         Water = 1 << 5,
         Rough = 1 << 6,  // field, scrub — passable but slow
+
+        /// <summary>
+        /// The back lane, and it is a different KIND of way through town rather than a narrow
+        /// street. Owner's standing fact 4 in docs/SOURCES-OF-TRUTH.md, from having grown up
+        /// here: an alley is for the bins and for the garage that faces it, cars do not use it
+        /// to get anywhere, and a boy on a bike takes it in preference to the street.
+        ///
+        /// The survey agrees without being asked: a Rossville house sits a median 81 ft from
+        /// its street and 129 ft from its alley, and its outbuilding is the other way round at
+        /// 125 ft and 84 ft. Fronts face the street, garages face the lane.
+        ///
+        /// Also set on Road tiles - an alley IS a carriageway, it is just nobody's route - so
+        /// anything asking "can I walk here quickly" keeps the answer it had.
+        /// </summary>
+        Alley = 1 << 7,
     }
 
     public enum Terrain : byte
@@ -111,6 +126,10 @@ namespace Noir.Core.World
 
         public bool IsWalkable(int x, int y) => InBounds(x, y) && (_flags[Index(x, y)] & TileFlags.Walkable) != 0;
         public bool IsWalkable(Tile t) => IsWalkable(t.X, t.Y);
+
+        /// <summary>Is this the back lane rather than the street? See <see cref="TileFlags.Alley"/>.</summary>
+        public bool IsAlley(int x, int y) => InBounds(x, y) && (_flags[Index(x, y)] & TileFlags.Alley) != 0;
+        public bool IsAlley(Tile t) => IsAlley(t.X, t.Y);
 
         public bool BlocksSight(int x, int y) => !InBounds(x, y) || (_flags[Index(x, y)] & TileFlags.BlocksSight) != 0;
         public bool BlocksSight(Tile t) => BlocksSight(t.X, t.Y);

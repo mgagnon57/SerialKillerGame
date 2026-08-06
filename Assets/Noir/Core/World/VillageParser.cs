@@ -209,6 +209,32 @@ namespace Noir.Core.World
                     break;
                 }
 
+                case "easement":
+                {
+                    // HOW MUCH PUBLIC LAND THIS ROAD HAS, which is a different thing from how
+                    // much of it is paved and is the number nothing here used to carry.
+                    //
+                    // The right of way is the gap the lots leave - ground nobody owns - and it
+                    // is wider than the corridor: a Rossville street sits in a 66 ft easement
+                    // and paves a 33 ft corridor down the middle of it, leaving about 16 ft
+                    // each side for verge, walk and utilities. Saying it lets anything laying a
+                    // sidewalk know where the public land actually ends, instead of guessing
+                    // outward from the asphalt and putting a walk through somebody's hedge.
+                    //
+                    // Optional, and 0 means NOT MEASURED rather than none - out in the country
+                    // the fields tile edge to edge and there is no gap to measure.
+                    Require(tokens, 2, lineNo, "easement <metres>");
+                    road.Easement = ContentText.Number(tokens[1], "village.txt", lineNo);
+                    if (road.Easement < 0f)
+                        throw new VillageParseException(lineNo, "an easement cannot be negative");
+                    if (road.Easement > 0f && road.Easement < road.Width)
+                        throw new VillageParseException(
+                            lineNo, $"'{road.Name}' declares a {road.Easement}m easement but a "
+                                  + $"{road.Width}m corridor - the paving would lie on private "
+                                  + "land for its whole length.");
+                    break;
+                }
+
                 default:
                     throw new VillageParseException(lineNo, $"unknown road attribute '{cmd}'");
             }

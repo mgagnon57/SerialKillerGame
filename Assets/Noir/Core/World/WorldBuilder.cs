@@ -283,6 +283,12 @@ namespace Noir.Core.World
         private static void StrokePolyline(TileGrid grid, RoadRun run)
         {
             var flags = TileGrid.FlagsFor(run.Kind);
+
+            // An alley is carriageway like any other - same walkability, same speed - but it is
+            // marked, because who USES it is not the same. See TileFlags.Alley.
+            if (run.Kind == Terrain.Road && run.EffectiveClass == RoadClass.Alley)
+                flags |= TileFlags.Alley;
+
             int half = run.Width / 2;
             int extra = run.Width % 2 == 0 ? 0 : 1;
 

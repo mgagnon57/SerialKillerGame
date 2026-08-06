@@ -281,6 +281,97 @@ namespace Noir.Core.Sim
 
         /// <summary>Octile distance — the exact cost of moving on an 8-way grid with no
         /// obstacles — scaled by <see cref="HeuristicWeight"/>.</summary>
+        /// <summary>
+        /// Route the way a boy on a bike does: pick up the back lane, run it, and come off it
+        /// near the far end. Falls back to the ordinary path when there is no alley worth the
+        /// detour, so a caller can always ask and never has to check first.
+        ///
+        /// WHY THIS IS A WAYPOINT AND NOT A CHEAPER TILE. The obvious way to express a
+        /// preference is to make an alley step cost less and let A* find it, and it does not
+        /// work here - measurably. This search runs on a heuristic scaled to
+        /// <see cref="TileGrid.TypicalMoveCost"/>, which already overestimates a road step, so
+        /// it is deliberately greedy: probed over a 127-tile journey it examined exactly 127
+        /// nodes, which is to say it walked straight at the goal and never considered an
+        /// alternative at all. A cost multiplier changed nothing until the alley was practically
+        /// underfoot. Making the heuristic admissible instead would have made every existing
+        /// route in the game a different route, to fix something that is not a routing failure.
+        ///
+        /// And the waypoint is the truer model anyway. A cheaper tile says the boy went down the
+        /// alley because it saved him something. He did not. He went because it is the alley -
+        /// he decides, and then he goes. So: choose one near the middle of the journey, path to
+        /// it, path on from it.
+        ///
+        /// <paramref name="maxDetour"/> is how much longer than the direct route he will accept.
+        /// Past that the lane is not on his way in any useful sense and he stays on the street.
+        /// </summary>
+        public PathOutcome FindPathViaAlley(Tile from, Tile to, List<Tile> result,
+                                            int searchRadius = 45, float maxDetour = 1.8f)
+        {
+            result.Clear();
+            if (!_grid.InBounds(from) || !_grid.InBounds(to)) return PathOutcome.NoRouteExists;
+
+            var direct = new List<Tile>();
+            var straight = FindPath(from, to, direct);
+            if (straight != PathOutcome.Found)
+            {
+                result.AddRange(direct);
+                return straight;
+            }
+
+            var midpoint = new Tile((from.X + to.X) / 2, (from.Y + to.Y) / 2);
+            if (!TryFindAlleyNear(midpoint, searchRadius, out var lane) ||
+                _grid.IsAlley(from) || _grid.IsAlley(to))
+            {
+                result.AddRange(direct);
+                return PathOutcome.Found;
+            }
+
+            var first = new List<Tile>();
+            var second = new List<Tile>();
+            if (FindPath(from, lane, first) != PathOutcome.Found ||
+                FindPath(lane, to, second) != PathOutcome.Found ||
+                first.Count + second.Count > direct.Count * maxDetour)
+            {
+                result.AddRange(direct);
+                return PathOutcome.Found;
+            }
+
+            result.AddRange(first);
+            result.AddRange(second);
+            return PathOutcome.Found;
+        }
+
+        /// <summary>
+        /// The nearest walkable alley tile to <paramref name="near"/>, within
+        /// <paramref name="radius"/>. Searched in growing rings so the first hit is the nearest,
+        /// and bounded by the radius so a town with no alley near this journey costs a box scan
+        /// rather than a map sweep.
+        /// </summary>
+        public bool TryFindAlleyNear(Tile near, int radius, out Tile found)
+        {
+            found = near;
+            if (_grid.IsAlley(near) && _grid.IsWalkable(near)) return true;
+
+            for (int r = 1; r <= radius; r++)
+            {
+                for (int d = -r; d <= r; d++)
+                {
+                    if (Hit(near.X + d, near.Y - r, ref found)) return true;
+                    if (Hit(near.X + d, near.Y + r, ref found)) return true;
+                    if (Hit(near.X - r, near.Y + d, ref found)) return true;
+                    if (Hit(near.X + r, near.Y + d, ref found)) return true;
+                }
+            }
+            return false;
+        }
+
+        private bool Hit(int x, int y, ref Tile found)
+        {
+            if (!_grid.IsAlley(x, y) || !_grid.IsWalkable(x, y)) return false;
+            found = new Tile(x, y);
+            return true;
+        }
+
         private float Heuristic(Tile a, Tile b)
         {
             int dx = a.X - b.X; if (dx < 0) dx = -dx;

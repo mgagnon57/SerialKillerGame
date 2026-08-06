@@ -57,6 +57,20 @@ namespace Noir.Core.World
             return v;
         }
 
+        /// <summary>
+        /// A measurement that need not land on a whole tile. Distinct from <see cref="Int"/>
+        /// because most numbers in these files ARE tiles and should stay whole - a road point at
+        /// 1234.5 is a mistake and reads better as one. A measured width is not: a right of way
+        /// comes off a survey at 20.5 m and rounding it to 20 throws away the half metre that
+        /// says whether the pavement fits.
+        /// </summary>
+        public static float Number(string s, string file, int lineNo)
+        {
+            if (!float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out float v))
+                throw new VillageParseException(file, lineNo, $"'{s}' is not a number");
+            return v;
+        }
+
         /// <summary>"12,34" -> Tile(12,34)</summary>
         public static Tile Point(string s, string file, int lineNo)
         {

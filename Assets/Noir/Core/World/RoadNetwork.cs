@@ -68,6 +68,33 @@ namespace Noir.Core.World
         /// </summary>
         public static int LanesEachWay(RoadClass klass) => klass == RoadClass.Freeway ? 2 : 1;
 
+        /// <summary>
+        /// How much passing traffic a road of this class carries, relative to the others. Used
+        /// both for where cars are introduced and for which way they turn at a junction, so the
+        /// two cannot drift apart.
+        ///
+        /// AN ALLEY SCORES ZERO, and that is the point of the function existing. Owner's
+        /// standing fact 4 in docs/SOURCES-OF-TRUTH.md: *"Cars would not normally use an
+        /// alley"* - they are for the bins and for the garage that faces them, and the way
+        /// through town is the street. Both tables here used to end `_ => 1`, which quietly
+        /// meant alleys, so ambient traffic was introduced onto back lanes and turned down them
+        /// at half the rate of a street.
+        ///
+        /// ZERO IS ABOUT AMBIENT TRAFFIC, NOT ABOUT ACCESS. It says nothing is *routed* through
+        /// an alley; it does not remove the alley from the lane graph, so a resident coming home
+        /// to a garage that faces the lane, or a collection round, can still be put on one
+        /// deliberately. Those are journeys with a reason, and this is the traffic that has
+        /// none.
+        /// </summary>
+        public static int AmbientTrafficWeight(RoadClass klass) => klass switch
+        {
+            RoadClass.Freeway => 12,
+            RoadClass.Mainroad => 8,
+            RoadClass.Street => 2,
+            RoadClass.Alley => 0,
+            _ => 1,                       // a track is a farm entrance: rare, but not nothing
+        };
+
         public static bool TryParse(string text, out RoadClass klass)
         {
             switch ((text ?? "").Trim().ToLowerInvariant())

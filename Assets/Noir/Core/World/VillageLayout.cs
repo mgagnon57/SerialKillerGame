@@ -29,6 +29,18 @@ namespace Noir.Core.World
         public readonly List<Tile> Points = new List<Tile>();
 
         /// <summary>
+        /// How wide the PUBLIC LAND is here, in metres - the right of way, which is the gap the
+        /// lots leave rather than the part that gets paved. 0 means not measured.
+        ///
+        /// The corridor is pinned to the class and is what the road kit's tiles draw; this is
+        /// the easement it sits inside. A Rossville street paves a 10 m corridor down the middle
+        /// of a 20 m easement, so about 5 m each side is public ground that is NOT road - verge,
+        /// utilities, and a sidewalk where there is one. Anything laying a walk needs this
+        /// number, because measuring outward from the asphalt and guessing puts it in a hedge.
+        /// </summary>
+        public float Easement;
+
+        /// <summary>
         /// What is painted on it, or null to take the obvious answer from the width.
         ///
         /// Optional because every map written before roads had classes leaves it unsaid, and
