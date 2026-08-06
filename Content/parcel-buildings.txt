@@ -1,0 +1,2290 @@
+# ============================================================================
+#  THE BUILDINGS OF ROSSVILLE, AS SOMETHING ACTUALLY MEASURED THEM
+#
+#  822 building footprints, seated on the county's own lots. Until this file, no
+#  building in this project stood anywhere a survey put it: houses are authored
+#  rectangles placed at a setback from a road, and 76 of them stand on no parcel at
+#  all. These are polygons, from imagery, with an area and an address each.
+#
+#  SOURCE. FEMA / Oak Ridge National Laboratory USA Structures, the national
+#  building-footprint layer, queried for the Rossville box on 2026-08-05. Raw download
+#  at tools/rossville-structures.geojson so this can be rebuilt; the seating is
+#  tools/seat-buildings.py and the coordinate fit it depends on is tools/fit-transform.py.
+#
+#  885 structures stand in the box. 822 are seated here; 57 fall on no county parcel
+#  (open country, where the parcels tile farmland) and 6 on a lot parcels.txt does not
+#  carry. For scale, OpenStreetMap has 19 buildings here and Vermilion County's own
+#  Buildings layer has none - that layer exists and covers Danville only, which is why
+#  earlier passes recorded the county as having no footprint data. It has none HERE.
+#
+#  HOW GOOD IS THE SEATING. Two independent checks, both computed rather than asserted:
+#
+#    822 of 822 footprints land inside the very lot they were assigned to, in the
+#    coordinates parcels.txt draws - so a house sits on its own lot, not the
+#    neighbour's. 69% sit wholly inside their boundary; the rest overhang it, which is
+#    partly real - garages are built on lot lines - and partly the tracing being loose.
+#
+#    96.0% of them carry the same street address the county assessor records for the
+#    same parcel (679 agree, 28 differ, on the 707 where both sides have one). The two
+#    datasets are unrelated - a county tax roll and a federal imagery product - so
+#    agreeing on which house is at which number is a real check on the geometry.
+#    Most disagreements are two house numbers apart on the right street.
+#
+#  WHAT IS NOT IN HERE, AND DO NOT INFER IT.
+#    - NO HEIGHTS. The HEIGHT column is empty on all 808 records.
+#    - NO ROOM DATA. Nothing here says bedrooms, baths or floor area; footprint is
+#      GROUND AREA, and a 1.5-storey house has half again as much floor as this says.
+#    - NO YEAR BUILT. See docs/research/ROSSVILLE-HISTORY.md for the era mix.
+#    - EVERY RECORD IS `VAL_METHOD: Automated`. Not one was checked by a person. These
+#      are machine-traced outlines: right about where a building is, approximate about
+#      its exact corners, and they include porches, attached garages and later
+#      additions that the 1913 Sanborn footprints deliberately exclude.
+#    - THE PRIMARY/OUTBUILDING SPLIT IS DERIVED, NOT RECORDED. FEMA ships an OUTBLDG
+#      flag and it is empty on every record, so the largest structure on a lot is
+#      called the building and the rest are behind it.
+#
+#  These are CURRENT buildings, imagery-dated 2016 on most records, and the game is set
+#  around 2000. The commercial row at Attica x Chicago burned in February 2004, so the
+#  downtown here is the town AFTER the fire and is wrong for the build year - see
+#  docs/research/DOWNTOWN-1991.md. The residential streets are substantially unchanged.
+#
+#  FIELDS
+#    parcel <id> building <n> <role> <area> <zone> "<address>"
+#        n       0 is the largest structure on the lot, then descending
+#        role    primary | outbuilding, derived as above
+#        area    footprint ground area in SQUARE METRES, to match parcels.txt and
+#                ResidentialLots.Homestead.Footprint. The header talks in square feet
+#                because the town does; the file is metric because the code is.
+#        zone    FEMA's occupancy class, mapped onto the project's own zoning words
+#        skew    degrees this outline sits off square to its own lot, signed. RECORDED,
+#                NOT CORRECTED - rotate the ring by minus this about its own centroid to
+#                square it. See the note on tracing quality above before doing so.
+#    parcel <id> shape <n> x,y x,y ...
+#        the footprint ring, closed, in village metres - the same frame as parcels.txt
+#
+#  Keyed by parcel id, which is that parcel's line number in parcels.txt (0-based,
+#  comments and blanks not counted), matching parcel-county.txt and parcel-notes.txt.
+#
+#  DERIVED AND READ-ONLY, like parcel-county.txt. Nothing authored belongs in here -
+#  parcel-notes.txt is the author's file and the game rewrites it whole.
+# ============================================================================
+
+parcel 1 building 0 primary 288.0 residential skew -3.3 block -2.8 "106 Smith Street"
+parcel 1 shape 0 668.5,759.7 667.4,742.4 678.5,741.6 680.0,765.1 660.2,766.4 659.8,760.2 668.5,759.7
+
+parcel 2 building 0 primary 375.2 residential skew +0.3 block -6.6 "403 North Chicago Street"
+parcel 2 shape 0 677.3,970.3 684.5,968.5 685.4,972.1 661.5,978.3 657.2,961.5 673.9,957.1 677.3,970.3
+
+parcel 3 building 0 primary 267.2 residential skew -1.7 block +2.7 "104 Green Street"
+parcel 3 shape 0 706.4,949.1 707.0,959.0 715.7,958.5 716.4,970.8 700.3,971.8 699.0,949.5 706.4,949.1
+
+parcel 4 building 0 primary 166.8 residential skew +5.4 block +9.2 "106 Green Street"
+parcel 4 shape 0 721.4,954.9 733.8,955.7 733.0,968.0 720.7,967.3 721.4,954.9
+
+parcel 5 building 0 primary 238.4 residential skew +3.4 block +3.8 "209 Green Street"
+parcel 5 shape 0 937.6,1009.8 932.7,1009.5 933.6,989.7 953.4,990.7 952.9,1000.6 938.1,999.9 937.6,1009.8
+
+parcel 6 building 0 primary 154.4 residential skew -0.4 block +0.3 "304 North Church Street"
+parcel 6 shape 0 940.6,1039.6 950.5,1039.4 950.8,1056.7 940.9,1056.9 940.6,1039.6
+parcel 6 building 1 outbuilding 58.6 residential skew +2.3 block +2.7 "304 North Church Street"
+parcel 6 shape 1 923.0,1051.1 913.1,1050.8 913.3,1043.4 923.2,1043.7 923.0,1051.1
+
+parcel 8 building 0 primary 291.8 residential skew -0.6 block -9.8 "218 Harrison Street"
+parcel 8 shape 0 802.8,1134.6 798.9,1122.9 821.1,1115.3 825.1,1127.1 802.8,1134.6
+
+parcel 9 building 0 primary 203.7 residential skew -1.3 block +0.5 "213 Harrison Street"
+parcel 9 shape 0 866.3,1149.4 887.3,1148.1 887.9,1158.0 867.0,1159.3 866.3,1149.4
+
+parcel 11 building 0 primary 580.4 commercial skew +10.7 block -0.3 "111 North Chicago Street"
+parcel 11 shape 0 749.2,1223.4 757.7,1222.2 760.9,1245.5 740.1,1248.4 735.8,1216.4 748.0,1214.8 749.2,1223.4
+
+parcel 12 building 0 primary 430.0 commercial skew -5.1 block -7.1 "101 North Chicago Street"
+parcel 12 shape 0 754.0,1334.4 748.8,1302.6 761.0,1300.6 766.2,1332.4 754.0,1334.4
+
+parcel 15 building 0 primary 196.8 residential skew +0.9 block +5.5 ""
+parcel 15 shape 0 659.7,1275.5 676.9,1276.6 676.2,1288.9 658.9,1287.9 659.7,1275.5
+
+parcel 17 building 0 primary 195.7 residential skew +19.0 block +19.2 "114 Henderson Street"
+parcel 17 shape 0 803.4,829.9 808.9,813.4 820.6,817.4 815.1,833.8 803.4,829.9
+parcel 17 building 1 outbuilding 73.3 residential skew -6.5 block -5.9 "114 Henderson Street"
+parcel 17 shape 1 812.0,800.3 813.2,810.1 805.8,811.0 804.6,801.2 812.0,800.3
+
+parcel 19 building 0 primary 160.2 residential skew +14.3 block +14.1 "111 West Attica Road"
+parcel 19 shape 0 624.4,1365.3 627.5,1353.3 639.4,1356.5 636.3,1368.4 624.4,1365.3
+parcel 19 building 1 outbuilding 98.1 residential skew +5.4 block +5.1 "111 West Attica Road"
+parcel 19 shape 1 621.5,1378.2 622.5,1368.3 632.3,1369.3 631.3,1379.2 621.5,1378.2
+
+parcel 20 building 0 primary 243.6 residential skew +4.5 block +4.6 "220 West Stufflebeam Drive"
+parcel 20 shape 0 452.1,1710.4 453.6,1691.8 465.9,1692.8 464.5,1711.3 452.1,1710.4
+parcel 20 building 1 outbuilding 133.9 residential skew +2.6 block +2.6 "220 West Stufflebeam Drive"
+parcel 20 shape 1 483.4,1694.3 483.1,1701.7 469.5,1701.1 469.8,1693.7 483.4,1694.3
+
+parcel 21 building 0 primary 153.0 residential skew +5.8 block +5.3 "212 Park Place"
+parcel 21 shape 0 565.7,1454.1 575.6,1455.0 574.1,1471.0 564.2,1470.1 565.7,1454.1
+
+parcel 23 building 0 primary 307.1 unclassified skew -3.8 block -14.0 "121 East Attica Road"
+parcel 23 shape 0 840.7,1377.9 834.6,1356.4 847.6,1352.7 853.8,1374.1 840.7,1377.9
+parcel 23 building 1 outbuilding 74.7 residential skew +3.1 block -7.7 "121 East Attica Road"
+parcel 23 shape 1 857.2,1391.3 848.7,1392.6 847.3,1384.1 855.8,1382.7 857.2,1391.3
+
+parcel 24 building 0 primary 418.2 residential skew -1.1 block -2.3 "126 South Chicago Street"
+parcel 24 shape 0 761.9,1452.9 762.9,1468.9 742.0,1470.2 740.7,1449.2 755.5,1448.3 755.8,1453.2 761.9,1452.9
+
+parcel 25 building 0 primary 158.1 residential skew +1.7 block +1.3 "102 Thompson Street"
+parcel 25 shape 0 914.6,2073.8 914.5,2089.9 904.6,2089.8 904.7,2073.7 914.6,2073.8
+
+parcel 26 building 0 primary 389.3 commercial skew -5.0 block -4.8 "104 Thompson Street"
+parcel 26 shape 0 946.5,2063.7 961.2,2062.3 963.8,2089.4 949.0,2090.8 946.5,2063.7
+
+parcel 27 building 0 primary 84.3 residential skew -16.6 block -16.3 "201 Thompson Street"
+parcel 27 shape 0 969.2,2114.0 972.8,2125.8 966.9,2127.7 963.3,2115.8 969.2,2114.0
+parcel 27 building 1 outbuilding 54.0 unclassified skew -1.6 block -1.5 ""
+parcel 27 shape 1 969.7,2159.4 962.3,2159.6 962.0,2152.2 969.4,2151.9 969.7,2159.4
+parcel 27 building 2 outbuilding 50.2 residential skew -4.1 block -3.8 "101 Thompson Street"
+parcel 27 shape 2 934.6,2132.7 934.0,2125.3 941.4,2124.7 942.0,2132.1 934.6,2132.7
+
+parcel 28 building 0 primary 402.0 residential skew +2.0 block +2.0 ""
+parcel 28 shape 0 210.1,1352.7 209.5,1372.5 189.8,1371.9 190.3,1352.1 210.1,1352.7
+
+parcel 31 building 0 primary 133.3 residential skew -6.8 block -6.1 "208 Henderson Street"
+parcel 31 shape 0 1078.0,822.5 1079.3,832.3 1067.0,833.9 1065.8,824.1 1078.0,822.5
+parcel 31 building 1 outbuilding 107.9 residential skew -1.0 block -0.7 "208 Henderson Street"
+parcel 31 shape 1 1073.9,799.9 1081.3,799.7 1081.7,814.6 1074.3,814.8 1073.9,799.9
+
+parcel 33 building 0 primary 101.9 residential skew +0.2 block +4.5 "401 Gilbert Street"
+parcel 33 shape 0 1362.4,1618.2 1369.8,1618.1 1369.9,1630.5 1362.5,1630.5 1362.4,1618.2
+
+parcel 35 building 0 primary 270.1 residential skew +21.1 block +21.6 "407 South Grove Street"
+parcel 35 shape 0 1375.3,1815.7 1381.1,1817.9 1375.0,1834.1 1363.4,1829.8 1371.7,1807.7 1377.5,1809.9 1375.3,1815.7
+
+parcel 36 building 0 primary 221.6 residential skew +24.0 block +27.7 "415 Mc Kibben Street"
+parcel 36 shape 0 1502.2,1889.8 1510.9,1869.3 1520.0,1873.2 1511.2,1893.7 1502.2,1889.8
+
+parcel 37 building 0 primary 144.0 residential skew +6.9 block +7.9 "404 Mc Kibben Street"
+parcel 37 shape 0 1400.1,1818.4 1398.4,1833.1 1388.6,1832.0 1390.2,1817.3 1400.1,1818.4
+
+parcel 39 building 0 primary 288.6 residential skew +8.5 block +4.7 ""
+parcel 39 shape 0 1551.6,1909.5 1551.2,1887.2 1563.5,1886.9 1564.0,1909.2 1551.6,1909.5
+
+parcel 40 building 0 primary 18514.6 civic skew +0.5 block -3.3 ""
+parcel 40 shape 0 1514.7,1580.6 1535.6,1567.3 1540.2,1574.7 1545.5,1571.3 1573.9,1616.3 1567.6,1620.3 1584.9,1647.5 1592.2,1642.9 1610.7,1672.1 1622.2,1664.8 1659.9,1724.5 1631.7,1742.4 1636.3,1749.7 1641.5,1746.4 1656.8,1770.4 1623.4,1791.7 1597.5,1750.9 1586.1,1758.2 1570.2,1733.1 1561.8,1738.4 1539.3,1702.8 1544.6,1699.5 1532.0,1679.6 1525.7,1683.6 1523.1,1679.4 1515.8,1684.0 1457.5,1592.0 1497.2,1566.8 1500.5,1572.0 1506.8,1568.0 1514.7,1580.6
+parcel 40 building 1 outbuilding 919.4 commercial skew +4.4 block -12.0 ""
+parcel 40 shape 1 1408.1,1522.4 1382.2,1474.5 1397.4,1466.2 1423.3,1514.1 1408.1,1522.4
+parcel 40 building 2 outbuilding 720.0 commercial skew +0.5 block -6.9 ""
+parcel 40 shape 2 1440.4,1523.8 1480.1,1498.6 1488.0,1511.2 1448.3,1536.3 1440.4,1523.8
+parcel 40 building 3 outbuilding 115.1 commercial skew +1.8 block -13.2 ""
+parcel 40 shape 3 1459.5,1550.5 1451.0,1555.6 1444.6,1545.0 1453.1,1539.9 1459.5,1550.5
+parcel 40 building 4 outbuilding 46.5 commercial skew +5.6 block -9.4 ""
+parcel 40 shape 4 1469.0,1559.6 1462.4,1563.0 1459.0,1556.4 1465.6,1553.0 1469.0,1559.6
+
+parcel 41 building 0 primary 201.7 residential skew +27.9 block +18.0 "409 East Attica Road"
+parcel 41 shape 0 1449.2,1377.7 1444.5,1394.4 1432.6,1391.1 1437.3,1374.4 1449.2,1377.7
+parcel 41 building 1 outbuilding 126.4 residential skew +40.5 block +29.5 "409 East Attica Road"
+parcel 41 shape 1 1449.1,1401.6 1454.9,1390.7 1463.6,1395.4 1457.8,1406.3 1449.1,1401.6
+
+parcel 48 building 0 primary 334.2 residential skew +14.7 block +14.7 "307 Earl Court"
+parcel 48 shape 0 1311.2,2270.2 1292.1,2264.9 1296.4,2249.4 1315.5,2254.7 1311.2,2270.2
+
+parcel 51 building 0 primary 864.3 commercial skew +5.5 block +5.0 "711 South Chicago Street"
+parcel 51 shape 0 983.7,2360.2 982.5,2376.3 957.9,2374.5 957.4,2380.7 940.2,2379.4 942.1,2352.2 955.7,2353.2 955.3,2358.1 983.7,2360.2
+
+parcel 53 building 0 primary 254.8 residential skew +0.0 block -0.1 "304 Henderson Street"
+parcel 53 shape 0 1191.1,825.9 1191.0,816.0 1215.7,815.8 1215.8,825.7 1191.1,825.9
+
+parcel 55 building 0 primary 148.3 residential skew -0.5 block +1.4 "402 East Attica Road"
+parcel 55 shape 0 1361.6,1341.2 1361.3,1321.4 1368.7,1321.3 1369.0,1341.1 1361.6,1341.2
+
+parcel 56 building 0 primary 556.1 residential skew +7.0 block +6.8 "402 Benton Street"
+parcel 56 shape 0 1358.9,1050.0 1352.8,1049.3 1354.4,1034.5 1370.4,1036.4 1365.1,1083.1 1355.3,1082.0 1358.9,1050.0
+
+parcel 57 building 0 primary 120.1 residential skew -3.2 block -3.3 "404 Benton Street"
+parcel 57 shape 0 1376.3,1082.1 1375.7,1072.2 1388.0,1071.4 1388.7,1081.3 1376.3,1082.1
+
+parcel 58 building 0 primary 378.3 residential skew +2.3 block +2.2 "405 Benton Street"
+parcel 58 shape 0 1399.0,1130.2 1399.4,1116.6 1425.3,1117.4 1424.9,1131.0 1399.0,1130.2
+parcel 58 building 1 outbuilding 67.5 residential skew +3.7 block +3.6 "405 Benton Street"
+parcel 58 shape 1 1400.2,1141.6 1392.8,1141.2 1393.2,1133.8 1400.6,1134.2 1400.2,1141.6
+parcel 58 building 2 outbuilding 44.2 residential skew -4.1 block -4.1 ""
+parcel 58 shape 2 1393.0,1150.2 1400.4,1149.6 1400.9,1155.8 1393.5,1156.4 1393.0,1150.2
+
+parcel 59 building 0 primary 437.8 residential skew +2.0 block +2.5 "401 Green Street"
+parcel 59 shape 0 1359.7,984.7 1380.7,985.5 1380.5,990.5 1391.7,990.9 1391.3,999.6 1359.2,998.3 1359.7,984.7
+
+parcel 60 building 0 primary 195.1 residential skew +11.1 block +11.8 "410 East Attica Road"
+parcel 60 shape 0 1455.7,1339.3 1441.1,1336.5 1443.7,1323.1 1458.2,1325.9 1455.7,1339.3
+
+parcel 61 building 0 primary 140.5 residential skew +2.7 block +2.6 "417 Holmes Street"
+parcel 61 shape 0 1505.1,1252.6 1505.7,1237.7 1515.6,1238.1 1515.0,1252.9 1505.1,1252.6
+parcel 61 building 1 outbuilding 48.8 residential skew +3.9 block +3.8 "417 Holmes Street"
+parcel 61 shape 1 1511.2,1255.7 1519.8,1256.2 1519.5,1261.1 1510.9,1260.6 1511.2,1255.7
+
+parcel 64 building 0 primary 137.9 residential skew +0.2 block -10.8 "208 Harrison Street"
+parcel 64 shape 0 802.5,1218.7 798.7,1206.9 810.4,1203.0 814.3,1214.8 802.5,1218.7
+
+parcel 66 building 0 primary 83.7 residential skew -5.4 block -6.7 "101 Holmes Street"
+parcel 66 shape 0 894.4,1236.8 896.1,1245.3 887.7,1247.0 885.9,1238.5 894.4,1236.8
+
+parcel 67 building 0 primary 119.5 residential skew +2.4 block +6.4 "103 Holmes Street"
+parcel 67 shape 0 919.3,1251.4 906.9,1251.0 907.3,1241.1 919.6,1241.5 919.3,1251.4
+
+parcel 68 building 0 primary 186.1 residential skew +2.5 block +5.9 "103 Holmes Street"
+parcel 68 shape 0 920.0,1273.1 919.6,1285.5 904.8,1285.0 905.2,1272.6 920.0,1273.1
+
+parcel 69 building 0 primary 152.1 residential skew -17.3 block -14.8 ""
+parcel 69 shape 0 941.5,1243.6 950.9,1240.6 955.4,1254.7 946.0,1257.8 941.5,1243.6
+parcel 69 building 1 outbuilding 136.5 residential skew +10.4 block +12.4 ""
+parcel 69 shape 1 944.9,1276.4 963.2,1279.6 962.3,1284.5 944.1,1281.3 944.9,1276.4
+
+parcel 70 building 0 primary 116.3 residential skew +5.5 block +5.9 "204 North Church Street"
+parcel 70 shape 0 955.4,1170.0 954.8,1177.4 938.8,1176.0 939.4,1168.6 955.4,1170.0
+
+parcel 71 building 0 primary 249.1 residential skew +2.7 block +5.9 "107 Henderson Street"
+parcel 71 shape 0 687.2,882.7 687.8,866.6 703.9,867.3 703.2,883.3 687.2,882.7
+parcel 71 building 1 outbuilding 79.9 residential skew +1.3 block +4.9 "107 Henderson Street"
+parcel 71 shape 1 718.2,898.9 718.4,889.0 727.0,889.1 726.9,899.1 718.2,898.9
+
+parcel 72 building 0 primary 150.1 residential skew -9.1 block -7.7 "410 North Church Street"
+parcel 72 shape 0 942.6,876.3 940.2,861.6 949.9,860.0 952.4,874.6 942.6,876.3
+parcel 72 building 1 outbuilding 76.8 residential skew +9.8 block +10.7 "410 North Church Street"
+parcel 72 shape 1 938.6,880.1 948.3,881.7 947.1,889.0 937.4,887.4 938.6,880.1
+
+parcel 73 building 0 primary 168.0 residential skew -9.8 block -7.9 ""
+parcel 73 shape 0 956.3,945.4 941.7,947.8 939.7,935.5 954.3,933.2 956.3,945.4
+parcel 73 building 1 outbuilding 65.2 residential skew -7.0 block -4.9 ""
+parcel 73 shape 1 937.7,914.8 945.0,914.0 945.9,921.4 938.5,922.2 937.7,914.8
+
+parcel 74 building 0 primary 389.3 residential skew +7.6 block +7.7 "3 South Watson Street"
+parcel 74 shape 0 563.9,1893.6 583.5,1896.5 582.6,1902.6 592.4,1904.0 591.1,1912.6 561.7,1908.3 563.9,1893.6
+
+parcel 76 building 0 primary 239.2 residential skew +7.5 block +7.9 "10 West Greenwood Drive"
+parcel 76 shape 0 567.8,1985.9 593.5,1989.7 592.0,1999.5 566.4,1995.7 567.8,1985.9
+parcel 76 building 1 outbuilding 79.4 residential skew -2.9 block -2.5 "10 West Greenwood Drive"
+parcel 76 shape 1 565.9,1966.8 566.2,1976.7 558.8,1977.0 558.5,1967.1 565.9,1966.8
+
+parcel 78 building 0 primary 174.3 residential skew -42.6 block -41.5 "2 South Watson Street"
+parcel 78 shape 0 713.6,1915.5 705.4,1906.2 716.4,1896.3 724.7,1905.5 713.6,1915.5
+
+parcel 79 building 0 primary 163.3 residential skew +2.9 block +2.8 "215 Perry Street"
+parcel 79 shape 0 568.8,1626.7 558.9,1626.3 559.6,1610.2 569.5,1610.7 568.8,1626.7
+parcel 79 building 1 outbuilding 87.2 residential skew -2.6 block -2.7 "215 Perry Street"
+parcel 79 shape 1 575.5,1644.2 568.1,1644.6 567.6,1634.7 575.0,1634.3 575.5,1644.2
+
+parcel 80 building 0 primary 213.6 residential skew -0.5 block -0.0 "207 Perry Street"
+parcel 80 shape 0 637.0,1611.9 649.4,1611.7 649.7,1629.0 637.3,1629.2 637.0,1611.9
+
+parcel 83 building 0 primary 215.0 residential skew +9.0 block +7.7 "308 South Chicago Street"
+parcel 83 shape 0 814.6,1633.5 831.8,1634.9 830.8,1647.2 813.6,1645.9 814.6,1633.5
+
+parcel 84 building 0 primary 191.3 residential skew +3.2 block +4.6 "310 South Chicago Street"
+parcel 84 shape 0 814.1,1665.2 814.5,1654.1 831.8,1654.6 831.4,1665.7 814.1,1665.2
+parcel 84 building 1 outbuilding 94.4 residential skew -0.9 block +0.9 "310 South Chicago Street"
+parcel 84 shape 1 783.8,1662.2 783.4,1652.3 793.3,1651.9 793.7,1661.8 783.8,1662.2
+
+parcel 86 building 0 primary 82.5 residential skew +1.6 block +1.6 "212 Perry Street"
+parcel 86 shape 0 560.0,1548.1 560.2,1538.2 570.1,1538.4 569.9,1548.3 560.0,1548.1
+
+parcel 87 building 0 primary 222.8 residential skew -0.3 block -0.5 "209 Park Place"
+parcel 87 shape 0 596.3,1497.0 596.5,1511.9 581.7,1512.1 581.5,1497.2 596.3,1497.0
+
+parcel 88 building 0 primary 182.7 residential skew +15.3 block +15.4 "207 Park Place"
+parcel 88 shape 0 609.5,1495.8 621.4,1498.9 617.6,1513.3 605.7,1510.1 609.5,1495.8
+parcel 88 building 1 outbuilding 85.1 residential skew -4.2 block -3.9 "207 Park Place"
+parcel 88 shape 1 619.4,1524.4 610.8,1525.1 610.0,1515.2 618.6,1514.5 619.4,1524.4
+
+parcel 89 building 0 primary 192.5 residential skew +39.4 block +40.8 "201 Park Place"
+parcel 89 shape 0 674.5,1493.6 684.1,1501.4 673.2,1514.9 663.6,1507.1 674.5,1493.6
+
+parcel 90 building 0 primary 140.3 residential skew +0.3 block +4.0 "112 Green Street"
+parcel 90 shape 0 773.9,959.0 773.9,949.1 788.8,949.2 788.7,959.2 773.9,959.0
+
+parcel 91 building 0 primary 208.9 residential skew +2.5 block +4.0 "401 Harrison Street"
+parcel 91 shape 0 871.0,957.0 853.7,956.0 854.4,943.6 871.7,944.6 871.0,957.0
+
+parcel 92 building 0 primary 226.8 civic skew +9.0 block -0.4 "401 North Chicago Street"
+parcel 92 shape 0 658.6,1000.7 656.5,987.2 672.4,984.7 674.5,998.2 658.6,1000.7
+
+parcel 93 building 0 primary 168.5 residential skew -0.5 block -0.3 "309 Harrison Street"
+parcel 93 shape 0 864.2,985.8 864.5,1001.9 854.6,1002.1 854.3,986.0 864.2,985.8
+
+parcel 94 building 0 primary 116.6 residential skew -3.7 block -3.2 "207 Green Street"
+parcel 94 shape 0 904.4,1001.2 904.1,996.2 925.0,994.7 925.4,999.6 904.4,1001.2
+
+parcel 96 building 0 primary 161.9 residential skew -5.6 block -3.0 "219 Harrison Street"
+parcel 96 shape 0 850.3,1115.3 865.0,1113.3 866.4,1123.1 851.7,1125.1 850.3,1115.3
+parcel 96 building 1 outbuilding 51.1 residential skew -17.4 block -15.9 "219 Harrison Street"
+parcel 96 shape 1 879.7,1124.9 877.6,1119.1 885.7,1116.2 887.8,1122.0 879.7,1124.9
+
+parcel 97 building 0 primary 164.5 residential skew -7.0 block -4.1 "217 Harrison Street"
+parcel 97 shape 0 865.5,1128.2 867.5,1140.4 855.3,1142.4 853.3,1130.2 865.5,1128.2
+parcel 97 building 1 outbuilding 122.9 residential skew +1.1 block +2.7 "217 Harrison Street"
+parcel 97 shape 1 897.6,1129.9 897.8,1139.8 884.2,1140.1 884.0,1130.2 897.6,1129.9
+
+parcel 98 building 0 primary 674.4 residential skew -1.0 block -13.0 "204 Harrison Street"
+parcel 98 shape 0 830.8,1214.8 835.5,1213.1 829.8,1196.8 842.7,1192.3 856.5,1232.0 839.0,1238.2 830.8,1214.8
+
+parcel 99 building 0 primary 133.0 residential skew +5.8 block +6.7 "202 North Church Street"
+parcel 99 shape 0 946.9,1192.6 958.0,1193.6 956.6,1209.6 954.1,1209.4 954.6,1204.5 945.9,1203.7 946.9,1192.6
+
+parcel 100 building 0 primary 314.6 residential skew -19.2 block -21.4 "126 East Attica Road"
+parcel 100 shape 0 926.0,1321.6 912.5,1327.7 903.9,1308.6 917.4,1302.4 926.0,1321.6
+
+parcel 101 building 0 primary 209.8 residential skew -1.0 block +1.6 "132 East Attica Road"
+parcel 101 shape 0 961.5,1325.4 961.7,1337.8 945.6,1338.1 945.4,1325.7 961.5,1325.4
+parcel 101 building 1 outbuilding 80.2 residential skew +7.6 block +10.6 "132 East Attica Road"
+parcel 101 shape 1 952.8,1305.4 951.5,1315.2 944.1,1314.2 945.4,1304.4 952.8,1305.4
+
+parcel 102 building 0 primary 243.9 residential skew +2.3 block +3.7 "110 Benton Street"
+parcel 102 shape 0 924.4,1132.7 910.8,1132.3 911.3,1116.2 924.9,1116.6 924.4,1132.7
+
+parcel 103 building 0 primary 208.9 residential skew +0.4 block +0.8 "306 North Church Street"
+parcel 103 shape 0 931.3,1019.3 931.4,1034.1 916.5,1034.2 916.5,1019.3 931.3,1019.3
+
+parcel 104 building 0 primary 234.6 residential skew +0.1 block -8.5 "407 North Chicago Street"
+parcel 104 shape 0 637.4,926.7 656.4,921.4 659.7,933.3 640.7,938.6 637.4,926.7
+
+parcel 105 building 0 primary 243.0 residential skew +42.6 block +44.1 "109 Henderson Street"
+parcel 105 shape 0 749.1,877.6 755.7,870.3 774.0,886.9 767.4,894.2 749.1,877.6
+
+parcel 106 building 0 primary 145.4 residential skew +0.7 block +0.9 ""
+parcel 106 shape 0 817.0,887.1 817.0,897.0 802.1,896.9 802.2,887.0 817.0,887.1
+
+parcel 107 building 0 primary 409.5 residential skew +4.6 block +4.7 "409 Harrison Street"
+parcel 107 shape 0 848.6,866.9 886.8,869.7 886.0,880.8 847.8,878.0 848.6,866.9
+
+parcel 108 building 0 primary 224.2 residential skew +8.3 block +8.5 "405 Harrison Street"
+parcel 108 shape 0 858.9,907.0 874.8,909.2 873.2,921.5 857.2,919.3 858.9,907.0
+
+parcel 109 building 0 primary 181.2 residential skew +4.4 block +4.2 "217 Perry Street"
+parcel 109 shape 0 552.5,1612.1 551.5,1627.0 539.1,1626.1 540.1,1611.3 552.5,1612.1
+
+parcel 110 building 0 primary 309.7 residential skew -3.9 block -4.1 "213 Perry Street"
+parcel 110 shape 0 588.3,1626.0 579.7,1626.6 578.8,1615.5 597.3,1614.1 598.9,1635.1 589.1,1635.8 588.3,1626.0
+parcel 110 building 1 outbuilding 102.2 residential skew -3.0 block -3.2 "213 Perry Street"
+parcel 110 shape 1 586.4,1654.1 576.5,1654.7 575.8,1642.3 585.6,1641.7 586.4,1654.1
+
+parcel 111 building 0 primary 223.9 residential skew +15.0 block +15.9 "205 Perry Street"
+parcel 111 shape 0 677.5,1627.3 665.5,1624.2 670.2,1606.2 682.2,1609.3 677.5,1627.3
+
+parcel 112 building 0 primary 148.9 residential skew +16.9 block +19.0 "201 Perry Street"
+parcel 112 shape 0 709.1,1628.6 697.2,1625.1 700.8,1613.2 712.6,1616.8 709.1,1628.6
+
+parcel 113 building 0 primary 256.3 residential skew -4.6 block -3.8 "312 South Chicago Street"
+parcel 113 shape 0 812.3,1689.0 811.0,1675.4 830.6,1673.4 832.0,1687.0 812.3,1689.0
+parcel 113 building 1 outbuilding 81.7 residential skew +0.8 block +2.6 "312 South Chicago Street"
+parcel 113 shape 1 784.2,1672.9 794.1,1672.8 794.1,1681.5 784.2,1681.6 784.2,1672.9
+
+parcel 114 building 0 primary 344.3 residential skew -0.8 block -0.2 "314 South Chicago Street"
+parcel 114 shape 0 813.0,1720.3 810.5,1720.4 809.9,1700.6 833.3,1699.8 833.8,1713.4 812.8,1714.1 813.0,1720.3
+
+parcel 116 building 0 primary 204.9 residential skew -4.7 block -4.9 "215 Park Place"
+parcel 116 shape 0 522.8,1497.4 536.3,1496.2 537.7,1511.0 524.1,1512.2 522.8,1497.4
+parcel 116 building 1 outbuilding 60.3 residential skew +7.6 block +7.6 "215 Park Place"
+parcel 116 shape 1 527.8,1514.4 526.9,1521.8 519.6,1520.8 520.5,1513.5 527.8,1514.4
+
+parcel 117 building 0 primary 195.7 residential skew -2.5 block -2.5 "213 Park Place"
+parcel 117 shape 0 544.7,1516.8 543.6,1495.8 553.5,1495.3 554.5,1516.3 544.7,1516.8
+parcel 117 building 1 outbuilding 126.4 residential skew +2.5 block +2.5 "213 Park Place"
+parcel 117 shape 1 539.4,1527.4 539.8,1517.5 554.6,1518.0 554.2,1527.9 539.4,1527.4
+
+parcel 118 building 0 primary 258.3 residential skew -14.6 block -14.7 "211 Park Place"
+parcel 118 shape 0 569.9,1522.0 563.5,1498.1 573.1,1495.5 579.5,1519.4 569.9,1522.0
+
+parcel 119 building 0 primary 149.2 residential skew -1.3 block -1.0 "205 Park Place"
+parcel 119 shape 0 639.3,1509.8 628.2,1510.1 627.8,1496.5 638.9,1496.2 639.3,1509.8
+
+parcel 120 building 0 primary 135.9 residential skew -7.4 block -6.8 "206 Perry Street"
+parcel 120 shape 0 642.8,1535.2 643.8,1542.6 626.7,1544.9 625.7,1537.6 642.8,1535.2
+parcel 120 building 1 outbuilding 130.4 residential skew +16.2 block +16.7 "206 Perry Street"
+parcel 120 shape 1 639.2,1573.4 627.3,1570.0 630.0,1560.5 641.9,1563.8 639.2,1573.4
+parcel 120 building 2 outbuilding 86.0 residential skew -6.4 block -5.7 "204 Perry Street"
+parcel 120 shape 2 640.0,1550.6 644.9,1550.0 646.5,1563.6 641.6,1564.2 640.0,1550.6
+
+parcel 121 building 0 primary 229.4 residential skew -3.6 block -2.4 "135 East Attica Road"
+parcel 121 shape 0 929.0,1393.6 940.1,1392.9 941.4,1413.9 930.3,1414.6 929.0,1393.6
+parcel 121 building 1 outbuilding 134.2 residential skew +0.9 block +2.4 "135 East Attica Road"
+parcel 121 shape 1 932.7,1392.9 925.3,1392.8 925.6,1375.5 933.0,1375.6 932.7,1392.9
+
+parcel 122 building 0 primary 107.4 residential skew +1.4 block +2.1 ""
+parcel 122 shape 0 935.5,1540.9 925.6,1540.7 925.8,1529.6 935.7,1529.8 935.5,1540.9
+
+parcel 124 building 0 primary 163.9 residential skew +2.5 block +2.5 "102 Stewart Street"
+parcel 124 shape 0 884.8,1698.1 894.7,1698.3 894.4,1714.4 884.5,1714.2 884.8,1698.1
+
+parcel 125 building 0 primary 346.0 residential skew +0.9 block +1.1 "106 Mc Kibben Street"
+parcel 125 shape 0 962.7,1836.2 933.0,1836.0 933.1,1823.6 962.8,1823.8 962.7,1836.2
+
+parcel 126 building 0 primary 221.6 residential skew +2.6 block +2.8 "105 Mc Kibben Street"
+parcel 126 shape 0 960.1,1880.2 959.8,1888.8 935.1,1887.9 935.4,1879.3 960.1,1880.2
+
+parcel 127 building 0 primary 162.2 residential skew -6.9 block -6.5 "100 West Stufflebeam Drive"
+parcel 127 shape 0 725.3,1755.8 740.0,1754.0 741.2,1763.9 726.4,1765.6 725.3,1755.8
+
+parcel 128 building 0 primary 1168.5 residential skew +0.4 block +0.8 "50 West Stufflebeam Drive"
+parcel 128 shape 0 781.3,1787.8 781.5,1749.4 791.4,1749.5 791.1,1799.0 761.4,1798.9 761.7,1749.3 771.6,1749.4 771.4,1787.8 781.3,1787.8
+
+parcel 129 building 0 primary 350.1 residential skew +4.8 block +4.2 "508 South Chicago Street"
+parcel 129 shape 0 848.9,1916.0 834.1,1915.1 835.5,1890.4 850.3,1891.3 848.9,1916.0
+
+parcel 130 building 0 primary 190.8 residential skew +6.4 block +5.7 "8 West Greenwood Drive"
+parcel 130 shape 0 680.3,1995.3 692.6,1996.5 690.9,2013.8 678.6,2012.6 680.3,1995.3
+parcel 130 building 1 outbuilding 83.1 residential skew +8.1 block +7.4 "8 West Greenwood Drive"
+parcel 130 shape 1 689.1,1979.8 696.4,1980.7 695.0,1991.8 687.7,1990.8 689.1,1979.8
+
+parcel 131 building 0 primary 160.2 residential skew +17.5 block +17.2 "5 West Greenwood Drive"
+parcel 131 shape 0 754.6,1997.4 750.1,2012.9 740.6,2010.1 745.1,1994.6 754.6,1997.4
+parcel 131 building 1 outbuilding 72.1 residential skew +2.0 block +1.6 "5 West Greenwood Drive"
+parcel 131 shape 1 741.0,1984.3 750.9,1984.4 750.8,1991.9 740.9,1991.7 741.0,1984.3
+
+parcel 132 building 0 primary 295.8 residential skew -8.3 block -8.5 "507 South Chicago Street"
+parcel 132 shape 0 917.6,1941.7 909.0,1943.1 906.8,1929.7 921.5,1927.2 925.3,1950.5 919.2,1951.5 917.6,1941.7
+parcel 132 building 1 outbuilding 48.2 residential skew -12.1 block -12.3 "507 South Chicago Street"
+parcel 132 shape 1 918.5,1971.4 916.8,1964.2 922.8,1962.8 924.5,1970.0 918.5,1971.4
+
+parcel 133 building 0 primary 296.7 residential skew -4.5 block -4.7 ""
+parcel 133 shape 0 919.4,1996.9 921.1,2014.2 903.9,2015.9 902.2,1998.7 919.4,1996.9
+parcel 133 building 1 outbuilding 243.3 residential skew +2.2 block +1.7 ""
+parcel 133 shape 1 963.3,2020.2 963.0,2037.6 949.4,2037.3 949.7,2020.0 963.3,2020.2
+parcel 133 building 2 outbuilding 175.2 residential skew +0.6 block +0.4 ""
+parcel 133 shape 2 916.1,2041.3 903.7,2041.5 903.6,2026.6 915.9,2026.5 916.1,2041.3
+parcel 133 building 3 outbuilding 159.0 residential skew +20.1 block +19.6 ""
+parcel 133 shape 3 935.7,2008.2 938.9,1998.8 954.1,2004.0 950.9,2013.4 935.7,2008.2
+
+parcel 134 building 0 primary 316.0 residential skew +7.4 block +4.6 "211 Henderson Street"
+parcel 134 shape 0 1026.9,861.9 1042.9,862.7 1042.1,877.6 1016.2,876.2 1016.5,871.3 1026.3,871.8 1026.9,861.9
+parcel 134 building 1 outbuilding 42.4 residential skew -3.3 block -5.9 "211 Henderson Street"
+parcel 134 shape 1 1042.8,890.0 1050.1,889.0 1050.8,893.9 1043.4,894.9 1042.8,890.0
+
+parcel 135 building 0 primary 173.7 residential skew -5.2 block -3.5 "402 North Summit Street"
+parcel 135 shape 0 1124.7,909.3 1134.5,908.3 1136.1,925.6 1126.3,926.6 1124.7,909.3
+
+parcel 136 building 0 primary 118.0 residential skew +6.6 block +6.7 "310 Green Street"
+parcel 136 shape 0 1264.8,942.3 1254.9,941.2 1256.2,930.2 1266.0,931.3 1264.8,942.3
+
+parcel 137 building 0 primary 357.3 residential skew -0.1 block -0.1 "403 North Grove Street"
+parcel 137 shape 0 1324.0,936.1 1311.7,936.2 1311.5,909.0 1323.9,908.9 1324.0,936.1
+parcel 137 building 1 outbuilding 152.1 residential skew +5.4 block +5.4 "403 North Grove Street"
+parcel 137 shape 1 1297.0,949.5 1298.3,934.7 1308.1,935.6 1306.8,950.4 1297.0,949.5
+
+parcel 140 building 0 primary 105.9 residential skew -4.0 block -3.1 "201 Benton Street"
+parcel 140 shape 0 999.2,1124.6 988.1,1125.5 987.3,1115.6 998.4,1114.8 999.2,1124.6
+
+parcel 141 building 0 primary 145.7 residential skew -0.9 block +1.0 "207 Benton Street"
+parcel 141 shape 0 1044.2,1117.8 1056.5,1117.5 1056.9,1129.9 1044.5,1130.2 1044.2,1117.8
+parcel 141 building 1 outbuilding 103.9 residential skew +3.7 block +5.4 "207 Benton Street"
+parcel 141 shape 1 1051.0,1142.6 1051.7,1130.3 1061.6,1130.8 1060.9,1143.1 1051.0,1142.6
+
+parcel 142 building 0 primary 249.6 residential skew -32.2 block -29.6 "209 Benton Street"
+parcel 142 shape 0 1092.3,1114.4 1099.0,1124.8 1085.5,1133.5 1078.1,1122.1 1077.1,1122.7 1079.7,1126.9 1072.5,1131.6 1067.8,1124.3 1080.3,1116.3 1088.3,1128.8 1091.4,1126.8 1086.1,1118.4 1092.3,1114.4
+parcel 142 building 1 outbuilding 42.7 residential skew -5.3 block -3.4 "209 Benton Street"
+parcel 142 shape 1 1066.7,1150.1 1065.8,1141.4 1070.7,1140.9 1071.6,1149.6 1066.7,1150.1
+
+parcel 143 building 0 primary 233.8 residential skew +7.4 block +4.1 "303 Benton Street"
+parcel 143 shape 0 1186.1,1126.8 1166.3,1126.5 1166.5,1114.1 1186.3,1114.5 1186.1,1126.8
+
+parcel 144 building 0 primary 201.1 residential skew +2.7 block +4.8 "307 Benton Street"
+parcel 144 shape 0 1229.8,1131.4 1230.4,1115.3 1242.8,1115.8 1242.2,1131.9 1229.8,1131.4
+
+parcel 145 building 0 primary 371.4 residential skew -1.6 block -1.1 "207 North Church Street"
+parcel 145 shape 0 997.4,1143.3 997.5,1145.8 1004.9,1145.5 1005.4,1157.9 986.9,1158.6 986.0,1136.3 1002.1,1135.7 1002.4,1143.1 997.4,1143.3
+
+parcel 146 building 0 primary 139.4 residential skew -20.7 block -19.7 "210 Holmes Street"
+parcel 146 shape 0 1068.4,1199.5 1077.6,1195.9 1082.5,1208.6 1073.3,1212.2 1068.4,1199.5
+parcel 146 building 1 outbuilding 43.3 residential skew -11.2 block -9.8 "210 Holmes Street"
+parcel 146 shape 1 1069.3,1189.4 1067.8,1182.1 1072.6,1181.1 1074.1,1188.4 1069.3,1189.4
+
+parcel 147 building 0 primary 81.1 residential skew -23.0 block -21.3 "214 Holmes Street"
+parcel 147 shape 0 1103.6,1195.1 1101.1,1189.4 1113.6,1184.0 1116.1,1189.7 1103.6,1195.1
+
+parcel 151 building 0 primary 246.2 residential skew -0.1 block +1.1 "110 North Summit Street"
+parcel 151 shape 0 1144.1,1236.2 1144.2,1251.0 1126.9,1251.2 1126.7,1236.3 1144.1,1236.2
+
+parcel 152 building 0 primary 146.6 residential skew -9.6 block -9.4 "203 Holmes Street"
+parcel 152 shape 0 1010.9,1242.5 1020.7,1240.8 1023.1,1254.2 1013.3,1255.9 1010.9,1242.5
+
+parcel 153 building 0 primary 220.8 residential skew -27.4 block -26.4 "202 East Attica Road"
+parcel 153 shape 0 990.3,1338.1 984.6,1327.2 1001.0,1318.6 1006.7,1329.5 990.3,1338.1
+parcel 153 building 1 outbuilding 68.4 residential skew +4.9 block +5.9 "202 East Attica Road"
+parcel 153 shape 1 1005.0,1309.5 1004.4,1316.9 995.8,1316.2 996.4,1308.8 1005.0,1309.5
+
+parcel 154 building 0 primary 155.5 residential skew -11.2 block -11.1 "206 East Attica Road"
+parcel 154 shape 0 1034.0,1340.1 1031.0,1325.5 1040.7,1323.5 1043.6,1338.1 1034.0,1340.1
+
+parcel 155 building 0 primary 194.8 residential skew -8.0 block -7.3 "117 North Church Street"
+parcel 155 shape 0 987.8,1269.7 998.8,1268.0 1001.2,1284.0 990.2,1285.6 987.8,1269.7
+parcel 155 building 1 outbuilding 154.4 residential skew -1.4 block -1.1 ""
+parcel 155 shape 1 987.7,1253.6 987.4,1243.7 1003.4,1243.2 1003.8,1253.1 987.7,1253.6
+parcel 155 building 2 outbuilding 77.3 residential skew +1.2 block +1.4 ""
+parcel 155 shape 2 1003.6,1257.0 1003.5,1266.9 996.1,1266.8 996.2,1256.9 1003.6,1257.0
+
+parcel 156 building 0 primary 181.5 residential skew +2.3 block +4.7 ""
+parcel 156 shape 0 1195.9,1115.1 1205.8,1115.4 1205.4,1129.0 1186.9,1128.5 1187.0,1123.5 1195.6,1123.8 1195.9,1115.1
+
+parcel 157 building 0 primary 117.5 residential skew -7.4 block -7.2 "309 Green Street"
+parcel 157 shape 0 1268.0,984.5 1269.6,996.8 1259.8,998.1 1258.2,985.8 1268.0,984.5
+
+parcel 159 building 0 primary 282.2 residential skew -36.7 block -36.2 "310 Benton Street"
+parcel 159 shape 0 1249.9,1069.7 1259.7,1062.2 1272.4,1079.0 1262.6,1086.5 1249.9,1069.7
+
+parcel 161 building 0 primary 139.1 residential skew +6.8 block +7.0 "208 Perry Street"
+parcel 161 shape 0 608.2,1572.1 609.8,1557.3 619.7,1558.4 618.0,1573.2 608.2,1572.1
+parcel 161 building 1 outbuilding 84.3 residential skew -1.7 block -1.5 "208 Perry Street"
+parcel 161 shape 1 615.9,1550.4 606.0,1550.8 605.7,1542.2 615.6,1541.8 615.9,1550.4
+
+parcel 162 building 0 primary 222.5 residential skew +4.6 block +4.7 "108 East Maple Street"
+parcel 162 shape 0 877.0,1444.8 894.3,1446.0 893.4,1458.4 876.1,1457.2 877.0,1444.8
+parcel 162 building 1 outbuilding 133.3 residential skew +5.7 block +6.3 "108 East Maple Street"
+parcel 162 shape 1 893.2,1420.4 891.6,1437.6 884.2,1437.0 885.8,1419.7 893.2,1420.4
+
+parcel 163 building 0 primary 175.8 residential skew +19.8 block +15.5 "201 South Chicago Street"
+parcel 163 shape 0 823.7,1510.0 827.2,1495.6 838.0,1498.2 834.5,1512.6 823.7,1510.0
+
+parcel 166 building 0 primary 187.9 residential skew -10.4 block -9.6 "108 Gilbert Street"
+parcel 166 shape 0 930.1,1589.3 927.5,1576.0 940.9,1573.4 943.4,1586.8 930.1,1589.3
+parcel 166 building 1 outbuilding 57.7 residential skew +1.0 block +1.6 "108 Gilbert Street"
+parcel 166 shape 1 926.6,1561.8 926.7,1550.6 931.6,1550.7 931.5,1561.8 926.6,1561.8
+
+parcel 168 building 0 primary 178.6 residential skew -3.0 block -2.9 "407 South Chicago Street"
+parcel 168 shape 0 889.2,1809.4 888.4,1798.3 905.7,1797.1 906.5,1808.3 889.2,1809.4
+
+parcel 169 building 0 primary 177.5 residential skew +10.0 block +9.6 "409 South Chicago Street"
+parcel 169 shape 0 888.9,1840.7 890.8,1828.4 905.5,1830.7 903.6,1842.9 888.9,1840.7
+parcel 169 building 1 outbuilding 49.6 residential skew +3.5 block +3.1 "106 Mc Kibben Street"
+parcel 169 shape 1 928.4,1834.4 922.2,1834.1 922.5,1826.7 928.7,1826.9 928.4,1834.4
+
+parcel 170 building 0 primary 236.4 residential skew +6.8 block +6.8 "410 South Chicago Street"
+parcel 170 shape 0 824.8,1839.6 837.1,1840.9 834.9,1860.6 822.6,1859.3 824.8,1839.6
+parcel 170 building 1 outbuilding 92.6 residential skew +5.7 block +5.6 "410 South Chicago Street"
+parcel 170 shape 1 821.3,1847.4 820.4,1857.3 811.8,1856.5 812.7,1846.7 821.3,1847.4
+
+parcel 171 building 0 primary 381.5 residential skew +9.7 block +7.6 "508 South Chicago Street"
+parcel 171 shape 0 823.5,1989.2 826.5,1962.1 841.2,1963.7 838.2,1990.8 823.5,1989.2
+
+parcel 172 building 0 primary 114.6 residential skew -1.6 block -1.5 "403 South Chicago Street"
+parcel 172 shape 0 911.5,1775.6 911.2,1768.2 926.0,1767.5 926.3,1775.0 911.5,1775.6
+
+parcel 173 building 0 primary 170.6 residential skew +0.2 block +0.4 "508 South Church Street"
+parcel 173 shape 0 965.0,1955.3 965.0,1967.7 950.2,1967.8 950.1,1955.4 965.0,1955.3
+parcel 173 building 1 outbuilding 58.3 residential skew +12.7 block +13.1 "508 South Church Street"
+parcel 173 shape 1 930.2,1960.4 937.4,1962.0 935.3,1971.6 928.1,1970.1 930.2,1960.4
+
+parcel 174 building 0 primary 302.2 residential skew +9.7 block +10.3 "210 West Stufflebeam Drive"
+parcel 174 shape 0 624.8,1691.6 646.7,1695.5 644.5,1707.7 622.6,1703.8 624.8,1691.6
+
+parcel 175 building 0 primary 901.3 residential skew +2.7 block +3.3 ""
+parcel 175 shape 0 731.9,1685.8 731.0,1710.5 719.8,1710.1 721.2,1673.0 752.1,1674.1 750.8,1710.0 739.6,1709.6 740.5,1686.1 731.9,1685.8
+
+parcel 177 building 0 primary 147.2 residential skew -12.1 block -12.1 ""
+parcel 177 shape 0 1199.0,884.7 1180.9,888.8 1179.3,881.5 1197.4,877.5 1199.0,884.7
+
+parcel 178 building 0 primary 228.3 residential skew -44.9 block +35.1 "407 North Church Street"
+parcel 178 shape 0 999.7,915.8 996.3,921.0 1002.5,925.1 999.7,929.2 979.1,915.5 985.3,906.2 999.7,915.8
+
+parcel 179 building 0 primary 124.7 residential skew +2.6 block -0.5 "213 Green Street"
+parcel 179 shape 0 1035.7,983.8 1036.6,998.6 1027.9,999.1 1027.1,984.3 1035.7,983.8
+
+parcel 180 building 0 primary 146.0 residential skew -0.3 block +1.2 "305 Green Street"
+parcel 180 shape 0 1202.3,982.1 1202.4,992.0 1187.6,992.1 1187.5,982.2 1202.3,982.1
+parcel 180 building 1 outbuilding 103.9 residential skew +12.3 block +14.1 "305 Green Street"
+parcel 180 shape 1 1202.1,1019.3 1192.4,1017.2 1194.5,1007.5 1204.1,1009.6 1202.1,1019.3
+
+parcel 181 building 0 primary 380.9 residential skew -14.6 block -12.6 "208 Benton Street"
+parcel 181 shape 0 1032.2,1068.8 1038.2,1067.2 1040.1,1074.4 1058.0,1069.5 1056.1,1062.3 1060.9,1061.0 1063.1,1069.4 1056.0,1071.3 1057.6,1077.3 1026.6,1085.7 1023.6,1075.0 1033.2,1072.4 1032.2,1068.8
+parcel 181 building 1 outbuilding 114.6 residential skew +0.5 block +2.7 "206 Benton Street"
+parcel 181 shape 1 1037.7,1047.8 1037.7,1057.7 1025.3,1057.7 1025.3,1047.8 1037.7,1047.8
+
+parcel 182 building 0 primary 157.9 residential skew +6.3 block +6.7 "208 Holmes Street"
+parcel 182 shape 0 1043.7,1209.7 1044.7,1199.8 1060.7,1201.4 1059.7,1211.3 1043.7,1209.7
+
+parcel 183 building 0 primary 449.6 residential skew +3.2 block +3.7 "108 North Summit Street"
+parcel 183 shape 0 1145.2,1265.4 1144.3,1282.7 1112.3,1281.1 1112.9,1268.7 1132.6,1269.7 1132.9,1264.8 1145.2,1265.4
+
+parcel 184 building 0 primary 263.8 residential skew +0.3 block +0.4 "208 East Attica Road"
+parcel 184 shape 0 1055.9,1318.8 1055.9,1327.5 1062.1,1327.5 1062.1,1337.4 1046.0,1337.4 1046.0,1318.8 1055.9,1318.8
+
+parcel 185 building 0 primary 258.9 residential skew -6.2 block -5.9 "312 Benton Street"
+parcel 185 shape 0 1273.4,1070.3 1289.3,1068.4 1291.1,1083.2 1275.1,1085.1 1273.4,1070.3
+
+parcel 186 building 0 primary 156.1 residential skew -9.5 block -9.6 "314 Benton Street"
+parcel 186 shape 0 1298.3,1083.8 1295.7,1069.2 1305.5,1067.5 1308.1,1082.1 1298.3,1083.8
+
+parcel 187 building 0 primary 248.5 residential skew +1.6 block +1.5 "216 East Maple Street"
+parcel 187 shape 0 1132.9,1434.1 1142.8,1434.3 1142.3,1459.1 1132.5,1458.9 1132.9,1434.1
+parcel 187 building 1 outbuilding 83.1 residential skew +7.4 block +7.4 "216 East Maple Street"
+parcel 187 shape 1 1146.5,1418.9 1145.6,1426.3 1135.8,1425.1 1136.7,1417.7 1146.5,1418.9
+
+parcel 188 building 0 primary 192.5 residential skew -12.2 block -12.3 "204 East Maple Street"
+parcel 188 shape 0 1006.0,1450.3 1020.5,1447.0 1023.2,1459.1 1008.7,1462.4 1006.0,1450.3
+
+parcel 190 building 0 primary 208.7 residential skew -42.5 block -42.1 "203 South Summit Street"
+parcel 190 shape 0 1182.3,1511.6 1173.9,1502.5 1187.4,1489.8 1195.8,1498.9 1182.3,1511.6
+parcel 190 building 1 outbuilding 156.7 residential skew +0.1 block +0.7 "203 South Summit Street"
+parcel 190 shape 1 1198.2,1496.6 1209.3,1496.5 1209.4,1510.1 1198.3,1510.2 1198.2,1496.6
+
+parcel 195 building 0 primary 153.8 residential skew -0.8 block -0.8 "208 Gilbert Street"
+parcel 195 shape 0 1062.3,1570.1 1062.5,1582.5 1050.2,1582.8 1049.9,1570.4 1062.3,1570.1
+parcel 195 building 1 outbuilding 137.1 residential skew +3.3 block +3.3 "208 Gilbert Street"
+parcel 195 shape 1 1057.9,1564.7 1058.8,1546.2 1066.2,1546.5 1065.3,1565.1 1057.9,1564.7
+
+parcel 196 building 0 primary 93.2 residential skew +2.8 block +2.8 "210 Gilbert Street"
+parcel 196 shape 0 1073.0,1584.0 1073.2,1579.1 1090.5,1579.8 1090.3,1584.7 1073.0,1584.0
+
+parcel 197 building 0 primary 130.4 residential skew -29.4 block -29.4 "207 Gilbert Street"
+parcel 197 shape 0 1057.2,1633.2 1051.0,1622.4 1059.6,1617.5 1065.8,1628.2 1057.2,1633.2
+parcel 197 building 1 outbuilding 51.1 residential skew -10.5 block -10.6 "207 Gilbert Street"
+parcel 197 shape 1 1047.1,1638.8 1055.6,1637.1 1056.5,1641.9 1048.0,1643.6 1047.1,1638.8
+
+parcel 198 building 0 primary 335.3 residential skew +6.2 block +6.2 "204 Stewart Street"
+parcel 198 shape 0 994.0,1700.9 995.5,1686.1 1018.9,1688.4 1017.4,1703.2 994.0,1700.9
+
+parcel 200 building 0 primary 219.6 residential skew -2.3 block -2.1 "307 Gilbert Street"
+parcel 200 shape 0 1234.5,1637.5 1233.7,1620.2 1246.0,1619.6 1246.9,1636.9 1234.5,1637.5
+parcel 200 building 1 outbuilding 60.3 residential skew +0.5 block +0.7 "307 Gilbert Street"
+parcel 200 shape 1 1244.5,1646.8 1244.5,1639.4 1251.9,1639.4 1251.9,1646.8 1244.5,1646.8
+
+parcel 201 building 0 primary 236.1 residential skew +3.3 block +3.9 "312 Stewart Street"
+parcel 201 shape 0 1298.5,1709.6 1283.6,1708.9 1284.4,1694.1 1299.2,1694.8 1298.5,1709.6
+parcel 201 building 1 outbuilding 51.4 residential skew -0.3 block +0.4 "312 Stewart Street"
+parcel 201 shape 1 1285.0,1668.3 1285.1,1675.7 1277.7,1675.8 1277.6,1668.4 1285.0,1668.3
+
+parcel 202 building 0 primary 242.1 residential skew -11.5 block -11.4 "201 Stewart Street"
+parcel 202 shape 0 995.1,1748.9 1003.5,1747.1 1008.7,1771.4 1000.2,1773.2 995.1,1748.9
+
+parcel 203 building 0 primary 158.1 residential skew -6.9 block -6.8 "209 Stewart Street"
+parcel 203 shape 0 1090.2,1759.1 1077.9,1760.7 1076.4,1748.4 1088.6,1746.8 1090.2,1759.1
+
+parcel 204 building 0 primary 224.8 residential skew +2.0 block +2.2 "202 Mc Kibben Street"
+parcel 204 shape 0 990.0,1826.7 998.6,1826.9 998.8,1819.5 1007.5,1819.7 1007.0,1837.1 989.7,1836.6 990.0,1826.7
+parcel 204 building 1 outbuilding 76.8 residential skew +0.3 block +0.4 "202 Mc Kibben Street"
+parcel 204 shape 1 999.6,1813.5 992.1,1813.5 992.1,1803.6 999.5,1803.6 999.6,1813.5
+
+parcel 205 building 0 primary 243.6 residential skew -15.1 block -15.1 "210 Mc Kibben Street"
+parcel 205 shape 0 1091.2,1819.2 1094.6,1831.2 1076.7,1836.1 1073.4,1824.2 1091.2,1819.2
+parcel 205 building 1 outbuilding 82.5 residential skew +3.8 block +3.8 "210 Mc Kibben Street"
+parcel 205 shape 1 1076.9,1795.6 1086.7,1796.1 1086.3,1803.6 1076.4,1803.0 1076.9,1795.6
+
+parcel 206 building 0 primary 238.7 residential skew +3.1 block +3.1 "216 Mc Kibben Street"
+parcel 206 shape 0 1149.2,1826.0 1148.7,1838.4 1128.9,1837.5 1129.5,1825.1 1149.2,1826.0
+parcel 206 building 1 outbuilding 109.1 residential skew +11.8 block +11.8 "216 Mc Kibben Street"
+parcel 206 shape 1 1130.2,1818.1 1132.1,1808.4 1143.0,1810.6 1141.1,1820.3 1130.2,1818.1
+
+parcel 208 building 0 primary 202.9 residential skew -3.7 block -3.7 "209 Mc Kibben Street"
+parcel 208 shape 0 1083.8,1893.6 1082.9,1881.3 1100.1,1880.0 1101.0,1892.4 1083.8,1893.6
+parcel 208 building 1 outbuilding 125.2 residential skew -0.2 block -0.2 "209 Mc Kibben Street"
+parcel 208 shape 1 1081.0,1900.1 1073.6,1900.2 1073.4,1882.9 1080.8,1882.8 1081.0,1900.1
+parcel 208 building 2 outbuilding 72.1 residential skew +2.0 block +2.0 "209 Mc Kibben Street"
+parcel 208 shape 2 1074.5,1875.6 1074.8,1863.2 1079.8,1863.3 1079.4,1875.7 1074.5,1875.6
+
+parcel 209 building 0 primary 161.6 commercial skew -30.0 block -30.0 "301 Stewart Street"
+parcel 209 shape 0 1176.9,1744.2 1183.3,1740.4 1190.8,1753.2 1174.8,1762.6 1172.3,1758.4 1181.9,1752.7 1176.9,1744.2
+
+parcel 210 building 0 primary 155.6 residential skew +1.5 block +1.8 "313 Stewart Street"
+parcel 210 shape 0 1315.5,1741.9 1315.2,1754.3 1302.9,1754.1 1303.1,1741.7 1315.5,1741.9
+parcel 210 building 1 outbuilding 95.8 residential skew -2.7 block -2.7 "313 Stewart Street"
+parcel 210 shape 1 1311.8,1781.8 1301.9,1782.4 1301.4,1772.5 1311.3,1771.9 1311.8,1781.8
+
+parcel 211 building 0 primary 191.6 residential skew -25.6 block -25.6 "302 Mc Kibben Street"
+parcel 211 shape 0 1178.9,1838.8 1173.5,1827.7 1187.9,1820.6 1193.3,1831.7 1178.9,1838.8
+parcel 211 building 1 outbuilding 84.6 residential skew +2.5 block +2.5 "302 Mc Kibben Street"
+parcel 211 shape 1 1188.4,1808.2 1188.1,1818.1 1180.6,1817.9 1181.0,1807.9 1188.4,1808.2
+
+parcel 212 building 0 primary 395.1 residential skew -7.3 block -7.2 "312 Mc Kibben Street"
+parcel 212 shape 0 1277.3,1813.8 1292.0,1811.8 1295.5,1837.6 1280.8,1839.6 1277.3,1813.8
+parcel 212 building 1 outbuilding 129.0 residential skew +7.0 block +7.0 "312 Mc Kibben Street"
+parcel 212 shape 1 1283.2,1805.4 1284.3,1795.5 1297.8,1797.1 1296.7,1806.9 1283.2,1805.4
+
+parcel 213 building 0 primary 204.3 residential skew -0.4 block -0.4 "315 Mc Kibben Street"
+parcel 213 shape 0 1338.8,1869.2 1339.0,1885.3 1326.7,1885.5 1326.4,1869.4 1338.8,1869.2
+parcel 213 building 1 outbuilding 164.8 residential skew +2.6 block +2.6 "315 Mc Kibben Street"
+parcel 213 shape 1 1323.1,1890.4 1330.5,1890.7 1329.8,1910.5 1322.4,1910.2 1323.1,1890.4
+
+parcel 214 building 0 primary 186.4 residential skew +6.0 block +6.0 "212 Dale Street"
+parcel 214 shape 0 1115.1,1952.4 1114.1,1962.3 1096.9,1960.6 1097.8,1950.8 1115.1,1952.4
+
+parcel 215 building 0 primary 258.3 residential skew -4.8 block -4.8 "302 Dale Street"
+parcel 215 shape 0 1179.7,1968.0 1178.1,1950.7 1192.9,1949.4 1194.5,1966.6 1179.7,1968.0
+parcel 215 building 1 outbuilding 145.2 residential skew +2.1 block +2.1 "302 Dale Street"
+parcel 215 shape 1 1211.5,1946.5 1211.1,1961.4 1201.2,1961.1 1201.6,1946.2 1211.5,1946.5
+
+parcel 216 building 0 primary 451.4 residential skew +3.3 block -1.2 "302 North Chicago Street"
+parcel 216 shape 0 630.8,1153.1 628.3,1144.8 623.6,1146.1 620.4,1135.5 651.3,1126.4 655.1,1139.4 635.0,1145.4 636.7,1151.3 630.8,1153.1
+
+parcel 221 building 0 primary 208.1 residential skew +15.5 block +5.5 "204 North Chicago Street"
+parcel 221 shape 0 669.2,1208.5 668.8,1194.9 684.8,1194.4 685.2,1208.1 669.2,1208.5
+
+parcel 223 building 0 primary 125.2 residential skew +3.1 block +5.7 "112 North Chicago Street"
+parcel 223 shape 0 683.3,1250.8 670.9,1250.3 671.2,1240.4 683.6,1240.9 683.3,1250.8
+
+parcel 224 building 0 primary 1640.1 commercial skew -3.7 block -3.4 "104 North Chicago Street"
+parcel 224 shape 0 693.6,1299.5 694.8,1314.3 686.2,1315.0 684.7,1296.5 694.5,1295.7 694.3,1293.2 689.4,1293.6 688.1,1278.8 718.9,1276.2 721.1,1302.1 727.3,1301.6 729.7,1331.2 705.1,1333.3 702.2,1298.7 693.6,1299.5
+
+parcel 225 building 0 primary 219.3 residential skew +4.1 block +4.3 "107 Smith Street"
+parcel 225 shape 0 712.7,753.8 725.1,754.6 723.9,773.1 711.5,772.3 712.7,753.8
+
+parcel 226 building 0 primary 282.2 residential skew -12.6 block -11.0 "106 Henderson Street"
+parcel 226 shape 0 706.9,814.8 720.2,811.7 724.6,831.1 711.4,834.1 706.9,814.8
+parcel 226 building 1 outbuilding 64.4 residential skew +2.7 block +3.4 "106 Henderson Street"
+parcel 226 shape 1 719.4,809.5 712.0,809.2 712.3,801.8 719.7,802.1 719.4,809.5
+parcel 226 building 2 outbuilding 55.1 residential skew +4.6 block +5.3 "106 Henderson Street"
+parcel 226 shape 2 710.9,797.4 703.5,796.8 704.0,789.4 711.4,790.0 710.9,797.4
+
+parcel 227 building 0 primary 283.4 residential skew -14.9 block -14.2 "110 Henderson Street"
+parcel 227 shape 0 765.4,809.6 776.2,806.7 775.2,803.1 793.1,798.2 796.0,809.0 767.4,816.8 765.4,809.6
+
+parcel 228 building 0 primary 295.5 residential skew -2.9 block -0.1 "106 York Street"
+parcel 228 shape 0 634.6,691.9 654.4,690.8 655.2,705.6 635.5,706.7 634.6,691.9
+
+parcel 230 building 0 primary 118.0 residential skew -0.4 block -0.2 ""
+parcel 230 shape 0 647.3,2088.1 636.2,2088.1 636.2,2078.2 647.3,2078.2 647.3,2088.1
+parcel 230 building 1 outbuilding 84.8 residential skew +0.2 block +0.5 ""
+parcel 230 shape 1 650.0,2068.0 657.4,2068.1 657.3,2078.0 649.9,2077.9 650.0,2068.0
+
+parcel 231 building 0 primary 224.2 residential skew -3.6 block -2.9 "127 West Attica Road"
+parcel 231 shape 0 464.6,1339.3 480.7,1338.9 481.1,1353.8 465.0,1354.2 464.6,1339.3
+
+parcel 232 building 0 primary 199.4 residential skew -24.0 block -35.1 "204 South Chicago Street"
+parcel 232 shape 0 783.8,1518.1 792.1,1528.9 780.3,1538.0 772.1,1527.1 783.8,1518.1
+
+parcel 233 building 0 primary 250.8 residential skew -10.4 block -16.8 "202 South Chicago Street"
+parcel 233 shape 0 775.8,1502.3 779.8,1514.0 761.0,1520.4 757.1,1508.7 775.8,1502.3
+
+parcel 234 building 0 primary 200.3 residential skew -1.4 block -2.0 "216 Park Place"
+parcel 234 shape 0 535.0,1470.0 522.6,1470.4 522.0,1453.1 534.4,1452.7 535.0,1470.0
+
+parcel 235 building 0 primary 90.9 residential skew -2.9 block -3.4 ""
+parcel 235 shape 0 593.1,1459.6 593.7,1469.5 585.1,1470.0 584.5,1460.1 593.1,1459.6
+
+parcel 236 building 0 primary 688.3 unclassified skew +1.9 block +2.7 ""
+parcel 236 shape 0 680.9,1355.2 678.8,1392.3 685.0,1392.6 683.4,1421.0 671.1,1420.4 674.7,1354.8 680.9,1355.2
+
+parcel 237 building 0 primary 321.2 commercial skew +3.8 block -0.7 "112 South Chicago Street"
+parcel 237 shape 0 694.0,1373.4 706.4,1373.3 706.4,1398.1 694.1,1398.1 694.0,1373.4
+parcel 237 building 1 outbuilding 89.2 commercial skew +1.7 block -2.3 "112 South Chicago Street"
+parcel 237 shape 1 735.5,1387.7 735.2,1379.0 726.5,1379.4 726.3,1373.2 737.4,1372.7 738.0,1387.6 735.5,1387.7
+
+parcel 241 building 0 primary 1032.9 unclassified skew +2.0 block -5.7 "201 North Chicago Street"
+parcel 241 shape 0 736.0,1210.7 729.0,1186.9 766.9,1175.6 773.9,1199.4 736.0,1210.7
+
+parcel 242 building 0 primary 382.7 unclassified skew -8.2 block -5.3 "108 West Attica Road"
+parcel 242 shape 0 666.7,1300.3 669.1,1322.4 651.9,1324.3 649.5,1302.1 666.7,1300.3
+
+parcel 245 building 0 primary 365.9 unclassified skew -6.8 block -6.8 "619 North Chicago Street"
+parcel 245 shape 0 524.3,549.0 550.4,541.4 553.8,553.3 527.7,560.9 524.3,549.0
+
+parcel 246 building 0 primary 176.6 unclassified skew +2.8 block +2.8 ""
+parcel 246 shape 0 420.0,1893.6 420.7,1883.8 439.2,1884.9 438.6,1894.8 420.0,1893.6
+
+parcel 247 building 0 primary 118.9 unclassified skew -2.2 block -2.6 ""
+parcel 247 shape 0 604.2,1853.8 589.4,1854.3 589.2,1846.8 604.0,1846.4 604.2,1853.8
+parcel 247 building 1 outbuilding 91.5 unclassified skew -1.2 block -0.9 ""
+parcel 247 shape 1 479.3,1783.4 491.6,1783.3 491.7,1790.7 479.4,1790.9 479.3,1783.4
+parcel 247 building 2 outbuilding 65.8 unclassified skew +4.6 block +4.6 ""
+parcel 247 shape 2 348.1,1794.6 347.2,1804.5 339.8,1803.8 340.7,1794.0 348.1,1794.6
+
+parcel 252 building 0 primary 210.7 residential skew +6.5 block +7.8 "202 Henderson Street"
+parcel 252 shape 0 1021.3,820.1 1020.0,832.4 1002.8,830.6 1004.1,818.3 1021.3,820.1
+
+parcel 253 building 0 primary 156.4 residential skew +5.9 block +7.0 "204 Henderson Street"
+parcel 253 shape 0 1041.4,834.3 1042.9,818.3 1051.5,819.1 1050.0,835.1 1041.4,834.3
+parcel 253 building 1 outbuilding 53.1 residential skew +4.6 block +5.4 "204 Henderson Street"
+parcel 253 shape 1 1051.3,816.7 1052.0,806.8 1056.9,807.2 1056.2,817.0 1051.3,816.7
+
+parcel 254 building 0 primary 185.0 residential skew -0.6 block -0.5 "215 Thompson Street"
+parcel 254 shape 0 1137.5,2126.8 1137.4,2116.9 1154.7,2116.6 1154.8,2126.5 1137.5,2126.8
+
+parcel 255 building 0 primary 228.9 residential skew -1.5 block -2.2 "315 Thompson Street"
+parcel 255 shape 0 1331.1,2113.2 1341.0,2112.9 1341.8,2137.6 1331.9,2137.9 1331.1,2113.2
+
+parcel 256 building 0 primary 64.6 residential skew -11.9 block -10.8 ""
+parcel 256 shape 0 1365.5,1799.7 1377.6,1797.1 1378.7,1801.9 1366.6,1804.6 1365.5,1799.7
+
+parcel 258 building 0 primary 151.8 residential skew -6.5 block -6.2 "403 Mc Kibben Street"
+parcel 258 shape 0 1397.5,1880.9 1387.7,1882.1 1385.9,1867.4 1395.7,1866.2 1397.5,1880.9
+
+parcel 259 building 0 primary 178.3 residential skew +0.4 block +1.2 "409 Mc Kibben Street"
+parcel 259 shape 0 1421.3,1878.1 1421.3,1868.2 1438.6,1868.2 1438.6,1878.1 1421.3,1878.1
+
+parcel 261 building 0 primary 251.1 residential skew +1.8 block +3.8 "309 South Grove Street"
+parcel 261 shape 0 1364.1,1683.4 1374.0,1683.6 1373.4,1710.9 1363.5,1710.6 1364.1,1683.4
+
+parcel 268 building 0 primary 139.7 residential skew -5.6 block -3.6 "402 North Church Street"
+parcel 268 shape 0 943.6,962.3 942.6,949.9 954.9,948.9 955.9,961.2 943.6,962.3
+parcel 268 building 1 outbuilding 125.5 residential skew -15.4 block -13.7 "402 North Church Street"
+parcel 268 shape 1 921.8,962.9 907.4,966.6 905.5,959.4 919.9,955.7 921.8,962.9
+
+parcel 269 building 0 primary 504.7 residential skew -16.4 block -17.6 "509 North Chicago Street"
+parcel 269 shape 0 605.6,779.2 602.1,769.9 645.9,753.1 649.5,762.4 605.6,779.2
+parcel 269 building 1 outbuilding 266.7 residential skew +3.0 block -0.2 "509 North Chicago Street"
+parcel 269 shape 1 680.4,785.0 680.8,799.8 661.1,800.4 660.7,785.5 680.4,785.0
+parcel 269 building 2 outbuilding 51.4 residential skew +2.3 block +0.1 "509 North Chicago Street"
+parcel 269 shape 2 626.5,732.1 633.9,731.8 634.2,739.3 626.8,739.6 626.5,732.1
+
+parcel 270 building 0 primary 342.6 residential skew +10.9 block +13.6 "108 Green Street"
+parcel 270 shape 0 739.4,943.3 745.5,944.3 746.8,935.7 752.9,936.7 747.9,968.5 735.7,966.6 739.4,943.3
+
+parcel 271 building 0 primary 250.5 residential skew +4.4 block +4.6 "307 Harrison Street"
+parcel 271 shape 0 859.0,1007.3 858.3,1018.4 870.6,1019.3 869.6,1034.1 853.6,1033.0 855.3,1007.1 859.0,1007.3
+parcel 271 building 1 outbuilding 153.5 residential skew -6.9 block -6.7 "307 Harrison Street"
+parcel 271 shape 1 884.4,1008.8 885.8,1019.9 872.4,1021.6 870.9,1010.6 884.4,1008.8
+
+parcel 272 building 0 primary 187.6 residential skew +3.0 block +5.9 "301 Harrison Street"
+parcel 272 shape 0 849.4,1089.9 849.9,1077.5 864.8,1078.2 864.2,1090.5 849.4,1089.9
+
+parcel 273 building 0 primary 194.5 residential skew +11.5 block +0.4 "210 Harrison Street"
+parcel 273 shape 0 823.3,1174.5 835.6,1173.1 837.6,1190.3 825.4,1191.7 823.3,1174.5
+parcel 273 building 1 outbuilding 142.6 residential skew -2.5 block -13.1 "210 Harrison Street"
+parcel 273 shape 1 802.3,1191.1 805.8,1200.4 791.9,1205.6 788.4,1196.4 802.3,1191.1
+
+parcel 274 building 0 primary 552.6 residential skew -33.0 block -31.0 "211 Harrison Street"
+parcel 274 shape 0 867.6,1164.3 871.9,1170.3 880.9,1163.9 887.4,1172.9 876.3,1180.8 880.6,1186.9 898.7,1173.9 903.1,1180.0 876.9,1198.7 865.4,1182.6 872.4,1177.5 864.5,1166.4 867.6,1164.3
+
+parcel 276 building 0 primary 144.0 residential skew +0.8 block +4.0 "207 Harrison Street"
+parcel 276 shape 0 888.5,1212.7 874.9,1213.2 874.5,1203.3 888.1,1202.8 888.5,1212.7
+parcel 276 building 1 outbuilding 50.2 residential skew -1.2 block +1.0 "207 Harrison Street"
+parcel 276 shape 1 894.6,1214.5 894.0,1205.8 898.9,1205.4 899.5,1214.1 894.6,1214.5
+
+parcel 278 building 0 primary 234.3 residential skew -21.7 block -27.2 "202 Harrison Street"
+parcel 278 shape 0 834.2,1255.7 850.8,1245.0 857.5,1255.4 840.9,1266.1 834.2,1255.7
+
+parcel 279 building 0 primary 128.1 residential skew -2.0 block -1.5 "206 North Church Street"
+parcel 279 shape 0 945.7,1156.2 945.2,1143.8 956.3,1143.3 956.8,1155.7 945.7,1156.2
+
+parcel 280 building 0 primary 310.2 residential skew -2.7 block -0.9 "107 Benton Street"
+parcel 280 shape 0 899.1,1074.7 899.7,1084.6 868.8,1086.4 868.2,1076.5 899.1,1074.7
+
+parcel 281 building 0 primary 254.8 residential skew -3.4 block -3.1 "111 Henderson Street"
+parcel 281 shape 0 789.7,881.6 773.7,882.7 772.7,867.8 788.8,866.8 789.7,881.6
+
+parcel 283 building 0 primary 135.9 residential skew -1.7 block +0.5 "404 Harrison Street"
+parcel 283 shape 0 819.2,924.0 819.3,933.9 806.9,934.1 806.8,924.2 819.2,924.0
+parcel 283 building 1 outbuilding 73.6 residential skew +1.7 block +5.9 "404 Harrison Street"
+parcel 283 shape 1 776.5,934.4 776.8,927.0 788.0,927.5 787.6,934.9 776.5,934.4
+
+parcel 286 building 0 primary 152.7 residential skew +7.2 block +9.0 "107 Park Place"
+parcel 286 shape 0 699.7,1502.4 700.9,1492.5 714.4,1494.1 713.2,1504.0 699.7,1502.4
+
+parcel 287 building 0 primary 185.0 residential skew -7.0 block -7.9 "105 Park Place"
+parcel 287 shape 0 744.3,1497.5 746.9,1512.2 734.7,1514.3 732.2,1499.7 744.3,1497.5
+
+parcel 288 building 0 primary 202.6 residential skew +17.0 block +17.2 "209 Perry Street"
+parcel 288 shape 0 613.4,1626.6 617.6,1612.3 629.5,1615.9 625.2,1630.1 613.4,1626.6
+
+parcel 289 building 0 primary 370.8 residential skew -19.4 block -25.0 "306 South Chicago Street"
+parcel 289 shape 0 801.1,1623.9 792.2,1607.6 811.8,1596.9 820.7,1613.2 801.1,1623.9
+parcel 289 building 1 outbuilding 79.1 residential skew -8.5 block -14.0 "306 South Chicago Street"
+parcel 289 shape 1 794.3,1644.6 783.6,1648.0 781.4,1640.9 792.0,1637.5 794.3,1644.6
+
+parcel 290 building 0 primary 374.9 residential skew +39.4 block +39.5 "222 West Stufflebeam Drive"
+parcel 290 shape 0 407.6,1715.4 396.1,1706.0 412.6,1685.9 424.0,1695.3 407.6,1715.4
+
+parcel 291 building 0 primary 300.7 residential skew -19.5 block -17.0 "205 Ann Street"
+parcel 291 shape 0 708.7,1540.4 705.4,1531.1 701.9,1532.3 697.7,1520.6 711.7,1515.6 719.2,1536.6 708.7,1540.4
+
+parcel 292 building 0 primary 163.9 residential skew +17.4 block +17.4 "216 Perry Street"
+parcel 292 shape 0 524.2,1573.8 528.9,1558.4 538.4,1561.3 533.7,1576.7 524.2,1573.8
+parcel 292 building 1 outbuilding 101.9 residential skew +0.2 block +0.3 "216 Perry Street"
+parcel 292 shape 1 529.9,1539.0 529.9,1551.4 521.3,1551.4 521.2,1539.0 529.9,1539.0
+
+parcel 293 building 0 primary 100.4 residential skew +2.6 block +3.4 "201 Park Place"
+parcel 293 shape 0 644.7,1522.8 654.6,1523.2 654.2,1534.3 644.3,1533.9 644.7,1522.8
+
+parcel 294 building 0 primary 172.0 residential skew -4.5 block -3.9 "204 Perry Street"
+parcel 294 shape 0 660.3,1571.5 650.4,1572.3 648.9,1555.1 658.8,1554.2 660.3,1571.5
+parcel 294 building 1 outbuilding 101.9 residential skew +3.9 block +4.7 "204 Perry Street"
+parcel 294 shape 1 655.0,1550.8 645.2,1550.2 645.9,1537.9 655.8,1538.5 655.0,1550.8
+
+parcel 296 building 0 primary 247.0 residential skew +0.4 block +1.1 "106 East Maple Street"
+parcel 296 shape 0 869.9,1440.7 869.9,1463.0 858.8,1463.0 858.7,1440.7 869.9,1440.7
+
+parcel 297 building 0 primary 144.3 residential skew -5.4 block -3.9 "103 East Maple Street"
+parcel 297 shape 0 847.1,1510.6 845.8,1498.3 856.9,1497.2 858.2,1509.5 847.1,1510.6
+parcel 297 building 1 outbuilding 99.9 residential skew -23.0 block -21.5 "103 East Maple Street"
+parcel 297 shape 1 845.6,1513.9 852.0,1528.7 845.2,1531.6 838.8,1516.9 845.6,1513.9
+
+parcel 301 building 0 primary 210.1 residential skew -7.4 block -6.1 "102 Gilbert Street"
+parcel 301 shape 0 867.9,1571.7 880.1,1569.7 882.8,1586.9 870.6,1588.8 867.9,1571.7
+parcel 301 building 1 outbuilding 55.7 residential skew +5.5 block +6.3 "102 Gilbert Street"
+parcel 301 shape 1 871.0,1551.8 863.6,1551.3 864.1,1543.9 871.5,1544.4 871.0,1551.8
+
+parcel 302 building 0 primary 167.7 residential skew +7.0 block +8.0 "105 Gilbert Street"
+parcel 302 shape 0 912.5,1638.9 900.2,1637.5 901.8,1623.9 914.0,1625.3 912.5,1638.9
+
+parcel 303 building 0 primary 166.5 residential skew +12.5 block +13.3 "104 Stewart Street"
+parcel 303 shape 0 918.9,1699.9 915.3,1716.8 905.6,1714.8 909.2,1697.8 918.9,1699.9
+parcel 303 building 1 outbuilding 94.4 residential skew +3.6 block +4.5 "104 Stewart Street"
+parcel 303 shape 1 913.3,1682.2 913.9,1671.1 921.3,1671.5 920.7,1682.6 913.3,1682.2
+
+parcel 304 building 0 primary 150.1 residential skew +30.3 block +30.9 "106 Stewart Street"
+parcel 304 shape 0 924.0,1708.3 930.2,1697.6 940.9,1703.7 934.8,1714.5 924.0,1708.3
+
+parcel 305 building 0 primary 115.4 residential skew +1.3 block +1.4 "105 Mc Kibben Street"
+parcel 305 shape 0 961.2,1895.7 968.6,1895.8 968.4,1910.7 961.0,1910.6 961.2,1895.7
+
+parcel 306 building 0 primary 334.8 residential skew -1.4 block -0.7 "109 Gilbert Street"
+parcel 306 shape 0 953.7,1620.4 954.6,1648.9 943.5,1649.2 942.6,1620.8 953.7,1620.4
+
+parcel 308 building 0 primary 285.1 residential skew -0.8 block -0.4 "1 South Watson Street"
+parcel 308 shape 0 731.8,1842.7 732.1,1865.0 719.7,1865.1 719.4,1842.8 731.8,1842.7
+
+parcel 309 building 0 primary 611.5 residential skew +6.4 block +6.0 "7 West Greenwood Drive"
+parcel 309 shape 0 702.5,1964.0 712.4,1964.9 713.5,1952.5 725.8,1953.7 722.8,1987.0 700.6,1984.9 702.5,1964.0
+
+parcel 310 building 0 primary 149.2 residential skew -8.3 block -8.8 "408 South Chicago Street"
+parcel 310 shape 0 825.9,1831.1 823.9,1818.9 836.1,1816.9 838.1,1829.1 825.9,1831.1
+parcel 310 building 1 outbuilding 73.6 residential skew +0.6 block +0.2 "408 South Chicago Street"
+parcel 310 shape 1 820.4,1823.6 820.5,1831.1 811.8,1831.1 811.8,1823.7 820.4,1823.6
+parcel 310 building 2 outbuilding 63.5 residential skew +0.2 block -0.3 "408 South Chicago Street"
+parcel 310 shape 2 810.8,1822.8 803.3,1822.9 803.2,1813.0 810.6,1812.9 810.8,1822.8
+
+parcel 311 building 0 primary 389.0 residential skew +5.2 block +5.2 "405 South Chicago Street"
+parcel 311 shape 0 888.5,1789.9 890.5,1762.7 905.3,1763.8 903.3,1791.0 888.5,1789.9
+parcel 311 building 1 outbuilding 128.1 residential skew +14.3 block +14.3 ""
+parcel 311 shape 1 920.8,1797.5 913.6,1795.8 917.0,1781.3 924.2,1783.1 920.8,1797.5
+
+parcel 314 building 0 primary 273.0 residential skew +2.7 block +3.1 "408 North Summit Street"
+parcel 314 shape 0 1123.6,886.5 1124.6,862.9 1136.9,863.4 1136.0,886.9 1123.6,886.5
+
+parcel 315 building 0 primary 93.8 residential skew +4.0 block +4.4 "304 Green Street"
+parcel 315 shape 0 1177.6,912.8 1176.9,922.7 1167.0,922.1 1167.7,912.2 1177.6,912.8
+
+parcel 317 building 0 primary 306.8 residential skew -0.6 block -0.8 "405 North Grove Street"
+parcel 317 shape 0 1311.3,894.5 1310.6,861.1 1320.5,860.9 1321.2,894.4 1311.3,894.5
+
+parcel 318 building 0 primary 763.9 residential skew +5.3 block +4.0 "302 North Summit Street"
+parcel 318 shape 0 1105.7,1024.1 1105.8,1004.2 1142.9,1004.5 1142.8,1024.3 1105.7,1024.1
+parcel 318 building 1 outbuilding 270.7 residential skew +5.3 block +4.0 "302 North Summit Street"
+parcel 318 shape 1 1087.7,1003.5 1087.9,981.2 1100.2,981.3 1100.1,1003.6 1087.7,1003.5
+parcel 318 building 2 outbuilding 62.3 unclassified skew -3.1 block -4.5 ""
+parcel 318 shape 2 1106.5,973.8 1111.4,973.1 1113.1,985.3 1108.2,986.0 1106.5,973.8
+
+parcel 320 building 0 primary 191.9 residential skew -38.7 block -37.8 "313 North Church Street"
+parcel 320 shape 0 994.1,1035.3 987.0,1026.8 999.3,1016.4 1006.5,1025.0 994.1,1035.3
+parcel 320 building 1 outbuilding 90.9 residential skew -0.5 block +0.8 "313 North Church Street"
+parcel 320 shape 1 1007.0,1027.6 1024.3,1027.1 1024.5,1032.1 1007.2,1032.5 1007.0,1027.6
+
+parcel 321 building 0 primary 224.8 residential skew +11.1 block +9.9 ""
+parcel 321 shape 0 1138.0,1055.0 1150.3,1056.4 1148.3,1074.8 1136.0,1073.5 1138.0,1055.0
+parcel 321 building 1 outbuilding 178.1 residential skew +5.3 block +3.9 "300 North Summit Street"
+parcel 321 shape 1 1144.6,1036.5 1144.5,1046.4 1128.5,1046.3 1128.6,1036.4 1144.6,1036.5
+
+parcel 322 building 0 primary 114.3 residential skew -1.2 block -1.1 "204 Holmes Street"
+parcel 322 shape 0 1029.9,1202.2 1029.5,1188.6 1036.9,1188.3 1037.3,1202.0 1029.9,1202.2
+
+parcel 324 building 0 primary 243.0 residential skew -31.2 block -31.0 "204 East Attica Road"
+parcel 324 shape 0 1018.6,1333.9 1009.1,1339.8 1003.9,1331.3 1028.2,1316.4 1030.7,1320.7 1016.0,1329.7 1018.6,1333.9
+
+parcel 325 building 0 primary 216.4 residential skew +9.5 block +9.6 "212 East Attica Road"
+parcel 325 shape 0 1093.0,1335.9 1095.8,1318.7 1108.0,1320.7 1105.2,1337.8 1093.0,1335.9
+parcel 325 building 1 outbuilding 108.5 residential skew +2.3 block +2.8 "212 East Attica Road"
+parcel 325 shape 1 1089.5,1308.5 1089.8,1299.9 1102.2,1300.3 1101.9,1309.0 1089.5,1308.5
+
+parcel 326 building 0 primary 218.2 residential skew +3.8 block +4.0 "214 East Attica Road"
+parcel 326 shape 0 1125.6,1319.7 1124.5,1337.0 1112.2,1336.2 1113.2,1318.9 1125.6,1319.7
+parcel 326 building 1 outbuilding 98.7 residential skew -0.0 block +0.5 "214 East Attica Road"
+parcel 326 shape 1 1111.5,1303.6 1111.4,1291.2 1118.8,1291.2 1118.9,1303.6 1111.5,1303.6
+
+parcel 327 building 0 primary 233.2 residential skew +29.6 block +29.7 "313 Green Street"
+parcel 327 shape 0 1295.2,988.0 1313.5,998.3 1308.0,1008.0 1289.7,997.7 1295.2,988.0
+
+parcel 328 building 0 primary 252.8 residential skew +2.0 block +1.9 "316 Benton Street"
+parcel 328 shape 0 1327.6,1078.7 1316.4,1078.4 1317.0,1056.1 1328.2,1056.4 1327.6,1078.7
+parcel 328 building 1 outbuilding 89.5 residential skew +5.1 block +5.0 "316 Benton Street"
+parcel 328 shape 1 1327.5,1038.3 1326.7,1048.2 1316.8,1047.4 1317.6,1037.5 1327.5,1038.3
+
+parcel 329 building 0 primary 253.7 residential skew +24.6 block +26.1 "309 Benton Street"
+parcel 329 shape 0 1259.0,1139.0 1250.0,1134.9 1260.0,1112.3 1269.1,1116.4 1259.0,1139.0
+
+parcel 330 building 0 primary 346.9 residential skew -10.0 block -9.6 ""
+parcel 330 shape 0 1277.3,1137.1 1275.5,1127.4 1309.6,1121.0 1311.4,1130.7 1277.3,1137.1
+
+parcel 331 building 0 primary 264.9 agricultural skew -4.2 block -4.2 ""
+parcel 331 shape 0 158.8,1939.7 160.0,1919.9 173.6,1920.7 172.4,1940.5 158.8,1939.7
+
+parcel 332 building 0 primary 277.9 residential skew -20.3 block -11.8 "604 North Chicago Street"
+parcel 332 shape 0 484.8,644.4 489.7,658.4 473.4,664.2 468.4,650.2 484.8,644.4
+parcel 332 building 1 outbuilding 275.6 residential skew -14.4 block -7.4 "604 North Chicago Street"
+parcel 332 shape 1 448.1,679.8 442.0,654.5 451.6,652.1 457.7,677.4 448.1,679.8
+parcel 332 building 2 outbuilding 51.4 residential skew -38.9 block -34.5 "604 North Chicago Street"
+parcel 332 shape 2 436.7,681.4 430.9,686.0 426.3,680.1 432.1,675.5 436.7,681.4
+
+parcel 333 building 0 primary 170.0 residential skew -13.1 block -12.4 "124 West Attica Road"
+parcel 333 shape 0 516.7,1307.0 514.0,1292.4 526.2,1290.1 528.9,1304.7 516.7,1307.0
+
+parcel 334 building 0 primary 286.6 residential skew -21.9 block -13.7 "610 North Chicago Street"
+parcel 334 shape 0 448.8,613.7 470.9,605.6 475.1,617.2 453.0,625.3 448.8,613.7
+parcel 334 building 1 outbuilding 79.4 residential skew -17.1 block -14.6 "610 North Chicago Street"
+parcel 334 shape 1 407.4,610.8 404.2,598.9 411.3,596.9 414.6,608.9 407.4,610.8
+
+parcel 335 building 0 primary 321.5 residential skew -33.0 block -21.3 "406 North Chicago Street"
+parcel 335 shape 0 576.1,963.2 586.5,980.0 571.8,989.1 561.4,972.3 576.1,963.2
+parcel 335 building 1 outbuilding 194.8 residential skew -4.4 block +6.9 "406 North Chicago Street"
+parcel 335 shape 1 556.2,977.5 546.4,978.0 545.2,957.0 555.1,956.4 556.2,977.5
+parcel 335 building 2 outbuilding 63.8 residential skew +14.0 block +17.2 "406 North Chicago Street"
+parcel 335 shape 2 515.7,962.9 517.6,955.8 524.8,957.7 522.8,964.9 515.7,962.9
+parcel 335 building 3 outbuilding 53.1 residential skew +8.8 block +10.4 "406 North Chicago Street"
+parcel 335 shape 3 410.9,926.4 412.2,919.1 419.5,920.4 418.2,927.7 410.9,926.4
+
+parcel 337 building 0 primary 193.4 unclassified skew -4.9 block +0.0 ""
+parcel 337 shape 0 466.8,745.4 454.5,746.5 453.1,730.5 465.4,729.4 466.8,745.4
+
+parcel 339 building 0 primary 277.9 residential skew -11.0 block -17.9 "109 North Chicago Street"
+parcel 339 shape 0 761.7,1263.3 767.5,1277.0 750.5,1284.3 744.7,1270.6 761.7,1263.3
+
+parcel 341 building 0 primary 1528.9 civic skew -1.0 block +4.3 "112 East Attica Road"
+parcel 341 shape 0 800.9,1307.3 800.8,1314.7 818.1,1315.1 817.7,1328.7 821.4,1328.8 822.0,1306.5 834.3,1306.8 833.8,1329.1 822.7,1328.9 822.5,1336.3 770.6,1335.0 771.3,1306.6 800.9,1307.3
+
+parcel 344 building 0 primary 220.8 unclassified skew -1.0 block -7.3 "122 East Attica Road"
+parcel 344 shape 0 862.3,1313.9 864.8,1328.5 850.2,1331.1 847.7,1316.4 862.3,1313.9
+
+parcel 345 building 0 primary 156.7 commercial skew +7.2 block +8.7 ""
+parcel 345 shape 0 862.7,1295.4 845.4,1293.8 846.3,1284.0 863.6,1285.5 862.7,1295.4
+parcel 345 building 1 outbuilding 58.6 commercial skew -4.0 block -1.8 ""
+parcel 345 shape 1 832.3,1279.7 840.9,1278.8 841.7,1286.2 833.1,1287.1 832.3,1279.7
+
+parcel 346 building 0 primary 123.8 residential skew -9.6 block -18.8 "124 East Attica Road"
+parcel 346 shape 0 879.8,1320.9 884.2,1332.5 876.2,1335.6 871.7,1324.0 879.8,1320.9
+
+parcel 348 building 0 primary 237.8 residential skew -3.6 block -5.3 "116 Henderson Street"
+parcel 348 shape 0 894.1,803.1 913.7,800.5 915.3,812.8 895.7,815.4 894.1,803.1
+parcel 348 building 1 outbuilding 177.8 residential skew +5.9 block +4.4 "116 Henderson Street"
+parcel 348 shape 1 861.8,797.1 861.4,808.2 845.3,807.7 845.7,796.5 861.8,797.1
+parcel 348 building 2 outbuilding 131.3 residential skew +14.5 block +11.7 "116 Henderson Street"
+parcel 348 shape 2 857.5,835.1 860.9,816.8 868.2,818.2 864.8,836.5 857.5,835.1
+parcel 348 building 3 outbuilding 69.8 residential skew +13.5 block +12.5 "116 Henderson Street"
+parcel 348 shape 3 886.2,788.8 885.2,794.9 874.2,793.0 875.2,786.9 886.2,788.8
+
+parcel 352 building 0 primary 269.3 residential skew -38.2 block -38.5 "12 West Greenwood Drive"
+parcel 352 shape 0 521.3,2069.0 507.6,2051.4 517.4,2043.8 531.1,2061.4 521.3,2069.0
+
+parcel 354 building 0 primary 1001.1 residential skew -0.8 block -0.8 "109 West Attica Road"
+parcel 354 shape 0 657.0,1385.5 657.1,1399.1 644.7,1399.2 644.4,1347.2 665.4,1347.0 665.6,1385.4 657.0,1385.5
+
+parcel 355 building 0 primary 147.8 residential skew +2.2 block +1.7 "214 Park Place"
+parcel 355 shape 0 546.9,1472.0 547.3,1458.3 557.2,1458.6 556.8,1472.3 546.9,1472.0
+parcel 355 building 1 outbuilding 112.5 residential skew +0.3 block -0.2 "214 Park Place"
+parcel 355 shape 1 538.9,1443.4 551.3,1443.3 551.3,1453.3 538.9,1453.3 538.9,1443.4
+
+parcel 356 building 0 primary 222.5 residential skew -18.6 block -18.7 "206 Park Place"
+parcel 356 shape 0 630.6,1470.7 624.9,1454.4 636.6,1450.3 642.2,1466.7 630.6,1470.7
+parcel 356 building 1 outbuilding 73.0 residential skew +1.8 block +1.5 "206 Park Place"
+parcel 356 shape 1 634.2,1442.8 634.4,1432.9 641.8,1433.1 641.6,1443.0 634.2,1442.8
+
+parcel 357 building 0 primary 202.9 residential skew +12.5 block +12.8 "204 Park Place"
+parcel 357 shape 0 643.9,1468.2 647.8,1450.0 658.7,1452.4 654.8,1470.5 643.9,1468.2
+
+parcel 360 building 0 primary 590.7 residential skew +11.2 block +11.6 "129 East Attica Road"
+parcel 360 shape 0 898.2,1376.7 899.5,1369.4 920.2,1373.2 917.1,1390.2 875.8,1382.7 877.5,1372.9 898.2,1376.7
+
+parcel 361 building 0 primary 164.2 residential skew +8.1 block +3.9 "123 East Attica Road"
+parcel 361 shape 0 859.5,1371.4 871.9,1371.9 871.3,1386.8 858.9,1386.2 859.5,1371.4
+
+parcel 362 building 0 primary 365.4 residential skew +3.8 block +3.4 "219 Perry Street"
+parcel 362 shape 0 516.6,1640.3 517.0,1632.9 507.2,1632.4 508.1,1615.1 525.4,1616.0 524.0,1640.7 516.6,1640.3
+
+parcel 365 building 0 primary 202.9 residential skew +0.6 block +0.6 "301 Thompson Street"
+parcel 365 shape 0 1191.5,2118.7 1191.4,2133.6 1179.1,2133.5 1179.2,2118.6 1191.5,2118.7
+
+parcel 366 building 0 primary 345.7 residential skew +4.8 block +4.8 "307 Thompson Street"
+parcel 366 shape 0 1221.5,2128.7 1222.4,2117.6 1233.5,2118.5 1231.6,2140.7 1211.9,2139.1 1212.8,2128.0 1221.5,2128.7
+
+parcel 367 building 0 primary 178.9 residential skew -35.8 block -36.3 "313 Thompson Street"
+parcel 367 shape 0 1309.9,2116.4 1323.8,2135.4 1317.8,2139.7 1303.9,2120.7 1309.9,2116.4
+
+parcel 368 building 0 primary 146.3 residential skew +3.0 block +4.0 "303 South Grove Street"
+parcel 368 shape 0 1374.4,1660.0 1364.6,1659.9 1364.6,1645.1 1374.5,1645.1 1374.4,1660.0
+parcel 368 building 1 outbuilding 93.2 residential skew -0.2 block +4.2 "303 South Grove Street"
+parcel 368 shape 1 1406.4,1657.5 1399.0,1657.9 1398.4,1645.5 1405.8,1645.1 1406.4,1657.5
+
+parcel 370 building 0 primary 114.0 residential skew +1.6 block +3.9 "401 Stewart Street"
+parcel 370 shape 0 1375.9,1758.9 1366.0,1758.7 1366.2,1746.3 1376.1,1746.5 1375.9,1758.9
+
+parcel 371 building 0 primary 373.7 residential skew -4.5 block -7.0 "409 Stewart Street"
+parcel 371 shape 0 1468.4,1749.0 1475.1,1779.2 1463.0,1781.9 1456.3,1751.7 1468.4,1749.0
+
+parcel 372 building 0 primary 229.4 residential skew +8.0 block +4.3 "414 Mc Kibben Street"
+parcel 372 shape 0 1491.6,1834.9 1491.5,1825.0 1513.7,1824.6 1513.9,1834.5 1491.6,1834.9
+
+parcel 373 building 0 primary 234.0 residential skew -13.2 block -13.2 "401 Mc Kibben Street"
+parcel 373 shape 0 1373.9,1869.9 1378.3,1887.9 1366.3,1890.9 1361.9,1872.8 1373.9,1869.9
+parcel 373 building 1 outbuilding 140.5 residential skew -0.0 block -0.1 "401 Mc Kibben Street"
+parcel 373 shape 1 1364.5,1910.5 1364.4,1898.1 1376.7,1898.0 1376.9,1910.4 1364.5,1910.5
+
+parcel 374 building 0 primary 269.0 residential skew -2.9 block -0.8 "411 Mc Kibben Street"
+parcel 374 shape 0 1452.7,1896.0 1451.1,1868.8 1460.9,1868.2 1462.6,1895.4 1452.7,1896.0
+
+parcel 375 building 0 primary 184.7 residential skew -4.0 block -0.2 "405 Stewart Street"
+parcel 375 shape 0 1409.5,1741.6 1409.7,1744.1 1415.8,1743.6 1416.7,1754.7 1403.1,1755.7 1402.1,1742.2 1409.5,1741.6
+parcel 375 building 1 outbuilding 70.4 residential skew -2.9 block -0.4 "405 Stewart Street"
+parcel 375 shape 1 1410.5,1784.6 1403.1,1785.1 1402.6,1776.4 1410.0,1776.0 1410.5,1784.6
+
+parcel 381 building 0 primary 316.9 residential skew -1.5 block -1.6 "302 Earl Court"
+parcel 381 shape 0 1186.4,2200.4 1186.0,2188.0 1210.8,2187.4 1211.1,2199.8 1186.4,2200.4
+
+parcel 383 building 0 primary 101.3 residential skew -1.6 block -1.7 "301 Earl Court"
+parcel 383 shape 0 1180.0,2277.2 1179.7,2264.8 1187.1,2264.6 1187.5,2277.0 1180.0,2277.2
+
+parcel 386 building 0 primary 1798.2 commercial skew -1.4 block -2.1 "705 South Chicago Street"
+parcel 386 shape 0 937.5,2221.8 978.2,2219.7 980.4,2264.3 939.7,2266.3 937.5,2221.8
+
+parcel 388 building 0 primary 201.7 residential skew -2.4 block -2.5 "302 Henderson Street"
+parcel 388 shape 0 1163.4,815.7 1175.8,815.1 1176.7,833.6 1164.4,834.3 1163.4,815.7
+
+parcel 389 building 0 primary 294.7 residential skew +3.3 block +3.2 "308 Henderson Street"
+parcel 389 shape 0 1239.2,834.8 1229.4,834.3 1230.9,802.1 1240.8,802.6 1239.2,834.8
+
+parcel 390 building 0 primary 407.2 residential skew +1.0 block +1.7 ""
+parcel 390 shape 0 996.2,741.8 1020.9,742.1 1020.8,759.4 996.1,759.2 996.2,741.8
+
+parcel 392 building 0 primary 861.7 commercial skew -6.5 block -11.4 ""
+parcel 392 shape 0 1225.2,1214.9 1214.9,1171.5 1234.1,1166.9 1244.4,1210.3 1225.2,1214.9
+
+parcel 393 building 0 primary 100.7 residential skew -5.2 block -4.3 "404 East Attica Road"
+parcel 393 shape 0 1392.6,1308.5 1385.2,1309.2 1384.0,1296.9 1391.4,1296.2 1392.6,1308.5
+
+parcel 394 building 0 primary 262.6 residential skew +15.4 block +15.4 "409 Green Street"
+parcel 394 shape 0 1428.5,985.9 1422.3,1008.6 1414.0,1006.3 1420.1,983.6 1428.5,985.9
+
+parcel 395 building 0 primary 197.4 residential skew -30.1 block -30.2 "403 Benton Street"
+parcel 395 shape 0 1388.3,1132.8 1376.3,1112.6 1382.7,1108.8 1394.7,1129.0 1388.3,1132.8
+
+parcel 396 building 0 primary 127.0 residential skew -3.7 block -3.6 "404 Holmes Street"
+parcel 396 shape 0 1378.2,1206.4 1377.1,1191.6 1385.7,1191.0 1386.8,1205.8 1378.2,1206.4
+parcel 396 building 1 outbuilding 100.4 residential skew +2.2 block +2.3 "404 Holmes Street"
+parcel 396 shape 1 1374.4,1187.7 1374.8,1175.3 1382.2,1175.6 1381.9,1187.9 1374.4,1187.7
+
+parcel 397 building 0 primary 135.9 residential skew +4.3 block +4.9 "414 East Attica Road"
+parcel 397 shape 0 1494.7,1329.5 1493.9,1341.9 1484.0,1341.2 1484.9,1328.8 1494.7,1329.5
+parcel 397 building 1 outbuilding 110.8 residential skew -2.4 block -1.9 "414 East Attica Road"
+parcel 397 shape 1 1481.7,1287.6 1494.1,1287.0 1494.5,1296.9 1482.2,1297.5 1481.7,1287.6
+
+parcel 398 building 0 primary 172.9 residential skew -1.1 block +0.9 "402 Harrison Street"
+parcel 398 shape 0 804.1,960.9 804.0,946.1 816.4,946.0 816.5,960.8 804.1,960.9
+
+parcel 399 building 0 primary 151.8 residential skew -7.5 block -6.1 "305 Harrison Street"
+parcel 399 shape 0 884.5,1055.5 871.0,1057.4 869.4,1046.3 882.9,1044.4 884.5,1055.5
+
+parcel 400 building 0 primary 430.3 residential skew -2.4 block -1.0 "303 Harrison Street"
+parcel 400 shape 0 865.8,1042.7 867.5,1074.9 852.7,1075.7 851.0,1043.5 865.8,1042.7
+parcel 400 building 1 outbuilding 105.9 residential skew +10.2 block +11.5 "303 Harrison Street"
+parcel 400 shape 1 886.4,1071.8 889.1,1055.9 894.0,1056.7 891.3,1072.6 886.4,1071.8
+
+parcel 401 building 0 primary 127.0 residential skew -11.1 block -11.0 "109 Benton Street"
+parcel 401 shape 0 923.8,1074.2 925.8,1083.9 912.5,1086.7 910.5,1077.0 923.8,1074.2
+
+parcel 402 building 0 primary 334.5 residential skew +3.5 block +4.1 "113 Benton Street"
+parcel 402 shape 0 956.4,1082.4 941.6,1081.7 942.6,1060.6 957.5,1061.4 956.4,1082.4
+
+parcel 403 building 0 primary 251.1 residential skew -40.9 block -40.6 "212 North Church Street"
+parcel 403 shape 0 942.9,1135.5 935.5,1127.2 951.3,1113.2 958.7,1121.6 942.9,1135.5
+
+parcel 404 building 0 primary 114.6 residential skew -10.4 block -21.3 "214 Harrison Street"
+parcel 404 shape 0 815.8,1160.9 826.7,1155.0 831.4,1163.7 820.5,1169.6 815.8,1160.9
+parcel 404 building 1 outbuilding 64.1 residential skew -0.9 block -9.6 "214 Harrison Street"
+parcel 404 shape 1 804.4,1165.1 812.6,1162.3 814.6,1168.1 806.4,1170.9 804.4,1165.1
+
+parcel 405 building 0 primary 264.3 residential skew +0.9 block +4.3 "104 Holmes Street"
+parcel 405 shape 0 929.7,1194.1 929.6,1206.5 907.3,1206.3 907.4,1193.9 929.7,1194.1
+
+parcel 406 building 0 primary 158.1 residential skew -23.1 block -19.7 "105 Holmes Street"
+parcel 406 shape 0 924.0,1264.7 920.1,1255.6 935.9,1248.7 939.9,1257.8 924.0,1264.7
+
+parcel 407 building 0 primary 130.4 residential skew +0.0 block +2.7 "130 East Attica Road"
+parcel 407 shape 0 928.0,1335.5 928.0,1321.9 936.7,1321.9 936.6,1335.5 928.0,1335.5
+parcel 407 building 1 outbuilding 93.5 residential skew -1.8 block +1.8 "130 East Attica Road"
+parcel 407 shape 1 935.0,1301.8 925.1,1302.1 924.8,1292.2 934.7,1291.9 935.0,1301.8
+
+parcel 408 building 0 primary 155.6 residential skew -0.4 block +2.1 ""
+parcel 408 shape 0 917.7,1182.4 917.6,1172.5 932.4,1172.2 932.6,1182.1 917.7,1182.4
+
+parcel 409 building 0 primary 385.3 residential skew +0.5 block -3.1 "409 North Chicago Street"
+parcel 409 shape 0 627.8,899.8 654.6,895.6 656.9,910.3 630.1,914.5 627.8,899.8
+parcel 409 building 1 outbuilding 147.5 residential skew -42.7 block +42.4 "409 North Chicago Street"
+parcel 409 shape 1 680.3,886.7 672.7,896.5 664.0,889.7 671.6,879.9 680.3,886.7
+
+parcel 410 building 0 primary 194.2 residential skew -1.5 block -1.2 "410 Harrison Street"
+parcel 410 shape 0 803.1,867.0 817.9,866.5 818.3,878.9 803.5,879.4 803.1,867.0
+parcel 410 building 1 outbuilding 81.4 residential skew -5.2 block -5.0 "410 Harrison Street"
+parcel 410 shape 1 802.3,874.1 793.6,875.0 792.7,865.1 801.3,864.3 802.3,874.1
+
+parcel 411 building 0 primary 112.3 residential skew +2.2 block +3.8 ""
+parcel 411 shape 0 887.4,923.1 899.7,923.8 899.2,933.7 886.9,933.0 887.4,923.1
+
+parcel 412 building 0 primary 335.9 residential skew -21.1 block -21.0 "11 West Greenwood Drive"
+parcel 412 shape 0 517.3,1985.9 528.9,1981.6 534.5,1996.7 548.4,1991.6 551.4,1999.7 536.3,2005.3 532.4,1994.9 522.0,1998.7 517.3,1985.9
+
+parcel 416 building 0 primary 173.7 residential skew +7.5 block +9.0 "109 Perry Street"
+parcel 416 shape 0 729.8,1619.4 728.2,1634.2 715.9,1632.8 717.5,1618.1 729.8,1619.4
+parcel 416 building 1 outbuilding 122.4 residential skew +1.3 block +2.9 "109 Perry Street"
+parcel 416 shape 1 734.9,1647.5 747.3,1647.5 747.3,1657.4 734.9,1657.4 734.9,1647.5
+
+parcel 417 building 0 primary 272.1 residential skew +9.0 block +9.8 "204 West Stufflebeam Drive"
+parcel 417 shape 0 663.5,1691.0 679.3,1693.7 676.6,1709.5 660.8,1706.8 663.5,1691.0
+parcel 417 building 1 outbuilding 233.2 residential skew -2.2 block -0.9 "204 West Stufflebeam Drive"
+parcel 417 shape 1 669.8,1665.6 670.1,1677.9 650.4,1678.4 650.1,1666.1 669.8,1665.6
+
+parcel 419 building 0 primary 428.3 residential skew -7.8 block -7.7 "212 Perry Street"
+parcel 419 shape 0 559.9,1554.2 561.2,1562.7 575.9,1560.6 577.3,1570.5 547.9,1574.6 545.3,1556.3 559.9,1554.2
+
+parcel 420 building 0 primary 212.7 residential skew +4.2 block +6.0 "202 Perry Street"
+parcel 420 shape 0 668.3,1571.2 669.5,1553.9 681.8,1554.7 680.6,1572.0 668.3,1571.2
+parcel 420 building 1 outbuilding 50.2 residential skew +1.3 block +2.8 "202 Perry Street"
+parcel 420 shape 1 666.0,1535.8 674.7,1536.0 674.6,1542.1 665.9,1542.0 666.0,1535.8
+
+parcel 421 building 0 primary 163.9 residential skew +4.3 block -0.5 "110 Perry Street"
+parcel 421 shape 0 710.1,1553.8 710.9,1568.7 699.8,1569.2 699.0,1554.4 710.1,1553.8
+
+parcel 422 building 0 primary 176.0 residential skew +21.9 block +10.8 "106 Perry Street"
+parcel 422 shape 0 772.7,1565.0 758.0,1563.0 759.7,1550.7 774.3,1552.7 772.7,1565.0
+
+parcel 423 building 0 primary 198.8 residential skew +3.8 block +5.2 "105 East Maple Street"
+parcel 423 shape 0 862.1,1511.2 862.8,1498.8 877.6,1499.7 876.9,1512.1 862.1,1511.2
+
+parcel 424 building 0 primary 148.0 residential skew +4.7 block +5.5 "107 East Maple Street"
+parcel 424 shape 0 894.9,1512.8 882.5,1511.9 883.4,1499.6 895.8,1500.5 894.9,1512.8
+
+parcel 425 building 0 primary 330.1 residential skew -6.1 block -5.8 "111 East Maple Street"
+parcel 425 shape 0 932.3,1512.4 933.0,1518.6 928.1,1519.2 925.5,1497.0 940.2,1495.3 943.1,1519.9 940.6,1520.2 939.6,1511.6 932.3,1512.4
+
+parcel 429 building 0 primary 265.5 residential skew +11.1 block +12.8 "104 Gilbert Street"
+parcel 429 shape 0 886.2,1586.6 890.7,1562.3 900.4,1564.1 895.9,1588.4 886.2,1586.6
+
+parcel 430 building 0 primary 115.4 residential skew +7.6 block +8.8 "106 Gilbert Street"
+parcel 430 shape 0 912.9,1554.7 920.3,1555.6 918.0,1574.0 910.6,1573.1 912.9,1554.7
+parcel 430 building 1 outbuilding 105.0 residential skew +2.7 block +4.0 "106 Gilbert Street"
+parcel 430 shape 1 904.5,1588.5 904.9,1578.6 916.0,1579.0 915.6,1588.9 904.5,1588.5
+
+parcel 431 building 0 primary 297.5 residential skew -3.9 block -3.5 "108 Stewart Street"
+parcel 431 shape 0 962.5,1713.5 950.2,1714.5 948.3,1691.1 960.7,1690.1 962.5,1713.5
+
+parcel 432 building 0 primary 175.8 residential skew -13.5 block -13.2 "402 South Church Street"
+parcel 432 shape 0 948.5,1749.2 962.9,1745.6 965.9,1757.6 951.5,1761.2 948.5,1749.2
+parcel 432 building 1 outbuilding 153.8 residential skew -1.1 block -0.7 "402 South Church Street"
+parcel 432 shape 1 929.8,1772.4 939.7,1772.1 940.1,1786.9 930.2,1787.2 929.8,1772.4
+
+parcel 433 building 0 primary 155.8 residential skew -1.9 block -1.4 "304 South Church Street"
+parcel 433 shape 0 961.3,1665.1 947.7,1665.7 947.3,1654.5 960.8,1653.9 961.3,1665.1
+parcel 433 building 1 outbuilding 62.9 residential skew +4.4 block +5.2 "304 South Church Street"
+parcel 433 shape 1 927.7,1665.3 928.2,1657.9 935.6,1658.4 935.1,1665.8 927.7,1665.3
+
+parcel 434 building 0 primary 110.8 residential skew -1.4 block -1.8 "101 Mc Kibben Street"
+parcel 434 shape 0 906.0,1910.5 905.5,1899.4 915.4,1898.9 915.9,1910.0 906.0,1910.5
+parcel 434 building 1 outbuilding 46.8 residential skew -4.2 block -4.6 "101 Mc Kibben Street"
+parcel 434 shape 1 903.4,1892.4 897.3,1893.0 896.6,1885.6 902.7,1885.0 903.4,1892.4
+
+parcel 435 building 0 primary 276.2 residential skew -11.9 block -11.7 "404 South Chicago Street"
+parcel 435 shape 0 831.5,1757.6 835.1,1773.3 818.2,1777.2 814.7,1761.5 831.5,1757.6
+parcel 435 building 1 outbuilding 102.2 residential skew -3.6 block -3.6 "404 South Chicago Street"
+parcel 435 shape 1 806.8,1755.9 808.2,1773.2 802.0,1773.7 800.6,1756.4 806.8,1755.9
+parcel 435 building 2 outbuilding 101.6 residential skew +0.4 block +0.9 "404 South Chicago Street"
+parcel 435 shape 2 811.1,1757.5 811.0,1747.6 820.9,1747.5 821.0,1757.4 811.1,1757.5
+
+parcel 436 building 0 primary 242.4 residential skew -19.0 block -18.3 "1 South Watson Street"
+parcel 436 shape 0 731.9,1804.7 736.6,1818.8 721.3,1823.9 716.6,1809.8 731.9,1804.7
+
+parcel 437 building 0 primary 271.9 residential skew -0.5 block +0.1 ""
+parcel 437 shape 0 792.4,1859.3 775.1,1859.4 775.0,1843.3 792.3,1843.2 792.4,1859.3
+parcel 437 building 1 outbuilding 120.3 residential skew +2.9 block +3.6 ""
+parcel 437 shape 1 763.8,1864.3 763.1,1876.7 753.2,1876.2 753.9,1863.8 763.8,1864.3
+
+parcel 438 building 0 primary 279.4 residential skew -1.9 block -4.1 "4 West Greenwood Drive"
+parcel 438 shape 0 804.7,1998.4 806.1,2013.2 786.4,2015.1 785.0,2000.3 804.7,1998.4
+
+parcel 439 building 0 primary 186.7 residential skew -2.7 block -2.5 "401 South Chicago Street"
+parcel 439 shape 0 887.2,1759.0 886.4,1746.7 902.4,1745.6 903.2,1758.0 887.2,1759.0
+
+parcel 440 building 0 primary 230.0 residential skew +28.4 block +28.8 "506 South Church Street"
+parcel 440 shape 0 945.0,1937.7 953.7,1921.3 964.6,1927.1 955.9,1943.5 945.0,1937.7
+parcel 440 building 1 outbuilding 49.9 residential skew +2.2 block +2.6 "506 South Church Street"
+parcel 440 shape 1 942.9,1924.4 942.7,1931.9 935.3,1931.6 935.5,1924.2 942.9,1924.4
+
+parcel 441 building 0 primary 361.3 residential skew -4.9 block -4.3 "214 West Stufflebeam Drive"
+parcel 441 shape 0 584.4,1690.9 585.5,1705.8 560.9,1707.7 559.7,1692.9 584.4,1690.9
+
+parcel 442 building 0 primary 347.2 residential skew -6.6 block -6.2 "212 West Stufflebeam Drive"
+parcel 442 shape 0 594.8,1692.0 615.7,1689.6 617.3,1704.4 596.4,1706.7 594.8,1692.0
+
+parcel 443 building 0 primary 349.5 residential skew +7.5 block +8.8 "202 West Stufflebeam Drive"
+parcel 443 shape 0 687.3,1692.4 711.8,1695.9 709.7,1710.6 685.2,1707.1 687.3,1692.4
+
+parcel 444 building 0 primary 892.6 unclassified skew +7.3 block +7.4 "116 East Maple Street"
+parcel 444 shape 0 929.9,1440.7 925.0,1440.1 926.8,1425.4 957.5,1429.0 953.6,1461.0 927.9,1457.9 929.9,1440.7
+
+parcel 445 building 0 primary 177.2 residential skew -0.2 block +0.7 "213 Henderson Street"
+parcel 445 shape 0 1082.7,866.8 1100.0,866.6 1100.1,876.5 1082.8,876.7 1082.7,866.8
+
+parcel 446 building 0 primary 172.0 residential skew -6.2 block -6.1 "407 North Summit Street"
+parcel 446 shape 0 1187.4,861.6 1188.5,871.5 1170.1,873.6 1168.9,863.8 1187.4,861.6
+
+parcel 447 building 0 primary 254.5 residential skew -4.8 block -4.8 "305 Henderson Street"
+parcel 447 shape 0 1221.4,862.8 1238.6,861.2 1239.6,872.3 1213.8,874.7 1213.2,868.5 1221.8,867.7 1221.4,862.8
+
+parcel 448 building 0 primary 464.3 residential skew -26.2 block -28.2 "211 Green Street"
+parcel 448 shape 0 1111.2,908.1 1079.1,926.7 1072.9,916.0 1105.0,897.3 1111.2,908.1
+
+parcel 449 building 0 primary 116.3 residential skew -15.2 block -14.2 ""
+parcel 449 shape 0 1203.5,946.8 1191.6,950.1 1189.0,940.6 1200.9,937.3 1203.5,946.8
+
+parcel 450 building 0 primary 190.5 residential skew +3.6 block +3.7 "308 Green Street"
+parcel 450 shape 0 1226.8,930.3 1244.1,931.3 1243.5,941.2 1226.2,940.2 1226.8,930.3
+
+parcel 451 building 0 primary 284.3 residential skew +1.6 block +1.4 "307 Henderson Street"
+parcel 451 shape 0 1259.9,880.6 1260.1,869.5 1286.0,870.0 1285.8,881.1 1259.9,880.6
+
+parcel 452 building 0 primary 133.6 residential skew -7.7 block -6.1 "315 North Church Street"
+parcel 452 shape 0 988.9,993.1 1001.1,991.3 1002.5,1001.1 990.3,1002.9 988.9,993.1
+parcel 452 building 1 outbuilding 88.6 residential skew -1.2 block +0.9 "315 North Church Street"
+parcel 452 shape 1 1009.9,1000.5 1009.6,990.6 1019.5,990.3 1019.8,1000.2 1009.9,1000.5
+
+parcel 453 building 0 primary 368.2 residential skew -21.1 block -19.9 "202 Benton Street"
+parcel 453 shape 0 993.7,1077.3 989.1,1065.8 1007.5,1058.5 1015.7,1079.2 1004.2,1083.8 1000.6,1074.6 993.7,1077.3
+parcel 453 building 1 outbuilding 80.8 residential skew +3.2 block +4.9 "202 Benton Street"
+parcel 453 shape 1 1015.7,1041.0 1015.3,1050.9 1005.4,1050.4 1005.8,1040.5 1015.7,1041.0
+
+parcel 455 building 0 primary 242.1 residential skew -36.6 block -35.4 "203 Benton Street"
+parcel 455 shape 0 998.1,1124.9 1012.9,1113.7 1020.4,1123.6 1005.6,1134.8 998.1,1124.9
+
+parcel 456 building 0 primary 205.5 residential skew -5.7 block -4.0 "205 Benton Street"
+parcel 456 shape 0 1035.7,1115.6 1037.2,1129.1 1031.1,1129.8 1031.7,1135.9 1024.4,1136.7 1022.2,1117.0 1035.7,1115.6
+
+parcel 458 building 0 primary 239.2 residential skew -27.1 block -32.4 "208 North Summit Street"
+parcel 458 shape 0 1131.5,1142.8 1140.0,1155.0 1125.9,1165.0 1117.3,1152.9 1131.5,1142.8
+parcel 458 building 1 outbuilding 57.1 residential skew +6.5 block +1.4 "208 North Summit Street"
+parcel 458 shape 1 1118.9,1137.7 1111.5,1137.9 1111.3,1130.5 1118.7,1130.2 1118.9,1137.7
+
+parcel 460 building 0 primary 239.0 residential skew +0.6 block +0.9 "205 North Church Street"
+parcel 460 shape 0 989.9,1168.6 999.8,1168.6 999.8,1190.9 989.9,1190.9 989.9,1168.6
+
+parcel 461 building 0 primary 160.7 residential skew +4.0 block +4.2 ""
+parcel 461 shape 0 1010.0,1211.8 1010.8,1199.4 1023.1,1200.2 1022.3,1212.5 1010.0,1211.8
+
+parcel 462 building 0 primary 187.3 residential skew +0.6 block +1.9 "212 Holmes Street"
+parcel 462 shape 0 1091.1,1197.6 1104.7,1197.7 1104.7,1211.3 1091.1,1211.2 1091.1,1197.6
+parcel 462 building 1 outbuilding 87.4 residential skew +0.8 block +2.8 "212 Holmes Street"
+parcel 462 shape 1 1088.7,1175.4 1088.8,1165.4 1098.7,1165.5 1098.6,1175.4 1088.7,1175.4
+
+parcel 463 building 0 primary 137.9 residential skew -10.6 block -10.7 ""
+parcel 463 shape 0 1041.5,1256.8 1031.8,1258.7 1028.7,1242.9 1038.4,1241.0 1041.5,1256.8
+parcel 463 building 1 outbuilding 130.4 residential skew +4.7 block +4.7 ""
+parcel 463 shape 1 1033.5,1271.7 1022.4,1270.9 1023.3,1258.6 1034.4,1259.4 1033.5,1271.7
+
+parcel 464 building 0 primary 202.3 residential skew -1.7 block -1.4 "209 Holmes Street"
+parcel 464 shape 0 1081.0,1268.9 1081.6,1284.9 1069.2,1285.4 1068.6,1269.3 1081.0,1268.9
+parcel 464 building 1 outbuilding 157.9 residential skew -44.7 block -44.2 "209 Holmes Street"
+parcel 464 shape 1 1080.0,1258.7 1070.4,1249.1 1079.1,1240.3 1088.7,1249.9 1080.0,1258.7
+
+parcel 465 building 0 primary 167.7 residential skew -10.7 block -10.1 "211 Holmes Street"
+parcel 465 shape 0 1089.2,1243.0 1101.3,1240.6 1104.2,1255.2 1092.0,1257.6 1089.2,1243.0
+parcel 465 building 1 outbuilding 76.2 residential skew -3.3 block -2.8 "211 Holmes Street"
+parcel 465 shape 1 1101.9,1269.2 1101.1,1256.8 1108.5,1256.3 1109.3,1268.7 1101.9,1269.2
+
+parcel 466 building 0 primary 123.2 residential skew -5.5 block -5.4 "210 East Attica Road"
+parcel 466 shape 0 1074.6,1325.7 1084.5,1324.7 1085.7,1337.1 1075.9,1338.1 1074.6,1325.7
+
+parcel 467 building 0 primary 177.5 residential skew -4.6 block -4.1 "216 East Attica Road"
+parcel 467 shape 0 1146.9,1321.0 1148.2,1335.8 1135.9,1336.8 1134.6,1322.0 1146.9,1321.0
+parcel 467 building 1 outbuilding 41.8 residential skew +1.7 block +2.2 "216 East Attica Road"
+parcel 467 shape 1 1129.6,1300.8 1137.0,1301.0 1136.9,1305.9 1129.5,1305.7 1129.6,1300.8
+
+parcel 468 building 0 primary 184.1 residential skew +3.0 block +5.6 "307 North Summit Street"
+parcel 468 shape 0 1167.1,1000.3 1168.1,980.5 1176.8,980.9 1175.7,1000.7 1167.1,1000.3
+
+parcel 469 building 0 primary 201.1 residential skew -0.7 block -0.6 "307 North Grove Street"
+parcel 469 shape 0 1319.4,1009.8 1319.1,989.9 1329.0,989.8 1329.3,1009.6 1319.4,1009.8
+
+parcel 471 building 0 primary 230.9 residential skew +17.3 block +17.7 "201 East Attica Road"
+parcel 471 shape 0 1001.8,1381.8 997.5,1396.0 984.5,1392.0 988.8,1377.8 1001.8,1381.8
+
+parcel 472 building 0 primary 115.4 residential skew +5.2 block +5.3 ""
+parcel 472 shape 0 996.7,1403.1 997.1,1398.1 1011.9,1399.4 1011.2,1408.0 1001.3,1407.2 1001.6,1403.5 996.7,1403.1
+
+parcel 473 building 0 primary 311.7 residential skew -1.0 block -0.8 "205 East Attica Road"
+parcel 473 shape 0 1015.7,1396.5 1039.1,1396.0 1039.4,1408.4 1015.9,1408.9 1015.7,1396.5
+
+parcel 474 building 0 primary 114.3 residential skew +0.4 block +0.5 "211 East Attica Road"
+parcel 474 shape 0 1093.9,1373.8 1103.8,1373.8 1103.7,1386.2 1093.9,1386.2 1093.9,1373.8
+parcel 474 building 1 outbuilding 88.3 residential skew +1.1 block +1.3 "211 East Attica Road"
+parcel 474 shape 1 1100.1,1392.7 1100.0,1402.6 1090.1,1402.4 1090.2,1392.5 1100.1,1392.7
+
+parcel 476 building 0 primary 187.6 residential skew -1.7 block -1.8 "205 East Maple Street"
+parcel 476 shape 0 1030.6,1512.2 1030.0,1496.1 1041.1,1495.6 1041.7,1511.7 1030.6,1512.2
+
+parcel 477 building 0 primary 299.6 residential skew +13.0 block +12.9 "207 East Maple Street"
+parcel 477 shape 0 1063.0,1491.1 1056.8,1518.9 1047.2,1516.8 1053.3,1489.0 1063.0,1491.1
+parcel 477 building 1 outbuilding 56.3 residential skew +4.5 block +4.4 ""
+parcel 477 shape 1 1067.6,1528.3 1060.2,1527.8 1060.7,1520.4 1068.1,1520.9 1067.6,1528.3
+
+parcel 478 building 0 primary 95.5 industrial skew -42.5 block -40.6 ""
+parcel 478 shape 0 1297.1,1501.4 1290.0,1508.2 1283.2,1501.1 1290.3,1494.2 1297.1,1501.4
+
+parcel 482 building 0 primary 193.9 residential skew +20.9 block +20.9 "212 South Gilbert Street"
+parcel 482 shape 0 1090.2,1584.5 1094.5,1572.9 1099.1,1574.6 1103.8,1561.8 1108.5,1563.6 1099.4,1587.9 1090.2,1584.5
+
+parcel 483 building 0 primary 180.9 residential skew +2.6 block +2.8 "301 South Church Street"
+parcel 483 shape 0 991.3,1644.6 992.0,1624.7 1000.7,1625.1 999.9,1644.9 991.3,1644.6
+
+parcel 484 building 0 primary 220.8 residential skew +1.0 block +1.0 "203 Gilbert Street"
+parcel 484 shape 0 1010.3,1641.2 1010.5,1618.9 1020.4,1619.0 1020.2,1641.3 1010.3,1641.2
+parcel 484 building 1 outbuilding 55.4 residential skew -1.5 block -1.4 "205 Gilbert Street"
+parcel 484 shape 1 1022.0,1644.3 1021.7,1634.4 1026.6,1634.2 1026.9,1644.1 1022.0,1644.3
+
+parcel 485 building 0 primary 167.1 residential skew -4.9 block -4.9 "205 Gilbert Street"
+parcel 485 shape 0 1034.7,1635.6 1033.2,1619.6 1043.0,1618.6 1044.5,1634.7 1034.7,1635.6
+parcel 485 building 1 outbuilding 88.6 residential skew -0.7 block -0.7 "205 Gilbert Street"
+parcel 485 shape 1 1036.2,1647.1 1044.8,1646.9 1045.0,1656.8 1036.4,1657.0 1036.2,1647.1
+
+parcel 486 building 0 primary 317.4 residential skew +11.5 block +11.7 "302 Gilbert Street"
+parcel 486 shape 0 1181.9,1563.8 1184.2,1551.7 1192.7,1553.4 1186.8,1583.7 1175.9,1581.6 1179.0,1565.8 1187.5,1567.5 1187.9,1565.0 1181.9,1563.8
+
+parcel 487 building 0 primary 212.4 residential skew +1.2 block +1.3 "306 Gilbert Street"
+parcel 487 shape 0 1242.3,1571.8 1242.2,1581.7 1222.5,1581.5 1222.6,1571.6 1242.3,1571.8
+parcel 487 building 1 outbuilding 137.1 residential skew +1.6 block +2.3 "306 Gilbert Street"
+parcel 487 shape 1 1234.5,1566.6 1234.7,1556.6 1249.5,1556.9 1249.3,1566.8 1234.5,1566.6
+
+parcel 488 building 0 primary 135.1 residential skew -14.0 block -12.6 "310 Gilbert Street"
+parcel 488 shape 0 1263.0,1588.7 1260.5,1579.1 1273.7,1575.7 1276.2,1585.3 1263.0,1588.7
+parcel 488 building 1 outbuilding 83.7 residential skew -22.3 block -21.0 "310 Gilbert Street"
+parcel 488 shape 1 1262.2,1558.3 1267.0,1569.7 1261.3,1572.1 1256.5,1560.7 1262.2,1558.3
+
+parcel 489 building 0 primary 158.4 residential skew -0.2 block -0.2 "301 Gilbert Street"
+parcel 489 shape 0 1177.7,1623.9 1187.5,1623.8 1187.7,1638.6 1177.8,1638.8 1177.7,1623.9
+
+parcel 491 building 0 primary 158.7 residential skew -3.9 block -3.9 "302 Stewart Street"
+parcel 491 shape 0 1178.3,1714.2 1177.1,1699.3 1187.0,1698.6 1188.1,1713.4 1178.3,1714.2
+
+parcel 492 building 0 primary 113.4 residential skew +2.2 block +2.2 "211 Stewart Street"
+parcel 492 shape 0 1098.6,1750.1 1108.5,1750.4 1108.2,1760.3 1098.3,1760.0 1098.6,1750.1
+parcel 492 building 1 outbuilding 60.3 residential skew -4.9 block -4.9 "211 Stewart Street"
+parcel 492 shape 1 1113.2,1770.6 1105.8,1771.3 1105.1,1763.9 1112.5,1763.2 1113.2,1770.6
+
+parcel 494 building 0 primary 241.8 residential skew -2.0 block -1.9 "204 Mc Kibben Street"
+parcel 494 shape 0 1027.3,1839.3 1012.5,1840.0 1011.8,1823.9 1026.6,1823.3 1027.3,1839.3
+parcel 494 building 1 outbuilding 113.4 residential skew -0.4 block -0.3 "204 Mc Kibben Street"
+parcel 494 shape 1 1009.5,1798.1 1021.8,1797.9 1022.0,1807.8 1009.6,1808.0 1009.5,1798.1
+
+parcel 495 building 0 primary 157.0 residential skew +10.8 block +10.7 "206 Mc Kibben Street"
+parcel 495 shape 0 1044.8,1838.9 1031.4,1836.5 1033.4,1825.5 1046.8,1827.9 1044.8,1838.9
+parcel 495 building 1 outbuilding 52.2 residential skew +1.7 block +1.7 "206 Mc Kibben Street"
+parcel 495 shape 1 1029.2,1818.7 1029.4,1808.8 1034.3,1808.9 1034.1,1818.8 1029.2,1818.7
+
+parcel 496 building 0 primary 372.0 residential skew +4.9 block +4.9 "207 Mc Kibben Street"
+parcel 496 shape 0 1062.1,1901.9 1049.8,1901.0 1052.1,1871.3 1064.4,1872.3 1062.1,1901.9
+
+parcel 497 building 0 primary 256.8 residential skew -17.0 block -17.0 "213 Mc Kibben Street"
+parcel 497 shape 0 1132.1,1887.1 1110.9,1893.8 1107.2,1882.0 1128.4,1875.3 1132.1,1887.1
+parcel 497 building 1 outbuilding 76.8 residential skew -3.4 block -3.5 "213 Mc Kibben Street"
+parcel 497 shape 1 1116.9,1913.5 1116.2,1903.6 1123.6,1903.1 1124.3,1913.0 1116.9,1913.5
+
+parcel 498 building 0 primary 151.8 residential skew -16.6 block -16.6 "311 Stewart Street"
+parcel 498 shape 0 1285.8,1743.8 1295.3,1740.8 1300.0,1756.2 1290.5,1759.1 1285.8,1743.8
+parcel 498 building 1 outbuilding 131.6 residential skew -2.3 block -2.3 "311 Stewart Street"
+parcel 498 shape 1 1281.3,1774.3 1291.1,1773.8 1291.7,1786.2 1281.9,1786.7 1281.3,1774.3
+
+parcel 499 building 0 primary 266.9 residential skew +4.0 block +4.7 "400 South Grove Street"
+parcel 499 shape 0 1321.6,1758.0 1322.5,1743.1 1339.8,1744.2 1338.9,1759.0 1321.6,1758.0
+
+parcel 501 building 0 primary 172.6 residential skew -1.1 block -1.1 "309 Mc Kibben Street"
+parcel 501 shape 0 1275.2,1869.9 1275.6,1884.7 1263.2,1885.1 1262.8,1870.2 1275.2,1869.9
+
+parcel 502 building 0 primary 248.5 residential skew -0.2 block -0.1 "505 South Church Street"
+parcel 502 shape 0 998.6,1943.4 998.4,1923.6 1010.8,1923.4 1011.0,1943.2 998.6,1943.4
+
+parcel 504 building 0 primary 200.9 residential skew -4.1 block -4.0 "207 East Attica Road"
+parcel 504 shape 0 1045.1,1398.2 1044.2,1387.1 1062.7,1385.7 1063.5,1396.8 1045.1,1398.2
+parcel 504 building 1 outbuilding 94.1 residential skew +21.7 block +21.8 "207 East Attica Road"
+parcel 504 shape 1 1053.0,1411.6 1057.5,1400.1 1064.4,1402.8 1059.9,1414.3 1053.0,1411.6
+
+parcel 505 building 0 primary 247.9 residential skew -10.8 block -10.6 "209 East Attica Road"
+parcel 505 shape 0 1074.4,1408.2 1069.2,1381.4 1078.9,1379.6 1084.1,1406.3 1074.4,1408.2
+
+parcel 506 building 0 primary 178.9 residential skew +9.3 block +9.4 "302 Thompson Street"
+parcel 506 shape 0 1183.1,2061.5 1200.2,2064.2 1198.6,2074.0 1181.5,2071.3 1183.1,2061.5
+parcel 506 building 1 outbuilding 169.7 residential skew +6.2 block +6.3 "302 Thompson Street"
+parcel 506 shape 1 1190.0,2092.1 1177.7,2090.8 1179.1,2077.3 1191.4,2078.6 1190.0,2092.1
+
+parcel 507 building 0 primary 264.9 residential skew -8.0 block -8.0 "117 South Church Street"
+parcel 507 shape 0 988.5,1419.4 1000.8,1417.6 1003.7,1437.2 991.5,1439.0 988.5,1419.4
+
+parcel 508 building 0 primary 485.1 residential skew -2.2 block -2.3 "206 East Maple Street"
+parcel 508 shape 0 1034.0,1419.4 1035.1,1442.9 1040.0,1442.7 1040.9,1460.0 1026.0,1460.7 1024.1,1419.9 1034.0,1419.4
+
+parcel 509 building 0 primary 264.6 residential skew +13.7 block +13.6 "208 East Maple Street"
+parcel 509 shape 0 1057.9,1466.4 1045.9,1463.6 1050.4,1444.3 1062.5,1447.1 1057.9,1466.4
+parcel 509 building 1 outbuilding 79.4 residential skew -2.7 block -2.7 "208 East Maple Street"
+parcel 509 shape 1 1064.5,1433.3 1065.2,1445.7 1057.8,1446.1 1057.1,1433.7 1064.5,1433.3
+
+parcel 510 building 0 primary 181.2 residential skew -17.9 block -18.0 "210 East Maple Street"
+parcel 510 shape 0 1076.6,1459.7 1070.7,1442.1 1080.1,1439.0 1086.0,1456.6 1076.6,1459.7
+
+parcel 511 building 0 primary 185.3 residential skew -0.2 block -0.2 "201 East Maple Street"
+parcel 511 shape 0 999.7,1486.9 999.9,1504.3 990.0,1504.4 989.8,1487.0 999.7,1486.9
+parcel 511 building 1 outbuilding 85.7 residential skew +3.1 block +3.1 "201 East Maple Street"
+parcel 511 shape 1 989.9,1515.3 998.6,1515.7 998.1,1525.6 989.5,1525.2 989.9,1515.3
+
+parcel 512 building 0 primary 264.9 residential skew +9.0 block +9.1 "203 East Maple Street"
+parcel 512 shape 0 1016.0,1525.8 1014.5,1535.6 1004.8,1534.1 1007.9,1513.3 1026.2,1516.1 1024.8,1525.9 1008.9,1523.5 1008.7,1524.7 1016.0,1525.8
+parcel 512 building 1 outbuilding 230.6 residential skew -10.7 block -10.7 "203 East Maple Street"
+parcel 512 shape 1 1022.2,1495.2 1024.6,1507.4 1007.6,1510.7 1005.2,1498.6 1022.2,1495.2
+
+parcel 513 building 0 primary 179.2 residential skew -1.3 block -1.3 "213 East Maple Street"
+parcel 513 shape 0 1116.4,1509.7 1115.9,1494.9 1128.3,1494.5 1128.7,1509.3 1116.4,1509.7
+
+parcel 514 building 0 primary 241.5 residential skew -1.0 block -1.0 "205 South Summit Street"
+parcel 514 shape 0 1195.6,1513.4 1195.9,1525.8 1177.4,1526.3 1177.1,1513.9 1195.6,1513.4
+
+parcel 515 building 0 primary 158.7 residential skew +1.8 block +3.1 "305 East Maple Street"
+parcel 515 shape 0 1229.7,1493.6 1229.3,1510.9 1219.4,1510.7 1219.8,1493.3 1229.7,1493.6
+parcel 515 building 1 outbuilding 71.0 residential skew +11.4 block +12.2 "305 East Maple Street"
+parcel 515 shape 1 1212.8,1509.5 1222.5,1511.4 1221.1,1518.7 1211.4,1516.8 1212.8,1509.5
+
+parcel 518 building 0 primary 91.8 residential skew -6.0 block -6.0 "215 East Maple Street"
+parcel 518 shape 0 1130.7,1524.6 1140.5,1523.4 1141.6,1533.3 1131.8,1534.4 1130.7,1524.6
+
+parcel 519 building 0 primary 164.2 residential skew +6.9 block +7.0 "202 Gilbert Street"
+parcel 519 shape 0 1004.5,1571.5 1002.6,1588.7 992.7,1587.6 994.7,1570.4 1004.5,1571.5
+parcel 519 building 1 outbuilding 118.6 residential skew +19.2 block +19.2 "202 Gilbert Street"
+parcel 519 shape 1 1001.1,1563.2 1005.8,1564.8 1003.8,1570.6 994.4,1567.5 999.2,1553.4 1003.9,1555.0 1001.1,1563.2
+parcel 519 building 2 outbuilding 51.9 residential skew -27.6 block -27.6 "202 Gilbert Street"
+parcel 519 shape 2 991.0,1543.2 997.6,1539.7 1001.1,1546.2 994.5,1549.7 991.0,1543.2
+
+parcel 520 building 0 primary 180.7 residential skew -9.9 block -9.8 "204 Gilbert Street"
+parcel 520 shape 0 1030.7,1563.7 1034.0,1582.0 1024.3,1583.8 1021.0,1565.5 1030.7,1563.7
+parcel 520 building 1 outbuilding 86.3 residential skew -4.4 block -4.3 "204 Gilbert Street"
+parcel 520 shape 1 1033.8,1540.7 1034.6,1550.5 1024.8,1551.4 1024.0,1541.5 1033.8,1540.7
+
+parcel 521 building 0 primary 274.2 residential skew -31.8 block -31.8 "211 Gilbert Street"
+parcel 521 shape 0 1103.1,1619.6 1109.7,1630.1 1104.5,1633.4 1115.1,1650.1 1109.9,1653.4 1092.7,1626.2 1103.1,1619.6
+
+parcel 522 building 0 primary 164.5 residential skew +1.6 block +3.3 "312 Gilbert Street"
+parcel 522 shape 0 1295.0,1582.8 1282.7,1582.5 1282.9,1570.2 1295.3,1570.4 1295.0,1582.8
+
+parcel 523 building 0 primary 127.3 residential skew -10.7 block -9.1 "313 Gilbert Street"
+parcel 523 shape 0 1309.9,1616.2 1312.8,1630.8 1303.1,1632.7 1300.2,1618.1 1309.9,1616.2
+
+parcel 524 building 0 primary 218.2 residential skew +24.1 block +24.1 "308 Stewart Street"
+parcel 524 shape 0 1247.1,1715.2 1234.7,1709.8 1241.1,1695.0 1253.6,1700.5 1247.1,1715.2
+parcel 524 building 1 outbuilding 104.8 residential skew -0.8 block -0.6 "308 Stewart Street"
+parcel 524 shape 1 1243.4,1686.0 1243.1,1673.7 1253.0,1673.4 1253.2,1685.8 1243.4,1686.0
+
+parcel 527 building 0 primary 132.2 residential skew +1.8 block +1.8 "215 Stewart Street"
+parcel 527 shape 0 1148.0,1743.4 1147.7,1755.8 1137.8,1755.6 1138.1,1743.2 1148.0,1743.4
+parcel 527 building 1 outbuilding 124.7 residential skew +7.7 block +7.7 "215 Stewart Street"
+parcel 527 shape 1 1143.4,1766.7 1141.5,1781.5 1132.9,1780.4 1134.8,1765.7 1143.4,1766.7
+
+parcel 528 building 0 primary 267.2 residential skew -30.7 block -30.8 "208 Mc Kibben Street"
+parcel 528 shape 0 1070.8,1821.2 1062.3,1826.3 1066.8,1833.7 1053.1,1842.0 1046.0,1830.4 1068.2,1816.9 1070.8,1821.2
+
+parcel 529 building 0 primary 183.3 residential skew +41.8 block +41.8 "212 Mc Kibben Street"
+parcel 529 shape 0 1101.0,1838.1 1095.4,1833.2 1110.9,1815.6 1116.5,1820.5 1101.0,1838.1
+
+parcel 530 building 0 primary 182.1 residential skew +30.8 block +30.8 "215 Mc Kibben Street"
+parcel 530 shape 0 1151.1,1877.4 1141.8,1893.4 1133.2,1888.4 1142.6,1872.3 1151.1,1877.4
+
+parcel 531 building 0 primary 137.4 residential skew +9.7 block +9.7 "309 Stewart Street"
+parcel 531 shape 0 1264.2,1758.2 1266.5,1743.5 1276.3,1745.1 1273.9,1759.8 1264.2,1758.2
+parcel 531 building 1 outbuilding 69.8 residential skew -11.0 block -11.0 "309 Stewart Street"
+parcel 531 shape 1 1261.7,1774.0 1259.7,1764.3 1267.0,1762.8 1268.9,1772.5 1261.7,1774.0
+
+parcel 533 building 0 primary 273.9 residential skew +6.4 block +6.4 "305 Mc Kibben Street"
+parcel 533 shape 0 1230.0,1883.2 1206.6,1880.8 1207.8,1869.7 1231.1,1872.1 1230.0,1883.2
+
+parcel 534 building 0 primary 320.9 residential skew +5.3 block +5.3 "311 Mc Kibben Street"
+parcel 534 shape 0 1299.8,1870.6 1297.6,1896.5 1289.0,1895.8 1290.1,1882.3 1279.0,1881.3 1279.9,1870.2 1289.8,1871.0 1289.2,1878.4 1291.6,1878.6 1292.4,1870.0 1299.8,1870.6
+
+parcel 535 building 0 primary 237.8 residential skew +1.1 block +1.0 "305 Stewart Street"
+parcel 535 shape 0 1228.6,1775.2 1228.7,1762.8 1248.5,1763.0 1248.4,1775.4 1228.6,1775.2
+parcel 535 building 1 outbuilding 191.0 residential skew +6.7 block +6.6 "305 Stewart Street"
+parcel 535 shape 1 1237.0,1743.0 1235.7,1755.3 1214.8,1753.1 1215.6,1745.7 1229.1,1747.1 1229.7,1742.2 1237.0,1743.0
+
+parcel 537 building 0 primary 148.9 residential skew -25.4 block -25.5 "516 South Summit Street"
+parcel 537 shape 0 1135.8,1954.0 1144.7,1949.7 1151.2,1963.0 1142.3,1967.3 1135.8,1954.0
+
+parcel 539 building 0 primary 249.3 residential skew -0.4 block -0.4 "316 South Grove Street"
+parcel 539 shape 0 1335.6,1939.5 1336.0,1961.8 1326.1,1961.9 1325.7,1939.6 1335.6,1939.5
+parcel 539 building 1 outbuilding 89.2 residential skew -0.1 block -0.1 "316 South Grove Street"
+parcel 539 shape 1 1341.3,1918.9 1341.3,1923.8 1326.5,1924.0 1326.4,1919.0 1341.3,1918.9
+
+parcel 540 building 0 primary 180.1 residential skew -8.4 block -8.4 "213 Dale Street"
+parcel 540 shape 0 1116.3,2008.3 1106.5,2009.8 1103.4,1990.2 1113.2,1988.7 1116.3,2008.3
+
+parcel 541 building 0 primary 174.6 residential skew -9.2 block -9.1 "206 Thompson Street"
+parcel 541 shape 0 1046.0,2071.3 1048.7,2087.2 1038.9,2088.8 1036.2,2073.0 1046.0,2071.3
+
+parcel 542 building 0 primary 354.4 residential skew +0.1 block +0.9 ""
+parcel 542 shape 0 1226.4,988.7 1226.4,981.3 1241.2,981.2 1241.3,993.6 1209.1,993.7 1209.1,981.3 1223.9,981.3 1223.9,988.7 1226.4,988.7
+parcel 542 building 1 outbuilding 210.4 residential skew -1.0 block +1.6 ""
+parcel 542 shape 1 1208.0,1081.0 1189.4,1081.4 1189.2,1069.0 1207.7,1068.6 1208.0,1081.0
+parcel 542 building 2 outbuilding 207.5 residential skew -2.1 block +0.1 ""
+parcel 542 shape 2 1238.3,1080.5 1221.0,1081.2 1220.5,1068.8 1237.8,1068.1 1238.3,1080.5
+parcel 542 building 3 outbuilding 186.7 residential skew -1.1 block +1.8 ""
+parcel 542 shape 3 1185.9,1060.5 1173.5,1060.8 1173.1,1043.5 1185.5,1043.2 1185.9,1060.5
+parcel 542 building 4 outbuilding 44.2 residential skew +9.8 block +12.1 ""
+parcel 542 shape 4 1201.7,1021.4 1200.9,1026.3 1193.6,1025.0 1194.4,1020.2 1201.7,1021.4
+
+parcel 543 building 0 primary 197.7 residential skew +8.9 block +8.9 "213 East Attica Road"
+parcel 543 shape 0 1110.3,1384.9 1112.7,1369.0 1125.0,1370.8 1122.6,1386.8 1110.3,1384.9
+parcel 543 building 1 outbuilding 49.9 residential skew +36.5 block +36.6 "215 East Attica Road"
+parcel 543 shape 1 1124.3,1401.1 1130.9,1392.1 1134.9,1395.0 1128.3,1404.0 1124.3,1401.1
+
+parcel 544 building 0 primary 209.2 residential skew -9.8 block -9.7 "215 East Attica Road"
+parcel 544 shape 0 1134.8,1391.9 1131.3,1372.4 1141.1,1370.6 1144.5,1390.1 1134.8,1391.9
+parcel 544 building 1 outbuilding 51.1 residential skew -1.6 block -1.5 "215 East Attica Road"
+parcel 544 shape 1 1147.4,1402.2 1147.6,1409.6 1140.2,1409.9 1139.9,1402.4 1147.4,1402.2
+
+parcel 545 building 0 primary 256.0 residential skew +6.4 block +6.4 "212 East Maple Street"
+parcel 545 shape 0 1090.4,1442.4 1105.1,1443.9 1103.2,1462.4 1088.4,1460.9 1090.4,1442.4
+
+parcel 546 building 0 primary 189.6 residential skew +0.3 block +0.3 "214 East Maple Street"
+parcel 546 shape 0 1112.4,1446.3 1124.8,1446.2 1124.8,1461.1 1112.5,1461.1 1112.4,1446.3
+parcel 546 building 1 outbuilding 164.2 residential skew +17.9 block +17.9 "214 East Maple Street"
+parcel 546 shape 1 1120.2,1418.8 1114.6,1436.5 1106.4,1433.9 1111.9,1416.2 1120.2,1418.8
+
+parcel 547 building 0 primary 141.7 residential skew +9.8 block +9.8 "209 East Maple Street"
+parcel 547 shape 0 1073.6,1506.1 1075.6,1493.9 1087.8,1495.9 1085.8,1508.1 1073.6,1506.1
+parcel 547 building 1 outbuilding 112.5 residential skew +1.7 block +1.7 "209 East Maple Street"
+parcel 547 shape 1 1070.2,1508.5 1078.8,1508.7 1078.6,1521.1 1069.9,1520.9 1070.2,1508.5
+
+parcel 548 building 0 primary 139.4 commercial skew -0.7 block -0.7 "211 East Maple Street"
+parcel 548 shape 0 1100.1,1512.9 1099.7,1495.5 1107.2,1495.4 1107.5,1512.7 1100.1,1512.9
+
+parcel 549 building 0 primary 183.3 residential skew -13.2 block -13.2 "214 Gilbert Street"
+parcel 549 shape 0 1127.3,1582.5 1117.7,1584.9 1113.6,1568.0 1123.2,1565.7 1127.3,1582.5
+
+parcel 550 building 0 primary 99.6 residential skew -1.7 block -1.7 "216 Gilbert Street"
+parcel 550 shape 0 1132.4,1582.7 1131.7,1564.2 1136.6,1564.0 1137.3,1582.5 1132.4,1582.7
+parcel 550 building 1 outbuilding 99.3 residential skew +1.1 block +1.1 "216 Gilbert Street"
+parcel 550 shape 1 1130.9,1553.0 1131.0,1543.1 1140.9,1543.2 1140.8,1553.1 1130.9,1553.0
+
+parcel 551 building 0 primary 228.6 residential skew +6.5 block +6.5 "209 Gilbert Street"
+parcel 551 shape 0 1072.0,1641.4 1074.2,1620.5 1085.3,1621.6 1083.1,1642.6 1072.0,1641.4
+parcel 551 building 1 outbuilding 200.9 residential skew +0.9 block +0.9 "209 Gilbert Street"
+parcel 551 shape 1 1075.7,1644.5 1085.6,1644.6 1085.5,1663.2 1075.6,1663.1 1075.7,1644.5
+
+parcel 552 building 0 primary 125.0 residential skew -5.2 block -4.6 "309 Gilbert Street"
+parcel 552 shape 0 1268.6,1636.7 1261.2,1637.5 1259.5,1620.2 1266.9,1619.5 1268.6,1636.7
+
+parcel 553 building 0 primary 173.4 residential skew -1.9 block -1.8 "304 Stewart Street"
+parcel 553 shape 0 1205.6,1698.9 1206.3,1716.2 1196.5,1716.6 1195.8,1699.3 1205.6,1698.9
+
+parcel 554 building 0 primary 152.4 residential skew +0.5 block +0.5 "306 Stewart Street"
+parcel 554 shape 0 1218.1,1701.6 1228.0,1701.6 1228.0,1716.5 1218.1,1716.5 1218.1,1701.6
+
+parcel 555 building 0 primary 159.6 residential skew +8.4 block +8.5 "310 Stewart Street"
+parcel 555 shape 0 1261.3,1698.1 1272.3,1699.6 1270.4,1713.1 1259.4,1711.6 1261.3,1698.1
+parcel 555 building 1 outbuilding 91.5 residential skew +8.2 block +8.8 "310 Stewart Street"
+parcel 555 shape 1 1265.1,1677.2 1266.4,1667.4 1276.2,1668.7 1274.9,1678.6 1265.1,1677.2
+
+parcel 556 building 0 primary 377.8 residential skew +5.1 block +0.8 "314 Gilbert Street"
+parcel 556 shape 0 1298.1,1569.7 1297.3,1542.4 1312.2,1542.0 1312.9,1569.3 1298.1,1569.7
+parcel 556 building 1 outbuilding 45.6 residential skew +19.1 block +15.1 "314 Gilbert Street"
+parcel 556 shape 1 1326.0,1569.3 1316.4,1567.2 1317.4,1562.3 1327.1,1564.5 1326.0,1569.3
+
+parcel 557 building 0 primary 289.5 residential skew -3.2 block -3.2 "203 Stewart Street"
+parcel 557 shape 0 1020.8,1769.3 1019.8,1753.3 1009.9,1753.9 1009.2,1742.8 1025.2,1741.7 1027.0,1768.9 1020.8,1769.3
+
+parcel 558 building 0 primary 136.5 residential skew -4.9 block -4.9 "207 Stewart Street"
+parcel 558 shape 0 1062.1,1762.8 1052.2,1763.8 1051.0,1750.2 1060.8,1749.3 1062.1,1762.8
+parcel 558 building 1 outbuilding 71.3 residential skew +0.8 block +0.8 ""
+parcel 558 shape 1 1069.1,1774.4 1069.1,1784.3 1061.7,1784.2 1061.7,1774.3 1069.1,1774.4
+
+parcel 559 building 0 primary 53.7 residential skew +18.9 block +19.0 ""
+parcel 559 shape 0 1009.5,1910.8 1007.2,1917.9 1000.1,1915.5 1002.5,1908.5 1009.5,1910.8
+parcel 559 building 1 outbuilding 48.2 residential skew +15.6 block +15.7 "201 Mc Kibben Street"
+parcel 559 shape 1 995.6,1889.4 998.1,1879.8 1001.7,1880.8 999.1,1890.4 995.6,1889.4
+
+parcel 560 building 0 primary 166.2 residential skew -19.6 block -19.5 "203 Mc Kibben Street"
+parcel 560 shape 0 1010.3,1890.3 1006.9,1881.0 1023.1,1875.1 1026.5,1884.4 1010.3,1890.3
+parcel 560 building 1 outbuilding 69.3 residential skew -4.2 block -4.1 "203 Mc Kibben Street"
+parcel 560 shape 1 1010.5,1909.1 1009.7,1899.2 1017.1,1898.6 1017.9,1908.5 1010.5,1909.1
+
+parcel 561 building 0 primary 171.4 residential skew +4.1 block +4.0 "306 Mc Kibben Street"
+parcel 561 shape 0 1216.6,1836.2 1217.3,1825.0 1232.1,1825.9 1231.4,1837.1 1216.6,1836.2
+parcel 561 building 1 outbuilding 69.6 residential skew +1.8 block +1.8 "306 Mc Kibben Street"
+parcel 561 shape 1 1217.4,1818.3 1217.7,1803.4 1222.7,1803.5 1222.3,1818.4 1217.4,1818.3
+
+parcel 562 building 0 primary 283.1 residential skew -20.1 block -20.0 "308 Mc Kibben Street"
+parcel 562 shape 0 1248.3,1842.6 1243.9,1831.0 1242.8,1831.4 1246.2,1840.7 1238.1,1843.7 1232.5,1828.7 1248.7,1822.6 1255.2,1840.0 1248.3,1842.6
+parcel 562 building 1 outbuilding 45.6 residential skew +7.8 block +7.9 "308 Mc Kibben Street"
+parcel 562 shape 1 1242.6,1811.3 1232.8,1810.0 1233.4,1805.1 1243.2,1806.4 1242.6,1811.3
+
+parcel 563 building 0 primary 223.7 residential skew +5.8 block +5.8 "316 Mc Kibben Street"
+parcel 563 shape 0 1333.8,1840.5 1321.4,1839.3 1323.3,1819.6 1335.6,1820.7 1333.8,1840.5
+parcel 563 building 1 outbuilding 96.1 residential skew +1.8 block +1.8 "316 Mc Kibben Street"
+parcel 563 shape 1 1330.4,1796.4 1330.2,1806.3 1320.3,1806.1 1320.5,1796.1 1330.4,1796.4
+
+parcel 564 building 0 primary 133.6 residential skew -2.7 block -2.7 "303 Mc Kibben Street"
+parcel 564 shape 0 1189.5,1888.2 1188.8,1875.8 1198.7,1875.3 1199.4,1887.6 1189.5,1888.2
+parcel 564 building 1 outbuilding 93.8 residential skew +2.3 block +2.3 ""
+parcel 564 shape 1 1174.0,1909.8 1191.3,1910.4 1191.2,1915.3 1173.9,1914.7 1174.0,1909.8
+
+parcel 565 building 0 primary 133.3 residential skew +11.0 block +11.1 "307 Mc Kibben Street"
+parcel 565 shape 0 1236.6,1868.4 1251.2,1871.1 1249.6,1879.6 1235.0,1876.9 1236.6,1868.4
+
+parcel 566 building 0 primary 155.3 residential skew -22.5 block -22.5 "210 Dale Street"
+parcel 566 shape 0 1082.5,1961.1 1077.2,1948.5 1087.4,1944.2 1092.7,1956.7 1082.5,1961.1
+
+parcel 567 building 0 primary 139.7 residential skew -6.5 block -6.5 "306 Dale Street"
+parcel 567 shape 0 1218.8,1965.3 1217.0,1950.6 1226.8,1949.4 1228.6,1964.1 1218.8,1965.3
+parcel 567 building 1 outbuilding 92.3 residential skew -0.9 block -0.9 "306 Dale Street"
+parcel 567 shape 1 1234.8,1946.8 1226.2,1947.0 1225.9,1937.1 1234.6,1936.9 1234.8,1946.8
+
+parcel 568 building 0 primary 292.1 residential skew -1.7 block -1.7 "308 Dale Street"
+parcel 568 shape 0 1249.7,1941.7 1253.4,1941.5 1254.4,1967.5 1240.8,1968.0 1240.2,1950.7 1250.0,1950.3 1249.7,1941.7
+
+parcel 569 building 0 primary 142.9 residential skew -3.8 block -3.8 "310 Dale Street"
+parcel 569 shape 0 1275.0,1950.4 1276.1,1965.2 1266.3,1966.0 1265.2,1951.1 1275.0,1950.4
+
+parcel 570 building 0 primary 300.1 residential skew -6.6 block -6.6 "215 Dale Street"
+parcel 570 shape 0 1157.1,2008.2 1133.8,2011.1 1132.3,1998.8 1155.6,1995.9 1157.1,2008.2
+parcel 570 building 1 outbuilding 201.7 residential skew -5.8 block -5.9 "215 Dale Street"
+parcel 570 shape 1 1155.1,2010.8 1156.1,2020.7 1136.5,2022.9 1135.4,2013.0 1155.1,2010.8
+
+parcel 571 building 0 primary 245.0 residential skew -13.1 block -13.1 "307 Dale Street"
+parcel 571 shape 0 1247.3,1996.7 1251.7,2014.7 1255.3,2013.9 1257.6,2023.5 1246.8,2026.1 1240.1,1998.4 1247.3,1996.7
+
+parcel 572 building 0 primary 157.9 residential skew +29.3 block +29.4 "201 Dale Street"
+parcel 572 shape 0 996.6,1999.8 1009.6,2006.9 1004.2,2016.7 991.2,2009.5 996.6,1999.8
+parcel 572 building 1 outbuilding 76.2 residential skew +7.1 block +7.2 "201 Dale Street"
+parcel 572 shape 1 1000.7,2033.6 999.7,2042.2 991.1,2041.2 992.1,2032.6 1000.7,2033.6
+
+parcel 573 building 0 primary 149.8 residential skew -1.5 block -1.6 "315 Dale Street"
+parcel 573 shape 0 1336.5,2015.7 1329.1,2015.9 1328.4,1998.6 1335.9,1998.3 1336.5,2015.7
+
+parcel 574 building 0 primary 339.7 residential skew -8.7 block -8.8 "303 Dale Street"
+parcel 574 shape 0 1215.5,2016.4 1203.3,2018.3 1201.0,2003.7 1218.0,2000.9 1223.2,2032.7 1218.3,2033.5 1215.5,2016.4
+
+parcel 575 building 0 primary 172.9 residential skew +5.0 block +5.2 "202 Thompson Street"
+parcel 575 shape 0 991.3,2085.1 992.1,2075.2 1008.1,2076.5 1007.3,2086.4 991.3,2085.1
+parcel 575 building 1 outbuilding 96.7 residential skew +2.7 block +2.8 "202 Thompson Street"
+parcel 575 shape 1 991.7,2056.8 1001.6,2057.2 1001.2,2067.1 991.3,2066.7 991.7,2056.8
+
+parcel 576 building 0 primary 86.6 residential skew +11.4 block +11.6 "204 Thompson Street"
+parcel 576 shape 0 1021.3,2087.5 1011.6,2085.6 1013.5,2075.9 1023.2,2077.8 1021.3,2087.5
+
+parcel 577 building 0 primary 132.2 residential skew -7.1 block -7.1 "210 Thompson Street"
+parcel 577 shape 0 1092.8,2076.5 1094.1,2086.3 1079.4,2088.2 1078.1,2078.4 1092.8,2076.5
+parcel 577 building 1 outbuilding 105.6 residential skew +2.5 block +2.6 "210 Thompson Street"
+parcel 577 shape 1 1088.4,2055.5 1076.0,2055.0 1076.4,2045.1 1088.7,2045.6 1088.4,2055.5
+
+parcel 578 building 0 primary 223.4 residential skew +6.2 block +5.8 "314 Thompson Street"
+parcel 578 shape 0 1332.6,2067.3 1331.6,2077.2 1310.7,2075.0 1311.7,2065.2 1332.6,2067.3
+parcel 578 building 1 outbuilding 108.8 residential skew +1.8 block +1.8 "314 Thompson Street"
+parcel 578 shape 1 1331.3,2061.6 1321.4,2061.4 1321.7,2050.2 1331.6,2050.5 1331.3,2061.6
+
+parcel 579 building 0 primary 653.4 residential skew -5.3 block -5.4 "312 Dale Street"
+parcel 579 shape 0 1301.9,1960.4 1301.0,1951.8 1310.9,1950.8 1310.1,1943.4 1318.7,1942.5 1320.8,1963.4 1287.6,1966.8 1285.9,1949.6 1290.8,1949.1 1289.7,1938.0 1298.3,1937.1 1300.7,1960.5 1301.9,1960.4
+parcel 579 building 1 outbuilding 102.7 residential skew +3.0 block +2.9 "314 Dale Street"
+parcel 579 shape 1 1308.3,1931.4 1302.1,1931.2 1302.7,1917.5 1308.9,1917.8 1308.3,1931.4
+
+parcel 580 building 0 primary 134.2 residential skew +1.3 block +1.3 "209 Dale Street"
+parcel 580 shape 0 1085.5,2008.3 1075.6,2008.1 1075.8,1994.5 1085.7,1994.6 1085.5,2008.3
+
+parcel 581 building 0 primary 228.6 residential skew -6.6 block -6.7 "601 South Summit Street"
+parcel 581 shape 0 1195.5,1998.7 1197.8,2017.1 1185.5,2018.7 1183.2,2000.2 1195.5,1998.7
+
+parcel 582 building 0 primary 298.4 residential skew -10.3 block -10.3 "311 Dale Street"
+parcel 582 shape 0 1302.4,2018.3 1290.2,2020.6 1285.8,1997.5 1298.0,1995.2 1302.4,2018.3
+
+parcel 583 building 0 primary 169.4 residential skew -0.3 block -0.4 "313 Dale Street"
+parcel 583 shape 0 1320.4,2006.6 1303.1,2006.9 1303.0,1997.0 1320.3,1996.7 1320.4,2006.6
+parcel 583 building 1 outbuilding 75.3 residential skew +1.7 block +1.6 "313 Dale Street"
+parcel 583 shape 1 1319.1,2024.9 1311.7,2024.8 1311.9,2014.8 1319.3,2015.0 1319.1,2024.9
+
+parcel 584 building 0 primary 198.6 residential skew -1.7 block -1.7 "506 South Summit Street"
+parcel 584 shape 0 1147.9,1939.9 1138.0,1940.3 1137.3,1921.7 1147.2,1921.3 1147.9,1939.9
+
+parcel 585 building 0 primary 201.4 residential skew +2.2 block +2.2 "208 Thompson Street"
+parcel 585 shape 0 1066.3,2089.1 1056.4,2088.8 1057.0,2070.3 1066.9,2070.6 1066.3,2089.1
+
+parcel 586 building 0 primary 124.1 residential skew -3.0 block -3.1 "308 Thompson Street"
+parcel 586 shape 0 1250.7,2085.1 1240.8,2085.7 1240.1,2073.3 1249.9,2072.8 1250.7,2085.1
+parcel 586 building 1 outbuilding 111.4 residential skew +0.9 block +0.8 "308 Thompson Street"
+parcel 586 shape 1 1247.7,2073.3 1247.8,2060.9 1257.7,2061.0 1257.6,2073.4 1247.7,2073.3
+parcel 586 building 2 outbuilding 42.7 residential skew +2.5 block +2.4 "308 Thompson Street"
+parcel 586 shape 2 1241.6,2062.2 1241.3,2072.1 1236.3,2071.9 1236.7,2062.0 1241.6,2062.2
+
+parcel 587 building 0 primary 114.0 residential skew +21.3 block +21.2 "310 Thompson Street"
+parcel 587 shape 0 1271.1,2089.5 1264.2,2086.8 1269.9,2071.8 1276.9,2074.5 1271.1,2089.5
+parcel 587 building 1 outbuilding 59.7 residential skew +8.4 block +8.4 "310 Thompson Street"
+parcel 587 shape 1 1260.6,2070.8 1261.6,2063.4 1269.0,2064.5 1267.9,2071.8 1260.6,2070.8
+
+parcel 592 building 0 primary 296.4 residential skew -17.0 block -17.5 "202 Earl Court"
+parcel 592 shape 0 1020.4,2181.8 1026.9,2201.8 1012.8,2206.4 1006.3,2186.3 1020.4,2181.8
+
+parcel 597 building 0 primary 374.9 residential skew +12.3 block +12.5 "216 Henderson Street"
+parcel 597 shape 0 1139.8,823.4 1137.0,836.7 1105.5,830.2 1107.6,820.5 1123.3,823.8 1124.0,820.1 1139.8,823.4
+parcel 597 building 1 outbuilding 64.1 residential skew +5.9 block +6.1 "216 Henderson Street"
+parcel 597 shape 1 1139.6,809.3 1138.9,816.7 1131.5,816.0 1132.2,808.6 1139.6,809.3
+
+parcel 598 building 0 primary 345.4 residential skew -11.8 block -11.8 ""
+parcel 598 shape 0 1263.6,823.7 1286.5,818.7 1284.7,810.2 1293.1,808.4 1296.3,822.9 1284.2,825.5 1285.3,830.4 1266.0,834.6 1263.6,823.7
+
+parcel 600 building 0 primary 128.4 residential skew -1.0 block -1.1 "417 Holmes Street"
+parcel 600 shape 0 1419.2,1249.1 1418.9,1236.7 1428.8,1236.4 1429.1,1248.8 1419.2,1249.1
+
+parcel 602 building 0 primary 211.0 residential skew -21.9 block -22.1 "408 Benton Street"
+parcel 602 shape 0 1426.3,1063.4 1432.4,1078.3 1419.9,1083.5 1413.7,1068.6 1426.3,1063.4
+
+parcel 603 building 0 primary 193.6 residential skew -12.7 block -12.8 "401 Benton Street"
+parcel 603 shape 0 1354.5,1110.9 1366.5,1108.0 1370.2,1123.7 1358.2,1126.5 1354.5,1110.9
+
+parcel 604 building 0 primary 137.7 residential skew +3.6 block +3.6 "406 Holmes Street"
+parcel 604 shape 0 1397.4,1194.5 1409.7,1195.2 1409.2,1205.1 1396.9,1204.4 1397.4,1194.5
+
+parcel 605 building 0 primary 221.1 residential skew -27.9 block -27.3 "412 East Attica Road"
+parcel 605 shape 0 1481.2,1337.9 1470.3,1343.8 1460.9,1326.3 1471.8,1320.5 1481.2,1337.9
+
+parcel 606 building 0 primary 189.9 residential skew -6.2 block -5.6 "416 East Attica Road"
+parcel 606 shape 0 1502.3,1342.9 1500.5,1326.9 1512.7,1325.5 1514.6,1341.5 1502.3,1342.9
+parcel 606 building 1 outbuilding 99.3 residential skew -3.7 block -3.1 "416 East Attica Road"
+parcel 606 shape 1 1520.7,1310.8 1521.6,1323.2 1514.2,1323.7 1513.3,1311.3 1520.7,1310.8
+
+parcel 609 building 0 primary 178.6 commercial skew -3.9 block -24.8 ""
+parcel 609 shape 0 1467.1,1699.5 1482.3,1688.9 1488.0,1697.0 1472.8,1707.6 1467.1,1699.5
+
+parcel 610 building 0 primary 217.6 residential skew +9.6 block +5.0 "505 East Attica Road"
+parcel 610 shape 0 1573.9,1401.6 1575.0,1383.1 1586.1,1383.8 1585.0,1402.3 1573.9,1401.6
+parcel 610 building 1 outbuilding 96.1 residential skew +4.4 block -1.4 "505 East Attica Road"
+parcel 610 shape 1 1607.8,1421.2 1597.9,1421.5 1597.6,1411.6 1607.5,1411.3 1607.8,1421.2
+
+parcel 611 building 0 primary 219.0 residential skew -11.6 block -11.1 "302 East Maple Street"
+parcel 611 shape 0 1180.5,1460.5 1177.9,1448.4 1194.8,1444.8 1197.4,1456.9 1180.5,1460.5
+
+parcel 612 building 0 primary 172.9 residential skew -7.6 block -7.5 "209 Thompson Street"
+parcel 612 shape 0 1077.0,2127.9 1075.7,2118.1 1092.8,2115.7 1094.2,2125.5 1077.0,2127.9
+parcel 612 building 1 outbuilding 82.2 residential skew -0.7 block -0.7 "209 Thompson Street"
+parcel 612 shape 1 1081.2,2142.6 1081.1,2132.7 1090.9,2132.5 1091.1,2142.4 1081.2,2142.6
+
+parcel 614 building 0 primary 160.2 residential skew -10.1 block -7.1 "600 North Chicago Street"
+parcel 614 shape 0 493.9,706.5 489.9,690.9 499.5,688.4 503.4,704.0 493.9,706.5
+
+parcel 615 building 0 primary 165.9 residential skew -43.2 block -43.2 "616 North Chicago Street"
+parcel 615 shape 0 441.5,543.8 434.0,535.6 444.9,525.5 452.4,533.7 441.5,543.8
+parcel 615 building 1 outbuilding 132.2 residential skew -1.4 block +1.4 "616 North Chicago Street"
+parcel 615 shape 1 405.0,532.8 404.8,522.9 419.7,522.7 419.8,532.6 405.0,532.8
+parcel 615 building 2 outbuilding 107.1 residential skew +35.9 block +35.9 "616 North Chicago Street"
+parcel 615 shape 2 387.6,545.6 375.6,536.8 380.1,530.8 392.0,539.6 387.6,545.6
+
+parcel 616 building 0 primary 200.0 residential skew +12.4 block +6.0 "512 North Chicago Street"
+parcel 616 shape 0 511.4,734.7 511.3,722.4 527.4,722.2 527.5,734.6 511.4,734.7
+
+parcel 617 building 0 primary 121.2 commercial skew +1.1 block -3.2 "207 North Chicago Street"
+parcel 617 shape 0 717.9,1163.4 726.1,1160.8 730.6,1175.0 722.3,1177.6 717.9,1163.4
+
+parcel 619 building 0 primary 244.1 commercial skew -0.4 block -10.6 "206 North Chicago Street"
+parcel 619 shape 0 658.6,1183.2 678.4,1176.3 682.4,1188.0 662.6,1194.9 658.6,1183.2
+
+parcel 621 building 0 primary 288.3 residential skew +4.4 block +7.7 ""
+parcel 621 shape 0 649.2,1263.1 650.2,1250.8 674.8,1252.7 673.8,1265.1 649.2,1263.1
+parcel 621 building 1 outbuilding 94.7 commercial skew -7.4 block -4.5 "110 North Chicago Street"
+parcel 621 shape 1 695.2,1269.2 693.9,1259.4 703.7,1258.2 705.0,1268.0 695.2,1269.2
+
+parcel 622 building 0 primary 283.1 residential skew +0.8 block +1.6 "117 West Attica Road"
+parcel 622 shape 0 589.3,1359.1 589.0,1366.5 566.8,1365.5 567.5,1349.4 579.9,1350.0 579.5,1358.6 589.3,1359.1
+
+parcel 623 building 0 primary 322.4 residential skew +3.4 block +5.2 "508 Harrison Street"
+parcel 623 shape 0 807.3,781.1 809.1,747.7 819.0,748.3 817.2,781.6 807.3,781.1
+
+parcel 624 building 0 primary 183.0 residential skew -3.5 block -2.9 "108 Henderson Street"
+parcel 624 shape 0 759.4,835.0 747.1,835.9 746.0,819.8 758.4,819.0 759.4,835.0
+parcel 624 building 1 outbuilding 114.6 residential skew +0.8 block +1.2 "108 Henderson Street"
+parcel 624 shape 1 749.4,807.2 749.5,794.8 759.4,794.9 759.3,807.3 749.4,807.2
+
+parcel 626 building 0 primary 423.4 residential skew -9.5 block -9.9 "14 West Greenwood Drive"
+parcel 626 shape 0 590.1,2082.3 587.3,2065.2 611.6,2061.2 614.5,2078.3 590.1,2082.3
+
+parcel 627 building 0 primary 462.3 residential skew -2.1 block -2.2 "13 West Greenwood Drive"
+parcel 627 shape 0 554.4,2093.1 523.5,2094.0 523.1,2079.2 554.0,2078.2 554.4,2093.1
+
+parcel 629 building 0 primary 738.8 residential skew -4.9 block -4.4 "123 West Attica Road"
+parcel 629 shape 0 549.7,1408.5 550.2,1415.9 551.5,1415.8 551.1,1409.6 572.0,1408.2 572.9,1420.5 517.4,1424.3 516.4,1410.7 549.7,1408.5
+parcel 629 building 1 outbuilding 329.0 residential skew -0.9 block -0.7 "123 West Attica Road"
+parcel 629 shape 1 597.9,1405.2 585.5,1405.2 585.6,1377.9 597.9,1377.9 597.9,1405.2
+parcel 629 building 2 outbuilding 210.7 residential skew +0.2 block +0.7 "123 West Attica Road"
+parcel 629 shape 2 580.0,1409.5 594.9,1409.8 594.6,1422.2 579.8,1421.9 580.0,1409.5
+
+parcel 630 building 0 primary 144.3 residential skew -0.4 block +0.3 "121 West Attica Road"
+parcel 630 shape 0 534.8,1363.6 535.2,1348.7 545.1,1348.9 544.7,1363.8 534.8,1363.6
+parcel 630 building 1 outbuilding 67.0 residential skew +0.3 block +1.1 "121 West Attica Road"
+parcel 630 shape 1 534.3,1367.1 541.7,1367.3 541.4,1374.8 534.0,1374.5 534.3,1367.1
+
+parcel 631 building 0 primary 215.9 residential skew -3.3 block -3.6 "113 West Attica Road"
+parcel 631 shape 0 605.7,1355.7 618.1,1355.1 618.9,1372.4 606.6,1373.1 605.7,1355.7
+
+parcel 632 building 0 primary 285.4 residential skew -1.7 block -1.2 "125 West Attica Road"
+parcel 632 shape 0 499.8,1361.6 499.8,1338.1 512.2,1338.1 512.2,1361.6 499.8,1361.6
+parcel 632 building 1 outbuilding 128.4 residential skew -20.3 block -19.7 "125 West Attica Road"
+parcel 632 shape 1 488.1,1375.5 484.5,1364.9 495.1,1361.4 498.6,1371.9 488.1,1375.5
+parcel 632 building 2 outbuilding 50.2 residential skew -0.8 block -0.1 "125 West Attica Road"
+parcel 632 shape 2 475.3,1374.1 475.1,1384.0 470.2,1383.9 470.3,1374.0 475.3,1374.1
+
+parcel 633 building 0 primary 213.0 residential skew +3.3 block +2.9 "208 Park Place"
+parcel 633 shape 0 607.3,1452.7 620.9,1453.4 620.1,1469.5 606.5,1468.8 607.3,1452.7
+parcel 633 building 1 outbuilding 158.1 residential skew -4.0 block -4.4 "208 Park Place"
+parcel 633 shape 1 603.5,1432.3 622.0,1430.9 622.8,1440.8 604.3,1442.2 603.5,1432.3
+
+parcel 634 building 0 primary 142.0 residential skew +8.7 block +9.9 "202 Park Place"
+parcel 634 shape 0 680.8,1455.3 678.6,1470.0 668.8,1468.6 671.0,1453.9 680.8,1455.3
+parcel 634 building 1 outbuilding 101.6 residential skew +1.7 block +1.9 "202 Park Place"
+parcel 634 shape 1 678.6,1448.9 668.7,1448.7 669.0,1437.5 678.8,1437.8 678.6,1448.9
+
+parcel 635 building 0 primary 330.1 commercial skew +1.7 block -13.9 "206 South Chicago Street"
+parcel 635 shape 0 801.7,1539.2 806.0,1553.4 784.6,1559.8 780.4,1545.5 801.7,1539.2
+
+parcel 636 building 0 primary 2683.3 commercial skew -1.0 block +0.9 "101 South Chicago Street"
+parcel 636 shape 0 809.0,1380.0 809.0,1376.3 799.1,1376.3 799.0,1368.9 794.1,1369.0 794.2,1386.3 801.7,1386.2 801.8,1396.1 809.2,1396.1 809.3,1407.2 816.7,1407.1 816.7,1410.9 778.4,1411.2 778.2,1392.7 772.1,1392.7 771.9,1376.6 764.5,1376.7 764.2,1343.3 786.4,1343.0 786.5,1354.2 828.5,1353.8 828.8,1379.8 809.0,1380.0
+
+parcel 637 building 0 primary 113.1 residential skew -0.2 block -1.9 "125 East Attica Road"
+parcel 637 shape 0 882.1,1411.1 881.5,1401.2 893.9,1400.5 894.4,1410.4 882.1,1411.1
+
+parcel 638 building 0 primary 151.2 residential skew +0.1 block -1.1 "124 South Chicago Street"
+parcel 638 shape 0 746.0,1429.2 757.1,1428.8 757.6,1442.4 746.5,1442.9 746.0,1429.2
+
+parcel 639 building 0 primary 308.2 residential skew -5.1 block -4.5 ""
+parcel 639 shape 0 707.5,1437.0 710.2,1465.4 700.4,1466.3 697.7,1438.0 707.5,1437.0
+
+parcel 640 building 0 primary 402.3 residential skew -17.8 block -17.5 "218 West Stufflebeam Drive"
+parcel 640 shape 0 512.2,1709.3 506.6,1691.6 526.6,1685.2 532.3,1702.9 512.2,1709.3
+parcel 640 building 1 outbuilding 80.2 residential skew -4.7 block -4.4 "218 West Stufflebeam Drive"
+parcel 640 shape 1 546.3,1666.9 547.1,1676.8 539.7,1677.4 538.9,1667.5 546.3,1666.9
+
+parcel 641 building 0 primary 4313.8 civic skew -16.6 block -16.6 ""
+parcel 641 shape 0 595.6,1136.8 571.0,1145.0 562.0,1118.0 585.5,1110.1 577.6,1086.6 549.5,1096.1 532.2,1044.4 581.5,1027.9 608.9,1110.1 598.4,1113.7 600.7,1120.7 591.3,1123.8 595.6,1136.8
+parcel 641 building 1 outbuilding 342.3 commercial skew -3.0 block +1.1 "206 North Chicago Street"
+parcel 641 shape 1 654.5,1186.9 644.6,1187.7 644.8,1190.2 655.9,1189.3 656.7,1199.1 639.5,1200.6 637.7,1179.6 653.7,1178.3 654.5,1186.9
+parcel 641 building 2 outbuilding 251.4 unclassified skew -12.0 block -12.0 ""
+parcel 641 shape 2 517.4,1122.1 521.0,1136.6 504.2,1140.7 500.6,1126.2 517.4,1122.1
+parcel 641 building 3 outbuilding 43.0 unclassified skew -27.7 block -31.7 ""
+parcel 641 shape 3 543.8,1247.8 547.5,1254.3 541.0,1258.0 537.4,1251.5 543.8,1247.8
+
+parcel 642 building 0 primary 276.5 unclassified skew +2.3 block +5.3 "102 West Attica Road"
+parcel 642 shape 0 682.2,1295.5 680.0,1322.7 670.2,1321.9 672.3,1294.7 682.2,1295.5
+
+parcel 644 building 0 primary 316.0 residential skew +2.5 block +2.5 ""
+parcel 644 shape 0 250.4,1397.3 278.8,1398.8 278.3,1408.7 249.9,1407.2 250.4,1397.3
+
+parcel 648 building 0 primary 277.9 residential skew -2.8 block -2.9 "309 Thompson Street"
+parcel 648 shape 0 1237.6,2131.2 1236.8,2116.4 1256.6,2115.3 1257.3,2130.2 1237.6,2131.2
+parcel 648 building 1 outbuilding 139.7 residential skew -0.3 block -0.7 ""
+parcel 648 shape 1 1244.5,2159.0 1244.4,2149.1 1258.0,2149.0 1258.1,2158.9 1244.5,2159.0
+parcel 648 building 2 outbuilding 66.1 residential skew -1.4 block -1.5 "309 Thompson Street"
+parcel 648 shape 2 1239.6,2143.1 1239.4,2135.7 1246.8,2135.5 1247.0,2142.9 1239.6,2143.1
+
+parcel 649 building 0 primary 291.8 residential skew +8.4 block +8.1 "311 Thompson Street"
+parcel 649 shape 0 1284.4,2125.9 1282.6,2138.1 1275.3,2137.0 1278.5,2115.0 1298.1,2117.9 1296.7,2127.7 1284.4,2125.9
+
+parcel 650 building 0 primary 116.9 residential skew +4.0 block +1.1 "403 Gilbert Street"
+parcel 650 shape 0 1386.6,1629.1 1376.8,1629.9 1375.8,1617.5 1385.6,1616.7 1386.6,1629.1
+parcel 650 building 1 outbuilding 79.1 residential skew +6.9 block +4.2 "403 Gilbert Street"
+parcel 650 shape 1 1389.7,1640.6 1389.4,1630.7 1399.3,1630.4 1399.6,1640.3 1389.7,1640.6
+
+parcel 651 building 0 primary 121.2 residential skew +2.0 block +4.4 "403 Stewart Street"
+parcel 651 shape 0 1393.9,1755.7 1381.5,1755.4 1381.8,1745.5 1394.1,1745.8 1393.9,1755.7
+parcel 651 building 1 outbuilding 64.6 residential skew -1.8 block -0.1 "403 Stewart Street"
+parcel 651 shape 1 1391.0,1776.7 1398.4,1776.4 1398.7,1783.8 1391.3,1784.1 1391.0,1776.7
+
+parcel 652 building 0 primary 164.8 residential skew +8.8 block +11.0 "406 Mc Kibben Street"
+parcel 652 shape 0 1419.1,1835.2 1406.9,1833.4 1409.0,1818.7 1421.3,1820.5 1419.1,1835.2
+parcel 652 building 1 outbuilding 108.5 residential skew -31.9 block -29.5 "406 Mc Kibben Street"
+parcel 652 shape 1 1412.4,1808.8 1408.4,1802.6 1419.9,1795.3 1423.9,1801.6 1412.4,1808.8
+
+parcel 653 building 0 primary 133.0 residential skew +0.4 block +1.1 "405 Mc Kibben Street"
+parcel 653 shape 0 1411.5,1867.7 1411.5,1880.1 1401.6,1880.1 1401.6,1867.7 1411.5,1867.7
+
+parcel 654 building 0 primary 284.6 residential skew +1.3 block +4.3 "413 Mc Kibben Street"
+parcel 654 shape 0 1491.8,1872.9 1491.6,1885.3 1469.4,1885.0 1469.5,1872.6 1491.8,1872.9
+
+parcel 655 building 0 primary 325.0 residential skew -1.8 block +1.8 "410 Mc Kibben Street"
+parcel 655 shape 0 1449.3,1825.2 1471.6,1824.3 1471.3,1818.1 1478.7,1817.8 1479.3,1832.6 1449.7,1833.8 1449.3,1825.2
+
+parcel 657 building 0 primary 1877.9 unclassified skew -5.9 block -5.6 "514 East Attica Road"
+parcel 657 shape 0 1687.2,1302.3 1689.4,1323.3 1669.7,1325.4 1665.4,1284.7 1683.9,1282.8 1681.9,1264.3 1715.1,1260.8 1716.9,1278.0 1699.7,1279.9 1700.6,1288.5 1714.1,1287.0 1715.4,1299.4 1687.2,1302.3
+parcel 657 building 1 outbuilding 320.0 residential skew +9.3 block +9.6 "514 East Attica Road"
+parcel 657 shape 1 1639.8,1252.7 1628.8,1250.9 1630.8,1238.7 1651.5,1242.0 1648.6,1260.4 1638.8,1258.8 1639.8,1252.7
+
+parcel 658 building 0 primary 56.3 unclassified skew +7.7 block -2.0 ""
+parcel 658 shape 0 1169.5,1205.6 1176.9,1205.1 1177.5,1212.5 1170.1,1213.0 1169.5,1205.6
+
+parcel 662 building 0 primary 431.2 residential skew +3.2 block +3.3 "208 Earl Court"
+parcel 662 shape 0 1124.9,2184.9 1143.4,2185.9 1144.3,2169.9 1149.2,2170.1 1147.5,2199.8 1124.1,2198.5 1124.9,2184.9
+
+parcel 665 building 0 primary 218.5 residential skew +1.2 block +1.0 "703 South Chicago Street"
+parcel 665 shape 0 920.6,2180.7 920.7,2169.5 940.4,2169.6 940.4,2180.7 920.6,2180.7
+parcel 665 building 1 outbuilding 197.1 residential skew +9.7 block +9.2 "703 South Chicago Street"
+parcel 665 shape 1 946.4,2194.5 949.0,2177.4 961.2,2179.2 958.6,2196.4 946.4,2194.5
+
+parcel 666 building 0 primary 266.4 residential skew -0.1 block -0.5 "707 South Chicago Street"
+parcel 666 shape 0 948.7,2290.5 948.5,2280.6 975.7,2280.0 975.9,2289.9 948.7,2290.5
+
+parcel 667 building 0 primary 162.5 residential skew +2.6 block +2.0 "709 South Chicago Street"
+parcel 667 shape 0 964.1,2344.2 964.4,2329.4 976.8,2329.7 976.4,2344.5 964.1,2344.2
+
+parcel 668 building 0 primary 244.4 residential skew +9.1 block +9.4 ""
+parcel 668 shape 0 1097.1,823.6 1098.6,813.8 1092.5,812.9 1092.8,810.4 1102.6,811.9 1098.9,836.4 1084.2,834.2 1086.1,821.9 1097.1,823.6
+
+parcel 669 building 0 primary 218.2 residential skew -8.5 block -7.2 "107 North Summit Street"
+parcel 669 shape 0 1175.8,1305.3 1173.5,1290.6 1188.2,1288.3 1190.4,1303.0 1175.8,1305.3
+parcel 669 building 1 outbuilding 110.5 industrial skew -1.6 block -0.0 "302 East Attica Road"
+parcel 669 shape 1 1213.1,1290.4 1220.5,1290.1 1220.9,1303.7 1213.5,1304.0 1213.1,1290.4
+
+parcel 670 building 0 primary 114.3 residential skew +2.8 block +3.8 "408 East Attica Road"
+parcel 670 shape 0 1421.6,1340.4 1422.0,1330.5 1433.1,1331.0 1432.7,1340.9 1421.6,1340.4
+parcel 670 building 1 outbuilding 82.2 residential skew -2.7 block -1.6 "408 East Attica Road"
+parcel 670 shape 1 1425.9,1316.8 1435.8,1316.3 1436.2,1323.7 1426.3,1324.2 1425.9,1316.8
+parcel 670 building 2 outbuilding 75.0 residential skew -5.2 block -4.1 "408 East Attica Road"
+parcel 670 shape 2 1407.2,1337.9 1406.4,1329.2 1415.0,1328.4 1415.8,1337.0 1407.2,1337.9
+
+parcel 671 building 0 primary 208.4 residential skew -0.4 block +0.1 "306 North Grove Street"
+parcel 671 shape 0 1360.3,1008.2 1370.2,1008.2 1370.3,1028.0 1360.4,1028.0 1360.3,1008.2
+
+parcel 672 building 0 primary 211.5 residential skew -5.0 block -4.8 "402 Holmes Street"
+parcel 672 shape 0 1366.0,1184.6 1368.0,1205.5 1358.2,1206.5 1356.1,1185.5 1366.0,1184.6
+parcel 672 building 1 outbuilding 90.0 residential skew +9.8 block +9.9 "402 Holmes Street"
+parcel 672 shape 1 1365.2,1180.5 1355.4,1178.9 1357.0,1169.1 1366.8,1170.7 1365.2,1180.5
+
+parcel 673 building 0 primary 201.7 residential skew -2.6 block -2.7 "408 Holmes Street"
+parcel 673 shape 0 1418.8,1189.7 1431.2,1189.0 1432.0,1203.8 1419.6,1204.5 1418.8,1189.7
+parcel 673 building 1 outbuilding 164.5 residential skew +29.6 block +29.6 "408 Holmes Street"
+parcel 673 shape 1 1421.2,1164.0 1435.2,1171.8 1429.8,1181.5 1415.8,1173.7 1421.2,1164.0
+
+parcel 674 building 0 primary 227.1 residential skew -18.6 block -17.9 "502 East Attica Road"
+parcel 674 shape 0 1549.9,1342.8 1543.5,1324.1 1554.0,1320.4 1560.4,1339.2 1549.9,1342.8
+
+parcel 675 building 0 primary 124.7 residential skew +1.1 block +1.0 ""
+parcel 675 shape 0 1615.5,1342.0 1604.4,1341.8 1604.5,1329.5 1615.6,1329.6 1615.5,1342.0
+
+parcel 676 building 0 primary 320.0 residential skew +5.1 block +5.1 "504 East Attica Road"
+parcel 676 shape 0 1582.0,1324.2 1580.5,1342.8 1563.3,1341.3 1564.8,1322.8 1582.0,1324.2
+parcel 676 building 1 outbuilding 79.1 residential skew -2.1 block -2.1 "504 East Attica Road"
+parcel 676 shape 1 1571.0,1319.4 1563.6,1319.7 1563.1,1308.6 1570.5,1308.3 1571.0,1319.4
+
+parcel 677 building 0 primary 170.8 residential skew +6.9 block +6.9 "504 Holmes Street"
+parcel 677 shape 0 1670.0,1188.4 1688.4,1190.4 1687.3,1200.3 1668.8,1198.2 1670.0,1188.4
+parcel 677 building 1 outbuilding 91.5 residential skew +2.6 block +2.6 "504 Holmes Street"
+parcel 677 shape 1 1675.2,1175.9 1674.8,1185.8 1665.0,1185.4 1665.3,1175.5 1675.2,1175.9
+
+parcel 680 building 0 primary 303.3 residential skew +23.4 block +23.7 "203 Thompson Street"
+parcel 680 shape 0 1017.3,2119.3 1031.0,2125.1 1022.7,2144.5 1009.0,2138.7 1017.3,2119.3
+
+parcel 681 building 0 primary 92.3 residential skew -9.2 block -8.9 "205 Thompson Street"
+parcel 681 shape 0 1036.2,2123.0 1048.4,2121.0 1049.6,2128.3 1037.4,2130.4 1036.2,2123.0
+parcel 681 building 1 outbuilding 51.4 residential skew +7.0 block +7.1 "205 Thompson Street"
+parcel 681 shape 1 1030.7,2143.6 1031.6,2136.2 1037.8,2136.9 1036.9,2144.3 1030.7,2143.6
+
+parcel 685 building 0 primary 226.0 residential skew +2.4 block +3.4 "306 East Maple Street"
+parcel 685 shape 0 1211.0,1461.4 1212.0,1432.9 1219.4,1433.2 1218.5,1461.6 1211.0,1461.4
+
+parcel 686 building 0 primary 230.6 residential skew +5.5 block +6.8 "308 East Maple Street"
+parcel 686 shape 0 1239.9,1432.8 1248.5,1433.6 1246.0,1463.2 1237.4,1462.4 1239.9,1432.8
+
+parcel 687 building 0 primary 262.9 residential skew +32.0 block +32.1 ""
+parcel 687 shape 0 1105.7,2138.0 1099.4,2134.1 1113.1,2112.0 1126.8,2120.4 1121.5,2128.9 1114.2,2124.3 1105.7,2138.0
+
+parcel 688 building 0 primary 298.1 residential skew +17.5 block +17.5 "207 Dale Street"
+parcel 688 shape 0 1049.3,2017.3 1056.5,1993.7 1068.3,1997.3 1061.1,2021.0 1049.3,2017.3
+
+parcel 689 building 0 primary 199.1 residential skew +7.2 block +7.2 "309 Dale Street"
+parcel 689 shape 0 1262.9,2010.5 1264.7,1995.8 1279.4,1997.5 1277.7,2012.3 1262.9,2010.5
+
+parcel 690 building 0 primary 88.6 residential skew -0.4 block -0.4 ""
+parcel 690 shape 0 1019.7,2036.9 1012.3,2037.0 1012.1,2025.8 1019.5,2025.7 1019.7,2036.9
+
+parcel 692 building 0 primary 440.7 residential skew +0.8 block +0.9 "212 Thompson Street"
+parcel 692 shape 0 1113.9,2077.2 1113.9,2085.9 1101.5,2085.8 1101.7,2062.2 1122.7,2062.4 1122.5,2083.5 1117.6,2083.4 1117.7,2077.2 1113.9,2077.2
+
+parcel 693 building 0 primary 232.0 residential skew +3.0 block +3.0 "216 Thompson Street"
+parcel 693 shape 0 1134.0,2081.8 1134.6,2069.4 1151.9,2070.2 1151.3,2082.6 1134.0,2081.8
+parcel 693 building 1 outbuilding 113.1 residential skew +1.8 block +1.9 "216 Thompson Street"
+parcel 693 shape 1 1139.5,2057.6 1139.8,2047.7 1152.1,2048.0 1151.8,2057.9 1139.5,2057.6
+
+parcel 694 building 0 primary 105.0 residential skew +7.8 block +7.6 "312 Thompson Street"
+parcel 694 shape 0 1284.9,2086.0 1286.5,2073.8 1295.1,2074.9 1293.5,2087.2 1284.9,2086.0
+
+parcel 696 building 0 primary 229.4 residential skew -2.3 block -2.3 "506 East Attica Road"
+parcel 696 shape 0 1585.8,1341.5 1584.8,1320.5 1595.9,1320.0 1596.9,1341.0 1585.8,1341.5
+
+parcel 697 building 0 primary 226.8 residential skew +1.3 block +1.3 "502 Holmes Street"
+parcel 697 shape 0 1656.5,1198.1 1636.8,1197.8 1636.9,1185.4 1656.7,1185.7 1656.5,1198.1
+parcel 697 building 1 outbuilding 77.6 residential skew +0.7 block +0.6 "502 Holmes Street"
+parcel 697 shape 1 1647.2,1181.1 1639.7,1181.1 1639.8,1171.2 1647.2,1171.2 1647.2,1181.1
+
+parcel 701 building 0 primary 2096.3 industrial skew +37.2 block +22.1 "402 Gilbert Street"
+parcel 701 shape 0 1259.7,1368.2 1277.3,1374.0 1271.5,1391.7 1285.6,1396.3 1281.8,1408.1 1305.2,1415.9 1295.2,1446.4 1289.3,1444.5 1281.9,1466.9 1272.5,1463.8 1277.6,1448.5 1279.9,1449.2 1283.0,1439.8 1271.3,1436.0 1275.2,1424.2 1255.2,1417.6 1262.2,1396.4 1251.6,1392.9 1259.7,1368.2
+parcel 701 building 1 outbuilding 914.8 industrial skew +32.6 block +18.5 "402 Gilbert Street"
+parcel 701 shape 1 1325.8,1498.0 1306.5,1493.4 1315.5,1456.1 1310.7,1454.9 1311.3,1452.5 1322.1,1455.1 1323.2,1450.3 1316.0,1448.5 1317.2,1443.7 1332.8,1447.5 1327.3,1470.4 1330.9,1471.2 1325.1,1495.3 1334.8,1497.6 1332.4,1507.3 1324.0,1505.2 1325.8,1498.0
+parcel 701 building 2 outbuilding 440.7 industrial skew -13.0 block -26.6 "402 Gilbert Street"
+parcel 701 shape 2 1350.3,1568.8 1368.1,1557.7 1379.2,1575.5 1361.4,1586.7 1350.3,1568.8
+parcel 701 building 3 outbuilding 53.4 industrial skew -31.8 block +43.7 "402 Gilbert Street"
+parcel 701 shape 3 1306.4,1443.7 1313.1,1449.2 1309.2,1454.0 1302.5,1448.5 1306.4,1443.7
+
+parcel 702 building 0 primary 96.4 residential skew -25.1 block -24.5 "201 Thompson Street"
+parcel 702 shape 0 999.8,2119.5 1005.6,2131.9 998.9,2135.0 993.1,2122.7 999.8,2119.5
+parcel 702 building 1 outbuilding 75.3 residential skew +1.2 block +1.6 "201 Thompson Street"
+parcel 702 shape 1 986.1,2131.7 994.8,2131.8 994.6,2139.3 986.0,2139.1 986.1,2131.7
+
+parcel 703 building 0 primary 183.0 residential skew -2.5 block -2.3 "207 Thompson Street"
+parcel 703 shape 0 1051.3,2121.1 1067.4,2120.3 1068.0,2132.7 1051.9,2133.5 1051.3,2121.1
+parcel 703 building 1 outbuilding 110.2 residential skew +16.6 block +16.7 "207 Thompson Street"
+parcel 703 shape 1 1073.9,2140.1 1070.8,2150.8 1061.3,2148.0 1064.4,2137.3 1073.9,2140.1
+
+parcel 704 building 0 primary 144.6 residential skew +7.7 block +7.9 "315 Benton Street"
+parcel 704 shape 0 1314.8,1127.3 1316.7,1112.5 1325.2,1113.6 1323.4,1128.4 1314.8,1127.3
+
+parcel 706 building 0 primary 166.8 residential skew -4.3 block -4.4 "215 Gilbert Street"
+parcel 706 shape 0 1145.7,1619.0 1146.7,1631.3 1134.4,1632.4 1133.3,1620.0 1145.7,1619.0
+parcel 706 building 1 outbuilding 123.2 residential skew +4.4 block +4.4 "215 Gilbert Street"
+parcel 706 shape 1 1152.7,1641.9 1152.0,1651.8 1138.4,1650.9 1139.1,1641.0 1152.7,1641.9
+
+parcel 708 building 0 primary 115.4 residential skew -0.9 block +0.2 "312 Holmes Street"
+parcel 708 shape 0 1290.6,1208.4 1278.3,1208.7 1278.0,1198.8 1290.4,1198.5 1290.6,1208.4
+
+parcel 709 building 0 primary 47.6 residential skew -2.6 block -2.6 "210 Stewart Street"
+parcel 709 shape 0 1072.4,1691.6 1072.0,1684.1 1079.4,1683.7 1079.8,1691.2 1072.4,1691.6
+
+parcel 710 building 0 primary 154.4 residential skew +0.3 block +0.3 "212 Stewart Street"
+parcel 710 shape 0 1101.1,1689.3 1111.0,1689.3 1111.1,1705.4 1101.2,1705.4 1101.1,1689.3
+parcel 710 building 1 outbuilding 53.7 residential skew +8.4 block +8.4 "212 Stewart Street"
+parcel 710 shape 1 1097.1,1679.7 1104.5,1680.7 1103.5,1688.1 1096.1,1687.0 1097.1,1679.7
+
+parcel 711 building 0 primary 308.8 residential skew +1.3 block +1.3 "216 Stewart Street"
+parcel 711 shape 0 1118.1,1712.8 1118.2,1701.7 1146.7,1702.1 1146.5,1713.2 1118.1,1712.8
+
+parcel 714 building 0 primary 175.5 residential skew -0.1 block -9.5 "405 North Chicago Street"
+parcel 714 shape 0 648.1,938.4 657.6,935.6 662.8,953.5 653.3,956.2 648.1,938.4
+
+parcel 715 building 0 primary 226.0 residential skew +5.8 block +6.3 "316 Holmes Street"
+parcel 715 shape 0 1320.0,1205.8 1322.2,1182.3 1328.3,1182.9 1326.2,1206.3 1320.0,1205.8
+
+parcel 716 building 0 primary 205.2 residential skew +4.8 block +4.8 "305 South Summit Street"
+parcel 716 shape 0 1146.4,1683.7 1127.9,1682.3 1128.8,1670.0 1147.3,1671.4 1146.4,1683.7
+
+parcel 717 building 0 primary 59.2 residential skew -1.6 block -0.9 ""
+parcel 717 shape 0 1205.2,1538.1 1204.9,1529.5 1212.3,1529.2 1212.6,1537.9 1205.2,1538.1
+
+parcel 719 building 0 primary 5729.7 commercial skew +0.8 block -5.8 ""
+parcel 719 shape 0 731.3,1089.7 746.6,1084.9 754.4,1109.7 716.6,1121.6 708.1,1094.4 701.0,1096.7 694.0,1074.2 698.7,1072.7 688.3,1039.6 681.3,1041.9 677.6,1030.0 744.8,1008.9 751.1,1029.0 759.3,1026.4 770.1,1060.7 751.2,1066.6 754.2,1076.0 736.5,1081.6 734.3,1074.5 737.8,1073.4 737.1,1071.0 726.4,1074.4 731.3,1089.7
+
+parcel 720 building 0 primary 259.4 agricultural skew -0.3 block +1.5 ""
+parcel 720 shape 0 503.5,886.7 503.4,866.9 515.8,866.8 515.9,886.6 503.5,886.7
+
+parcel 721 building 0 primary 522.9 residential skew -19.1 block -10.6 "412 North Chicago Street"
+parcel 721 shape 0 542.9,892.4 550.9,889.3 554.5,898.6 571.8,891.9 578.0,908.0 552.7,917.9 542.9,892.4
+
+parcel 722 building 0 primary 322.6 residential skew +8.3 block +6.1 "202 North Chicago Street"
+parcel 722 shape 0 673.4,1212.2 673.4,1218.4 691.9,1218.6 691.8,1228.5 664.7,1228.3 664.8,1212.2 673.4,1212.2
+parcel 722 building 1 outbuilding 54.0 residential skew -8.4 block -11.8 "202 North Chicago Street"
+parcel 722 shape 1 649.3,1218.1 654.0,1216.7 656.8,1226.2 652.0,1227.6 649.3,1218.1
+
+parcel 723 building 0 primary 223.7 residential skew -16.5 block -16.1 "120 West Attica Road"
+parcel 723 shape 0 553.6,1299.5 560.7,1297.7 564.1,1310.9 550.9,1314.2 546.1,1295.0 552.0,1293.5 553.6,1299.5
+
+parcel 724 building 0 primary 217.3 residential skew +4.0 block +5.8 "116 West Attica Road"
+parcel 724 shape 0 602.0,1294.2 599.9,1313.9 588.8,1312.7 591.0,1293.0 602.0,1294.2
+parcel 724 building 1 outbuilding 68.1 residential skew +0.1 block +2.5 "116 West Attica Road"
+parcel 724 shape 1 596.0,1277.3 595.7,1284.7 588.3,1284.4 588.6,1277.0 596.0,1277.3
+
+parcel 727 building 0 primary 310.2 commercial skew +3.1 block +4.5 "104 East Maple Street"
+parcel 727 shape 0 846.3,1443.8 844.9,1467.3 832.6,1466.6 834.0,1443.1 846.3,1443.8
+parcel 727 building 1 outbuilding 65.5 commercial skew -2.7 block -1.0 "104 East Maple Street"
+parcel 727 shape 1 821.9,1461.0 821.3,1446.1 826.2,1445.9 826.9,1460.8 821.9,1461.0
+
+parcel 729 building 0 primary 154.4 residential skew +4.1 block +4.2 "401 North Church Street"
+parcel 729 shape 0 985.3,962.0 985.7,950.8 999.3,951.4 998.8,962.5 985.3,962.0
+parcel 729 building 1 outbuilding 75.0 residential skew -2.7 block -2.1 "401 North Church Street"
+parcel 729 shape 1 1012.7,962.0 1011.9,952.2 1019.3,951.6 1020.1,961.5 1012.7,962.0
+
+parcel 732 building 0 primary 56.0 residential skew +2.9 block +4.1 "310 Holmes Street"
+parcel 732 shape 0 1263.3,1200.5 1263.0,1207.9 1255.6,1207.6 1255.9,1200.2 1263.3,1200.5
+
+parcel 734 building 0 primary 165.7 residential skew -3.0 block -3.0 "208 Stewart Street"
+parcel 734 shape 0 1051.0,1701.1 1063.3,1700.4 1064.2,1713.9 1051.8,1714.7 1051.0,1701.1
+parcel 734 building 1 outbuilding 120.3 residential skew +0.5 block +0.5 "208 Stewart Street"
+parcel 734 shape 1 1053.5,1668.9 1065.9,1668.9 1065.9,1678.8 1053.5,1678.8 1053.5,1668.9
+
+parcel 736 building 0 primary 239.2 residential skew -19.9 block -18.0 "502 North Chicago Street"
+parcel 736 shape 0 542.0,861.1 535.8,847.7 551.5,840.4 557.7,853.9 542.0,861.1
+parcel 736 building 1 outbuilding 185.3 residential skew +4.2 block +4.0 "502 North Chicago Street"
+parcel 736 shape 1 522.4,843.8 505.1,844.0 505.0,834.1 522.3,833.9 522.4,843.8
+
+parcel 737 building 0 primary 267.5 residential skew -0.3 block +0.9 "111 Smith Street"
+parcel 737 shape 0 709.7,685.7 722.0,685.6 722.3,707.9 710.0,708.0 709.7,685.7
+
+parcel 738 building 0 primary 461.5 residential skew -8.3 block -6.6 "202 York Street"
+parcel 738 shape 0 745.4,708.7 742.6,690.4 767.0,686.6 769.8,705.0 761.2,706.3 760.7,702.6 755.8,703.4 756.4,707.0 745.4,708.7
+
+parcel 740 building 0 primary 370.5 residential skew -7.2 block -5.0 "510 North Chicago Street"
+parcel 740 shape 0 538.7,772.1 516.8,775.9 513.9,758.8 535.8,755.0 538.7,772.1
+
+parcel 741 building 0 primary 819.0 residential skew -13.2 block -9.6 "508 North Chicago Street"
+parcel 741 shape 0 498.2,785.5 501.0,796.3 521.3,791.2 523.1,798.4 530.3,796.6 534.6,813.4 516.6,817.9 512.4,801.1 487.2,807.4 482.7,789.4 498.2,785.5
+
+parcel 742 building 0 primary 158.7 residential skew -7.2 block -5.0 "114 West Attica Road"
+parcel 742 shape 0 606.9,1314.6 605.6,1299.8 615.4,1298.9 616.7,1313.7 606.9,1314.6
+
+parcel 743 building 0 primary 106.8 residential skew +3.8 block +4.9 "118 West Attica Road"
+parcel 743 shape 0 574.4,1299.4 584.2,1300.5 583.2,1310.3 573.4,1309.3 574.4,1299.4
+parcel 743 building 1 outbuilding 42.7 residential skew +1.8 block +3.4 "118 West Attica Road"
+parcel 743 shape 1 567.4,1283.7 567.7,1278.8 575.1,1279.3 574.8,1284.3 567.4,1283.7
+
+parcel 744 building 0 primary 142.9 residential skew -0.8 block +1.7 ""
+parcel 744 shape 0 621.7,1312.8 622.0,1300.4 633.1,1300.7 632.8,1313.1 621.7,1312.8
+parcel 744 building 1 outbuilding 73.3 unclassified skew -9.8 block -6.7 ""
+parcel 744 shape 1 642.5,1280.4 635.2,1281.4 633.9,1271.6 641.3,1270.6 642.5,1280.4
+
+parcel 745 building 0 primary 268.4 residential skew +2.9 block +4.3 "110 Smith Street"
+parcel 745 shape 0 675.2,702.2 662.9,701.7 663.9,679.4 676.3,679.9 675.2,702.2
+
+parcel 746 building 0 primary 215.0 residential skew -21.2 block -26.3 "210 York Street"
+parcel 746 shape 0 843.6,714.1 833.8,696.9 843.5,691.4 853.2,708.6 843.6,714.1
+
+parcel 752 building 0 primary 411.2 residential skew +0.6 block +0.7 ""
+parcel 752 shape 0 1356.3,832.5 1377.3,832.6 1377.2,852.4 1356.1,852.3 1356.3,832.5
+parcel 752 building 1 outbuilding 301.9 residential skew -1.8 block -1.5 ""
+parcel 752 shape 1 1385.1,788.7 1404.8,788.0 1405.3,802.9 1385.6,803.6 1385.1,788.7
+
+parcel 753 building 0 primary 41.8 residential skew -8.5 block -8.4 ""
+parcel 753 shape 0 1539.9,1258.0 1547.2,1256.9 1548.0,1261.8 1540.7,1262.9 1539.9,1258.0
+
+parcel 754 building 0 primary 186.1 residential skew -8.1 block -7.7 "402 North Grove Street"
+parcel 754 shape 0 1358.4,936.1 1373.1,934.1 1374.8,946.3 1360.1,948.4 1358.4,936.1
+
+parcel 756 building 0 primary 193.1 residential skew -3.0 block -2.8 "401 Holmes Street"
+parcel 756 shape 0 1367.6,1235.3 1368.7,1252.6 1358.8,1253.2 1357.7,1235.9 1367.6,1235.3
+
+parcel 757 building 0 primary 165.1 residential skew -0.9 block -0.6 "403 Holmes Street"
+parcel 757 shape 0 1377.1,1247.4 1376.8,1235.1 1391.6,1234.7 1391.9,1247.1 1377.1,1247.4
+
+parcel 758 building 0 primary 204.9 residential skew -1.9 block +0.1 "208 York Street"
+parcel 758 shape 0 803.6,695.8 822.1,695.0 822.5,704.9 804.0,705.7 803.6,695.8
+
+parcel 760 building 0 primary 405.2 residential skew -3.0 block -1.9 "102 York Street"
+parcel 760 shape 0 608.8,703.1 591.6,705.0 592.3,711.1 586.1,711.8 583.8,690.9 607.2,688.3 608.8,703.1
+parcel 760 building 1 outbuilding 230.3 residential skew +1.6 block +3.2 "102 York Street"
+parcel 760 shape 1 576.5,691.4 577.1,708.8 564.7,709.1 564.2,691.8 576.5,691.4
+
+parcel 761 building 0 primary 882.2 civic skew -4.3 block -11.9 ""
+parcel 761 shape 0 550.8,625.7 539.7,591.5 563.2,583.9 574.3,618.0 550.8,625.7
+
+parcel 762 building 0 primary 633.2 commercial skew -9.7 block -6.7 "125 South Chicago Street"
+parcel 762 shape 0 805.7,1417.9 806.6,1424.0 813.9,1423.0 816.7,1442.6 791.0,1446.2 787.4,1420.4 805.7,1417.9
+
+parcel 768 building 0 primary 311.7 residential skew +1.2 block -0.0 ""
+parcel 768 shape 0 1257.5,1241.7 1272.3,1241.2 1273.0,1263.5 1258.2,1263.9 1257.5,1241.7
+
+parcel 769 building 0 primary 192.5 residential skew +36.4 block +36.6 "407 Holmes Street"
+parcel 769 shape 0 1392.1,1249.0 1403.7,1232.9 1410.7,1238.0 1399.1,1254.1 1392.1,1249.0
+
+parcel 770 building 0 primary 354.4 residential skew -1.4 block -0.3 ""
+parcel 770 shape 0 1284.8,1281.0 1283.2,1233.9 1290.6,1233.7 1292.2,1280.7 1284.8,1281.0
+
+parcel 773 building 0 primary 224.5 residential skew +1.1 block +1.3 "210 Henderson Street"
+parcel 773 shape 0 1088.0,774.9 1088.2,757.6 1100.5,757.7 1100.4,775.1 1088.0,774.9
+
+parcel 775 building 0 primary 212.4 residential skew -2.7 block -2.2 "315 Holmes Street"
+parcel 775 shape 0 1320.7,1260.1 1319.4,1236.7 1329.2,1236.1 1330.6,1259.6 1320.7,1260.1
+
+parcel 777 building 0 primary 255.1 unclassified skew +23.9 block +23.7 ""
+parcel 777 shape 0 1182.7,1236.2 1173.0,1260.3 1165.0,1257.1 1174.7,1233.0 1182.7,1236.2
+
+parcel 779 building 0 primary 248.8 residential skew +0.7 block -27.6 ""
+parcel 779 shape 0 1083.2,1059.2 1093.9,1052.9 1104.0,1069.9 1093.3,1076.3 1083.2,1059.2
+parcel 779 building 1 outbuilding 42.4 residential skew +22.7 block -6.3 ""
+parcel 779 shape 1 1026.4,953.0 1027.7,961.5 1022.8,962.3 1021.5,953.7 1026.4,953.0

@@ -365,6 +365,48 @@ kind churchyard
   catchment no
   describe  yes
 
+# A BURIAL GROUND THAT IS NOT A CHURCH'S. `churchyard` is the ground around a church, and is
+# already used for "the old burial ground" at the edge of the map. A municipal cemetery is a
+# different place - usually out past the built-up town, on its own, reached deliberately rather
+# than walked past. Same ground texture, because mown grass and stones is mown grass and stones.
+kind cemetery
+  words     cemetery graveyard
+  form      open
+  ground    churchyard
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+# THE VILLAGE PARK, and Rossville's has a name: Christman Park, where the Rossville Community
+# Organization runs "Christmas in the Village" - docs/research/ROSSVILLE-HISTORY.md.
+#
+# Distinct from the two kinds already here that are nearly it. `green` is the scrap of common
+# ground at a crossroads, which a park is not; `playground` is the swings, which stand IN a park
+# rather than being one.
+kind park
+  words     park
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
 kind allotments
   words     allotments
   form      open
@@ -670,6 +712,90 @@ kind newsstand
 # giving it rooms would have the interior generator lay out a kitchen in the sky.
 kind watertower
   words     watertower tower_water
+  form      open
+  ground    grass
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+# ---- WHAT THE VILLAGE OWNS AND RUNS ----------------------------------------
+#
+# Rossville runs its OWN gas, water and sewer - that is in the village's own history and it is
+# unusual enough to be worth modelling rather than glossing. Two wells at 127 and 135 ft, 300
+# gallons a minute, a 150,000-gallon tank; waterworks recorded continuously since 1898.
+# docs/research/ROSSVILLE-HISTORY.md, "Utilities, recorded contemporaneously".
+#
+# These exist because a good share of the town's tax-exempt parcels are municipal ground with no
+# church, school or hall on them, and there was nothing to call them.
+
+# The wells and the pump house that fill the tower. A small brick or block shed, fenced, humming.
+kind waterworks
+  words     waterworks pumphouse wellhouse
+  form      building
+  rooms     auto
+  grammar   hall
+  roof      yes
+  frontage  none
+  massing   shed
+  props     none
+  counter   no
+  hours     none
+  jobs      1
+  roles     operator
+  shifts    one
+  catchment no
+  describe  yes
+
+# The sewage plant. Out past the edge of town and downwind, which is where every one of these
+# is, and open ground rather than a building - a small town's is lagoons and a control shed.
+kind sewageworks
+  words     sewageworks lagoon
+  form      open
+  ground    field
+  rooms     none
+  roof      no
+  frontage  none
+  props     none
+  counter   no
+  hours     none
+  jobs      0
+  roles     none
+  shifts    one
+  catchment no
+  describe  yes
+
+# The village yard: the truck, the mower, the salt, the gas department's pipe. Where municipal
+# work is kept rather than done.
+kind publicworks
+  words     publicworks villageyard depot_works
+  form      building
+  rooms     auto
+  grammar   hall
+  roof      yes
+  frontage  none
+  massing   shed
+  props     none
+  counter   no
+  hours     07:00-15:30
+  jobs      3
+  roles     foreman labourer
+  shifts    one
+  catchment no
+  describe  yes
+
+# THE CATCH-ALL, AND IT IS AN HONEST ONE. Village-owned ground with nothing particular on it -
+# the scraps the county records as tax exempt because the municipality holds them, not because
+# anything stands there. Better than guessing at a facility that is not there.
+kind municipal
+  words     municipal villageland
   form      open
   ground    grass
   rooms     none

@@ -1,0 +1,1506 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rossville — the buildings, seated on the lots</title>
+<style>
+  /* Palette is the subject's own: Sanborn's material key for the buildings - the key this
+     project decoded off the 1913 sheets - over drafting linen and ink. */
+  :root {
+    --paper:    #E6E4DD;
+    --panel:    #F1EFE9;
+    --sunk:     #DCD9D0;
+    --ink:      #22201C;
+    --muted:    #6E6A61;
+    --rule:     #C6C2B6;
+
+    --lot:      #9A9384;
+    --lot-hi:   #22201C;
+    --road:     #CFCBBF;
+    --frame:    #D9A441;
+    --brick:    #B4503F;
+    --civic:    #4A6C8C;
+    --industry: #7A6A57;
+    --agri:     #6B7F4B;
+    --other:    #8A8478;
+    --authored: #E0607F;
+    --flag:     #C2503F;
+    --newroad:  #2E7D8F;
+    --alleyline:#8A5C86;
+    --was-built:#6B7F4B;
+    --was-vacant:#B4503F;
+    --was-unsure:#8A8478;
+    --was-absent:#6E6A61;
+    --editing:  #D93A2B;
+    --merged:   #7A6A57;
+    --vanished: #C2503F;
+    --untaxed:  #4A6C8C;
+    --exempt:   #6B7F4B;
+
+    --shadow: 0 1px 2px rgba(34,32,28,.10), 0 8px 24px rgba(34,32,28,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #16171A; --panel: #1E2024; --sunk: #121316;
+      --ink: #E4E2DA; --muted: #8E8F8A; --rule: #33363C;
+      --lot: #5C5F66; --lot-hi: #E4E2DA; --road: #2A2D33;
+      --frame: #E0B255; --brick: #CE6250; --civic: #6E93B5;
+      --industry: #9A8874; --agri: #8AA067; --other: #9A948A;
+      --authored: #EC7C97; --flag: #E4715C; --newroad: #57B0C4; --alleyline: #C093BC; --was-built: #8AA067; --was-vacant: #CE6250; --was-unsure: #9A948A; --was-absent: #8E8F8A; --editing: #FF6B5A; --merged: #9A8874; --vanished: #E4715C; --untaxed: #6E93B5; --exempt: #8AA067;
+      --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #16171A; --panel: #1E2024; --sunk: #121316;
+    --ink: #E4E2DA; --muted: #8E8F8A; --rule: #33363C;
+    --lot: #5C5F66; --lot-hi: #E4E2DA; --road: #2A2D33;
+    --frame: #E0B255; --brick: #CE6250; --civic: #6E93B5;
+    --industry: #9A8874; --agri: #8AA067; --other: #9A948A;
+    --authored: #EC7C97; --flag: #E4715C; --newroad: #57B0C4; --alleyline: #C093BC; --was-built: #8AA067; --was-vacant: #CE6250; --was-unsure: #9A948A; --was-absent: #8E8F8A; --editing: #FF6B5A;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+  }
+  :root[data-theme="light"] {
+    --paper: #E6E4DD; --panel: #F1EFE9; --sunk: #DCD9D0;
+    --ink: #22201C; --muted: #6E6A61; --rule: #C6C2B6;
+    --lot: #9A9384; --lot-hi: #22201C; --road: #CFCBBF;
+    --frame: #D9A441; --brick: #B4503F; --civic: #4A6C8C;
+    --industry: #7A6A57; --agri: #6B7F4B; --other: #8A8478;
+    --authored: #E0607F; --flag: #C2503F; --newroad: #2E7D8F; --alleyline: #8A5C86; --was-built: #6B7F4B; --was-vacant: #B4503F; --was-unsure: #8A8478; --was-absent: #6E6A61; --editing: #D93A2B;
+    --shadow: 0 1px 2px rgba(34,32,28,.10), 0 8px 24px rgba(34,32,28,.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace; }
+
+  /* min-height matters when this is embedded rather than opened directly: a host that sizes
+     its frame to the content height would otherwise measure a 100vh app as whatever the frame
+     already is, and collapse it. */
+  #app { display: grid; grid-template-columns: 300px 1fr; height: 100vh; min-height: 720px; }
+  @media (max-width: 820px) { #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }
+
+  /* ---- rail ---- */
+  #rail {
+    background: var(--panel);
+    border-right: 1px solid var(--rule);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  @media (max-width: 820px) { #rail { border-right: 0; border-bottom: 1px solid var(--rule); max-height: 46vh; } }
+
+  .pad { padding: 18px 20px; }
+  .sep { border-top: 1px solid var(--rule); }
+
+  h1 {
+    margin: 0 0 4px; font-size: 19px; font-weight: 650; letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  .sub { margin: 0; color: var(--muted); font-size: 13px; }
+
+  .eyebrow {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+    font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px;
+  }
+
+  /* Validation figures lead, because the whole question about this data is whether to
+     believe it. Form encodes state: a check that passed carries the frame colour. */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .stat { background: var(--panel); padding: 10px 12px; }
+  .stat b {
+    display: block;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+    font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  }
+  .stat span { display: block; font-size: 11px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+  .stat.good b { color: var(--agri); }
+
+  label.row {
+    display: flex; align-items: center; gap: 9px;
+    padding: 5px 0; cursor: pointer; font-size: 13.5px; user-select: none;
+  }
+  label.row input { accent-color: var(--ink); margin: 0; width: 14px; height: 14px; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.22); }
+
+  #q {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 4px;
+    background: var(--sunk); color: var(--ink); font-size: 13px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  }
+  #q:focus-visible { outline: 2px solid var(--civic); outline-offset: 1px; }
+  #hits { margin-top: 8px; max-height: 190px; overflow-y: auto; }
+  #hits button {
+    display: block; width: 100%; text-align: left; padding: 5px 8px; border: 0; border-radius: 3px;
+    background: none; color: var(--ink); cursor: pointer; font-size: 12.5px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  }
+  #hits button:hover, #hits button:focus-visible { background: var(--sunk); outline: none; }
+
+  /* ---- map ---- */
+  #stage { position: relative; overflow: hidden; background: var(--paper); }
+  #map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  #map.drag { cursor: grabbing; }
+
+  #detail {
+    position: absolute; right: 16px; top: 16px; width: 310px; max-height: calc(100% - 32px);
+    overflow-y: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px;
+    box-shadow: var(--shadow); padding: 15px 16px; display: none;
+  }
+  #detail.on { display: block; }
+  #detail.editing { border-color: var(--editing); box-shadow: 0 0 0 1px var(--editing), var(--shadow); }
+  #detail h2 { margin: 0 0 2px; font-size: 15px; font-weight: 650; }
+  #detail .pin { color: var(--muted); font-size: 12px; }
+  #close {
+    position: absolute; top: 9px; right: 9px; border: 0; background: none; cursor: pointer;
+    color: var(--muted); font-size: 17px; line-height: 1; padding: 3px 6px; border-radius: 3px;
+  }
+  #close:hover { background: var(--sunk); color: var(--ink); }
+
+  dl { margin: 12px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12.5px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; text-align: right; font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .bldg { margin-top: 11px; padding: 9px 10px; background: var(--sunk); border-radius: 4px; border-left: 3px solid var(--frame); }
+  .bldg.outb { border-left-color: var(--other); }
+  .bldg .t { font-size: 12.5px; font-weight: 600; }
+  .bldg .m { font-size: 11.5px; color: var(--muted); }
+  .bldg dl { margin-top: 6px; }
+
+  .chip {
+    display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 10.5px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+    letter-spacing: .04em; text-transform: uppercase; border: 1px solid currentColor;
+  }
+  .chip.primary { color: var(--agri); }
+  .chip.outbuilding { color: var(--muted); }
+
+  #scale {
+    position: absolute; left: 16px; bottom: 14px; font-size: 11px; color: var(--muted);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    padding: 5px 9px; border-radius: 3px; border: 1px solid var(--rule);
+  }
+  #scale .bar { display: block; height: 3px; background: var(--ink); margin-bottom: 4px; }
+
+  .note { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+  .note code { font-family: ui-monospace, Consolas, Menlo, monospace; font-size: 11px; }
+
+  .mate { color: var(--civic); text-decoration: underline; cursor: pointer; }
+  #d-save.dirty { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  button.v {
+    font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--ink); flex: 1;
+  }
+  button.v:hover { border-color: var(--muted); }
+  button.v.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  #d-kind, #d-prop { }
+  #d-kind, #d-prop, #d-note {
+    width: 100%; margin-top: 6px; padding: 6px 8px; border: 1px solid var(--rule);
+    border-radius: 4px; background: var(--sunk); color: var(--ink); font-size: 12px;
+    font-family: ui-monospace, Consolas, Menlo, monospace;
+  }
+
+  button.step {
+    font: inherit; font-size: 13px; line-height: 1; padding: 2px 8px; border-radius: 3px;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--ink); cursor: pointer;
+  }
+  button.step:hover { border-color: var(--muted); background: var(--sunk); }
+  .disrow:hover { background: var(--sunk) !important; }
+
+  button.ghost {
+    font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 4px;
+    border: 1px solid var(--rule); background: var(--sunk); color: var(--ink); cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div id="app">
+  <aside id="rail">
+    <div class="pad">
+      <p class="eyebrow" id="s-built">Vermilion County · FEMA/ORNL</p>
+      <h1>The buildings, seated on the lots</h1>
+      <p class="sub">822 measured footprints on Rossville's 794 surveyed parcels — the first buildings in this project that stand where a survey put them.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat good"><b id="s-seated">—</b><span>footprints seated on a county lot</span></div>
+      <div class="stat good"><b id="s-inside">—</b><span>land inside their own lot</span></div>
+      <div class="stat good"><b id="s-addr">—</b><span>agree with the county's address</span></div>
+      <div class="stat"><b id="s-lots">—</b><span>lots carrying a building</span></div>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">What the footprints say</p>
+      <p class="note" style="margin:0" id="s-findings">—</p>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">Layers</p>
+      <label class="row"><input type="checkbox" id="l-lot" checked /><span class="swatch" style="background:var(--lot)"></span>County lot lines <span class="mono ct" data-ct="parcels" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row"><input type="checkbox" id="l-newroad" checked /><span class="swatch" style="background:var(--newroad)"></span>Streets <span class="mono ct" data-ct="streets_new" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row"><input type="checkbox" id="l-alleyline" checked /><span class="swatch" style="background:var(--alleyline)"></span>Alleys <span class="mono ct" data-ct="alleys_new" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row"><input type="checkbox" id="l-bldg" checked /><span class="swatch" style="background:var(--frame)"></span>Measured footprints <span class="mono ct" data-ct="buildings" style="color:var(--muted);font-size:11px"></span><span class="mono" id="ct-later" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row"><input type="checkbox" id="l-out" checked /><span class="swatch" style="background:var(--other)"></span>…including outbuildings <span class="mono ct" data-ct="outbuildings" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row"><input type="checkbox" id="l-sq" checked /><span class="swatch" style="background:var(--frame);border-style:dashed"></span>Squared to their block <span class="mono" style="color:var(--muted);font-size:11px">untick for raw</span></label>
+      <label class="row"><input type="checkbox" id="l-flag" /><span class="swatch" style="background:var(--vanished)"></span>Where the two sources differ <span class="mono ct" data-ct="disagree_total" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row" id="row-absent" style="display:none"><input type="checkbox" id="l-absent" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show lots I removed <span class="mono" id="ct-absent" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row" id="row-1991" style="display:none"><input type="checkbox" id="l-1991" checked /><span class="swatch" style="background:var(--was-built)"></span>What I said was here in 1991 <span class="mono" id="ct-1991" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row"><input type="checkbox" id="l-addr" /><span class="swatch" style="background:transparent;border-style:dashed"></span>Addresses <span class="mono" style="color:var(--muted);font-size:11px">(zoom in)</span></label>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">Building use — Sanborn's key</p>
+      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--frame)"></span>Residential — frame</label>
+      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--brick)"></span>Commercial — brick</label>
+      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--civic)"></span>Civic, school, government</label>
+      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--industry)"></span>Industrial</label>
+      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--agri)"></span>Agricultural</label>
+      <p class="note" style="margin:10px 0 0">Colour follows the 1913 Sanborn material key this project already decoded — yellow frame, red brick — so the layer reads the way the town's own fire-insurance sheets do.</p>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">Streets and alleys</p>
+      <p class="note" id="s-alleynote" style="margin:0">—</p>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">Where the two sources differ</p>
+      <div id="s-dis"></div>
+      <p class="note" style="margin:10px 0 0" id="s-disnote">—</p>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">Roads still crossing private land</p>
+      <p class="note" id="s-roadsum" style="margin:0 0 8px">—</p>
+      <div id="s-roadbad"></div>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">Find a lot</p>
+      <input id="q" placeholder="408 Holmes, or a parcel id" autocomplete="off" />
+      <div id="hits"></div>
+    </div>
+
+    <div class="pad sep">
+      <p class="eyebrow">Read this before believing it</p>
+      <p class="note" id="s-crooked">—</p>
+      <p class="note">Every record is <code>VAL_METHOD: Automated</code> — machine-traced from imagery, not one checked by a person. Outlines include porches, attached garages and later additions; the 1913 Sanborn footprints exclude them. Imagery is <b>2016</b> and the game is set around <b>2000</b>, so the commercial row here is the town <i>after</i> the February 2004 fire. No heights, no room counts, no year built.</p>
+      <p style="margin:12px 0 0"><button class="ghost" id="reset">Reset view</button></p>
+    </div>
+  </aside>
+
+  <div id="stage">
+    <canvas id="map"></canvas>
+    <div id="scale"><span class="bar"></span><span id="scale-t">—</span></div>
+    <div id="detail">
+      <button id="close" aria-label="Close">×</button>
+      <h2 id="d-addr">—</h2>
+      <div class="pin mono" id="d-pin">—</div>
+      <div id="d-flag" class="note" style="display:none;margin-top:10px;padding:8px 10px;
+           background:var(--sunk);border-left:3px solid var(--vanished);border-radius:4px"></div>
+      <div id="d-1991" style="display:none;margin-top:12px">
+        <p class="eyebrow" style="margin:0 0 6px">What stood here in 1991?</p>
+        <div style="display:flex;gap:5px">
+          <button class="v" data-v="built">Built</button>
+          <button class="v" data-v="vacant">Vacant</button>
+          <button class="v" data-v="unsure">Unsure</button>
+          <button class="v" data-v="absent" title="the parcel itself did not exist in 1991 - it was split off later">No lot yet</button>
+        </div>
+        <div id="d-built" style="display:none">
+          <input id="d-kind" list="kindlist" placeholder="what was it? school, shop, dwelling…"
+                 autocomplete="off" />
+          <datalist id="kindlist"><option value="dwelling"></option><option value="apartment"></option><option value="shop"></option><option value="church"></option><option value="school"></option><option value="pub"></option><option value="diner"></option><option value="garage"></option><option value="gasstation"></option><option value="postoffice"></option><option value="bank"></option><option value="villagehall"></option><option value="firestation"></option><option value="precinct"></option><option value="surgery"></option><option value="hospital"></option><option value="municipal"></option><option value="publicworks"></option><option value="waterworks"></option><option value="sewageworks"></option><option value="watertower"></option><option value="cemetery"></option><option value="park"></option><option value="playground"></option><option value="green"></option><option value="churchyard"></option><option value="memorial"></option><option value="carpark"></option><option value="mill"></option><option value="factory"></option><option value="elevator"></option><option value="silo"></option><option value="barn"></option><option value="farm"></option><option value="farmyard"></option><option value="railway"></option><option value="cinema"></option><option value="laundry"></option><option value="newsstand"></option><option value="busstop"></option><option value="phonebox"></option><option value="allotments"></option><option value="casino"></option><option value="icecream"></option><option value="carwash"></option><option value="restroom"></option><option value="tower"></option><option value="cornfield"></option><option value="paddock"></option><option value="orchard"></option><option value="district"></option><option value="standing"></option><option value="camp"></option><option value="suburb"></option><option value="copse"></option></datalist>
+          <input id="d-prop" list="proplist" autocomplete="off"
+                 placeholder="property name — same name joins lots into one" />
+          <datalist id="proplist"></datalist>
+          <div id="d-propmates" class="note" style="margin-top:4px"></div>
+        </div>
+        <input id="d-note" placeholder="a note, if you have one" autocomplete="off" />
+        <div style="display:flex;gap:8px;align-items:center;margin-top:7px">
+          <button id="d-save" class="ghost">Save</button>
+          <span id="d-saved" class="mono" style="font-size:11.5px"></span>
+        </div>
+      </div>
+      <dl id="d-county"></dl>
+      <div id="d-bldgs"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/ null;
+
+const ZONE_COLOR = {
+  residential: "--frame", commercial: "--brick", civic: "--civic",
+  industrial: "--industry", agricultural: "--agri", unclassified: "--other",
+};
+const OCC_ZONE = {
+  Residential: "residential", Commercial: "commercial", Industrial: "industrial",
+  Government: "civic", Education: "civic", Agriculture: "agricultural",
+  Unclassified: "unclassified",
+};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ESCAPE ANYTHING THAT WAS TYPED OR PARSED BEFORE IT MEETS innerHTML.
+//
+// Flagged as XSS, and on a page served to one person off their own loopback from a name they
+// typed themselves that is not much of an attack. It is a plain rendering bug though, and an
+// ordinary one: a property called "Smith & Sons" or "Bill's Garage" breaks the markup, and so
+// does any county address with an ampersand in it. Escaping is the same one line either way.
+const esc = t => String(t ?? "")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+// ---- index the data ------------------------------------------------------------------
+const byParcel = new Map();
+for (const b of DATA.buildings) {
+  if (!byParcel.has(b.p)) byParcel.set(b.p, []);
+  byParcel.get(b.p).push(b);
+}
+
+// The same footprint turned back square to its own lot: rotate by minus its recorded skew
+// about its own centroid. Only for skews under 20 degrees - past that the building is
+// probably genuinely askew (a corner lot, or something along the railroad's diagonal) and
+// forcing it would be inventing rather than correcting. Display only; the data keeps the
+// measurement.
+const _bbCache = new Map();
+function bbox(b) {
+  let v = _bbCache.get(b);
+  if (v) return v;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [x, y] of b.r) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  v = [x0, y0, x1, y1];
+  _bbCache.set(b, v);
+  return v;
+}
+
+// The same footprint turned back square to THE BLOCK IT STANDS IN - rotated by minus its
+// recorded block angle, about its own centroid.
+//
+// Two changes from the first version, and both were behind "works for some but not all":
+//
+//   IT SQUARES TO THE BLOCK, NOT TO THE ONE LOT. A single parcel polygon wobbles - a median
+//   degree off the town grid, worst case past thirty - and squaring a house to it inherits
+//   that wobble exactly. The block direction is the same measurement averaged over every lot
+//   within 130 m, so the wobble cancels while a diagonal block keeps its own angle.
+//
+//   THERE IS NO 20-DEGREE CUTOFF ANY MORE. It refused to touch a tenth of the town, which is
+//   exactly the tenth that looks worst, and it was the single biggest source of the ones left
+//   crooked. Judged by whether neighbouring houses come out parallel - which is what a platted
+//   street looks like - the old rule left 17.6 degrees of disagreement at the 90th percentile
+//   and this leaves 1.3.
+//
+// Display only: the data records both angles and applies neither.
+const SQUARE_LIMIT = 46;          // past 45 the fold makes the correction meaningless anyway
+const _sqCache = new Map();
+function squared(b) {
+  const s = (b.bskew !== undefined ? b.bskew : b.skew) || 0;
+  if (Math.abs(s) < 0.05 || Math.abs(s) > SQUARE_LIMIT) return b.r;
+  let got = _sqCache.get(b);
+  if (got) return got;
+  let cx = 0, cy = 0;
+  const n = b.r.length - 1;
+  for (let i = 0; i < n; i++) { cx += b.r[i][0]; cy += b.r[i][1]; }
+  cx /= n; cy /= n;
+  const th = -s * Math.PI / 180, co = Math.cos(th), si = Math.sin(th);
+  got = b.r.map(([x, y]) => {
+    const dx = x - cx, dy = y - cy;
+    return [cx + dx * co - dy * si, cy + dx * si + dy * co];
+  });
+  _sqCache.set(b, got);
+  return got;
+}
+
+// ---- the owner's ruling on what stood here in 1991 ---------------------------------------
+//
+// The one question none of the data can answer. The tax roll starts in 2007 and the imagery is
+// 2016; the town is played around 2000. So where the sources disagree the tie is broken by
+// somebody who was there, and that answer has to go somewhere a coder can read - it lands in
+// Content/parcel-1991.txt via the local server.
+//
+// Only offered when there IS a server. Opened as a file, or as a published artifact, there is
+// nothing to save to and the panel stays hidden rather than pretending.
+const LIVE = (location.protocol === "http:" || location.protocol === "https:")
+          && (location.hostname === "127.0.0.1" || location.hostname === "localhost");
+let VERDICTS = {};
+
+// NOTHING IS WRITTEN UNTIL SAVE IS PRESSED. This file is the one thing in the project that no
+// re-run can rebuild, so a click that quietly commits a ruling is the wrong default - a misclick
+// on the wrong lot used to be on disk before the hand left the mouse. `dirtyOn` is the parcel
+// with uncommitted changes, or -1.
+let dirtyOn = -1;
+
+// How many footprints the rulings are holding back, said out loud rather than subtracted
+// quietly from a count that claims to be all of them.
+// A DISAGREEMENT YOU HAVE RULED ON IS SETTLED, and stops being a disagreement. `unsure` does
+// not count: it says the lot was looked at and NOT settled, so it stays on the list.
+function settled(i) {
+  const e = VERDICTS[i] || VERDICTS[String(i)];
+  return !!e && e.was && e.was !== "unsure";
+}
+
+function laterCount() {
+  const el = document.getElementById("ct-later");
+  if (!el) return;
+  const out = new Set();
+  for (const [k, e] of Object.entries(VERDICTS))
+    if (e.was === "vacant" || e.was === "absent") out.add(+k);
+  let n = 0;
+  for (const b of DATA.buildings) if (out.has(b.p)) n++;
+  el.textContent = n ? `  −${n} later` : "";
+}
+
+async function loadVerdicts() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__verdicts", { cache: "no-store" });
+    if (r.ok) { VERDICTS = await r.json(); afterVerdicts(); }
+  } catch (e) { /* no server, no rulings */ }
+}
+
+/// EVERYTHING THAT DEPENDS ON THE RULINGS, IN ONE PLACE.
+///
+/// The counts in the disagreement panel appeared to be stagnant and then to jump - 21 at first
+/// paint, 13 after a single edit. Neither number was wrong; they were counted at different
+/// MOMENTS. `loadVerdicts` is async and lands after the panel has already rendered, and it only
+/// redrew the canvas, so the first paint counted nothing as settled. The first save then ran a
+/// different, fuller update and the honest number appeared all at once, looking like a jump of
+/// eight from one edit.
+///
+/// So there is now one function that brings everything into line with VERDICTS, and both the
+/// initial load and every save call it. Two code paths updating overlapping bits of the same
+/// state is what produced the disagreement in the first place.
+function afterVerdicts() {
+  const n = Object.keys(VERDICTS).length;
+  const c = document.getElementById("ct-1991");
+  if (c) c.textContent = n;
+  const row = document.getElementById("row-1991");
+  if (row) row.style.display = "flex";
+
+  const gone = Object.values(VERDICTS).filter(e => e.was === "absent").length;
+  const ra = document.getElementById("row-absent");
+  if (ra) ra.style.display = gone ? "flex" : "none";
+  const ca = document.getElementById("ct-absent");
+  if (ca) ca.textContent = gone;
+
+  laterCount();
+  if (window.__disRefresh) window.__disRefresh();
+  draw();
+}
+
+// SAY WHICH OF THE THREE STATES IT IS IN, always. Saving quietly on blur meant the only way
+// to know whether a ruling had landed was to click away and click back, which is not a thing
+// to ask of somebody working through a hundred lots.
+function saveState(state, text) {
+  const res = document.getElementById("d-saved");
+  const btn = document.getElementById("d-save");
+  if (typeof draw === "function") requestAnimationFrame(draw);   // the outline shows the state too
+  res.textContent = text;
+  res.style.color = state === "saved" ? "var(--agri)"
+                  : state === "error" ? "var(--flag)" : "var(--muted)";
+  if (btn) btn.classList.toggle("dirty", state === "dirty");
+}
+
+async function saveVerdict(pid, was, note, kind, property) {
+  const res = document.getElementById("d-saved");
+  try {
+    const r = await fetch("/__verdict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parcel: pid, was, note: note || "",
+                             kind: kind || "", property: property || "" }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "refused");
+    if (was) VERDICTS[pid] = { was, note: note || "", kind: kind || "", property: property || "" };
+    else delete VERDICTS[pid];
+    const t = new Date().toTimeString().slice(0, 8);
+    saveState("saved", (was ? "saved " : "cleared ") + t + `  ·  ${j.count} lots settled`);
+    afterVerdicts();          // the one update path - see afterVerdicts
+  } catch (e) {
+    // Say it plainly rather than looking as though it saved.
+    saveState("error", "NOT SAVED — " + e.message);
+  }
+}
+
+// WHICH EDGES SURVIVE WHEN SEVERAL LOTS BECOME ONE PROPERTY.
+//
+// A convex hull was the first attempt and it is not the same thing: it wraps the group in the
+// smallest convex ring, which sweeps in any lot the group happens to enclose and cuts corners
+// off any group that is not convex. And it still left the old lot lines drawn underneath, so
+// the school read as three lots inside a dashed box rather than as one school.
+//
+// A true dissolve instead. An edge between two lots of the same property has the property on
+// BOTH sides of it, so it is internal and is not drawn; an edge with the property on one side
+// only is the outer boundary. Tested by stepping a short way off each edge either way and
+// asking whether that point is still inside some lot of the group - which needs no shared
+// vertices between neighbours and so survives the two lots being drawn with different vertex
+// counts along the same boundary, which cadastral parcels frequently are.
+function pointInRing(pt, ring) {
+  let hit = false;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x0, y0] = ring[i], [x1, y1] = ring[i + 1];
+    if ((y0 > pt[1]) !== (y1 > pt[1])) {
+      if (pt[0] < x0 + (pt[1] - y0) / (y1 - y0) * (x1 - x0)) hit = !hit;
+    }
+  }
+  return hit;
+}
+
+// EVERY LOT OF THE PROPERTY THIS LOT BELONGS TO, or just the lot itself.
+//
+// Once several parcels have been declared one school, clicking any of them has to mean the
+// school. Selecting the parcel under the cursor left the property looking split at whichever
+// lot was clicked - the outline came back, the panel described a third of a building - which
+// is the map contradicting the very thing that was just said about it.
+function propertyOf(i) {
+  const e = VERDICTS[i] || VERDICTS[String(i)];
+  const name = e && (e.property || "").trim();
+  if (!name) return { name: null, ids: [i] };
+  const key = name.toLowerCase();
+  const ids = Object.keys(VERDICTS)
+    .filter(k => ((VERDICTS[k].property || "").trim().toLowerCase()) === key)
+    .map(Number)
+    .sort((a, b) => a - b);
+  return { name, ids: ids.length ? ids : [i] };
+}
+
+function strokeProperty(ids, style, width) {
+  ctx.strokeStyle = style;
+  ctx.lineWidth = width;
+  if (ids.length === 1) { path(DATA.parcels[ids[0]]); ctx.stroke(); return; }
+  const edges = dissolveEdges(ids.map(k => DATA.parcels[k]).filter(Boolean));
+  ctx.beginPath();
+  for (const [a, b] of edges) {
+    ctx.moveTo(sx(a[0]), sy(a[1]));
+    ctx.lineTo(sx(b[0]), sy(b[1]));
+  }
+  ctx.stroke();
+}
+
+function dissolveEdges(polys, eps = 0.5) {
+  const out = [];
+  for (const poly of polys) {
+    for (let i = 0; i < poly.length - 1; i++) {
+      const a = poly[i], b = poly[i + 1];
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const L = Math.hypot(dx, dy);
+      if (L < 0.01) continue;
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      const nx = -dy / L * eps, ny = dx / L * eps;
+      const left  = polys.some(q => pointInRing([mx + nx, my + ny], q));
+      const right = polys.some(q => pointInRing([mx - nx, my - ny], q));
+      if (!(left && right)) out.push([a, b]);      // property on one side only: it is the edge
+    }
+  }
+  return out;
+}
+
+const bounds = (() => {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const ring of DATA.parcels) for (const [x, y] of ring) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return { x0, y0, x1, y1 };
+})();
+
+const pBox = DATA.parcels.map(r => {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [x, y] of r) { if (x<x0) x0=x; if (x>x1) x1=x; if (y<y0) y0=y; if (y>y1) y1=y; }
+  return [x0, y0, x1, y1];
+});
+
+// A lot the two sources disagree about: the assessor books a dwelling on it and imagery
+// finds no building, or imagery finds one where the assessor books no dwelling. This is the
+// layer worth arguing with - it is where one of the two datasets is wrong.
+const flagged = new Set();
+for (let i = 0; i < DATA.parcels.length; i++) {
+  const c = DATA.county[i], has = byParcel.has(i);
+  if (!c) continue;
+  const booked = (c.dwell || 0) > 0;
+  if (booked !== has) flagged.add(i);
+}
+
+// ---- view ----------------------------------------------------------------------------
+const cv = document.getElementById("map"), ctx = cv.getContext("2d");
+let view = { s: 1, ox: 0, oy: 0 }, W = 0, H = 0, sel = -1, hover = -1;
+
+function fitView() {
+  const bw = bounds.x1 - bounds.x0, bh = bounds.y1 - bounds.y0;
+  const pad = 30;
+  view.s = Math.min((W - pad * 2) / bw, (H - pad * 2) / bh);
+  view.ox = (W - bw * view.s) / 2 - bounds.x0 * view.s;
+  view.oy = (H - bh * view.s) / 2 - bounds.y0 * view.s;
+}
+// Village Y already increases southward, so it maps straight to canvas Y and north is up.
+const sx = x => x * view.s + view.ox;
+const sy = y => y * view.s + view.oy;
+const wx = px => (px - view.ox) / view.s;
+const wy = py => (py - view.oy) / view.s;
+
+function resize() {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function path(ring) {
+  ctx.beginPath();
+  ctx.moveTo(sx(ring[0][0]), sy(ring[0][1]));
+  for (let i = 1; i < ring.length; i++) ctx.lineTo(sx(ring[i][0]), sy(ring[i][1]));
+  ctx.closePath();
+}
+
+const on = id => document.getElementById(id).checked;
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  const s = view.s;
+
+  // STREETS AND ALLEYS ARE DRAWN AS DIFFERENT THINGS, because they ARE different things -
+  // owner's standing fact 4: cars use one and not the other. Sharing a colour and differing
+  // only by alpha made an alley read as a thin street, which is exactly the distinction that
+  // matters most on this map. The alley gets its own ink and a dashed line: dashes for a way
+  // that is not a through route.
+  {
+    const drawNet = (want, colourVar, dashed) => {
+      ctx.lineCap = dashed ? "butt" : "round";
+      ctx.lineJoin = "round";
+      const col = css(colourVar);
+      for (const rd of (DATA.newroads || [])) {
+        if ((rd.c === "alley") !== want) continue;
+        const lw = Math.max(1, (rd.w || 10) * s);
+
+        ctx.setLineDash([]);
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = col + (want ? "38" : "66");
+        for (const pl of rd.lines) {
+          ctx.beginPath();
+          ctx.moveTo(sx(pl[0][0]), sy(pl[0][1]));
+          for (let i = 1; i < pl.length; i++) ctx.lineTo(sx(pl[i][0]), sy(pl[i][1]));
+          ctx.stroke();
+        }
+
+        ctx.lineWidth = want ? 1.4 : 1;
+        ctx.strokeStyle = col;
+        if (dashed) ctx.setLineDash([Math.max(3, 6 * s), Math.max(3, 5 * s)]);
+        for (const pl of rd.lines) {
+          ctx.beginPath();
+          ctx.moveTo(sx(pl[0][0]), sy(pl[0][1]));
+          for (let i = 1; i < pl.length; i++) ctx.lineTo(sx(pl[i][0]), sy(pl[i][1]));
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+    };
+    if (on("l-newroad")) drawNet(false, "--newroad", false);
+    if (on("l-alleyline")) drawNet(true, "--alleyline", true);
+  }
+
+  if (on("l-lot")) {
+    // A lot that is part of a property does not get its own outline while the 1991 layer is
+    // showing: the whole point of saying three parcels are one school is that the map should
+    // stop drawing three parcels. The property's own dissolved edge is drawn instead, below.
+    const inProperty = new Set();
+    const absent = new Set();
+    if (on("l-1991")) {
+      for (const [k, e] of Object.entries(VERDICTS)) {
+        if ((e.property || "").trim()) inProperty.add(+k);
+        // A LOT THAT DID NOT EXIST IN 1991 IS NOT DRAWN AS A LOT. The parcel data is today's,
+        // and ground subdivided out of a field in 1998 has no business on a map of 1991. It is
+        // still drawn, faintly and dotted, below - or there would be no way to click it and say
+        // that was wrong.
+        if (e.was === "absent") absent.add(+k);
+      }
+    }
+    ctx.strokeStyle = css("--lot"); ctx.lineWidth = Math.min(1.1, Math.max(.35, s * 1.1));
+    for (let i = 0; i < DATA.parcels.length; i++) {
+      if (inProperty.has(i) || absent.has(i)) continue;
+      const b = pBox[i];
+      if (sx(b[2]) < -40 || sx(b[0]) > W + 40 || sy(b[3]) < -40 || sy(b[1]) > H + 40) continue;
+      path(DATA.parcels[i]); ctx.stroke();
+    }
+    // GONE MEANS GONE. Marking a lot as never having existed and then still drawing it is
+    // the map arguing with what was just said about it. It comes back only when "Show lots I
+    // removed" is ticked, which is how one gets clicked again and undone.
+    if (absent.size && on("l-absent")) {
+      ctx.save();
+      ctx.setLineDash([2, 4]);
+      ctx.strokeStyle = css("--was-absent") + "88";
+      for (const i of absent) {
+        const b = pBox[i];
+        if (!b || sx(b[2]) < -40 || sx(b[0]) > W + 40 || sy(b[3]) < -40 || sy(b[1]) > H + 40) continue;
+        path(DATA.parcels[i]); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  if (on("l-flag")) {
+    const COL = { merged: "--merged", vanished: "--vanished",
+                  untaxed: "--untaxed", exempt: "--exempt" };
+    // A lot already ruled on used to be struck through here, corner to corner. It read as a
+    // stray white line rather than as a mark - `--ink` is near-white in the dark theme - and it
+    // is redundant now that the 1991 layer colours every settled lot in its own right.
+    // Same rule as everywhere else: a lot that is part of a property does not get its own
+    // outline, or the property comes apart again. Two of the three Grade School lots are
+    // flagged `vanished`, so this layer alone was enough to put the internal lines back.
+    const grouped = new Set();
+    if (on("l-1991")) {
+      for (const [k, e] of Object.entries(VERDICTS))
+        if ((e.property || "").trim()) grouped.add(+k);
+    }
+    for (const [pid, why] of Object.entries(DATA.disagree || {})) {
+      const i = +pid;
+      if (settled(i)) continue;                 // ruled on: no longer a disagreement
+      const b = pBox[i];
+      if (!b || sx(b[2]) < 0 || sx(b[0]) > W || sy(b[3]) < 0 || sy(b[1]) > H) continue;
+      const c = css(COL[why] || "--flag");
+      path(DATA.parcels[i]);
+      ctx.fillStyle = c + "3A";
+      ctx.fill();
+      if (!grouped.has(i)) {
+        ctx.strokeStyle = c;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+    }
+  }
+
+  if (on("l-bldg")) {
+    const showOut = on("l-out");
+    const square = on("l-sq");
+
+    // A FOOTPRINT YOUR OWN RULING RULES OUT IS NOT DRAWN. These outlines are 2016 imagery, so
+    // on a lot you have said was VACANT in 1991 the building is simply later than the town
+    // being looked at, and on a lot you have said did not EXIST it is later still. Neither is
+    // evidence about 1991 and both make the map read as though they were.
+    //
+    // `unsure` keeps its buildings: not knowing is not the same as knowing it was empty.
+    const ruledOut = new Set();
+    if (on("l-1991")) {
+      for (const [k, e] of Object.entries(VERDICTS))
+        if (e.was === "vacant" || e.was === "absent") ruledOut.add(+k);
+    }
+    for (const b of DATA.buildings) {
+      if (b.role === "outbuilding" && !showOut) continue;
+      if (ruledOut.has(b.p)) continue;
+      const col = css(ZONE_COLOR[OCC_ZONE[b.occ] || "unclassified"]);
+      // Cull on the whole footprint, not on its first corner. Culling on b.r[0] made a
+      // building vanish whenever that one corner left the view, which on a page used to check
+      // the data is the worst possible bug: it looks like the building is not there.
+      const bb = bbox(b);
+      if (sx(bb[2]) < -20 || sx(bb[0]) > W + 20 || sy(bb[3]) < -20 || sy(bb[1]) > H + 20) continue;
+      path(square ? squared(b) : b.r);
+      ctx.fillStyle = col + (b.role === "primary" ? "CC" : "77");
+      ctx.fill();
+      if (s > 0.25) {
+        ctx.strokeStyle = col; ctx.lineWidth = b.role === "primary" ? 1 : .7;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // WHAT WAS RULED ON, and where several lots are one property, drawn as one property.
+  //
+  // A shared name that shows up nowhere on the map is not really a grouping - the school still
+  // reads as three lots. So the lots of a property are filled together and wrapped in a single
+  // hull with the name written across it: three parcels, one building, one outline.
+  if (on("l-1991") && Object.keys(VERDICTS).length) {
+    const COL = { built: "--was-built", vacant: "--was-vacant", unsure: "--was-unsure" };
+    const groups = new Map();
+
+    for (const [k, e] of Object.entries(VERDICTS)) {
+      const i = +k;
+      const b = pBox[i];
+      if (!b || !DATA.parcels[i]) continue;
+      if (e.was === "absent") continue;      // drawn as a ghost by the lot-lines layer
+      const col = css(COL[e.was] || "--was-unsure");
+      const name = (e.property || "").trim();
+      if (!(sx(b[2]) < -30 || sx(b[0]) > W + 30 || sy(b[3]) < -30 || sy(b[1]) > H + 30)) {
+        path(DATA.parcels[i]);
+        ctx.fillStyle = col + "44";
+        ctx.fill();
+        // A LOT INSIDE A PROPERTY GETS NO OUTLINE OF ITS OWN. Suppressing the county lot-lines
+        // layer was not enough: THIS layer was drawing each lot's own boundary right back on
+        // top, so the school still read as three lots with a ring round them. The property's
+        // dissolved edge below is the only outline it gets.
+        if (!name) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+      }
+      if (name) {
+        if (!groups.has(name)) groups.set(name, []);
+        groups.get(name).push(i);
+      }
+    }
+
+    for (const [name, ids] of groups) {
+      const polys = ids.map(i => DATA.parcels[i]).filter(Boolean);
+      if (!polys.length) continue;
+
+      const edges = dissolveEdges(polys);
+      ctx.strokeStyle = css("--ink");
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (const [a, b] of edges) {
+        ctx.moveTo(sx(a[0]), sy(a[1]));
+        ctx.lineTo(sx(b[0]), sy(b[1]));
+      }
+      ctx.stroke();
+
+      let cx = 0, cy = 0, n = 0;
+      for (const poly of polys) for (let i = 0; i < poly.length - 1; i++) { cx += poly[i][0]; cy += poly[i][1]; n++; }
+      if (!n) continue;
+      cx /= n; cy /= n;
+      const px = sx(cx), py = sy(cy);
+      if (px > -120 && px < W + 120 && py > -40 && py < H + 40 && view.s > 0.5) {
+        const label = name + (ids.length > 1 ? `  (${ids.length} lots)` : "");
+        ctx.font = "600 12px 'Segoe UI', system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = css("--paper");
+        ctx.strokeText(label, px, py);
+        ctx.fillStyle = css("--ink");
+        ctx.fillText(label, px, py);
+        ctx.textAlign = "left";
+      }
+    }
+  }
+
+  // THE LOT BEING EDITED IS RED. It was drawn in --lot-hi, which is the ordinary ink colour,
+  // so on a map already carrying six coloured layers it was not findable by eye - and the one
+  // outline that has to be findable is the lot whose record is open. Unsaved work makes it
+  // heavier still, so a pending change is visible on the MAP and not only in the panel.
+  if (sel >= 0) {
+    const pending = dirtyOn === sel;
+    strokeProperty(propertyOf(sel).ids, css("--editing"), pending ? 3.5 : 2.5);
+  }
+  if (hover >= 0 && hover !== sel) {
+    const h = propertyOf(hover);
+    if (!h.ids.includes(sel)) strokeProperty(h.ids, css("--lot-hi") + "80", 1.5);
+  }
+
+  // Labels only once a lot is wide enough to hold one, and drawn with a halo of the ground
+  // colour so a house number over a footprint stays readable. At the first zoom that showed
+  // them they ran into each other and the block turned into a smear of digits.
+  if (on("l-addr") && s > 1.8) {
+    ctx.font = '10px ui-monospace, Consolas, Menlo, monospace';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineWidth = 3; ctx.strokeStyle = css("--paper");
+    ctx.fillStyle = css("--ink");
+    for (let i = 0; i < DATA.parcels.length; i++) {
+      const c = DATA.county[i]; if (!c || !c.addr) continue;
+      const b = pBox[i];
+      if ((b[2] - b[0]) * s < 44) continue;
+      const cx = sx((b[0] + b[2]) / 2), cy = sy(b[3]) - 9;   // at the lot's own end, off the house
+      if (cx < 0 || cx > W || cy < 0 || cy > H) continue;
+      ctx.strokeText(c.addr, cx, cy);
+      ctx.fillText(c.addr, cx, cy);
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  }
+
+  // Scale bar: pick a round number of feet that fits in about 110 px.
+  const ftPerPx = 3.28084 / s;
+  const want = 110 * ftPerPx;
+  const steps = [10, 25, 50, 100, 200, 500, 1000, 2000, 5280];
+  const pick = steps.find(v => v >= want) || 5280;
+  document.querySelector("#scale .bar").style.width = (pick / ftPerPx) + "px";
+  document.getElementById("scale-t").textContent =
+    pick >= 5280 ? "1 mile" : pick + " ft";
+}
+
+// ---- picking -------------------------------------------------------------------------
+function inside(x, y, ring) {
+  let hit = false;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x0, y0] = ring[i], [x1, y1] = ring[i + 1];
+    if ((y0 > y) !== (y1 > y)) {
+      const xi = x0 + (y - y0) / (y1 - y0) * (x1 - x0);
+      if (x < xi) hit = !hit;
+    }
+  }
+  return hit;
+}
+function pick(px, py) {
+  const x = wx(px), y = wy(py);
+  let best = -1, bestArea = Infinity;
+  // A lot that has been removed is not there to be clicked either, unless it is being shown
+  // on purpose - otherwise the ground still behaves like a lot and nothing looks removed.
+  const hidden = (i) => {
+    if (!on("l-1991") || on("l-absent")) return false;
+    const e = VERDICTS[i] || VERDICTS[String(i)];
+    return e && e.was === "absent";
+  };
+  for (let i = 0; i < DATA.parcels.length; i++) {
+    if (hidden(i)) continue;
+    const b = pBox[i];
+    if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) continue;
+    if (!inside(x, y, DATA.parcels[i])) continue;
+    const a = (b[2] - b[0]) * (b[3] - b[1]);
+    if (a < bestArea) { bestArea = a; best = i; }   // smallest lot wins, so a town lot beats the farm around it
+  }
+  return best;
+}
+
+// ---- detail panel --------------------------------------------------------------------
+const M2_FT2 = 10.7639, AC = 4046.86;
+const fmt = n => n.toLocaleString("en-US");
+
+function ringArea(r) {
+  let a = 0;
+  for (let i = 0; i < r.length - 1; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1];
+  return Math.abs(a) / 2;
+}
+
+function show(i) {
+  // Leaving a lot with uncommitted changes would drop them silently, which is the same fault
+  // as saving silently, pointed the other way.
+  if (dirtyOn >= 0 && dirtyOn !== i) {
+    const keep = confirm(
+      `Parcel ${dirtyOn} has unsaved changes.
+
+OK to discard them and move on, or Cancel to go back and press Save.`);
+    if (!keep) return;
+    dirtyOn = -1;
+  }
+  sel = i;
+  const prop = propertyOf(i);
+  const many = prop.ids.length > 1;
+
+  // The whole property, gathered: its lots, its buildings, its ground. Reading one parcel's
+  // record while looking at a three-parcel school is how the map ends up disagreeing with
+  // itself about what is there.
+  const c = DATA.county[i] || {};
+  const bl = [];
+  for (const k of prop.ids) for (const b of (byParcel.get(k) || [])) bl.push(b);
+  bl.sort((a, b) => (b.sf || 0) - (a.sf || 0));
+
+  const d = document.getElementById("detail");
+  d.classList.add("on");
+  d.classList.add("editing");
+  document.getElementById("d-addr").textContent =
+    many ? prop.name : (c.addr || "unaddressed lot");
+  document.getElementById("d-pin").textContent = many
+    ? `${prop.ids.length} lots as one property · parcels ${prop.ids.join(", ")}`
+    : `parcel ${i}` + (c.cls ? ` · PIN ${DATA.county[i].pin || ""}` : "");
+
+  let lot = 0;
+  for (const k of prop.ids) lot += ringArea(DATA.parcels[k]);
+
+  // If this lot is one the two sources argue about, say so HERE - it is the moment somebody is
+  // actually looking at it and deciding what stood there.
+  const WHY = {
+    exempt:   ["a church, school or hall", "Both sources are right: a tax roll lists taxable dwellings, and this is not one."],
+    merged:   ["the downtown terrace",     "Believe the COUNTY. The imagery traces a run of joined brick as one building, so its neighbours read as empty."],
+    untaxed:  ["a building the county does not book", "The real conflict. A structure stands here and the roll calls the land vacant."],
+    vanished: ["booked, but nothing stands here", "Believe the IMAGERY. The roll books a dwelling and the photograph shows none — most likely demolished."],
+  };
+  const why = (DATA.disagree || {})[i];
+  const flag = document.getElementById("d-flag");
+  if (why && WHY[why]) {
+    flag.style.display = "block";
+    flag.innerHTML = `<b style="color:var(--ink)">${WHY[why][0]}</b><br>${WHY[why][1]}`
+      + `<br><span style="color:var(--muted)">Neither source can say what stood here in 1991 —`
+      + ` the roll starts in 2007 and the imagery is 2016.</span>`;
+  } else {
+    flag.style.display = "none";
+  }
+
+  const panel = document.getElementById("d-1991");
+  if (LIVE) {
+    panel.style.display = "block";
+    const cur = VERDICTS[i] || VERDICTS[String(i)] || null;
+    const note = document.getElementById("d-note");
+    const kind = document.getElementById("d-kind");
+    const prop = document.getElementById("d-prop");
+    const built = document.getElementById("d-built");
+
+    note.value = cur ? (cur.note || "") : "";
+    kind.value = cur ? (cur.kind || "") : "";
+    prop.value = cur ? (cur.property || "") : "";
+    saveState("clean", cur ? "on record" : "nothing recorded yet");
+
+    // Every property name already used, so a second lot of the same school is picked from a
+    // list rather than retyped - a typo would silently make it a different property.
+    const names = [...new Set(Object.values(VERDICTS).map(v => v.property).filter(Boolean))].sort();
+    document.getElementById("proplist").innerHTML =
+      names.map(n => `<option value="${esc(n)}"></option>`).join("");
+
+    const showBuilt = () => {
+      const on = panel.querySelector("button.v.on");
+      built.style.display = (on && on.dataset.v === "built") ? "block" : "none";
+      mates();
+    };
+
+    // WHICH OTHER LOTS ARE THE SAME PROPERTY. The county splits ground for its own reasons -
+    // the grade school stands on three parcels - so the answer to "what is this" is sometimes
+    // "a third of the school". Sharing the name is what joins them, and this says so out loud.
+    function mates() {
+      const host = document.getElementById("d-propmates");
+      const name = prop.value.trim();
+      if (!name) { host.textContent = ""; return; }
+      const ids = Object.keys(VERDICTS)
+        .filter(k => (VERDICTS[k].property || "").trim().toLowerCase() === name.toLowerCase())
+        .map(Number).filter(k => k !== i);
+      host.innerHTML = ids.length
+        ? `<b style="color:var(--ink)">${esc(name)}</b> also covers `
+          + ids.map(k => `<a href="#" data-go="${k}" class="mate">parcel ${k}</a>`).join(", ")
+          + ` — ${ids.length + 1} lots, one property.`
+        : `<span style="color:var(--muted)">first lot of “${esc(name)}”. Type the same name on its `
+          + `neighbours to join them.</span>`;
+      for (const a of host.querySelectorAll(".mate")) {
+        a.onclick = e => {
+          e.preventDefault();
+          const k = +a.dataset.go, b = pBox[k];
+          if (!b) return;
+          view.ox = W / 2 - (b[0] + b[2]) / 2 * view.s;
+          view.oy = H / 2 - (b[1] + b[3]) / 2 * view.s;
+          show(k);
+        };
+      }
+    }
+
+    // EDITING A PROPERTY EDITS ALL OF IT. If three lots are one school then the school is
+    // what has a kind and a name, not each third of it.
+    const push = async () => {
+      const chosen = panel.querySelector("button.v.on");
+      const verdict = chosen ? chosen.dataset.v : "";        // none chosen: clears the lot
+      for (const k of propertyOf(i).ids)
+        await saveVerdict(k, verdict, note.value, kind.value, prop.value);
+      dirtyOn = -1;
+      mates();
+      // Only once it is actually on disk does a removed lot leave the screen.
+      if (verdict === "absent" && !on("l-absent")) {
+        document.getElementById("detail").classList.remove("on");
+        sel = -1; hover = -1; draw();
+      }
+    };
+
+    for (const b of panel.querySelectorAll("button.v")) {
+      b.classList.toggle("on", !!cur && cur.was === b.dataset.v);
+      b.onclick = () => {
+        const already = b.classList.contains("on");
+        for (const o of panel.querySelectorAll("button.v")) o.classList.remove("on");
+        if (!already) b.classList.add("on");
+        showBuilt();
+        dirtyOn = i;
+        saveState("dirty", "unsaved — press Save");
+      };
+    }
+    const dirty = () => { dirtyOn = i; saveState("dirty", "unsaved — press Save"); };
+    note.oninput = dirty;
+    kind.oninput = dirty;
+    prop.oninput = () => { dirty(); mates(); };
+    document.getElementById("d-save").onclick = push;
+    showBuilt();
+  } else {
+    panel.style.display = "none";
+  }
+
+  const rows = [];
+  rows.push([many ? "Ground, all lots" : "Lot as surveyed",
+             `${fmt(Math.round(lot * M2_FT2))} sq ft · ${(lot / AC).toFixed(2)} ac`]);
+  if (many) {
+    const classes = [...new Set(prop.ids.map(k => (DATA.county[k] || {}).clsname).filter(Boolean))];
+    if (classes.length) rows.push(["County classes", classes.join(", ")]);
+    let dwell = 0, any = false;
+    for (const k of prop.ids) {
+      const cc = DATA.county[k] || {};
+      if (cc.dwell !== undefined) { dwell += cc.dwell; any = true; }
+    }
+    if (any) {
+      rows.push(["Assessed dwelling", "$" + fmt(dwell)]);
+      rows.push(["Implied market", "$" + fmt(dwell * 3)]);
+    }
+  } else {
+    if (c.clsname) rows.push(["County class", c.clsname]);
+    if (c.occ) rows.push(["Occupancy", c.occ]);
+    if (c.o65) rows.push(["Over-65 exemption", "claimed"]);
+    if (c.dwell !== undefined) {
+      rows.push(["Assessed dwelling", "$" + fmt(c.dwell)]);
+      rows.push(["Implied market", "$" + fmt(c.dwell * 3)]);
+    }
+  }
+  document.getElementById("d-county").innerHTML =
+    rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+
+  const host = document.getElementById("d-bldgs");
+  if (!bl.length) {
+    const booked = (c.dwell || 0) > 0;
+    host.innerHTML = `<p class="note" style="margin-top:12px">No footprint found on this lot.${
+      booked ? " <b>The assessor books a dwelling here</b> — one of the two sources is wrong." : ""}</p>`;
+    draw(); return;
+  }
+  const ruled = (VERDICTS[i] || VERDICTS[String(i)] || {}).was;
+  const later = ruled === "vacant" || ruled === "absent";
+  host.innerHTML = `<p class="eyebrow" style="margin:16px 0 0">${bl.length} structure${bl.length > 1 ? "s" : ""} on this lot`
+    + (later ? ` <span style="color:var(--flag)">— later than 1991, by your ruling</span>` : "")
+    + `</p>` +
+    bl.map(b => {
+      const cover = (ringArea(b.r) / lot) * 100;
+      const perFt = (c.dwell && b.role === "primary" && b.sf) ? Math.round(c.dwell * 3 / b.sf) : null;
+      return `<div class="bldg ${b.role === "outbuilding" ? "outb" : ""}">
+        <div class="t">${b.prim || b.occ}</div>
+        <div class="m">${b.addr ? b.addr.toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) : "no address on record"}</div>
+        <dl>
+          <dt>Footprint</dt><dd>${fmt(b.sf)} sq ft</dd>
+          <dt>Covers</dt><dd>${cover.toFixed(0)}% of lot</dd>
+          ${perFt ? `<dt>Market ÷ footprint</dt><dd>$${perFt}/sq ft</dd>` : ""}
+          <dt>Role</dt><dd><span class="chip ${b.role}">${b.role}</span></dd>
+        </dl></div>`;
+    }).join("");
+  draw();
+}
+
+document.getElementById("close").onclick = () => {
+  document.getElementById("detail").classList.remove("on"); sel = -1; draw();
+};
+
+// ---- interaction ---------------------------------------------------------------------
+let drag = null;
+cv.addEventListener("pointerdown", e => {
+  drag = { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy, moved: false };
+  cv.setPointerCapture(e.pointerId); cv.classList.add("drag");
+});
+cv.addEventListener("pointermove", e => {
+  const r = cv.getBoundingClientRect();
+  if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    view.ox = drag.ox + dx; view.oy = drag.oy + dy;
+    draw();
+  } else {
+    const h = pick(e.clientX - r.left, e.clientY - r.top);
+    if (h !== hover) { hover = h; draw(); }
+  }
+});
+cv.addEventListener("pointerup", e => {
+  const r = cv.getBoundingClientRect();
+  if (drag && !drag.moved) {
+    const i = pick(e.clientX - r.left, e.clientY - r.top);
+    if (i >= 0) show(i);
+  }
+  drag = null; cv.classList.remove("drag");
+});
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  const before = [wx(px), wy(py)];
+  const k = Math.exp(-e.deltaY * 0.0016);
+  view.s = Math.min(14, Math.max(0.05, view.s * k));
+  view.ox = px - before[0] * view.s;
+  view.oy = py - before[1] * view.s;
+  draw();
+}, { passive: false });
+
+for (const id of ["l-lot","l-newroad","l-alleyline","l-bldg","l-out","l-sq","l-flag","l-1991","l-absent","l-addr"])
+  document.getElementById(id).addEventListener("change", draw);
+
+document.getElementById("reset").onclick = () => { fitView(); draw(); };
+
+// ---- search --------------------------------------------------------------------------
+const idx = [];
+for (let i = 0; i < DATA.parcels.length; i++) {
+  const c = DATA.county[i];
+  idx.push({ i, s: ((c && c.addr) ? c.addr : "") + " parcel " + i });
+}
+document.getElementById("q").addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  const host = document.getElementById("hits");
+  if (q.length < 2) { host.innerHTML = ""; return; }
+  const hits = idx.filter(r => r.s.toLowerCase().includes(q)).slice(0, 24);
+  host.innerHTML = hits.map(h => {
+    const c = DATA.county[h.i];
+    return `<button data-i="${h.i}">${esc((c && c.addr) || "unaddressed")} <span style="color:var(--muted)">· ${h.i}</span></button>`;
+  }).join("") || `<p class="note">Nothing matches.</p>`;
+  for (const b of host.querySelectorAll("button")) b.onclick = () => {
+    const i = +b.dataset.i, bx = pBox[i];
+    view.s = 3.2;
+    view.ox = W / 2 - (bx[0] + bx[2]) / 2 * view.s;
+    view.oy = H / 2 - (bx[1] + bx[3]) / 2 * view.s;
+    show(i);
+  };
+});
+
+// ---- go ------------------------------------------------------------------------------
+// EVERY FIGURE BELOW COMES OUT OF DATA.stats, which build-viewer-data.py computes from the
+// same arrays this page draws. Nothing here is typed in. See tools/viewer-stats.py.
+const ST = DATA.stats || {};
+const num = n => (n === undefined || n === null) ? "—" : n.toLocaleString("en-US");
+
+document.getElementById("s-built").textContent =
+  "Vermilion County · FEMA/ORNL · data built " + (ST.built || "unknown");
+document.getElementById("s-seated").textContent = num(ST.buildings);
+document.getElementById("s-inside").textContent = ST.inside_own_lot_pct + "%";
+document.getElementById("s-addr").textContent = ST.addr_pct + "%";
+document.getElementById("s-lots").textContent = num(ST.lots_built);
+
+for (const el of document.querySelectorAll(".ct")) {
+  const k = el.dataset.ct;
+  el.textContent = k === "places" ? num(DATA.places.length) : num(ST[k]);
+}
+
+document.getElementById("s-findings").innerHTML =
+  `Measured off these ${num(ST.setback_lots)} town lots, not asserted: the median house centre `
+  + `stands <b style="color:var(--ink)">${ST.setback_ft} ft</b> in from its front lot line on a lot `
+  + `<b style="color:var(--ink)">${ST.lot_depth_ft} ft</b> deep and `
+  + `<b style="color:var(--ink)">${ST.lot_front_ft} ft</b> wide — pushed to the front `
+  + `(${ST.setback_frac} of the way down it, where 0.50 would be dead centre), with the back open `
+  + `behind it. Of the ${num(ST.multi_lots)} lots carrying a second structure, ${ST.behind_pct}% put `
+  + `it behind the house, a median ${ST.behind_ft} ft further back. The 1913 Sanborn sheets said `
+  + `houses sit at the front of the lot with an outbuilding at the rear; this is the first time the `
+  + `project could put numbers on it.`;
+
+document.getElementById("s-crooked").innerHTML =
+  `<b style="color:var(--ink)">The outlines are crooked, and it is the source.</b> The median house `
+  + `sits <b style="color:var(--ink)">${ST.skew_med}°</b> off square to its own lot and the worst `
+  + `tenth more than ${ST.skew_p90}° — and that is equally true in the raw download, before this `
+  + `pipeline touches it, so it is FEMA's tracing rather than the seating. Two things here were mine `
+  + `and are fixed: a 0.197% squash in the coordinate fit, and a 17 ft registration offset between `
+  + `the two agencies' data. The angle no placement can fix, so the map shows it corrected by `
+  + `default — squared to its block, which is steadier than any single lot. Untick “squared to `
+  + `their block” to see the raw tracing underneath.`;
+
+document.getElementById("s-alleynote").innerHTML =
+  `The county maps <b style="color:var(--ink)">${ST.streets_new}</b> streets and no alleys at all `
+  + `— counties map what they maintain and address from. The `
+  + `<b style="color:var(--ink)">${ST.alleys_new}</b> alleys are traced out of the parcel gaps `
+  + `instead, since a right of way is the ground nobody owns. Two of them carry real names, `
+  + `<span class="mono">ann</span> and <span class="mono">watson</span>: the county calls them `
+  + `streets, but their easement measures 33 ft and 26 ft, too narrow to pave as one. `
+  + `<b style="color:var(--ink)">Cars use the streets and not the alleys</b> — an alley is for `
+  + `the bins, the garage that faces it, and a boy on a bike.`;
+
+// ---- reviewing the disagreements, one lot at a time ---------------------------------------
+//
+// The four causes are a WORKLIST, not a picture: each one is a lot somebody has to look at and
+// decide what stood there in 1991, which neither the tax roll nor a 2016 photograph can settle
+// on its own. So the categories are clickable, and stepping through them flies the map to each
+// lot in turn with its record open.
+(() => {
+  const dc = ST.disagree_counts || {};
+  const total = Object.values(dc).reduce((a, b) => a + b, 0);
+  const ROWS = [
+    ["exempt",   "--exempt",   "a church, school or hall", "both right — a tax roll lists taxable dwellings, and these are not"],
+    ["merged",   "--merged",   "the downtown terrace",     "believe the COUNTY — the imagery traces a run of joined brick as one building"],
+    ["untaxed",  "--untaxed",  "a building on land the county calls vacant", "the real conflict; the roll may be stale"],
+    ["vanished", "--vanished", "booked, but nothing stands there", "believe the IMAGERY — most likely demolished since"],
+  ];
+
+  // Lots per cause, ordered by address so a walk through them is a walk down a street rather
+  // than a jump around the map in parcel-file order.
+  const lots = {};       // everything, so the "of N" total does not move under you
+  const open = {};       // what is left to look at
+  for (const [pid, why] of Object.entries(DATA.disagree || {})) (lots[why] ||= []).push(+pid);
+  const addrOf = i => ((DATA.county[i] || {}).addr || "");
+  for (const k of Object.keys(lots)) {
+    lots[k].sort((a, b) => {
+      const A = addrOf(a), B = addrOf(b);
+      if (!A && !B) return a - b;
+      if (!A) return 1;
+      if (!B) return -1;
+      const na = parseInt(A, 10), nb = parseInt(B, 10);
+      const sa = A.replace(/^\d+\s*/, ""), sb = B.replace(/^\d+\s*/, "");
+      return sa === sb ? (na - nb) : sa.localeCompare(sb);
+    });
+  }
+
+  const refreshOpen = () => {
+    for (const k of Object.keys(lots)) open[k] = lots[k].filter(i => !settled(i));
+  };
+  refreshOpen();
+
+  let active = null, at = 0;
+
+  const goTo = i => {
+    const b = pBox[i];
+    if (!b) return;
+    view.s = Math.max(view.s, 3.0);
+    view.ox = W / 2 - (b[0] + b[2]) / 2 * view.s;
+    view.oy = H / 2 - (b[1] + b[3]) / 2 * view.s;
+    document.getElementById("l-flag").checked = true;   // keep the context visible
+    show(i);
+  };
+
+  const render = () => {
+    document.getElementById("s-dis").innerHTML = ROWS.map(([k, col, what, verdict]) => {
+      const all = (lots[k] || []).length;
+      const n = (open[k] || []).length;
+      const on = active === k;
+      return `<div class="disrow ${on ? "on" : ""}" data-k="${k}"
+                   style="display:flex;gap:9px;align-items:flex-start;padding:6px 7px;border-radius:4px;
+                          cursor:${n ? "pointer" : "default"};
+                          background:${on ? "var(--sunk)" : "transparent"}">
+         <span class="swatch" style="background:var(${col});margin-top:4px"></span>
+         <span style="font-size:12.5px;line-height:1.35;flex:1">
+           <b class="mono">${n}</b> ${what}<br>
+           <span style="color:var(--muted);font-size:11.5px">${verdict}</span>
+           ${on ? stepper(k) : ""}
+         </span>
+       </div>`;
+    }).join("");
+
+    for (const el of document.querySelectorAll(".disrow")) {
+      el.onclick = e => {
+        if (e.target.closest(".step")) return;          // the arrows handle themselves
+        const k = el.dataset.k;
+        if (!(open[k] || []).length) return;
+        if (active === k) { step(1); return; }          // clicking again moves on
+        active = k; at = 0;
+        render();
+        goTo(open[k][0]);
+      };
+    }
+    for (const el of document.querySelectorAll(".step")) {
+      el.onclick = e => { e.stopPropagation(); step(+el.dataset.d); };
+    }
+  };
+
+  const stepper = k => {
+    const list = open[k] || [];
+    if (!list.length) {
+      return `<div style="margin-top:6px" class="mono"
+                   style="font-size:11.5px;color:var(--agri)">all settled</div>`;
+    }
+    const i = list[at];
+    const label = addrOf(i) || `parcel ${i}`;
+    return `<div style="margin-top:6px;display:flex;align-items:center;gap:6px">
+      <button class="step" data-d="-1" title="previous">‹</button>
+      <span class="mono" style="font-size:11.5px;color:var(--ink)">${at + 1} of ${list.length}</span>
+      <button class="step" data-d="1" title="next">›</button>
+      <span class="mono" style="font-size:11.5px;color:var(--muted);overflow:hidden;
+                                text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
+    </div>`;
+  };
+
+  const step = d => {
+    const list = open[active] || [];
+    if (!list.length) { render(); return; }
+    at = (at + d + list.length) % list.length;
+    render();
+    goTo(list[at]);
+  };
+
+  render();
+
+  // Re-run when a ruling is saved, so a lot leaves the list as it is decided rather than at
+  // the next reload.
+  window.__disRefresh = () => {
+    refreshOpen();
+    if (active && !(open[active] || []).length) at = 0;
+    else if (active) at = Math.min(at, Math.max(0, (open[active] || []).length - 1));
+    render();
+    const left = Object.values(open).reduce((a, b) => a + b.length, 0);
+    const el = document.querySelector('[data-ct="disagree_total"]');
+    if (el) el.textContent = left;
+  };
+  window.__disRefresh();
+
+  document.getElementById("s-disnote").innerHTML =
+    `${total} lots in all — <b style="color:var(--ink)">click a row to walk through them</b>, `
+    + `and the arrows to move on. Each one flies to the lot with its record open, so the `
+    + `question can be answered where it has to be: <i>what stood there in 1991?</i> Neither `
+    + `source can say. A tax roll is 2007 at the earliest and the imagery is 2016.`;
+  document.querySelector('[data-ct="disagree_total"]').textContent = total;
+
+  const per = ST.per_road || {};
+  document.getElementById("s-roadsum").innerHTML =
+    `A right of way is ground nobody owns, so a correct centreline should never cross a lot. `
+    + `Sampled every 4 m through the platted town, <b style="color:var(--ink)">${ST.new_pct}%</b> `
+    + `of this network does. The stubborn ones:`;
+  const bad = Object.entries(per).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const host = document.getElementById("s-roadbad");
+  host.innerHTML = bad.length
+    ? bad.map(([n, v]) =>
+        `<div class="mono" style="font-size:11.5px;display:flex;justify-content:space-between;padding:2px 0">
+           <span>${esc(n)}</span><span style="color:${v >= 5 ? "var(--flag)" : "var(--muted)"}">${v}%</span>
+         </div>`).join("")
+    : `<p class="note">None — every road sits clear of the lots.</p>`;
+})();
+
+// ---- never show a stale map -------------------------------------------------------------
+//
+// Served by tools/serve-viewer.py, which answers /__version with the page's own mtime. Poll
+// it, and reload when it moves: rebuild the map and this browser follows within two seconds.
+//
+// GUARDED, because this same file is also published as an artifact and opened straight off
+// the filesystem, and in neither of those is there a server to ask. It only polls a loopback
+// http origin, and it gives up permanently after a few failures rather than retrying at 2 Hz
+// for ever against something that is never going to answer.
+(() => {
+  const local = (location.protocol === "http:" || location.protocol === "https:")
+             && (location.hostname === "127.0.0.1" || location.hostname === "localhost");
+  if (!local) return;
+
+  // GIVING UP IS ONLY RIGHT IF THERE WAS NEVER A SERVER. The first version stopped after five
+  // misses full stop, and restarting the server - which happens every time it gains a feature -
+  // killed the auto-reload in whatever tab was already open. It went stale AND stopped watching,
+  // which is the worst of both. So: never connected, give up quietly; connected once and now
+  // failing, the server is restarting, so keep asking at a slower rate and recover by itself.
+  let seen = null, misses = 0, everConnected = false;
+  const tick = async () => {
+    let wait = 2000;
+    try {
+      const r = await fetch("/__version", { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      const v = (await r.text()).trim();
+      misses = 0;
+      // NEVER RELOAD OVER UNSAVED WORK. The map refreshing itself is a convenience; throwing
+      // away a ruling somebody has typed and not yet saved is not a trade worth making.
+      if (dirtyOn >= 0) {
+        saveState("dirty", "unsaved — press Save (the map will refresh after)");
+        everConnected = true;
+        if (seen === null) seen = v;
+        setTimeout(tick, 2000);
+        return;
+      }
+      if (!everConnected && seen !== null) location.reload();   // came back after an outage
+      everConnected = true;
+      if (seen === null) { seen = v; }
+      else if (v !== seen) {
+        const [pageNow, rulesNow] = v.split(":");
+        const [pageWas, rulesWas] = seen.split(":");
+        seen = v;
+        // A rebuilt page needs a reload; rulings changed on disk only need re-reading, which
+        // keeps the view where it is. A tool that edits the rulings - merge-back-strips.py -
+        // now shows up on an open map within two seconds without disturbing it.
+        if (pageNow !== pageWas) { location.reload(); return; }
+        if (rulesNow !== rulesWas) loadVerdicts();
+      }
+    } catch (e) {
+      misses++;
+      if (!everConnected && misses >= 5) return;   // nothing was ever listening here
+      if (everConnected && misses >= 3) { everConnected = false; }
+      wait = misses > 3 ? 5000 : 2000;             // ease off while it is down
+    }
+    setTimeout(tick, wait);
+  };
+  setTimeout(tick, 2000);
+})();
+
+new ResizeObserver(() => { const had = view.s !== 1; resize(); if (!had) fitView(); draw(); }).observe(cv);
+addEventListener("beforeunload", e => {
+  if (dirtyOn < 0) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+resize(); fitView(); draw();
+loadVerdicts();
+</script>

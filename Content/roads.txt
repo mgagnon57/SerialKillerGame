@@ -1,0 +1,323 @@
+# ============================================================================
+#  THE ROADS OF ROSSVILLE, FROM SURVEY RATHER THAN FROM A RULER
+#
+#  DERIVED AND RE-RUNNABLE - build with tools/build-roads.py. This file does NOT
+#  replace the road lines in city.txt; nothing reads it yet. It is the proposal, and
+#  the numbers that justify it are below.
+#
+#  WHAT WAS WRONG. 32 of city.txt's 37 road lines are two points - a straight line
+#  ruled from one side of the town to the other. Attica Street is `0,1353 2099,1353`.
+#  The 2026-08-04 refit slid each of them bodily onto the nearest parcel-free strip,
+#  which is the most a rigid shift can do and no help at all to a road whose SHAPE is
+#  wrong - Harrison turns 15.4 degrees at Benton and a straight line cannot.
+#
+#  SOURCES, one per class of road:
+#
+#    STREETS - Vermilion County's own centreline layer, 146 segments over Rossville,
+#    on the same ArcGIS server that gave us the parcels and the property records. Real
+#    surveyed geometry, with address ranges and ZIP 60963 attached. Segments are
+#    chained into continuous runs here, since the layer cuts them at every junction.
+#
+#    ALLEYS - derived from the parcel gaps by tools/derive-alleys.py, because no county
+#    maps its alleys. A right of way is the ground nobody owns, so the alley is already
+#    in the survey as an absence and only needs tracing out of it.
+#
+#    CHICAGO STREET - copied from city.txt untouched. It is authored, the owner
+#    corrected it personally, and SOURCES-OF-TRUTH.md says it is never regenerated.
+#    The measurement backs the ruling: the authored curve runs on private land 0.0% of
+#    the time and the county's own Route 1 line manages 3.4%, so replacing it would be
+#    a downgrade. Route 1 is dropped as redundant - it is the same road.
+#
+#  HOW GOOD IS IT. Sampled every 4 m through the platted town, share of centreline
+#  running across somebody's lot - which for a public right of way should be zero:
+#
+#    city.txt as it stands     9.0%
+#    this file                 1.6%
+#
+#  NAMES. The county spells McKibben as `McKidden`; this project's spelling is kept.
+#  The county also carries the west-of-Route-1 names the research already predicted -
+#  Park, Perry, Stufflebeam, Smith, Watson - as real addressed streets, so they are
+#  here as roads in their own right rather than as continuations.
+#
+#  TWO WIDTHS, DO NOT CONFUSE THEM. The number on a road line is the CORRIDOR the road
+#  kit is built to and VillageParser pins to the class - alley 4, street 10, mainroad
+#  30 - and declaring any other value is a parse error. The measured RIGHT OF WAY is a
+#  different quantity, written in the trailing comment: 20.0 m for a street, 6.0 m for
+#  an alley, taken off the parcel gaps. The right of way is what the town has; the
+#  corridor is what the tiles draw.
+#
+#  THREE WIDTHS, NESTED, AND ONLY THE MIDDLE ONE IS THE ROAD:
+#    easement  the public land - the gap the lots leave. Measured off the parcels.
+#              A Rossville street has 66 ft of it, the same as its main roads.
+#    corridor  what the road kit paves: asphalt plus its pavements. Pinned to the class
+#              at 33 ft for a street and 13 ft for an alley. Written on the road line.
+#    asphalt   measured off the tile mesh at build time by CityStreets, inside that.
+#  So a street leaves roughly 16 ft each side of public ground that is not road - verge,
+#  utilities, and a walk WHERE THERE IS ONE. Which roads have a sidewalk is not recorded
+#  here and is not known per road: the downtown photographs show a concrete walk set back
+#  behind a grass verge on Chicago Street, and nothing establishes it street by street.
+#  The easement is what a later pass needs to lay one without crossing a lot line.
+#
+#  FORMAT  road <name> <corridor width, metres> x,y x,y ...   then an indented class
+#          and, where it could be measured, an easement in metres.
+#  Village metres, the same frame as parcels.txt and city.txt.
+# ============================================================================
+
+road 3550north 10 0,1298 457,1324   # county, right of way 30.0 m measured, county classes it mainroad
+  class street
+  easement 30.0
+
+road abner 10 510,1589 509,1483   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road ann 4 691,1587 690,1431   # county, right of way 10.0 m measured, county classes it street
+  class alley
+  easement 10.0
+
+road attica 10 457,1324 974,1352 2100,1367   # county, right of way 20.0 m measured, county classes it mainroad
+  class street
+  easement 20.0
+
+road benton 10 686,1149 824,1102 1435,1095 1775,1093   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road church 10 970,849 980,2101   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road creative 10 1404,1358 1515,1531   # county, right of way 19.7 m measured
+  class street
+  easement 19.7
+
+road dale 10 882,1982 1351,1978   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road earl 10 1338,2226 1038,2223   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road gilbert 10 838,1605 1428,1600   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road goodwine 10 1531,1360 1530,1220   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road green 10 642,1018 771,977 1034,974 1062,961 1436,966   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+road green 10 1627,1210 1625,1094   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road greenwood 10 885,2036 277,2024   # county, right of way 15.2 m measured
+  class street
+  easement 15.2
+
+road grove 10 1303,1475 1347,1592 1352,2168 1351,2179 1336,2234 1334,2246 1333,2259 1333,2289   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+road grove 10 1344,1357 1340,845   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road harrison 10 833,1102 832,724   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+road harrison 10 900,1348 831,1102   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road henderson 10 587,852 1340,845   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road holmes 10 866,1227 1192,1225   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+road holmes 10 1227,1223 1530,1220   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road maple 10 797,1481 1303,1475   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road mckibben 10 874,1857 1586,1850   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road park 10 797,1481 509,1483   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road perry 10 822,1557 773,1577 750,1583 727,1587 510,1589   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road railroad 10 1389,1600 1547,1850   # county, right of way 18.9 m measured
+  class street
+  easement 18.9
+
+road smith 10 695,851 694,667   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road stewart 10 866,1731 1468,1725   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road stufflebeam 10 866,1733 692,1732 374,1729   # county, right of way 10.0 m measured
+  class street
+  easement 10.0
+
+road summit 10 1116,1099 1158,1171 1168,2287   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+road summit 10 1156,1098 1154,784   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road thompson 10 890,2100 1352,2103   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road watson 4 692,1732 693,1871 578,1873   # county, right of way 8.0 m measured, county classes it street
+  class alley
+  easement 8.0
+
+road york 10 545,727 832,724   # county, right of way 20.0 m measured
+  class street
+  easement 20.0
+
+road chicago 10 313,0 370,177 465,470 592,855 674,1109 746,1332 775,1423 798,1491 838,1607 856,1687 862,1740 871,1876 880,2049 898,2399   # authored, right of way 13.4 m measured, county classes it mainroad
+  class street
+  easement 13.4
+
+road alley1 4 992,1918 1064,1917 1124,1918 1149,1916 1178,1916 1335,1916 1364,1914 1445,1914 1464,1914 1619,1912   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley2 4 760,1138 804,1270 812,1274 832,1276 822,1291 813,1300 823,1330 832,1358 849,1408 853,1416 959,1416 988,1416 1020,1414 1109,1414 1145,1414   # parcels, right of way 5.7 m measured
+  class alley
+  easement 5.7
+
+road alley3 4 900,2046 913,2044 964,2044 993,2044 1021,2044 1104,2044 1121,2042 1150,2042 1179,2042 1214,2042 1231,2042 1321,2042 1336,2040   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley4 4 991,1792 1036,1792 1053,1792 1148,1792 1177,1790 1334,1790   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley5 4 990,1666 1147,1666 1176,1666 1188,1664 1277,1664 1293,1664 1333,1664   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley6 4 1357,1284 1489,1284 1515,1282 1544,1282 1615,1282 1620,1283 1624,1290 1625,1298 1626,1344   # parcels, right of way 4.5 m measured
+  class alley
+  easement 4.5
+
+road alley7 4 897,1290 958,1290 987,1290 1144,1288   # parcels, right of way 4.5 m measured
+  class alley
+  easement 4.5
+
+road alley8 4 1152,2158 940,2156 907,2156   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley9 4 900,862 901,960 901,988 901,1056 902,1086   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley10 4 295,1298 300,1299 306,1300 365,1305 490,1312   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley11 4 676,1428 602,1429 578,1428 563,1430 501,1430   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley12 4 1180,2158 1207,2158 1337,2160   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley13 4 295,1330 339,1330 451,1336   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley14 4 989,1540 1090,1540 1107,1540 1146,1540   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley15 4 523,1536 535,1536 675,1534   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley16 4 1137,1162 1014,1162 986,1164   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley17 4 1190,1160 1327,1160   # parcels, right of way 4.5 m measured
+  class alley
+  easement 4.5
+
+road alley18 4 1312,1538 1217,1538 1200,1540 1175,1540   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley19 4 960,1542 832,1542   # parcels, right of way 4.5 m measured
+  class alley
+  easement 4.5
+
+road alley20 4 1491,1788 1465,1788 1375,1788 1363,1790   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley21 4 1463,1108 1451,1122 1448,1137 1446,1143 1440,1151 1433,1154 1426,1157 1418,1158 1356,1158   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley22 4 862,1164 957,1164   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley23 4 961,1668 871,1668   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley24 4 1065,1078 1064,1036 985,1038   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley26 4 962,1792 941,1794 884,1794   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley27 4 963,1918 892,1920   # parcels, right of way 6.0 m measured
+  class alley
+  easement 6.0
+
+road alley28 4 846,788 858,786 913,786   # parcels, right of way 4.5 m measured
+  class alley
+  easement 4.5
+
+road alley29 4 688,1350 688,1418   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley30 4 1329,1284 1313,1286 1269,1286   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley31 4 1412,1662 1362,1664   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
+
+road alley32 4 647,1272 645,1320   # parcels, right of way 4.0 m measured
+  class alley
+  easement 4.0
