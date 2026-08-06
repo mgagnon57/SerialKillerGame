@@ -92,8 +92,9 @@ namespace Noir.Unity
         public static IReadOnlyList<int> OneProperty(int parcelId)
         {
             Load();
-            var name = PropertyOf(parcelId);
-            if (name.Length > 0 && _byProperty.TryGetValue(name, out var lots)) return lots;
+            var name = PropertyOf(parcelId).Trim();
+            if (name.Length > 0 && _byProperty.TryGetValue(name.ToLowerInvariant(), out var lots))
+                return lots;
             return new[] { parcelId };
         }
 
@@ -164,12 +165,17 @@ namespace Noir.Unity
                 }
             }
 
+            // KEYED CASE-INSENSITIVELY AND TRIMMED, because the browser map joins them that way
+            // and the two must agree about what is one property. Typing "grade school" on a
+            // fourth lot has to join the school, not start a second one that looks identical in
+            // the file and behaves differently on the map.
             foreach (var kv in _byParcel)
             {
-                var name = kv.Value.Property;
+                var name = kv.Value.Property.Trim();
                 if (name.Length == 0) continue;
-                if (!_byProperty.TryGetValue(name, out var lots))
-                    _byProperty[name] = lots = new List<int>();
+                var key = name.ToLowerInvariant();
+                if (!_byProperty.TryGetValue(key, out var lots))
+                    _byProperty[key] = lots = new List<int>();
                 lots.Add(kv.Key);
             }
             // Ascending, so SpokesmanFor is the same lot every load. Dictionary order is not.

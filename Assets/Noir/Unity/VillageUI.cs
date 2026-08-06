@@ -1707,8 +1707,13 @@ namespace Noir.Unity
 
             // Nothing while a panel is open on the SAME lot - the inspector already says all of
             // this and more, an arm's length away, and two copies of one address is clutter.
+            // ACROSS THE WHOLE PROPERTY. The panel open on the grade school describes all three
+            // of its lots, so pointing at another of them is pointing at what the panel already
+            // says - comparing lot ids popped the tip up over a lot the inspector was already
+            // open on.
             if (_host.SelectedParcel.HasValue
-                && _host.SelectedParcel.Value.Id == hovered.Value.Id) return;
+                && Rulings.SpokesmanFor(_host.SelectedParcel.Value.Id)
+                   == Rulings.SpokesmanFor(hovered.Value.Id)) return;
 
             var parcel = hovered.Value;
             var county = CountyRecord.For(parcel.Id);

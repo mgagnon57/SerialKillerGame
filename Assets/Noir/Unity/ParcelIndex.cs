@@ -158,10 +158,19 @@ namespace Noir.Unity
         /// Safe to ask about any edge of any lot: an ungrouped lot has no interior edges, so this
         /// is false for the 771 lots that are their own property.
         ///
-        /// Matching is on the vertices at centimetre precision. Checked against the real county
-        /// geometry, all 23 multi-lot properties share their interior edges exactly - the same
-        /// 60 edges match at whole metres as at thousandths - so this is a lookup, not a
-        /// tolerance search for nearly-parallel lines.
+        /// THE SAME DISSOLVE THE BROWSER MAP DOES, deliberately - see dissolveEdges in
+        /// tools/viewer-template.html. An edge with the property on BOTH sides is internal; an
+        /// edge with it on one side is the outer boundary. Decided by stepping half a metre off
+        /// the edge either way and asking whether that point is still inside some lot of the
+        /// group, which needs no shared vertices between neighbours.
+        ///
+        /// Matching the two matters more than it looks. Vertex matching was the first cut here
+        /// and it agrees with this on today's data - all 23 properties happen to share their
+        /// interior vertices exactly - but cadastral lots frequently draw the same boundary with
+        /// different vertex counts on either side, and the first grouping that did would have
+        /// silently failed to merge in the game while merging correctly in the tool the ruling
+        /// was made in. A rule that works until the data changes shape is not the rule the owner
+        /// is looking at.
         /// </summary>
         public static bool SharedInsideOneProperty(Vector2 a, Vector2 b)
         {
@@ -187,7 +196,19 @@ namespace Noir.Unity
                 var lots = kv.Value;
                 if (lots.Count < 2) continue;
 
-                // An edge belonging to two different lots of the same property is between them.
+                var rings = new List<Vector2[]>(lots.Count);
+                foreach (int id in lots)
+                {
+                    var p = ById(id);
+                    if (p != null) rings.Add(p.Value.Points);
+                }
+
+                // TWO TESTS, AND AN EDGE IS INTERIOR IF EITHER SAYS SO. Neither is a superset of
+                // the other on the real county geometry: the step test misses an edge whose
+                // neighbour is thinner than DissolveStep, where standing half a metre off lands
+                // outside the group entirely, and the vertex test misses a boundary the two lots
+                // drew with different vertex counts. Taking both costs one extra pass over a few
+                // hundred edges and cannot merge less than either alone.
                 var owner = new Dictionary<(int, int, int, int), int>();
                 foreach (int id in lots)
                 {
@@ -201,8 +222,36 @@ namespace Noir.Unity
                         else owner[key] = id;
                     }
                 }
+
+                foreach (var ring in rings)
+                for (int i = 0; i < ring.Length; i++)
+                {
+                    var a = ring[i];
+                    var b = ring[(i + 1) % ring.Length];
+                    var d = b - a;
+                    float len = d.magnitude;
+                    if (len < 0.01f) continue;
+
+                    var mid = (a + b) * 0.5f;
+                    var step = new Vector2(-d.y / len, d.x / len) * DissolveStep;
+
+                    bool left = false, right = false;
+                    foreach (var q in rings)
+                    {
+                        if (!left && Inside(q, mid + step)) left = true;
+                        if (!right && Inside(q, mid - step)) right = true;
+                        if (left && right) break;
+                    }
+                    if (left && right) _interior.Add(EdgeKey(a, b));
+                }
             }
         }
+
+        /// <summary>How far off an edge to stand when asking which property is on that side. Half
+        /// a metre, the same as the browser map's own dissolve - wide enough to clear the slivers
+        /// between two lots drawn from separate surveys, narrow enough that no real lot is that
+        /// thin.</summary>
+        private const float DissolveStep = 0.5f;
 
         /// <summary>A segment's identity, direction-free, so the same edge read from either of the
         /// two lots that share it produces the same key.</summary>

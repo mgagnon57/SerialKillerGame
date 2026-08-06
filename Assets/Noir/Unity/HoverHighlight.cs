@@ -75,9 +75,23 @@ namespace Noir.Unity
 
             _verts.Clear(); _cols.Clear(); _tangents.Clear(); _tris.Clear();
 
-            var p = hovered.Value.Points;
-            for (int i = 0; i < p.Length; i++)
-                Edge(p[i], p[(i + 1) % p.Length]);
+            // THE PROPERTY, NOT THE COUNTY'S PIECE OF IT - the rule CityOutlines draws the lot
+            // lines by, SelectionHighlight marks by, and the browser map has always hovered by.
+            // Pointing at one third of the grade school outlined that third, which contradicts
+            // the merged lot lines drawn underneath it.
+            foreach (int id in Rulings.OneProperty(hovered.Value.Id))
+            {
+                var lot = ParcelIndex.ById(id);
+                if (lot == null) continue;
+                var p = lot.Value.Points;
+                for (int i = 0; i < p.Length; i++)
+                {
+                    var a = p[i];
+                    var b = p[(i + 1) % p.Length];
+                    if (ParcelIndex.SharedInsideOneProperty(a, b)) continue;
+                    Edge(a, b);
+                }
+            }
 
             var mesh = _mf.sharedMesh;
             if (mesh == null) { mesh = new Mesh { name = "HoverHighlight" }; _mf.sharedMesh = mesh; }
