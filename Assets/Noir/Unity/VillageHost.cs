@@ -409,6 +409,10 @@ namespace Noir.Unity
                 // nothing is carefully seated and then taken down again.
                 SeatOnSurvey.Apply(layout);
 
+                // And the buildings the survey found that the map never had. Last, so it can see
+                // everything already standing and put nothing up on top of it.
+                FillFromSurvey.Apply(layout);
+
                 World = WorldBuilder.Build(layout);
 
                 var report = WorldValidator.Validate(World);

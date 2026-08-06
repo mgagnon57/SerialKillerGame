@@ -34,7 +34,7 @@ namespace Noir.Unity
     {
         /// <summary>Smallest usable footprint, in tiles. Under this there is no room for an
         /// interior to be generated and the building is better left where it was.</summary>
-        private const int Smallest = 5;
+        internal const int Smallest = 5;
 
         /// <summary>
         /// How much of its box a footprint has to fill before the box is taken at face value.
@@ -128,7 +128,7 @@ namespace Noir.Unity
         /// is what removes the parts that are not the building. The shrink is only for the case
         /// where there is no outline to do it properly.
         /// </summary>
-        private static TileRect BoxOf(ParcelBuildings.Entry e, out Tile[] outline)
+        internal static TileRect BoxOf(ParcelBuildings.Entry e, out Tile[] outline)
         {
             outline = null;
             var ring = e.Squared();
@@ -183,7 +183,7 @@ namespace Noir.Unity
         /// <summary>Whether a tile's own centre is inside the outline. The same test WorldBuilder
         /// makes, and it has to stay the same one: a door this says is inside and the stamper
         /// says is outside would be a building with no way in.</summary>
-        private static bool Covers(Tile[] ring, Tile t)
+        internal static bool Covers(Tile[] ring, Tile t)
         {
             if (ring == null || ring.Length < 3 || !t.IsValid) return false;
             float px = t.X + 0.5f, py = t.Y + 0.5f;

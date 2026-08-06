@@ -92,7 +92,8 @@ namespace Noir.Editor
                 // looking at it is the whole point of the render.
                 SurveyRoads.Apply(layout);
                 RuledAway.Apply(layout);
-                SeatOnSurvey.Apply(layout);        // the same reason: render the town the game builds
+                SeatOnSurvey.Apply(layout);
+                FillFromSurvey.Apply(layout);        // the same reason: render the town the game builds
 
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
 
@@ -162,6 +163,7 @@ namespace Noir.Editor
                 SurveyRoads.Apply(layout);      // the same reason as above
                 RuledAway.Apply(layout);
                 SeatOnSurvey.Apply(layout);
+                FillFromSurvey.Apply(layout);
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
                 Debug.Log($"[cityshot] loaded {world.Width}x{world.Height}, {world.PlaceCount} places.");
 
