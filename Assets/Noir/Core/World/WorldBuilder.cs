@@ -47,13 +47,24 @@ namespace Noir.Core.World
                 var spec = layout.Places[i];
                 var id = new PlaceId(i);
 
+                // A SHAPED BUILDING IS STAMPED AS A RECTANGLE AND THEN CUT BACK TO ITS OUTLINE,
+                // so every step below - units, interiors, doorways, furniture - goes on working
+                // in rectangles and only the silhouette changes. The ground under the rectangle
+                // is kept first, because the corners that turn out not to be the building have to
+                // go back to being whatever they were.
+                bool shaped = spec.Outline != null && spec.Outline.Length >= 3
+                              && Inside(spec.Outline, spec.Door);
+                Terrain[] under = null; TileFlags[] underFlags = null;
+                if (shaped) SnapshotUnder(grid, spec.Bounds, out under, out underFlags);
+
                 if (spec.IsBuilding) StampBuilding(grid, spec);
                 else StampOpenPlace(grid, spec);
 
                 // Claim tiles for this place so "what is this person walking into" is answerable.
                 for (int y = spec.Bounds.Y; y <= spec.Bounds.Bottom; y++)
                 for (int x = spec.Bounds.X; x <= spec.Bounds.Right; x++)
-                    grid.SetPlace(x, y, id);
+                    if (!shaped || Inside(spec.Outline, x, y))
+                        grid.SetPlace(x, y, id);
 
                 var place = new Place(id, spec.Kind, spec.Name, spec.Human,
                                       spec.Bounds, spec.Door, spec.Hours.ToArray(),
@@ -72,6 +83,9 @@ namespace Noir.Core.World
                 if (spec.IsBuilding && PlaceKindTable.Current.Row(spec.Kind).Rooms.Any)
                     StampUnits(grid, spec, place, rooms, furniture,
                                Xoshiro256ss.Substream(seed, "interior:" + place.KeySource));
+
+                // Last, so it cuts the finished building rather than a half-built one.
+                if (shaped) MaskToOutline(grid, spec, under, underFlags);
             }
 
             // Loud rather than silently wrong. Neither ceiling is reachable today; the point is
@@ -271,6 +285,135 @@ namespace Noir.Core.World
             // Carve the doorway.
             if (spec.Door.IsValid)
                 grid.Set(spec.Door.X, spec.Door.Y, Terrain.Floor, floorFlags);
+        }
+
+        // ---- shaped buildings ---------------------------------------------------------------
+        //
+        // See PlaceSpec.Outline. A building whose real footprint has been measured is stamped as
+        // its bounding rectangle, in the ordinary way, and then everything outside the outline is
+        // put back to the ground it was standing on. That order is deliberate: the interior
+        // generator, the unit slicing, the doorways and the furniture all keep working in
+        // rectangles, which is what they were written for and what the tests cover.
+
+        private static void SnapshotUnder(TileGrid grid, TileRect b,
+                                          out Terrain[] terrain, out TileFlags[] flags)
+        {
+            terrain = new Terrain[b.W * b.H];
+            flags = new TileFlags[b.W * b.H];
+            for (int y = 0; y < b.H; y++)
+            for (int x = 0; x < b.W; x++)
+            {
+                terrain[y * b.W + x] = grid.TerrainAt(b.X + x, b.Y + y);
+                flags[y * b.W + x] = grid.FlagsAt(b.X + x, b.Y + y);
+            }
+        }
+
+        private static bool Inside(Tile[] ring, Tile t) => t.IsValid && Inside(ring, t.X, t.Y);
+
+        /// <summary>Even-odd crossings, tested at the tile's own centre so a tile is either in
+        /// the building or out of it and never half.</summary>
+        private static bool Inside(Tile[] ring, int tx, int ty)
+        {
+            if (ring == null || ring.Length < 3) return true;
+            float px = tx + 0.5f, py = ty + 0.5f;
+            bool inside = false;
+            for (int i = 0, j = ring.Length - 1; i < ring.Length; j = i++)
+            {
+                float ax = ring[i].X, ay = ring[i].Y, bx = ring[j].X, by = ring[j].Y;
+                if ((ay > py) != (by > py) && px < (bx - ax) * (py - ay) / (by - ay) + ax)
+                    inside = !inside;
+            }
+            return inside;
+        }
+
+        /// <summary>
+        /// Cut a stamped rectangle back to the building's real outline.
+        ///
+        /// Three passes, and the third is the one that makes this safe to do at all:
+        ///
+        ///   OUT. Every tile outside the outline goes back to the ground that was under it.
+        ///
+        ///   SEAL. A room the outline cut through is now open to the street, so any floor that
+        ///   has come to touch the outside becomes wall. Without this a house with an L-shaped
+        ///   footprint has its back rooms standing in the garden with no wall between.
+        ///
+        ///   REACH. Cutting the shape can strand part of the interior behind the new wall. Every
+        ///   floor tile that cannot be walked to from the front door becomes wall too, so the
+        ///   building is always one connected inside with one way in - which is the property the
+        ///   town's own walkability test rests on, and it is guaranteed here rather than hoped
+        ///   for. Solid is a worse building; disconnected is a broken town.
+        /// </summary>
+        private static void MaskToOutline(TileGrid grid, PlaceSpec spec,
+                                          Terrain[] under, TileFlags[] underFlags)
+        {
+            var b = spec.Bounds;
+            var ring = spec.Outline;
+            var wallFlags = TileGrid.FlagsFor(Terrain.Wall);
+            var floorFlags = TileGrid.FlagsFor(Terrain.Floor);
+
+            var inside = new bool[b.W * b.H];
+            for (int y = 0; y < b.H; y++)
+            for (int x = 0; x < b.W; x++)
+            {
+                bool inb = Inside(ring, b.X + x, b.Y + y);
+                inside[y * b.W + x] = inb;
+                if (!inb)
+                    grid.Set(b.X + x, b.Y + y, under[y * b.W + x], underFlags[y * b.W + x]);
+            }
+
+            for (int y = 0; y < b.H; y++)
+            for (int x = 0; x < b.W; x++)
+            {
+                if (!inside[y * b.W + x]) continue;
+                if (grid.TerrainAt(b.X + x, b.Y + y) != Terrain.Floor) continue;
+                if (Edge(inside, b, x, y))
+                    grid.Set(b.X + x, b.Y + y, Terrain.Wall, wallFlags);
+            }
+
+            // The door is on the outline - SeatOnSurvey puts it there, and a spec whose door is
+            // not inside its own outline never gets here at all. Open it and walk in.
+            grid.Set(spec.Door.X, spec.Door.Y, Terrain.Floor, floorFlags);
+            ConnectFrontDoor(grid, b, spec.Door, floorFlags);
+
+            var reached = new bool[b.W * b.H];
+            var queue = new Queue<int>();
+            int start = (spec.Door.Y - b.Y) * b.W + (spec.Door.X - b.X);
+            if (start < 0 || start >= reached.Length) return;
+            reached[start] = true;
+            queue.Enqueue(start);
+            while (queue.Count > 0)
+            {
+                int at = queue.Dequeue();
+                int ax = at % b.W, ay = at / b.W;
+                for (int d = 0; d < 4; d++)
+                {
+                    int nx = ax + (d == 0 ? 1 : d == 1 ? -1 : 0);
+                    int ny = ay + (d == 2 ? 1 : d == 3 ? -1 : 0);
+                    if (nx < 0 || ny < 0 || nx >= b.W || ny >= b.H) continue;
+                    int n = ny * b.W + nx;
+                    if (reached[n]) continue;
+                    if (grid.TerrainAt(b.X + nx, b.Y + ny) != Terrain.Floor) continue;
+                    reached[n] = true;
+                    queue.Enqueue(n);
+                }
+            }
+
+            for (int y = 0; y < b.H; y++)
+            for (int x = 0; x < b.W; x++)
+            {
+                int i = y * b.W + x;
+                if (reached[i] || !inside[i]) continue;
+                if (grid.TerrainAt(b.X + x, b.Y + y) == Terrain.Floor)
+                    grid.Set(b.X + x, b.Y + y, Terrain.Wall, wallFlags);
+            }
+        }
+
+        /// <summary>Whether this inside-tile has the outside orthogonally next to it.</summary>
+        private static bool Edge(bool[] inside, TileRect b, int x, int y)
+        {
+            if (x == 0 || y == 0 || x == b.W - 1 || y == b.H - 1) return true;
+            return !inside[y * b.W + x + 1] || !inside[y * b.W + x - 1]
+                || !inside[(y + 1) * b.W + x] || !inside[(y - 1) * b.W + x];
         }
 
         /// <summary>The green, a playground, a churchyard: bounded but open ground.</summary>

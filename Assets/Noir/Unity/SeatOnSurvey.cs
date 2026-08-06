@@ -49,6 +49,11 @@ namespace Noir.Unity
         private const float LooseBox = 0.7f;
         private const float TargetFill = 0.85f;
 
+        /// <summary>Above this much of its own bounding box filled, a footprint is a rectangle and
+        /// is built as one. Handing over an outline here would cost a polygon test per tile to
+        /// arrive back at the same walls.</summary>
+        private const float Rectangular = 0.9f;
+
         public static int Apply(VillageLayout layout)
         {
             if (layout == null || ParcelBuildings.Count == 0) return 0;
@@ -67,7 +72,8 @@ namespace Noir.Unity
                 list.Add(place);
             }
 
-            var seated = new List<(PlaceSpec Place, TileRect Was, TileRect Now, Tile Door)>();
+            var seated = new List<(PlaceSpec Place, TileRect Was, TileRect Now, Tile Door,
+                                  Tile[] Outline)>();
             foreach (var pair in byLot)
             {
                 var places = pair.Value;
@@ -76,9 +82,11 @@ namespace Noir.Unity
 
                 for (int i = 0; i < places.Count && i < measured.Count; i++)
                 {
-                    var box = BoxOf(measured[i]);
+                    var box = BoxOf(measured[i], out var outline);
                     if (box.W < Smallest || box.H < Smallest) continue;
-                    seated.Add((places[i], places[i].Bounds, box, DoorFor(places[i], box)));
+                    var door = DoorFor(places[i], box, outline);
+                    if (outline != null && !Covers(outline, door)) outline = null;
+                    seated.Add((places[i], places[i].Bounds, box, door, outline));
                 }
             }
 
@@ -88,7 +96,7 @@ namespace Noir.Unity
             // the generator put it.
             seated.Sort((a, b) => b.Now.Area.CompareTo(a.Now.Area));
             var taken = new List<TileRect>(seated.Count);
-            int moved = 0, yielded = 0;
+            int moved = 0, yielded = 0, shaped = 0;
             foreach (var s in seated)
             {
                 bool clash = false;
@@ -99,18 +107,30 @@ namespace Noir.Unity
                 taken.Add(s.Now);
                 s.Place.Bounds = s.Now;
                 if (s.Door.IsValid) s.Place.Door = s.Door;
+                s.Place.Outline = s.Outline;
                 moved++;
+                if (s.Outline != null) shaped++;
             }
 
-            Debug.Log($"[survey] {moved} buildings seated on their measured footprint"
+            Debug.Log($"[survey] {moved} buildings seated on their measured footprint, "
+                    + $"{shaped} of them built to its real outline"
                     + (yielded > 0 ? $", {yielded} left alone to avoid overlapping one" : "") + ".");
             return moved;
         }
 
-        /// <summary>The measured footprint as a box in tiles, squared back to its lot first and
-        /// shrunk to a believable bulk if the outline is too diagonal for its own bounds.</summary>
-        private static TileRect BoxOf(ParcelBuildings.Entry e)
+        /// <summary>
+        /// The measured footprint as a box in tiles, squared back to its lot first - and, where
+        /// the building is not a rectangle, the outline to cut that box back to.
+        ///
+        /// A footprint filling nearly all of its own bounding box IS a rectangle, and handing one
+        /// over would cost a polygon test per tile to arrive back at the same building. Below
+        /// that, the shape is worth keeping and the box is left at full size, because the outline
+        /// is what removes the parts that are not the building. The shrink is only for the case
+        /// where there is no outline to do it properly.
+        /// </summary>
+        private static TileRect BoxOf(ParcelBuildings.Entry e, out Tile[] outline)
         {
+            outline = null;
             var ring = e.Squared();
             if (ring == null || ring.Length < 3) return new TileRect(0, 0, 0, 0);
 
@@ -125,21 +145,61 @@ namespace Noir.Unity
             if (w <= 0f || h <= 0f) return new TileRect(0, 0, 0, 0);
 
             float fill = e.Area > 0f ? e.Area / (w * h) : 1f;
-            if (fill > 0f && fill < LooseBox)
+            if (fill > 0f && fill < Rectangular)
             {
-                float s = Mathf.Sqrt(fill / TargetFill);
-                float cx = (minX + maxX) * 0.5f, cy = (minY + maxY) * 0.5f;
-                w *= s; h *= s;
-                minX = cx - w * 0.5f; minY = cy - h * 0.5f;
+                outline = TilesOf(ring);
+                if (outline == null && fill < LooseBox)
+                {
+                    float s = Mathf.Sqrt(fill / TargetFill);
+                    float cx = (minX + maxX) * 0.5f, cy = (minY + maxY) * 0.5f;
+                    w *= s; h *= s;
+                    minX = cx - w * 0.5f; minY = cy - h * 0.5f;
+                }
             }
 
             return new TileRect(Mathf.RoundToInt(minX), Mathf.RoundToInt(minY),
                                 Mathf.Max(1, Mathf.RoundToInt(w)), Mathf.Max(1, Mathf.RoundToInt(h)));
         }
 
+        /// <summary>The ring rounded to whole tiles, with the closing repeat and any point that
+        /// lands on top of its neighbour dropped - a doubled vertex is harmless to the crossing
+        /// test but makes every later loop over the ring do nothing twice.</summary>
+        private static Tile[] TilesOf(Vector2[] ring)
+        {
+            var outp = new List<Tile>(ring.Length);
+            foreach (var p in ring)
+            {
+                var t = new Tile(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y));
+                if (outp.Count > 0 && outp[outp.Count - 1].X == t.X && outp[outp.Count - 1].Y == t.Y)
+                    continue;
+                outp.Add(t);
+            }
+            while (outp.Count > 1 && outp[0].X == outp[outp.Count - 1].X
+                                  && outp[0].Y == outp[outp.Count - 1].Y)
+                outp.RemoveAt(outp.Count - 1);
+            return outp.Count >= 3 ? outp.ToArray() : null;
+        }
+
+        /// <summary>Whether a tile's own centre is inside the outline. The same test WorldBuilder
+        /// makes, and it has to stay the same one: a door this says is inside and the stamper
+        /// says is outside would be a building with no way in.</summary>
+        private static bool Covers(Tile[] ring, Tile t)
+        {
+            if (ring == null || ring.Length < 3 || !t.IsValid) return false;
+            float px = t.X + 0.5f, py = t.Y + 0.5f;
+            bool inside = false;
+            for (int i = 0, j = ring.Length - 1; i < ring.Length; j = i++)
+            {
+                float ax = ring[i].X, ay = ring[i].Y, bx = ring[j].X, by = ring[j].Y;
+                if ((ay > py) != (by > py) && px < (bx - ax) * (py - ay) / (by - ay) + ax)
+                    inside = !inside;
+            }
+            return inside;
+        }
+
         /// <summary>The door on the same side of the new box as it was on the old one, centred.
         /// Tile.None if this place never had one.</summary>
-        private static Tile DoorFor(PlaceSpec place, TileRect now)
+        private static Tile DoorFor(PlaceSpec place, TileRect now, Tile[] outline)
         {
             var d = place.Door;
             if (!d.IsValid) return Tile.None;
@@ -148,17 +208,36 @@ namespace Noir.Unity
             // Which wall it was in. Top and Left are tested first, and a door in a corner - both
             // tests true - keeps the horizontal wall, which is the street side of nearly every
             // building on this grid.
-            if (d.Y == was.Top)    return new Tile(now.X + now.W / 2, now.Top);
-            if (d.Y == was.Bottom) return new Tile(now.X + now.W / 2, now.Bottom);
-            if (d.X == was.Left)   return new Tile(now.Left, now.Y + now.H / 2);
-            if (d.X == was.Right)  return new Tile(now.Right, now.Y + now.H / 2);
+            Tile at; int dx = 0, dy = 0;
+            if (d.Y == was.Top)         { at = new Tile(now.X + now.W / 2, now.Top);    dy = 1; }
+            else if (d.Y == was.Bottom) { at = new Tile(now.X + now.W / 2, now.Bottom); dy = -1; }
+            else if (d.X == was.Left)   { at = new Tile(now.Left, now.Y + now.H / 2);   dx = 1; }
+            else if (d.X == was.Right)  { at = new Tile(now.Right, now.Y + now.H / 2);  dx = -1; }
+            else
+            {
+                // Not in any wall of its own box. A fault in the map rather than something to
+                // carry forward, so it is named and the new door goes where a front door belongs.
+                Debug.LogWarning($"[survey] '{place.Name}' had a door at {d.X},{d.Y} which is not "
+                               + $"in its own wall {was} - the re-seated one is on the bottom edge.");
+                at = new Tile(now.X + now.W / 2, now.Bottom); dy = -1;
+            }
 
-            // Not in any wall of its own box. That is a fault in the map rather than something to
-            // carry forward, so the new door is put where a front door belongs and the old one is
-            // named so it can be fixed at source.
-            Debug.LogWarning($"[survey] '{place.Name}' had a door at {d.X},{d.Y} which is not in "
-                           + $"its own wall {was} - the re-seated one is on the bottom edge.");
-            return new Tile(now.X + now.W / 2, now.Bottom);
+            if (outline == null) return at;
+
+            // A SHAPED BUILDING MAY NOT REACH ITS OWN BOUNDING BOX on the side the door faces, so
+            // the door walks in from the street until it meets the building. Landing it on the
+            // box corner instead would put the front door in the garden.
+            int depth = Mathf.Max(now.W, now.H);
+            for (int step = 0; step < depth; step++)
+            {
+                var t = new Tile(at.X + dx * step, at.Y + dy * step);
+                if (!now.Contains(t)) break;
+                if (Covers(outline, t)) return t;
+            }
+
+            // Never met it. Hand back the plain edge tile - the caller sees it is not covered by
+            // the outline, drops the outline, and the building is built as its rectangle.
+            return at;
         }
     }
 }

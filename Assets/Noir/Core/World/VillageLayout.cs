@@ -97,6 +97,21 @@ namespace Noir.Core.World
         public readonly List<OpenWindow> Hours = new List<OpenWindow>();
 
         /// <summary>
+        /// The building's real outline, in tiles, or null for a plain rectangle.
+        ///
+        /// A ring, not closed - the last point joins the first. It must lie within
+        /// <see cref="Bounds"/>, which stays the rectangle everything else measures the place by:
+        /// this changes the SHAPE the building is stamped in, not the extent it occupies.
+        ///
+        /// Nothing in the map file writes it and nothing in Core computes it. It exists so the
+        /// Unity side can hand over a measured footprint - see SeatOnSurvey, which reads the
+        /// traced outlines in Content/parcel-buildings.txt - without Core having to know that
+        /// such a thing exists. A town with no survey behind it leaves this null everywhere and
+        /// is stamped exactly as it was before this field.
+        /// </summary>
+        public Tile[] Outline;
+
+        /// <summary>
         /// Outdoor places are drawn as open ground, without walls or a door. Which are which is
         /// the `form` column in kinds.txt: this used to be a list of exceptions here and another
         /// one in the renderer, and they had drifted apart.
