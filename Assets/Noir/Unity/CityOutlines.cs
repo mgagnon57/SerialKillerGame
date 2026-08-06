@@ -318,7 +318,7 @@ namespace Noir.Unity
         /// </summary>
         private static int Parcels(List<Vector3> verts, List<Color> cols, List<int> tris)
         {
-            var all = ParcelIndex.All;
+            var all = ParcelIndex.In1991;
             if (all.Count == 0)
             {
                 Debug.LogWarning("[outlines] no Content/parcels.txt - lot lines are missing.");
@@ -331,11 +331,19 @@ namespace Noir.Unity
             // you see before you see anything else.
             var lot = new Color(0.55f, 0.56f, 0.60f);
 
+            // The lines the county drew through the middle of one property are left out, so a
+            // building standing on several lots reads as the one thing it is - see
+            // ParcelIndex.SharedInsideOneProperty and Content/parcel-1991.txt.
             foreach (var parcel in all)
             {
                 var pts = parcel.Points;
                 for (int i = 0; i < pts.Length; i++)
-                    Edge(verts, cols, tris, pts[i], pts[(i + 1) % pts.Length], lot);
+                {
+                    var a = pts[i];
+                    var b = pts[(i + 1) % pts.Length];
+                    if (ParcelIndex.SharedInsideOneProperty(a, b)) continue;
+                    Edge(verts, cols, tris, a, b, lot);
+                }
             }
             return all.Count;
         }

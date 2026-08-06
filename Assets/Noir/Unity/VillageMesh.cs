@@ -968,7 +968,7 @@ namespace Noir.Unity
         /// </summary>
         private static byte[,] ZoningMask(int width, int height)
         {
-            var parcels = ParcelIndex.All;
+            var parcels = ParcelIndex.In1991;
             if (parcels.Count == 0) return null;
 
             var mask = new byte[height, width];
@@ -981,7 +981,12 @@ namespace Noir.Unity
                 // THE AUTHOR OVERRULES THE COUNTY, the same rule GroundZoning.ZoningAt and
                 // CountyRecord both state. Somebody who has typed a zoning onto a lot in the
                 // parcel editor has looked at it; the class code is only ever the starting guess.
-                var note = ParcelNotes.For(parcel.Id);
+                // ONE PROPERTY, ONE COLOUR. The grade school stands on three parcels and is one
+                // school, so all three take the zoning held by the property's lead lot rather
+                // than one each - otherwise a single building paints in two shades wherever the
+                // county's split happens to run. ZoningPatch.ZoningOf must agree, and does.
+                int id = Rulings.SpokesmanFor(parcel.Id);
+                var note = ParcelNotes.For(id);
                 var zoning = note != null && note.Zoning != ParcelNotes.Zoning.Unset
                     ? note.Zoning
                     : ParcelNotes.Zoning.Unset;
@@ -992,7 +997,7 @@ namespace Noir.Unity
                     // second line - 776 matched by nearest centroid - and For() returns null for
                     // the rest. Unguarded that is a NullReferenceException inside BuildGround,
                     // which aborts VillageHost.Awake half built and shows as a black screen.
-                    var record = CountyRecord.For(parcel.Id);
+                    var record = CountyRecord.For(id);
                     if (record == null) { unrecorded++; continue; }
                     zoning = record.Zoning;
                 }

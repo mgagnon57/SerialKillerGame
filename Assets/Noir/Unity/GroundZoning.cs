@@ -53,7 +53,7 @@ namespace Noir.Unity
             _parcelAt = new short[_gridW * _gridH];
             for (int i = 0; i < _parcelAt.Length; i++) _parcelAt[i] = -1;
 
-            foreach (var parcel in ParcelIndex.All)
+            foreach (var parcel in ParcelIndex.In1991)
             {
                 int x0 = Mathf.Max(0, Mathf.FloorToInt(parcel.Bounds.xMin));
                 int x1 = Mathf.Min(_gridW - 1, Mathf.CeilToInt(parcel.Bounds.xMax));
@@ -95,10 +95,16 @@ namespace Noir.Unity
             short pid = _parcelAt[gy * _gridW + gx];
             if (pid < 0) return ParcelNotes.Zoning.Unset;
 
-            var note = ParcelNotes.For(pid);
+            // One property, one surface - the third of the three places that make this decision,
+            // with VillageMesh.ZoningMask and ZoningPatch.ZoningOf. This one picks the GROUND
+            // TEXTURE, so without the redirect the grade school would stand on concrete across
+            // two of its lots and grass across the third.
+            int id = Rulings.SpokesmanFor(pid);
+
+            var note = ParcelNotes.For(id);
             if (note != null && note.Zoning != ParcelNotes.Zoning.Unset) return note.Zoning;
 
-            return CountyRecord.For(pid)?.Zoning ?? ParcelNotes.Zoning.Unset;
+            return CountyRecord.For(id)?.Zoning ?? ParcelNotes.Zoning.Unset;
         }
 
         /// <summary>Zoning only, no slope test - what a riser's higher side should match, since

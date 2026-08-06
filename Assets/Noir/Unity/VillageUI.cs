@@ -1877,12 +1877,68 @@ namespace Noir.Unity
             }
 
             GUILayout.Space(S(10f));
-            GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "
-                           + "built on it.</color>", _label);
+
+            // ---- what the owner says was here in 1991 ----
+            // Not in the county's grey: everything above this line is a record, and this is the
+            // one thing on the panel that is a person remembering. READ-ONLY here on purpose -
+            // it is written in the browser map (tools/serve-viewer.py), and the game rewrites
+            // parcel-notes.txt whole on every save, so letting these two share a pen would put
+            // the only irreplaceable file in the project under the one that overwrites itself.
+            var ruled = Rulings.For(parcel.Id);
+            var lots = Rulings.OneProperty(parcel.Id);
+            bool anyRuling = ruled.Was != Rulings.Stood.Unruled || ruled.Kind.Length > 0
+                          || ruled.Note.Length > 0 || ruled.Property.Length > 0;
+
+            if (anyRuling)
+            {
+                if (ruled.Property.Length > 0)
+                    GUILayout.Label($"<color=#c2b48c>{ruled.Property}</color>"
+                                  + (lots.Count > 1
+                                     ? $"<color=#8a8a86>   ·   {lots.Count} lots, one property</color>"
+                                     : ""), _label);
+
+                string stood;
+                switch (ruled.Was)
+                {
+                    case Rulings.Stood.Built:
+                        stood = ruled.Kind.Length > 0
+                              ? "in 1991 this was " + Article(ruled.Kind)
+                              : "a building stood here in 1991";
+                        break;
+                    case Rulings.Stood.Vacant: stood = "in 1991 the lot was here, and empty"; break;
+                    case Rulings.Stood.Unsure: stood = "looked at in 1991, and not settled"; break;
+                    case Rulings.Stood.Absent:
+                        stood = "no such lot in 1991 - this ground had not been split off yet";
+                        break;
+                    default:
+                        stood = ruled.Kind.Length > 0 ? "recorded as " + Article(ruled.Kind) : null;
+                        break;
+                }
+                if (stood != null) GUILayout.Label($"<color=#c2b48c>{stood}</color>", _label);
+
+                if (ruled.Note.Length > 0)
+                    GUILayout.Label($"<color=#8f8a66><i>{ruled.Note}</i></color>", _small);
+
+                GUILayout.Label("<color=#6f6d68>the owner's own ruling · edited in the browser map"
+                              + "</color>", _small);
+            }
+            else
+            {
+                GUILayout.Label("<color=#8a8a86>A real surveyed parcel with no house or business "
+                               + "built on it.</color>", _label);
+            }
+
+            // ONE PROPERTY, ONE RECORD. Clicking any of the grade school's three lots edits the
+            // school, not whichever third of it was under the cursor. The other lots keep
+            // whatever was authored on them before they were grouped - nothing here deletes it,
+            // and ungrouping in the browser map hands it straight back.
+            int editing = Rulings.SpokesmanFor(parcel.Id);
+            if (editing != parcel.Id)
+                GUILayout.Label($"<color=#8a8a86>editing all {lots.Count} lots together</color>", _small);
 
             // No FlexibleSpace here - the note editor's own scroll view takes the slack. See
             // DrawPlaceInspector for why two expanding siblings is the wrong shape.
-            DrawNoteEditor(parcel.Id);
+            DrawNoteEditor(editing);
 
             if (GUILayout.Button("close", _button, GUILayout.Width(S(70f)), GUILayout.Height(S(26f))))
                 _host.SelectedParcel = null;

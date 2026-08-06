@@ -121,14 +121,44 @@ namespace Noir.Unity
             Commit(verts, tris);
         }
 
+        /// <summary>
+        /// Outline the PROPERTY, not the county's piece of it.
+        ///
+        /// Clicking any one of the grade school's three lots marks the school. The splits between
+        /// them are left out by the same rule CityOutlines draws by, so the mark lands exactly on
+        /// the lot lines that are actually on screen rather than cutting across the middle of a
+        /// building. An ungrouped lot is its own property and takes the identical path - there is
+        /// no separate single-lot case to keep in step.
+        /// </summary>
         private void BuildMesh(ParcelIndex.Parcel parcel)
         {
             var verts = new List<Vector3>();
             var tris = new List<int>();
             _cols.Clear(); _tangents.Clear();
-            var pts = parcel.Points;
-            for (int i = 0; i < pts.Length; i++)
-                Edge(verts, tris, pts[i], pts[(i + 1) % pts.Length]);
+
+            foreach (int id in Rulings.OneProperty(parcel.Id))
+            {
+                var lot = ParcelIndex.ById(id);
+                if (lot == null) continue;
+                var pts = lot.Value.Points;
+                for (int i = 0; i < pts.Length; i++)
+                {
+                    var a = pts[i];
+                    var b = pts[(i + 1) % pts.Length];
+                    if (ParcelIndex.SharedInsideOneProperty(a, b)) continue;
+                    Edge(verts, tris, a, b);
+                }
+            }
+
+            // A property whose lots all resolved to nothing would leave no mark at all, which
+            // reads as a click that missed. Trace what was actually clicked instead.
+            if (verts.Count == 0)
+            {
+                var pts = parcel.Points;
+                for (int i = 0; i < pts.Length; i++)
+                    Edge(verts, tris, pts[i], pts[(i + 1) % pts.Length]);
+            }
+
             Commit(verts, tris);
         }
 

@@ -104,13 +104,19 @@ namespace Noir.Unity
 
         private void RememberWhatWasBaked()
         {
-            foreach (var parcel in ParcelIndex.All) _baked[parcel.Id] = ZoningOf(parcel.Id);
+            // The same set VillageMesh.ZoningMask baked from. If these two ever disagree about
+            // which lots exist, the patch repaints ground the bake never painted.
+            foreach (var parcel in ParcelIndex.In1991) _baked[parcel.Id] = ZoningOf(parcel.Id);
         }
 
         /// <summary>The rule VillageMesh.ZoningMask uses: what somebody authored, else what the
         /// county's class code says, else nothing.</summary>
         private static ParcelNotes.Zoning ZoningOf(int parcelId)
         {
+            // One property, one colour - the same redirect VillageMesh.ZoningMask makes. These
+            // two decide the baked ground and the patch drawn over it; disagreeing would show as
+            // a lot that changes colour when you edit its neighbour.
+            parcelId = Rulings.SpokesmanFor(parcelId);
             var note = ParcelNotes.For(parcelId);
             if (note != null && note.Zoning != ParcelNotes.Zoning.Unset) return note.Zoning;
             return CountyRecord.For(parcelId)?.Zoning ?? ParcelNotes.Zoning.Unset;
@@ -122,7 +128,7 @@ namespace Noir.Unity
             var tris = new Dictionary<ParcelNotes.Zoning, List<int>>();
 
             int changed = 0;
-            foreach (var parcel in ParcelIndex.All)
+            foreach (var parcel in ParcelIndex.In1991)
             {
                 var now = ZoningOf(parcel.Id);
                 if (!_baked.TryGetValue(parcel.Id, out var was)) was = ParcelNotes.Zoning.Unset;

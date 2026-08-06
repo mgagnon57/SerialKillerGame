@@ -37,9 +37,41 @@ namespace Noir.Unity
         }
 
         private static List<Parcel> _all;
+        private static List<Parcel> _in1991;
+        private static int _in1991Revision;
 
-        /// <summary>Every parcel, parsed once. Empty rather than null if the content is missing.</summary>
+        /// <summary>Every parcel in the file, including ones that did not exist in 1991. Empty
+        /// rather than null if the content is missing. Most callers want <see cref="In1991"/> -
+        /// this one is for anything that has to resolve a parcel id whatever its date.</summary>
         public static IReadOnlyList<Parcel> All { get { Load(); return _all; } }
+
+        /// <summary>
+        /// The lots that were there, which is what the town should be drawn from.
+        ///
+        /// Content/parcels.txt is the county's boundaries as they stand TODAY, and 37 of them are
+        /// ground that was subdivided out of a field after the game's own date - see Rulings, and
+        /// the header of Content/parcel-1991.txt. Drawing those puts lot lines across what should
+        /// be open country, and letting them be clicked offers the player a property that did not
+        /// exist. Filtering here rather than at each renderer means the plan view, the ground
+        /// colour, the zoning patch and the click test cannot disagree about which lots are real.
+        /// </summary>
+        public static IReadOnlyList<Parcel> In1991
+        {
+            get
+            {
+                Load();
+                // The browser map rewrites the rulings while the game is running, so this is
+                // rebuilt when they change rather than cached once - rule a lot absent and it
+                // leaves the map without a restart. Compared against Rulings.Revision rather than
+                // the file's own mtime, so asking costs an int rather than a syscall.
+                int rev = Rulings.Revision;
+                if (_in1991 != null && rev == _in1991Revision) return _in1991;
+                _in1991Revision = rev;
+                _in1991 = new List<Parcel>(_all.Count);
+                foreach (var p in _all) if (!Rulings.Absent(p.Id)) _in1991.Add(p);
+                return _in1991;
+            }
+        }
 
         public static Parcel? ById(int id)
         {
@@ -62,11 +94,13 @@ namespace Noir.Unity
         /// <summary>
         /// The parcel whose ring actually contains a point, not merely whose box does - two lots
         /// can share a bounding box near an alley cut, and the box alone would pick either.
+        ///
+        /// Lots ruled absent are not here to be found: a click landing on ground that was a field
+        /// in 1991 falls through to the field, which is what the player is looking at.
         /// </summary>
         public static Parcel? Find(Vector2 at)
         {
-            Load();
-            foreach (var p in _all)
+            foreach (var p in In1991)
             {
                 if (!p.Bounds.Contains(at)) continue;
                 if (Inside(p.Points, at)) return p;
@@ -109,6 +143,74 @@ namespace Noir.Unity
                 }
                 _all.Add(new Parcel(_all.Count, pts.ToArray(), Rect.MinMaxRect(minX, minY, maxX, maxY)));
             }
+        }
+
+        /// <summary>
+        /// Whether this edge is a county split running through the middle of one property, rather
+        /// than a boundary anybody standing there would see.
+        ///
+        /// The grade school stands on three parcels and the Chicago Street terrace on eleven. The
+        /// lines between them are in the tax roll because the county sells ground in pieces, not
+        /// because there is anything there - so drawing them makes one building look like three
+        /// lots, which is exactly what the owner ruled it is not. Suppressing them is what turns
+        /// a group into a property on the map.
+        ///
+        /// Safe to ask about any edge of any lot: an ungrouped lot has no interior edges, so this
+        /// is false for the 771 lots that are their own property.
+        ///
+        /// Matching is on the vertices at centimetre precision. Checked against the real county
+        /// geometry, all 23 multi-lot properties share their interior edges exactly - the same
+        /// 60 edges match at whole metres as at thousandths - so this is a lookup, not a
+        /// tolerance search for nearly-parallel lines.
+        /// </summary>
+        public static bool SharedInsideOneProperty(Vector2 a, Vector2 b)
+        {
+            BuildInteriorEdges();
+            return _interior.Count > 0 && _interior.Contains(EdgeKey(a, b));
+        }
+
+        private static HashSet<(int, int, int, int)> _interior;
+        private static int _interiorRevision;
+
+        private static void BuildInteriorEdges()
+        {
+            Load();
+            // Asked once per lot edge while the plan mesh is built - a few thousand times - so
+            // this compares an int rather than stat'ing the rulings file each time.
+            int rev = Rulings.Revision;
+            if (_interior != null && rev == _interiorRevision) return;
+            _interiorRevision = rev;
+            _interior = new HashSet<(int, int, int, int)>();
+
+            foreach (var kv in Rulings.Properties)
+            {
+                var lots = kv.Value;
+                if (lots.Count < 2) continue;
+
+                // An edge belonging to two different lots of the same property is between them.
+                var owner = new Dictionary<(int, int, int, int), int>();
+                foreach (int id in lots)
+                {
+                    var p = ById(id);
+                    if (p == null) continue;
+                    var pts = p.Value.Points;
+                    for (int i = 0; i < pts.Length; i++)
+                    {
+                        var key = EdgeKey(pts[i], pts[(i + 1) % pts.Length]);
+                        if (owner.TryGetValue(key, out int first) && first != id) _interior.Add(key);
+                        else owner[key] = id;
+                    }
+                }
+            }
+        }
+
+        /// <summary>A segment's identity, direction-free, so the same edge read from either of the
+        /// two lots that share it produces the same key.</summary>
+        private static (int, int, int, int) EdgeKey(Vector2 a, Vector2 b)
+        {
+            int ax = Mathf.RoundToInt(a.x * 100f), ay = Mathf.RoundToInt(a.y * 100f);
+            int bx = Mathf.RoundToInt(b.x * 100f), by = Mathf.RoundToInt(b.y * 100f);
+            return (ax < bx || (ax == bx && ay <= by)) ? (ax, ay, bx, by) : (bx, by, ax, ay);
         }
 
         /// <summary>Standard ray-casting point-in-polygon test - even-odd crossings of a
