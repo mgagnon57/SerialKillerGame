@@ -50,12 +50,22 @@ namespace Noir.Unity
             // list is also what guarantees we re-enable exactly what we disabled — including
             // anything that was already off for its own reasons, which a blanket "turn it all
             // back on" would silently switch on for the first time.
-            foreach (string name in Hidden)
+            // FOUND ANYWHERE UNDER THE VILLAGE, NOT ONLY AS ITS DIRECT CHILDREN.
+            //
+            // This used to be village.transform.Find(name), which looks one level down and no
+            // further. The moment the generated massing was gathered under a "Dressing" root so
+            // it could have a layer switch of its own, Walls, Roofs, Furniture, Props and
+            // Frontage all moved a level - Find returned null for every one of them, nothing was
+            // collected, and the x-ray hid nothing while reporting no error at all. The smoke
+            // test caught it as "hid nothing: 14,284 -> 14,286": the only renderers it could
+            // still account for were the two the wireframe itself adds.
+            var wanted = new HashSet<string>(Hidden);
+            var seen = new HashSet<Renderer>();
+            foreach (var part in village.GetComponentsInChildren<Transform>(true))
             {
-                var part = village.transform.Find(name);
-                if (part == null) continue;
+                if (!wanted.Contains(part.name)) continue;
                 foreach (var r in part.GetComponentsInChildren<Renderer>(true))
-                    if (r.enabled) xray._hidden.Add(r);
+                    if (r.enabled && seen.Add(r)) xray._hidden.Add(r);
             }
 
             return xray;

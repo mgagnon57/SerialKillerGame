@@ -99,6 +99,8 @@ namespace Noir.Core.World
                 throw new InvalidOperationException(
                     $"{places.Count} places is more than a tile can record ({TileGrid.MaxId})");
 
+            SealWalkablePockets(grid);
+
             var placeArray = places.ToArray();
             var props = PropGenerator.Generate(grid, placeArray, seed);
 
@@ -286,6 +288,86 @@ namespace Noir.Core.World
             // Carve the doorway.
             if (spec.Door.IsValid)
                 grid.Set(spec.Door.X, spec.Door.Y, Terrain.Floor, floorFlags);
+        }
+
+        /// <summary>
+        /// Ground nobody can reach, closed off.
+        ///
+        /// A handful of tiles get sealed behind whatever gets stamped over them - a shaped
+        /// building's walls closing round a strip of the garden it did not cover, a doorway that
+        /// lands against a neighbour. Two tiles of grass behind a house harms nothing on screen
+        /// and breaks the one invariant the town's routing rests on: that the walkable map is a
+        /// single piece. It was five pieces the first time anybody measured the built town, and
+        /// the four strays were 2, 3, 3 and 6 tiles.
+        ///
+        /// A NET AT THE END, NOT A FIX AT EACH SOURCE. Anything that stamps terrain can strand a
+        /// pocket, and the ways to do it are not enumerable - so this catches them all, once,
+        /// where the grid is finally complete.
+        ///
+        /// ONLY SMALL ONES. A big cut-off region is a real fault - a quarter of the town behind an
+        /// impassable crossing - and quietly filling it in would hide exactly the thing worth
+        /// knowing. Those are left alone for the validator to report.
+        /// </summary>
+        private const int SealPocketsUpTo = 64;
+
+        private static void SealWalkablePockets(TileGrid grid)
+        {
+            // The same flood WorldValidator counts regions with - eight ways, and no cutting the
+            // diagonal between two blocked corners. Written out here rather than shared, because
+            // WalkableRegions lives in Noir.Core.Sim and this assembly cannot see it; the two must
+            // agree or this would seal ground the validator still counts, or leave ground it does
+            // not, and either way the report would stop matching the map.
+            var region = new int[grid.Count];
+            for (int i = 0; i < region.Length; i++) region[i] = -1;
+
+            var sizes = new List<int>();
+            var stack = new Stack<Tile>();
+
+            for (int start = 0; start < grid.Count; start++)
+            {
+                var first = grid.TileAt(start);
+                if (!grid.IsWalkable(first) || region[start] >= 0) continue;
+
+                int id = sizes.Count, size = 0;
+                region[start] = id;
+                stack.Push(first);
+
+                while (stack.Count > 0)
+                {
+                    var t = stack.Pop();
+                    size++;
+                    for (int dx = -1; dx <= 1; dx++)
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        int nx = t.X + dx, ny = t.Y + dy;
+                        if (!grid.InBounds(nx, ny) || !grid.IsWalkable(nx, ny)) continue;
+                        if (dx != 0 && dy != 0 &&
+                            !grid.IsWalkable(t.X + dx, t.Y) && !grid.IsWalkable(t.X, t.Y + dy))
+                            continue;
+
+                        int ni = grid.Index(nx, ny);
+                        if (region[ni] >= 0) continue;
+                        region[ni] = id;
+                        stack.Push(new Tile(nx, ny));
+                    }
+                }
+                sizes.Add(size);
+            }
+
+            if (sizes.Count <= 1) return;
+
+            int largest = 0;
+            for (int i = 1; i < sizes.Count; i++) if (sizes[i] > sizes[largest]) largest = i;
+
+            var wallFlags = TileGrid.FlagsFor(Terrain.Wall);
+            for (int i = 0; i < region.Length; i++)
+            {
+                int r = region[i];
+                if (r < 0 || r == largest || sizes[r] > SealPocketsUpTo) continue;
+                var t = grid.TileAt(i);
+                grid.Set(t.X, t.Y, Terrain.Wall, wallFlags);
+            }
         }
 
         // ---- shaped buildings ---------------------------------------------------------------
