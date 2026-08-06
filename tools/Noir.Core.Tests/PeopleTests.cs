@@ -27,7 +27,7 @@ namespace Noir.Core.Tests
             get
             {
                 if (_world == null)
-                    _world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("village.txt")));
+                    _world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("fixture-village.txt")));
                 return _world;
             }
         }

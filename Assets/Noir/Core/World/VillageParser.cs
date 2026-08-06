@@ -11,8 +11,15 @@ namespace Noir.Core.World
     /// </summary>
     public sealed class VillageParseException : Exception
     {
+        /// <summary>
+        /// NAMED "the map file", NOT "village.txt". This defaulted to the fixture's name, so a
+        /// syntax error in city.txt - which is the file the game actually parses - reported a
+        /// line number against a different, much shorter file. An error that names the wrong file
+        /// sends whoever reads it to go and look at the wrong one, which is the same fault this
+        /// project already fixed once for the map-load warnings.
+        /// </summary>
         public VillageParseException(int line, string message)
-            : this("village.txt", line, message) { }
+            : this("the map file", line, message) { }
 
         public VillageParseException(string file, int line, string message)
             : base($"{file} line {line}: {message}") { }
@@ -246,7 +253,7 @@ namespace Noir.Core.World
                     // Optional, and 0 means NOT MEASURED rather than none - out in the country
                     // the fields tile edge to edge and there is no gap to measure.
                     Require(tokens, 2, lineNo, "easement <metres>");
-                    road.Easement = ContentText.Number(tokens[1], "village.txt", lineNo);
+                    road.Easement = ContentText.Number(tokens[1], File, lineNo);
                     if (road.Easement < 0f)
                         throw new VillageParseException(lineNo, "an easement cannot be negative");
                     if (road.Easement > 0f && road.Easement < road.Width)
@@ -329,7 +336,10 @@ namespace Noir.Core.World
         // The syntax below is shared with kinds.txt and lives in ContentText. These stay as
         // named wrappers so that every call site here reads the way it always did.
 
-        private const string File = "village.txt";
+        /// <summary>What a parse error calls the file it is complaining about. Deliberately not
+        /// "village.txt" - see VillageParseException. The parser is handed text, not a path, so
+        /// it cannot name the real file; naming the wrong one is worse than naming none.</summary>
+        private const string File = "the map file";
 
         private static List<string> Tokenise(string line) => ContentText.Tokenise(line);
 

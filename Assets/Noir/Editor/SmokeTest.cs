@@ -39,7 +39,16 @@ namespace Noir.Editor
                 // VillageHost, which is the only place that used to do it.
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
 
-                var layout = VillageParser.Parse(ContentLoader.Read("village.txt"));
+                // THE TOWN THE GAME BUILDS, not the fixture. This read village.txt - the small
+                // retired village the unit tests use - so the one check that claims to build
+                // "the entire village and report what came out" was reporting on a town nobody
+                // plays, and would have passed happily while Rossville was broken.
+                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
+                SurveyRoads.Apply(layout);
+                RuledAway.Apply(layout);
+                SeatOnSurvey.Apply(layout);
+                FillFromSurvey.Apply(layout);
+
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
                 Log($"world      {world.Width}x{world.Height}, {world.PlaceCount} places, "
                   + $"{world.RoomCount} rooms, {world.FurnitureCount} furniture, {world.PropCount} props");

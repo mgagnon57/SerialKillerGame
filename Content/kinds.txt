@@ -2,7 +2,7 @@
 #  WHAT KINDS OF PLACE THERE ARE
 #
 #  One row per kind. Adding an amenity to the village is a row here and a few
-#  lines in village.txt - it is not thirteen switch statements in eleven files,
+#  lines in fixture-village.txt - it is not thirteen switch statements in eleven files,
 #  which is what it used to be, and eleven chances to forget one.
 #
 #  A row is complete or the load fails. There is deliberately no default for
@@ -14,7 +14,7 @@
 #  the order of this file does not matter and cannot move anything. A kind the
 #  enum has never heard of is numbered after them, and works everywhere in Core
 #  without a line of C#. A barber, tried as one row here and four lines in
-#  village.txt, came out walled, roofed, laid out inside, open Tuesday to
+#  fixture-village.txt, came out walled, roofed, laid out inside, open Tuesday to
 #  Saturday and with somebody behind the chair who had a trade of her own.
 #  What such a kind does NOT get is anything the renderer still decides by
 #  switch - its shopfront is the generic board - and nobody walks to it for a
@@ -22,7 +22,7 @@
 #
 #  ---- the columns ------------------------------------------------------------
 #
-#  words      what village.txt may call it. The first is the canonical name.
+#  words      what fixture-village.txt may call it. The first is the canonical name.
 #  form       building (walls, floor, a door) or open (bounded ground).
 #  home       whether people LIVE here, and so whether households are made in it.
 #             Optional, and unstated means "dwelling and nothing else", which is how

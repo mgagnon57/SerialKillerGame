@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -62,7 +62,7 @@ namespace Noir.Editor
                 Directory.CreateDirectory(OutputDir);
 
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read("village.txt"));
+                var layout = VillageParser.Parse(ContentLoader.Read("fixture-village.txt"));
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
 
                 root = new GameObject("ElevationVillage");

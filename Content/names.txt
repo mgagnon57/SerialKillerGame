@@ -24,7 +24,7 @@
 # A few German families in a town this size is fine and likely. A HEAVY layer would have built
 # a Lutheran church, and there isn't one. See docs/research/WHO-LIVES-THERE.md.
 #
-# PETHICK, HALLORAN AND IVEY MUST STAY. Content/village.txt - Ashcombe, still parsed by the
+# PETHICK, HALLORAN AND IVEY MUST STAY. Content/fixture-village.txt - Ashcombe, still parsed by the
 # older editor tools - names its shop, its surgery and its garage after them, and
 # particulars.txt quotes all three. They are the only survivors of the English pool, and all
 # three pass as American anyway.
@@ -472,7 +472,7 @@ surname Greenwood
 surname Watson
 surname Stufflebeam
 
-# The three survivors of Ashcombe's pool. village.txt still needs them - see the top.
+# The three survivors of Ashcombe's pool. fixture-village.txt still needs them - see the top.
 surname Pethick
 surname Halloran
 surname Ivey

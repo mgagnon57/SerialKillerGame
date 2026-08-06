@@ -119,7 +119,7 @@ namespace Noir.Editor
                 // disagreed with Content/kinds.txt the moment anybody edited it.
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
 
-                var layout = VillageParser.Parse(ContentLoader.Read("village.txt"));
+                var layout = VillageParser.Parse(ContentLoader.Read("fixture-village.txt"));
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
 
                 root = new GameObject("SnapshotVillage");

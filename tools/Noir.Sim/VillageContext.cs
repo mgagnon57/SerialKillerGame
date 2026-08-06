@@ -1,4 +1,4 @@
-using Noir.Core.People;
+﻿using Noir.Core.People;
 using Noir.Core.World;
 
 namespace Noir.Sim
@@ -29,7 +29,7 @@ namespace Noir.Sim
         /// </summary>
         public static VillageContext Load(int tiles, ulong seed = 1979)
         {
-            var layout = BigVillage.Repeat(VillageParser.Parse(ContentPath.ReadAll("village.txt")), tiles);
+            var layout = BigVillage.Repeat(VillageParser.Parse(ContentPath.ReadAll("fixture-village.txt")), tiles);
             var world = WorldBuilder.Build(layout);
             var names = NameTable.Parse(ContentPath.ReadAll("names.txt"));
             var particulars = ParticularsTable.Parse(ContentPath.ReadAll("particulars.txt"));

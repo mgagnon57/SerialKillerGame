@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
@@ -25,7 +25,7 @@ namespace Noir.Core.Tests
         }
 
         /// <summary>
-        /// The authored kinds table, in place before any test reads a `place` line — so that the
+        /// The authored kinds table, in place before any test reads a `place` line â€” so that the
         /// tests are looking at the same seventeen rows the harness and the renderer are, rather
         /// than at the bootstrap copy compiled into Core.
         /// </summary>
@@ -222,8 +222,8 @@ place pub 4,4 7x6 ""P""
     /// Content has to be additive, and this is the test that says whether it is.
     ///
     /// It was not. Inserting one building at the top of the 345-place file used to reshuffle
-    /// fifty-four other buildings' interiors — buildings with byte-identical footprints, nowhere
-    /// near the edit — because every interior was drawn from one stream threaded through the
+    /// fifty-four other buildings' interiors â€” buildings with byte-identical footprints, nowhere
+    /// near the edit â€” because every interior was drawn from one stream threaded through the
     /// file in order, so a place's rooms depended on how many places came before it. Narrowing
     /// one building by one tile moved a hundred props for the same reason. That is the kind of
     /// thing that gets worse every week: at 61 places it is an oddity, at 600 it means nobody
@@ -254,7 +254,7 @@ place pub 4,4 7x6 ""P""
 
         private static (WorldModel before, WorldModel after) BuildBothWays()
         {
-            string text = TestContent.Read("village.txt");
+            string text = TestContent.Read("fixture-village.txt");
 
             int firstPlace = text.IndexOf("place church", StringComparison.Ordinal);
             Assert.That(firstPlace, Is.GreaterThan(0), "village.txt no longer starts its places with the church");
@@ -302,7 +302,7 @@ place pub 4,4 7x6 ""P""
                 if (Describe(after, twin) != was) moved.Add(place.Name);
             }
 
-            Assert.That(compared, Is.GreaterThan(40), "almost nothing had an interior — the test proved nothing");
+            Assert.That(compared, Is.GreaterThan(40), "almost nothing had an interior â€” the test proved nothing");
             Assert.That(moved, Is.Empty,
                 $"{moved.Count} of {compared} interiors were rebuilt by adding an unrelated cottage: "
               + string.Join(", ", moved.ToArray()));
@@ -330,7 +330,7 @@ place pub 4,4 7x6 ""P""
             Tally(after, now);
 
             Assert.That(was.Count, Is.GreaterThan(500),
-                "hardly any props were compared — the test proved nothing");
+                "hardly any props were compared â€” the test proved nothing");
 
             var differences = new List<string>();
             foreach (var pair in was)
@@ -369,7 +369,7 @@ place pub 4,4 7x6 ""P""
         public void TwoPlacesMayNotShareAKey()
         {
             // Everything inside a building comes from its key, so two places sharing one would be
-            // two copies of the same interior — and the failure would be invisible.
+            // two copies of the same interior â€” and the failure would be invisible.
             var ex = Assert.Throws<InvalidOperationException>(() => WorldBuilder.Build(VillageParser.Parse(
                 "village D\nsize 40 20\n" +
                 "place cottage 2,2 8x8 \"Same\"\n  door 6,9\n  human x\n" +
@@ -394,7 +394,7 @@ place pub 4,4 7x6 ""P""
         [Test]
         public void EveryPlaceInAshcombeHasItsOwnKey()
         {
-            var world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("village.txt")));
+            var world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("fixture-village.txt")));
             var seen = new Dictionary<ulong, string>();
 
             foreach (var place in world.AllPlaces)
@@ -462,7 +462,7 @@ place pub 2,2 6x5 ""P""
 
         [OneTimeSetUp]
         public void Load() =>
-            _world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("village.txt")));
+            _world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("fixture-village.txt")));
 
         [Test]
         public void LoadsWithTheExpectedShape()
@@ -498,7 +498,7 @@ place pub 2,2 6x5 ""P""
         {
             // The precise invariant, rather than "not the biggest": the generator assigns the
             // bathroom the smallest available room, so nothing except the hall may be smaller.
-            // Ties are fine and common — plenty of houses have rooms of equal size.
+            // Ties are fine and common â€” plenty of houses have rooms of equal size.
             foreach (var id in _world.PlacesOfKind(PlaceKind.Dwelling))
             {
                 Room bathroom = null;
@@ -549,7 +549,7 @@ place pub 2,2 6x5 ""P""
 
             int dwellings = _world.PlacesOfKind(PlaceKind.Dwelling).Count;
             Assert.That(shapes.Count, Is.GreaterThan(dwellings / 2),
-                $"only {shapes.Count} distinct layouts across {dwellings} houses — they are too samey");
+                $"only {shapes.Count} distinct layouts across {dwellings} houses â€” they are too samey");
         }
 
         [Test]

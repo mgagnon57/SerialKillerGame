@@ -15,7 +15,17 @@ namespace Noir.Unity
     {
         public static string Root => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Content"));
 
-        public static bool Exists => Directory.Exists(Root) && File.Exists(Path.Combine(Root, "village.txt"));
+        /// <summary>
+        /// Whether there is content to load, decided by the map the GAME builds.
+        ///
+        /// This used to look for village.txt, which is the small retired fixture the unit tests
+        /// build their world from and has not been the town for months. Two consequences, both
+        /// quiet: a Content folder holding a perfectly good Rossville but no fixture read as no
+        /// content at all, and renaming the fixture - which is a test concern - would have taken
+        /// the whole game down with it.
+        /// </summary>
+        public static bool Exists =>
+            Directory.Exists(Root) && File.Exists(Path.Combine(Root, VillageHost.MapFile));
 
         public static string Read(string fileName)
         {

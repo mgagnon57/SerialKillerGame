@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Noir.Core.People;
 using Noir.Core.World;
@@ -28,7 +28,7 @@ namespace Noir.Bench
                 while (dir != null)
                 {
                     string candidate = Path.Combine(dir.FullName, "Content");
-                    if (File.Exists(Path.Combine(candidate, "village.txt")))
+                    if (File.Exists(Path.Combine(candidate, "fixture-village.txt")))
                         return _root = candidate;
                     dir = dir.Parent;
                 }
@@ -57,7 +57,7 @@ namespace Noir.Bench
             EnsureKinds();
 
             var world = WorldBuilder.Build(
-                VillageParser.Parse(File.ReadAllText(Path.Combine(Root, "village.txt"))), seed);
+                VillageParser.Parse(File.ReadAllText(Path.Combine(Root, "fixture-village.txt"))), seed);
             var names = NameTable.Parse(File.ReadAllText(Path.Combine(Root, "names.txt")));
             var particulars = ParticularsTable.Parse(File.ReadAllText(Path.Combine(Root, "particulars.txt")));
             var people = PopulationGenerator.Generate(world, names, particulars, seed);
@@ -69,7 +69,7 @@ namespace Noir.Bench
         {
             if (Root == null) return null;
             EnsureKinds();
-            return VillageParser.Parse(File.ReadAllText(Path.Combine(Root, "village.txt")));
+            return VillageParser.Parse(File.ReadAllText(Path.Combine(Root, "fixture-village.txt")));
         }
     }
 }
