@@ -155,7 +155,89 @@ owner says otherwise.
    previously asserted that only Chicago St and Railroad Ave bend; that was a Phase A regression
    guard, not a survey fact, and three roads have now broken it with the owner calling each one.
 
-4. *(space kept for the owner to add)*
+4. **An alley is not a road. It is the second way through town, and cars do not use it.**
+   Owner, 2026-08-05, from having grown up here:
+
+   > *"Most alleys were only used for trash pick up or parking their cars in the garage that
+   > faced the alley… when I was a kid and rode my bike around, I would take alleys to get to
+   > where I wanted. Cars would not normally use an alley."*
+
+   **Why this is load-bearing rather than flavour.** It means Rossville has *two* movement
+   networks laid over the same ground, and they are not used by the same people:
+
+   | | streets | alleys |
+   |---|---|---|
+   | through traffic | yes | **no** |
+   | cars at all | yes | only reaching a garage, and the trash truck |
+   | on foot or on a bike | yes | **yes — by preference, for a kid** |
+   | overlooked by | front windows, porches, the street | back windows, and much less of them |
+
+   `INSIDE-THE-HOUSES.md` already found the physical half of this from the plans — *"every house
+   has a front that faces a watched street and a back that faces an unwatched lane"* — and
+   `WHO-SEES-WHOM.md` is built on who is overlooked by whom. This is the movement half: **there
+   is a route through this town that adults in cars do not take and children on bikes do.**
+   For a game about who was where and who noticed, that is not a detail about paving.
+
+   **THE SURVEY AGREES, and it did not have to.** Measured off the 822 seated footprints against
+   the derived alley network — the house and the garage face opposite ways, and the two
+   populations flip cleanly:
+
+   | | to the nearest street | to the nearest alley | nearer the alley |
+   |---|---|---|---|
+   | houses (n=572) | **81 ft** | 129 ft | 18% |
+   | outbuildings (n=250) | 125 ft | **84 ft** | **55%** |
+
+   A house is half as far from its street as from its alley; its garage is the other way round.
+   That is the owner's account arriving independently out of federal imagery and a county
+   cadastre, neither of which knows what an alley is for.
+
+   **THE CODE CURRENTLY CONTRADICTS THIS.** Recorded so it is not mistaken for done:
+
+   - `CityTraffic` weights spawns by class — `Freeway 12, Mainroad 8, Street 2, _ => 1` — and
+     that final case is the alleys, so cars do drive down them, at half the rate of a street.
+     Through traffic on an alley should be **none**.
+   - Nothing in movement consults `RoadClass.Alley` at all. `Pathfinder` is a tile A* over
+     `IsWalkable`, so an alley is simply a shortcut, taken by anyone when it happens to be
+     shorter. Nobody prefers one and nobody avoids one.
+
+   **What the model should be**, when someone builds it: no through traffic; local access only
+   for a resident reaching their own garage and for the collection round; and a walking cost that
+   makes the alley *attractive* rather than merely permitted — because the shortest path is not
+   why a boy on a bike goes down the alley.
+
+5. **A town lot ran from the street to the alley. The half-lots behind them are LATER.**
+   Owner, 2026-08-05:
+
+   > *"I know that the lots ran to the alley as I had a lot of friends in 1991 that lived along
+   > Maple and their property went to the alley."*
+
+   Raised on seeing strips behind the houses on E Maple that *"make no sense to me"* as lots.
+   They make no sense because they are not lots. Measured, they are unmistakable:
+
+   | | |
+   |---|---|
+   | size | **66 × 33 ft** — half of a 66 × 66 ft lot, one surveyor's chain wide |
+   | distance to the alley | 22–27 ft — hard against it |
+   | distance to the nearest street | 65–182 ft — nowhere near one |
+   | street address | **none of them have one** |
+   | buildings | 15 of 17 empty; where one is assessed, median **$4,312** against the town's ~$23,000 median dwelling — a garage, not a house |
+
+   So they are the **back halves of the platted lots**, deeded off separately at some point
+   after 1991 — to a neighbour, to a son, to whoever wanted somewhere to put a garage off the
+   alley. The county has to number any separately-owned scrap of ground whether or not it is a
+   building lot, so a split made in 1998 shows up as a boundary on a map of 1991.
+
+   **Seventeen have been joined back to the lot in front of them** by
+   `tools/merge-back-strips.py`, using the property mechanism in `Content/parcel-1991.txt`: the
+   strip and the house lot share a property name, so they draw as one lot running to the alley.
+   Fourteen of the seventeen share **exactly 66 ft** of boundary with the lot in front — the
+   full width — which is what a clean back-half split looks like and is the reason to believe
+   the join is right.
+
+   **This bears on the setback and yard figures in `BUILDING-FOOTPRINTS.md`.** Those were
+   measured against today's parcels, so on any lot whose back half had been split away the
+   depth is short and the house looks less deep-set than it was. The medians are dominated by
+   lots that were never split, but the figure is a floor rather than a centre.
 
 ---
 
