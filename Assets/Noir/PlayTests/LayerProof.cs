@@ -1,0 +1,164 @@
+using System.Collections;
+using System.IO;
+using System.Text;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using Noir.Unity;
+
+namespace Noir.PlayTests
+{
+    /// <summary>
+    /// Photographs the layer switches actually working, one combination at a time.
+    ///
+    /// The panel is the one part of this project that cannot be checked by assertion: every
+    /// question about it - is the house outline visible over the massing, does the massing come up
+    /// at all, does turning a layer on do anything without a restart - is a question about what is
+    /// ON SCREEN. So this drives the switches and takes a picture of each answer, and the pictures
+    /// are the evidence.
+    /// </summary>
+    public class LayerProof
+    {
+        private const int Width = 1400, Height = 900;
+        private static readonly string Dir =
+            Path.Combine(Directory.GetCurrentDirectory(), "docs", "snapshots", "layers");
+
+        /// <summary>Over the Benton Avenue blocks: houses, the grade school lots, a crossroads.</summary>
+        private static readonly Vector3 Over = new Vector3(800f, 0f, -1080f);
+
+        private readonly struct Shot
+        {
+            public readonly string Name;
+            public readonly Layers.Kind[] On;
+            public Shot(string name, params Layers.Kind[] on) { Name = name; On = on; }
+        }
+
+        private static readonly Shot[] Sheet =
+        {
+            new Shot("01-parcel-lines",            Layers.Kind.Plan),
+            new Shot("02-parcel-lines-and-houses", Layers.Kind.Plan, Layers.Kind.Footprints),
+            new Shot("03-house-outlines-alone",    Layers.Kind.Footprints),
+            new Shot("04-massing-alone",           Layers.Kind.Massing),
+            new Shot("05-massing-and-outlines",    Layers.Kind.Massing, Layers.Kind.Footprints),
+            new Shot("06-massing-plan-outlines",   Layers.Kind.Massing, Layers.Kind.Plan,
+                                                   Layers.Kind.Footprints),
+            new Shot("07-streets-and-massing",     Layers.Kind.Massing, Layers.Kind.Streets,
+                                                   Layers.Kind.Alleys),
+        };
+
+        /// <summary>
+        /// Raise the built town for a headless run, when asked to.
+        ///
+        /// VillageHost deliberately does not read the built-town preference in batch mode - see
+        /// the guard on Application.isBatchMode - so a headless run always gets the static
+        /// default, which is the survey plan. That is right for the render tools and useless
+        /// here: the whole subject of these photographs is the built town, and a run without it
+        /// has no roads, no traffic and ten layers with nothing behind them, which looks exactly
+        /// like a broken panel and is not one.
+        ///
+        /// Behind an environment variable rather than on by default, because this assembly also
+        /// holds the traffic suite, and quietly building four thousand renderers under it would
+        /// slow every one of those runs down for nothing.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void RaiseTheTownIfAsked()
+        {
+            if (System.Environment.GetEnvironmentVariable("NOIR_BUILT_TOWN") == "1")
+                VillageHost.ShowBuildings = true;
+        }
+
+        [UnityTest, Timeout(1800000)]
+        public IEnumerator PhotographEveryLayerCombination()
+        {
+            // SILENT. A batch run is not a person sitting at the machine, and this suite has put
+            // the whole town's audio through somebody's headphones before now.
+            AudioListener.volume = 0f;
+            AudioListener.pause = true;
+
+            yield return CityUnderTest.WaitUntilBuilt();
+            Directory.CreateDirectory(Dir);
+
+            // NO SkipToHour. The town opens at six, in the dark, and skipping to noon means
+            // simulating six hours - which on a town that has just gained 315 buildings does not
+            // finish inside this test's patience. That is worth knowing on its own, and it is not
+            // what these pictures are about: the subject is which geometry is on screen, so the
+            // rig is stood down and a plain light put in instead. Deterministic, and instant.
+            for (int settle = 0; settle < 10; settle++) yield return null;
+
+            // ---- what has anything behind it at all ----
+            var wired = new StringBuilder("[layerproof] wiring:\n");
+            foreach (var kind in Layers.All)
+                wired.Append("    ").Append(Layers.IsWired(kind) ? "LIVE " : "DEAD ")
+                     .Append(Layers.Label(kind)).Append('\n');
+            Debug.Log(wired.ToString());
+
+            // The fog is tuned for standing in the street and eats a block seen from 200 m up,
+            // and the rig writes it every frame, so it has to be stood down rather than overridden.
+            var weather = Object.FindFirstObjectByType<SunRig>();
+            if (weather != null) weather.enabled = false;
+            bool wasFog = RenderSettings.fog;
+            RenderSettings.fog = false;
+
+            var lightGo = new GameObject("LayerProofSun");
+            var sun = lightGo.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.intensity = 1.1f;
+            sun.shadows = LightShadows.None;
+            lightGo.transform.rotation = Quaternion.Euler(50f, 30f, 0f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.42f, 0.44f, 0.48f);
+
+            var camGo = new GameObject("LayerProofCamera");
+            var cam = camGo.AddComponent<Camera>();
+            cam.fieldOfView = 45f;
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane = 4000f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.06f, 0.07f, 0.08f);
+
+            var rotation = Quaternion.Euler(52f, 20f, 0f);
+            camGo.transform.rotation = rotation;
+            camGo.transform.position = Over + Vector3.up * 2f - rotation * Vector3.forward * 210f;
+
+            var rt = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
+            var shot = new Texture2D(Width, Height, TextureFormat.RGB24, false);
+
+            foreach (var frame in Sheet)
+            {
+                foreach (var kind in Layers.All) Layers.Set(kind, false);
+                foreach (var kind in frame.On) Layers.Set(kind, true);
+
+                // A LAZY LAYER IS BUILT BY THAT Set, so the frame after is the first one that can
+                // show it. Several, to let the bake and any instantiate settle.
+                for (int settle = 0; settle < 4; settle++) yield return null;
+
+                RenderSettings.fog = false;
+                Capture(cam, rt, shot, frame.Name);
+            }
+
+            RenderSettings.fog = wasFog;
+
+            Assert.That(Directory.GetFiles(Dir, "*.png").Length, Is.GreaterThanOrEqualTo(Sheet.Length),
+                        "every combination should have left a picture behind");
+            Debug.Log($"[layerproof] {Sheet.Length} frames in {Dir}");
+        }
+
+        private static void Capture(Camera cam, RenderTexture rt, Texture2D shot, string name)
+        {
+            var wasTarget = cam.targetTexture;
+            var wasActive = RenderTexture.active;
+
+            cam.targetTexture = rt;
+            cam.Render();
+            RenderTexture.active = rt;
+            shot.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+            shot.Apply();
+
+            cam.targetTexture = wasTarget;
+            RenderTexture.active = wasActive;
+
+            File.WriteAllBytes(Path.Combine(Dir, name + ".png"), shot.EncodeToPNG());
+            Debug.Log($"[layerproof] {name}");
+        }
+    }
+}

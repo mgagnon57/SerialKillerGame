@@ -691,25 +691,29 @@ namespace Noir.Unity
             // runs, so a test or a preset can set it and be obeyed.
             CitySignals signals = null;
             CityTraffic traffic = null;
-            bool wantTraffic = Layers.IsOn(Layers.Kind.Traffic) || Layers.IsOn(Layers.Kind.Signals);
-            if (wantTraffic)
-            {
-                signals = CitySignals.Create(World, transform);
-                profile.Done("CitySignals");
-                traffic = CityTraffic.Create(World, transform, signals);
-                profile.Done("CityTraffic");
-            }
-            else
-            {
-                Debug.Log("[host] traffic and signals are both switched off, so neither is built. "
-                        + "88 vehicles and 2,766 junction conflict pairs are not being solved "
-                        + "every frame. Switch either layer on and re-enter Play to get them back.");
-            }
+
+            // ALWAYS BUILT. Not lazily, and not skipped - and this is the one place in the panel
+            // where that is the right answer.
+            //
+            // These two were skipped when both layers were off, which saved solving 88 vehicles
+            // and 2,766 junction conflict pairs a frame, and cost a restart to undo. Making them
+            // lazy like the trees looked obvious and is wrong twice: the traffic is a SIMULATION,
+            // not scenery - signals cycle, lanes are walked, jams happen whether or not anybody
+            // is drawing a van - and building it on a switch means the town's history depends on
+            // when somebody clicked. It also breaks every test that waits for a CityTraffic to
+            // exist, which is most of them.
+            //
+            // So the layer decides what is DRAWN and nothing else, exactly as the paragraph below
+            // has always said it should, and the switch works without a restart because there is
+            // nothing left to build.
+            signals = CitySignals.Create(World, transform);
+            profile.Done("CitySignals");
+            traffic = CityTraffic.Create(World, transform, signals);
+            profile.Done("CityTraffic");
 
             // The two that MOVE. Registered like the rest, and switching them off hides them
-            // exactly as HideActors always did - the cars keep driving their lanes and the
-            // signals keep cycling underneath, because this decides what is drawn and nothing
-            // else. Not baked: a combined mesh cannot move or change colour.
+            // exactly as HideActors always did. Not baked: a combined mesh cannot move or change
+            // colour.
             if (signals != null) Layers.Register(Layers.Kind.Signals, signals.gameObject);
             if (traffic != null) Layers.Register(Layers.Kind.Traffic, traffic.gameObject);
 
@@ -735,10 +739,16 @@ namespace Noir.Unity
             // are: 763 bought, animated figures are built and skinned every frame whether or not
             // anything draws them, and on a survey view that is a large slice of the budget spent
             // on people who are switched off. The simulation is untouched either way.
-            if (ShowPeople && Layers.IsOn(Layers.Kind.People))
-                _agentView = AgentMeshView.Create(this, transform);
+            // Lazily, so switching the people on is a click rather than a restart. The simulation
+            // is untouched either way - this is the 763 bought, animated, skinned figures, not the
+            // citizens, who go to work whether or not anybody is drawing them.
+            if (ShowPeople)
+                Layers.RegisterLazy(Layers.Kind.People, () =>
+                {
+                    _agentView = AgentMeshView.Create(this, transform);
+                    return _agentView != null ? _agentView.gameObject : null;
+                });
             profile.Done("AgentMeshView (the people)");
-            if (_agentView != null) Layers.Register(Layers.Kind.People, _agentView.gameObject);
 
             // THE CURTAIN. Up before anything can be mistaken for the game running, down only
             // when the frames have actually settled - and it holds the clock while it is up, so

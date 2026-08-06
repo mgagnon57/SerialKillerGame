@@ -397,8 +397,28 @@ namespace Noir.Unity
                 return ElevationGrid.HeightAt(cx + 0.5f, cy + 0.5f);
             }
 
+            // A BOUGHT BUILDING BRINGS ITS OWN INSIDES.
+            //
+            // BuildWalls already leaves a bought building's tiles alone, because the model has its
+            // own walls - see the `bought` mask down there. The furniture did not, and it is in
+            // this layer while the model is in another, so switching the civic buildings off left
+            // the grade school's desks standing in an open field, in rows, with no walls and no
+            // roof. It reads as a spectacular bug and is really one line missing from here.
+            //
+            // Same rule and same reason as the walls, now in both places.
+            bool BoughtBuildingOwns(TileRect fp)
+            {
+                int cx = fp.X + fp.W / 2, cy = fp.Y + fp.H / 2;
+                foreach (var place in world.AllPlaces)
+                    if (place.Bounds.Contains(cx, cy)) return CityBuildings.Handles(place);
+                return false;
+            }
+
+            int indoors = 0;
             foreach (var f in world.AllFurniture)
             {
+                if (BoughtBuildingOwns(f.Footprint)) { indoors++; continue; }
+
                 var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 box.name = f.Kind.ToString();
                 box.transform.SetParent(root.transform, false);
@@ -428,7 +448,9 @@ namespace Noir.Unity
                 mr.SetPropertyBlock(block);
             }
 
-            Debug.Log($"Furniture: {world.FurnitureCount} pieces across {world.RoomCount} rooms.");
+            Debug.Log($"Furniture: {world.FurnitureCount - indoors} pieces drawn across "
+                    + $"{world.RoomCount} rooms; {indoors} left to the bought buildings that "
+                    + "have their own.");
         }
 
         // ---------- ground ----------
