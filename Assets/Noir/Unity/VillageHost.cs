@@ -778,6 +778,12 @@ namespace Noir.Unity
             if (_lighting != null)
                 Layers.Register(Layers.Kind.Lamps, _lighting.SetFixtureRenderers);
 
+                // The houses' own windows follow the houses, not the street lighting - see
+                // SunRig.SetWindowPanes. The glazing inside a bought building needs no switch of
+                // its own at all: it is a child of the building, so the building's layer already
+                // takes it away.
+                Layers.Register(Layers.Kind.Massing, _lighting.SetWindowPanes);
+
             // The switches, on screen. L opens them.
             LayerPanel.Create(transform);
 

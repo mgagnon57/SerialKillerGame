@@ -504,11 +504,16 @@ namespace Noir.Unity
                     return new Color(0.45f, 0.85f, 0.45f);      // land - green
             }
 
-            // Homes still read a touch brighter than a bare lot line - that is the one thing
-            // this tier of the palette needs to say - but dimmed to match the county parcels
-            // below, so the two together sit under the road cyan rather than over it.
-            return home ? new Color(0.74f, 0.72f, 0.66f)        // somebody lives here - warm pale
-                        : new Color(0.52f, 0.52f, 0.55f);       // everything else - dim grey
+            // A HOUSE IS THE THING YOU ARE LOOKING FOR, so it is the loudest line on the plan.
+            //
+            // These were a warm pale grey, half a step off the county lot lines they sit inside,
+            // on the reasoning that the roads should read first. That is right for a drawing of a
+            // road network and wrong for this one: against the zoning colours - tan, ochre, green
+            // - a pale grey house outline is invisible, and finding one house among eight hundred
+            // is most of what the plan is for. Pink because nothing else here is: the roads have
+            // cyan, trade has amber, civic has violet, open land has green.
+            return home ? new Color(1.00f, 0.28f, 0.52f)        // somebody lives here
+                        : new Color(0.62f, 0.62f, 0.66f);       // everything else - grey
         }
 
         /// <summary>

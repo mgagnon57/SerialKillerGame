@@ -57,7 +57,9 @@ namespace Noir.Unity
             Houses,         // the suburb - residential stock
             Story,          // the story props
             Trees,          // every tree, bush, hedge and fallen trunk
-            Lamps,          // street lighting fixtures and window glazing
+            Lamps,          // street lighting fixtures - the lanterns, and nothing else. A
+                            // building's own windows are part of the building; see
+                            // SunRig.SetWindowPanes for what that cost before it was true.
             Traffic,        // moving vehicles
             People,         // the citizens
 

@@ -137,8 +137,26 @@ namespace Noir.Unity
         {
             if (_fixtures == null) return;
             foreach (var r in _fixtures.Lanterns) if (r != null) r.enabled = visible;
+        }
+
+        /// <summary>
+        /// The windows of the massing-built houses, which are part of the house and not part of
+        /// the street lighting.
+        ///
+        /// THESE USED TO BE ON THE LAMPS SWITCH, with the lanterns, because they are all emissive
+        /// surfaces built in the same pass and that is what the pass was called. It reads as a
+        /// fault the moment anybody turns the generated massing off: the walls go and the panes
+        /// stay, because they hang from this rig rather than from the building, so the town
+        /// becomes rows of black rectangles floating where the houses were - and the only way to
+        /// clear them is to switch off the street lighting, which has nothing to do with it.
+        ///
+        /// A window belongs to its building. Registered against Massing so it goes when the
+        /// building goes.
+        /// </summary>
+        public void SetWindowPanes(bool visible)
+        {
+            if (_fixtures == null) return;
             foreach (var r in _fixtures.Panes) if (r != null) r.enabled = visible;
-            foreach (var r in _fixtures.Glazing) if (r != null) r.enabled = visible;
         }
 
         /// <summary>
@@ -216,7 +234,15 @@ namespace Noir.Unity
         public static Fixtures BuildFixtures(WorldModel world, Transform parent)
         {
             bool wantLamps = Layers.IsOn(Layers.Kind.Lamps);
-            var fixtures = new Fixtures(parent, wantLamps ? LightPool.DefaultSize : 1);
+
+            // WINDOWS FOLLOW THE BUILDINGS, LAMPS FOLLOW THE STREET LIGHTING, and that goes for
+            // whether they are BUILT as well as whether they are drawn. Both used to be gated on
+            // the lamps layer together, so switching street lighting off left every house in the
+            // town without a pane of glass in it - which is not what anybody means by turning the
+            // street lights off.
+            bool wantWindows = Layers.IsOn(Layers.Kind.Massing);
+            var fixtures = new Fixtures(parent,
+                                        wantLamps || wantWindows ? LightPool.DefaultSize : 1);
 
             // Every place that HAS walls gets glass in them.
             //
@@ -241,18 +267,19 @@ namespace Noir.Unity
             // Layers is normally a way of LOOKING and does not change what exists. Lighting
             // fixtures are pure scenery with nothing behind them, so skipping the build is safe;
             // the cost is that switching Lamps back on needs a rebuild rather than being free.
-            bool wanted = wantLamps;
-
             foreach (var place in world.AllPlaces)
-                if (wanted && RoofBuilder.IsRoofed(place.Kind))
+                if (wantWindows && RoofBuilder.IsRoofed(place.Kind))
                     AddWindow(world, place, parent, fixtures);
 
             long windows = clock.ElapsedMilliseconds;
-            if (wanted) BuildStreetLamps(world, parent, fixtures);
+            if (wantLamps) BuildStreetLamps(world, parent, fixtures);
             long lamps = clock.ElapsedMilliseconds - windows;
-            if (!wanted)
-                Debug.Log("[sunrig] street lighting layer is off - no fixtures built. "
-                        + "Switch Lamps on and re-enter Play to get them back.");
+            if (!wantLamps)
+                Debug.Log("[sunrig] street lighting layer is off - no street lamps built. "
+                        + "Switch Street lighting on and re-enter Play to get them back.");
+            if (!wantWindows)
+                Debug.Log("[sunrig] generated massing is off - no window glass built. "
+                        + "Switch Generated massing on and re-enter Play to get it back.");
 
             Debug.Log($"[sunrig] windows {windows} ms, street lamps {lamps} ms "
                     + $"(scan {_lampScanMs} ms, instantiate {_lampMakeMs} ms, "
