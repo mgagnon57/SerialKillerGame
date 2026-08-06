@@ -392,6 +392,13 @@ namespace Noir.Unity
                 }
 
                 var layout = VillageParser.Parse(ContentLoader.Read(MapFile));
+
+                // The roads in city.txt are DERIVED, not authored - SOURCES-OF-TRUTH.md is
+                // explicit that when they disagree with the parcels the parcels win and the
+                // road gets moved. Content/roads.txt is that move, done from survey rather than
+                // by sliding a ruled line sideways. No-ops if the file is not there.
+                SurveyRoads.Apply(layout);
+
                 World = WorldBuilder.Build(layout);
 
                 var report = WorldValidator.Validate(World);

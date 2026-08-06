@@ -568,11 +568,9 @@ namespace Noir.Unity
             for (int i = 0; i < Graph.Segments.Count; i++)
             {
                 var klass = world.Roads.Lines[Graph.Segments[i].Line].Class;
-                int weight = klass switch
-                {
-                    RoadClass.Freeway => 12, RoadClass.Mainroad => 8,
-                    RoadClass.Street => 2, _ => 1,
-                };
+                // Zero for an alley, so no car is ever introduced on a back lane - see
+                // RoadClasses.AmbientTrafficWeight. The turn scoring reads the same table.
+                int weight = RoadClasses.AmbientTrafficWeight(klass);
                 for (int w = 0; w < weight; w++) pitch.Add(i);
             }
 
@@ -1239,13 +1237,9 @@ namespace Noir.Unity
                 ? _world.Roads.Lines[into.Line].Class
                 : RoadClass.Street;
 
-            int road = klass switch
-            {
-                RoadClass.Freeway  => 12,
-                RoadClass.Mainroad => 8,
-                RoadClass.Street   => 2,
-                _                  => 1,      // a track is where the tractor goes
-            };
+            // Alleys score 0, so nothing turns down one on its way somewhere - see
+            // RoadClasses.AmbientTrafficWeight, which the spawn pitch reads from too.
+            int road = RoadClasses.AmbientTrafficWeight(klass);
 
             return road * (Graph.Turns[turn].Kind == TurnKind.Straight ? 3 : 1);
         }
