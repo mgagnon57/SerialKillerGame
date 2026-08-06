@@ -88,6 +88,18 @@ namespace Noir.Unity
             Plan,
 
             /// <summary>
+            /// The buildings' own outlines, over the top of whatever is standing.
+            ///
+            /// Its own switch rather than riding on Plan, because the two answer different
+            /// questions - where the boundary is, and where the house is - and the useful thing
+            /// is putting the second over the first. They shared a mesh, so they shared a switch.
+            ///
+            /// Drawn ignoring depth: a building stands exactly on its own outline and hides it,
+            /// so with the massing up this layer used to draw nothing and read as broken.
+            /// </summary>
+            Footprints,
+
+            /// <summary>
             /// Street names and addresses, drawn in screen space over whatever is standing.
             ///
             /// Its own switch rather than riding on Plan: the names are wanted with the built town
@@ -99,11 +111,16 @@ namespace Noir.Unity
         /// <summary>How the panel labels each one, and the order it lists them in.</summary>
         public static readonly Kind[] All =
         {
+            // Kind.Rail - the ELEVATED railway - is deliberately not listed. It needs a
+            // `place railway` in the map, Rossville has none and is not going to, and Rossville is
+            // the only map this project still carries. The switch was permanently dead, so it is
+            // off the panel rather than sitting there as a thing you can click for no result. The
+            // builder and the enum member stay: a map that wants an El only has to say so.
             Kind.Streets, Kind.Alleys, Kind.Parking, Kind.Signs, Kind.Signals,
-            Kind.RailBed, Kind.Rail, Kind.Powerlines, Kind.Farm,
+            Kind.RailBed, Kind.Powerlines, Kind.Farm,
             Kind.Buildings, Kind.Districts, Kind.Houses, Kind.Story,
             Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Massing,
-            Kind.Plan, Kind.Labels,
+            Kind.Plan, Kind.Footprints, Kind.Labels,
         };
 
         public static string Label(Kind k)
@@ -129,6 +146,7 @@ namespace Noir.Unity
                 case Kind.People:     return "People";
                 case Kind.Massing:    return "Generated massing";
                 case Kind.Plan:       return "Parcel lines";
+                case Kind.Footprints: return "House outlines";
                 case Kind.Labels:     return "Street names";
                 default:              return k.ToString();
             }
@@ -186,9 +204,59 @@ namespace Noir.Unity
             setVisible(IsOn(kind));
         }
 
-        /// <summary>Forget every root and hook. Called when the town is rebuilt, or the
-        /// dictionaries keep pointers to destroyed objects and every toggle throws.</summary>
-        public static void Clear() { _roots.Clear(); _hooks.Clear(); }
+        /// <summary>
+        /// Register something expensive that is only worth building if somebody asks to see it.
+        ///
+        /// THE PROBLEM THIS SOLVES. Trees, farm clutter and power lines were skipped entirely when
+        /// their layer was off - 17,405 farm pieces, 12,804 trees and 789 poles that nothing was
+        /// ever going to look at, and on a survey view that is the whole frame budget. The price
+        /// was that switching one back ON did nothing until you left Play and came back, with a
+        /// line in the log to explain it. A switch that needs the game restarted is not a switch,
+        /// and nobody reads the log while they are looking at the town.
+        ///
+        /// So the saving stays and the restart goes: the builder is kept, and run the first time
+        /// the layer is turned on. Startup skips what is switched off, and switching it on costs
+        /// its build once, there and then.
+        ///
+        /// A layer built this way after the bake is not baked, so it draws in more calls than one
+        /// that was there from the start. That is the trade, and it only applies to a layer that
+        /// was off when the town came up.
+        /// </summary>
+        public static void RegisterLazy(Kind kind, System.Func<GameObject> build)
+        {
+            if (build == null) return;
+
+            if (IsOn(kind)) { Register(kind, build()); return; }
+
+            if (!_pending.TryGetValue(kind, out var list))
+                _pending[kind] = list = new List<System.Func<GameObject>>();
+            list.Add(build);
+        }
+
+        private static readonly Dictionary<Kind, List<System.Func<GameObject>>> _pending =
+            new Dictionary<Kind, List<System.Func<GameObject>>>();
+
+        private static void BuildPending(Kind kind)
+        {
+            if (!_pending.TryGetValue(kind, out var builders)) return;
+            _pending.Remove(kind);        // before building, so a builder that toggles cannot loop
+
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var build in builders) Register(kind, build());
+            Debug.Log($"[layers] built {Label(kind)} on demand in {clock.ElapsedMilliseconds} ms - "
+                    + "it was switched off when the town came up.");
+        }
+
+        /// <summary>Whether this layer has anything behind it: a root, a hook, or a builder
+        /// waiting to run. False means the switch does nothing, and the panel says so.</summary>
+        public static bool IsWired(Kind kind) =>
+            (_roots.TryGetValue(kind, out var r) && r.Count > 0)
+         || (_hooks.TryGetValue(kind, out var h) && h.Count > 0)
+         || _pending.ContainsKey(kind);
+
+        /// <summary>Forget every root, hook and pending builder. Called when the town is rebuilt,
+        /// or the dictionaries keep pointers to destroyed objects and every toggle throws.</summary>
+        public static void Clear() { _roots.Clear(); _hooks.Clear(); _pending.Clear(); }
 
         private static readonly GameObject[] None = new GameObject[0];
 
@@ -219,6 +287,10 @@ namespace Noir.Unity
             PlayerPrefs.SetInt(KeyPrefix + kind, on ? 1 : 0);
             PlayerPrefs.Save();
 
+            // Built the first time it is asked for, not at startup - see RegisterLazy. Must come
+            // after _on is set, because Register activates the new root from it.
+            if (on) BuildPending(kind);
+
             if (_roots.TryGetValue(kind, out var list))
             {
                 for (int i = list.Count - 1; i >= 0; i--)
@@ -233,6 +305,29 @@ namespace Noir.Unity
         }
 
         public static void Toggle(Kind kind) => Set(kind, !IsOn(kind));
+
+        /// <summary>
+        /// Say out loud which switches have nothing behind them.
+        ///
+        /// Called once the town is up and everything has had its chance to register. Some of these
+        /// are legitimate and permanent - the elevated rail needs a `place railway` that
+        /// Rossville's map does not have - and some mean a builder returned null and nobody
+        /// noticed. Either way a switch that does nothing should be visible as one, and the panel
+        /// marks the same layers this names.
+        /// </summary>
+        public static void Audit()
+        {
+            var dead = new List<string>();
+            foreach (var k in All) if (!IsWired(k)) dead.Add(Label(k));
+
+            if (dead.Count == 0)
+            {
+                Debug.Log($"[layers] all {All.Length} switches have something behind them.");
+                return;
+            }
+            Debug.LogWarning($"[layers] {dead.Count} of {All.Length} switches have nothing behind "
+                           + "them and are marked in the panel: " + string.Join(", ", dead) + ".");
+        }
 
         public static void SetAll(bool on)
         {

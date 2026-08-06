@@ -457,7 +457,13 @@ namespace Noir.Unity
             Layers.Clear();
 
             var profile = new BuildProfile();
-            _village = VillageMesh.Build(World, transform, ShowBuildings);
+            // TRUE, NOT ShowBuildings. That flag is about the BOUGHT prefabs - the Universal Pack's
+            // Chicago brownstones, which are the wrong country for an Illinois village and are off
+            // for that reason. The generated massing is the town this project actually draws, and
+            // tying it to the same flag meant the Generated massing switch had nothing behind it
+            // and could never light a single house however many times it was clicked. What gets
+            // built is the layer's decision now, and it is made lazily.
+            _village = VillageMesh.Build(World, transform, showDressing: true);
             profile.Done("VillageMesh (ground, walls, roofs, frontage, furniture)");
 
             // The ground, roads and props are still drawn by the village renderer; only the
@@ -490,11 +496,18 @@ namespace Noir.Unity
                                     CityStreets.Build(World, city.transform, out alleyRoot));
                     Layers.Register(Layers.Kind.Alleys, alleyRoot);
                     profile.Done("CityStreets");
-                    Layers.Register(Layers.Kind.Parking, CityParking.Build(World, city.transform));
-                    profile.Done("CityParking");
-                    Layers.Register(Layers.Kind.Signs, CitySigns.Build(World, city.transform));
-                    profile.Done("CitySigns");
                 }
+
+                // PARKING AND SIGNS EITHER WAY. They were built only alongside the street kit, so
+                // in centreline mode - which is how Rossville is drawn - both switches sat in the
+                // panel looking exactly like the working ones and did nothing when clicked.
+                // Neither needs the asphalt: both are placed from the road network, which is there
+                // in both modes. Lazy, so the centreline view does not pay for them unless asked.
+                var roads = city.transform;
+                Layers.RegisterLazy(Layers.Kind.Parking, () => CityParking.Build(World, roads));
+                profile.Done("CityParking");
+                Layers.RegisterLazy(Layers.Kind.Signs, () => CitySigns.Build(World, roads));
+                profile.Done("CitySigns");
             }
             // BUILDINGS OFF, LOT LINES ON. The Universal Pack holds exactly two house families
             // and both are Chicago brownstones - bay fronts, stoops, fire escapes - so a village
@@ -524,43 +537,36 @@ namespace Noir.Unity
             // farm clutter and the story props are all scenery, and scenery on a plan is
             // scenery ON TOP OF the thing you are trying to read - a block of forty trees
             // hides forty lot boundaries.
-            if (ShowBuildings)
-            {
-                Layers.Register(Layers.Kind.Story, CityStory.Build(World, city.transform));
-                profile.Done("CityStory");
-                Layers.Register(Layers.Kind.Rail, CityRail.Build(World, city.transform));
-                profile.Done("CityRail");
+            // NOT GATED ON ShowBuildings, ANY OF THEM. That flag is about the bought prefabs -
+            // the Universal Pack's Chicago brownstones, which are the wrong country for an
+            // Illinois village and are off for that reason. None of the six below is a bought
+            // house: the CSX line follows the survey, the story props are the game's own, and the
+            // farm, poles and trees are generated. Tying them to the same flag left six switches
+            // in the panel that ticked and did nothing, forever, and no way to find out why.
+            //
+            // SKIPPED WHEN SWITCHED OFF, AND BUILT THE MOMENT ONE IS ASKED FOR. Building them to
+            // hide them cost 17,405 farm pieces, 12,804 trees and 789 poles nothing would ever
+            // see, which on a survey view is the whole frame budget. Skipping them used to mean
+            // switching one back on did nothing until you left Play and came back - a switch that
+            // needs the game restarted is not a switch. See Layers.RegisterLazy: the saving stays
+            // and the restart goes.
+            var cityRoot = city.transform;
+            Layers.RegisterLazy(Layers.Kind.Story, () => CityStory.Build(World, cityRoot));
+            profile.Done("CityStory");
 
-                // The real CSX line, at grade. Separate from CityRail above, which is the
-                // elevated El and is gated on a `place railway` city.txt does not have - see
-                // CityRailBed. This one needs no place: it follows the surveyed alignment in
-                // features.txt, which is the same line the survey plan draws.
-                Layers.Register(Layers.Kind.RailBed, CityRailBed.Build(World, city.transform));
-                profile.Done("CityRailBed");
-                // SKIPPED ENTIRELY WHEN SWITCHED OFF, not built and hidden. Layers is a way of
-                // LOOKING at the town and deliberately does not touch the simulation - but these
-                // three are scenery with no simulation behind them at all, and building them to
-                // hide them cost 17,405 farm pieces, 12,804 trees and 789 poles of geometry that
-                // nothing was ever going to see. On a survey view that is the whole frame budget.
-                //
-                // The cost: switching one back on needs a rebuild rather than being free. That is
-                // the trade, and it is the right way round for scenery.
-                if (Layers.IsOn(Layers.Kind.Farm))
-                {
-                    Layers.Register(Layers.Kind.Farm, CityFarm.Build(World, city.transform));
-                    profile.Done("CityFarm");
-                }
-                if (Layers.IsOn(Layers.Kind.Powerlines))
-                {
-                    Layers.Register(Layers.Kind.Powerlines, CityPowerlines.Build(World, city.transform));
-                    profile.Done("CityPowerlines");
-                }
-                if (Layers.IsOn(Layers.Kind.Trees))
-                {
-                    Layers.Register(Layers.Kind.Trees, CityGreenery.Build(World, city.transform));
-                    profile.Done("CityGreenery");
-                }
-            }
+            // The real CSX line, at grade. Separate from Kind.Rail, which is the elevated El and
+            // needs a `place railway` city.txt does not have - that one is off the panel entirely
+            // now, see Layers.All. This one needs no place: it follows the surveyed alignment in
+            // features.txt, the same line the survey plan draws.
+            Layers.RegisterLazy(Layers.Kind.RailBed, () => CityRailBed.Build(World, cityRoot));
+            profile.Done("CityRailBed");
+
+            Layers.RegisterLazy(Layers.Kind.Farm, () => CityFarm.Build(World, cityRoot));
+            profile.Done("CityFarm");
+            Layers.RegisterLazy(Layers.Kind.Powerlines, () => CityPowerlines.Build(World, cityRoot));
+            profile.Done("CityPowerlines");
+            Layers.RegisterLazy(Layers.Kind.Trees, () => CityGreenery.Build(World, cityRoot));
+            profile.Done("CityGreenery");
 
             // BEFORE the bake, because it measures the buildings the bake is about to destroy,
             // and parented outside the node the bake touches so it survives. Nothing else in the
@@ -628,7 +634,13 @@ namespace Noir.Unity
             // they answer best: IS THIS HOUSE WHERE THE PARCEL SAYS IT IS. Now it is built either
             // way and switched with Layers.Kind.Plan like everything else.
             Layers.Register(Layers.Kind.Plan,
-                            CityOutlines.Build(World, transform, ShowPlanRoads, ShowPlanFootprints));
+                            CityOutlines.Build(World, transform, ShowPlanRoads));
+
+            // ON ITS OWN ROOT AND ITS OWN SWITCH. The lot lines say where the boundary is and
+            // these say where the house is; the useful view is the second over the first, and
+            // while they shared a mesh there was one switch for both.
+            Layers.Register(Layers.Kind.Footprints,
+                            CityOutlines.BuildFootprints(World, transform));
 
             // THE NAMES GO ON EITHER WAY. Like the parcel lines above, these were built only in
             // survey-plan mode - so the built town, which is what anybody actually looks at, was
@@ -776,6 +788,7 @@ namespace Noir.Unity
             // themselves keep burning either way, which is the same distinction everywhere else
             // here draws - this decides what is DRAWN.
             if (_lighting != null)
+            {
                 Layers.Register(Layers.Kind.Lamps, _lighting.SetFixtureRenderers);
 
                 // The houses' own windows follow the houses, not the street lighting - see
@@ -783,9 +796,14 @@ namespace Noir.Unity
                 // its own at all: it is a child of the building, so the building's layer already
                 // takes it away.
                 Layers.Register(Layers.Kind.Massing, _lighting.SetWindowPanes);
+            }
 
             // The switches, on screen. L opens them.
             LayerPanel.Create(transform);
+
+            // Everything that is going to register has registered by here, so this is where a
+            // switch with nothing behind it can be named. The panel marks the same ones.
+            Layers.Audit();
 
             // AFTER the people AND the lights exist, which is the whole of the bug this line
             // used to have. It sat above CityTraffic.Create's block, where _agentView was still

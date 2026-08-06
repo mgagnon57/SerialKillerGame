@@ -16,6 +16,13 @@ Shader "Noir/ScreenSpaceLine"
     {
         _WidthPixels ("Width (pixels)", Range(0.5, 12)) = 2.5
         _Color ("Tint", Color) = (1,1,1,1)
+
+        // AN OVERLAY LINE IGNORES DEPTH. Default is the ordinary LEqual/On, so a lot line is
+        // paint on the ground and is properly hidden by anything standing in front of it. The
+        // house outlines set Always/Off instead: the whole point of switching them on is to see
+        // where a building is, and the building itself is the thing in the way.
+        [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest ("ZTest", Float) = 4
+        [Enum(Off, 0, On, 1)] _ZWrite ("ZWrite", Float) = 1
     }
 
     SubShader
@@ -30,8 +37,8 @@ Shader "Noir/ScreenSpaceLine"
         Pass
         {
             Name "NoirLine"
-            ZWrite On
-            ZTest LEqual
+            ZWrite [_ZWrite]
+            ZTest [_ZTest]
             Cull Off
 
             HLSLPROGRAM

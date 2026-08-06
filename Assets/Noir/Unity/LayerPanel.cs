@@ -127,8 +127,22 @@ namespace Noir.Unity
             foreach (var kind in Layers.All)
             {
                 bool on = Layers.IsOn(kind);
-                string tick = on ? "<color=#8c8>✓</color> " : "<color=#666>·</color> ";
-                if (GUILayout.Button(tick + Layers.Label(kind), on ? _row : _rowOff))
+                bool wired = Layers.IsWired(kind);
+
+                // A SWITCH WITH NOTHING BEHIND IT SAYS SO, rather than looking exactly like the
+                // working ones and doing nothing when clicked. Some of these are legitimate: the
+                // elevated rail needs a `place railway` that Rossville's map does not have, and
+                // parking and road signs are not built at all in centreline mode. The switch
+                // still works - turn the thing on and it lights up - it just has no town behind
+                // it today, and that is worth saying on the panel instead of in the log.
+                string tick = !wired ? "<color=#665>–</color> "
+                            : on     ? "<color=#8c8>✓</color> "
+                                     : "<color=#666>·</color> ";
+                string label = wired
+                    ? Layers.Label(kind)
+                    : "<color=#76715f>" + Layers.Label(kind) + "   nothing built</color>";
+
+                if (GUILayout.Button(tick + label, on && wired ? _row : _rowOff))
                     Layers.Toggle(kind);
             }
 

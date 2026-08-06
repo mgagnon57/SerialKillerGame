@@ -68,7 +68,7 @@ namespace Noir.Unity
         /// support, the same complaint as a place outline on a lot the parcel already draws.
         /// </summary>
         public static GameObject Build(WorldModel world, Transform parent,
-                                       bool showRoads = true, bool showFootprints = true)
+                                       bool showRoads = true, bool showFootprints = false)
         {
             var go = new GameObject("CityOutlines");
             go.transform.SetParent(parent, false);
@@ -92,31 +92,84 @@ namespace Noir.Unity
             // ---- the railway, the water, the schools ----
             int features = Features(verts, cols, tris);
 
-            int footprints = 0;
-            if (showFootprints)
+            int footprints = showFootprints ? Footprints(world, verts, cols, tris) : 0;
+
+            // The screen-space line has no width until the shader gives it one, so its vertices
+            // all sit exactly on the centre line and the bounds come out a hair too tight. A
+            // parcel whose bounds are a flat sliver gets culled the moment the camera is square
+            // on to it, which reads as whole blocks of the plan blinking out while you orbit -
+            // which is why Emit expands them.
+            Emit(go, "CityOutlines", verts, cols, tris, paint);
+
+            Debug.Log($"[outlines] {parcels} county parcels, {roads} road corridors, "
+                    + $"{features} named features, {footprints} of {world.PlaceCount} places "
+                    + $"outlined - {tris.Count / 3} triangles in one mesh.");
+            return go;
+        }
+
+        /// <summary>
+        /// The buildings' own outlines, on their own root so they have their own switch.
+        ///
+        /// SEPARATE FROM THE LOT LINES, and that is the point. The county's parcels and the
+        /// buildings standing on them answer different questions - where the boundary is, and
+        /// where the house is - and the one thing worth doing with them is putting the second
+        /// over the first. Sharing a mesh with the parcels meant one switch for both.
+        ///
+        /// DRAWN OVER EVERYTHING, ignoring depth. An outline traces the footprint of a building,
+        /// so the building stands exactly on it and hides it - switching house outlines on while
+        /// the massing is up used to show nothing at all, which reads as a broken switch. The
+        /// whole reason to ask for this layer is to see where the buildings are, and the building
+        /// being in the way is not a reason to refuse.
+        /// </summary>
+        public static GameObject BuildFootprints(WorldModel world, Transform parent)
+        {
+            var go = new GameObject("HouseOutlines");
+            go.transform.SetParent(parent, false);
+
+            var verts = new List<Vector3>();
+            var cols = new List<Color>();
+            var tris = new List<int>();
+
+            var paint = OverlayPaint();
+            _tangents.Clear();
+
+            int n = Footprints(world, verts, cols, tris);
+            Emit(go, "HouseOutlines", verts, cols, tris, paint);
+
+            Debug.Log($"[outlines] {n} of {world.PlaceCount} places outlined on their own layer.");
+            return go;
+        }
+
+        private static int Footprints(WorldModel world, List<Vector3> verts, List<Color> cols,
+                                      List<int> tris)
+        {
+            var kinds = PlaceKindTable.Current;
+            int n = 0;
+
+            foreach (var place in world.AllPlaces)
             {
-                var kinds = PlaceKindTable.Current;
+                if (place == null) continue;
 
-                foreach (var place in world.AllPlaces)
-                {
-                    if (place == null) continue;
+                var row = kinds.Row(place.Kind);
+                var colour = ColourOf(row.Name, row.IsHome);
+                var b = place.Bounds;
 
-                    var row = kinds.Row(place.Kind);
-                    var colour = ColourOf(row.Name, row.IsHome);
-                    var b = place.Bounds;
+                Outline(verts, cols, tris, b.X, b.Y, b.W, b.H, colour);
 
-                    Outline(verts, cols, tris, b.X, b.Y, b.W, b.H, colour);
-
-                    // A doorway is a gap in the line and a stub pointing into the plot, which is
-                    // how a plan says which way a building faces. It is also the only way to
-                    // tell, on a footprint, that 408 Holmes fronts Holmes Avenue rather than the
-                    // alley behind.
-                    if (row.IsBuilding) Door(verts, cols, tris, place, colour);
-                    footprints++;
-                }
+                // A doorway is a gap in the line and a stub pointing into the plot, which is how
+                // a plan says which way a building faces. It is also the only way to tell, on a
+                // footprint, that 408 Holmes fronts Holmes Avenue rather than the alley behind.
+                if (row.IsBuilding) Door(verts, cols, tris, place, colour);
+                n++;
             }
+            return n;
+        }
 
-            var mesh = new Mesh { name = "CityOutlines", indexFormat = verts.Count > 65000
+        /// <summary>One mesh, one renderer, the bounds guard both paths need.</summary>
+        private static void Emit(GameObject go, string name, List<Vector3> verts, List<Color> cols,
+                                 List<int> tris, Material paint)
+        {
+            var mesh = new Mesh { name = name, indexFormat = verts.Count > 65000
                 ? UnityEngine.Rendering.IndexFormat.UInt32
                 : UnityEngine.Rendering.IndexFormat.UInt16 };
             mesh.SetVertices(verts);
@@ -124,10 +177,6 @@ namespace Noir.Unity
             if (ScreenSpace) mesh.SetUVs(0, _tangents);
             mesh.SetTriangles(tris, 0);
 
-            // The screen-space line has no width until the shader gives it one, so its vertices
-            // all sit exactly on the centre line and the bounds come out a hair too tight. A
-            // parcel whose bounds are a flat sliver gets culled the moment the camera is square
-            // on to it, which reads as whole blocks of the plan blinking out while you orbit.
             mesh.RecalculateBounds();
             if (ScreenSpace)
             {
@@ -141,11 +190,24 @@ namespace Noir.Unity
             renderer.sharedMaterial = paint;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+        }
 
-            Debug.Log($"[outlines] {parcels} county parcels, {roads} road corridors, "
-                    + $"{features} named features, {footprints} of {world.PlaceCount} places "
-                    + $"outlined - {tris.Count / 3} triangles in one mesh.");
-            return go;
+        /// <summary>The same line, drawn over the top of the town rather than into it.</summary>
+        private static Material OverlayPaint()
+        {
+            var m = Paint();          // also decides ScreenSpace, which the vertex layout needs
+            m.name = "House Outline Paint (overlay)";
+
+            if (m.HasProperty("_ZTest"))
+                m.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
+            if (m.HasProperty("_ZWrite")) m.SetFloat("_ZWrite", 0f);
+            else
+                Debug.LogWarning("[outlines] the line shader has no depth controls - house "
+                               + "outlines will be hidden by the buildings they trace.");
+
+            // After everything solid, so it lands on top rather than fighting for the same pixel.
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Overlay - 100;
+            return m;
         }
 
         /// <summary>

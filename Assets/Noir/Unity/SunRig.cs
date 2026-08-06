@@ -111,7 +111,12 @@ namespace Noir.Unity
 
             BuildSky();
 
+            // Kept so the two halves of the fixture build can be finished later, the first time
+            // somebody switches their layer on - see EnsureStreetLamps and EnsureWindows.
+            _world = host.World;
             _fixtures = BuildFixtures(host.World, transform);
+            _lampsBuilt = Layers.IsOn(Layers.Kind.Lamps);
+            _windowsBuilt = Layers.IsOn(Layers.Kind.Massing);
 
             Debug.Log($"Lighting: {_fixtures.Windows.Count} window lights, {_fixtures.Panes.Count} panes, "
                     + $"{_fixtures.Lamps.Count} street lamps, sharing "
@@ -135,8 +140,46 @@ namespace Noir.Unity
         /// </summary>
         public void SetFixtureRenderers(bool visible)
         {
+            if (visible) EnsureStreetLamps();
             if (_fixtures == null) return;
             foreach (var r in _fixtures.Lanterns) if (r != null) r.enabled = visible;
+        }
+
+        private WorldModel _world;
+        private bool _lampsBuilt, _windowsBuilt;
+
+        /// <summary>
+        /// Put the street lamps up now, if they were skipped when the town came up.
+        ///
+        /// The fixture pass is the most expensive thing in the build - it was 9.6 seconds of a
+        /// 16.8 second one - so it is skipped when its layer is off. It used to stay skipped until
+        /// the next Play, with a line in the log saying so, which is not a switch and is not
+        /// something anybody reads while looking at the town. Now the cost is simply paid at the
+        /// moment it is asked for.
+        /// </summary>
+        public void EnsureStreetLamps()
+        {
+            if (_lampsBuilt || _fixtures == null || _world == null) return;
+            _lampsBuilt = true;
+
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            BuildStreetLamps(_world, transform, _fixtures);
+            Debug.Log($"[sunrig] {_fixtures.Lamps.Count} street lamps built on demand in "
+                    + $"{clock.ElapsedMilliseconds} ms.");
+        }
+
+        /// <summary>The same, for the glass in the houses. See EnsureStreetLamps.</summary>
+        public void EnsureWindows()
+        {
+            if (_windowsBuilt || _fixtures == null || _world == null) return;
+            _windowsBuilt = true;
+
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var place in _world.AllPlaces)
+                if (RoofBuilder.IsRoofed(place.Kind))
+                    AddWindow(_world, place, transform, _fixtures);
+            Debug.Log($"[sunrig] {_fixtures.Panes.Count} window panes built on demand in "
+                    + $"{clock.ElapsedMilliseconds} ms.");
         }
 
         /// <summary>
@@ -155,6 +198,7 @@ namespace Noir.Unity
         /// </summary>
         public void SetWindowPanes(bool visible)
         {
+            if (visible) EnsureWindows();
             if (_fixtures == null) return;
             foreach (var r in _fixtures.Panes) if (r != null) r.enabled = visible;
         }
@@ -241,8 +285,12 @@ namespace Noir.Unity
             // town without a pane of glass in it - which is not what anybody means by turning the
             // street lights off.
             bool wantWindows = Layers.IsOn(Layers.Kind.Massing);
-            var fixtures = new Fixtures(parent,
-                                        wantLamps || wantWindows ? LightPool.DefaultSize : 1);
+
+            // THE POOL IS ALWAYS FULL SIZE, even when both halves are skipped. It used to be one
+            // slot in that case, which was correct while a skipped fixture stayed skipped for the
+            // session - and became a trap the moment they could be built later, because the lamps
+            // would go up with one real light between them and no obvious reason why.
+            var fixtures = new Fixtures(parent, LightPool.DefaultSize);
 
             // Every place that HAS walls gets glass in them.
             //
@@ -275,11 +323,11 @@ namespace Noir.Unity
             if (wantLamps) BuildStreetLamps(world, parent, fixtures);
             long lamps = clock.ElapsedMilliseconds - windows;
             if (!wantLamps)
-                Debug.Log("[sunrig] street lighting layer is off - no street lamps built. "
-                        + "Switch Street lighting on and re-enter Play to get them back.");
+                Debug.Log("[sunrig] street lighting is off - street lamps skipped. They go up "
+                        + "the moment the layer is switched on; see EnsureStreetLamps.");
             if (!wantWindows)
-                Debug.Log("[sunrig] generated massing is off - no window glass built. "
-                        + "Switch Generated massing on and re-enter Play to get it back.");
+                Debug.Log("[sunrig] generated massing is off - window glass skipped. It goes in "
+                        + "the moment the layer is switched on; see EnsureWindows.");
 
             Debug.Log($"[sunrig] windows {windows} ms, street lamps {lamps} ms "
                     + $"(scan {_lampScanMs} ms, instantiate {_lampMakeMs} ms, "

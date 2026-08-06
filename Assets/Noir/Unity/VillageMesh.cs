@@ -64,24 +64,14 @@ namespace Noir.Unity
             // Walls, roofs, furniture, frontage and the countryside scatter are 45,510 props and
             // 9,172 country objects; building them to hide them was most of a second and a great
             // deal of memory for geometry nothing would draw.
-            if (showDressing && Layers.IsOn(Layers.Kind.Massing))
+            //
+            // LAZY, so that saving no longer costs a restart. It used to be skipped outright when
+            // the layer was off, and switching the layer back on did nothing at all - the switch
+            // was there, it ticked, and no house ever appeared. See Layers.RegisterLazy.
+            if (showDressing)
             {
-                // ONE ROOT OVER ALL OF IT, SO IT CAN BE SWITCHED OFF. Every one of these six used
-                // to hang straight off `root`, which is the ground as well - so the generated
-                // massing was drawn UNDER the bought prefabs with no way to remove it, and asking
-                // the panel for "roads and lot lines only" still gave a town full of primitive
-                // houses. The ground stays outside the switch: a plan needs a surface to dim.
-                var dressing = new GameObject("Dressing");
-                dressing.transform.SetParent(root.transform, false);
-
-                BuildWalls(world, dressing.transform);
-                BuildFurniture(world, dressing.transform);
-                BuildProps(world, dressing.transform);
-                RoofBuilder.Build(world, dressing.transform);
-                Frontage.Build(world, dressing.transform);
-                Countryside.Build(world, dressing.transform);
-
-                Layers.Register(Layers.Kind.Massing, dressing);
+                var under = root.transform;
+                Layers.RegisterLazy(Layers.Kind.Massing, () => BuildDressing(world, under));
             }
 
             // Reported AFTER building, not before. Textures load lazily when the first
@@ -90,6 +80,28 @@ namespace Noir.Unity
             SurfaceTextures.ReportOnce();
 
             return root;
+        }
+
+        /// <summary>
+        /// ONE ROOT OVER ALL OF IT, SO IT CAN BE SWITCHED OFF. Every one of these six used to hang
+        /// straight off the ground's root - so the generated massing was drawn UNDER the bought
+        /// prefabs with no way to remove it, and asking the panel for "roads and lot lines only"
+        /// still gave a town full of primitive houses. The ground stays outside the switch: a plan
+        /// needs a surface to dim.
+        /// </summary>
+        private static GameObject BuildDressing(WorldModel world, Transform parent)
+        {
+            var dressing = new GameObject("Dressing");
+            dressing.transform.SetParent(parent, false);
+
+            BuildWalls(world, dressing.transform);
+            BuildFurniture(world, dressing.transform);
+            BuildProps(world, dressing.transform);
+            RoofBuilder.Build(world, dressing.transform);
+            Frontage.Build(world, dressing.transform);
+            Countryside.Build(world, dressing.transform);
+
+            return dressing;
         }
 
         // ---------- props ----------
