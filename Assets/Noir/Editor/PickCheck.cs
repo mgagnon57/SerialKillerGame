@@ -31,9 +31,8 @@ namespace Noir.Editor
 
             try
             {
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read("city.txt"));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                var built = TownPipeline.Build();
+                var world = built.World;
 
                 // The models have to go up: heights are measured while they are built, and
                 // without them every building is treated as flat ground.

@@ -364,77 +364,13 @@ namespace Noir.Unity
 
             try
             {
-                if (!ContentLoader.Exists)
-                    throw new Exception($"Content not found at {ContentLoader.Root}");
-
-                // Before anything reads a kind. Core cannot open a file, so without this it
-                // falls back to a copy of this table compiled into PlaceKindTable - which
-                // covers the enum but not the content, so a barber authored in village.txt
-                // would fail here as an unknown kind while working perfectly in the tools.
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-
-                // What the town has, and when it gets it. Without this line every citizen lives in
-                // 1991 for the whole fifteen years.
-                //
-                // CAUGHT, NOT FATAL, and the asymmetry is the design: a technology with no row is
-                // a technology the town does not have, so a missing file means the opening world
-                // rather than a village that will not load. The kind table one line up is the
-                // opposite and throws, because a kind with no row is a building with no rooms.
-                // A MALFORMED file still stops here, though - Parse throws, and an authoring
-                // mistake is a different thing from an absence.
-                try
-                {
-                    TechnologyTable.Install(TechnologyTable.Parse(ContentLoader.Read("technology.txt")));
-                }
-                catch (FileNotFoundException)
-                {
-                    Debug.LogWarning("[era] no Content/technology.txt - the town stays in 1991.");
-                }
-
-                var layout = VillageParser.Parse(ContentLoader.Read(MapFile));
-
-                // The roads in city.txt are DERIVED, not authored - SOURCES-OF-TRUTH.md is
-                // explicit that when they disagree with the parcels the parcels win and the
-                // road gets moved. Content/roads.txt is that move, done from survey rather than
-                // by sliding a ruled line sideways. No-ops if the file is not there.
-                // The passes are about to say what they did with each of the owner's rulings, and
-                // the answer is written back where the browser map can read it - see SurveyReport.
-                SurveyReport.Clear();
-
-                SurveyRoads.Apply(layout);
-
-                // The buildings on lots the owner ruled had none in 1991. Same reasoning as the
-                // roads above and the same seam: decided on the layout, once, so everything that
-                // walks AllPlaces afterwards sees one town.
-                RuledAway.Apply(layout);
-
-                // And what is left stands where it was measured standing, at the size it was
-                // measured being - rather than on the generator's 13x7 box. After RuledAway, so
-                // nothing is carefully seated and then taken down again.
-                SeatOnSurvey.Apply(layout);
-
-                // The downtown lots SeatOnSurvey just skipped, because their measured shape is what
-                // REPLACED 1991 rather than a late photograph of it - a quarter of the commercial
-                // section burned in Feb 2004 and the imagery shows the forecourt built on the
-                // cleared ground. Laid from the 1913 Sanborn frontages instead: the fabric changes
-                // on a century where the trades change on a decade. Its own substream, so adding
-                // this pass does not shift the numbers every other system draws.
-                DowntownFromSanborn.Apply(layout, Xoshiro256ss.Substream(Seed, "downtown"));
-
-                // And the buildings the survey found that the map never had. Last, so it can see
-                // everything already standing and put nothing up on top of it - including the
-                // terrace one line above.
-                FillFromSurvey.Apply(layout);
-                SurveyReport.Write();
-
-                World = WorldBuilder.Build(layout);
-
-                var report = WorldValidator.Validate(World);
-                // NAMED FROM MapFile, not written out. These said "village.txt:" while the game
-                // has loaded city.txt for months, and an error that names the wrong file sends
-                // whoever reads it to go and look at the wrong one - which it did.
-                foreach (var problem in report.Errors) Debug.LogError(MapFile + ": " + problem);
-                foreach (var warning in report.Warnings) Debug.LogWarning(MapFile + ": " + warning);
+                // ONE CALL. The kind table, the era table, the parse, all five survey passes in
+                // their load-bearing order, and the validation now live in TownPipeline - so the
+                // eighteen editor tools that render and audit this town build the SAME town the
+                // player walks around in. Until 2026-08-07 they did not: fourteen of them ran no
+                // survey passes at all, and the one called "Render The Built Town" was among them.
+                var built = TownPipeline.Build(MapFile, Seed);
+                World = built.World;
 
                 var names = NameTable.Parse(ContentLoader.Read("names.txt"));
                 Particulars = ParticularsTable.Parse(ContentLoader.Read("particulars.txt"));

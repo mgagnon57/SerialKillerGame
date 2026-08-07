@@ -25,9 +25,11 @@ namespace Noir.Editor
         {
             var log = new StringBuilder();
 
-            PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-            var world = WorldBuilder.Build(
-                VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile)), VillageHost.Seed);
+            // The town the game builds, survey passes and all - the whole question here is where
+            // the SURVEYED road puts its lanes, and a probe of the ruled lines would answer about
+            // a road that is not there any more.
+            var built = TownPipeline.Build();
+            var world = built.World;
 
             RoadLine chicago = null;
             foreach (var l in world.Roads.Lines) if (l.Name == "chicago") chicago = l;

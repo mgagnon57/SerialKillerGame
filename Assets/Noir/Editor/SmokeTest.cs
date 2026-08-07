@@ -34,29 +34,21 @@ namespace Noir.Editor
                 if (!ContentLoader.Exists)
                     throw new Exception($"content not found at {ContentLoader.Root}");
 
-                // Before the first `place` line is read. Core cannot open a file, so every entry
-                // point has to hand it the table itself - and this one does not go through
-                // VillageHost, which is the only place that used to do it.
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-
                 // THE TOWN THE GAME BUILDS, not the fixture. This read village.txt - the small
                 // retired village the unit tests use - so the one check that claims to build
                 // "the entire village and report what came out" was reporting on a town nobody
-                // plays, and would have passed happily while Rossville was broken.
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                SurveyReport.Clear();
-                SurveyRoads.Apply(layout);
-                RuledAway.Apply(layout);
-                SeatOnSurvey.Apply(layout);
-                FillFromSurvey.Apply(layout);
-                SurveyReport.Write();
-
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                // plays, and would have passed happily while Rossville was broken. TownPipeline
+                // now guarantees it: the kind table, VillageHost.MapFile and every survey pass in
+                // the order they have to run, the same way Play gets them.
+                var built = TownPipeline.Build();
+                var world = built.World;
                 Log($"world      {world.Width}x{world.Height}, {world.PlaceCount} places, "
                   + $"{world.RoomCount} rooms, {world.FurnitureCount} furniture, {world.PropCount} props");
 
-                var report = WorldValidator.Validate(world);
-                foreach (var e in report.Errors) { LogError("layout: " + e); failures++; }
+                // The errors are already on the log from the pipeline; what is added here is the
+                // count, because a smoke test that does not fail on them is not a test.
+                var report = built.Validation;
+                failures += report.Errors.Count;
                 Log($"layout     {(report.IsValid ? "valid" : "INVALID")}, "
                   + $"{report.WalkableTiles} walkable, {report.RegionCount} region(s)");
 

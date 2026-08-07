@@ -32,9 +32,8 @@ namespace Noir.Editor
 
             try
             {
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                var built = TownPipeline.Build();
+                var world = built.World;
 
                 // EVERY RENDERER THAT PLACES A BOUGHT MODEL, or the ones left out get missed and
                 // stay unbaked for ever. Four were: CityParking, CitySigns and CityDistrict have

@@ -197,9 +197,10 @@ namespace Noir.Editor
                 // Before anything is built: VillageMesh reads it while it is making materials.
                 VillageHost.ShowBuildings = true;
 
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                // TownPipeline guarantees the survey layer, so what is photographed here really is
+                // what Play builds - which is the entire claim "Render The Built Town" makes.
+                var built = TownPipeline.Build();
+                var world = built.World;
 
                 int wet = 0;
                 for (int y = 0; y < world.Height; y++)

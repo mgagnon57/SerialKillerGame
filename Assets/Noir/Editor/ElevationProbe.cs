@@ -67,9 +67,8 @@ namespace Noir.Editor
             //
             // The grid can be right and the mesh still flat: the ground is baked once at build
             // and nothing re-reads the grid afterwards, so this is a separate question.
-            PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-            var world = WorldBuilder.Build(
-                VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile)), VillageHost.Seed);
+            var built = TownPipeline.Build();
+            var world = built.World;
 
             var root = new GameObject("ElevationProbe");
             try

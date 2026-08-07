@@ -68,9 +68,10 @@ namespace Noir.Editor
                 Directory.CreateDirectory(CityShot.OutputDir);
                 VillageHost.ShowBuildings = true;
 
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                // The real town from TownPipeline, survey layer included - the same reason this
+                // drives the real builders through the real registry rather than a mock.
+                var built = TownPipeline.Build();
+                var world = built.World;
 
                 root = new GameObject("LayerShot");
                 VillageMesh.Build(world, root.transform, true);

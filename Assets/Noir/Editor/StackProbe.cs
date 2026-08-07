@@ -42,9 +42,7 @@ namespace Noir.Editor
 
             try
             {
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                var world = TownPipeline.Build().World;
 
                 root = new GameObject("BuildingProbe");
                 var nodes = new[]
@@ -121,9 +119,9 @@ namespace Noir.Editor
             {
                 Directory.CreateDirectory(Out);
 
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                // The town as the game builds it, survey layer and all - this photographs a block
+                // named by its real streets, and an unsurveyed town puts that block somewhere else.
+                var world = TownPipeline.Build().World;
 
                 root = new GameObject("CityProbe");
                 CityStreets.Build(world, root.transform);
@@ -518,9 +516,7 @@ namespace Noir.Editor
             {
                 Directory.CreateDirectory(Out);
 
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                var world = TownPipeline.Build().World;
 
                 Place any = null;
                 foreach (var p in world.AllPlaces) { any = p; break; }

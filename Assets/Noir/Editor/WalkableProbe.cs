@@ -14,9 +14,10 @@ namespace Noir.Editor
     ///
     /// WHY THIS EXISTS BESIDE WalkableDiagnostic, WHICH ASKS THE SAME QUESTION. That one lives in
     /// Core's test project and builds straight from city.txt, and it passes: city.txt on its own
-    /// is one piece. The town the game builds is city.txt plus four passes that live in the Unity
-    /// assembly - SurveyRoads, RuledAway, SeatOnSurvey, FillFromSurvey - and Core cannot see them,
-    /// so a cut introduced by one of those is invisible to the guard that exists to catch it.
+    /// is one piece. The town the game builds is city.txt plus the survey passes TownPipeline runs
+    /// - SurveyRoads, RuledAway, SeatOnSurvey, DowntownFromSanborn, FillFromSurvey - which live in
+    /// the Unity assembly, so a cut introduced by one of those is invisible to the guard that
+    /// exists to catch it.
     ///
     /// The smoke test reported five regions the first time it was pointed at the real town. This
     /// is how to find out which pass did it and where.
@@ -30,6 +31,9 @@ namespace Noir.Editor
         {
             try
             {
+                // The stages below are HALF-BUILT TOWNS on purpose, so each one runs its own
+                // passes and goes through BuildUnsurveyed - which installs nothing, so the kind
+                // table is this tool's to put up.
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
 
                 // ONE PASS AT A TIME, so the report names the culprit rather than the symptom.
@@ -40,11 +44,17 @@ namespace Noir.Editor
                 {
                     SurveyRoads.Apply(l); RuledAway.Apply(l); SeatOnSurvey.Apply(l);
                 });
-                Report("+ FillFromSurvey  (what the game builds)", l =>
+                Report("+ FillFromSurvey", l =>
                 {
                     SurveyRoads.Apply(l); RuledAway.Apply(l);
                     SeatOnSurvey.Apply(l); FillFromSurvey.Apply(l);
                 });
+
+                // AND THE REAL TOWN, from the one pipeline the game itself runs. The list above
+                // used to be labelled "what the game builds" and had quietly stopped being it -
+                // it has no DowntownFromSanborn - so the last word goes to TownPipeline, which
+                // cannot fall out of step. Anything cut here and not cut above is that pass.
+                Measure("the town the game builds", TownPipeline.Build().World);
             }
             catch (Exception ex)
             {
@@ -56,11 +66,18 @@ namespace Noir.Editor
             }
         }
 
+        /// <summary>One stage of the pipeline, with only the passes it names applied. Deliberately
+        /// not the real town, which is what BuildUnsurveyed is for.</summary>
         private static void Report(string label, Action<VillageLayout> passes)
         {
             var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
             passes?.Invoke(layout);
-            var world = WorldBuilder.Build(layout, VillageHost.Seed);
+            Measure(label, TownPipeline.BuildUnsurveyed(
+                layout, VillageHost.Seed, VillageHost.MapFile).World);
+        }
+
+        private static void Measure(string label, WorldModel world)
+        {
             var regions = new WalkableRegions(world.Grid);
             int largest = regions.Largest();
 

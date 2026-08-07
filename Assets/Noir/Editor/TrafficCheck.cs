@@ -35,9 +35,10 @@ namespace Noir.Editor
 
             try
             {
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read("city.txt"));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                // The town as the game builds it. Every measurement below is taken against
+                // world.Roads, and SurveyRoads MOVES those lines - so a town built without the
+                // survey layer checks the geometry of roads that are not the ones being driven on.
+                var world = TownPipeline.Build().World;
 
                 root = new GameObject("TrafficCheck");
                 var signals = CitySignals.Create(world, root.transform);

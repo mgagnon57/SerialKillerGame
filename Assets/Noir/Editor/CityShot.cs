@@ -83,19 +83,14 @@ namespace Noir.Editor
             try
             {
                 Directory.CreateDirectory(OutputDir);
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
 
-                // THE ROADS THE GAME ACTUALLY BUILDS. Without this the picture is drawn from
-                // city.txt's 37 straight lines while the game builds the 66 surveyed ones, so
-                // the one artefact anybody LOOKS at shows a town that no longer exists - and
-                // looking at it is the whole point of the render.
-                SurveyRoads.Apply(layout);
-                RuledAway.Apply(layout);
-                SeatOnSurvey.Apply(layout);
-                FillFromSurvey.Apply(layout);        // the same reason: render the town the game builds
-
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                // THE ROADS THE GAME ACTUALLY BUILDS. Without the survey layer the picture is
+                // drawn from city.txt's 37 straight lines while the game builds the 66 surveyed
+                // ones, so the one artefact anybody LOOKS at shows a town that no longer exists -
+                // and looking at it is the whole point of the render. TownPipeline.Build is that
+                // guarantee: it is the one way the town gets built, survey passes and all.
+                var built = TownPipeline.Build();
+                var world = built.World;
 
                 root = new GameObject("CityGround");
                 VillageMesh.Build(world, root.transform, showDressing: false);
@@ -158,18 +153,13 @@ namespace Noir.Editor
             {
                 Directory.CreateDirectory(OutputDir);
 
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                SurveyRoads.Apply(layout);      // the same reason as above
-                RuledAway.Apply(layout);
-                SeatOnSurvey.Apply(layout);
-                FillFromSurvey.Apply(layout);
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+                // Through TownPipeline for the same reason as above - it carries the survey
+                // passes, so this photographs the town the game builds rather than the ruled
+                // lines it was derived from - and it logs the validation errors and warnings
+                // itself, named from the map file it actually loaded.
+                var built = TownPipeline.Build();
+                var world = built.World;
                 Debug.Log($"[cityshot] loaded {world.Width}x{world.Height}, {world.PlaceCount} places.");
-
-                var report = WorldValidator.Validate(world);
-                foreach (var problem in report.Errors) Debug.LogError("city.txt: " + problem);
-                foreach (var warning in report.Warnings) Debug.LogWarning("city.txt: " + warning);
 
                 // The ground, roads and props still come from the old renderer - only the
                 // BUILDINGS are bought models. That is the point of the slice. Dressing off in

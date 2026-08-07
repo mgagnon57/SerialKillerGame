@@ -27,17 +27,17 @@ namespace Noir.Editor
             int bad = 0;
             try
             {
-                PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-                Debug.Log("[playcheck] kinds.txt parsed.");
-
-                var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-                var world = WorldBuilder.Build(layout);
+                // The same call VillageHost.Awake makes - kinds.txt, the map file, the survey
+                // passes and the validation, in the one order that is load-bearing. A check that
+                // built a different town than Play does would answer a question nobody asked.
+                var built = TownPipeline.Build();
+                var world = built.World;
                 Debug.Log($"[playcheck] {VillageHost.MapFile}: {world.Width}x{world.Height}, "
                         + $"{world.PlaceCount} places.");
 
-                var report = WorldValidator.Validate(world);
-                foreach (var problem in report.Errors) { Debug.LogError("[playcheck] ERROR " + problem); bad++; }
-                foreach (var warning in report.Warnings) Debug.LogWarning("[playcheck] warn " + warning);
+                // Already logged by the pipeline; counted here because the count is the exit code.
+                var report = built.Validation;
+                bad += report.Errors.Count;
 
                 int dwellings = world.PlacesOfKind(PlaceKind.Dwelling).Count;
                 Debug.Log($"[playcheck] places of enum kind Dwelling: {dwellings}");

@@ -120,7 +120,12 @@ namespace Noir.Editor
                 PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
 
                 var layout = VillageParser.Parse(ContentLoader.Read("fixture-village.txt"));
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+
+                // Deliberately UNSURVEYED. This is the fixture village, not Rossville: the survey
+                // passes are keyed to the real town's parcel ids and would silently do nothing
+                // here. Do not "fix" this into TownPipeline.Build().
+                var built = TownPipeline.BuildUnsurveyed(layout, VillageHost.Seed, "fixture-village.txt");
+                var world = built.World;
 
                 root = new GameObject("SnapshotVillage");
                 VillageMesh.Build(world, root.transform);

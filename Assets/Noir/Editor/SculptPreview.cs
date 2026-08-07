@@ -30,9 +30,10 @@ namespace Noir.Editor
         {
             Teardown();
 
-            PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-            var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-            World = WorldBuilder.Build(layout);
+            // Through TownPipeline, so the ground being painted is the ground under the town the
+            // game builds - the survey roads move where the road surface lands, and a brush
+            // stroke aimed at an unsurveyed road would be aimed at ground that is not there.
+            World = TownPipeline.Build().World;
 
             Root = new GameObject("SculptPreview");
             VillageMesh.BuildGround(World, Root.transform);

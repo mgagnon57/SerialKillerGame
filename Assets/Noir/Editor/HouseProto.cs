@@ -234,7 +234,13 @@ namespace Noir.Editor
             {
                 PlaceKindTable.Install(PlaceKindTable.Parse(kinds));
                 var layout = VillageParser.Parse(map);
-                var world = WorldBuilder.Build(layout, VillageHost.Seed);
+
+                // Deliberately UNSURVEYED. This is a synthetic one-building map built from the
+                // string above, not Rossville: the survey passes are keyed to the real town's
+                // parcel ids and would silently do nothing here. Do not "fix" this into
+                // TownPipeline.Build().
+                var built = TownPipeline.BuildUnsurveyed(layout, VillageHost.Seed, "<house proto>");
+                var world = built.World;
                 var go = VillageMesh.Build(world, parent);
                 return go;
             }

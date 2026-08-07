@@ -40,9 +40,10 @@ namespace Noir.Editor
         [MenuItem("Noir/Probe Ground Chunk Size")]
         public static void Run()
         {
-            PlaceKindTable.Install(PlaceKindTable.Parse(ContentLoader.Read("kinds.txt")));
-            var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
-            var world = WorldBuilder.Build(layout, VillageHost.Seed);
+            // Through TownPipeline, so the sweep is over the town the game builds - survey layer
+            // and all. Chunk counts read off a different town would be a bill nobody ever pays.
+            var built = TownPipeline.Build();
+            var world = built.World;
 
             Debug.Log($"[ground-chunks] {world.Width}x{world.Height} map, "
                     + $"{world.Width * world.Height:N0} tiles. "
