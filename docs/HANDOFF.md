@@ -104,7 +104,10 @@ inside the story's own window**:
   A Casey's petrol station stands on that corner today.
 - **2006** — Rossville-Alvin High School closed.
 
-**We build the town as it stood around 2000.** That means:
+**We build the town as it stood in 1991.** The year is decided in `docs/research/THE-ERA.md` and
+followed everywhere else; this line said "around 2000" until 2026-08-07. Everything below still
+holds — 1991 is on the same side of the 2004 fire as 2000 was — but the two are nine years apart
+and the difference shows in the trades, the technology and the canopy. That means:
 
 - The **downtown brick row is whole** — the buildings the 1893 fire produced are all still
   standing. No gap, no Casey's.

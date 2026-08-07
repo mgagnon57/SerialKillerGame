@@ -45,8 +45,8 @@ against a standing project rule rather than being merely large or risky. Both ne
 ## From the town history research — 2026-08-03
 
 Everything here comes out of `docs/research/ROSSVILLE-HISTORY.md` and the nine Sanborn sheets in
-`docs/research/sanborn/`. **The town is built as it stood around 2000, before the February 2004
-fire** — see `docs/HANDOFF.md`.
+`docs/research/sanborn/`. **The town is built as it stood in 1991, long before the February 2004
+fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [ ] **Georeference the Sanborn footprints for the downtown core.** The 1913 sheets draw every
   building at Attica × Chicago with its material, storey count and use. Most of that row was built

@@ -56,8 +56,14 @@ HEADER = """# ==================================================================
 #  AUTHORED, not derived. Everything else about these lots is measured: the county's
 #  tax roll, the federal imagery, the parcel geometry. None of them can answer this
 #  one. The earliest tax year Vermilion County publishes is 2007 and the imagery is
-#  2016, and the game is set around 2000 - so where the sources disagree about what
-#  was on a lot, the tie is broken by somebody who was there.
+#  2016, and THE GAME IS SET IN 1991 - so every measured source here postdates the year
+#  it is being used to describe, by between sixteen and twenty-five years. Where they
+#  disagree about what was on a lot, the tie is broken by somebody who was there.
+#
+#  The year is decided in docs/research/THE-ERA.md and nowhere else. This header said
+#  "around 2000" until 2026-08-07, which is not a rounding of 1991 - it is the far side
+#  of the 2004 fire, and it was being written into the top of this file every time
+#  anybody saved a lot.
 #
 #  Written by the browser map (docs/rossville-buildings.html, served by
 #  tools/serve-viewer.py): click a lot, say what was there, and it lands here.
