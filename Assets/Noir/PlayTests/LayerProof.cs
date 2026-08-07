@@ -44,6 +44,13 @@ namespace Noir.PlayTests
                                                    Layers.Kind.Footprints),
             new Shot("07-streets-and-massing",     Layers.Kind.Massing, Layers.Kind.Streets,
                                                    Layers.Kind.Alleys),
+
+            // The view the road widths are judged in: the corridor and its right of way against
+            // the lot lines they have to sit between, with nothing standing on top of either.
+            new Shot("08-road-widths",             Layers.Kind.Streets, Layers.Kind.Alleys,
+                                                   Layers.Kind.Plan),
+            new Shot("09-road-widths-and-houses",  Layers.Kind.Streets, Layers.Kind.Alleys,
+                                                   Layers.Kind.Plan, Layers.Kind.Footprints),
         };
 
         /// <summary>

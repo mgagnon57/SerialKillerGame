@@ -62,6 +62,21 @@ namespace Noir.Unity
             // the roads being the thing that is broken.
             var paint = Paint(out bool screenSpace);
 
+            // One segment of one line, pushed sideways off the centre by `offset` metres.
+            void Band(Vector2 a, Vector2 b, float offset, Color c)
+            {
+                var d = b - a;
+                float len = d.magnitude;
+                if (len < 1e-4f) return;
+
+                var push = offset == 0f ? Vector2.zero
+                                        : new Vector2(-d.y, d.x) / len * offset;
+                if (screenSpace)
+                    Ribbon.ScreenEdge(verts, cols, tangents, tris, a + push, b + push, c, Lift);
+                else
+                    Ribbon.Edge(verts, cols, tris, a + push, b + push, c, Stroke, Lift);
+            }
+
             foreach (var line in world.Roads.Lines)
             {
                 if (line == null || line.Path == null) continue;
@@ -70,20 +85,42 @@ namespace Noir.Unity
 
                 var colour = Colour(line.Class);
 
+                // THE ROAD AT THE WIDTH IT IS, not a line standing in for it.
+                //
+                // The centreline answers "is this street on its right of way" and answers nothing
+                // about how much of that right of way it actually takes - which is the question a
+                // sidewalk lives inside. A Rossville street paves a 10 m corridor down the middle
+                // of a 20 m easement, so five metres each side is public ground that is NOT road,
+                // and that gap is where a walk went on the streets that had one.
+                //
+                // Drawn as EDGES rather than filled, which is the whole reason this renderer
+                // exists instead of CityStreets: a band of asphalt covers the lot lines it is
+                // meant to be judged against. Two kerbs and two right-of-way lines say the same
+                // thing and leave the parcels readable underneath.
+                var kerb = colour;
+                var middle = colour * 0.5f;
+                var verge = colour * 0.34f;
+                float half = line.Width / 2f;
+                bool hasVerge = line.Easement > line.Width + 0.5f;
+                float row = line.Easement / 2f;
+
                 // Walked at a fixed pitch rather than vertex to vertex: a bend authored as three
                 // points and a bend authored as thirty then draw the same weight of line.
                 var prev = line.Path.PointAt(0f);
                 for (float d = 2f; d <= line.Path.Length; d += 2f)
                 {
                     var here = line.Path.PointAt(Mathf.Min(d, line.Path.Length));
-                    if (screenSpace)
-                        Ribbon.ScreenEdge(verts, cols, tangents, tris,
-                                          new Vector2(prev.X, prev.Y), new Vector2(here.X, here.Y),
-                                          colour, Lift);
-                    else
-                        Ribbon.Edge(verts, cols, tris,
-                                    new Vector2(prev.X, prev.Y), new Vector2(here.X, here.Y),
-                                    colour, Stroke, Lift);
+                    var a = new Vector2(prev.X, prev.Y);
+                    var b = new Vector2(here.X, here.Y);
+
+                    Band(a, b, 0f, middle);
+                    Band(a, b,  half, kerb);
+                    Band(a, b, -half, kerb);
+                    if (hasVerge)
+                    {
+                        Band(a, b,  row, verge);
+                        Band(a, b, -row, verge);
+                    }
                     prev = here;
                 }
                 n++;

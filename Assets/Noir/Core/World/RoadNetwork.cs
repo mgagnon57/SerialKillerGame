@@ -153,6 +153,18 @@ namespace Noir.Core.World
         /// <summary>Corridor width in tiles, as declared.</summary>
         public readonly int Width;
 
+        /// <summary>
+        /// The public land this corridor sits inside, in metres, or 0 where it was not measured.
+        ///
+        /// Carried through from RoadRun.Easement for the same reason Carries is: the parser knows
+        /// it, and everything that DRAWS a road had no way to ask. A Rossville street paves 10 m
+        /// down the middle of a 20 m right of way, so five metres each side is public ground that
+        /// is not road - verge, utilities, and a sidewalk where there was one. Anything laying a
+        /// walk needs this number; measuring outward from the asphalt and guessing puts it in a
+        /// hedge, and measuring outward from the lot line is what the survey measured.
+        /// </summary>
+        public readonly float Easement;
+
         public readonly IReadOnlyList<Tile> Points;
 
         /// <summary>Along the map's y axis rather than its x.</summary>
@@ -187,13 +199,16 @@ namespace Noir.Core.World
 
         /// <param name="carries">What the road's job is, when that differs from its corridor.
         /// Null means the two agree, which is every road on every map written before this.</param>
+        /// <param name="easement">The public land the corridor sits in, in metres. 0 is "not
+        /// measured", which is every map written before the survey.</param>
         public RoadLine(string name, RoadClass klass, int width, IReadOnlyList<Tile> points,
-                        RoadClass? carries = null)
+                        RoadClass? carries = null, float easement = 0f)
         {
             Name = name ?? "";
             Class = klass;
             Carries = carries ?? klass;
             Width = width;
+            Easement = easement;
             Points = points ?? Array.Empty<Tile>();
 
             if (Points.Count < 2)
