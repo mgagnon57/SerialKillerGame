@@ -38,3 +38,42 @@
 #  of which can stop a house appearing - so this counts as a STRUCTURAL change
 #  and sending it runs the game's own check. See tools/change_gate.py.
 # ============================================================================
+building 12 0 move +0.00 +0.00 turn -13.71
+building 23 0 move +0.00 +0.00 turn +15.45
+building 23 1 move +0.00 +0.00 turn +15.14
+building 24 0 move +0.00 +0.00 turn +2.04
+building 86 0 move +0.00 +1.36 turn +0.00
+building 120 0 move -0.68 +2.55 turn +0.00
+building 120 1 move -2.38 -1.87 turn +0.00
+building 142 0 move +5.61 +0.23 turn +0.00
+building 143 0 move +0.00 +0.00 turn +4.00
+building 156 0 move +3.97 +0.00 turn +0.00
+building 224 0 move +0.00 +0.00 turn -16.80
+building 226 0 move +6.08 +0.70 turn +0.00
+building 237 0 move +0.00 +0.00 turn -13.67
+building 237 1 move +0.00 +0.00 turn +6.90
+building 269 1 move +0.70 +8.65 turn +0.00
+building 287 0 move +0.00 +0.00 turn +2.63
+building 293 0 move +2.72 -5.60 turn +0.00
+building 339 0 move +0.00 +0.00 turn -5.65
+building 344 0 move +0.00 +0.00 turn +11.75
+building 345 0 move +0.00 +0.00 turn -13.75
+building 345 1 move +0.00 +0.00 turn -13.69
+building 346 0 move +0.00 +0.00 turn -4.07
+building 348 3 move -0.26 +4.68 turn +0.00
+building 354 0 move +0.00 +0.00 turn +2.63
+building 361 0 move +0.00 +0.00 turn +8.89
+building 390 0 move +6.76 -1.30 turn +0.00
+building 420 1 move +0.85 +2.89 turn +0.00
+building 448 0 move +0.00 +0.00 turn +20.00
+building 458 0 move -5.14 -7.01 turn +14.00
+building 621 1 move +0.00 +0.00 turn -17.74
+building 637 0 move +0.00 +0.00 turn +6.13
+building 638 0 move +0.00 +0.00 turn -16.50
+building 721 0 move +3.22 +2.90 turn +0.00
+building 729 0 move -8.80 +0.20 turn +0.00
+building 736 1 move +10.94 +0.64 turn +0.00
+building 741 0 move +3.54 +9.34 turn -18.00
+building 746 0 move -1.26 -6.09 turn +11.00
+building 762 0 move +0.00 +0.00 turn -20.44
+building 779 1 move -6.29 -0.43 turn -14.00

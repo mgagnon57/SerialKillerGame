@@ -50,6 +50,8 @@
 road earl was absent
 road grove was built
 road summit was built
+block attica alley2 harrison was built
+block attica end chicago was built
 block grove earl end was absent
 block grove thompson earl was absent
 block smith york end was absent
@@ -91,6 +93,8 @@ road ann walk none
 road watson walk none
 
 #  ---- blocks that differ from their street ----
+block attica alley2 harrison walk both
 block attica chicago alley2 walk both
+block attica end chicago walk none
 block chicago attica park walk both
 block chicago benton attica walk both

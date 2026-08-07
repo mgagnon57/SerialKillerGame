@@ -445,7 +445,8 @@
 
       <p class="eyebrow" style="margin:12px 0 5px">Turn it</p>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <button class="w" id="h-square">Square to the block</button>
+        <button class="w" id="h-sqstreet">Square to the street</button>
+        <button class="w" id="h-square" title="The average angle of the whole block. Usually worse than the street for a single building.">…to the block</button>
         <button class="w" id="h-turn-l">↺ 1°</button>
         <button class="w" id="h-turn-r">↻ 1°</button>
       </div>
@@ -1067,19 +1068,46 @@ function nearestRoad(x, y) {
 /// asked to be told, not to be overruled - a house that genuinely straddled a line has to stay
 /// possible. Returns the number of corners over the line.
 function cornersOutside(b, ring) {
-  const lot = DATA.parcels[b.p];
-  if (!lot) return 0;
+  // A PROPERTY, NOT A LOT. The Chicago Street terrace is one building over eleven parcels, so
+  // measured against parcel 636 alone every corner but a handful is "over the line" - and the
+  // panel duly reported twenty of them, which is a warning that means nothing and trains you to
+  // ignore the ones that do. Where the owner has grouped lots into a property, the property is
+  // the boundary.
+  const mine = groupedWith(b.p);
+  if (!mine.length) return 0;
   let out = 0;
-  for (let i = 0; i < ring.length - 1; i++) if (!pointInRing(ring[i], lot)) out++;
+  for (let i = 0; i < ring.length - 1; i++) {
+    if (!mine.some(poly => pointInRing(ring[i], poly))) out++;
+  }
   return out;
+}
+
+/// Every lot ring making up the property this lot belongs to - itself alone if it is not grouped.
+function groupedWith(pid) {
+  const name = ((VERDICTS[pid] || {}).property || "").trim().toLowerCase();
+  const ids = [];
+  if (name) {
+    for (const [k, v] of Object.entries(VERDICTS))
+      if (((v.property || "").trim().toLowerCase()) === name) ids.push(+k);
+  }
+  if (!ids.length) ids.push(pid);
+  return ids.map(id => DATA.parcels[id]).filter(Boolean);
 }
 
 /// Which OTHER lots this footprint now sits in, so "over the line" can say where to.
 function lotsEntered(b, ring) {
   const hit = new Set();
+  // A lot inside this building's own property is not somewhere it has strayed into.
+  const own = new Set();
+  {
+    const name = ((VERDICTS[b.p] || {}).property || "").trim().toLowerCase();
+    own.add(b.p);
+    if (name) for (const [k, v] of Object.entries(VERDICTS))
+      if (((v.property || "").trim().toLowerCase()) === name) own.add(+k);
+  }
   for (let i = 0; i < ring.length - 1; i++) {
     for (const [id, poly] of Object.entries(DATA.parcels)) {
-      if (+id === b.p) continue;
+      if (own.has(+id)) continue;
       const bx = pBox[+id];
       if (!bx || ring[i][0] < bx[0] || ring[i][0] > bx[2]
               || ring[i][1] < bx[1] || ring[i][1] > bx[3]) continue;
@@ -1424,6 +1452,11 @@ function showHouse(b) {
   rows.push(`moved   ${ft(a.dx)} east, ${ft(a.dy)} north`);
   rows.push(`turned  ${(a.turn || 0).toFixed(1)}°`);
   if (road) rows.push(`to ${road.rd.n}  ${ft(road.d)} from its centre`);
+  // THE ANGLE THAT MATTERS IS THE ONE TO ITS STREET. The lot skew and the block skew are both
+  // inputs to a guess; this is the thing you are actually looking at when a row of shops reads
+  // as crooked, so it goes first and the other two stay for reference.
+  const off = offItsStreet(b);
+  if (off !== null) rows.push(`square    ${off.toFixed(1)}° off ${road.rd.n}`);
   rows.push(`skew    ${b.skew}° to its lot, block sits at ${b.bskew}°`);
   if (saved && !houseEdit.pending) rows.push(`saved   yes`);
   document.getElementById("h-nums").innerHTML = rows.map(esc).join("<br>");
@@ -1473,6 +1506,51 @@ function squareToBlock(b) {
   const s = b.skew || 0, bs = b.bskew || 0;
   const gameSquared = Math.abs(s) >= 0.05 && Math.abs(s) <= GAME_SQUARE_LIMIT;
   return gameSquared ? (s - bs) : -bs;
+}
+
+/// The bearing of a footprint's longest edge. A building's long wall is what the eye reads as its
+/// direction, and on a shop it is the wall along the street.
+function ringBearing(ring) {
+  let best = null;
+  for (let i = 1; i < ring.length; i++) {
+    const dx = ring[i][0] - ring[i-1][0], dy = ring[i][1] - ring[i-1][1];
+    const L = Math.hypot(dx, dy);
+    if (!best || L > best.L) best = { L, a: Math.atan2(dy, dx) * 180 / Math.PI };
+  }
+  return best ? best.a : 0;
+}
+
+/// Fold an angle into ±45°, because a rectangle turned 90° is the same rectangle. Without this,
+/// squaring a building whose long wall happens to be measured the other way round spins it a
+/// quarter turn to "improve" it.
+const foldSquare = (d) => { const x = ((d % 90) + 90) % 90; return x > 45 ? x - 90 : x; };
+
+/// SQUARE TO THE STREET IT FRONTS, which is what a business row actually wants and is NOT the same
+/// as squaring to the block.
+///
+/// Measured on the six crooked buildings downtown, squaring to the block made three of them worse:
+/// 112 East Attica sits 0.7° off its street - as square as anything on the map - and the block
+/// angle would have knocked it 6° out. A block's angle is an average over a whole block and the
+/// street in front of one shop is a fact about that shop, so where they disagree the street wins.
+///
+/// Returns the turn from the game's baseline, so it is set rather than added.
+function squareToStreet(b) {
+  const ring = placedRing(b, NOWHERE);          // the game's ring, before any adjustment
+  const c = ringCentre(ring);
+  const road = nearestRoad(c[0], c[1]);
+  if (!road) return null;
+  const roadAngle = Math.atan2(road.ty, road.tx) * 180 / Math.PI;
+  return -foldSquare(ringBearing(ring) - roadAngle);
+}
+
+/// How far off its street a building sits now, in degrees. The number the panel reports and the
+/// one worth judging a squaring by.
+function offItsStreet(b) {
+  const ring = placedRing(b);
+  const c = ringCentre(ring);
+  const road = nearestRoad(c[0], c[1]);
+  if (!road) return null;
+  return foldSquare(ringBearing(ring) - Math.atan2(road.ty, road.tx) * 180 / Math.PI);
 }
 
 /// MATCH THE NEIGHBOURS' FRONT. Houses down a block sat at a common setback, so the useful answer
@@ -2687,6 +2765,12 @@ document.getElementById("h-turn-r").onclick = () => nudge(0, 0, -1);
 document.getElementById("h-square").onclick = () => {
   const a = houseNow(houseEdit.target);
   setNudge({ dx: a.dx, dy: a.dy, turn: squareToBlock(houseEdit.target) });
+};
+document.getElementById("h-sqstreet").onclick = () => {
+  const t = squareToStreet(houseEdit.target);
+  if (t === null) { saidNearTheButton("no street near enough to square to", "var(--flag)"); return; }
+  const a = houseNow(houseEdit.target);
+  setNudge({ dx: a.dx, dy: a.dy, turn: t });
 };
 document.getElementById("h-front").onclick = () => {
   const f = frontLineFor(houseEdit.target);
