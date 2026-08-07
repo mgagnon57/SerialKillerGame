@@ -200,7 +200,7 @@ parcel 236 note "back of the lot; ran to the alley in 1991, split off later"
 parcel 237 was built
 parcel 237 kind shop
 parcel 237 footprint later
-parcel 237 note "the even side of the 100 block - antique shops and a restaurant, standing in 1991, burned 27 Feb 2004. Caseys was built on the cleared ground, so the measured footprint is 2004+ and must not be seated. Todays 1.19-acre parcel is the cleared site: in 1991 this was several narrow storefront lots."
+parcel 237 note "one BUILDING, subdivided into several narrow shops - the even side of the 100 block, antique shops and a restaurant, standing in 1991 and burned 27 Feb 2004. Casey's was built on the cleared ground, so the measured footprint is 2004+ and must not be seated. Today's 1.19-acre parcel is the cleared site; in 1991 this was one continuous terrace with party walls, not detached buildings."
 
 parcel 238 was built
 parcel 238 kind shop
