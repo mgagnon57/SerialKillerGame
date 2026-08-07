@@ -33,6 +33,16 @@ namespace Noir.Unity
     {
         public const string FileName = "parcel-1991.txt";
 
+        /// <summary>
+        /// The verbs this understands, for the smoke test to check the authored file against.
+        ///
+        /// THE BROWSER MAP IS THE SOURCE and the game is meant to obey all of it. A ruling the map
+        /// learns to write and this never learns to read is the failure worth guarding: nothing
+        /// breaks, nothing is logged, the owner rules a hundred lots and the town quietly ignores
+        /// them. Naming the vocabulary here lets that be caught the day it lands.
+        /// </summary>
+        public static readonly string[] KnownVerbs = { "was", "kind", "property", "note" };
+
         /// <summary>What was on the lot. <see cref="Unruled"/> means nobody has looked at it yet,
         /// which is different from having looked and not settled it (<see cref="Unsure"/>).</summary>
         public enum Stood { Unruled, Built, Vacant, Unsure, Absent }

@@ -152,7 +152,9 @@
     box-shadow: var(--shadow); padding: 15px 16px; display: none;
   }
   #detail.on, #roadpanel.on { display: block; }
-  #detail.editing { border-color: var(--editing); box-shadow: 0 0 0 1px var(--editing), var(--shadow); }
+  #detail.editing, #roadpanel.editing {
+    border-color: var(--editing); box-shadow: 0 0 0 1px var(--editing), var(--shadow);
+  }
   #detail h2, #roadpanel h2 { margin: 0 0 2px; font-size: 15px; font-weight: 650; }
   #detail .pin, #roadpanel .pin { color: var(--muted); font-size: 12px; }
   #roadpanel button.w { font: inherit; font-size: 12px; padding: 4px 9px; cursor: pointer;
@@ -346,7 +348,11 @@
       <p class="eyebrow" style="margin:13px 0 6px">Was there a sidewalk in 1991?</p>
       <div id="r-sides" style="display:flex;gap:5px;flex-wrap:wrap"></div>
       <p class="note" id="r-room" style="margin:9px 0 0"></p>
-      <div style="margin-top:7px"><span id="r-saved" class="mono" style="font-size:11.5px"></span></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:9px">
+        <button id="r-save" class="ghost">Save</button>
+        <button id="r-cancel" class="ghost">Cancel</button>
+        <span id="r-saved" class="mono" style="font-size:11.5px"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -641,6 +647,16 @@ let BLOCKS = [];
 let roadSel = null;
 let blockSel = null;
 
+// NOTHING IS WRITTEN UNTIL SAVE IS PRESSED, the same rule the lot panel has always had and for
+// the same reason: this file is the owner's memory and no re-run can rebuild it, so a click that
+// quietly commits a ruling is the wrong default. A misclick on the wrong block should cost a
+// Cancel, not an edit to the one file that cannot be regenerated.
+//
+// null means "no change pending"; a string - including the empty one, which clears a ruling - is
+// a choice waiting to be saved.
+let walkPending = { block: null, road: null };
+const walkDirty = () => walkPending.block !== null || walkPending.road !== null;
+
 /// What is laid on this block: its own ruling if it has one, else its street's.
 function walkOn(roadName, blk) {
   if (blk) {
@@ -777,51 +793,94 @@ function showRoad(rd) {
   if (blockSel) {
     const key = rd.n + "|" + blockSel.from + "|" + blockSel.to;
     const nice = (w) => w === "end" ? "the end" : w;
+    const shown = walkPending.block !== null ? walkPending.block : (WALKS.blocks[key] || "");
     rowFor(`This block — ${nice(blockSel.from)} to ${nice(blockSel.to)}`
            + `, ${Math.round(blockSel.b - blockSel.a)} m`,
-           WALKS.blocks[key] || "",
-           side => saveWalk(rd.n, side, blockSel));
+           shown,
+           side => { walkPending.block = side; showRoad(rd); });
   }
+  const shownRoad = walkPending.road !== null ? walkPending.road : (WALKS.roads[rd.n] || "");
   rowFor(`The whole of ${rd.n}` + (blockSel ? " — the default" : ""),
-         WALKS.roads[rd.n] || "", side => saveWalk(rd.n, side, null));
+         shownRoad, side => { walkPending.road = side; showRoad(rd); });
 
   const here = walkOn(rd.n, blockSel);
   const ruledBlocks = blocksOf(rd.n)
     .filter(b => WALKS.blocks[rd.n + "|" + b.from + "|" + b.to]).length;
-  document.getElementById("r-saved").textContent =
-    (here ? "this block: " + here : "not ruled yet")
-    + `  ·  ${blocksOf(rd.n).length} blocks`
-    + (ruledBlocks ? `, ${ruledBlocks} ruled on their own` : "");
+
+  const saveBtn = document.getElementById("r-save");
+  saveBtn.disabled = !walkDirty();
+  saveBtn.style.opacity = walkDirty() ? "1" : "0.45";
+  document.getElementById("r-cancel").style.visibility = walkDirty() ? "visible" : "hidden";
+
+  const res = document.getElementById("r-saved");
+  if (walkDirty()) {
+    res.textContent = "not saved yet — press Save";
+    res.style.color = "var(--editing)";
+  } else {
+    res.textContent = (here ? "this block: " + here : "not ruled yet")
+      + `  ·  ${blocksOf(rd.n).length} blocks`
+      + (ruledBlocks ? `, ${ruledBlocks} ruled on their own` : "");
+    res.style.color = "var(--muted)";
+  }
+  document.getElementById("roadpanel").classList.toggle("editing", walkDirty());
   draw();
 }
 
-async function saveWalk(name, side, blk) {
-  const res = document.getElementById("r-saved");
-  try {
-    const body = blk ? { road: name, from: blk.from, to: blk.to, walk: side }
-                     : { road: name, walk: side };
-    const r = await fetch("/__walk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "refused");
+async function postWalk(name, side, blk) {
+  const body = blk ? { road: name, from: blk.from, to: blk.to, walk: side }
+                   : { road: name, walk: side };
+  const r = await fetch("/__walk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "refused");
 
-    if (blk) {
-      const k = name + "|" + blk.from + "|" + blk.to;
-      if (side) WALKS.blocks[k] = side; else delete WALKS.blocks[k];
-    } else {
-      if (side) WALKS.roads[name] = side; else delete WALKS.roads[name];
-    }
-    res.textContent = (side ? "saved " : "cleared ") + new Date().toTimeString().slice(0, 8)
-                    + `  ·  ${j.roads} streets, ${j.blocks} blocks`;
+  if (blk) {
+    const k = name + "|" + blk.from + "|" + blk.to;
+    if (side) WALKS.blocks[k] = side; else delete WALKS.blocks[k];
+  } else {
+    if (side) WALKS.roads[name] = side; else delete WALKS.roads[name];
+  }
+  return j;
+}
+
+/// Both scopes at once, and only what actually changed. Nothing has reached the disk before this.
+async function commitWalk() {
+  if (!roadSel || !walkDirty()) return;
+  const res = document.getElementById("r-saved");
+  const road = roadSel, blk = blockSel;
+  try {
+    let last = null;
+    if (walkPending.block !== null && blk) last = await postWalk(road.n, walkPending.block, blk);
+    if (walkPending.road !== null) last = await postWalk(road.n, walkPending.road, null);
+
+    walkPending = { block: null, road: null };
+    showRoad(road);
+    res.textContent = "saved " + new Date().toTimeString().slice(0, 8)
+                    + (last ? `  ·  ${last.roads} streets, ${last.blocks} blocks` : "");
     res.style.color = "var(--agri)";
-    if (roadSel) showRoad(roadSel);
   } catch (e) {
     res.textContent = "NOT SAVED — " + e.message;
     res.style.color = "var(--flag)";
   }
+}
+
+function cancelWalk() {
+  walkPending = { block: null, road: null };
+  if (roadSel) showRoad(roadSel);
+}
+
+/// Leaving a street with a choice not yet saved would drop it silently, which is the same fault
+/// as saving silently pointed the other way. The lot panel asks the same question.
+function walkMayLeave() {
+  if (!walkDirty()) return true;
+  const go = confirm(
+    (roadSel ? roadSel.n : "This street") + " has an unsaved sidewalk choice.\n\n"
+    + "OK to discard it and move on, or Cancel to go back and press Save.");
+  if (go) walkPending = { block: null, road: null };
+  return go;
 }
 
 /// The walk itself, drawn where it would be laid: out at the right-of-way edge rather than
@@ -1462,9 +1521,12 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
   draw();
 }
 
+document.getElementById("r-save").onclick = () => commitWalk();
+document.getElementById("r-cancel").onclick = () => cancelWalk();
 document.getElementById("r-close").onclick = () => {
+  if (!walkMayLeave()) return;
   document.getElementById("roadpanel").classList.remove("on");
-  roadSel = null;
+  roadSel = null; blockSel = null;
   draw();
 };
 document.getElementById("close").onclick = () => {
@@ -1493,8 +1555,8 @@ cv.addEventListener("pointerup", e => {
   const r = cv.getBoundingClientRect();
   if (drag && !drag.moved) {
     const i = pick(e.clientX - r.left, e.clientY - r.top);
-    if (i >= 0) show(i);
-    else {
+    if (i >= 0) { if (walkMayLeave()) show(i); }
+    else if (walkMayLeave()) {
       // A CLICK THAT MISSES EVERY LOT IS A CLICK ON THE STREET. Roads run between the parcels,
       // so nothing has to be held down and no mode has to be entered: click a lot for the lot,
       // click the road for the road.

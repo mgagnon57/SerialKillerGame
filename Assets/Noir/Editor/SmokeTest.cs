@@ -68,6 +68,16 @@ namespace Noir.Editor
                 sim.Tick(Noir.Core.Contracts.GameClock.TicksPerMinute * 120);
                 Log($"sim        ran two hours, clock at {sim.Clock}");
 
+                // EVERYTHING THE BROWSER MAP CAN SAY, THE GAME CAN HEAR.
+                //
+                // The map is the owner's memory of 1991 and it is the source: the tax roll starts
+                // in 2007 and the imagery is 2016, so where they disagree the person who was there
+                // wins. The failure worth guarding is silent - the map learns to write a ruling,
+                // the game never learns to read it, nothing breaks, nothing is logged, and a
+                // hundred rulings are quietly ignored. So every line of every authored file is
+                // checked against the vocabulary the loaders actually implement.
+                failures += CheckRulingsAreHeard();
+
                 // EVERY LAYER ON. A smoke test exists to run the code that only breaks when it
                 // runs, so building a town with the scenery switched off tests the half nobody
                 // was worried about. The massing is built lazily now - see Layers.RegisterLazy -
@@ -127,6 +137,73 @@ namespace Noir.Editor
             Log(failures == 0 ? "--- SMOKE TEST PASSED ---" : $"--- SMOKE TEST FAILED ({failures}) ---");
 
             if (Application.isBatchMode) EditorApplication.Exit(failures == 0 ? 0 : 1);
+        }
+
+        /// <summary>
+        /// Every line of every authored file, against the vocabulary the game implements.
+        ///
+        /// Reports what it FOUND as well as what it could not read, because a loader that reads
+        /// the file and finds nothing in it is the same silence seen from the other end - and has
+        /// happened here: parcel-1991.txt carried 359 rulings for a day with no reader at all.
+        /// </summary>
+        private static int CheckRulingsAreHeard()
+        {
+            int bad = 0;
+
+            bad += Vet("parcel-1991.txt", Rulings.KnownVerbs, line =>
+            {
+                // parcel <id> <verb> <rest>
+                var p = line.Split(new[] { ' ' }, 4);
+                return p.Length >= 4 && p[0] == "parcel" ? p[2] : null;
+            });
+
+            bad += Vet(RoadRulings.FileName, RoadRulings.KnownVerbs, line =>
+            {
+                // road <name> walk <side>, or block <road> <from> <to> walk <side>
+                var p = line.Split(' ');
+                if (p.Length == 4 && p[2] == "walk") return p[0];
+                if (p.Length == 6 && p[4] == "walk") return p[0];
+                return p.Length > 0 ? p[0] : null;
+            });
+
+            Log($"rulings    {Rulings.Count} lots, {RoadRulings.Count} roads and blocks, "
+              + $"{RoadRulings.Blocks.Count} blocks known");
+
+            if (Rulings.Count == 0)
+            {
+                LogError("rulings: parcel-1991.txt read as empty - the game is ignoring the "
+                       + "browser map. That file is the owner's memory and cannot be rebuilt.");
+                bad++;
+            }
+            return bad;
+        }
+
+        /// <summary>One authored file, checked line by line. `verb` pulls the word that decides
+        /// what the line means; a null answer is a line whose shape nothing recognises.</summary>
+        private static int Vet(string file, string[] known, System.Func<string, string> verb)
+        {
+            string text;
+            try { text = ContentLoader.Read(file); }
+            catch { return 0; }                       // an absent authored file is not an error
+
+            int bad = 0;
+            var seen = new System.Collections.Generic.HashSet<string>();
+            var lines = text.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i].Trim();
+                if (line.Length == 0 || line[0] == '#') continue;
+
+                var word = verb(line);
+                if (word != null && System.Array.IndexOf(known, word) >= 0) continue;
+                if (!seen.Add(word ?? "(unreadable)")) continue;   // one complaint per verb
+
+                LogError($"rulings: {file} line {i + 1} says '{word ?? line}', which no loader in "
+                       + "the game understands. The browser map is the source - if it can write "
+                       + "this, something here has to read it.");
+                bad++;
+            }
+            return bad;
         }
 
         private static int CountRenderers(GameObject root) =>

@@ -104,6 +104,14 @@ namespace Noir.Unity
                 bool hasVerge = line.Easement > line.Width + 0.5f;
                 float row = line.Easement / 2f;
 
+                // THE WALK, WHERE THE OWNER SAYS THERE WAS ONE. Its own colour, because it is the
+                // one thing on this drawing that is remembered rather than measured - see
+                // RoadRulings and Content/roads-1991.txt. Laid out near the lot line rather than
+                // against the kerb: that is the side of the verge a walk sits on, and it is what
+                // the easement was measured for.
+                var walkPaint = new Color(0.96f, 0.55f, 0.72f);
+                float walkOff = hasVerge ? Mathf.Max(half + 1f, row - 1.3f) : half + 1f;
+
                 // Walked at a fixed pitch rather than vertex to vertex: a bend authored as three
                 // points and a bend authored as thirty then draw the same weight of line.
                 var prev = line.Path.PointAt(0f);
@@ -120,6 +128,30 @@ namespace Noir.Unity
                     {
                         Band(a, b,  row, verge);
                         Band(a, b, -row, verge);
+                    }
+
+                    // Asked per step rather than per road, because a walk is a property of a
+                    // BLOCK: Chicago had one both sides through the middle of town and none out
+                    // at the edges, and the change happens at a cross street partway along.
+                    var walk = RoadRulings.WalkAt(line.Name, d);
+                    if (walk != RoadRulings.Walk.Unruled && walk != RoadRulings.Walk.None)
+                    {
+                        // The push is (-dy, dx), so on a road running north it points WEST and on
+                        // one running east it points north - the same convention the browser map
+                        // draws by, and it has to stay the same or the two disagree about which
+                        // side of the street somebody walked on.
+                        bool ns = line.IsNorthSouth;
+                        if (walk == RoadRulings.Walk.Both)
+                        {
+                            Band(a, b,  walkOff, walkPaint);
+                            Band(a, b, -walkOff, walkPaint);
+                        }
+                        else
+                        {
+                            float sign = ns ? (walk == RoadRulings.Walk.East ? -1f : 1f)
+                                            : (walk == RoadRulings.Walk.North ? 1f : -1f);
+                            Band(a, b, walkOff * sign, walkPaint);
+                        }
                     }
                     prev = here;
                 }

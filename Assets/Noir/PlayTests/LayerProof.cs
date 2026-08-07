@@ -26,11 +26,25 @@ namespace Noir.PlayTests
         /// <summary>Over the Benton Avenue blocks: houses, the grade school lots, a crossroads.</summary>
         private static readonly Vector3 Over = new Vector3(800f, 0f, -1080f);
 
+        /// <summary>Chicago x Attica - the commercial crossroads, and where the sidewalk rulings
+        /// are. A shot of the town's own centre is worth having anyway.</summary>
+        private static readonly Vector3 Downtown = new Vector3(660f, 0f, -1230f);
+
         private readonly struct Shot
         {
             public readonly string Name;
             public readonly Layers.Kind[] On;
-            public Shot(string name, params Layers.Kind[] on) { Name = name; On = on; }
+            public readonly Vector3 Where;
+
+            public Shot(string name, params Layers.Kind[] on)
+            {
+                Name = name; On = on; Where = Over;
+            }
+
+            public Shot(string name, Vector3 where, params Layers.Kind[] on)
+            {
+                Name = name; On = on; Where = where;
+            }
         }
 
         private static readonly Shot[] Sheet =
@@ -51,6 +65,11 @@ namespace Noir.PlayTests
                                                    Layers.Kind.Plan),
             new Shot("09-road-widths-and-houses",  Layers.Kind.Streets, Layers.Kind.Alleys,
                                                    Layers.Kind.Plan, Layers.Kind.Footprints),
+
+            // THE OWNER'S OWN SIDEWALK RULINGS, ON THE GROUND THEY WERE MADE FOR. The browser map
+            // is the source; this is the picture that says the game heard it.
+            new Shot("10-downtown-sidewalks", Downtown,
+                     Layers.Kind.Streets, Layers.Kind.Alleys, Layers.Kind.Plan),
         };
 
         /// <summary>
@@ -125,13 +144,15 @@ namespace Noir.PlayTests
 
             var rotation = Quaternion.Euler(52f, 20f, 0f);
             camGo.transform.rotation = rotation;
-            camGo.transform.position = Over + Vector3.up * 2f - rotation * Vector3.forward * 210f;
 
             var rt = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             var shot = new Texture2D(Width, Height, TextureFormat.RGB24, false);
 
             foreach (var frame in Sheet)
             {
+                camGo.transform.position =
+                    frame.Where + Vector3.up * 2f - rotation * Vector3.forward * 210f;
+
                 foreach (var kind in Layers.All) Layers.Set(kind, false);
                 foreach (var kind in frame.On) Layers.Set(kind, true);
 
