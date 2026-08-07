@@ -41,7 +41,7 @@ namespace Noir.PlayTests
         [TearDown]
         public void Slow() => Time.timeScale = 1f;
 
-        [UnityTest, Timeout(900000)]
+        [UnityTest, Category("Diagnostic"), Timeout(900000)]
         public IEnumerator PhotographTheJunctionWhileItRuns()
         {
             Directory.CreateDirectory(Dir);

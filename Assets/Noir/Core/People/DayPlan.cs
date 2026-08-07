@@ -190,10 +190,25 @@ namespace Noir.Core.People
                     int end = ClosingOf(p, dayOfWeek, 15 * 60 + 30);
                     if (start > cursor) blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
 
+                    // GUARDED THE SAME WAY THE WORK BRANCH IS, and for a reason the work branch
+                    // only half-covers: Block's constructor THROWS on end <= start, and `in_` is
+                    // the cursor when the morning has already run past the bell. A child whose
+                    // earlier blocks overran school closing crashed population generation for the
+                    // whole town, from one lot's data.
+                    //
+                    // Not advancing the cursor matters as much as not adding the block. `cursor`
+                    // is already at or past `end` in this case, so `cursor = end` would move it
+                    // BACKWARDS and every block placed afterwards would overlap - which DayPlan.At
+                    // resolves by returning the first covering block, so the person silently never
+                    // does the later thing. That is the failure the constructor's own comment says
+                    // it exists to prevent.
                     int in_ = Math.Max(cursor, start);
-                    AddObligation(blocks, world, who, year, school, Activity.AtSchool,
-                                  in_, end, jitter, dayOfWeek, rng);
-                    cursor = end;
+                    if (end > in_)
+                    {
+                        AddObligation(blocks, world, who, year, school, Activity.AtSchool,
+                                      in_, end, jitter, dayOfWeek, rng);
+                        cursor = end;
+                    }
                 }
             }
             else if (who.Works)
@@ -204,10 +219,16 @@ namespace Noir.Core.People
                     var (start, end) = ShiftFor(p, dayOfWeek, who.Shift);
                     start += jitter;
                     if (start > cursor) blocks.Add(new Block(cursor, start, who.Home, Activity.AtHome));
-                    if (end > start)
+
+                    // `end > start` was not enough. The value actually handed to Block is
+                    // Math.Max(cursor, start), so a shift that ends before the cursor already
+                    // stands still built a backwards block and threw - the guard checked one
+                    // number and passed a different one.
+                    int from = Math.Max(cursor, start);
+                    if (end > from)
                     {
                         AddObligation(blocks, world, who, year, who.Work, Activity.AtWork,
-                                      Math.Max(cursor, start), end, jitter, dayOfWeek, rng);
+                                      from, end, jitter, dayOfWeek, rng);
                         cursor = end;
                     }
                 }
@@ -337,6 +358,12 @@ namespace Noir.Core.People
             // as the church draw and ChooseNearby's roll. A filter that sometimes skips the roll
             // would shift every decision later in the day.
             float roll = rng.NextFloat();
+
+            // NO ROOM, NO OBLIGATION. Both callers check this now, and it is checked again here
+            // because this is the choke point every one of them goes through and the failure it
+            // prevents is a thrown exception out of population generation for the whole town. The
+            // draw above still happens, so guarding here cannot shift anybody else's numbers.
+            if (until <= from) return;
 
             int start = DinnerStart + jitter;
             int end = start + DinnerLength;

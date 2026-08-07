@@ -93,7 +93,7 @@ namespace Noir.PlayTests
                 VillageHost.ShowBuildings = true;
         }
 
-        [UnityTest, Timeout(1800000)]
+        [UnityTest, Category("Diagnostic"), Timeout(1800000)]
         public IEnumerator PhotographEveryLayerCombination()
         {
             // SILENT. A batch run is not a person sitting at the machine, and this suite has put

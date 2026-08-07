@@ -73,7 +73,7 @@ namespace Noir.PlayTests
             new Stop("The whole map",                        480f, 480f, 0f,  1150f, 50f,  30f),
         };
 
-        [UnityTest, Timeout(1800000)]
+        [UnityTest, Category("Diagnostic"), Timeout(1800000)]
         public IEnumerator DriveTheWholeCity()
         {
             yield return CityUnderTest.WaitUntilBuilt();

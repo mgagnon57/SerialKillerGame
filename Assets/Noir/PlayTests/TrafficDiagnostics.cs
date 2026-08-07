@@ -68,7 +68,7 @@ namespace Noir.PlayTests
         /// inside a fixed distance, and a busy road can hand that gap from one car to the next
         /// with no frame ever clear.
         /// </summary>
-        [UnityTest, Timeout(900000)]
+        [UnityTest, Category("Diagnostic"), Timeout(900000)]
         public IEnumerator HowLongTheHeadOfAQueueWaits()
         {
             var signals = CityUnderTest.Signals;
@@ -145,7 +145,7 @@ namespace Noir.PlayTests
         /// written against a guess about which one it was and neither of them worked, which is
         /// what this is for.
         /// </summary>
-        [UnityTest, Timeout(900000)]
+        [UnityTest, Category("Diagnostic"), Timeout(900000)]
         public IEnumerator WhatIsHoldingTheTraffic()
         {
             var traffic = CityUnderTest.Traffic;
@@ -210,7 +210,7 @@ namespace Noir.PlayTests
         /// today, that is not the follow model working - it is the rule that is about to be
         /// relaxed doing all of it.
         /// </summary>
-        [UnityTest, Timeout(900000)]
+        [UnityTest, Category("Diagnostic"), Timeout(900000)]
         public IEnumerator HowCloseCrossingPathsCome()
         {
             var world = CityUnderTest.World;

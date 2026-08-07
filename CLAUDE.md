@@ -92,10 +92,32 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 `LLMUnityTests.TestLLM`, whose constructor downloads a language model, and the run never finishes.
 Do **not** pass `-nographics` — two tests render and fail spuriously without it.
 
-> **No baseline exists, and on 2026-08-07 it was established WHY.** The suite does not finish in
-> batch mode: it runs, several tests pass with real assertions, and then it hangs. Two runs, both
-> killed after ~20 minutes with no results file written. The last test to complete both times was
-> `ThePlayerCanStandInTheStreet`. **There are 14 tests, not the 13 every document claims.**
+**Run the gates, not the diagnostics.** The suite is split by category:
+
+```
+Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform PlayMode ^
+  -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
+```
+
+> **BASELINE, first ever recorded, 2026-08-07: 8 tests, 4 pass, 4 fail, 1 min 42 s.**
+>
+> Passing: `ThePlayerCanStandInTheStreet`, `NoJunctionEverShowsGreenBothWays`,
+> `NoTwoVehiclesOccupyTheSameSpace`, `NoVehicleEverLeavesTheRoad`.
+> Failing: `TheCityComesUpAndRuns` ("the clock did not advance"),
+> `TrafficMovesAndStopsAtRedLights` (movement 0.0), `NoCarWaitsForeverAtTheHeadOfAClearQueue`
+> (120 s waits), `WhyAreThePeopleNotAnimating` (no `AgentMeshView`).
+>
+> **The first three are probably ONE bug**: the sim clock sits at exactly 720 — `VillageHost`'s
+> `startMinuteOfDay` — after a full ten-second wait, so it has never ticked. Nothing moves because
+> nothing is running. Not yet root-caused; the tick budget (`SimBudgetMs = 6`, `TickChunk = 8`)
+> and `Time.unscaledDeltaTime` in batch mode are where to look.
+
+**There are 14 tests, not the 13 every document claims.** Six are diagnostics wearing a test's
+clothes — three of them call `Assert.Pass()`, and `Tour`/`FilmStrip`/`LayerProof` assert only that
+the right number of image files appeared. They carry 105 minutes of the timeout budget between
+them, which is why the whole suite never finished: run un-split it can take **four hours**, and it
+was being killed at twenty minutes and called a hang. It was never hung. It was slow by design and
+nobody had ever seen the end of it.
 
 **Run this first, or the run drowns.** `Assets/polyperfect/` is gitignored, so the pack's mesh
 import settings are NOT in the repo and Read/Write defaults to off:
