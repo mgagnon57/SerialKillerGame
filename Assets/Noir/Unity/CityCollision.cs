@@ -83,7 +83,20 @@ namespace Noir.Unity
 
                 foreach (Transform child in node.transform)
                 {
-                    var rends = child.GetComponentsInChildren<Renderer>();
+                    // INCLUDE INACTIVE, or a layer switch silently deletes the walls.
+                    //
+                    // These roots are the Buildings, Districts and Houses layers, and VillageHost
+                    // registers them with Layers BEFORE calling this - and Layers.Register ends in
+                    // root.SetActive(IsOn(kind)). GetComponentsInChildren<Renderer>() skips
+                    // inactive objects by default, so with those layers switched off this found
+                    // nothing, built no colliders at all, and the player walked through every
+                    // building in Rossville. Layers persist in PlayerPrefs, so that was not a
+                    // session-long glitch - it was however long ago somebody last looked at a
+                    // survey view.
+                    //
+                    // Same fault as the traffic freeze: a switch about what is DRAWN reaching
+                    // something that is not about drawing. Physics is not a view.
+                    var rends = child.GetComponentsInChildren<Renderer>(true);
                     if (rends.Length == 0) continue;
 
                     var b = rends[0].bounds;
@@ -140,9 +153,25 @@ namespace Noir.Unity
             for (int c = 0; c < cols - 1; c++)
             {
                 int v0 = r * cols + c, v1 = v0 + 1, v2 = v0 + cols, v3 = v2 + 1;
-                // Wound to face up, matching the ground renderer's own convention.
-                tris[t++] = v0; tris[t++] = v2; tris[t++] = v1;
-                tris[t++] = v1; tris[t++] = v2; tris[t++] = v3;
+
+                // WOUND TO FACE UP, AND IT DID NOT. This read `v0,v2,v1 / v1,v2,v3` and said in a
+                // comment that it faced up. It faced DOWN, and the arithmetic says so plainly:
+                // row r maps to world z = -wy, so stepping a row FORWARD steps z BACKWARD, and
+                // that negation mirrors the handedness of every quad. With
+                //   v0=(x,h,-y)  v1=(x+S,h,-y)  v2=(x,h,-y-S)
+                //   (v2-v0) x (v1-v0) = (0,0,-S) x (S,0,0) = (0,-S²,0)
+                // the normal points at the floor. RecalculateNormals then faithfully reproduced
+                // it, so the shaded ground and the collision agreed with each other and both were
+                // upside down.
+                //
+                // A CharacterController dropping onto the BACK of a MeshCollider face is not
+                // reliably stopped by it - sometimes PhysX catches it, sometimes the man goes
+                // through - which is why ThePlayerCanStandInTheStreet has been intermittent rather
+                // than simply broken, and why it was written off as flaky. Probed: spawn 6.90,
+                // ground 3.90, and the fall passes straight through 3.90 at 0.06 m a step. That is
+                // not tunnelling. That is a floor with no upward face.
+                tris[t++] = v0; tris[t++] = v1; tris[t++] = v2;
+                tris[t++] = v1; tris[t++] = v3; tris[t++] = v2;
             }
 
             var mesh = new Mesh
