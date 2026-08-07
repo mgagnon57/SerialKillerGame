@@ -361,14 +361,20 @@
       <button id="r-close" aria-label="Close">×</button>
       <h2 id="r-name">—</h2>
       <div class="pin mono" id="r-size">—</div>
-      <p class="eyebrow" style="margin:13px 0 6px">Was there a sidewalk in 1991?</p>
+      <!-- What the tape says about this street, kept up here with the width it belongs to. The
+           questions below are what the OWNER says, and the two should not read as one list. There
+           is no static heading over them any more: the panel asks two different things at a scope
+           you choose, so each question carries its own label. -->
+      <p class="note" id="r-room" style="margin:5px 0 0"></p>
       <div id="r-sides" style="display:flex;gap:5px;flex-wrap:wrap"></div>
-      <p class="note" id="r-room" style="margin:9px 0 0"></p>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:9px">
+      <!-- The status gets its own line. Beside the buttons it had about a third of a narrow panel
+           and wrapped to three ragged lines, which is how "not saved yet - press Save" ends up
+           being the thing nobody reads. -->
+      <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
         <button id="r-save" class="ghost">Save</button>
         <button id="r-cancel" class="ghost">Cancel</button>
-        <span id="r-saved" class="mono" style="font-size:11.5px"></span>
       </div>
+      <div id="r-saved" class="mono" style="font-size:11.5px;margin-top:7px"></div>
     </div>
   </div>
 </div>
@@ -663,6 +669,10 @@ let BLOCKS = [];
 let roadSel = null;
 let blockSel = null;
 
+/// Which scope the panel is editing - "block" or "road". Picked once at the top of the panel so
+/// every question below it has one obvious owner.
+let roadScope = "block";
+
 // NOTHING IS WRITTEN UNTIL SAVE IS PRESSED, the same rule the lot panel has always had and for
 // the same reason: this file is the owner's memory and no re-run can rebuild it, so a click that
 // quietly commits a ruling is the wrong default. A misclick on the wrong block should cost a
@@ -835,11 +845,20 @@ function showRoad(rd) {
 
   const row = rd.row || 0;
   const room = row > 0 ? (row - rd.w) / 2 : 0;
+  // Rounded, because the right of way arrives as a measured float and a panel that reports
+  // "13.416407864998739 m" is quoting precision the tape never had.
   document.getElementById("r-size").textContent =
-    `${rd.w} m of ${rd.c}` + (row ? ` in a ${row} m right of way` : ", right of way not measured");
-  document.getElementById("r-room").textContent = room >= 2
-    ? `About ${room.toFixed(1)} m each side for verge and a walk.`
-    : "No room either side - this is an alley, and it is ruled by the tape rather than by memory.";
+    `${rd.w} m of ${rd.c}`
+    + (row ? ` in a ${row.toFixed(1)} m right of way` : ", right of way not measured");
+
+  // Said by CLASS, not by width. This read "this is an alley" off `room < 2`, so Chicago Street -
+  // 10 m of pavement in a 13.4 m right of way - was told it was an alley on the strength of
+  // having a narrow verge.
+  const alley = rd.c === "alley";
+  document.getElementById("r-room").textContent = alley
+    ? "An alley: 4 m of track with nowhere to put a walk, ruled by the tape rather than by memory."
+    : room >= 2 ? `About ${room.toFixed(1)} m each side for verge and a walk.`
+                : `Only ${room.toFixed(1)} m each side - a walk here would be tight against the kerb.`;
 
   const ns = roadIsNorthSouth(rd);
   const offer = WALK_CHOICES.filter(([v]) =>
@@ -848,11 +867,64 @@ function showRoad(rd) {
 
   const box = document.getElementById("r-sides");
   box.innerHTML = "";
+  box.style.display = "block";
 
-  // TWO ROWS: this block, and the whole street. The block you clicked is named, so there is no
-  // guessing which piece of road is about to change - "Chicago, Attica to Park" is how the answer
-  // is held in somebody's head anyway.
-  const rowFor = (label, current, save) => {
+  // ---- ONE SCOPE, THEN THE QUESTIONS ABOUT IT ---------------------------------------------
+  //
+  // This used to stack four rows - was the block here, was the street here, the block's walk, the
+  // street's walk - and each pair looked like the same question asked twice with no way to tell
+  // which answer went where. Pick what you are talking about once, at the top, and everything
+  // below is about that.
+  // A street ruled off the map has no blocks to talk about, so that tab closes rather than
+  // offering to rule a stretch of a street that was never there.
+  const streetGone =
+    (walkPending.was !== null ? walkPending.was : (WALKS.was[rd.n] || "")) === "absent";
+  if (streetGone) roadScope = "road";
+
+  const onBlock = roadScope === "block" && !!blockSel && !streetGone;
+  const nice = (w) => w === "end" ? "the end" : w;
+
+  const tabs = document.createElement("div");
+  tabs.style.cssText = "display:flex;gap:0;margin:2px 0 8px";
+  // Lit by what is ACTUALLY being asked, not by what was last clicked. Click a street away from
+  // any block and roadScope is still "block" while the questions below are the street's - a lit
+  // tab over the other tab's questions is the same lie the old rows told.
+  const showing = onBlock ? "block" : "road";
+  const tab = (id, text, live, why) => {
+    const b = document.createElement("button");
+    b.className = "w" + (showing === id ? " on" : "");
+    b.textContent = text;
+    b.style.cssText = "flex:1;border-radius:0";
+    b.disabled = !live;
+    if (!live) { b.style.opacity = "0.4"; b.title = why; }
+    b.onclick = () => { roadScope = id; showRoad(rd); };
+    return b;
+  };
+  tabs.appendChild(tab("block", "This block", !!blockSel && !streetGone,
+    streetGone ? "The whole street is ruled off the map."
+               : "Click the street where a block is to pick one."));
+  tabs.appendChild(tab("road", "Whole street", true));
+  box.appendChild(tabs);
+
+  const what = document.createElement("p");
+  what.className = "note";
+  what.style.margin = "0 0 11px";
+  what.textContent = onBlock
+    ? `${nice(blockSel.from)} to ${nice(blockSel.to)} · ${Math.round(blockSel.b - blockSel.a)} m`
+    : `all of ${rd.n} · ${blocksOf(rd.n).length} block${blocksOf(rd.n).length === 1 ? "" : "s"}`;
+  box.appendChild(what);
+
+  const bkey = blockSel ? rd.n + "|" + blockSel.from + "|" + blockSel.to : null;
+
+  // What this scope says now, with anything pending on top of it.
+  const wasNow = onBlock
+    ? (walkPending.wasBlock !== null ? walkPending.wasBlock : (WALKS.wasBlocks[bkey] || ""))
+    : (walkPending.was !== null ? walkPending.was : (WALKS.was[rd.n] || ""));
+  const walkNow = onBlock
+    ? (walkPending.block !== null ? walkPending.block : (WALKS.blocks[bkey] || ""))
+    : (walkPending.road !== null ? walkPending.road : (WALKS.roads[rd.n] || ""));
+
+  const ask = (label, choices, current, save) => {
     const head = document.createElement("p");
     head.className = "eyebrow";
     head.style.margin = "2px 0 5px";
@@ -860,94 +932,56 @@ function showRoad(rd) {
     box.appendChild(head);
 
     const line = document.createElement("div");
-    line.style.cssText = "display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px";
-    for (const [value, text] of offer) {
+    line.style.cssText = "display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px";
+    for (const [value, text] of choices) {
       const b = document.createElement("button");
       b.className = "w" + (current === value ? " on" : "");
       b.textContent = text;
-      b.onclick = () => save(current === value ? "" : value);
+      b.onclick = () => { save(current === value ? "" : value); showRoad(rd); };
       line.appendChild(b);
     }
     box.appendChild(line);
   };
 
-  box.style.display = "block";
+  // The label names its own scope. Two rows headed "Was it here in 1991?" with no way to tell
+  // which one meant the block is exactly the confusion this panel was redrawn to end.
+  ask(onBlock ? "Was this stretch here in 1991?" : `Was ${rd.n} here in 1991?`,
+      [["built", "Yes"], ["absent", "No — take it off the map"]], wasNow,
+      v => { if (onBlock) walkPending.wasBlock = v; else walkPending.was = v; });
 
-  // WAS IT THERE AT ALL, asked first, because it makes every other question about the street
-  // moot. Same act as ruling a lot absent: roads.txt is the county's network as it stands TODAY,
-  // and a street cut through in 1998 has no business on a map of 1991.
-  {
-    const shownWas = walkPending.was !== null ? walkPending.was : (WALKS.was[rd.n] || "");
-    const bkey = blockSel ? rd.n + "|" + blockSel.from + "|" + blockSel.to : null;
-    const shownWasBlk = walkPending.wasBlock !== null ? walkPending.wasBlock
-                      : (bkey ? (WALKS.wasBlocks[bkey] || "") : "");
-
-    const askWas = (label, current, save) => {
-      const head = document.createElement("p");
-      head.className = "eyebrow";
-      head.style.margin = "2px 0 5px";
-      head.textContent = label;
-      box.appendChild(head);
-
-      const line = document.createElement("div");
-      line.style.cssText = "display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px";
-      for (const [value, text] of [["built", "Yes"], ["absent", "No — take it off"]]) {
-        const b = document.createElement("button");
-        b.className = "w" + (current === value ? " on" : "");
-        b.textContent = text;
-        b.onclick = () => { save(current === value ? "" : value); showRoad(rd); };
-        line.appendChild(b);
-      }
-      box.appendChild(line);
-    };
-
-    // SOME ROADS WERE EXTENDED AFTER 1991 and only the new end should come off, so the block is
-    // asked first - it is the finer answer and the one more often wanted.
-    if (blockSel) {
-      const nice = (w) => w === "end" ? "the end" : w;
-      askWas(`Was this stretch here in 1991? — ${nice(blockSel.from)} to ${nice(blockSel.to)}`,
-             shownWasBlk, v => walkPending.wasBlock = v);
-    }
-    askWas("Was the whole street here in 1991?", shownWas, v => walkPending.was = v);
-
-    if (shownWasBlk === "absent" && shownWas !== "absent") {
-      const note = document.createElement("p");
-      note.className = "note";
-      note.style.margin = "0 0 9px";
-      note.textContent = "This stretch comes off and the rest of the street stays. "
-                       + "The run is cut, not dropped.";
-      box.appendChild(note);
-    }
-
-    // A street that was not there cannot have had a sidewalk, so there is nothing more to ask.
-    if (shownWas === "absent") {
-      const note = document.createElement("p");
-      note.className = "note";
-      note.style.margin = "0 0 4px";
-      note.textContent = "Taken off the map: not drawn, not driven, not walked. "
-                       + "Its blocks and any sidewalk ruling on them are left alone in the file, "
-                       + "so putting it back restores them.";
-      box.appendChild(note);
-      finishRoadPanel(rd);
-      return;
-    }
+  // Gone is gone: a stretch that was not there cannot have had a walk on it.
+  if (wasNow === "absent") {
+    const note = document.createElement("p");
+    note.className = "note";
+    note.style.margin = "0 0 4px";
+    note.textContent = onBlock
+      ? "This stretch comes off and the rest of the street stays — the run is cut, not dropped."
+      : "The whole street comes off: not drawn, not driven, not walked.";
+    box.appendChild(note);
+    finishRoadPanel(rd);
+    return;
   }
 
-  if (blockSel) {
-    const key = rd.n + "|" + blockSel.from + "|" + blockSel.to;
-    const nice = (w) => w === "end" ? "the end" : w;
-    const shown = walkPending.block !== null ? walkPending.block : (WALKS.blocks[key] || "");
-    rowFor(`This block — ${nice(blockSel.from)} to ${nice(blockSel.to)}`
-           + `, ${Math.round(blockSel.b - blockSel.a)} m`,
-           shown,
-           side => { walkPending.block = side; showRoad(rd); });
+  ask(onBlock ? "Sidewalk on this stretch" : "Sidewalk the length of the street", offer, walkNow,
+      v => { if (onBlock) walkPending.block = v; else walkPending.road = v; });
+
+  // On a block, say what it would fall back to - an empty answer here is not "no walk", it is
+  // "whatever the street says", and those are different rulings.
+  if (onBlock) {
+    const fallback = WALKS.roads[rd.n];
+    const note = document.createElement("p");
+    note.className = "note";
+    note.style.margin = "-4px 0 4px";
+    note.textContent = walkNow
+      ? "This block only. The rest of the street is unaffected."
+      : fallback ? `Following the street: ${fallback}.`
+                 : "Nothing said for this block or the street.";
+    box.appendChild(note);
   }
-  const shownRoad = walkPending.road !== null ? walkPending.road : (WALKS.roads[rd.n] || "");
-  rowFor(`The whole of ${rd.n}` + (blockSel ? " — the default" : ""),
-         shownRoad, side => { walkPending.road = side; showRoad(rd); });
 
   finishRoadPanel(rd);
 }
+
 
 /// The Save/Cancel state and the status line, shared by both ways out of showRoad - a street
 /// ruled off the map stops before the sidewalk rows and still needs its Save button.
@@ -970,7 +1004,9 @@ function finishRoadPanel(rd) {
     res.textContent = "not in 1991";
     res.style.color = "var(--muted)";
   } else {
-    res.textContent = (here ? "this block: " + here : "not ruled yet")
+    // Says which scope the walk it is quoting came from. "this block: both" over a street with no
+    // block picked was the summary telling the same half-truth the old rows did.
+    res.textContent = (here ? (blockSel ? "this block: " : "this street: ") + here : "not ruled yet")
       + `  ·  ${blocksOf(rd.n).length} blocks`
       + (ruledBlocks ? `, ${ruledBlocks} ruled on their own` : "");
     res.style.color = "var(--muted)";
@@ -1883,6 +1919,9 @@ cv.addEventListener("pointerup", e => {
       const rd = pickRoad(e.clientX - r.left, e.clientY - r.top);
       if (rd) {
         blockSel = blockAt(rd, wx(e.clientX - r.left), wy(e.clientY - r.top));
+        // A fresh click starts on the stretch you clicked, which is the finer answer and the one
+        // usually wanted. Falls back to the street where the click found no block.
+        roadScope = blockSel ? "block" : "road";
         showRoad(rd);
       }
     }
