@@ -485,7 +485,32 @@ namespace Noir.Core.World
                         // measured to the end point - which can flip sign for a road that
                         // merely passes the end without touching it. Only strictly inside the
                         // run is a crossing.
-                        if (sOther > 0.001f && sOther < other.Length - 0.001f)
+                        //
+                        // AND THE HIT HAS TO BE ON THE OTHER ROAD, not merely somewhere beside
+                        // it. The note above guards the ENDS; this is the same false positive in
+                        // the MIDDLE of the run. Project answers with the nearest dense sample and
+                        // measures the lateral against the normal THERE, so as this road passes a
+                        // bend far away the nearest sample jumps from one segment to the next and
+                        // the signed lateral turns over with it - a sign flip with no crossing
+                        // under it. The straight branch already guards this by playing S back
+                        // through PointAt; the walked branch never did.
+                        //
+                        // Measured on the survey network: Railroad Avenue "crossed" alley1 TWICE
+                        // at (1453,1701), 214 m north of any part of that alley, and Route 1
+                        // "crossed" it at (449,421), 1,118 m away. The two railroad ones land 5 m
+                        // apart - closer than their own reach - so LaneGraph drops the lane
+                        // between them and four lanes arrive at a junction they cannot leave,
+                        // which parks those cars on Hold.NoLegalTurn for the rest of the run.
+                        //
+                        // One resample pitch of tolerance: that is the accuracy the interpolated
+                        // hit is found to, a real crossing reprojects to well inside it, and on a
+                        // straight `other` Project is exact.
+                        var backOther = other.PointAt(sOther);
+                        float offX = backOther.X - hit.X, offY = backOther.Y - hit.Y;
+                        bool onOther = offX * offX + offY * offY
+                                     <= RoadPath.ResamplePitch * RoadPath.ResamplePitch;
+
+                        if (onOther && sOther > 0.001f && sOther < other.Length - 0.001f)
                         {
                             // Hand back (SA = along a, SB = along b) regardless of which side
                             // was walked, so callers never have to know.

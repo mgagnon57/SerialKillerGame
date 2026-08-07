@@ -256,6 +256,39 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Roads
 
+- [ ] **A road that ENDS on another road makes no junction, and there are ~21 of them.**
+  `RoadNetwork.Crossings` finds a junction by the projected lateral FLIPPING SIGN as one centre
+  line passes THROUGH the other. A road that stops dead on another leaves on the side it arrived
+  on, so it never flips, so no junction is recorded. With no junction, `LaneGraph` makes both
+  approaches `IsExit`/`IsEntry`, `CityTraffic.cs:842` skips `MayCross` entirely on an exit
+  segment - no signal, no give-way, no turn claim - and `Blocked()` skips the pair because the
+  headings differ by more than 45°. Nothing at all separates the two streams.
+
+  **Confirmed by measurement, 2026-08-07.** Maple's east end and Grove's north end are the same
+  point in `Content/roads.txt` (`1303,1475`, meeting at ~70°); their lane centre lines genuinely
+  intersect at ≈(1302.8,1477.0) with a minimum separation of **0.002 m**. That is
+  `NoTwoVehiclesOccupyTheSameSpace` failing at 0.40 m, 132.3 m from `grove x gilbert` - and 132.4 m
+  is exactly where that junction is. **28 road-end-touches-road cases across ~21 distinct
+  corners**: grove/maple, grove/henderson, harrison/york, goodwine/holmes, abner/park,
+  abner/perry, watson/stufflebeam, stewart/railroad, smith/henderson, thompson/grove, earl/grove,
+  church/thompson, church/henderson, holmes/harrison, green/benton, harrison/benton, ann/perry,
+  railroad/gilbert, railroad/mckibben, gilbert/chicago, perry/chicago. Fixing one moves the
+  failure to the next.
+
+  **THE PROJECT ALREADY LEARNED THIS ONCE.** `RoadGeometryBaselineTests` records it in as many
+  words - *"twenty-six T junctions silently broken... Forty-three road ends were then extended to
+  their cross street and 16 ft past it, because an end that stops ON a centreline only touches it
+  and the intersection finder wants a real crossing."* That hand-extension went into
+  `Content/city.txt`. **`tools/build-roads.py`, which generates the survey network that replaced
+  it, has no such step**, so every one of them came back.
+
+  **DO NOT just add an overhang in build-roads.py without measuring.** That was tried against the
+  real data on 2026-08-07: 46 ends moved, junctions 64→83, and lane pairs closer than 2 m went
+  21→5 - but **three of those five did not exist before**. It does not restore the invariant, it
+  manufactures new instances of the same fault. The durable version is a `Touches` rule beside
+  `Crossings` in Core, where an end landing on another road's centre line is a junction in its own
+  right; that is untried and needs the same measurement before it is believed.
+
 - [ ] **Curved roads on the outer parts - the map is too square.** The pack HAS the
   pieces: `Road_Turn_20x20_City`, `Road_Turn_Shift_20x20_City` (an S-bend), and
   `Road_Dirt_A/B_Turn_20x20m` for lanes, all found and unused. The blocker is not

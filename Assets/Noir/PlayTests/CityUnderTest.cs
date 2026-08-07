@@ -118,8 +118,62 @@ namespace Noir.PlayTests
                     Mathf.Abs(vy - junction.Y) <= junction.Reach)
                     return true;
 
-            var line = world.Roads.At(vx, vy);
-            if (line == null)
+            // ON ASPHALT, NOT ON A PARTICULAR ROAD'S ASPHALT.
+            //
+            // This asked RoadNetwork.At, which answers a DIFFERENT question: whose CORRIDOR holds
+            // this point, widest first and declaration order on a tie. Near a crossing the
+            // perpendicular street's corridor holds the point too, and when it is the wider one it
+            // wins - so a car sitting correctly in its own lane was measured against the centre
+            // line of the road it was driving ACROSS, five metres away, and failed.
+            //
+            // The ceiling gives it away: inside a 10 m corridor `over` can never exceed
+            // HalfWidth(5) - Asphalt(3) = 2.00 m, and the failure was 1.99 m. The junction escape
+            // above cannot cover it either - that is an axis-aligned square, a corridor is a strip
+            // about a centre line that bends, and where the survey's roads meet at a T there is no
+            // Junction recorded at all (see RoadNetwork.Crossings).
+            //
+            // So: keep the SMALLEST overshoot over every corridor that contains the point. A car
+            // on any road's carriageway is on the road. Containment is decided by exactly At's own
+            // rule, including its straight/bent end guard, so the only thing that changes is which
+            // containing road gets measured against - which is the whole fix and nothing more.
+            //
+            // NOTE ON ALLEYS: Asphalt(Alley) measures 3.55 m off the dirt tile while an alley's
+            // HalfWidth is 2.0 m, so any point inside an alley corridor passes unconditionally.
+            // That is the alley tile being wider than the corridor it is declared to fill, not
+            // this test being loose, and it is recorded here so the next person does not re-derive
+            // it from a surprising pass.
+            bool anyCorridor = false;
+            float least = float.MaxValue;
+
+            foreach (var road in world.Roads.Lines)
+            {
+                if (road.Path == null) continue;
+
+                var (s, lateral) = road.Path.Project(new Noir.Core.Contracts.Vec2(vx, vy));
+                float off = Mathf.Abs(lateral);
+                if (off > road.HalfWidth) continue;
+
+                if (s <= 0f || s >= road.Path.Length)
+                {
+                    if (road.Path.IsStraightAxisAligned)
+                    {
+                        float along = road.IsNorthSouth ? vy : vx;
+                        if (along < road.From || along > road.To) continue;
+                    }
+                    else
+                    {
+                        var end = road.Path.PointAt(s);
+                        float dx = vx - end.X, dy = vy - end.Y;
+                        if (dx * dx + dy * dy > road.HalfWidth * road.HalfWidth) continue;
+                    }
+                }
+
+                anyCorridor = true;
+                float overThis = off - CityStreets.Asphalt(road.Class);
+                if (overThis < least) least = overThis;
+            }
+
+            if (!anyCorridor)
             {
                 // Off the map entirely is fine - lanes run past the edge so cars arrive from
                 // off-stage rather than appearing out of nothing.
@@ -128,31 +182,7 @@ namespace Noir.PlayTests
                 return false;
             }
 
-            // HOW FAR FROM THE CENTRE LINE, measured the way the road is actually shaped.
-            //
-            // This used to be |across - line.Centre| on one axis, and against a road that bends
-            // that is not a measurement, it is a straight ruler held up to a curve. It reported
-            // a van sitting correctly on Chicago Street's south end as "583.23m past the
-            // asphalt" - which is exactly |903.23 - 314| - 6, the distance from the x of the
-            // road's FIRST point, 2.4km away at the north edge.
-            //
-            // RoadNetwork.At had already been taught to ask the path; this had not, so the test
-            // was failing a car the game was placing correctly.
-            float off;
-            if (line.Path != null)
-            {
-                var (_, lateral) = line.Path.Project(new Noir.Core.Contracts.Vec2(vx, vy));
-                off = Mathf.Abs(lateral);
-            }
-            else
-            {
-                float across = line.IsNorthSouth ? vx : vy;
-                off = Mathf.Abs(across - line.Centre);
-            }
-
-            float half = CityStreets.Asphalt(line.Class);
-
-            over = off - half;
+            over = least;
             return over <= tolerance;
         }
 
