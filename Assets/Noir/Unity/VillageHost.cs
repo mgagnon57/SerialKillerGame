@@ -413,8 +413,17 @@ namespace Noir.Unity
                 // nothing is carefully seated and then taken down again.
                 SeatOnSurvey.Apply(layout);
 
+                // The downtown lots SeatOnSurvey just skipped, because their measured shape is what
+                // REPLACED 1991 rather than a late photograph of it - a quarter of the commercial
+                // section burned in Feb 2004 and the imagery shows the forecourt built on the
+                // cleared ground. Laid from the 1913 Sanborn frontages instead: the fabric changes
+                // on a century where the trades change on a decade. Its own substream, so adding
+                // this pass does not shift the numbers every other system draws.
+                DowntownFromSanborn.Apply(layout, Xoshiro256ss.Substream(Seed, "downtown"));
+
                 // And the buildings the survey found that the map never had. Last, so it can see
-                // everything already standing and put nothing up on top of it.
+                // everything already standing and put nothing up on top of it - including the
+                // terrace one line above.
                 FillFromSurvey.Apply(layout);
                 SurveyReport.Write();
 
