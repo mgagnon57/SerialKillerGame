@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text;
 using NUnit.Framework;
 using Noir.Core.Contracts;
@@ -11,7 +11,7 @@ namespace Noir.Core.Tests
     /// <summary>
     /// Coverage for the People and Sim layers, which had none.
     ///
-    /// The load-bearing tests here are <see cref="DayPlanTests"/> â€” a day plan that overlaps
+    /// The load-bearing tests here are <see cref="DayPlanTests"/> — a day plan that overlaps
     /// itself or runs past midnight makes people silently skip whole activities, and that is
     /// invisible in the game. These sweep every citizen across four weeks rather than spot-
     /// checking, because the failures were rare: 4 bad blocks in ~3,000.
@@ -160,7 +160,7 @@ namespace Noir.Core.Tests
 
     /// <summary>
     /// CitizenId is a slot in an array, and the game's central event takes somebody out of that
-    /// array. Everything that has to outlive one run â€” a save, a case note, an observation â€”
+    /// array. Everything that has to outlive one run — a save, a case note, an observation —
     /// needs a name that is not an offset.
     /// </summary>
     [TestFixture]
@@ -195,7 +195,7 @@ namespace Noir.Core.Tests
         [Test]
         public void AKeyIsMadeOfTheHomeAndThePlaceInIt()
         {
-            // Not of the array index â€” that is the whole point. Recomputing it from the two
+            // Not of the array index — that is the whole point. Recomputing it from the two
             // things it is documented to be made of has to give the same answer.
             foreach (var c in Village.People.Citizens)
             {
@@ -327,7 +327,7 @@ namespace Noir.Core.Tests
             }
             // The night shift is legitimately up; nearly everyone else should not be.
             Assert.That(awake, Is.LessThan(Village.People.Count / 4),
-                $"{awake} people awake at 03:00 â€” the night is not quiet enough");
+                $"{awake} people awake at 03:00 — the night is not quiet enough");
         }
 
         /// <summary>
@@ -379,7 +379,7 @@ namespace Noir.Core.Tests
                 $"{offences.Count} shifts with no dinner hour:\n  "
               + string.Join("\n  ", offences.ToArray()));
             Assert.That(broken, Is.GreaterThan(0),
-                "no shift in the whole village crosses midday â€” this test is measuring nothing");
+                "no shift in the whole village crosses midday — this test is measuring nothing");
         }
 
         /// <summary>
@@ -423,7 +423,7 @@ namespace Noir.Core.Tests
                 $"{offences.Count} school days with no dinner break:\n  "
               + string.Join("\n  ", offences.ToArray()));
             Assert.That(broken, Is.GreaterThan(0),
-                "no child is ever at school across midday â€” this test is measuring nothing");
+                "no child is ever at school across midday — this test is measuring nothing");
         }
 
         [Test]
@@ -485,7 +485,7 @@ namespace Noir.Core.Tests
             for (int i = 0; i < chunked.AgentCount; i++)
                 Assert.That(single.GetAgent(i).Position.X,
                     Is.EqualTo(chunked.GetAgent(i).Position.X).Within(0.0001f),
-                    $"agent {i} diverged â€” fast-forward is not equivalent to real time");
+                    $"agent {i} diverged — fast-forward is not equivalent to real time");
         }
 
         [Test]
@@ -521,7 +521,7 @@ namespace Noir.Core.Tests
             // three hours it swings between none and eight depending on nothing in particular,
             // so a threshold on one three-hour window measures the dice rather than the
             // village. Over a day it settles to a dozen or twenty, which is what the assertion
-            // below is actually about â€” that this is not a place where everybody walks briskly
+            // below is actually about — that this is not a place where everybody walks briskly
             // past everybody else.
             for (int minute = 0; minute < 1440; minute++)
             {
@@ -534,7 +534,7 @@ namespace Noir.Core.Tests
             }
 
             Assert.That(everTalked, Is.GreaterThan(8),
-                $"only {everTalked} people stopped to talk all day â€” the village is too brisk");
+                $"only {everTalked} people stopped to talk all day — the village is too brisk");
         }
 
         [Test]
@@ -588,7 +588,7 @@ namespace Noir.Core.Tests
             }
 
             Assert.That(paired, Is.GreaterThan(0),
-                "nobody walked with anybody all morning â€” the school run is not pairing up");
+                "nobody walked with anybody all morning — the school run is not pairing up");
         }
 
         [Test]
@@ -602,13 +602,13 @@ namespace Noir.Core.Tests
                 if (sim.GetAgent(i).Travelling) travelling++;
 
             Assert.That(travelling, Is.LessThan(sim.AgentCount / 3),
-                $"{travelling} of {sim.AgentCount} still walking â€” journeys are not completing");
+                $"{travelling} of {sim.AgentCount} still walking — journeys are not completing");
         }
     }
 
     /// <summary>
     /// Everybody's day plan changes on a minute boundary, so every journey a day contains lands
-    /// on one of 1,440 ticks out of 1,728,000 â€” and they land in heaps. At five thousand people
+    /// on one of 1,440 ticks out of 1,728,000 — and they land in heaps. At five thousand people
     /// 1,317 journeys start on the single 08:30 tick, and PathBudgetPerTick then behaves as a
     /// queue rather than a smoother: the last citizen sets off five and a half seconds after the
     /// first, and the school run dribbles out of the houses instead of the street emptying.
@@ -658,7 +658,7 @@ namespace Noir.Core.Tests
             // twentieth is comfortably past "they all still move at once".
             Assert.That(onTheBoundary * 20, Is.LessThan(departures.Count),
                 $"{onTheBoundary} of {departures.Count} journeys still begin on the tick the "
-              + "minute turns â€” the clump has not been spread at all");
+              + "minute turns — the clump has not been spread at all");
         }
 
         [Test]
@@ -680,10 +680,10 @@ namespace Noir.Core.Tests
             foreach (var n in perTick.Values) if (n > worstTick) worstTick = n;
             foreach (var n in perMinute.Values) if (n > worstMinute) worstMinute = n;
 
-            Assert.That(worstMinute, Is.GreaterThan(8), "no minute of the day is busy â€” nothing was tested");
+            Assert.That(worstMinute, Is.GreaterThan(8), "no minute of the day is busy — nothing was tested");
             Assert.That(worstTick, Is.LessThan(worstMinute),
                 $"the busiest tick still carries {worstTick} of the busiest minute's {worstMinute} "
-              + "journeys â€” the whole clump is landing on one tick");
+              + "journeys — the whole clump is landing on one tick");
         }
 
         [Test]
@@ -691,8 +691,8 @@ namespace Noir.Core.Tests
         {
             // This is what the jitter is keyed on the household to protect. A brother and sister
             // more than a second apart are more than six tiles apart by the time the second one
-            // moves, FindCompanion has nothing to pair them with, and the companion link â€” two
-            // dots moving together, which reads as "together" instantly â€” quietly stops
+            // moves, FindCompanion has nothing to pair them with, and the companion link — two
+            // dots moving together, which reads as "together" instantly — quietly stops
             // happening. It is the effect the spreading was supposed to serve, not spend.
             var departures = DepartuesOverADay();
 
@@ -723,7 +723,7 @@ namespace Noir.Core.Tests
             }
 
             Assert.That(together, Is.GreaterThan(0),
-                "no two people from one household ever left for the same place â€” nothing was tested");
+                "no two people from one household ever left for the same place — nothing was tested");
         }
     }
 
@@ -773,7 +773,7 @@ namespace Noir.Core.Tests
                 // rollover window actually needs is "nobody is up BEFORE 04:45".
                 Assert.That(first.EndMinute, Is.GreaterThanOrEqualTo(4 * 60 + 45),
                     $"{citizen.FullName} is up at {first.EndMinute / 60:00}:{first.EndMinute % 60:00} "
-                  + "on day " + day + " â€” earlier than the rollover window assumes");
+                  + "on day " + day + " — earlier than the rollover window assumes");
             }
         }
 
@@ -806,8 +806,8 @@ namespace Noir.Core.Tests
     /// The village must never contain a person the simulation is wrong about.
     ///
     /// A failed path used to be swallowed by filing the citizen at their destination while
-    /// leaving their feet where they were, which is invisible on screen â€” the renderer draws
-    /// the position â€” and wrong everywhere else, because the inspector, the density table and
+    /// leaving their feet where they were, which is invisible on screen — the renderer draws
+    /// the position — and wrong everywhere else, because the inspector, the density table and
     /// the window lights all read the place. There is nothing to see, so there has to be
     /// something to run.
     /// </summary>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Noir.Core.Contracts;
@@ -15,7 +15,7 @@ namespace Noir.Sim
     /// sounding the same, and by the time that is noticeable in play it has been true for
     /// months. So it gets counted, at a population that has not been built yet.
     ///
-    /// The measurement is the real generator against the real tables â€” not a model of it. That
+    /// The measurement is the real generator against the real tables — not a model of it. That
     /// matters because the draws are not uniform: PickSurname prefers a surname nobody has yet,
     /// and a person's two or three particulars must differ from each other. Both of those
     /// flatten the distribution while the table is roomy and give up quietly once it is not,
@@ -27,7 +27,7 @@ namespace Noir.Sim
         /// The default bar: how many people one authored string may describe.
         ///
         /// A POLICY, not a measurement, and the one number here that is somebody's judgement
-        /// rather than the village's. Four is chosen so that the ladder below straddles it â€”
+        /// rather than the village's. Four is chosen so that the ladder below straddles it —
         /// three men who whistle badly is a village, ten is a generator. Move it with --k and
         /// read the ladder to see what the move costs.
         /// </summary>
@@ -54,7 +54,7 @@ namespace Noir.Sim
         /// The cache is not an optimisation for its own sake. The bisection asks for the same
         /// table size once per resample, so without it every search rebuilds a hundred thousand
         /// lines of text eight times over. The counter exists so the report can say what it cost
-        /// in work rather than in seconds â€” a stopwatch reading would make two runs of the same
+        /// in work rather than in seconds — a stopwatch reading would make two runs of the same
         /// seed differ, which is the one thing these reports may not do.
         /// </summary>
         private sealed class Lab
@@ -94,7 +94,7 @@ namespace Noir.Sim
             int authoredPeople = lab.Generate(authoredWorld, realNames, realParticulars, seed).Count;
 
             WorldModel world = authoredWorld;
-            string worldNote = "Ashcombe exactly as authored â€” this is a measurement, not a sample.";
+            string worldNote = "Ashcombe exactly as authored — this is a measurement, not a sample.";
 
             if (targetPopulation > 0)
             {
@@ -115,7 +115,7 @@ namespace Noir.Sim
             bool agrees = SameVillage(people, real, realNames, realParticulars);
 
             var r = new Instrument();
-            r.Line($"vocab â€” the content ceiling at {people.Count} people, seed {seed}");
+            r.Line($"vocab — the content ceiling at {people.Count} people, seed {seed}");
             r.Line($"        {worldNote}");
             r.Line($"        bar: no authored string may describe more than {k} "
                  + $"{(k == 1 ? "person" : "people")}.");
@@ -128,7 +128,7 @@ namespace Noir.Sim
                 : "  WARNING: counting is done on a tagged run, and it did NOT reproduce the untagged");
             r.Line(agrees
                 ? "  a draw attributable to one table and one line. It reproduced the untagged village"
-                : "  village person for person â€” a table almost certainly holds the same string twice.");
+                : "  village person for person — a table almost certainly holds the same string twice.");
             r.Line(agrees
                 ? "  person for person, so nothing below is an artefact of the tagging."
                 : "  Read the duplicate column before anything else.");
@@ -140,7 +140,7 @@ namespace Noir.Sim
             foreach (var kind in drawn)
                 counts[kind] = Tally(people, kind, tables.Size(kind));
 
-            var main = new Table("DRAWN TABLES â€” one row per authored table, at this population",
+            var main = new Table("DRAWN TABLES — one row per authored table, at this population",
                 new Col("table", 17, right: false), new Col("entries", 7), new Col("dupes", 5),
                 new Col("draws", 7), new Col("per entry", 9), new Col("max", 5),
                 new Col($"over {k}", 6), new Col("+need", 7),
@@ -191,7 +191,7 @@ namespace Noir.Sim
             }
 
             main.Note("'draws' is how many times the generator reached into the table, and 'per entry'");
-            main.Note("is that divided by its length. 'max' and 'over' are for THIS seed â€” the village");
+            main.Note("is that divided by its length. 'max' and 'over' are for THIS seed — the village");
             main.Note("that actually ships, and what the exit code is decided on. The last two columns");
             main.Note($"are the worst of {samples} resamples on other seeds and what it would cost to hold the");
             main.Note("bar on any of them; the gap between the two '+need' columns is how much of the");
@@ -201,7 +201,7 @@ namespace Noir.Sim
             // The tail is the whole difficulty and it is not obvious, so it is shown rather than
             // explained: the bar is on the busiest entry, and the busiest entry carries several
             // times the average however evenly the draws are spread.
-            var floor = new Table($"THE FLOOR OF THE SAME JOB â€” entries to bring the AVERAGE to {k}",
+            var floor = new Table($"THE FLOOR OF THE SAME JOB — entries to bring the AVERAGE to {k}",
                 new Col("table", 17, right: false), new Col("have", 7), new Col("average", 8),
                 new Col("+floor", 8), new Col("+need", 8), new Col("tail costs", 11));
 
@@ -213,7 +213,7 @@ namespace Noir.Sim
 
                 floor.Row(tables.Label(kind), size, size > 0 ? draws / (double)size : 0,
                           Grow(floors[kind]), Grow(needed[kind]),
-                          needed[kind] <= 0 ? "â€”"
+                          needed[kind] <= 0 ? "—"
                               : floors[kind] > 0 ? $"x{needed[kind] / (double)floors[kind]:0.0}"
                               : "ALL of it");
             }
@@ -222,7 +222,7 @@ namespace Noir.Sim
             floor.Note("the real bar, and the last column is what the busiest entry costs over the");
             floor.Note("average one. Read the two as the ends of the range for the content task.");
             floor.Note("'ALL of it' means the AVERAGE is already inside the bar and every entry in +need");
-            floor.Note("is bought purely to pull the busiest line down â€” which is the usual case, and the");
+            floor.Note("is bought purely to pull the busiest line down — which is the usual case, and the");
             floor.Note("reason a table can look roomy and read as repetitive at the same time.");
             r.Add(floor);
 
@@ -266,7 +266,7 @@ namespace Noir.Sim
             ladder.Note("On this seed, matching the '+need' column above. The smallest table size the");
             ladder.Note("search could confirm holds the bar: found by bisection, and the busiest entry");
             ladder.Note("does not fall monotonically as a table grows, so a few entries either way are");
-            ladder.Note("noise. 'â€”' means no size under " + SearchCap + " held it.");
+            ladder.Note("noise. '—' means no size under " + SearchCap + " held it.");
             ladder.Note("This is the table to read if the bar is the argument. It costs nothing to change");
             ladder.Note("k and everything to change it after the town is written.");
             r.Add(ladder);
@@ -281,7 +281,7 @@ namespace Noir.Sim
                 if (need > 0)
                     r.Finding($"{tables.Label(kind)}: {tables.Size(kind)} entries today, "
                             + $"{tables.Size(kind) + need} needed to hold k={k} at {people.Count} "
-                            + $"people â€” {need} more to write. "
+                            + $"people — {need} more to write. "
                             + (floors[kind] > 0
                                 ? $"{floors[kind]} of those only bring the average inside the bar; the "
                                   + "rest are the busiest line."
@@ -310,8 +310,8 @@ namespace Noir.Sim
                     + "cheapest thing in the project to grow and the most expensive to notice you "
                     + "should have grown.");
 
-            // What it cost, in work rather than in seconds â€” see Lab.
-            r.Line($"  COST â€” {lab.Populations:#,0} populations generated, "
+            // What it cost, in work rather than in seconds — see Lab.
+            r.Line($"  COST — {lab.Populations:#,0} populations generated, "
                  + $"{(targetPopulation > 0 ? "Ashcombe plus one sample town" : "one world")} built, "
                  + "no simulation ticked.");
             r.Line($"         {lab.Tables.Count} distinct table sizes were built and cached. Almost all "
@@ -343,12 +343,12 @@ namespace Noir.Sim
         {
             var known = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "names.txt", "drawn â€” male forenames, female forenames, surnames" },
-                { "particulars.txt", "drawn â€” one clause per line" },
-                { "fixture-village.txt", "authored once each â€” place names and `human` lines" },
+                { "names.txt", "drawn — male forenames, female forenames, surnames" },
+                { "particulars.txt", "drawn — one clause per line" },
+                { "fixture-village.txt", "authored once each — place names and `human` lines" },
             };
 
-            var table = new Table("CONTENT/ â€” read off the folder, not off a list in this file",
+            var table = new Table("CONTENT/ — read off the folder, not off a list in this file",
                 new Col("file", 20, right: false), new Col("lines", 7), new Col("bytes", 9),
                 new Col("", 52, right: false));
 
@@ -365,12 +365,12 @@ namespace Noir.Sim
                 if (!measured) unmeasured++;
 
                 table.Row(name, MeaningfulLines(text), text.Length,
-                          measured ? what : "NOT MEASURED â€” this command does not know how it is drawn");
+                          measured ? what : "NOT MEASURED — this command does not know how it is drawn");
             }
 
             table.Note("'lines' counts what the parsers count: comments and blanks stripped.");
             table.Note("Content/tiles, Content/audio and Content/textures hold PNG and WAV that the");
-            table.Note("`tiles` and `audio` commands regenerate from code â€” no authored strings in them.");
+            table.Note("`tiles` and `audio` commands regenerate from code — no authored strings in them.");
             if (unmeasured > 0)
                 table.Note($"{unmeasured} file(s) above are NOT measured. Teach this command how they are "
                          + "drawn, or the ceiling on them stays invisible.");
@@ -380,7 +380,7 @@ namespace Noir.Sim
         }
 
         // ------------------------------------------------------------------
-        //  village.txt â€” authored once each rather than drawn
+        //  village.txt — authored once each rather than drawn
         // ------------------------------------------------------------------
 
         private static void AuthoredPlaces(Instrument r, VillageLayout layout, int population,
@@ -401,14 +401,14 @@ namespace Noir.Sim
                 else
                 {
                     // Dwellings take their character from the household inside, so only the rest
-                    // are expected to carry a line â€” see WorldValidator.
+                    // are expected to carry a line — see WorldValidator.
                     needHuman++;
                     if (string.IsNullOrEmpty(place.Human)) missingHuman++;
                     else Bump(humans, place.Human);
                 }
             }
 
-            var table = new Table("VILLAGE.TXT â€” authored once each, so the ceiling is a different shape",
+            var table = new Table("VILLAGE.TXT — authored once each, so the ceiling is a different shape",
                 new Col("table", 17, right: false), new Col("entries", 8), new Col("dupes", 6),
                 new Col("used", 8), new Col("per entry", 10), new Col("missing", 8));
 
@@ -417,8 +417,8 @@ namespace Noir.Sim
             table.Row("human line", needHuman - missingHuman, needHuman - missingHuman - humans.Count,
                       needHuman - missingHuman, 1.0, missingHuman);
             table.Note("Nothing is drawn here: each string is written for one place and used by that");
-            table.Note("place. A duplicate is a straight authoring mistake â€” WorldBuilder refuses two");
-            table.Note("places with the same name outright â€” so 'dupes' should read zero forever.");
+            table.Note("place. A duplicate is a straight authoring mistake — WorldBuilder refuses two");
+            table.Note("places with the same name outright — so 'dupes' should read zero forever.");
             r.Add(table);
 
             r.M("vocab_authored", ("places", layout.Places.Count), ("dwellings", dwellings),
@@ -430,13 +430,13 @@ namespace Noir.Sim
             if (target <= 0) return;
 
             // DERIVED, and the only derived figure in this command. It assumes the town keeps
-            // Ashcombe's places-per-head, which a town will not do exactly â€” a settlement of six
+            // Ashcombe's places-per-head, which a town will not do exactly — a settlement of six
             // hundred gets a second shop before it gets six times the churches.
             double scale = target / (double)population;
             int placesAt = (int)Math.Ceiling(layout.Places.Count * scale);
             int humansAt = (int)Math.Ceiling(needHuman * scale);
 
-            r.Line($"    DERIVED, not measured â€” at {target} people, holding Ashcombe's {population} people");
+            r.Line($"    DERIVED, not measured — at {target} people, holding Ashcombe's {population} people");
             r.Line($"    across {layout.Places.Count} places:");
             r.Line($"      places        {layout.Places.Count,6}  ->{placesAt,7}   "
                  + $"{placesAt - layout.Places.Count} more building names to invent, all distinct");
@@ -513,7 +513,7 @@ namespace Noir.Sim
         /// that appears twice in one, and cannot tell either from a name used twice. Tags remove
         /// the ambiguity without changing a single roll: the generator picks by index and never
         /// looks at what it drew, except when PickSurname asks whether a surname is already
-        /// taken â€” which behaves identically as long as the real table has no duplicates. That is
+        /// taken — which behaves identically as long as the real table has no duplicates. That is
         /// checked, and reported, rather than assumed.
         /// </summary>
         private static (NameTable names, ParticularsTable parts) Tagged(
@@ -559,8 +559,8 @@ namespace Noir.Sim
             if (kind == Kind.Surname)
             {
                 // One use per DRAW, which is one per household plus one per lodger. A family of
-                // four called Pethick is one Pethick in the village, not four â€” what a player
-                // meets is households â€” and PopulationGenerator draws it exactly once for them.
+                // four called Pethick is one Pethick in the village, not four — what a player
+                // meets is households — and PopulationGenerator draws it exactly once for them.
                 foreach (var h in people.Households)
                 {
                     Add(counts, h.Surname, 's', size);
@@ -587,7 +587,7 @@ namespace Noir.Sim
         /// <summary>
         /// Per-entry counts folded onto the strings themselves.
         ///
-        /// The bar is about a STRING â€” the thing a player reads â€” so two table lines holding the
+        /// The bar is about a STRING — the thing a player reads — so two table lines holding the
         /// same words are one offender with the sum of their uses, not two innocents.
         /// </summary>
         private static Dictionary<string, int> Aggregate(int[] byEntry, IReadOnlyList<string> entries)
@@ -629,7 +629,7 @@ namespace Noir.Sim
 
         /// <summary>
         /// The busiest STRING, not the busiest table row. They differ only when a table holds the
-        /// same words twice, which is itself worth catching â€” two lines reading the same thing
+        /// same words twice, which is itself worth catching — two lines reading the same thing
         /// are one line a player meets twice as often.
         /// </summary>
         private static int MaxUses(int[] byEntry, IReadOnlyList<string> entries)
@@ -646,7 +646,7 @@ namespace Noir.Sim
         }
 
         private static string Grow(int need) =>
-            need == 0 ? "ok" : need < 0 ? "â€”" : "+" + need;
+            need == 0 ? "ok" : need < 0 ? "—" : "+" + need;
 
         /// <summary>
         /// How many entries must be ADDED before every resample holds the bar. Zero if it
@@ -724,7 +724,7 @@ namespace Noir.Sim
         }
 
         private static string Clip(string text, int width) =>
-            text.Length <= width ? text : text.Substring(0, width - 1) + "â€¦";
+            text.Length <= width ? text : text.Substring(0, width - 1) + "…";
 
         /// <summary>
         /// Lines a parser would keep: comment stripped at the first '#', trimmed, non-empty.

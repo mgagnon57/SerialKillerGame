@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Noir.Core.World;
 
@@ -48,7 +48,7 @@ namespace Noir.Sim
         ///
         /// Here rather than in each command because every command reaches content through this
         /// class, and one that forgot would be looking at a different set of kinds from the rest
-        /// â€” which is how `check` and `who` come to disagree about what a shop is.
+        /// — which is how `check` and `who` come to disagree about what a shop is.
         /// </summary>
         private static void EnsureKinds()
         {

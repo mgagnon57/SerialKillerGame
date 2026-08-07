@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Noir.Core.Contracts;
 using Noir.Core.World;
 
@@ -61,7 +61,7 @@ namespace Noir.Sim
                             "                   hour. density counts where plans say people are;\n" +
                             "                   this counts bodies you could photograph.\n" +
                             "\n" +
-                            "  the instruments â€” these grade the settlement, not the code\n" +
+                            "  the instruments — these grade the settlement, not the code\n" +
                             "  encounters [--days n] [--tile n] [--from hour] [--range tenths]\n" +
                             "             [--regap s] [--seed n]\n" +
                             "                   is the acquaintance graph real: passes, repeats, reach,\n" +
@@ -112,7 +112,7 @@ namespace Noir.Sim
             if (scale < 1) scale = 1;
 
             var world = LoadWorld();
-            Console.WriteLine($"{world.Name} â€” {world.Width}x{world.Height}, "
+            Console.WriteLine($"{world.Name} — {world.Width}x{world.Height}, "
                             + $"{world.PlaceCount} places, {world.TotalJobSlots} jobs");
             Console.WriteLine();
             Console.WriteLine(AsciiMap.Render(world, scale));
