@@ -120,6 +120,35 @@ namespace Noir.Core.Witness
         }
 
         /// <summary>
+        /// The same question, answered in English. One line per sighting, oldest first, and a
+        /// single sentence when they saw nothing.
+        ///
+        /// WHY THE STRING VERSION LIVES HERE. Noir.Unity references Noir.Core.Witness and does
+        /// NOT reference Noir.Core.Observation - that is the firewall, and it is worth keeping.
+        /// Handing the game a Sighting[] would force the reference and put the investigation's own
+        /// types in reach of every MonoBehaviour that wanted one. Handing it string[] does not.
+        /// The game gets testimony; it never gets the evidence to reason backwards from.
+        ///
+        /// So this is the seam the whole layer was waiting for, and it is one method wide on
+        /// purpose.
+        /// </summary>
+        public static string[] AskInEnglish(WorldModel world, Population population,
+                                            Citizen who, int day, PlayerTrack track, ulong seed,
+                                            INightWitnesses nightWitnesses = null,
+                                            ISightBlocked blocked = null)
+        {
+            Sighting[] saw = WhatTheySaw(world, population, who, day, track, seed,
+                                         nightWitnesses, blocked);
+
+            // A SENTENCE, NOT AN EMPTY ARRAY. "I saw nobody" and "nobody asked me" are the same
+            // value to a caller holding an empty list and completely different answers to a
+            // player. An alibi is evidence too.
+            if (saw.Length == 0) return new[] { Testimony.SawNothing };
+
+            return Testimony.InEnglish(saw);
+        }
+
+        /// <summary>
         /// "About half seven." Nobody reports a minute, and a consumer given one would trust it.
         /// The worse the look, the coarser the memory of when it was.
         /// </summary>

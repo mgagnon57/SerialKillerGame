@@ -82,7 +82,15 @@ namespace Noir.Core.Tests
                 string slashed = file.Replace('\\', '/');
                 if (slashed.Contains("/Core/Witness/")) continue;
 
-                string text = File.ReadAllText(file);
+                // CODE, NOT PROSE. This read the raw file, so a doc comment that merely NAMED the
+                // assembly tripped the firewall - and the files most likely to name it are the
+                // ones explaining why they deliberately do not use it. Observation/Testimony.cs
+                // was the first: it exists precisely to keep testimony on the safe side of this
+                // wall, said so in its summary, and was reported as breaching it.
+                //
+                // Stripping comments does not soften the rule. A comment cannot reference an
+                // assembly; only a using or a qualified name can, and both still count.
+                string text = Strip(File.ReadAllText(file));
                 if (!text.Contains("Noir.Core.Witness")) continue;
 
                 if (slashed.EndsWith(TheCaller)) foundTheCaller = true;
@@ -104,6 +112,13 @@ namespace Noir.Core.Tests
                 "If the player's track has moved somewhere else, move the name above with it. If\n" +
                 "it has been deleted, the observation system is back to never running and this\n" +
                 "test should go back to asserting nothing in the game references Witness at all.");
+        }
+
+        /// <summary>Comments are not references. Same helper, same reason, as TownPipelineTests.</summary>
+        private static string Strip(string source)
+        {
+            source = Regex.Replace(source, @"/\*.*?\*/", " ", RegexOptions.Singleline);
+            return Regex.Replace(source, @"//[^\n]*", " ");
         }
 
         private static string RepoRoot()

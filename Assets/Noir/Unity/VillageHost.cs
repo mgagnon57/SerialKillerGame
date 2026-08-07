@@ -958,6 +958,58 @@ namespace Noir.Unity
         /// walk anywhere during it, and inventing minutes they were not present for is exactly
         /// what Recollection refuses to do for travelling villagers.
         /// </summary>
+        /// <summary>
+        /// Ask one neighbour what they saw, and get back what they would actually say.
+        ///
+        /// THE OTHER HALF OF THE FIREWALL, and the reason this file is allowed to name the
+        /// Witness assembly at all. RecordWhereThePlayerWas has been feeding Track since
+        /// 2026-08-05 and NOTHING HAS EVER ASKED IT A QUESTION - 4,852 lines of finished,
+        /// tested, firewalled investigation machinery with no consumer. This is the question.
+        ///
+        /// Strings out, not Sighting[]. Noir.Unity does not reference Noir.Core.Observation and
+        /// must not start: handing the game evidence objects would put the investigation's own
+        /// types in reach of any MonoBehaviour that wanted one, and the whole point of the
+        /// firewall is that convenience is exactly how ground truth leaks into testimony. The UI
+        /// gets sentences. It cannot reason backwards from a sentence.
+        /// </summary>
+        public string[] AskWhatTheySaw(CitizenId who, int day)
+        {
+            if (People == null || World == null) return System.Array.Empty<string>();
+            return Recollection.AskInEnglish(World, People, People.Get(who), day, Track, Seed);
+        }
+
+        /// <summary>
+        /// The nearest person who lives near a point - the neighbour worth asking.
+        ///
+        /// Home rather than current position on purpose: Recollection only answers for stationary
+        /// witnesses, so the useful witness is the one whose day is spent somewhere, and where
+        /// they LIVE is the part of that this can know without replaying anybody's plan.
+        /// Returns an invalid id when the town is empty.
+        /// </summary>
+        public CitizenId NearestNeighbour(Tile to)
+        {
+            var best = default(CitizenId);
+            long nearest = long.MaxValue;
+            if (People == null || World == null) return best;
+
+            for (int i = 0; i < People.Count; i++)
+            {
+                var id = new CitizenId(i);
+                var home = World.GetPlace(People.Get(id).Home);
+                if (home == null) continue;
+
+                // Tiles throughout, and squared, so this is integer arithmetic with no root and
+                // no float comparison. The track records tiles; the places are measured in tiles.
+                var at = home.Bounds.Centre;
+                long dx = at.X - to.X, dy = at.Y - to.Y;
+                long d = dx * dx + dy * dy;
+                if (d >= nearest) continue;
+                nearest = d;
+                best = id;
+            }
+            return best;
+        }
+
         private void RecordWhereThePlayerWas()
         {
             var at = _player == null ? null : _player.Where;
