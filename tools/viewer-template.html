@@ -632,8 +632,25 @@ function dissolveEdges(polys, eps = 0.5) {
 // The alleys arrive already ruled `none`, by measurement rather than by memory: 4 m of track in
 // 4 to 8 m of public ground has nowhere to put a walk. The 33 streets are the question, and each
 // has about five metres a side to put one in.
-let WALKS = {};
+// TWO SCOPES, AND THE BLOCK WINS. A walk is a property of a block - Chicago Street had walks both
+// sides through the middle of town and nothing out at the edges - but saying so one block at a
+// time is 137 clicks. The road ruling is the street's default and a block ruling overrides it, so
+// most streets are one click and a couple of exceptions.
+let WALKS = { roads: {}, blocks: {} };
+let BLOCKS = [];
 let roadSel = null;
+let blockSel = null;
+
+/// What is laid on this block: its own ruling if it has one, else its street's.
+function walkOn(roadName, blk) {
+  if (blk) {
+    const k = roadName + "|" + blk.from + "|" + blk.to;
+    if (WALKS.blocks[k]) return WALKS.blocks[k];
+  }
+  return WALKS.roads[roadName] || "";
+}
+
+function blocksOf(name) { return BLOCKS.filter(b => b.road === name); }
 
 const WALK_CHOICES = [
   ["none", "None"], ["both", "Both sides"],
@@ -645,8 +662,37 @@ async function loadWalks() {
   if (!LIVE) return;
   try {
     const r = await fetch("/__walks", { cache: "no-store" });
-    if (r.ok) { WALKS = await r.json(); draw(); }
+    if (r.ok) {
+      const j = await r.json();
+      WALKS = { roads: j.roads || {}, blocks: j.blocks || {} };
+    }
+    const b = await fetch("/__blocks", { cache: "no-store" });
+    if (b.ok) BLOCKS = await b.json();
+    draw();
   } catch (e) { /* no server, no rulings */ }
+}
+
+/// How far along its own polyline a point sits, in metres - the same measure road-blocks.txt
+/// records its cuts in, so the two agree about which block you are standing on.
+function alongRoad(rd, x, y) {
+  let run = 0, best = 0, bestD = Infinity;
+  for (const pl of rd.lines)
+    for (let i = 1; i < pl.length; i++) {
+      const ax = pl[i - 1][0], ay = pl[i - 1][1], bx = pl[i][0], by = pl[i][1];
+      const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy);
+      if (L < 1e-9) continue;
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (L * L)));
+      const d = Math.hypot(x - (ax + dx * t), y - (ay + dy * t));
+      if (d < bestD) { bestD = d; best = run + t * L; }
+      run += L;
+    }
+  return best;
+}
+
+function blockAt(rd, x, y) {
+  const d = alongRoad(rd, x, y);
+  for (const b of blocksOf(rd.n)) if (d >= b.a && d <= b.b) return b;
+  return null;
 }
 
 /// Which way a road runs, so the panel offers the two sides that MEAN something: a north-south
@@ -704,31 +750,72 @@ function showRoad(rd) {
 
   const box = document.getElementById("r-sides");
   box.innerHTML = "";
-  for (const [value, label] of offer) {
-    const b = document.createElement("button");
-    b.className = "w" + (WALKS[rd.n] === value ? " on" : "");
-    b.textContent = label;
-    b.onclick = () => saveWalk(rd.n, WALKS[rd.n] === value ? "" : value);
-    box.appendChild(b);
+
+  // TWO ROWS: this block, and the whole street. The block you clicked is named, so there is no
+  // guessing which piece of road is about to change - "Chicago, Attica to Park" is how the answer
+  // is held in somebody's head anyway.
+  const rowFor = (label, current, save) => {
+    const head = document.createElement("p");
+    head.className = "eyebrow";
+    head.style.margin = "2px 0 5px";
+    head.textContent = label;
+    box.appendChild(head);
+
+    const line = document.createElement("div");
+    line.style.cssText = "display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px";
+    for (const [value, text] of offer) {
+      const b = document.createElement("button");
+      b.className = "w" + (current === value ? " on" : "");
+      b.textContent = text;
+      b.onclick = () => save(current === value ? "" : value);
+      line.appendChild(b);
+    }
+    box.appendChild(line);
+  };
+
+  box.style.display = "block";
+  if (blockSel) {
+    const key = rd.n + "|" + blockSel.from + "|" + blockSel.to;
+    const nice = (w) => w === "end" ? "the end" : w;
+    rowFor(`This block — ${nice(blockSel.from)} to ${nice(blockSel.to)}`
+           + `, ${Math.round(blockSel.b - blockSel.a)} m`,
+           WALKS.blocks[key] || "",
+           side => saveWalk(rd.n, side, blockSel));
   }
+  rowFor(`The whole of ${rd.n}` + (blockSel ? " — the default" : ""),
+         WALKS.roads[rd.n] || "", side => saveWalk(rd.n, side, null));
+
+  const here = walkOn(rd.n, blockSel);
+  const ruledBlocks = blocksOf(rd.n)
+    .filter(b => WALKS.blocks[rd.n + "|" + b.from + "|" + b.to]).length;
   document.getElementById("r-saved").textContent =
-    WALKS[rd.n] ? "ruled " + WALKS[rd.n] : "not ruled yet";
+    (here ? "this block: " + here : "not ruled yet")
+    + `  ·  ${blocksOf(rd.n).length} blocks`
+    + (ruledBlocks ? `, ${ruledBlocks} ruled on their own` : "");
   draw();
 }
 
-async function saveWalk(name, side) {
+async function saveWalk(name, side, blk) {
   const res = document.getElementById("r-saved");
   try {
+    const body = blk ? { road: name, from: blk.from, to: blk.to, walk: side }
+                     : { road: name, walk: side };
     const r = await fetch("/__walk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ road: name, walk: side }),
+      body: JSON.stringify(body),
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "refused");
-    if (side) WALKS[name] = side; else delete WALKS[name];
+
+    if (blk) {
+      const k = name + "|" + blk.from + "|" + blk.to;
+      if (side) WALKS.blocks[k] = side; else delete WALKS.blocks[k];
+    } else {
+      if (side) WALKS.roads[name] = side; else delete WALKS.roads[name];
+    }
     res.textContent = (side ? "saved " : "cleared ") + new Date().toTimeString().slice(0, 8)
-                    + `  ·  ${j.count} roads ruled`;
+                    + `  ·  ${j.roads} streets, ${j.blocks} blocks`;
     res.style.color = "var(--agri)";
     if (roadSel) showRoad(roadSel);
   } catch (e) {
@@ -750,9 +837,20 @@ function drawWalks() {
   // black on the first click that gave a street a sidewalk.
   const s = view.s;
   const col = css("--authored");
+  // PER BLOCK, because that is what a walk is. A street with no block rulings draws one dashed
+  // line end to end from its default; one with them draws each block as it was ruled, and the
+  // difference between two neighbouring blocks is the thing worth being able to see.
   for (const rd of DATA.newroads) {
-    const side = WALKS[rd.n];
-    if (!side || side === "none") continue;
+    const mine = blocksOf(rd.n);
+    const spans = mine.length ? mine : [null];
+    for (const blk of spans) drawWalkSpan(rd, blk, s, col);
+  }
+}
+
+function drawWalkSpan(rd, blk, s, col) {
+  {
+    const side = walkOn(rd.n, blk);
+    if (!side || side === "none") return;
     const row = rd.row || rd.w;
     const off = Math.max(rd.w / 2 + 1, row / 2 - 1.2);
     const ns = roadIsNorthSouth(rd);
@@ -768,16 +866,31 @@ function drawWalks() {
     ctx.lineWidth = Math.max(1.2, 1.6 * s);
     ctx.strokeStyle = col;
     ctx.setLineDash([Math.max(2, 3 * s), Math.max(2, 3 * s)]);
+    // Walked in metres from the road's start so a block can be cut out of it, using the same
+    // measure road-blocks.txt records its cuts in. A segment that straddles a block boundary is
+    // trimmed to the part inside, so two neighbouring blocks ruled differently meet exactly at
+    // the cross street rather than a vertex or two either side of it.
+    const lo = blk ? blk.a : -Infinity;
+    const hi = blk ? blk.b : Infinity;
+    let run = 0;
     for (const pl of rd.lines)
       for (let i = 1; i < pl.length; i++) {
         const ax = pl[i - 1][0], ay = pl[i - 1][1], bx = pl[i][0], by = pl[i][1];
         const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy);
         if (len < 0.01) continue;
+
+        const t0 = Math.max(0, Math.min(1, (lo - run) / len));
+        const t1 = Math.max(0, Math.min(1, (hi - run) / len));
+        run += len;
+        if (t1 <= t0) continue;
+
+        const px = ax + dx * t0, py = ay + dy * t0;
+        const qx = ax + dx * t1, qy = ay + dy * t1;
         for (const sgn of signs) {
           const nx = -dy / len * off * sgn, ny = dx / len * off * sgn;
           ctx.beginPath();
-          ctx.moveTo(sx(ax + nx), sy(ay + ny));
-          ctx.lineTo(sx(bx + nx), sy(by + ny));
+          ctx.moveTo(sx(px + nx), sy(py + ny));
+          ctx.lineTo(sx(qx + nx), sy(qy + ny));
           ctx.stroke();
         }
       }
@@ -1386,7 +1499,10 @@ cv.addEventListener("pointerup", e => {
       // so nothing has to be held down and no mode has to be entered: click a lot for the lot,
       // click the road for the road.
       const rd = pickRoad(e.clientX - r.left, e.clientY - r.top);
-      if (rd) showRoad(rd);
+      if (rd) {
+        blockSel = blockAt(rd, wx(e.clientX - r.left), wy(e.clientY - r.top));
+        showRoad(rd);
+      }
     }
   }
   drag = null; cv.classList.remove("drag");

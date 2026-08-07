@@ -153,6 +153,7 @@ def write_verdicts(v):
 # is a property of the street.
 
 WALKS = os.path.join(HERE, "..", "Content", "roads-1991.txt")
+BLOCKS = os.path.join(HERE, "..", "Content", "road-blocks.txt")
 
 WALK_SIDES = {"none", "both", "north", "south", "east", "west"}
 
@@ -174,11 +175,23 @@ WALK_HEADER = """# =============================================================
 #  five metres each side is public ground that is NOT road. The walk has somewhere to go
 #  the moment this file says it exists.
 #
-#  FIELDS, one per line, keyed by the road's name in roads.txt
-#    road <name> walk none            no sidewalk on either side
-#    road <name> walk both            one on each side
-#    road <name> walk north|south     an east-west street with a walk on that side only
-#    road <name> walk east|west       a north-south street with a walk on that side only
+#  A WALK IS A PROPERTY OF A BLOCK, not of a street. Chicago Street had walks both
+#  sides through the middle of town and nothing out at the edges. So there are two
+#  scopes, and the block wins:
+#
+#    road <name> walk <side>                the default for the whole street
+#    block <road> <from> <to> walk <side>   this block only, overriding the street
+#
+#  <side> is none | both | north | south | east | west. North and south are for an
+#  east-west street, east and west for a north-south one.
+#
+#  from/to name the crossing streets, or `end` where the road runs out - see
+#  Content/road-blocks.txt, which is derived and lists every block. Named by its cross
+#  streets rather than by a number so that re-surveying the roads cannot silently move
+#  a ruling onto a different piece of road.
+#
+#  Saying it street-wide and correcting the odd block is a couple of clicks; saying it
+#  one block at a time is 137.
 #
 #  A road with no line here has not been ruled on yet, which is not the same as `none`.
 #
@@ -189,18 +202,23 @@ WALK_HEADER = """# =============================================================
 
 
 def read_walks():
-    out = {}
+    """{"roads": {name: side}, "blocks": {"road|from|to": side}}.
+
+    TWO SCOPES, because a walk in Rossville is a property of a BLOCK and saying so one block at a
+    time would be 137 clicks. The road line is the default for the whole street; a block line
+    overrides it for that block. Most streets are one click and a couple of exceptions."""
+    out = {"roads": {}, "blocks": {}}
     try:
         with open(WALKS, encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
-                parts = line.split()
-                if len(parts) != 4 or parts[0] != "road" or parts[2] != "walk":
-                    continue
-                if parts[3] in WALK_SIDES:
-                    out[parts[1]] = parts[3]
+                p = line.split()
+                if len(p) == 4 and p[0] == "road" and p[2] == "walk" and p[3] in WALK_SIDES:
+                    out["roads"][p[1]] = p[3]
+                elif len(p) == 6 and p[0] == "block" and p[4] == "walk" and p[5] in WALK_SIDES:
+                    out["blocks"][f"{p[1]}|{p[2]}|{p[3]}"] = p[5]
     except OSError:
         pass
     return out
@@ -208,9 +226,17 @@ def read_walks():
 
 def write_walks(w):
     lines = [WALK_HEADER]
-    for name in sorted(w):
-        if w[name] in WALK_SIDES:
-            lines.append(f"road {name} walk {w[name]}")
+    for name in sorted(w.get("roads", {})):
+        if w["roads"][name] in WALK_SIDES:
+            lines.append(f"road {name} walk {w['roads'][name]}")
+    if w.get("blocks"):
+        lines.append("")
+        lines.append("#  ---- blocks that differ from their street ----")
+        for key in sorted(w["blocks"]):
+            side = w["blocks"][key]
+            bits = key.split("|")
+            if len(bits) == 3 and side in WALK_SIDES:
+                lines.append(f"block {bits[0]} {bits[1]} {bits[2]} walk {side}")
     body = "\n".join(lines) + "\n"
     tmp = WALKS + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
@@ -281,16 +307,46 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._json({"ok": False, "error": str(e)}, 400)
             return
 
+        frm = str(data.get("from", "")).strip()
+        to = str(data.get("to", "")).strip()
+
         w = read_walks()
-        if side:
-            w[road] = side
+        if frm and to:
+            key = f"{road}|{frm}|{to}"
+            if side:
+                w["blocks"][key] = side
+            else:
+                w["blocks"].pop(key, None)
+            what = f"{road} {frm}..{to}"
         else:
-            w.pop(road, None)
+            if side:
+                w["roads"][road] = side
+            else:
+                w["roads"].pop(road, None)
+            what = f"{road} (whole street)"
+
         write_walks(w)
-        print(f"  [walk] {road} -> {side or 'unruled'}")
-        self._json({"ok": True, "count": len(w)})
+        print(f"  [walk] {what} -> {side or 'unruled'}")
+        self._json({"ok": True,
+                    "roads": len(w["roads"]), "blocks": len(w["blocks"])})
 
     def do_GET(self):
+        if self.path.startswith("/__blocks"):
+            # DERIVED, and served rather than baked into the page: re-running
+            # build-road-blocks.py after a re-survey should change what the browser offers
+            # without anybody having to rebuild the page around it.
+            out = []
+            try:
+                with open(BLOCKS, encoding="utf-8") as fh:
+                    for line in fh:
+                        p = line.split()
+                        if len(p) == 6 and p[0] == "block":
+                            out.append({"road": p[1], "from": p[2], "to": p[3],
+                                        "a": float(p[4]), "b": float(p[5])})
+            except OSError:
+                pass
+            self._json(out)
+            return
         if self.path.startswith("/__walks"):
             self._json(read_walks())
             return
@@ -332,7 +388,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         # asked for, which is always /favicon.ico. Written as a one-line filter, shipped as
         # "verified" because the happy path answered, and caught by reading the server's own log.
         text = " ".join(str(a) for a in args)
-        if "__version" in text or "__verdicts" in text or "__walks" in text:
+        if ("__version" in text or "__verdicts" in text
+                or "__walks" in text or "__blocks" in text):
             return                       # a poll every two seconds would bury everything else
         super().log_message(fmt, *args)
 

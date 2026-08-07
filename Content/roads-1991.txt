@@ -16,11 +16,23 @@
 #  five metres each side is public ground that is NOT road. The walk has somewhere to go
 #  the moment this file says it exists.
 #
-#  FIELDS, one per line, keyed by the road's name in roads.txt
-#    road <name> walk none            no sidewalk on either side
-#    road <name> walk both            one on each side
-#    road <name> walk north|south     an east-west street with a walk on that side only
-#    road <name> walk east|west       a north-south street with a walk on that side only
+#  A WALK IS A PROPERTY OF A BLOCK, not of a street. Chicago Street had walks both
+#  sides through the middle of town and nothing out at the edges. So there are two
+#  scopes, and the block wins:
+#
+#    road <name> walk <side>                the default for the whole street
+#    block <road> <from> <to> walk <side>   this block only, overriding the street
+#
+#  <side> is none | both | north | south | east | west. North and south are for an
+#  east-west street, east and west for a north-south one.
+#
+#  from/to name the crossing streets, or `end` where the road runs out - see
+#  Content/road-blocks.txt, which is derived and lists every block. Named by its cross
+#  streets rather than by a number so that re-surveying the roads cannot silently move
+#  a ruling onto a different piece of road.
+#
+#  Saying it street-wide and correcting the odd block is a couple of clicks; saying it
+#  one block at a time is 137.
 #
 #  A road with no line here has not been ruled on yet, which is not the same as `none`.
 #
