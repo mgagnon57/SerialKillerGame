@@ -242,6 +242,17 @@
       <div class="stat"><b id="s-lots">—</b><span>lots carrying a building</span></div>
     </div>
 
+    <!-- EVERYTHING RULED HERE, HANDED TO THE GAME. Not a save - each ruling was already saved on
+         its own. This recuts what is derived from them and reads the totals back, so ten lots
+         edited can be confirmed as ten lots the game will build. -->
+    <div class="pad sep" id="send" style="display:none">
+      <p class="eyebrow">Send to the game</p>
+      <p class="note" style="margin:0 0 8px">Everything saved here, handed to Rossville. The plan
+        picks it up straight away; buildings and removed lots come with the next Play.</p>
+      <button class="ghost" id="send-go">Send these changes to the game</button>
+      <p class="note" id="send-said" style="margin:8px 0 0"></p>
+    </div>
+
     <div class="pad sep">
       <p class="eyebrow">What the footprints say</p>
       <p class="note" style="margin:0" id="s-findings">—</p>
@@ -1520,6 +1531,44 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
     }).join("");
   draw();
 }
+
+if (LIVE) document.getElementById("send").style.display = "block";
+document.getElementById("send-go").onclick = async () => {
+  const btn = document.getElementById("send-go");
+  const said = document.getElementById("send-said");
+
+  // A ruling not yet saved is not a ruling, so it does not get sent - and saying so is better
+  // than sending nine of ten edits and reporting success.
+  if (!walkMayLeave()) return;
+  if (dirtyOn >= 0) {
+    said.textContent = `Parcel ${dirtyOn} has unsaved changes — press Save on it first.`;
+    said.style.color = "var(--flag)";
+    return;
+  }
+
+  btn.disabled = true;
+  said.textContent = "sending…";
+  said.style.color = "var(--muted)";
+  try {
+    const r = await fetch("/__publish", { method: "POST" });
+    const j = await r.json();
+    const bits = [
+      `${j.lots} lots ruled — ${j.built} built, ${j.absent} removed`,
+      `${j.properties} properties`,
+      `${j.streets} streets and ${j.blocks} blocks of sidewalk`,
+    ];
+    said.innerHTML = (j.ok ? "Sent. " : "Sent, with problems. ") + bits.join(" · ")
+      + (j.problems.length
+         ? "<br><b style='color:var(--flag)'>" + j.problems.join("<br>") + "</b>"
+         : "");
+    said.style.color = j.ok ? "var(--agri)" : "var(--ink)";
+    loadVerdicts(); loadWalks();
+  } catch (e) {
+    said.textContent = "NOT SENT — " + e.message;
+    said.style.color = "var(--flag)";
+  }
+  btn.disabled = false;
+};
 
 document.getElementById("r-save").onclick = () => commitWalk();
 document.getElementById("r-cancel").onclick = () => cancelWalk();
