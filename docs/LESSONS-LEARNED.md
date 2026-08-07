@@ -146,8 +146,12 @@ copies were checked and hold only zoning and quality — but one push would have
   times tonight — `\n` became real newlines inside string literals, and `'\\'` came out as
   `'\'`. Use the editing tool for anything containing a backslash.
 - **Two by-design failures are the baseline**: `TwoToOneTests.TheMedianVillagerYields…` and
-  `…TheTenthPercentileIsNotALock`. 341 passed / 2 failed is green. Anything else is a
-  regression.
+  `…TheTenthPercentileIsNotALock`. Anything else is a regression.
+  **The pass count lives in `CLAUDE.md` and nowhere else** — it was written out here as
+  "341 passed" and went stale, which made the rule above unfalsifiable for weeks: nobody can
+  enforce "anything else is a regression" against a number that is wrong. Run the suite in
+  **Release**; in Debug it is four times slower and produces a third failure that does not
+  reproduce.
 
 ---
 

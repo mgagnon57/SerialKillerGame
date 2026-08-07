@@ -88,7 +88,11 @@ going to use the map in the morning, leave the server running or restart it.**
 
 1. **Compile. Fix whatever breaks.** Above. Nothing else matters until this passes.
 
-2. **Run the Core suite.** `dotnet test tools/Noir.Core.Tests/Noir.Core.Tests.csproj`
+2. **Run the Core suite.** > **STALE — see `CLAUDE.md` for the command and the current baseline.**
+   > This step said `dotnet test` without `-c Release` and expected 359 pass; both were wrong by
+   > 2026-08-07. Kept as written because this is a dated record of what was believed that day.
+
+   `dotnet test tools/Noir.Core.Tests/Noir.Core.Tests.csproj`
    Expect **359 pass, 2 fail**. The two failures are `TwoToOneTests.TheMedianVillagerYields…`
    and `TheTenthPercentileIsNotALock` — **they fail by design and failed at HEAD before any of
    this work**; `docs/IDEAS.md` records the confirmation. Do not "fix" them.
