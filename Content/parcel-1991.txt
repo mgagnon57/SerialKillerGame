@@ -56,6 +56,8 @@ parcel 13 was built
 parcel 13 kind shop
 parcel 13 property "the Attica Street row"
 
+parcel 20 was absent
+
 parcel 22 was built
 parcel 22 property "113 S Chicago"
 
@@ -108,6 +110,7 @@ parcel 126 kind dwelling
 
 parcel 128 was built
 parcel 128 kind apartment
+parcel 128 property "Taco's apt. building"
 
 parcel 133 was built
 parcel 133 kind apartment
@@ -229,6 +232,8 @@ parcel 277 kind dwelling
 
 parcel 285 was absent
 
+parcel 290 was absent
+
 parcel 295 was built
 parcel 295 kind dwelling
 
@@ -243,6 +248,7 @@ parcel 300 note "back of the lot; ran to the alley in 1991, split off later"
 
 parcel 307 was built
 parcel 307 kind apartment
+parcel 307 property "Taco's apt. building"
 
 parcel 322 was built
 parcel 322 kind dwelling

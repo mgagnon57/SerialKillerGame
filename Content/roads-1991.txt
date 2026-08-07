@@ -50,6 +50,10 @@
 road earl was absent
 road grove was built
 road summit was built
+block grove earl end was absent
+block grove thompson earl was absent
+block smith york end was absent
+block summit earl end was absent
 block summit thompson earl was absent
 
 road alley1 walk none
