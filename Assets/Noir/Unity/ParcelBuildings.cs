@@ -68,6 +68,22 @@ namespace Noir.Unity
             /// </summary>
             public float Skew;
 
+            /// <summary>
+            /// The same measurement taken against the BLOCK GRID rather than this one lot - the
+            /// median axis of every lot within 130 m.
+            ///
+            /// PREFER THIS ONE where a choice is being made. A single lot's own axes carry a
+            /// median error near a degree and a worst case past thirty, so <see cref="Skew"/>
+            /// partly measures how badly the lot was traced; averaging over the block cancels
+            /// that while staying local enough to follow the diagonal blocks along the railroad.
+            ///
+            /// Parsed since 2026-08-07. It had been written by seat-buildings.py and silently
+            /// dropped by the reader before that, so anything predating it used Skew alone -
+            /// including <see cref="Squared"/>, which still does. Changing that moves buildings,
+            /// so it is a deliberate decision and not a tidy-up.
+            /// </summary>
+            public float BlockSkew;
+
             /// <summary>The footprint ring, closed, in village metres - the same frame as
             /// parcels.txt, Place.Bounds and ParcelNotes.Footprint.</summary>
             public Vector2[] Shape;
@@ -158,9 +174,31 @@ namespace Noir.Unity
 
                 if (kind == "building")
                 {
-                    // <n> <role> <area> <zone> skew <deg> "<address>"
-                    var t = rest.Split(new[] { ' ' }, 7);
-                    if (t.Length < 6) continue;
+                    // <n> <role> <area> <zone> skew <deg> block <deg> "<address>"
+                    //
+                    // SCANNED, NOT COUNTED, and that is the whole point of this shape. This used
+                    // to be rest.Split(' ', 7) with seven hard-coded index reads, written against
+                    // a header that documented neither angle. The writer emitted `block <deg>`
+                    // between the skew and the address, so the seventh field swallowed the rest of
+                    // the line and every one of the 824 addresses parsed as the literal text
+                    // `block -2.8 "106 Smith Street"` - which is not empty, so FillFromSurvey's
+                    // fallback to the county's own address never fired either. One added column
+                    // silently corrupted every record in the file and nothing failed.
+                    // The address is the quoted run; everything before the first quote is fields.
+                    // Split at the quote FIRST and scan only the field side, so that an address
+                    // which happens to contain the word "block" cannot be read as an angle.
+                    int q = rest.IndexOf('"');
+                    string fields = q >= 0 ? rest.Substring(0, q) : rest;
+
+                    string address = "";
+                    if (q >= 0)
+                    {
+                        int q2 = rest.IndexOf('"', q + 1);
+                        if (q2 > q) address = rest.Substring(q + 1, q2 - q - 1);
+                    }
+
+                    var t = fields.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+                    if (t.Length < 4) continue;
                     if (!int.TryParse(t[0], out int idx)) continue;
 
                     var e = new Entry
@@ -170,8 +208,9 @@ namespace Noir.Unity
                         Which = t[1] == "outbuilding" ? Role.Outbuilding : Role.Primary,
                         Area = Num(t[2]),
                         Zoning = ZoningOf(t[3]),
-                        Skew = t[4] == "skew" ? Num(t[5]) : 0f,
-                        Address = t.Length >= 7 ? Unquote(t[6]) : "",
+                        Skew = AngleAfter(t, "skew"),
+                        BlockSkew = AngleAfter(t, "block"),
+                        Address = address,
                     };
                     pending[(pid, idx)] = e;
                     if (!_byParcel.TryGetValue(pid, out var list))
@@ -209,6 +248,20 @@ namespace Noir.Unity
             s = s.Trim();
             if (s.Length >= 2 && s[0] == '"' && s[s.Length - 1] == '"') s = s.Substring(1, s.Length - 2);
             return s;
+        }
+
+        /// <summary>
+        /// The number written after a named keyword, or zero if the keyword is not there.
+        ///
+        /// Named rather than positional so that adding a field to the writer cannot shift the
+        /// meaning of an existing one - which is exactly how every address in this file came to
+        /// be wrong for as long as `block` had been emitted.
+        /// </summary>
+        private static float AngleAfter(string[] tokens, string keyword)
+        {
+            for (int i = 0; i < tokens.Length - 1; i++)
+                if (tokens[i] == keyword) return Num(tokens[i + 1]);
+            return 0f;
         }
 
         private static ParcelNotes.Zoning ZoningOf(string word)
