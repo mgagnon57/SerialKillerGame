@@ -681,9 +681,28 @@ let roadScope = "block";
 // null means "no change pending"; a string - including the empty one, which clears a ruling - is
 // a choice waiting to be saved.
 let walkPending = { block: null, road: null, was: null, wasBlock: null };
-const walkDirty = () =>
-  walkPending.block !== null || walkPending.road !== null ||
-  walkPending.was !== null || walkPending.wasBlock !== null;
+
+/// DIRTY MEANS DIFFERENT FROM WHAT IS ON DISK, not merely "something was clicked".
+///
+/// This used to be `pending !== null`, and a pending value is set by every click on a choice -
+/// including the click that puts a choice back the way it was. Toggle "None" on and off again and
+/// nothing has changed, but the panel called itself dirty, and from then on EVERY click on another
+/// street asked whether to discard the unsaved choice. Answer Cancel - which is what you answer
+/// when you are told you have unsaved work - and the road does not select.
+///
+/// And it got worse than annoying. After a few repeats Chrome offers "prevent this page from
+/// creating additional dialogs"; tick it and confirm() returns false for ever, so every click on a
+/// street is refused with no dialog and no visible cause at all. The map simply stops selecting
+/// roads. Comparing against what is saved is what stops that from ever starting.
+function walkDirty() {
+  if (!roadSel) return false;
+  const differs = (pending, saved) => pending !== null && pending !== (saved || "");
+  const bkey = blockSel ? roadSel.n + "|" + blockSel.from + "|" + blockSel.to : null;
+  return differs(walkPending.road, WALKS.roads[roadSel.n])
+      || differs(walkPending.was, WALKS.was[roadSel.n])
+      || (!!bkey && (differs(walkPending.block, WALKS.blocks[bkey])
+                  || differs(walkPending.wasBlock, WALKS.wasBlocks[bkey])));
+}
 
 /// What is laid on this block: its own ruling if it has one, else its street's.
 function walkOn(roadName, blk) {
@@ -1087,9 +1106,31 @@ function cancelWalk() {
 /// as saving silently pointed the other way. The lot panel asks the same question.
 function walkMayLeave() {
   if (!walkDirty()) return true;
+
+  // A SUPPRESSED DIALOG MUST NOT LOCK THE MAP. Chrome offers "prevent this page from creating
+  // additional dialogs" after a few confirms, and once that is ticked confirm() returns false
+  // instantly and for ever - so this guard would refuse every click on a street with nothing on
+  // screen to say why. Refusing silently is the one outcome worse than either answer.
+  //
+  // Told apart by the clock: a person takes a moment, a suppressed dialog returns in microseconds.
+  const t0 = performance.now();
   const go = confirm(
     (roadSel ? roadSel.n : "This street") + " has an unsaved sidewalk choice.\n\n"
     + "OK to discard it and move on, or Cancel to go back and press Save.");
+  const suppressed = !go && (performance.now() - t0) < 40;
+
+  if (suppressed) {
+    // Say it in the panel, where it cannot be suppressed, and name the two buttons that end it.
+    const res = document.getElementById("r-saved");
+    if (res) {
+      res.innerHTML = "<b style='color:var(--flag)'>This browser is blocking the page's dialogs, "
+        + "so the unsaved choice cannot be confirmed away.</b><br>Press <b>Save</b> to keep it or "
+        + "<b>Cancel</b> to drop it — then the map will let you pick another street.";
+    }
+    document.getElementById("roadpanel").classList.add("on");
+    return false;
+  }
+
   if (go) walkPending = { block: null, road: null, was: null, wasBlock: null };
   return go;
 }
