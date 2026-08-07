@@ -165,6 +165,12 @@
     background: var(--ink); color: var(--paper); border-color: var(--ink); }
   /* THE MODE IS VISIBLE FROM ANYWHERE ON THE MAP. A click means something different while the
      house tool is on, so the canvas itself says so rather than leaving it to be remembered. */
+  #mapsays {
+    position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 6;
+    background: var(--ink); color: var(--paper); padding: 8px 15px; border-radius: 20px;
+    font-size: 13px; box-shadow: var(--shadow); opacity: 0; transition: opacity .35s;
+    pointer-events: none; max-width: 60%; text-align: center;
+  }
   #movemode { position: absolute; left: 16px; bottom: 16px; z-index: 5; }
   #movemode button {
     font: inherit; font-size: 12.5px; padding: 7px 13px; cursor: pointer; border-radius: 5px;
@@ -261,6 +267,18 @@
         picks it up straight away; buildings and removed lots come with the next Play.</p>
       <button class="ghost" id="send-go">Send these changes to the game</button>
       <p class="note" id="send-said" style="margin:8px 0 0"></p>
+    </div>
+
+    <!-- A TEST YOU CAN WATCH. Everything here has been checked by driving it from outside, which
+         proves it works and shows the owner nothing. This runs the same checks in his own browser,
+         slowly, narrating each one on the map as it goes. It writes NOTHING: every edit it makes
+         is cancelled, and it puts the selection and the mode back where it found them. -->
+    <div class="pad sep">
+      <p class="eyebrow">Check the tool</p>
+      <p class="note" style="margin:0 0 8px">Drives every part of this map in front of you — lots,
+        streets, sidewalks, the house tool. Saves nothing and changes nothing.</p>
+      <button class="ghost" id="selftest-go">Run the check</button>
+      <div id="selftest-out" class="mono" style="font-size:11px;line-height:1.6;margin-top:9px"></div>
     </div>
 
     <div class="pad sep">
@@ -392,6 +410,11 @@
       </div>
       <div id="r-saved" class="mono" style="font-size:11.5px;margin-top:7px"></div>
     </div>
+
+    <!-- Said in the MIDDLE of the map, because that is where the eye is. The mode button lives in
+         the bottom corner of a screen five thousand pixels wide, and a click swallowed silently
+         over there looks exactly like a broken tool over here. -->
+    <div id="mapsays"></div>
 
     <div id="movemode">
       <button id="movetoggle" title="M">Move houses</button>
@@ -727,6 +750,74 @@ let blockSel = null;
 /// every question below it has one obvious owner.
 let roadScope = "block";
 
+// ---- one unsaved edit, however many panels there are ---------------------------------------
+//
+// WHY THIS EXISTS, and it is worth being blunt about. This map had three editors - the lot, the
+// street, the house - and each carried its own copy of "what is being edited", "what has changed",
+// "may I leave", "save", "cancel". Three copies meant three chances to get each rule wrong, and
+// every bug the owner reported in one evening was the SAME bug in a different copy:
+//
+//   * dirty meant "something was clicked" rather than "something changed", so a choice put back
+//     the way it was still counted as unsaved - which put a confirm on every click, and once
+//     Chrome offered to suppress that confirm the map stopped selecting streets entirely.
+//   * the unsaved value was read without checking WHOSE it was, so dragging one house re-drew
+//     every other saved house with that drag on it.
+//   * the suppressed-dialog guard had to be written twice, because there were two confirms.
+//
+// None of those are hard problems. They are the same problem, and it kept being solved locally.
+// So: one implementation, and a panel supplies only the parts that are genuinely its own - how to
+// read what is saved, how to compare, and how to write.
+function makeEditor(spec) {
+  const ed = {
+    name: spec.name,
+    target: null,        // what is being edited, or null
+    pending: null,       // the unsaved value, or null
+
+    /// Where `what` stands: the unsaved edit ONLY if `what` is the thing being edited, otherwise
+    /// what is saved for it. The identity check is the whole point - without it an unsaved edit
+    /// belongs to every object the panel is asked about, which is exactly how one house being
+    /// dragged moved all the others.
+    valueFor(what) {
+      if (what && what === ed.target && ed.pending) return ed.pending;
+      return spec.saved(what);
+    },
+
+    /// DIRTY MEANS DIFFERENT FROM WHAT IS ON DISK, never merely "touched". Comparing against the
+    /// saved value is what stops a no-op click from arming the leave-confirm.
+    dirty() {
+      if (!ed.target || !ed.pending) return false;
+      return !spec.same(ed.pending, spec.saved(ed.target));
+    },
+
+    set(value) { ed.pending = value; spec.redraw(); },
+    cancel() { ed.pending = null; spec.redraw(); },
+
+    /// The one leave-guard. A suppressed dialog must never silently refuse: Chrome offers to block
+    /// a page's dialogs after a few confirms, and from then on confirm() returns false instantly
+    /// and for ever - which reads as a dead map rather than as a refusal.
+    mayLeave() {
+      if (!ed.dirty()) return true;
+      const t0 = performance.now();
+      const go = confirm(spec.askToLeave(ed.target));
+      if (!go && performance.now() - t0 < 40) {
+        spec.blocked();
+        return false;
+      }
+      if (go) ed.pending = null;
+      return go;
+    },
+
+    async commit() {
+      if (!ed.dirty()) return null;
+      const what = ed.target, value = ed.pending;
+      const res = await spec.write(what, value);
+      ed.pending = null;
+      return res;
+    },
+  };
+  return ed;
+}
+
 // NOTHING IS WRITTEN UNTIL SAVE IS PRESSED, the same rule the lot panel has always had and for
 // the same reason: this file is the owner's memory and no re-run can rebuild it, so a click that
 // quietly commits a ruling is the wrong default. A misclick on the wrong block should cost a
@@ -758,6 +849,33 @@ function walkDirty() {
                   || differs(walkPending.wasBlock, WALKS.wasBlocks[bkey])));
 }
 
+/// The street panel's leave-guard, from the same implementation the house panel uses.
+///
+/// Its four pending fields are keyed to (roadSel, blockSel) rather than to one object, so it keeps
+/// its own dirty() above - but the LEAVE rule has to be shared, because that is the one that
+/// silently locked the map when only one of the two copies knew about suppressed dialogs.
+const walkEdit = makeEditor({
+  name: "street",
+  saved: () => null,
+  same: () => false,
+  redraw: () => { if (roadSel) showRoad(roadSel); },
+  askToLeave: () => (roadSel ? roadSel.n : "This street")
+    + " has an unsaved sidewalk choice.\n\n"
+    + "OK to discard it and move on, or Cancel to go back and press Save.",
+  blocked: () => {
+    const res = document.getElementById("r-saved");
+    if (res) {
+      res.innerHTML = "<b style='color:var(--flag)'>This browser is blocking the page's dialogs, "
+        + "so the unsaved choice cannot be confirmed away.</b><br>Press <b>Save</b> to keep it or "
+        + "<b>Cancel</b> to drop it — then the map will let you pick another street.";
+    }
+    document.getElementById("roadpanel").classList.add("on");
+  },
+  write: () => null,
+});
+// It answers about the four fields above rather than about one object.
+walkEdit.dirty = () => walkDirty();
+
 // ---- moving and turning a house ----------------------------------------------------------
 //
 // AN OVERLAY ON THE MEASUREMENT, NEVER AN EDIT TO IT. Content/parcel-buildings.txt is 822
@@ -765,30 +883,43 @@ function walkDirty() {
 // an adjustment and the ghost of where the measurement put the house is always drawable.
 // Read and written by Content/placement-1991.txt - see Assets/Noir/Unity/Placements.cs.
 let PLACES = {};                  // "<parcel>|<index>" -> {dx, dy, turn}
-let houseSel = null;              // the building being adjusted
 let houseMode = false;            // does a click on the map mean "pick a house"?
-let housePending = null;          // {dx, dy, turn} not yet saved, or null
 
 const houseKey = (b) => b.p + "|" + (b.i || 0);
+const NOWHERE = { dx: 0, dy: 0, turn: 0 };
 
-/// Where THIS building stands: the unsaved edit if this is the one being edited, otherwise
-/// whatever is saved for it, otherwise where the survey put it.
-///
-/// The check on houseSel is the whole point and it was missing. Written as
-/// `housePending || PLACES[key] || zero`, the unsaved edit won every building on the map - so
-/// dragging one house re-drew every house already saved with that same offset on it, and moving
-/// one appeared to move two. It reached hit-testing and the setback maths as well, which are also
-/// asked about buildings other than the selected one.
-const houseNow = (b) =>
-  (houseSel === b && housePending) ? housePending
-                                   : (PLACES[houseKey(b)] || { dx: 0, dy: 0, turn: 0 });
-const houseDirty = () => {
-  if (!houseSel || !housePending) return false;
-  const on = PLACES[houseKey(houseSel)] || { dx: 0, dy: 0, turn: 0 };
-  return Math.abs(housePending.dx - on.dx) > 1e-3
-      || Math.abs(housePending.dy - on.dy) > 1e-3
-      || Math.abs(housePending.turn - on.turn) > 1e-3;
-};
+/// The house panel's editor. Everything about "unsaved" now comes from makeEditor - the identity
+/// check, the compare-against-disk, the leave-guard - so it cannot drift from the street panel's
+/// answers to the same questions, which is how the two got different bugs.
+const houseEdit = makeEditor({
+  name: "house",
+  saved: (b) => (b && PLACES[houseKey(b)]) || NOWHERE,
+  same: (a, b) => Math.abs(a.dx - b.dx) < 1e-3
+               && Math.abs(a.dy - b.dy) < 1e-3
+               && Math.abs(a.turn - b.turn) < 1e-3,
+  redraw: () => { if (houseEdit.target) showHouse(houseEdit.target); },
+  askToLeave: (b) => (b && (b.addr || ("lot " + b.p)) || "This house")
+    + " has been moved but not saved.\n\nOK to discard the move, or Cancel to go back and Save.",
+  blocked: () => {
+    const said = document.getElementById("h-saved");
+    said.innerHTML = "<b style='color:var(--flag)'>This browser is blocking dialogs.</b><br>"
+      + "Press <b>Save</b> to keep the move or <b>Cancel</b> to drop it.";
+  },
+  write: async (b, a) => {
+    const r = await fetch("/__place", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parcel: b.p, index: b.i, dx: a.dx, dy: a.dy, turn: a.turn }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "refused");
+    if (j.moved) PLACES[houseKey(b)] = { dx: a.dx, dy: a.dy, turn: a.turn };
+    else delete PLACES[houseKey(b)];
+    return j;
+  },
+});
+
+const houseNow = (b) => houseEdit.valueFor(b);
+const houseDirty = () => houseEdit.dirty();
 
 /// THE RING THE GAME WILL ACTUALLY BUILD, which is not the one this map draws by default.
 ///
@@ -1224,7 +1355,7 @@ const M_TO_FT = 3.28084;
 const ft = (m) => (m * M_TO_FT).toFixed(1) + " ft";
 
 function showHouse(b) {
-  houseSel = b;
+  houseEdit.target = b;
   document.getElementById("detail").classList.remove("on");
   document.getElementById("roadpanel").classList.remove("on");
   document.getElementById("housepanel").classList.add("on");
@@ -1256,7 +1387,7 @@ function showHouse(b) {
   rows.push(`turned  ${(a.turn || 0).toFixed(1)}°`);
   if (road) rows.push(`to ${road.rd.n}  ${ft(road.d)} from its centre`);
   rows.push(`skew    ${b.skew}° to its lot, block sits at ${b.bskew}°`);
-  if (saved && !housePending) rows.push(`saved   yes`);
+  if (saved && !houseEdit.pending) rows.push(`saved   yes`);
   document.getElementById("h-nums").innerHTML = rows.map(esc).join("<br>");
 
   const dirty = houseDirty();
@@ -1279,16 +1410,16 @@ function showHouse(b) {
 /// Every adjustment goes through here so nothing can change a building without the panel and the
 /// Save button finding out about it.
 function nudge(dx, dy, dturn) {
-  if (!houseSel) return;
-  const a = houseNow(houseSel);
-  housePending = { dx: a.dx + dx, dy: a.dy + dy, turn: a.turn + dturn };
-  showHouse(houseSel);
+  if (!houseEdit.target) return;
+  const a = houseNow(houseEdit.target);
+  houseEdit.pending = { dx: a.dx + dx, dy: a.dy + dy, turn: a.turn + dturn };
+  showHouse(houseEdit.target);
 }
 
 function setNudge(next) {
-  if (!houseSel) return;
-  housePending = next;
-  showHouse(houseSel);
+  if (!houseEdit.target) return;
+  houseEdit.pending = next;
+  showHouse(houseEdit.target);
 }
 
 /// SQUARE IT TO THE BLOCK. The data carries the building's own angle and its block's, so this is
@@ -1351,13 +1482,32 @@ function frontLineFor(b) {
 function houseClickAt(px, py) {
   const b = pickHouse(px, py);
   if (!houseMayLeave()) return;
-  if (b) { if (b !== houseSel) showHouse(b); return; }
+  if (b) { if (b !== houseEdit.target) showHouse(b); return; }
   letGoOfHouse();
+
+  // AND SAY WHY NOTHING HAPPENED. A click on a street or a lot does nothing at all while this
+  // tool is on, which is correct and is also how the sidewalk editor came to look broken: the
+  // mode button is in the bottom corner of a very wide screen and the work is in the middle of
+  // it. Silence is indistinguishable from a bug, so the map says which mode swallowed the click.
+  if (pickRoad(px, py) || pick(px, py) >= 0) {
+    tellTheMap("Move houses is on — press M, or the button below, to get back to streets and lots.");
+  }
+}
+
+/// A word in the middle of the map, where the eye already is. Used for the things that would
+/// otherwise be silence.
+function tellTheMap(text) {
+  const el = document.getElementById("mapsays");
+  if (!el) return;
+  el.textContent = text;
+  el.style.opacity = "1";
+  clearTimeout(tellTheMap._t);
+  tellTheMap._t = setTimeout(() => { el.style.opacity = "0"; }, 4000);
 }
 
 function letGoOfHouse() {
-  houseSel = null;
-  housePending = null;
+  houseEdit.target = null;
+  houseEdit.pending = null;
   document.getElementById("housepanel").classList.remove("on");
   draw();
 }
@@ -1375,52 +1525,29 @@ function saidNearTheButton(text, colour) {
   saidNearTheButton._t = setTimeout(() => { host.style.opacity = "0"; }, 6000);
 }
 
+/// SAVING LETS GO OF THE HOUSE, so the next one is a single click. The writing itself belongs to
+/// the editor; all this adds is what to say and what to do afterwards.
 async function commitHouse() {
-  if (!houseSel || !houseDirty()) return;
-  const said = document.getElementById("h-saved");
-  const b = houseSel, a = housePending;
+  const b = houseEdit.target;
+  if (!b) return;
   try {
-    const r = await fetch("/__place", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parcel: b.p, index: b.i, dx: a.dx, dy: a.dy, turn: a.turn }),
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || "refused");
-    if (j.moved) PLACES[houseKey(b)] = { dx: a.dx, dy: a.dy, turn: a.turn };
-    else delete PLACES[houseKey(b)];
-    housePending = null;
-
-    // SAVING LETS GO OF THE HOUSE. It used to stay selected and its panel stayed open, so the next
-    // house was not one click away - and worse, a press on the one still selected was read as a
-    // drag, so clicking it again did nothing at all.
+    const j = await houseEdit.commit();
+    if (!j) return;
     const what = b.addr || ("lot " + b.p);
     letGoOfHouse();
     saidNearTheButton(
-      (j.moved ? `Saved ${what} — ${j.count} moved in all` : `${what} put back where the survey had it`),
+      j.moved ? `Saved ${what} — ${j.count} moved in all`
+              : `${what} put back where the survey had it`,
       "var(--agri)");
     loadPlaces();
   } catch (e) {
+    const said = document.getElementById("h-saved");
     said.textContent = "NOT SAVED — " + e.message;
     said.style.color = "var(--flag)";
   }
 }
 
-/// Same rule as the street panel and the lot panel: nothing is written until Save, and nothing is
-/// discarded without being asked. The suppressed-dialog trap is handled the same way too.
-function houseMayLeave() {
-  if (!houseDirty()) return true;
-  const t0 = performance.now();
-  const go = confirm((houseSel.addr || ("lot " + houseSel.p))
-    + " has been moved but not saved.\n\nOK to discard the move, or Cancel to go back and Save.");
-  if (!go && performance.now() - t0 < 40) {
-    const said = document.getElementById("h-saved");
-    said.innerHTML = "<b style='color:var(--flag)'>This browser is blocking dialogs.</b><br>"
-      + "Press <b>Save</b> to keep the move or <b>Cancel</b> to drop it.";
-    return false;
-  }
-  if (go) housePending = null;
-  return go;
-}
+const houseMayLeave = () => houseEdit.mayLeave();
 
 /// The Save/Cancel state and the status line, shared by both ways out of showRoad - a street
 /// ruled off the map stops before the sidewalk rows and still needs its Save button.
@@ -1525,34 +1652,9 @@ function cancelWalk() {
 /// Leaving a street with a choice not yet saved would drop it silently, which is the same fault
 /// as saving silently pointed the other way. The lot panel asks the same question.
 function walkMayLeave() {
-  if (!walkDirty()) return true;
-
-  // A SUPPRESSED DIALOG MUST NOT LOCK THE MAP. Chrome offers "prevent this page from creating
-  // additional dialogs" after a few confirms, and once that is ticked confirm() returns false
-  // instantly and for ever - so this guard would refuse every click on a street with nothing on
-  // screen to say why. Refusing silently is the one outcome worse than either answer.
-  //
-  // Told apart by the clock: a person takes a moment, a suppressed dialog returns in microseconds.
-  const t0 = performance.now();
-  const go = confirm(
-    (roadSel ? roadSel.n : "This street") + " has an unsaved sidewalk choice.\n\n"
-    + "OK to discard it and move on, or Cancel to go back and press Save.");
-  const suppressed = !go && (performance.now() - t0) < 40;
-
-  if (suppressed) {
-    // Say it in the panel, where it cannot be suppressed, and name the two buttons that end it.
-    const res = document.getElementById("r-saved");
-    if (res) {
-      res.innerHTML = "<b style='color:var(--flag)'>This browser is blocking the page's dialogs, "
-        + "so the unsaved choice cannot be confirmed away.</b><br>Press <b>Save</b> to keep it or "
-        + "<b>Cancel</b> to drop it — then the map will let you pick another street.";
-    }
-    document.getElementById("roadpanel").classList.add("on");
-    return false;
-  }
-
-  if (go) walkPending = { block: null, road: null, was: null, wasBlock: null };
-  return go;
+  if (!walkEdit.mayLeave()) return false;
+  walkPending = { block: null, road: null, was: null, wasBlock: null };
+  return true;
 }
 
 /// The walk itself, drawn where it would be laid: out at the right-of-way edge rather than
@@ -1602,7 +1704,7 @@ function drawMovedHouses() {
   if (!on("l-moved")) return;
   const s = view.s;
   const marks = new Set(Object.keys(PLACES));
-  if (houseSel) marks.add(houseKey(houseSel));
+  if (houseEdit.target) marks.add(houseKey(houseEdit.target));
   if (!marks.size) return;
 
   ctx.save();
@@ -1625,7 +1727,7 @@ function drawMovedHouses() {
     const now = placedRing(b);
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
-    const picked = houseSel && houseKey(houseSel) === key;
+    const picked = houseEdit.target && houseKey(houseEdit.target) === key;
     ctx.strokeStyle = css(picked ? "--editing" : "--authored");
     ctx.lineWidth = Math.max(1.4, (picked ? 2.2 : 1.6) * s);
     ctx.beginPath();
@@ -2012,7 +2114,7 @@ function draw() {
       // owner had shifted appeared twice and neither copy was labelled - the exact confusion this
       // whole overlay exists to remove. The one it left behind is now the dashed ghost, drawn by
       // drawMovedHouses, which is a statement about history rather than a second building.
-      const moved = PLACES[houseKey(b)] || (houseSel === b && housePending);
+      const moved = PLACES[houseKey(b)] || (houseEdit.target === b && houseEdit.pending);
       const geo = moved ? placedRing(b) : (square ? squared(b) : b.r);
 
       // Culled on the ring being DRAWN. The cached bbox is of the measured ring, and at seven
@@ -2511,7 +2613,20 @@ document.getElementById("movetoggle").onclick = () => {
   document.getElementById("movetoggle").classList.toggle("on", houseMode);
   document.getElementById("movetoggle").textContent =
     houseMode ? "Move houses — on" : "Move houses";
-  if (!houseMode) letGoOfHouse();
+
+  if (houseMode) {
+    // The lot and street panels stay open otherwise, so the screen shows a lot's record while
+    // clicks have quietly stopped meaning lots - which is the same confusion the mode banner
+    // exists to prevent, only with a panel to make it look deliberate.
+    if (!walkMayLeave()) { houseMode = false; document.getElementById("movetoggle").click(); return; }
+    document.getElementById("detail").classList.remove("on");
+    document.getElementById("roadpanel").classList.remove("on");
+    roadSel = null;
+    tellTheMap("Move houses is on. Click a house to pick it up; press M for streets and lots.");
+  } else {
+    letGoOfHouse();
+    tellTheMap("Back to lots and streets.");
+  }
   draw();
 };
 addEventListener("keydown", e => {
@@ -2528,24 +2643,24 @@ document.getElementById("h-close").onclick = () => {
 document.getElementById("h-turn-l").onclick = () => nudge(0, 0, +1);
 document.getElementById("h-turn-r").onclick = () => nudge(0, 0, -1);
 document.getElementById("h-square").onclick = () => {
-  const a = houseNow(houseSel);
-  setNudge({ dx: a.dx, dy: a.dy, turn: squareToBlock(houseSel) });
+  const a = houseNow(houseEdit.target);
+  setNudge({ dx: a.dx, dy: a.dy, turn: squareToBlock(houseEdit.target) });
 };
 document.getElementById("h-front").onclick = () => {
-  const f = frontLineFor(houseSel);
+  const f = frontLineFor(houseEdit.target);
   const said = document.getElementById("h-saved");
   if (!f) {
     said.textContent = "no neighbours near enough on this street to take a line from";
     said.style.color = "var(--flag)";
     return;
   }
-  const a = houseNow(houseSel);
+  const a = houseNow(houseEdit.target);
   setNudge({ dx: a.dx + f.dx, dy: a.dy + f.dy, turn: a.turn });
   said.textContent = `lined up with ${f.n} neighbours at ${ft(f.med)} from the street`;
   said.style.color = "var(--muted)";
 };
 document.getElementById("h-save").onclick = () => commitHouse();
-document.getElementById("h-cancel").onclick = () => { housePending = null; showHouse(houseSel); };
+document.getElementById("h-cancel").onclick = () => { houseEdit.pending = null; showHouse(houseEdit.target); };
 document.getElementById("h-revert").onclick = () => {
   setNudge({ dx: 0, dy: 0, turn: 0 });      // saving zeroes deletes the line entirely
 };
@@ -2555,9 +2670,9 @@ document.getElementById("h-block").onclick = () => straightenBlock();
 /// you say yes - and it goes through the same Save as everything else rather than writing behind
 /// your back. Only the primary buildings: a shed at an angle is usually at that angle.
 async function straightenBlock() {
-  if (!houseSel) return;
+  if (!houseEdit.target) return;
   const said = document.getElementById("h-saved");
-  const [cx, cy] = ringCentre(placedRing(houseSel));
+  const [cx, cy] = ringCentre(placedRing(houseEdit.target));
   const mine = nearestRoad(cx, cy);
   if (!mine) { said.textContent = "no street near enough to take a block from"; return; }
 
@@ -2595,8 +2710,208 @@ async function straightenBlock() {
   said.textContent = `straightened ${done} of ${crooked.length} along ${mine.rd.n}`;
   said.style.color = done === crooked.length ? "var(--agri)" : "var(--flag)";
   loadPlaces();
-  showHouse(houseSel);
+  showHouse(houseEdit.target);
 }
+
+// ---- a check you can watch -----------------------------------------------------------------
+//
+// WHY IT LIVES IN THE PAGE. Everything in this tool has been verified by driving it from outside
+// the browser, which proves it works and shows the owner nothing - so "it is broken" and "I tested
+// it" have been arriving in the same conversation more than once. This runs the same checks in his
+// own window, at a speed a person can follow, saying what it is doing on the map as it goes.
+//
+// IT WRITES NOTHING. Every edit it makes is cancelled, and the mode, the selection and the view
+// are put back where it found them. The one thing it must never do is leave a mark on the file
+// that is the owner's memory of the town.
+const testPause = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function runSelfTest() {
+  const btn = document.getElementById("selftest-go");
+  const out = document.getElementById("selftest-out");
+  btn.disabled = true;
+  out.innerHTML = "";
+
+  const rows = [];
+  const say = (name, pass, detail) => {
+    rows.push({ name, pass, detail });
+    out.innerHTML = rows.map(r =>
+      `<div style="color:${r.pass ? "var(--agri)" : "var(--flag)"}">`
+      + `${r.pass ? "ok  " : "FAIL"} ${esc(r.name)}</div>`
+      + (r.detail ? `<div style="color:var(--muted);padding-left:22px">${esc(r.detail)}</div>` : "")
+    ).join("");
+  };
+
+  // remember everything worth putting back
+  const was = { mode: houseMode, s: view.s, ox: view.ox, oy: view.oy,
+                lotOpen: document.getElementById("detail").classList.contains("on") };
+  const errs = [];
+  const onErr = (e) => errs.push(e.message);
+  addEventListener("error", onErr);
+
+  const P = (t, px, py) => { const r = cv.getBoundingClientRect();
+    cv.dispatchEvent(new PointerEvent(t, { pointerId: 1, bubbles: true, cancelable: true,
+      clientX: r.left + px, clientY: r.top + py, button: 0, isPrimary: true })); };
+  const click = async (px, py) => { P("pointerdown", px, py); P("pointerup", px, py); await testPause(500); };
+
+  try {
+    if (houseMode) { document.getElementById("movetoggle").click(); await testPause(300); }
+    fitView(); draw();
+    tellTheMap("Checking the tool. Nothing here is saved.");
+    await testPause(1400);
+
+    // ---- find things to click, in view ----------------------------------------------------
+    const rd = (DATA.newroads || []).find(r => r.n === "chicago") || DATA.newroads[0];
+    let street = null;
+    for (const pl of rd.lines) for (let i = 1; i < pl.length && !street; i++) {
+      const px = sx((pl[i-1][0]+pl[i][0])/2), py = sy((pl[i-1][1]+pl[i][1])/2);
+      if (px>40 && py>40 && px<W-40 && py<H-40 && pick(px,py) < 0) street = [px, py];
+    }
+    let house = null, houseB = null;
+    for (const b of DATA.buildings) {
+      if (b.role !== "primary") continue;
+      const c = ringCentre(placedRing(b)), px = sx(c[0]), py = sy(c[1]);
+      if (px>40 && py>40 && px<W-40 && py<H-40) { house = [px, py]; houseB = b; break; }
+    }
+    let lot = null;
+    for (let px = 260; px < W-80 && !lot; px += 29)
+      for (let py = 80; py < H-80 && !lot; py += 29)
+        if (pick(px,py) >= 0 && !pickHouse(px,py)) lot = [px, py];
+
+    // ---- lots -----------------------------------------------------------------------------
+    tellTheMap("1 / 6 — clicking a lot");
+    await testPause(900);
+    if (lot) { await click(...lot);
+      say("a lot opens its record", document.getElementById("detail").classList.contains("on"));
+    } else say("a lot opens its record", false, "no lot in view to click");
+
+    // ---- streets --------------------------------------------------------------------------
+    tellTheMap("2 / 6 — clicking a street");
+    await testPause(900);
+    await click(...street);
+    say("a street opens the sidewalk panel", roadSel && roadSel.n === rd.n,
+        roadSel ? ("picked " + roadSel.n + (blockSel ? ", block " + blockSel.from + "→" + blockSel.to : "")) : "nothing picked");
+    say("the lot record closed behind it", !document.getElementById("detail").classList.contains("on"));
+
+    // ---- the sidewalk questions, and Cancel -----------------------------------------------
+    tellTheMap("3 / 6 — a sidewalk choice, then Cancel");
+    await testPause(900);
+    const wBtn = (t) => [...document.querySelectorAll("#r-sides button")].find(b => b.textContent === t);
+    const beforeWalk = JSON.stringify(WALKS.blocks) + JSON.stringify(WALKS.roads);
+    if (wBtn("Both sides")) {
+      wBtn("Both sides").click(); await testPause(700);
+      say("choosing a sidewalk marks it unsaved", walkDirty());
+      document.getElementById("r-cancel").click(); await testPause(600);
+      say("Cancel drops it and writes nothing", !walkDirty()
+          && JSON.stringify(WALKS.blocks) + JSON.stringify(WALKS.roads) === beforeWalk);
+    } else say("the sidewalk buttons are there", false, "no side buttons in the panel");
+
+    // toggling a choice on and off must not leave it dirty - this is what locked the map before
+    if (wBtn("None")) {
+      wBtn("None").click(); await testPause(400);
+      const nBtn = [...document.querySelectorAll("#r-sides button")].find(b => b.textContent === "None");
+      nBtn.click(); await testPause(400);
+      say("a choice put back the way it was is not 'unsaved'", !walkDirty());
+      document.getElementById("r-cancel").click(); await testPause(300);
+    }
+
+    // ---- switching streets ----------------------------------------------------------------
+    tellTheMap("4 / 6 — the street panel switches cleanly");
+    await testPause(900);
+    const scopeBtns = [...document.querySelectorAll("#r-sides button")].slice(0, 2);
+    say("the panel asks one scope at a time", scopeBtns.length === 2
+        && scopeBtns.filter(b => b.className.includes("on")).length === 1,
+        scopeBtns.map(b => b.textContent + (b.className.includes("on") ? "*" : "")).join(" / "));
+    await click(...street);
+    say("a street can still be picked after all that", !!roadSel, roadSel ? roadSel.n : "NOTHING");
+
+    // ---- the house tool -------------------------------------------------------------------
+    tellTheMap("5 / 6 — the house tool");
+    await testPause(900);
+    document.getElementById("movetoggle").click(); await testPause(700);
+    say("turning it on closes the other panels", houseMode
+        && !document.getElementById("roadpanel").classList.contains("on")
+        && !document.getElementById("detail").classList.contains("on"));
+
+    await click(...street);
+    say("a street click is refused, and says so", !document.getElementById("roadpanel").classList.contains("on")
+        && document.getElementById("mapsays").style.opacity === "1");
+    await testPause(700);
+
+    if (house) {
+      // centre on the house so the drag is visible
+      const c = ringCentre(placedRing(houseB));
+      view.s = 7; view.ox = W/2 - c[0]*view.s; view.oy = H/2 - c[1]*view.s; draw();
+      await testPause(600);
+      const at = () => { const q = ringCentre(placedRing(houseB)); return [sx(q[0]), sy(q[1])]; };
+      await click(...at());
+      say("a house can be picked up", houseEdit.target === houseB, houseEdit.target ? (houseEdit.target.addr || houseKey(houseEdit.target)) : "nothing");
+
+      const startedAt = JSON.stringify(houseNow(houseB));
+      P("pointerdown", ...at()); P("pointermove", at()[0]+2, at()[1]+1); P("pointerup", at()[0]+2, at()[1]+1);
+      await testPause(500);
+      say("a two-pixel wobble does not move it", JSON.stringify(houseNow(houseB)) === startedAt
+          && houseEdit.target === houseB);
+
+      // a real drag, watched
+      const from = at();
+      P("pointerdown", ...from);
+      for (let k = 1; k <= 8; k++) { P("pointermove", from[0]+k*7, from[1]+k*4); await testPause(90); }
+      P("pointerup", from[0]+56, from[1]+32);
+      await testPause(500);
+      say("a real drag moves it", houseDirty(), houseEdit.pending
+          ? `${(houseEdit.pending.dx*3.28084).toFixed(1)} ft east, ${(houseEdit.pending.dy*3.28084).toFixed(1)} ft north` : "-");
+
+      // AND NO OTHER HOUSE MOVED WITH IT - the one the owner caught
+      const others = DATA.buildings.filter(b => b !== houseB && PLACES[houseKey(b)]).slice(0, 5);
+      const drifted = others.filter(b => {
+        const a = houseNow(b), s = PLACES[houseKey(b)];
+        return Math.abs(a.dx-s.dx) > 1e-6 || Math.abs(a.dy-s.dy) > 1e-6 || Math.abs(a.turn-s.turn) > 1e-6;
+      });
+      say("no other house moved with it", drifted.length === 0,
+          others.length ? `checked ${others.length} already-moved houses` : "no other moved houses to check");
+
+      document.getElementById("h-cancel").click(); await testPause(600);
+      say("Cancel puts it straight back", !houseDirty()
+          && JSON.stringify(houseNow(houseB)) === startedAt);
+    }
+
+    // ---- back out -------------------------------------------------------------------------
+    tellTheMap("6 / 6 — back to lots and streets");
+    await testPause(900);
+    document.getElementById("movetoggle").click(); await testPause(700);
+    say("turning it off releases the house", !houseMode && houseEdit.target === null);
+    fitView(); draw(); await testPause(400);
+
+    let again = null;
+    for (const pl of rd.lines) for (let i = 1; i < pl.length && !again; i++) {
+      const px = sx((pl[i-1][0]+pl[i][0])/2), py = sy((pl[i-1][1]+pl[i][1])/2);
+      if (px>40 && py>40 && px<W-40 && py<H-40 && pick(px,py) < 0) again = [px, py];
+    }
+    if (again) { await click(...again);
+      say("STREETS WORK AGAIN AFTERWARDS", !!roadSel, roadSel ? roadSel.n : "NOTHING"); }
+
+    say("nothing threw", errs.length === 0, errs.join(" | "));
+  } catch (e) {
+    say("the check itself fell over", false, e.message);
+  } finally {
+    removeEventListener("error", onErr);
+    // put it back exactly as found
+    houseEdit.pending = null; walkPending = { block: null, road: null, was: null, wasBlock: null };
+    if (houseMode !== was.mode) document.getElementById("movetoggle").click();
+    letGoOfHouse();
+    document.getElementById("roadpanel").classList.remove("on");
+    roadSel = null; blockSel = null;
+    view.s = was.s; view.ox = was.ox; view.oy = was.oy;
+    draw();
+    btn.disabled = false;
+  }
+
+  const bad = rows.filter(r => !r.pass).length;
+  tellTheMap(bad ? `${bad} of ${rows.length} checks failed — see the list on the left`
+                 : `All ${rows.length} checks passed. Nothing was saved.`);
+}
+
+document.getElementById("selftest-go").onclick = () => runSelfTest();
 
 document.getElementById("r-save").onclick = () => commitWalk();
 document.getElementById("r-cancel").onclick = () => cancelWalk();
@@ -2620,15 +2935,15 @@ cv.addEventListener("pointerdown", e => {
   const r = cv.getBoundingClientRect();
   // Pressing on the SELECTED house picks it up. On any other house it does not, so a click still
   // means "select that one" and only a deliberate second grab moves anything.
-  if (houseMode && houseSel) {
+  if (houseMode && houseEdit.target) {
     const hit = pickHouse(e.clientX - r.left, e.clientY - r.top);
-    if (hit === houseSel) {
-      const a = houseNow(houseSel);
+    if (hit === houseEdit.target) {
+      const a = houseNow(houseEdit.target);
       // `was` and `moved` are what let a PRESS still be a click. Without them every press that
       // landed on the selected house was a drag, so clicking it again did nothing whatsoever -
       // you could not let go of a house, and you could not reach a smaller one sitting inside it.
       houseDrag = { x: wx(e.clientX - r.left), y: wy(e.clientY - r.top),
-                    dx: a.dx, dy: a.dy, was: housePending, moved: false,
+                    dx: a.dx, dy: a.dy, was: houseEdit.pending, moved: false,
                     px: e.clientX, py: e.clientY };
       cv.setPointerCapture(e.pointerId);
       return;
@@ -2647,13 +2962,13 @@ cv.addEventListener("pointermove", e => {
         && Math.abs(e.clientX - houseDrag.px) + Math.abs(e.clientY - houseDrag.py) <= 3) return;
     houseDrag.moved = true;
 
-    const a = houseNow(houseSel);
-    housePending = {
+    const a = houseNow(houseEdit.target);
+    houseEdit.pending = {
       dx: houseDrag.dx + (wx(e.clientX - r.left) - houseDrag.x),
       dy: houseDrag.dy + (wy(e.clientY - r.top) - houseDrag.y),
       turn: a.turn,
     };
-    showHouse(houseSel);
+    showHouse(houseEdit.target);
     return;
   }
   if (drag) {
@@ -2674,7 +2989,7 @@ cv.addEventListener("pointerup", e => {
   // falls through to the handling below - see the note on houseDrag.moved.
   if (houseDrag) {
     const dragged = houseDrag.moved;
-    if (!dragged) housePending = houseDrag.was;      // a click is not an edit
+    if (!dragged) houseEdit.pending = houseDrag.was;      // a click is not an edit
     houseDrag = null;
     cv.classList.remove("drag");
     if (dragged) { drag = null; return; }
