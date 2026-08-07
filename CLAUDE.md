@@ -92,9 +92,26 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 `LLMUnityTests.TestLLM`, whose constructor downloads a language model, and the run never finishes.
 Do **not** pass `-nographics` — two tests render and fail spuriously without it.
 
-> **No baseline exists.** This suite has never been recorded green. The results on record are
-> 7/7 (when there were seven), 11/13 and 12/13. `docs/HANDOFF.md` says "expect 13/13"; that is an
-> aspiration, not an observation. **Establishing a real number here is outstanding work.**
+> **No baseline exists, and on 2026-08-07 it was established WHY.** The suite does not finish in
+> batch mode: it runs, several tests pass with real assertions, and then it hangs. Two runs, both
+> killed after ~20 minutes with no results file written. The last test to complete both times was
+> `ThePlayerCanStandInTheStreet`. **There are 14 tests, not the 13 every document claims.**
+
+**Run this first, or the run drowns.** `Assets/polyperfect/` is gitignored, so the pack's mesh
+import settings are NOT in the repo and Read/Write defaults to off:
+
+```
+Unity.exe -batchmode -quit -projectPath C:\SerialKillerGame ^
+  -executeMethod Noir.Editor.MeshReadable.Enable -logFile <log>
+```
+
+Measured 2026-08-07: **22 models needed it, 294 already had it.** Before that step the PlayMode
+log carried **3,503** "not Read/Write enabled" warnings, each with a full stack trace, and came to
+4 MB; after it, **zero**, and the log was 439 KB. It did not cure the hang — but it is the
+difference between a log you can read and one you cannot.
+
+Also measured, and worth knowing because a doc claims otherwise: the town builds in
+**`[build] 1941 ms`**, not the two minutes quoted elsewhere.
 
 **4. Look at it.** The tests and `MapAudit` cannot see ugly. Render a still and actually view it.
 
