@@ -99,11 +99,24 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, first ever recorded, 2026-08-07: 8 tests, 5 pass, 3 fail, ~2 min.**
-> Four runs. Do not quote a single number without reading the next paragraph.
+> **BASELINE, 2026-08-07: 8 tests, 5 pass, 3 fail, ~2 min. Reproduced exactly twice**, down to
+> the player landing at `(1050.00, 3.84, -1200.00)` in both runs. It is deterministic now.
 >
-> **Always passing (4):** `TheCityComesUpAndRuns`, `NoJunctionEverShowsGreenBothWays`,
-> `NoTwoVehiclesOccupyTheSameSpace`, `NoVehicleEverLeavesTheRoad`.
+> **Passing (5):** `TheCityComesUpAndRuns`, `NoJunctionEverShowsGreenBothWays`,
+> `TrafficMovesAndStopsAtRedLights`, `ThePlayerCanStandInTheStreet`,
+> `WhyAreThePeopleNotAnimating`.
+>
+> **Failing (3), all genuine faults in the traffic model** — not infrastructure, not flakiness:
+> `NoTwoVehiclesOccupyTheSameSpace` (two cars within 0.40 m on open road, 132 m from any
+> junction), `NoVehicleEverLeavesTheRoad` (a van 1.99 m past the asphalt),
+> `NoCarWaitsForeverAtTheHeadOfAClearQueue` (worst wait 105 s against a 37 s gate).
+> **That is the next work.**
+>
+> **THERE WERE NO FLAKY TESTS.** Two were called flaky — by me, in this file — and both were one
+> bug: `CityCollision`'s ground mesh was wound to face DOWNWARDS, so the player dropped onto the
+> back of the floor. PhysX stops a `CharacterController` on a backface *sometimes*, which is what
+> intermittent looks like when nobody has measured it. Flaky is a diagnosis of last resort; spend
+> the twenty minutes first.
 >
 > **The traffic now runs, and the score went DOWN because of it.** `Layers.Register(kind, root)`
 > ends in `root.SetActive(IsOn(kind))`, and an inactive GameObject gets no `Update()` — so
