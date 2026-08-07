@@ -50,8 +50,6 @@ building 143 0 move +0.00 +0.00 turn +4.00
 building 156 0 move +3.97 +0.00 turn +0.00
 building 224 0 move +0.00 +0.00 turn -16.80
 building 226 0 move +6.08 +0.70 turn +0.00
-building 237 0 move +0.00 +0.00 turn -13.67
-building 237 1 move +0.00 +0.00 turn +6.90
 building 269 1 move +0.70 +8.65 turn +0.00
 building 287 0 move +0.00 +0.00 turn +2.63
 building 293 0 move +2.72 -5.60 turn +0.00

@@ -184,6 +184,9 @@ parcel 236 was built
 parcel 236 property "109 W Attica"
 parcel 236 note "back of the lot; ran to the alley in 1991, split off later"
 
+parcel 237 was vacant
+parcel 237 note "Casey's - built after 1991; the lot was here, this building was not"
+
 parcel 238 was built
 parcel 238 kind shop
 parcel 238 property "the Chicago Street terrace, west side"
