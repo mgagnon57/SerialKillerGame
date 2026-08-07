@@ -1867,15 +1867,71 @@ document.getElementById("send-go").onclick = async () => {
     said.innerHTML = (j.ok ? "Sent. " : "Sent, with problems. ") + bits.join(" · ")
       + (j.problems.length
          ? "<br><b style='color:var(--flag)'>" + j.problems.join("<br>") + "</b>"
-         : "");
+         : "")
+      + verdictOnTheChange(j);
     said.style.color = j.ok ? "var(--agri)" : "var(--ink)";
     loadVerdicts(); loadWalks(); loadVerdictFromGame();
+    if (j.verify && j.verify.started) pollVerify();
   } catch (e) {
     said.textContent = "NOT SENT — " + e.message;
     said.style.color = "var(--flag)";
   }
   btn.disabled = false;
 };
+
+/// WHAT THIS EDIT ACTUALLY NEEDS, which is the whole point of pressing the button rather than
+/// just saving. A sidewalk is read by the drawing and by nothing else, so it needs a Play press.
+/// A road taken off the map moves what is walkable and can strand a corner of town, so it needs
+/// the game's own check first. See tools/change_gate.py for how the two are told apart.
+function verdictOnTheChange(j) {
+  const s = (j.structural || []).length, c = (j.cosmetic || []).length;
+  const list = (rows) => "<br>" + rows.slice(0, 8).map(r =>
+      `<span style="opacity:.65">${r.scope}</span> &nbsp;${r.what}`).join("<br>")
+    + (rows.length > 8 ? `<br><span style="opacity:.65">…and ${rows.length - 8} more</span>` : "");
+
+  if (!s && !c) return "<br><b>Nothing new since the last check — press Play.</b>";
+
+  if (!s) {
+    return `<br><b>${c} change${c === 1 ? "" : "s"}, none of it structural — no check needed, `
+         + "press Play.</b>" + list(j.cosmetic);
+  }
+
+  const v = j.verify || {};
+  const head = `<br><b>${s} structural change${s === 1 ? "" : "s"}`
+             + (c ? ` (and ${c} cosmetic)` : "") + " — the game needs re-checking.</b>";
+  const how = v.started
+    ? "<br><span id='vstat'>Checking now… the survey passes and the walkable-region test. "
+      + "A few minutes.</span>"
+    : `<br><b style="color:var(--flag)">Not checked: ${v.why}</b>`;
+  return head + how + list(j.structural);
+}
+
+/// The check runs for minutes, so the answer is polled rather than waited on. It reports the two
+/// lines that matter - is the layout valid, and is the town still ONE walkable piece - because a
+/// removed road is exactly the edit that can split it.
+async function pollVerify() {
+  const said = document.getElementById("send-said");
+  for (;;) {
+    await new Promise(r => setTimeout(r, 4000));
+    let j;
+    try { j = await (await fetch("/__verify", { cache: "no-store" })).json(); }
+    catch (e) { continue; }
+
+    const stat = document.getElementById("vstat");
+    if (j.running) { if (stat) stat.textContent = "Checking now… (started " + j.when + ")"; continue; }
+
+    const key = (j.lines || []).filter(l => /layout|region|survey|PASSED|FAILED/.test(l));
+    if (stat) {
+      stat.innerHTML = (j.ok
+          ? "<b style='color:var(--agri)'>Checked and good — press Play.</b>"
+          : "<b style='color:var(--flag)'>CHECK FAILED — do not trust this map yet.</b>")
+        + (j.error ? "<br>" + j.error : "")
+        + (key.length ? "<br><span style='opacity:.7'>" + key.join("<br>") + "</span>" : "");
+    }
+    loadVerdictFromGame();
+    return;
+  }
+}
 
 document.getElementById("r-save").onclick = () => commitWalk();
 document.getElementById("r-cancel").onclick = () => cancelWalk();

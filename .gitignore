@@ -124,3 +124,7 @@ docs/*.html
 # Written by the game every time it builds - what it did with each of the owner's rulings.
 # Derived, rewritten on every run, and meaningless without the run that produced it.
 tools/game-verdict.json
+
+tools/.verified/
+
+tools/__pycache__/

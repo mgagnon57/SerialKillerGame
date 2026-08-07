@@ -23,6 +23,9 @@ import socketserver
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import change_gate      # noqa: E402  - which edits need the game re-checked, and which do not
+import verify_run       # noqa: E402  - and the run itself, when one is needed
 DOCS = os.path.join(HERE, "..", "docs")
 PAGE = "rossville-buildings.html"
 def _port_from_argv():
@@ -376,8 +379,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         absent = sum(1 for v in verdicts.values() if v.get("was") == "absent")
         props = len({v["property"] for v in verdicts.values() if v.get("property")})
 
-        print("  [publish] %d lots, %d roads, %d blocks%s"
+        # ---- DOES THIS CHANGE NEED THE GAME RE-CHECKED, OR JUST A PLAY PRESS? ----------------
+        #
+        # The owner: "if it is going to affect other pieces of the game then it should be built
+        # and run through the test". Right - and the half that makes it usable is that most edits
+        # do not. A sidewalk is read by the drawing and by nothing else; a road taken off the map
+        # moves what is walkable and can leave a corner of town unreachable. Sitting through a
+        # four-minute Unity run to move a sidewalk is how you teach somebody to skip the check on
+        # the day it matters. See tools/change_gate.py for what is in which bucket and why.
+        gate = change_gate.unverified()
+        verify = {"needed": bool(gate["structural"]), "started": False, "why": ""}
+
+        if gate["structural"]:
+            started, why = verify_run.start(change_gate.mark_verified)
+            verify["started"] = started
+            verify["why"] = why
+        else:
+            # Nothing unchecked can affect anything but the drawing, so the verified mark can
+            # move forward without a run. This is what keeps the next edit's diff small.
+            change_gate.mark_verified()
+
+        print("  [publish] %d lots, %d roads, %d blocks - %d structural, %d cosmetic%s"
               % (len(verdicts), len(walks["roads"]), len(walks["blocks"]),
+                 len(gate["structural"]), len(gate["cosmetic"]),
                  ", %d PROBLEM(S)" % len(problems) if problems else ""))
 
         self._json({
@@ -385,6 +409,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "lots": len(verdicts), "built": built, "absent": absent, "properties": props,
             "streets": len(walks["roads"]), "blocks": len(walks["blocks"]),
             "notes": notes, "problems": problems,
+            "structural": gate["structural"], "cosmetic": gate["cosmetic"],
+            "baseline": gate["baseline"], "verify": verify,
         })
 
     def _walk(self):
@@ -485,6 +511,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path.startswith("/__walks"):
             self._json(read_walks())
+            return
+        if self.path.startswith("/__verify"):
+            # How the check that publish set off is getting on. Polled, because it takes minutes
+            # and an HTTP request that waits that long is a request that has already timed out.
+            s = verify_run.snapshot()
+            s["unverified"] = change_gate.unverified()
+            self._json(s)
             return
         if self.path.startswith("/__verdicts"):
             self._json({str(k): v for k, v in read_verdicts().items()})
