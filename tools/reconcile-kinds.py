@@ -185,12 +185,23 @@ def main():
         print("\nnothing to do.")
         return
 
-    shutil.copy2(CITY, CITY + ".before-kinds")
+    # NEVER OVERWRITE AN EARLIER BACKUP. A fixed ".before-kinds" protects you exactly once: run
+    # this a second time and it copies the already-modified file over the only record of what the
+    # file used to be. The second run is also when you want it most, because the first run is what
+    # made you look. Same rule as tools/serve-viewer.py backup(); city.txt holds 48 commits of
+    # hand-authored work.
+    dest = CITY + ".before-kinds"
+    n_dup = 2
+    while os.path.exists(dest):
+        dest = CITY + ".before-kinds-%d" % n_dup
+        n_dup += 1
+    shutil.copy2(CITY, dest)
+
     for pid, n, was, now, text in changes:
         m = rx.match(lines[n])
         lines[n] = m.group(1) + now + m.group(3)
     open(CITY, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
-    print("\nbacked up to Content/city.txt.before-kinds")
+    print("\nbacked up to Content/%s" % os.path.basename(dest))
     print("wrote Content/city.txt - %d place kinds corrected" % len(changes))
 
 

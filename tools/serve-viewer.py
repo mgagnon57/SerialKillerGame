@@ -19,6 +19,7 @@ page carries the real addresses of a real town.
 import http.server
 import json
 import os
+import shutil
 import socketserver
 import sys
 
@@ -111,6 +112,28 @@ HEADER = """# ==================================================================
 #: The verbs this server knows how to format on the way out. Anything else read from the file is
 #: still KEPT and written back verbatim - see read_verdicts.
 KNOWN_VERBS = ("was", "kind", "property", "note", "footprint")
+
+
+def backup(path, tag):
+    """Copy a file aside before rewriting it, NEVER overwriting an earlier backup.
+
+    Every tool here used `shutil.copy2(path, path + ".before-" + tag)` with a fixed name, which
+    is a backup that protects you exactly once. Run the tool a second time and the "backup" it
+    takes is of the ALREADY-MODIFIED file, so the original - the thing you actually wanted back -
+    is gone, overwritten by the safety mechanism that existed to preserve it. The second run is
+    also precisely when you want it most, because the first run is what made you look.
+
+    So: the first backup keeps the plain name, and every later one gets -2, -3, and so on. Nothing
+    here ever deletes; disk is cheap and Content/parcel-1991.txt cannot be rebuilt from anything.
+    """
+    base = f"{path}.before-{tag}"
+    dest = base
+    n = 2
+    while os.path.exists(dest):
+        dest = f"{base}-{n}"
+        n += 1
+    shutil.copy2(path, dest)
+    return dest
 
 
 def read_verdicts():

@@ -1616,6 +1616,10 @@ namespace Noir.Unity
 
         private static NameTable _names;
 
+        /// <summary>How many households have been rolled this session. The ONLY thing that varies
+        /// between clicks of "randomize" - see RandomizeHousehold for why that is deliberate.</summary>
+        private static int _randomized;
+
         /// <summary>
         /// A plausible household for a lot nobody remembers, using the same names.txt and
         /// particulars.txt every generated citizen already draws from - a randomized family
@@ -1629,40 +1633,49 @@ namespace Noir.Unity
                 catch { _names = null; }
             }
 
-            var rng = new System.Random();
-            adults = rng.NextDouble() < 0.3 ? 1 : 2;
-            double kidRoll = rng.NextDouble();
-            kids = kidRoll < 0.4 ? 0 : kidRoll < 0.7 ? 1 : kidRoll < 0.9 ? 2 : 3;
+            // DELIBERATELY NOT REPRODUCIBLE - a person pressing "randomize" a second time wants a
+            // different household, which is the one place in this project where varying output is
+            // the requirement rather than the bug.
+            //
+            // Routed through IRng regardless, because Core/Contracts/Rng.cs says outright that
+            // nothing may call System.Random, and an exception that looks reasonable in a UI file
+            // is exactly how that rule stops meaning anything. The counter is what varies; the
+            // substream keeps it out of every other system's numbers, and repeat clicks now walk a
+            // known sequence instead of an ambient one.
+            var rng = Xoshiro256ss.Substream(VillageHost.Seed, "randomize-household:" + _randomized++);
+            adults = rng.NextFloat() < 0.3f ? 1 : 2;
+            float kidRoll = rng.NextFloat();
+            kids = kidRoll < 0.4f ? 0 : kidRoll < 0.7f ? 1 : kidRoll < 0.9f ? 2 : 3;
 
             var lines = new System.Collections.Generic.List<string>();
             character = "";
             if (_names != null && _names.Surnames.Count > 0
                 && _names.Male.Count > 0 && _names.Female.Count > 0)
             {
-                string surname = _names.Surnames[rng.Next(_names.Surnames.Count)];
+                string surname = _names.Surnames[rng.NextInt(_names.Surnames.Count)];
                 string headFirst = null;
-                bool headIsMale = rng.NextDouble() < 0.5;
+                bool headIsMale = rng.Chance(0.5f);
                 for (int i = 0; i < adults; i++)
                 {
                     // The second adult is the opposite sex of the first - not a rule this town
                     // enforces elsewhere, just the common case for a randomized guess.
                     bool male = i == 0 ? headIsMale : !headIsMale;
-                    string first = male ? _names.Male[rng.Next(_names.Male.Count)]
-                                        : _names.Female[rng.Next(_names.Female.Count)];
+                    string first = male ? _names.Male[rng.NextInt(_names.Male.Count)]
+                                        : _names.Female[rng.NextInt(_names.Female.Count)];
                     if (i == 0) headFirst = first;
                     lines.Add($"{first} {surname}");
                 }
                 for (int i = 0; i < kids; i++)
                 {
-                    string first = rng.NextDouble() < 0.5
-                        ? _names.Male[rng.Next(_names.Male.Count)]
-                        : _names.Female[rng.Next(_names.Female.Count)];
+                    string first = rng.Chance(0.5f)
+                        ? _names.Male[rng.NextInt(_names.Male.Count)]
+                        : _names.Female[rng.NextInt(_names.Female.Count)];
                     lines.Add($"{first} {surname}");
                 }
 
                 if (_host?.Particulars != null && _host.Particulars.Count > 0 && lines.Count > 0)
                 {
-                    int idx = rng.Next(_host.Particulars.Count);
+                    int idx = rng.NextInt(_host.Particulars.Count);
                     character = _host.Particulars.Sentence(headFirst ?? lines[0].Split(' ')[0], idx);
                 }
             }

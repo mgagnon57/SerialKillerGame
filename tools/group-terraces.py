@@ -129,7 +129,7 @@ def main():
         print("\nnothing written. Re-run with --apply.")
         return
 
-    shutil.copy2(sv.VERDICTS, sv.VERDICTS + ".before-terrace-grow")
+    print(f"\nbacked up to {os.path.basename(sv.backup(sv.VERDICTS, 'terrace-grow'))}")
     n = 0
     for name, have, add, row, sqft, cover in changes:
         model = v.get(have[0], {})

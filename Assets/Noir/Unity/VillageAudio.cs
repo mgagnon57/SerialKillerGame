@@ -143,9 +143,26 @@ namespace Noir.Unity
         /// A scene bootstrapped from empty has a camera but no ears. Without this every source
         /// in the village plays into nothing, which is indistinguishable from the files being
         /// missing and takes far longer to work out.
+        ///
+        /// EXCEPT IN BATCH MODE, WHERE THERE IS NOBODY TO LISTEN AND SOMEBODY TO DISTURB. The
+        /// PlayMode suite bootstraps this same host, so `-runTests` played the village's ambience,
+        /// its bell and its traffic straight into the owner's headphones while he was doing
+        /// something else. That was written down as a rule - "headless runs must be silent" - and
+        /// a rule in a document does not mute anything. Giving the scene no ears is the whole fix:
+        /// every source still plays, still moves, still gets tested, and is heard by nothing.
         /// </summary>
         private static void EnsureListener()
         {
+            if (Application.isBatchMode)
+            {
+                // Belt and braces: not adding ears is not enough on its own, because anything
+                // else in the scene - a prefab, a test's own camera - may bring a listener with
+                // it. Zeroing the global volume is the one switch nothing downstream can undo by
+                // accident.
+                AudioListener.volume = 0f;
+                return;
+            }
+
             if (FindFirstObjectByType<AudioListener>() != null) return;
             var cam = Camera.main;
             if (cam != null) cam.gameObject.AddComponent<AudioListener>();

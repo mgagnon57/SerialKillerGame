@@ -226,9 +226,7 @@ def main():
 
     # ---- write, having backed up first ---------------------------------------------------
     if os.path.exists(sv.VERDICTS):
-        backup = sv.VERDICTS + ".before-merge"
-        shutil.copy2(sv.VERDICTS, backup)
-        print(f"\nbacked up to {os.path.basename(backup)}")
+        print(f"\nbacked up to {os.path.basename(sv.backup(sv.VERDICTS, 'merge'))}")
 
     v = sv.read_verdicts()
     kept = 0
