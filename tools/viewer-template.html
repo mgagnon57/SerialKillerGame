@@ -770,7 +770,18 @@ let houseMode = false;            // does a click on the map mean "pick a house"
 let housePending = null;          // {dx, dy, turn} not yet saved, or null
 
 const houseKey = (b) => b.p + "|" + (b.i || 0);
-const houseNow = (b) => housePending || PLACES[houseKey(b)] || { dx: 0, dy: 0, turn: 0 };
+
+/// Where THIS building stands: the unsaved edit if this is the one being edited, otherwise
+/// whatever is saved for it, otherwise where the survey put it.
+///
+/// The check on houseSel is the whole point and it was missing. Written as
+/// `housePending || PLACES[key] || zero`, the unsaved edit won every building on the map - so
+/// dragging one house re-drew every house already saved with that same offset on it, and moving
+/// one appeared to move two. It reached hit-testing and the setback maths as well, which are also
+/// asked about buildings other than the selected one.
+const houseNow = (b) =>
+  (houseSel === b && housePending) ? housePending
+                                   : (PLACES[houseKey(b)] || { dx: 0, dy: 0, turn: 0 });
 const houseDirty = () => {
   if (!houseSel || !housePending) return false;
   const on = PLACES[houseKey(houseSel)] || { dx: 0, dy: 0, turn: 0 };
