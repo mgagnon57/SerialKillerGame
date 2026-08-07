@@ -171,12 +171,19 @@
     font-size: 13px; box-shadow: var(--shadow); opacity: 0; transition: opacity .35s;
     pointer-events: none; max-width: 60%; text-align: center;
   }
-  #movemode { position: absolute; left: 16px; bottom: 16px; z-index: 5; }
-  #movemode button {
-    font: inherit; font-size: 12.5px; padding: 7px 13px; cursor: pointer; border-radius: 5px;
-    border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
-    box-shadow: var(--shadow); }
-  #movemode button.on { background: var(--editing); color: #fff; border-color: var(--editing); }
+  #movemode { position: absolute; left: 16px; bottom: 16px; z-index: 5;
+    display: flex; align-items: center; }
+  #toolbar { display: flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden;
+    box-shadow: var(--shadow); background: var(--panel); }
+  #movemode button.tool {
+    font: inherit; font-size: 12.5px; padding: 8px 15px; cursor: pointer; border: 0;
+    border-right: 1px solid var(--rule); background: var(--panel); color: var(--muted); }
+  #movemode button.tool:last-child { border-right: 0; }
+  #movemode button.tool:hover { color: var(--ink); }
+  /* The house tool is the one that changes what a click MEANS, so it is the one that gets the
+     editing colour. Lots and streets is the resting state and looks like it. */
+  #movemode button.tool.on { background: var(--ink); color: var(--paper); }
+  #movemode button#movetoggle.on { background: var(--editing); color: #fff; }
   #close, #r-close, #h-close {
     position: absolute; top: 9px; right: 9px; border: 0; background: none; cursor: pointer;
     color: var(--muted); font-size: 17px; line-height: 1; padding: 3px 6px; border-radius: 3px;
@@ -416,9 +423,15 @@
          over there looks exactly like a broken tool over here. -->
     <div id="mapsays"></div>
 
+    <!-- WHAT A CLICK MEANS, said as a choice rather than as a switch. This was one button in the
+         bottom corner reading "Move houses — on", which is a state you have to remember rather
+         than a place you can see you are. Two tabs: whichever is lit is what the map is for. -->
     <div id="movemode">
-      <button id="movetoggle" title="M">Move houses</button>
-      <span id="movesaid" class="mono" style="font-size:11.5px;margin-left:9px;opacity:0;transition:opacity .4s"></span>
+      <div id="toolbar" role="group" aria-label="What a click does">
+        <button id="tool-lots" class="tool on" title="L">Lots &amp; streets</button>
+        <button id="movetoggle" class="tool" title="M">Move houses</button>
+      </div>
+      <span id="movesaid" class="mono" style="font-size:11.5px;margin-left:10px;opacity:0;transition:opacity .4s"></span>
     </div>
 
     <!-- MOVING AND TURNING A HOUSE. Its own panel again, and its own MODE: a click on the map
@@ -561,6 +574,30 @@ let VERDICTS = {};
 // on the wrong lot used to be on disk before the hand left the mouse. `dirtyOn` is the parcel
 // with uncommitted changes, or -1.
 let dirtyOn = -1;
+
+/// The lot panel's editor - the third and last panel to stop having its own copy of these rules.
+///
+/// Its unsaved state is a parcel id rather than a value, because the lot form writes many fields
+/// and tracks them together, so `target` reads dirtyOn rather than shadowing it. What it gains is
+/// the LEAVE guard, which is the rule that had gone wrong twice already elsewhere and was still
+/// wrong here: this panel's confirm() had no suppressed-dialog protection at all, so a browser
+/// told to block dialogs made it impossible to open another lot, silently and permanently.
+const lotEdit = makeEditor({
+  name: "lot",
+  saved: () => null,
+  same: () => false,
+  redraw: () => {},
+  askToLeave: (id) => `Parcel ${id} has unsaved changes.\n\n`
+    + "OK to discard them and move on, or Cancel to go back and press Save.",
+  blocked: () => {
+    saveState("dirty", "this browser is blocking dialogs — press Save or Cancel on this lot");
+    tellTheMap("Parcel " + dirtyOn + " has unsaved changes, and this browser is blocking the "
+             + "question. Press Save or Cancel on it to move on.");
+  },
+  write: () => null,
+});
+Object.defineProperty(lotEdit, "target", { get: () => (dirtyOn >= 0 ? dirtyOn : null) });
+lotEdit.dirty = () => dirtyOn >= 0;
 
 // How many footprints the rulings are holding back, said out loud rather than subtracted
 // quietly from a count that claims to be all of them.
@@ -770,6 +807,7 @@ let roadScope = "block";
 function makeEditor(spec) {
   const ed = {
     name: spec.name,
+    builtBy: "makeEditor",   // asserted by the in-page check: all three panels must say this
     target: null,        // what is being edited, or null
     pending: null,       // the unsaved value, or null
 
@@ -2297,16 +2335,13 @@ function ringArea(r) {
 }
 
 function show(i) {
-  // Leaving a lot with uncommitted changes would drop them silently, which is the same fault
-  // as saving silently, pointed the other way.
-  if (dirtyOn >= 0 && dirtyOn !== i) {
-    const keep = confirm(
-      `Parcel ${dirtyOn} has unsaved changes.
-
-OK to discard them and move on, or Cancel to go back and press Save.`);
-    if (!keep) return;
-    dirtyOn = -1;
-  }
+  // Leaving a lot with uncommitted changes would drop them silently, which is the same fault as
+  // saving silently, pointed the other way - and it is the same question the street and house
+  // panels ask, so it is now the same code asking it. This was the last raw confirm() on the map
+  // and the only one still missing the suppressed-dialog guard: with a browser blocking dialogs
+  // it returned false for ever and no other lot could be opened, with nothing on screen saying so.
+  if (lotEdit.target !== null && lotEdit.target !== i && !lotEdit.mayLeave()) return;
+  if (lotEdit.target !== null && lotEdit.target !== i) dirtyOn = -1;
   sel = i;
   document.getElementById("roadpanel").classList.remove("on"); roadSel = null;
 
@@ -2611,8 +2646,7 @@ document.getElementById("movetoggle").onclick = () => {
   if (houseMode && !houseMayLeave()) return;
   houseMode = !houseMode;
   document.getElementById("movetoggle").classList.toggle("on", houseMode);
-  document.getElementById("movetoggle").textContent =
-    houseMode ? "Move houses — on" : "Move houses";
+  document.getElementById("tool-lots").classList.toggle("on", !houseMode);
 
   if (houseMode) {
     // The lot and street panels stay open otherwise, so the screen shows a lot's record while
@@ -2629,10 +2663,18 @@ document.getElementById("movetoggle").onclick = () => {
   }
   draw();
 };
+// Each tab picks its mode rather than toggling one, so pressing the one already lit does nothing
+// instead of dropping you into the other tool.
+document.getElementById("tool-lots").onclick = () => {
+  if (houseMode) document.getElementById("movetoggle").click();
+};
 addEventListener("keydown", e => {
-  if (e.key === "m" || e.key === "M") {
-    if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
-    document.getElementById("movetoggle").click();
+  if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (k === "m" && !houseMode) document.getElementById("movetoggle").click();
+  else if (k === "l" && houseMode) document.getElementById("movetoggle").click();
+  else if (k === "escape") {
+    if (houseMode) document.getElementById("movetoggle").click();
   }
 });
 
@@ -2889,6 +2931,69 @@ async function runSelfTest() {
     }
     if (again) { await click(...again);
       say("STREETS WORK AGAIN AFTERWARDS", !!roadSel, roadSel ? roadSel.n : "NOTHING"); }
+
+    // ---- the leave-guards, including the one that can lock the map -----------------------
+    //
+    // A browser told to block dialogs makes confirm() return false instantly and for ever. Every
+    // panel that asks "discard your unsaved work?" has to survive that WITHOUT silently refusing,
+    // because a refusal nobody can see is indistinguishable from a dead tool - which is exactly
+    // how the street editor came to look broken. Faked here rather than waited for.
+    tellTheMap("Extra — what happens if this browser blocks dialogs");
+    await testPause(1100);
+    // Each panel is ARMED with a real unsaved change first. A guard tested with nothing to guard
+    // passes for the wrong reason, and "nothing unsaved to test against" is not a result.
+    const realConfirm = window.confirm;
+    window.confirm = () => false;
+    try {
+      // street: pick one, choose a side
+      await click(...street);
+      const sideBtn = [...document.querySelectorAll("#r-sides button")]
+        .find(b => ["Both sides", "None"].includes(b.textContent)
+                && !b.className.includes("on"));
+      if (sideBtn) sideBtn.click();
+      await testPause(300);
+      say("street: armed with an unsaved choice", walkDirty());
+      say("street: blocked dialogs refuse rather than lock", walkDirty() && walkEdit.mayLeave() === false);
+      walkPending = { block: null, road: null, was: null, wasBlock: null };
+
+      // house: pick one, nudge it
+      if (house) {
+        document.getElementById("movetoggle").click(); await testPause(400);
+        const c = ringCentre(placedRing(houseB));
+        view.s = 7; view.ox = W/2 - c[0]*view.s; view.oy = H/2 - c[1]*view.s; draw();
+        await click(sx(c[0]), sy(c[1]));
+        const a = houseNow(houseB);
+        houseEdit.set({ dx: a.dx + 2, dy: a.dy, turn: a.turn });
+        await testPause(300);
+        say("house: armed with an unsaved move", houseEdit.dirty());
+        say("house: blocked dialogs refuse rather than lock",
+            houseEdit.dirty() && houseEdit.mayLeave() === false);
+        houseEdit.pending = null;
+        document.getElementById("movetoggle").click(); await testPause(400);
+      }
+
+      // lot: mark one dirty the way the form does
+      const wasDirtyOn = dirtyOn;
+      dirtyOn = 1;
+      say("lot: armed with unsaved changes", lotEdit.dirty());
+      say("lot: blocked dialogs refuse rather than lock", lotEdit.mayLeave() === false);
+      dirtyOn = wasDirtyOn;
+    } finally { window.confirm = realConfirm; }
+
+    // The point of the refactor, asserted rather than assumed: all three come from the one
+    // factory, so a fix to the leave rule cannot land on two panels out of three again.
+    const shared = [walkEdit, houseEdit, lotEdit];
+    say("all three panels come from one editor",
+        shared.every(ed => ed.builtBy === "makeEditor"),
+        shared.map(ed => ed.name + (ed.builtBy === "makeEditor" ? "" : " NOT SHARED")).join(", "));
+
+    // ---- the toolbar ---------------------------------------------------------------------
+    const tLots = document.getElementById("tool-lots"), tHouse = document.getElementById("movetoggle");
+    say("exactly one tool is lit",
+        [tLots, tHouse].filter(b => b.classList.contains("on")).length === 1,
+        [tLots, tHouse].map(b => b.textContent + (b.classList.contains("on") ? "*" : "")).join(" / "));
+    tLots.click(); await testPause(400);
+    say("pressing the lit tool changes nothing", !houseMode && tLots.classList.contains("on"));
 
     say("nothing threw", errs.length === 0, errs.join(" | "));
   } catch (e) {
