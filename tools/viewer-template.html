@@ -653,7 +653,7 @@ function dissolveEdges(polys, eps = 0.5) {
 // sides through the middle of town and nothing out at the edges - but saying so one block at a
 // time is 137 clicks. The road ruling is the street's default and a block ruling overrides it, so
 // most streets are one click and a couple of exceptions.
-let WALKS = { roads: {}, blocks: {} };
+let WALKS = { roads: {}, blocks: {}, was: {} };
 let BLOCKS = [];
 let roadSel = null;
 let blockSel = null;
@@ -665,8 +665,9 @@ let blockSel = null;
 //
 // null means "no change pending"; a string - including the empty one, which clears a ruling - is
 // a choice waiting to be saved.
-let walkPending = { block: null, road: null };
-const walkDirty = () => walkPending.block !== null || walkPending.road !== null;
+let walkPending = { block: null, road: null, was: null };
+const walkDirty = () =>
+  walkPending.block !== null || walkPending.road !== null || walkPending.was !== null;
 
 /// What is laid on this block: its own ruling if it has one, else its street's.
 function walkOn(roadName, blk) {
@@ -691,7 +692,7 @@ async function loadWalks() {
     const r = await fetch("/__walks", { cache: "no-store" });
     if (r.ok) {
       const j = await r.json();
-      WALKS = { roads: j.roads || {}, blocks: j.blocks || {} };
+      WALKS = { roads: j.roads || {}, blocks: j.blocks || {}, was: j.was || {} };
     }
     const b = await fetch("/__blocks", { cache: "no-store" });
     if (b.ok) BLOCKS = await b.json();
@@ -801,6 +802,43 @@ function showRoad(rd) {
   };
 
   box.style.display = "block";
+
+  // WAS IT THERE AT ALL, asked first, because it makes every other question about the street
+  // moot. Same act as ruling a lot absent: roads.txt is the county's network as it stands TODAY,
+  // and a street cut through in 1998 has no business on a map of 1991.
+  {
+    const shownWas = walkPending.was !== null ? walkPending.was : (WALKS.was[rd.n] || "");
+    const head = document.createElement("p");
+    head.className = "eyebrow";
+    head.style.margin = "2px 0 5px";
+    head.textContent = "Was this street here in 1991?";
+    box.appendChild(head);
+
+    const line = document.createElement("div");
+    line.style.cssText = "display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px";
+    for (const [value, text] of [["built", "Yes"], ["absent", "No — take it off the map"]]) {
+      const b = document.createElement("button");
+      b.className = "w" + (shownWas === value ? " on" : "");
+      b.textContent = text;
+      b.onclick = () => { walkPending.was = shownWas === value ? "" : value; showRoad(rd); };
+      line.appendChild(b);
+    }
+    box.appendChild(line);
+
+    // A street that was not there cannot have had a sidewalk, so there is nothing more to ask.
+    if (shownWas === "absent") {
+      const note = document.createElement("p");
+      note.className = "note";
+      note.style.margin = "0 0 4px";
+      note.textContent = "Taken off the map: not drawn, not driven, not walked. "
+                       + "Its blocks and any sidewalk ruling on them are left alone in the file, "
+                       + "so putting it back restores them.";
+      box.appendChild(note);
+      finishRoadPanel(rd);
+      return;
+    }
+  }
+
   if (blockSel) {
     const key = rd.n + "|" + blockSel.from + "|" + blockSel.to;
     const nice = (w) => w === "end" ? "the end" : w;
@@ -814,9 +852,16 @@ function showRoad(rd) {
   rowFor(`The whole of ${rd.n}` + (blockSel ? " — the default" : ""),
          shownRoad, side => { walkPending.road = side; showRoad(rd); });
 
+  finishRoadPanel(rd);
+}
+
+/// The Save/Cancel state and the status line, shared by both ways out of showRoad - a street
+/// ruled off the map stops before the sidewalk rows and still needs its Save button.
+function finishRoadPanel(rd) {
   const here = walkOn(rd.n, blockSel);
   const ruledBlocks = blocksOf(rd.n)
     .filter(b => WALKS.blocks[rd.n + "|" + b.from + "|" + b.to]).length;
+  const gone = (walkPending.was !== null ? walkPending.was : (WALKS.was[rd.n] || "")) === "absent";
 
   const saveBtn = document.getElementById("r-save");
   saveBtn.disabled = !walkDirty();
@@ -827,6 +872,9 @@ function showRoad(rd) {
   if (walkDirty()) {
     res.textContent = "not saved yet — press Save";
     res.style.color = "var(--editing)";
+  } else if (gone) {
+    res.textContent = "not in 1991";
+    res.style.color = "var(--muted)";
   } else {
     res.textContent = (here ? "this block: " + here : "not ruled yet")
       + `  ·  ${blocksOf(rd.n).length} blocks`
@@ -857,6 +905,18 @@ async function postWalk(name, side, blk) {
   return j;
 }
 
+async function postWas(name, was) {
+  const r = await fetch("/__walk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ road: name, was: was }),
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "refused");
+  if (was) WALKS.was[name] = was; else delete WALKS.was[name];
+  return j;
+}
+
 /// Both scopes at once, and only what actually changed. Nothing has reached the disk before this.
 async function commitWalk() {
   if (!roadSel || !walkDirty()) return;
@@ -864,10 +924,11 @@ async function commitWalk() {
   const road = roadSel, blk = blockSel;
   try {
     let last = null;
+    if (walkPending.was !== null) last = await postWas(road.n, walkPending.was);
     if (walkPending.block !== null && blk) last = await postWalk(road.n, walkPending.block, blk);
     if (walkPending.road !== null) last = await postWalk(road.n, walkPending.road, null);
 
-    walkPending = { block: null, road: null };
+    walkPending = { block: null, road: null, was: null };
     showRoad(road);
     res.textContent = "saved " + new Date().toTimeString().slice(0, 8)
                     + (last ? `  ·  ${last.roads} streets, ${last.blocks} blocks` : "");
@@ -879,7 +940,7 @@ async function commitWalk() {
 }
 
 function cancelWalk() {
-  walkPending = { block: null, road: null };
+  walkPending = { block: null, road: null, was: null };
   if (roadSel) showRoad(roadSel);
 }
 
@@ -890,7 +951,7 @@ function walkMayLeave() {
   const go = confirm(
     (roadSel ? roadSel.n : "This street") + " has an unsaved sidewalk choice.\n\n"
     + "OK to discard it and move on, or Cancel to go back and press Save.");
-  if (go) walkPending = { block: null, road: null };
+  if (go) walkPending = { block: null, road: null, was: null };
   return go;
 }
 

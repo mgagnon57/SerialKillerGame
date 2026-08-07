@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 
@@ -32,7 +33,9 @@ namespace Noir.Unity
         /// rulings file and safe with no parcels file: both leave the layout alone.</summary>
         public static int Apply(VillageLayout layout)
         {
-            if (layout == null || Rulings.Count == 0) return 0;
+            if (layout == null) return 0;
+            TakeAwayRoads(layout);
+            if (Rulings.Count == 0) return 0;
 
             int gone = 0;
             layout.Places.RemoveAll(place =>
@@ -58,6 +61,29 @@ namespace Noir.Unity
                 Debug.Log($"[1991] {gone} buildings taken down - they stand on lots ruled "
                         + "absent or vacant. Change the ruling in the browser map to get them back.");
             return gone;
+        }
+
+        /// <summary>
+        /// The roads that were not there in 1991, taken off the map.
+        ///
+        /// The same act as ruling a lot absent and for the same reason: Content/roads.txt is the
+        /// county's network as it stands TODAY, and a street cut through in 1998 has no business
+        /// on a map of 1991. An absent road stops being drawn, stops being driven and stops being
+        /// walked, because it is removed from the layout before the world is built at all - so
+        /// nothing downstream has to know the ruling exists.
+        ///
+        /// Whole roads only. A road that was HALF built in 1991 is a block-level question and the
+        /// file has the shape for it; splitting a run at a block boundary is a different job and
+        /// is not pretended at here.
+        /// </summary>
+        private static void TakeAwayRoads(VillageLayout layout)
+        {
+            int gone = layout.Roads.RemoveAll(run => !RoadRulings.Existed(run.Name));
+            if (gone == 0) return;
+
+            var named = new List<string>(RoadRulings.Gone);
+            Debug.Log($"[1991] {gone} road line(s) taken off the map - "
+                    + string.Join(", ", named) + " did not exist in 1991.");
         }
     }
 }

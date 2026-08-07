@@ -47,6 +47,42 @@ namespace Noir.Unity
         /// than the day somebody notices the game ignoring it.</summary>
         public static readonly string[] KnownVerbs = { "road", "block" };
 
+        /// <summary>
+        /// Whether the road was there at all. The same act as ruling a lot absent, and it means
+        /// the same thing: the survey is TODAY'S network, and a street cut through in 1998 has no
+        /// business on a map of 1991. An absent road is not drawn, not driven and not walked.
+        ///
+        /// <see cref="Unknown"/> is the default and means nobody has said, which is taken as "it
+        /// was there" - the survey is right far more often than it is wrong, and making every
+        /// unruled road vanish would empty the town.
+        /// </summary>
+        public enum Stood { Unknown, Built, Absent }
+
+        private static Dictionary<string, Stood> _wasRoad;
+
+        /// <summary>Whether this road existed in 1991. Only a road ruled ABSENT is false.</summary>
+        public static bool Existed(string road)
+        {
+            Load();
+            return !(_wasRoad.TryGetValue(road, out var s) && s == Stood.Absent);
+        }
+
+        /// <summary>Every road ruled out of 1991, by name.</summary>
+        public static IEnumerable<string> Gone
+        {
+            get
+            {
+                Load();
+                foreach (var kv in _wasRoad) if (kv.Value == Stood.Absent) yield return kv.Key;
+            }
+        }
+
+        public static Stood WasThere(string road)
+        {
+            Load();
+            return _wasRoad.TryGetValue(road, out var s) ? s : Stood.Unknown;
+        }
+
         private static Dictionary<string, Walk> _byRoad;
         private static Dictionary<string, Walk> _byBlock;      // "road|from|to"
         private static List<Block> _blocks;
@@ -98,6 +134,7 @@ namespace Noir.Unity
             _stamp = written;
             _byRoad = new Dictionary<string, Walk>();
             _byBlock = new Dictionary<string, Walk>();
+            _wasRoad = new Dictionary<string, Stood>();
 
             string text;
             try { text = ContentLoader.Read(FileName); }
@@ -109,7 +146,12 @@ namespace Noir.Unity
                 if (line.Length == 0 || line[0] == '#') continue;
                 var p = line.Split(' ');
 
-                if (p.Length == 4 && p[0] == "road" && p[2] == "walk")
+                if (p.Length == 4 && p[0] == "road" && p[2] == "was")
+                {
+                    if (p[3] == "absent") _wasRoad[p[1]] = Stood.Absent;
+                    else if (p[3] == "built") _wasRoad[p[1]] = Stood.Built;
+                }
+                else if (p.Length == 4 && p[0] == "road" && p[2] == "walk")
                 {
                     var w = WalkOf(p[3]);
                     if (w != Walk.Unruled) _byRoad[p[1]] = w;

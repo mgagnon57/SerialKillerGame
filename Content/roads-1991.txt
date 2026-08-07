@@ -73,3 +73,8 @@ road alley8 walk none
 road alley9 walk none
 road ann walk none
 road watson walk none
+
+#  ---- blocks that differ from their street ----
+block attica chicago alley2 walk both
+block chicago attica park walk both
+block chicago benton attica walk both

@@ -157,6 +157,11 @@ BLOCKS = os.path.join(HERE, "..", "Content", "road-blocks.txt")
 
 WALK_SIDES = {"none", "both", "north", "south", "east", "west"}
 
+# Whether the road was there at all - the same act as ruling a lot absent, and for the same
+# reason: roads.txt is the county's network as it stands TODAY, and a street cut through in 1998
+# has no business on a map of 1991.
+WAS_VALUES = {"built", "absent"}
+
 WALK_HEADER = """# ============================================================================
 #  WHERE THE SIDEWALKS WERE - THE OWNER'S OWN RULING
 #
@@ -207,7 +212,7 @@ def read_walks():
     TWO SCOPES, because a walk in Rossville is a property of a BLOCK and saying so one block at a
     time would be 137 clicks. The road line is the default for the whole street; a block line
     overrides it for that block. Most streets are one click and a couple of exceptions."""
-    out = {"roads": {}, "blocks": {}}
+    out = {"roads": {}, "blocks": {}, "was": {}}
     try:
         with open(WALKS, encoding="utf-8") as fh:
             for line in fh:
@@ -217,6 +222,8 @@ def read_walks():
                 p = line.split()
                 if len(p) == 4 and p[0] == "road" and p[2] == "walk" and p[3] in WALK_SIDES:
                     out["roads"][p[1]] = p[3]
+                elif len(p) == 4 and p[0] == "road" and p[2] == "was" and p[3] in WAS_VALUES:
+                    out["was"][p[1]] = p[3]
                 elif len(p) == 6 and p[0] == "block" and p[4] == "walk" and p[5] in WALK_SIDES:
                     out["blocks"][f"{p[1]}|{p[2]}|{p[3]}"] = p[5]
     except OSError:
@@ -226,6 +233,16 @@ def read_walks():
 
 def write_walks(w):
     lines = [WALK_HEADER]
+
+    # The roads that were not there at all come first: it is the bigger statement, and a street
+    # ruled absent makes every other ruling about it moot.
+    if w.get("was"):
+        lines.append("#  ---- roads that did not exist in 1991 ----")
+        for name in sorted(w["was"]):
+            if w["was"][name] in WAS_VALUES:
+                lines.append(f"road {name} was {w['was'][name]}")
+        lines.append("")
+
     for name in sorted(w.get("roads", {})):
         if w["roads"][name] in WALK_SIDES:
             lines.append(f"road {name} walk {w['roads'][name]}")
@@ -366,10 +383,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             data = json.loads(self.rfile.read(n) or b"{}")
             road = str(data["road"]).strip()
             side = str(data.get("walk", "")).strip()
+            was = str(data.get("was", "")).strip()
             if not road:
                 raise ValueError("no road named")
             if side and side not in WALK_SIDES:
                 raise ValueError(f"unknown side {side!r}")
+            if was and was not in WAS_VALUES:
+                raise ValueError(f"unknown verdict {was!r}")
         except Exception as e:
             self._json({"ok": False, "error": str(e)}, 400)
             return
@@ -378,6 +398,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         to = str(data.get("to", "")).strip()
 
         w = read_walks()
+
+        # "was" arrives on its own - it is a statement about the road, not about a block of it.
+        if "was" in data:
+            if was:
+                w["was"][road] = was
+            else:
+                w["was"].pop(road, None)
+            write_walks(w)
+            print(f"  [walk] {road} was -> {was or 'unruled'}")
+            self._json({"ok": True, "roads": len(w["roads"]), "blocks": len(w["blocks"]),
+                        "gone": len([k for k, v in w["was"].items() if v == 'absent'])})
+            return
+
         if frm and to:
             key = f"{road}|{frm}|{to}"
             if side:
@@ -394,8 +427,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         write_walks(w)
         print(f"  [walk] {what} -> {side or 'unruled'}")
-        self._json({"ok": True,
-                    "roads": len(w["roads"]), "blocks": len(w["blocks"])})
+        self._json({"ok": True, "roads": len(w["roads"]), "blocks": len(w["blocks"]),
+                    "gone": len([k for k, v in w["was"].items() if v == 'absent'])})
 
     def do_GET(self):
         if self.path.startswith("/__blocks"):
