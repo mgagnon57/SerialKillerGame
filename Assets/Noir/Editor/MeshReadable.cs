@@ -58,13 +58,35 @@ namespace Noir.Editor
                 CityGreenery.Build(world, probe.transform);
 
                 // Which model asset each placed mesh came from.
+                //
+                // BOTH RENDERER TYPES. This walked MeshFilter alone, which is the same omission as
+                // the four missing builders above, one level deeper: a SKINNED mesh has no
+                // MeshFilter at all - it hangs off SkinnedMeshRenderer.sharedMesh - so every
+                // skinned model this town places was invisible to the tool whose whole job is
+                // finding models that need Read/Write.
                 var models = new SortedSet<string>(StringComparer.Ordinal);
+
                 foreach (var f in probe.GetComponentsInChildren<MeshFilter>())
                 {
                     if (f.sharedMesh == null) continue;
                     string path = AssetDatabase.GetAssetPath(f.sharedMesh);
                     if (!string.IsNullOrEmpty(path)) models.Add(path);
                 }
+
+                foreach (var s in probe.GetComponentsInChildren<SkinnedMeshRenderer>())
+                {
+                    if (s.sharedMesh == null) continue;
+                    string path = AssetDatabase.GetAssetPath(s.sharedMesh);
+                    if (!string.IsNullOrEmpty(path)) models.Add(path);
+                }
+
+                // STILL A GAP, AND IT IS THE PEOPLE. The probe above builds what the CITY places;
+                // the 763 figures are placed by AgentMeshView from VillageHost, which needs a
+                // generated population and so is not built here. On 2026-08-07 a PlayMode run that
+                // forced the people layer up logged 1,390 "isReadable is false" errors against
+                // boy-*, girl-* and man-* meshes - which is very likely why nobody's legs move.
+                // Fixing it means giving this probe a population, or reading the figure prefabs
+                // directly. Logged rather than guessed at.
 
                 Debug.Log($"[readable] the city places meshes from {models.Count} model assets.");
 

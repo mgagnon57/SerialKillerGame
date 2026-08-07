@@ -99,18 +99,27 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, first ever recorded, 2026-08-07: 8 tests, 4 pass, 4 fail, 1 min 42 s.**
+> **BASELINE, first ever recorded, 2026-08-07: 8 tests, 5 pass, 3 fail, ~2 min.**
+> Four runs. Do not quote a single number without reading the next paragraph.
 >
-> Passing: `ThePlayerCanStandInTheStreet`, `NoJunctionEverShowsGreenBothWays`,
+> **Always passing (4):** `TheCityComesUpAndRuns`, `NoJunctionEverShowsGreenBothWays`,
 > `NoTwoVehiclesOccupyTheSameSpace`, `NoVehicleEverLeavesTheRoad`.
-> Failing: `TheCityComesUpAndRuns` ("the clock did not advance"),
-> `TrafficMovesAndStopsAtRedLights` (movement 0.0), `NoCarWaitsForeverAtTheHeadOfAClearQueue`
-> (120 s waits), `WhyAreThePeopleNotAnimating` (no `AgentMeshView`).
 >
-> **The first three are probably ONE bug**: the sim clock sits at exactly 720 — `VillageHost`'s
-> `startMinuteOfDay` — after a full ten-second wait, so it has never ticked. Nothing moves because
-> nothing is running. Not yet root-caused; the tick budget (`SimBudgetMs = 6`, `TickChunk = 8`)
-> and `Time.unscaledDeltaTime` in batch mode are where to look.
+> **Always failing (2), and they are the real bug:** `TrafficMovesAndStopsAtRedLights`
+> (total distance travelled = **0.0**) and `NoCarWaitsForeverAtTheHeadOfAClearQueue` (120 s at a
+> clear queue). Vehicles exist — `TheCityComesUpAndRuns` asserts that and passes — and the clock
+> now runs, but nothing drives. `CityTraffic` accumulates `Time.deltaTime` into 1/30 s slices;
+> start there.
+>
+> **FLAKY (2):** `ThePlayerCanStandInTheStreet` and `WhyAreThePeopleNotAnimating` swap between
+> pass and fail **on identical code**. Two runs of the same commit gave the opposite pair. The
+> player one fails as "fell through the world — ended at y=1.94 with the ground at 3.90", which is
+> a timing race on the collision shell, not a wrong number. **Do not treat either as a signal
+> until they are made deterministic.**
+>
+> **Fixed to get here:** `BootScreen` was holding the clock — it sets `SpeedIndex = 0` and lifts
+> only after twelve straight sub-25 ms frames or 45 s, and a batch build's first frame alone takes
+> 16 s. Three failures were that one stopped clock reported three ways.
 
 **There are 14 tests, not the 13 every document claims.** Six are diagnostics wearing a test's
 clothes — three of them call `Assert.Pass()`, and `Tour`/`FilmStrip`/`LayerProof` assert only that

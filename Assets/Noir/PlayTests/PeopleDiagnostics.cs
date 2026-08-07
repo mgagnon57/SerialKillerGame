@@ -28,18 +28,6 @@ namespace Noir.PlayTests
             Time.timeScale = 1f;
             yield return CityUnderTest.WaitUntilBuilt();
             _speedWas = CityUnderTest.Host.SpeedIndex;
-
-            // THE PEOPLE ARE BUILT LAZILY and this is the only test that looks at them, so it is
-            // the only one that has to ask for them. VillageHost registers AgentMeshView through
-            // Layers.RegisterLazy - 763 bought, skinned figures are not built until something
-            // actually wants to draw them - and headless nothing ever does. So this test failed on
-            // "no AgentMeshView - are the people drawn?", which reads like the people are broken
-            // and means only that nobody had asked for them.
-            //
-            // Before the frames below, not after: they need to be walking DURING them for their
-            // animator state to mean anything.
-            Layers.Set(Layers.Kind.People, true);
-            yield return null;
         }
 
         /// <summary>
