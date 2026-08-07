@@ -393,7 +393,10 @@
       <div id="r-saved" class="mono" style="font-size:11.5px;margin-top:7px"></div>
     </div>
 
-    <div id="movemode"><button id="movetoggle" title="M">Move houses</button></div>
+    <div id="movemode">
+      <button id="movetoggle" title="M">Move houses</button>
+      <span id="movesaid" class="mono" style="font-size:11.5px;margin-left:9px;opacity:0;transition:opacity .4s"></span>
+    </div>
 
     <!-- MOVING AND TURNING A HOUSE. Its own panel again, and its own MODE: a click on the map
          already means "the lot" or "the street", and a third meaning on the same click would make
@@ -1323,6 +1326,44 @@ function frontLineFor(b) {
   return { dx: mine.nx * shift, dy: mine.ny * shift, n: setbacks.length, med };
 }
 
+/// One place where a click in house mode is decided, so a press that turned out not to be a drag
+/// behaves exactly like a plain click rather than like a near-miss of one.
+///
+/// CLICKING THE SELECTED HOUSE AGAIN DOES NOTHING, deliberately. Letting go that way was tried
+/// and it is a trap: a press that wobbles two pixels is a click by any threshold, so reaching for
+/// a house to drag it would sometimes drop it instead - and on a tool for nudging things by
+/// inches, "sometimes" is every few minutes. Let go with the ×, by clicking open ground, or by
+/// saving, all three of which are things you can only do on purpose.
+///
+/// A smaller building inside a bigger one is still reachable: pickHouse returns the smallest
+/// footprint containing the point, so a garage drawn inside a house wins the click on its own.
+function houseClickAt(px, py) {
+  const b = pickHouse(px, py);
+  if (!houseMayLeave()) return;
+  if (b) { if (b !== houseSel) showHouse(b); return; }
+  letGoOfHouse();
+}
+
+function letGoOfHouse() {
+  houseSel = null;
+  housePending = null;
+  document.getElementById("housepanel").classList.remove("on");
+  draw();
+}
+
+/// What was saved, said where it can still be read after the panel has closed. Saving lets go of
+/// the house - the owner asked for that - and a confirmation inside a panel that is on its way out
+/// is a confirmation nobody sees.
+function saidNearTheButton(text, colour) {
+  const host = document.getElementById("movesaid");
+  if (!host) return;
+  host.textContent = text;
+  host.style.color = colour;
+  host.style.opacity = "1";
+  clearTimeout(saidNearTheButton._t);
+  saidNearTheButton._t = setTimeout(() => { host.style.opacity = "0"; }, 6000);
+}
+
 async function commitHouse() {
   if (!houseSel || !houseDirty()) return;
   const said = document.getElementById("h-saved");
@@ -1337,9 +1378,15 @@ async function commitHouse() {
     if (j.moved) PLACES[houseKey(b)] = { dx: a.dx, dy: a.dy, turn: a.turn };
     else delete PLACES[houseKey(b)];
     housePending = null;
-    showHouse(b);
-    said.textContent = `saved ${new Date().toTimeString().slice(0, 8)}  ·  ${j.count} moved`;
-    said.style.color = "var(--agri)";
+
+    // SAVING LETS GO OF THE HOUSE. It used to stay selected and its panel stayed open, so the next
+    // house was not one click away - and worse, a press on the one still selected was read as a
+    // drag, so clicking it again did nothing at all.
+    const what = b.addr || ("lot " + b.p);
+    letGoOfHouse();
+    saidNearTheButton(
+      (j.moved ? `Saved ${what} — ${j.count} moved in all` : `${what} put back where the survey had it`),
+      "var(--agri)");
     loadPlaces();
   } catch (e) {
     said.textContent = "NOT SAVED — " + e.message;
@@ -2453,10 +2500,7 @@ document.getElementById("movetoggle").onclick = () => {
   document.getElementById("movetoggle").classList.toggle("on", houseMode);
   document.getElementById("movetoggle").textContent =
     houseMode ? "Move houses — on" : "Move houses";
-  if (!houseMode) {
-    houseSel = null; housePending = null;
-    document.getElementById("housepanel").classList.remove("on");
-  }
+  if (!houseMode) letGoOfHouse();
   draw();
 };
 addEventListener("keydown", e => {
@@ -2468,9 +2512,7 @@ addEventListener("keydown", e => {
 
 document.getElementById("h-close").onclick = () => {
   if (!houseMayLeave()) return;
-  houseSel = null;
-  document.getElementById("housepanel").classList.remove("on");
-  draw();
+  letGoOfHouse();
 };
 document.getElementById("h-turn-l").onclick = () => nudge(0, 0, +1);
 document.getElementById("h-turn-r").onclick = () => nudge(0, 0, -1);
@@ -2571,7 +2613,12 @@ cv.addEventListener("pointerdown", e => {
     const hit = pickHouse(e.clientX - r.left, e.clientY - r.top);
     if (hit === houseSel) {
       const a = houseNow(houseSel);
-      houseDrag = { x: wx(e.clientX - r.left), y: wy(e.clientY - r.top), dx: a.dx, dy: a.dy };
+      // `was` and `moved` are what let a PRESS still be a click. Without them every press that
+      // landed on the selected house was a drag, so clicking it again did nothing whatsoever -
+      // you could not let go of a house, and you could not reach a smaller one sitting inside it.
+      houseDrag = { x: wx(e.clientX - r.left), y: wy(e.clientY - r.top),
+                    dx: a.dx, dy: a.dy, was: housePending, moved: false,
+                    px: e.clientX, py: e.clientY };
       cv.setPointerCapture(e.pointerId);
       return;
     }
@@ -2582,6 +2629,13 @@ cv.addEventListener("pointerdown", e => {
 cv.addEventListener("pointermove", e => {
   const r = cv.getBoundingClientRect();
   if (houseDrag) {
+    // Three pixels of slack before anything moves. A mouse always shifts a little between press
+    // and release, and without this every attempt to click a house nudged it by a few inches -
+    // which is the one thing a tool for aligning houses must not do by accident.
+    if (!houseDrag.moved
+        && Math.abs(e.clientX - houseDrag.px) + Math.abs(e.clientY - houseDrag.py) <= 3) return;
+    houseDrag.moved = true;
+
     const a = houseNow(houseSel);
     housePending = {
       dx: houseDrag.dx + (wx(e.clientX - r.left) - houseDrag.x),
@@ -2604,11 +2658,17 @@ cv.addEventListener("pointermove", e => {
 cv.addEventListener("pointerup", e => {
   const r = cv.getBoundingClientRect();
 
-  // A HOUSE BEING DRAGGED OWNS THE GESTURE. Checked before the click handling below, or letting
-  // go after a drag would also read as a click and select whatever is underneath.
+  // A HOUSE THAT WAS ACTUALLY DRAGGED OWNS THE GESTURE, or letting go after a drag would also
+  // read as a click and select whatever is underneath. A press that never moved is a CLICK and
+  // falls through to the handling below - see the note on houseDrag.moved.
   if (houseDrag) {
+    const dragged = houseDrag.moved;
+    if (!dragged) housePending = houseDrag.was;      // a click is not an edit
     houseDrag = null;
-    drag = null; cv.classList.remove("drag");
+    cv.classList.remove("drag");
+    if (dragged) { drag = null; return; }
+    houseClickAt(e.clientX - r.left, e.clientY - r.top);
+    drag = null;
     return;
   }
 
@@ -2616,13 +2676,7 @@ cv.addEventListener("pointerup", e => {
     // WHILE THE TOOL IS ON, A CLICK MEANS A HOUSE. Lots and streets keep their meaning the moment
     // it is switched off again, which is why this is a mode rather than a modifier key.
     if (houseMode) {
-      const b = pickHouse(e.clientX - r.left, e.clientY - r.top);
-      if (b) { if (houseMayLeave()) showHouse(b); }
-      else if (houseMayLeave()) {
-        houseSel = null;
-        document.getElementById("housepanel").classList.remove("on");
-        draw();
-      }
+      houseClickAt(e.clientX - r.left, e.clientY - r.top);
       drag = null; cv.classList.remove("drag");
       return;
     }
