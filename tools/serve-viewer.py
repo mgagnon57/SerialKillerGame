@@ -431,6 +431,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "gone": len([k for k, v in w["was"].items() if v == 'absent'])})
 
     def do_GET(self):
+        if self.path.startswith("/__game"):
+            # WHAT THE GAME DID WITH EACH RULING, written by the survey passes themselves - see
+            # SurveyReport. Absent until the game has been run once, which is honest: nothing can
+            # be said about what it did before it did it.
+            try:
+                with open(os.path.join(HERE, "game-verdict.json"), encoding="utf-8") as fh:
+                    self._json(json.load(fh))
+            except Exception:
+                self._json({"when": None, "lots": []})
+            return
         if self.path.startswith("/__blocks"):
             # DERIVED, and served rather than baked into the page: re-running
             # build-road-blocks.py after a re-survey should change what the browser offers
@@ -489,7 +499,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         # "verified" because the happy path answered, and caught by reading the server's own log.
         text = " ".join(str(a) for a in args)
         if ("__version" in text or "__verdicts" in text
-                or "__walks" in text or "__blocks" in text):
+                or "__walks" in text or "__blocks" in text or "__game" in text):
             return                       # a poll every two seconds would bury everything else
         super().log_message(fmt, *args)
 

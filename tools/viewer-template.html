@@ -269,6 +269,7 @@
       <label class="row"><input type="checkbox" id="l-flag" /><span class="swatch" style="background:var(--vanished)"></span>Where the two sources differ <span class="mono ct" data-ct="disagree_total" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-absent" style="display:none"><input type="checkbox" id="l-absent" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show lots I removed <span class="mono" id="ct-absent" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-1991" style="display:none"><input type="checkbox" id="l-1991" checked /><span class="swatch" style="background:var(--was-built)"></span>What I said was here in 1991 <span class="mono" id="ct-1991" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row" id="row-game" style="display:none"><input type="checkbox" id="l-game" checked /><span class="swatch" style="background:var(--flag)"></span>What the game could not build <span class="mono" id="ct-game" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-addr" /><span class="swatch" style="background:transparent;border-style:dashed"></span>Addresses <span class="mono" style="color:var(--muted);font-size:11px">(zoom in)</span></label>
     </div>
 
@@ -322,6 +323,9 @@
       <div class="pin mono" id="d-pin">—</div>
       <div id="d-flag" class="note" style="display:none;margin-top:10px;padding:8px 10px;
            background:var(--sunk);border-left:3px solid var(--vanished);border-radius:4px"></div>
+      <!-- WHAT THE GAME DID WITH THIS LOT, last time it ran. See SurveyReport. -->
+      <div id="d-game" class="note" style="display:none;margin-top:10px;padding:8px 10px;
+           background:var(--sunk);border-left:3px solid var(--flag);border-radius:4px"></div>
       <div id="d-1991" style="display:none;margin-top:12px">
         <p class="eyebrow" style="margin:0 0 6px">What stood here in 1991?</p>
         <div style="display:flex;gap:5px">
@@ -686,6 +690,34 @@ const WALK_CHOICES = [
   ["east", "East side"], ["west", "West side"],
 ];
 
+// ---- what the game did with it -----------------------------------------------------------
+//
+// The map is the source, but not every ruling can be obeyed: the game refuses a building that
+// would stand in a road, one that would overlap a neighbour, one on ground ruled to be something
+// that is not a building. From here those were indistinguishable from the ones that worked -
+// rule a lot, no house appears, no symptom anywhere. The survey passes write down what they
+// decided and this reads it back.
+let VERDICT = {};        // parcel id -> { b: built?, w: why }
+let VERDICT_WHEN = null;
+
+async function loadVerdictFromGame() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__game", { cache: "no-store" });
+    if (!r.ok) return;
+    const j = await r.json();
+    VERDICT = {};
+    for (const row of (j.lots || [])) VERDICT[row.p] = { b: row.b, w: row.w };
+    VERDICT_WHEN = j.when;
+
+    const row = document.getElementById("row-game");
+    if (row) row.style.display = Object.keys(VERDICT).length ? "flex" : "none";
+    const ct = document.getElementById("ct-game");
+    if (ct) ct.textContent = Object.values(VERDICT).filter(v => !v.b).length + " refused";
+    draw();
+  } catch (e) { /* the game has not run yet */ }
+}
+
 async function loadWalks() {
   if (!LIVE) return;
   try {
@@ -958,6 +990,29 @@ function walkMayLeave() {
 /// The walk itself, drawn where it would be laid: out at the right-of-way edge rather than
 /// against the kerb, because that is the side of the verge a walk actually sits on and it is
 /// what the easement was measured for.
+/// The lots the game could not build on, crossed out where they are. A lot the owner ruled and
+/// the game refused looks exactly like one it obeyed until something draws the difference.
+function drawGameVerdict() {
+  if (!on("l-game")) return;
+  const s = view.s;
+  ctx.save();
+  ctx.strokeStyle = css("--flag");
+  ctx.lineWidth = Math.max(1, 1.4 * s);
+  for (const [id, v] of Object.entries(VERDICT)) {
+    if (v.b) continue;
+    const ring = DATA.parcels[+id];
+    if (!ring) continue;
+    const b = pBox[+id];
+    ctx.beginPath();
+    ctx.moveTo(sx(b[0]), sy(b[1]));
+    ctx.lineTo(sx(b[2]), sy(b[3]));
+    ctx.moveTo(sx(b[0]), sy(b[3]));
+    ctx.lineTo(sx(b[2]), sy(b[1]));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawWalks() {
   if (!DATA.newroads) return;
 
@@ -1131,6 +1186,7 @@ function draw() {
     if (on("l-newroad")) drawNet(false, "--newroad", false);
     if (on("l-alleyline")) drawNet(true, "--alleyline", true);
     drawWalks();
+    drawGameVerdict();
   }
 
   if (on("l-lot")) {
@@ -1405,6 +1461,21 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
   }
   sel = i;
   document.getElementById("roadpanel").classList.remove("on"); roadSel = null;
+
+  // What the game made of this lot when it last ran. Shown for every lot it reported on, not
+  // only the refusals: "raised from the survey" is the answer to "did my ruling arrive".
+  {
+    const g = document.getElementById("d-game");
+    const v = VERDICT[i];
+    if (!v) {
+      g.style.display = "none";
+    } else {
+      g.style.display = "block";
+      g.style.borderLeftColor = v.b ? "var(--agri)" : "var(--flag)";
+      g.innerHTML = (v.b ? "The game built here: " : "<b>The game did not build here.</b> ")
+                  + v.w + (VERDICT_WHEN ? `<br><span class="mono">last run ${VERDICT_WHEN}</span>` : "");
+    }
+  }
   const prop = propertyOf(i);
   const many = prop.ids.length > 1;
 
@@ -1623,7 +1694,7 @@ document.getElementById("send-go").onclick = async () => {
          ? "<br><b style='color:var(--flag)'>" + j.problems.join("<br>") + "</b>"
          : "");
     said.style.color = j.ok ? "var(--agri)" : "var(--ink)";
-    loadVerdicts(); loadWalks();
+    loadVerdicts(); loadWalks(); loadVerdictFromGame();
   } catch (e) {
     said.textContent = "NOT SENT — " + e.message;
     said.style.color = "var(--flag)";
@@ -1962,7 +2033,7 @@ document.getElementById("s-alleynote").innerHTML =
         // keeps the view where it is. A tool that edits the rulings - merge-back-strips.py -
         // now shows up on an open map within two seconds without disturbing it.
         if (pageNow !== pageWas) { location.reload(); return; }
-        if (rulesNow !== rulesWas) { loadVerdicts(); loadWalks(); }
+        if (rulesNow !== rulesWas) { loadVerdicts(); loadWalks(); loadVerdictFromGame(); }
       }
     } catch (e) {
       misses++;
@@ -1985,4 +2056,5 @@ addEventListener("beforeunload", e => {
 resize(); fitView(); draw();
 loadVerdicts();
 loadWalks();
+loadVerdictFromGame();
 </script>

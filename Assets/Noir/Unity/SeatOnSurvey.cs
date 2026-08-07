@@ -142,6 +142,12 @@ namespace Noir.Unity
                 {
                     taken[mine] = wasClaiming;        // stay put, and keep holding the old ground
                     yielded++;
+
+                    var b = s.Was;
+                    var lot = ParcelIndex.Find(new Vector2(b.X + b.W / 2f, b.Y + b.H / 2f));
+                    if (lot != null)
+                        SurveyReport.Say(lot.Value.Id, true,
+                                         "left where it was - the measured spot was taken");
                     continue;
                 }
 

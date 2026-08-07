@@ -62,18 +62,41 @@ namespace Noir.Unity
                 var primary = ParcelBuildings.PrimaryOf(parcel.Id);
                 if (primary == null || primary.Which != ParcelBuildings.Role.Primary) continue;
 
+                // EVERY REFUSAL IS REPORTED BACK, not just counted. From the browser map a lot the
+                // game declined to build on looks exactly like one it built on - the owner rules
+                // it, no house appears, and there is no symptom anywhere. SurveyReport is how the
+                // map gets to say why.
                 var box = SeatOnSurvey.BoxOf(primary, out var outline);
                 if (box.W < SeatOnSurvey.Smallest || box.H < SeatOnSurvey.Smallest)
-                { tooSmall++; continue; }
+                {
+                    tooSmall++;
+                    SurveyReport.Say(parcel.Id, false, "too small to hold an interior");
+                    continue;
+                }
 
                 bool clash = false;
                 foreach (var t in standing)
                     if (box.Overlaps(t)) { clash = true; break; }
-                if (clash) { tooTight++; continue; }
+                if (clash)
+                {
+                    tooTight++;
+                    SurveyReport.Say(parcel.Id, false, "would overlap what is already there");
+                    continue;
+                }
 
-                if (OnARoad(layout, box)) { onRoad++; continue; }
+                if (OnARoad(layout, box))
+                {
+                    onRoad++;
+                    SurveyReport.Say(parcel.Id, false, "would stand in a road");
+                    continue;
+                }
 
-                if (!KindFor(parcel.Id, primary, kinds, out var kind)) { notABuilding++; continue; }
+                if (!KindFor(parcel.Id, primary, kinds, out var kind))
+                {
+                    notABuilding++;
+                    SurveyReport.Say(parcel.Id, false, "ruled to be something that is not a building");
+                    continue;
+                }
                 var door = DoorFacingTheRoad(layout, box, outline);
                 if (outline != null && !SeatOnSurvey.Covers(outline, door)) outline = null;
 
@@ -98,6 +121,7 @@ namespace Noir.Unity
                 layout.Places.Add(spec);
                 standing.Add(box);
                 built++;
+                SurveyReport.Say(parcel.Id, true, "raised from the survey");
             }
 
             Debug.Log($"[survey] {built} buildings put up from the survey"

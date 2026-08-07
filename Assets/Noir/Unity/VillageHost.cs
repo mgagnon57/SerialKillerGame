@@ -397,6 +397,10 @@ namespace Noir.Unity
                 // explicit that when they disagree with the parcels the parcels win and the
                 // road gets moved. Content/roads.txt is that move, done from survey rather than
                 // by sliding a ruled line sideways. No-ops if the file is not there.
+                // The passes are about to say what they did with each of the owner's rulings, and
+                // the answer is written back where the browser map can read it - see SurveyReport.
+                SurveyReport.Clear();
+
                 SurveyRoads.Apply(layout);
 
                 // The buildings on lots the owner ruled had none in 1991. Same reasoning as the
@@ -412,6 +416,7 @@ namespace Noir.Unity
                 // And the buildings the survey found that the map never had. Last, so it can see
                 // everything already standing and put nothing up on top of it.
                 FillFromSurvey.Apply(layout);
+                SurveyReport.Write();
 
                 World = WorldBuilder.Build(layout);
 

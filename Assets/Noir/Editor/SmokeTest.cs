@@ -44,10 +44,12 @@ namespace Noir.Editor
                 // "the entire village and report what came out" was reporting on a town nobody
                 // plays, and would have passed happily while Rossville was broken.
                 var layout = VillageParser.Parse(ContentLoader.Read(VillageHost.MapFile));
+                SurveyReport.Clear();
                 SurveyRoads.Apply(layout);
                 RuledAway.Apply(layout);
                 SeatOnSurvey.Apply(layout);
                 FillFromSurvey.Apply(layout);
+                SurveyReport.Write();
 
                 var world = WorldBuilder.Build(layout, VillageHost.Seed);
                 Log($"world      {world.Width}x{world.Height}, {world.PlaceCount} places, "

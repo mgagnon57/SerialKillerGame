@@ -54,6 +54,9 @@ namespace Noir.Unity
                 if (was != Rulings.Stood.Absent && was != Rulings.Stood.Vacant) return false;
 
                 gone++;
+                SurveyReport.Say(lot.Value.Id, false,
+                                 was == Rulings.Stood.Absent ? "taken down - no lot here in 1991"
+                                                             : "taken down - the lot was empty");
                 return true;
             });
 
