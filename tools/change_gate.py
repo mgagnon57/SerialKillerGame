@@ -46,7 +46,14 @@ CONTENT = os.path.join(ROOT, "Content")
 #: changed since the page loaded". Git-ignored; losing it costs one extra check, nothing more.
 VERIFIED = os.path.join(HERE, ".verified")
 
-WATCHED = ("roads-1991.txt", "parcel-1991.txt")
+WATCHED = ("roads-1991.txt", "parcel-1991.txt", "placement-1991.txt")
+
+#: verb -> (scope, structural?) for placement-1991.txt. Moving a building changes the overlap test
+#: in SeatOnSurvey and the on-a-road test in FillFromSurvey, and failing either is how a house
+#: quietly does not appear - so a nudge of half a metre is as structural as taking the lot away.
+BUILDING_VERBS = {
+    "move": ("house moved", True),
+}
 
 #: verb -> (scope, structural?). The scope is only for reading back to a human.
 ROAD_VERBS = {
@@ -90,11 +97,18 @@ def _rulings(path):
         elif p[0] == "parcel" and len(p) >= 3:
             out[("parcel", p[1], p[2])] = (p[2], line)
 
+        # placement-1991.txt: building <parcel> <index> move <dx> <dy> turn <deg>
+        #
+        # One key for the whole line rather than one per verb: move and turn are two halves of one
+        # placement, and a house dragged and turned in the same gesture is ONE change to report.
+        elif p[0] == "building" and len(p) >= 4:
+            out[("building", p[1], p[2])] = ("move", line)
+
     return out
 
 
 def _verb_kind(key, verb):
-    table = LOT_VERBS if key[0] == "parcel" else ROAD_VERBS
+    table = {"parcel": LOT_VERBS, "building": BUILDING_VERBS}.get(key[0], ROAD_VERBS)
     return table.get(verb, ("unknown verb %r" % verb, True))   # unknown is structural, on purpose
 
 
@@ -153,6 +167,7 @@ READERS = {
     "was": [r"RoadRulings\.Existed", r"RoadRulings\.AnyBlockGone", r"Rulings\.For", r"Rulings\.Absent"],
     "kind": [r"Rulings\.For"],
     "property": [r"Rulings\.SpokesmanFor", r"Rulings\.OneProperty"],
+    "move": [r"Placements\.For", r"Placements\.Apply"],
 }
 
 

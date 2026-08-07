@@ -160,6 +160,70 @@ BLOCKS = os.path.join(HERE, "..", "Content", "road-blocks.txt")
 
 WALK_SIDES = {"none", "both", "north", "south", "east", "west"}
 
+#: Where the owner has moved or turned a building, over where the survey measured it. An OVERLAY
+#: on Content/parcel-buildings.txt and never an edit to it - see that file's header and
+#: Assets/Noir/Unity/Placements.cs. Keyed "<parcel>|<index>".
+PLACES = os.path.join(HERE, "..", "Content", "placement-1991.txt")
+
+
+def read_places():
+    out = {}
+    try:
+        with open(PLACES, encoding="utf-8") as fh:
+            for line in fh:
+                p = line.split()
+                # building <parcel> <index> move <dx> <dy> turn <deg>  -  eight tokens, not nine
+                if len(p) == 8 and p[0] == "building" and p[3] == "move" and p[6] == "turn":
+                    try:
+                        out["%s|%s" % (p[1], p[2])] = {
+                            "dx": float(p[4]), "dy": float(p[5]), "turn": float(p[7])}
+                    except ValueError:
+                        continue
+    except OSError:
+        pass
+    return out
+
+
+def write_places(places):
+    """Rewrite the overlay from scratch, header and all.
+
+    Sorted by lot then by building so a diff of this file reads as a list of houses rather than as
+    the order somebody happened to click them in.
+    """
+    lines = [_places_header()]
+    for key in sorted(places, key=lambda k: (int(k.split("|")[0]), int(k.split("|")[1]))):
+        v = places[key]
+        pid, idx = key.split("|")
+        lines.append("building %s %s move %+.2f %+.2f turn %+.2f"
+                     % (pid, idx, v["dx"], v["dy"], v["turn"]))
+    body = "\n".join(lines) + "\n"
+
+    tmp = PLACES + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(body)
+    os.replace(tmp, PLACES)          # atomic: a half-written overlay would lose adjustments
+
+
+def _places_header():
+    """Keep whatever header the file already carries, so the explanation in it is never lost to a
+    save. Falls back to a minimal one if the file has been deleted."""
+    try:
+        with open(PLACES, encoding="utf-8") as fh:
+            head = []
+            for line in fh:
+                if line.startswith("#"):
+                    head.append(line.rstrip("\n"))
+                elif line.strip() == "":
+                    continue
+                else:
+                    break
+            if head:
+                return "\n".join(head)
+    except OSError:
+        pass
+    return ("# Where the owner put the building, over where the survey measured it.\n"
+            "#     building <parcelId> <index> move <dx> <dy> turn <degrees>")
+
 # Whether the road was there at all - the same act as ruling a lot absent, and for the same
 # reason: roads.txt is the county's network as it stands TODAY, and a street cut through in 1998
 # has no business on a map of 1991.
@@ -293,6 +357,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith("/__publish"):
             self._publish()
             return
+        if self.path.startswith("/__place"):
+            self._place()
+            return
         if self.path.startswith("/__walk"):
             self._walk()
             return
@@ -413,6 +480,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "baseline": gate["baseline"], "verify": verify,
         })
 
+    def _place(self):
+        """One building moved or turned, saved.
+
+        ALL ZEROES DELETES THE LINE rather than writing three noughts. "Put it back where the
+        survey had it" and "leave it where the survey had it" are the same statement about the
+        world, and the file should not be able to tell them apart - otherwise the overlay slowly
+        fills with rows recording that nothing happened.
+        """
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            data = json.loads(self.rfile.read(n) or b"{}")
+            pid = int(data["parcel"])
+            idx = int(data["index"])
+            dx = float(data.get("dx", 0.0))
+            dy = float(data.get("dy", 0.0))
+            turn = float(data.get("turn", 0.0))
+            if not all(abs(v) < 1e4 for v in (dx, dy)) or abs(turn) > 360.0:
+                raise ValueError("out of range")
+        except Exception as e:
+            self._json({"ok": False, "error": str(e)}, 400)
+            return
+
+        places = read_places()
+        key = "%d|%d" % (pid, idx)
+        moved = abs(dx) > 1e-3 or abs(dy) > 1e-3 or abs(turn) > 1e-3
+        if moved:
+            places[key] = {"dx": dx, "dy": dy, "turn": turn}
+        else:
+            places.pop(key, None)
+        write_places(places)
+
+        print("  [place] lot %d building %d %s"
+              % (pid, idx, ("moved %+.2f %+.2f turned %+.2f" % (dx, dy, turn)) if moved
+                           else "put back where the survey had it"))
+        self._json({"ok": True, "count": len(places), "moved": moved})
+
     def _walk(self):
         """One street's sidewalk, saved. An empty side clears the road back to unruled, which is
         not the same as ruling it `none` - see the header of Content/roads-1991.txt."""
@@ -511,6 +614,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path.startswith("/__walks"):
             self._json(read_walks())
+            return
+        if self.path.startswith("/__places"):
+            self._json(read_places())
             return
         if self.path.startswith("/__verify"):
             # How the check that publish set off is getting on. Polled, because it takes minutes

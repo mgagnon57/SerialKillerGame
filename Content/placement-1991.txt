@@ -1,0 +1,40 @@
+# ============================================================================
+#  WHERE THE OWNER PUT THE BUILDING, OVER WHERE THE SURVEY MEASURED IT
+#
+#  AUTHORED. An overlay on Content/parcel-buildings.txt, never an edit to it.
+#
+#  Those 822 footprints are measurement - polygons off federal imagery, with the
+#  query and the scripts that rebuilt them recorded in that file's own header.
+#  Editing them in place would mean a re-survey silently destroys every
+#  adjustment, and would leave no way to draw where the measurement actually put
+#  the house. So the measurement stays exactly as it is, and this file holds only
+#  the differences.
+#
+#  Written by the browser map (docs/rossville-buildings.html, served by
+#  tools/serve-viewer.py): pick a house, drag it, turn it, press Save.
+#  Hand-editing is fine - the file is read back on the next load.
+#
+#  FORMAT
+#
+#      building <parcelId> <index> move <dx> <dy> turn <degrees>
+#
+#  Metres and degrees, on the same grid as the shapes in parcel-buildings.txt.
+#  <index> is the building's number on its lot: 0 is the largest, then down.
+#  Turn is about the footprint's own centroid, positive anticlockwise.
+#
+#  NO LINE MEANS UNTOUCHED, which is what makes "put it back" a deletion rather
+#  than a value, and keeps this file the size of what was actually changed rather
+#  than 822 rows of zeroes.
+#
+#  TURN IS APPLIED AFTER THE SQUARING. SeatOnSurvey squares a footprint back to
+#  its lot before seating it - a building two degrees off is more likely badly
+#  traced than genuinely askew - and the owner's turn is a correction to THAT
+#  result, so it has to come last. The browser map squares before it draws for
+#  the same reason: otherwise the two disagree about where the house is and
+#  every adjustment inherits the difference.
+#
+#  Read by Assets/Noir/Unity/Placements.cs. Moving a building changes the
+#  overlap test in SeatOnSurvey and the on-a-road test in FillFromSurvey, either
+#  of which can stop a house appearing - so this counts as a STRUCTURAL change
+#  and sending it runs the game's own check. See tools/change_gate.py.
+# ============================================================================

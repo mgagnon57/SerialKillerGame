@@ -178,7 +178,14 @@ namespace Noir.Unity
         internal static TileRect BoxOf(ParcelBuildings.Entry e, out Tile[] outline)
         {
             outline = null;
-            var ring = e.Squared();
+
+            // SQUARED FIRST, THEN THE OWNER'S ADJUSTMENT, and that order is the whole contract.
+            // Squaring is a correction to the TRACING - a footprint two degrees off is more likely
+            // badly drawn than genuinely askew - and the owner's turn is a correction to the
+            // result. Applied the other way round the squaring would argue with him and a house he
+            // had lined up by eye would come out a couple of degrees off. Placements is an overlay
+            // on the measurement and never an edit to it; see Content/placement-1991.txt.
+            var ring = Placements.Apply(e.Squared(), Placements.For(e.ParcelId, e.Index));
             if (ring == null || ring.Length < 3) return new TileRect(0, 0, 0, 0);
 
             float minX = ring[0].x, maxX = ring[0].x, minY = ring[0].y, maxY = ring[0].y;
