@@ -87,6 +87,19 @@ HEADER = """# ==================================================================
 #                                   one school. Give them the same property name and
 #                                   they are the same property. There is no group id to
 #                                   keep in step - the name IS the grouping.
+#    parcel <id> footprint later    A BUILDING STOOD HERE IN 1991, BUT THE MEASURED SHAPE
+#                                   IS NOT IT. The footprints are 2016 imagery; where a lot
+#                                   has been cleared and rebuilt since, seating that shape
+#                                   puts the wrong decade's building on the right ground.
+#                                   112 S Chicago is the case: a row of antique shops and a
+#                                   restaurant stood there in 1991, burned in Feb 2004, and
+#                                   a Casey's was built on the cleared site. `vacant` is the
+#                                   WRONG word for it - that erases the row instead of
+#                                   correcting it. The lot was built on; it is the SHAPE
+#                                   that postdates 1991, and the two facts need saying
+#                                   separately. The game then skips the footprint and raises
+#                                   a building by rule instead: a rule is a better guess
+#                                   about 1991 than a photograph of 2016.
 #    parcel <id> note "<text>"      anything else worth saying
 #
 #  Parcel id is the line number in parcels.txt, 0-based, comments and blanks not
@@ -114,7 +127,11 @@ def read_verdicts():
                 if val.startswith('"') and val.endswith('"') and len(val) >= 2:
                     val = val[1:-1]
                 e = out.setdefault(pid, {})
-                if key in ("was", "kind", "property", "note"):
+                # KEEP THIS LIST IN STEP WITH Rulings.KnownVerbs. write_verdicts rewrites the whole
+                # file from what this read, so a verb missing HERE is not ignored - it is DELETED,
+                # silently, the next time anybody saves any lot. `footprint` was hand-written into
+                # the file and would have survived exactly until the next click.
+                if key in ("was", "kind", "property", "note", "footprint"):
                     e[key] = val
     except OSError:
         pass
@@ -138,6 +155,11 @@ def write_verdicts(v):
             lines.append(f'parcel {pid} kind {str(e["kind"]).strip().replace(" ", "-")}')
         if e.get("property"):
             lines.append(f'parcel {pid} property {q(e["property"])}')
+        # `footprint later`: the lot was built on in 1991 but the MEASURED shape postdates it, so
+        # the game must not seat it - see Rulings.Ruling.FootprintIsLater. Written unquoted because
+        # it is a keyword and not free text.
+        if e.get("footprint"):
+            lines.append(f'parcel {pid} footprint {str(e["footprint"]).strip().split()[0]}')
         if e.get("note"):
             lines.append(f'parcel {pid} note {q(e["note"])}')
         lines.append("")
@@ -379,11 +401,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         v = read_verdicts()
         if was:
+            # `footprint` is CARRIED THROUGH rather than rebuilt. The panel does not offer it yet,
+            # so a lot saved from the browser would otherwise arrive without it and the whole entry
+            # is replaced here - meaning one click on an unrelated field would quietly undate a
+            # footprint somebody had dated by hand. Only an explicit value in the request changes it.
+            keep = v.get(pid, {}).get("footprint", "")
             v[pid] = {
                 "was": was,
                 "kind": str(data.get("kind", "")).strip(),
                 "property": str(data.get("property", "")).strip(),
                 "note": str(data.get("note", "")).strip(),
+                "footprint": str(data.get("footprint", keep)).strip(),
             }
         else:
             v.pop(pid, None)          # empty verdict clears the lot again

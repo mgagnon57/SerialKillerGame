@@ -36,6 +36,19 @@
 #                                   one school. Give them the same property name and
 #                                   they are the same property. There is no group id to
 #                                   keep in step - the name IS the grouping.
+#    parcel <id> footprint later    A BUILDING STOOD HERE IN 1991, BUT THE MEASURED SHAPE
+#                                   IS NOT IT. The footprints are 2016 imagery; where a lot
+#                                   has been cleared and rebuilt since, seating that shape
+#                                   puts the wrong decade's building on the right ground.
+#                                   112 S Chicago is the case: a row of antique shops and a
+#                                   restaurant stood there in 1991, burned in Feb 2004, and
+#                                   a Casey's was built on the cleared site. `vacant` is the
+#                                   WRONG word for it - that erases the row instead of
+#                                   correcting it. The lot was built on; it is the SHAPE
+#                                   that postdates 1991, and the two facts need saying
+#                                   separately. The game then skips the footprint and raises
+#                                   a building by rule instead: a rule is a better guess
+#                                   about 1991 than a photograph of 2016.
 #    parcel <id> note "<text>"      anything else worth saying
 #
 #  Parcel id is the line number in parcels.txt, 0-based, comments and blanks not
@@ -184,8 +197,10 @@ parcel 236 was built
 parcel 236 property "109 W Attica"
 parcel 236 note "back of the lot; ran to the alley in 1991, split off later"
 
-parcel 237 was vacant
-parcel 237 note "Casey's - built after 1991; the lot was here, this building was not"
+parcel 237 was built
+parcel 237 kind shop
+parcel 237 footprint later
+parcel 237 note "the even side of the 100 block - antique shops and a restaurant, standing in 1991, burned 27 Feb 2004. Caseys was built on the cleared ground, so the measured footprint is 2004+ and must not be seated. Todays 1.19-acre parcel is the cleared site: in 1991 this was several narrow storefront lots."
 
 parcel 238 was built
 parcel 238 kind shop

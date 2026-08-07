@@ -41,7 +41,7 @@ namespace Noir.Unity
         /// breaks, nothing is logged, the owner rules a hundred lots and the town quietly ignores
         /// them. Naming the vocabulary here lets that be caught the day it lands.
         /// </summary>
-        public static readonly string[] KnownVerbs = { "was", "kind", "property", "note" };
+        public static readonly string[] KnownVerbs = { "was", "kind", "property", "note", "footprint" };
 
         /// <summary>What was on the lot. <see cref="Unruled"/> means nobody has looked at it yet,
         /// which is different from having looked and not settled it (<see cref="Unsure"/>).</summary>
@@ -62,6 +62,28 @@ namespace Noir.Unity
 
             /// <summary>Anything else worth saying. Empty if unsaid.</summary>
             public string Note = "";
+
+            /// <summary>
+            /// TRUE WHERE A BUILDING STOOD IN 1991 BUT THE MEASURED FOOTPRINT IS NOT IT.
+            ///
+            /// The gap this closes was found at 112 South Chicago Street. A block-long run of
+            /// antique shops and a restaurant stood there in 1991; it burned in February 2004 and
+            /// a Casey's was built on the cleared ground. So the lot is emphatically `built` - and
+            /// seating the measured footprint on it puts a set-back convenience store where a row
+            /// of storefronts met the pavement. "Nowhere close", as the owner put it.
+            ///
+            /// `vacant` is the wrong word for this and was tried first: it says nothing stood
+            /// there, which erases the row instead of correcting it. The lot was built on. It is
+            /// the SHAPE that postdates 1991, and the two facts need saying separately.
+            ///
+            ///     parcel 237 footprint later
+            ///
+            /// The footprint is then skipped by SeatOnSurvey and the lot falls through to
+            /// FillFromSurvey, which raises a building by rule - the right era and the right
+            /// posture, even if it is not the right building. A rule is a better guess about 1991
+            /// than a photograph of 2016.
+            /// </summary>
+            public bool FootprintIsLater;
         }
 
         private static readonly Ruling Nothing = new Ruling { ParcelId = -1 };
@@ -172,6 +194,10 @@ namespace Noir.Unity
                     case "kind":     r.Kind = Unquote(rest);  break;
                     case "note":     r.Note = Unquote(rest);  break;
                     case "property": r.Property = Unquote(rest); break;
+                    // `footprint later` - the lot was built on, but the measured shape postdates
+                    // 1991 and must not be seated. Any other value is left alone rather than
+                    // guessed at, so a future word cannot silently mean this one.
+                    case "footprint": r.FootprintIsLater = Unquote(rest).Trim().ToLowerInvariant() == "later"; break;
                 }
             }
 

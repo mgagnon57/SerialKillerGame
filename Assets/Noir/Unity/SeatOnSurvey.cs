@@ -74,10 +74,25 @@ namespace Noir.Unity
 
             var seated = new List<(PlaceSpec Place, TileRect Was, TileRect Now, Tile Door,
                                   Tile[] Outline)>();
+            int skippedAsLater = 0;
             foreach (var pair in byLot)
             {
                 var places = pair.Value;
                 places.Sort((a, b) => b.Bounds.Area.CompareTo(a.Bounds.Area));
+
+                // A FOOTPRINT THE OWNER HAS DATED LATER THAN 1991 IS NOT SEATED.
+                //
+                // 112 South Chicago is the case that found this. A block-long row of antique shops
+                // and a restaurant stood there in 1991, burned in February 2004, and a Casey's was
+                // built on the cleared ground. The lot is emphatically built on - but seating its
+                // MEASURED footprint puts a set-back convenience store where storefronts met the
+                // pavement, which is the shape of 2016 wearing the date of 1991.
+                //
+                // Skipping it here drops the lot through to FillFromSurvey, which raises a building
+                // by rule: the right era and the right posture even where it is not the right
+                // building. A rule is a better guess about 1991 than a photograph of 2016.
+                if (Rulings.For(pair.Key).FootprintIsLater) { skippedAsLater += places.Count; continue; }
+
                 var measured = ParcelBuildings.For(pair.Key);          // already largest first
 
                 for (int i = 0; i < places.Count && i < measured.Count; i++)
@@ -161,7 +176,10 @@ namespace Noir.Unity
 
             Debug.Log($"[survey] {moved} buildings seated on their measured footprint, "
                     + $"{shaped} of them built to its real outline"
-                    + (yielded > 0 ? $", {yielded} left alone to avoid overlapping one" : "") + ".");
+                    + (yielded > 0 ? $", {yielded} left alone to avoid overlapping one" : "")
+                    + (skippedAsLater > 0
+                        ? $", {skippedAsLater} left to the rules because the owner dated the "
+                        + "footprint later than 1991" : "") + ".");
             return moved;
         }
 
