@@ -168,8 +168,21 @@ namespace Noir.Editor
                 return p.Length > 0 ? p[0] : null;
             });
 
+            bad += Vet(Placements.FileName, Placements.KnownVerbs, line =>
+            {
+                // building <parcel> <index> move <dx> <dy> turn <deg>
+                var p = line.Split(' ');
+                return p.Length > 0 ? p[0] : null;
+            });
+
+            // COUNTED, AND COUNTED FROM THE GAME'S SIDE. The overlay passing its vocabulary check
+            // only proves the file is spellable; this is the number the game actually loaded, and
+            // it is the difference between "the owner moved a house" and "the owner moved a house
+            // and the town was built with it moved". The same silence parcel-1991.txt sat in for a
+            // day - a file with rulings in it and no reader - would look exactly like a zero here.
             Log($"rulings    {Rulings.Count} lots, {RoadRulings.Count} roads and blocks, "
-              + $"{RoadRulings.Blocks.Count} blocks known");
+              + $"{RoadRulings.Blocks.Count} blocks known, "
+              + $"{Placements.Count} house{(Placements.Count == 1 ? "" : "s")} moved");
 
             if (Rulings.Count == 0)
             {

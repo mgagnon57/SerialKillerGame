@@ -146,22 +146,32 @@
   #map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
   #map.drag { cursor: grabbing; }
 
-  #detail, #roadpanel {
+  #detail, #roadpanel, #housepanel {
     position: absolute; right: 16px; top: 16px; width: 310px; max-height: calc(100% - 32px);
     overflow-y: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px;
     box-shadow: var(--shadow); padding: 15px 16px; display: none;
   }
-  #detail.on, #roadpanel.on { display: block; }
-  #detail.editing, #roadpanel.editing {
+  #detail.on, #roadpanel.on, #housepanel.on { display: block; }
+  #detail.editing, #roadpanel.editing, #housepanel.editing {
     border-color: var(--editing); box-shadow: 0 0 0 1px var(--editing), var(--shadow);
   }
-  #detail h2, #roadpanel h2 { margin: 0 0 2px; font-size: 15px; font-weight: 650; }
-  #detail .pin, #roadpanel .pin { color: var(--muted); font-size: 12px; }
-  #roadpanel button.w { font: inherit; font-size: 12px; padding: 4px 9px; cursor: pointer;
+  #detail h2, #roadpanel h2, #housepanel h2 { margin: 0 0 2px; font-size: 15px; font-weight: 650; }
+  #detail .pin, #roadpanel .pin, #housepanel .pin { color: var(--muted); font-size: 12px; }
+  #roadpanel button.w, #housepanel button.w {
+    font: inherit; font-size: 12px; padding: 4px 9px; cursor: pointer;
     border: 1px solid var(--rule); background: var(--panel); color: var(--ink); border-radius: 4px; }
-  #roadpanel button.w:hover { border-color: var(--muted); }
-  #roadpanel button.w.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  #close, #r-close {
+  #roadpanel button.w:hover, #housepanel button.w:hover { border-color: var(--muted); }
+  #roadpanel button.w.on, #housepanel button.w.on {
+    background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  /* THE MODE IS VISIBLE FROM ANYWHERE ON THE MAP. A click means something different while the
+     house tool is on, so the canvas itself says so rather than leaving it to be remembered. */
+  #movemode { position: absolute; left: 16px; bottom: 16px; z-index: 5; }
+  #movemode button {
+    font: inherit; font-size: 12.5px; padding: 7px 13px; cursor: pointer; border-radius: 5px;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+    box-shadow: var(--shadow); }
+  #movemode button.on { background: var(--editing); color: #fff; border-color: var(--editing); }
+  #close, #r-close, #h-close {
     position: absolute; top: 9px; right: 9px; border: 0; background: none; cursor: pointer;
     color: var(--muted); font-size: 17px; line-height: 1; padding: 3px 6px; border-radius: 3px;
   }
@@ -270,6 +280,12 @@
       <label class="row" id="row-absent" style="display:none"><input type="checkbox" id="l-absent" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show lots I removed <span class="mono" id="ct-absent" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-1991" style="display:none"><input type="checkbox" id="l-1991" checked /><span class="swatch" style="background:var(--was-built)"></span>What I said was here in 1991 <span class="mono" id="ct-1991" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-gone" style="display:none"><input type="checkbox" id="l-gone" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show roads I removed <span class="mono" id="ct-gone" style="color:var(--muted);font-size:11px"></span></label>
+      <!-- The one place this map knowingly draws something the game will not build. Kept as a
+           switch rather than quietly corrected, because which of the two angles is RIGHT for
+           Rossville is the owner's call and he has said he will settle them by hand - which he
+           cannot do without being able to find them. -->
+      <label class="row" id="row-angle" style="display:none"><input type="checkbox" id="l-angle" /><span class="swatch" style="background:var(--vanished)"></span>Drawn at an angle the game won't use <span class="mono" id="ct-angle" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row" id="row-moved" style="display:none"><input type="checkbox" id="l-moved" checked /><span class="swatch" style="background:var(--authored)"></span>Houses I moved <span class="mono" id="ct-moved" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-game" style="display:none"><input type="checkbox" id="l-game" /><span class="swatch" style="background:var(--flag)"></span>What the game could not build <span class="mono" id="ct-game" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-addr" /><span class="swatch" style="background:transparent;border-style:dashed"></span>Addresses <span class="mono" style="color:var(--muted);font-size:11px">(zoom in)</span></label>
     </div>
@@ -375,6 +391,41 @@
         <button id="r-cancel" class="ghost">Cancel</button>
       </div>
       <div id="r-saved" class="mono" style="font-size:11.5px;margin-top:7px"></div>
+    </div>
+
+    <div id="movemode"><button id="movetoggle" title="M">Move houses</button></div>
+
+    <!-- MOVING AND TURNING A HOUSE. Its own panel again, and its own MODE: a click on the map
+         already means "the lot" or "the street", and a third meaning on the same click would make
+         all three unpredictable. The tool is off until it is switched on. -->
+    <div id="housepanel">
+      <button id="h-close" aria-label="Close">×</button>
+      <h2 id="h-name">—</h2>
+      <div class="pin mono" id="h-where">—</div>
+      <p class="note" id="h-warn" style="margin:6px 0 0"></p>
+
+      <p class="eyebrow" style="margin:12px 0 5px">Turn it</p>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="w" id="h-square">Square to the block</button>
+        <button class="w" id="h-turn-l">↺ 1°</button>
+        <button class="w" id="h-turn-r">↻ 1°</button>
+      </div>
+
+      <p class="eyebrow" style="margin:12px 0 5px">Line it up</p>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="w" id="h-front">Match the neighbours' front</button>
+        <button class="w" id="h-block">Straighten the whole block…</button>
+      </div>
+
+      <p class="eyebrow" style="margin:12px 0 5px">Where it is now</p>
+      <div class="mono" id="h-nums" style="font-size:11.5px;line-height:1.55"></div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
+        <button id="h-save" class="ghost">Save</button>
+        <button id="h-cancel" class="ghost">Cancel</button>
+        <button id="h-revert" class="ghost">Put it back</button>
+      </div>
+      <div id="h-saved" class="mono" style="font-size:11.5px;margin-top:7px"></div>
     </div>
   </div>
 </div>
@@ -704,6 +755,157 @@ function walkDirty() {
                   || differs(walkPending.wasBlock, WALKS.wasBlocks[bkey])));
 }
 
+// ---- moving and turning a house ----------------------------------------------------------
+//
+// AN OVERLAY ON THE MEASUREMENT, NEVER AN EDIT TO IT. Content/parcel-buildings.txt is 822
+// polygons off federal imagery; this records only the differences, so a re-survey cannot destroy
+// an adjustment and the ghost of where the measurement put the house is always drawable.
+// Read and written by Content/placement-1991.txt - see Assets/Noir/Unity/Placements.cs.
+let PLACES = {};                  // "<parcel>|<index>" -> {dx, dy, turn}
+let houseSel = null;              // the building being adjusted
+let houseMode = false;            // does a click on the map mean "pick a house"?
+let housePending = null;          // {dx, dy, turn} not yet saved, or null
+
+const houseKey = (b) => b.p + "|" + (b.i || 0);
+const houseNow = (b) => housePending || PLACES[houseKey(b)] || { dx: 0, dy: 0, turn: 0 };
+const houseDirty = () => {
+  if (!houseSel || !housePending) return false;
+  const on = PLACES[houseKey(houseSel)] || { dx: 0, dy: 0, turn: 0 };
+  return Math.abs(housePending.dx - on.dx) > 1e-3
+      || Math.abs(housePending.dy - on.dy) > 1e-3
+      || Math.abs(housePending.turn - on.turn) > 1e-3;
+};
+
+/// THE RING THE GAME WILL ACTUALLY BUILD, which is not the one this map draws by default.
+///
+/// SeatOnSurvey squares a footprint by its LOT skew and gives up past 20 degrees; the drawing
+/// above squares by the BLOCK skew and gives up past 46. Both are defensible and they are not the
+/// same ring - so a house lined up against the drawn one would go into the game a degree or two
+/// off, and every adjustment would inherit the gap. The tool drags what the game builds.
+/// Mirrors Placements.Apply and ParcelBuildings.Entry.Squared exactly; if either moves, this must.
+const GAME_SQUARE_LIMIT = 20;
+function gameRing(b) {
+  const s = b.skew || 0;
+  if (Math.abs(s) < 0.05 || Math.abs(s) > GAME_SQUARE_LIMIT) return b.r;
+  return turnRing(b.r, -s);
+}
+
+/// A ring turned about its own centroid. The ring is closed - the last point repeats the first -
+/// so the repeat is not counted or the centroid drags towards it and the house turns off-centre.
+function ringCentre(r) {
+  let cx = 0, cy = 0, n = r.length - 1;
+  if (n < 1) return [r[0][0], r[0][1]];
+  for (let i = 0; i < n; i++) { cx += r[i][0]; cy += r[i][1]; }
+  return [cx / n, cy / n];
+}
+function turnRing(r, deg) {
+  if (!deg) return r;
+  const [cx, cy] = ringCentre(r);
+  const t = deg * Math.PI / 180, co = Math.cos(t), si = Math.sin(t);
+  return r.map(([x, y]) => {
+    const dx = x - cx, dy = y - cy;
+    return [cx + dx * co - dy * si, cy + dx * si + dy * co];
+  });
+}
+
+/// Where a building stands with the owner's adjustment on it - turned, then moved, the same order
+/// and the same pivot as Placements.Apply.
+function placedRing(b, adj) {
+  const a = adj || houseNow(b);
+  const r = turnRing(gameRing(b), a.turn || 0);
+  if (!a.dx && !a.dy) return r;
+  return r.map(([x, y]) => [x + a.dx, y + a.dy]);
+}
+
+/// The disagreement count is a fact about the data, not about anything saved, so it is settled
+/// once at load rather than recomputed on every frame over 824 buildings.
+(() => {
+  const n = DATA.buildings.filter(b => angleGap(b) > 5).length;
+  const row = document.getElementById("row-angle");
+  if (row && n) row.style.display = "flex";
+  const ct = document.getElementById("ct-angle");
+  if (ct) ct.textContent = n + " over 5°";
+})();
+
+async function loadPlaces() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__places", { cache: "no-store" });
+    if (r.ok) PLACES = await r.json();
+    const row = document.getElementById("row-moved");
+    const n = Object.keys(PLACES).length;
+    if (row) row.style.display = n ? "flex" : "none";
+    const ct = document.getElementById("ct-moved");
+    if (ct) ct.textContent = n + " moved";
+    draw();
+  } catch (e) { /* not served, or nothing moved yet */ }
+}
+
+/// The building under the cursor, or null. Topmost-smallest wins, so a garage sitting inside the
+/// footprint of the house behind it is still reachable.
+function pickHouse(px, py) {
+  const x = wx(px), y = wy(py);
+  let best = null, bestA = Infinity;
+  for (const b of DATA.buildings) {
+    const r = placedRing(b);
+    if (!pointInRing([x, y], r)) continue;
+    const a = b.a || 0;
+    if (a < bestA) { bestA = a; best = b; }
+  }
+  return best;
+}
+
+/// The road nearest a point, with how far off its centreline and which way that is. The setback
+/// tools all need the same three numbers and computing them twice invites them to disagree.
+function nearestRoad(x, y) {
+  let best = null;
+  for (const rd of (DATA.newroads || [])) {
+    if (rd.c === "alley") continue;                 // a house does not front an alley
+    for (const pl of rd.lines)
+      for (let i = 1; i < pl.length; i++) {
+        const ax = pl[i - 1][0], ay = pl[i - 1][1], bx = pl[i][0], by = pl[i][1];
+        const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+        const t = L <= 0 ? 0 : Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L));
+        const qx = ax + dx * t, qy = ay + dy * t;
+        const d = Math.hypot(x - qx, y - qy);
+        if (!best || d < best.d) {
+          const len = Math.hypot(dx, dy) || 1;
+          best = { rd, d, at: [qx, qy],
+                   // unit normal, pointing from the road towards the point
+                   nx: (x - qx) / (d || 1), ny: (y - qy) / (d || 1),
+                   tx: dx / len, ty: dy / len };
+        }
+      }
+  }
+  return best;
+}
+
+/// Is any corner of this footprint outside its own lot? Reported, never corrected: the owner
+/// asked to be told, not to be overruled - a house that genuinely straddled a line has to stay
+/// possible. Returns the number of corners over the line.
+function cornersOutside(b, ring) {
+  const lot = DATA.parcels[b.p];
+  if (!lot) return 0;
+  let out = 0;
+  for (let i = 0; i < ring.length - 1; i++) if (!pointInRing(ring[i], lot)) out++;
+  return out;
+}
+
+/// Which OTHER lots this footprint now sits in, so "over the line" can say where to.
+function lotsEntered(b, ring) {
+  const hit = new Set();
+  for (let i = 0; i < ring.length - 1; i++) {
+    for (const [id, poly] of Object.entries(DATA.parcels)) {
+      if (+id === b.p) continue;
+      const bx = pBox[+id];
+      if (!bx || ring[i][0] < bx[0] || ring[i][0] > bx[2]
+              || ring[i][1] < bx[1] || ring[i][1] > bx[3]) continue;
+      if (pointInRing(ring[i], poly)) hit.add(+id);
+    }
+  }
+  return [...hit];
+}
+
 /// What is laid on this block: its own ruling if it has one, else its street's.
 function walkOn(roadName, blk) {
   if (blk) {
@@ -1002,6 +1204,166 @@ function showRoad(rd) {
 }
 
 
+// ---- the house panel ---------------------------------------------------------------------
+
+const M_TO_FT = 3.28084;
+const ft = (m) => (m * M_TO_FT).toFixed(1) + " ft";
+
+function showHouse(b) {
+  houseSel = b;
+  document.getElementById("detail").classList.remove("on");
+  document.getElementById("roadpanel").classList.remove("on");
+  document.getElementById("housepanel").classList.add("on");
+
+  const a = houseNow(b);
+  const ring = placedRing(b, a);
+  document.getElementById("h-name").textContent = b.addr || ("lot " + b.p);
+  document.getElementById("h-where").textContent =
+    `lot ${b.p}, building ${b.i}  ·  ${b.sf} sq ft  ·  ${b.role}`;
+
+  // OVER THE LINE IS SAID, NOT FIXED. "Flag it, leave it where I put it" - nothing on this map
+  // moves a building except the owner.
+  const out = cornersOutside(b, ring);
+  const warn = document.getElementById("h-warn");
+  if (out) {
+    const into = lotsEntered(b, ring);
+    warn.innerHTML = `<b style="color:var(--flag)">${out} corner${out === 1 ? "" : "s"} over the `
+      + `lot line${into.length ? " into lot " + into.join(", ") : ""}.</b> Left where you put it.`;
+  } else {
+    warn.textContent = "";
+  }
+
+  // The numbers, in feet, because that is the language the town is remembered in.
+  const [cx, cy] = ringCentre(ring);
+  const road = nearestRoad(cx, cy);
+  const saved = PLACES[houseKey(b)];
+  const rows = [];
+  rows.push(`moved   ${ft(a.dx)} east, ${ft(a.dy)} north`);
+  rows.push(`turned  ${(a.turn || 0).toFixed(1)}°`);
+  if (road) rows.push(`to ${road.rd.n}  ${ft(road.d)} from its centre`);
+  rows.push(`skew    ${b.skew}° to its lot, block sits at ${b.bskew}°`);
+  if (saved && !housePending) rows.push(`saved   yes`);
+  document.getElementById("h-nums").innerHTML = rows.map(esc).join("<br>");
+
+  const dirty = houseDirty();
+  const save = document.getElementById("h-save");
+  save.disabled = !dirty;
+  save.style.opacity = dirty ? "1" : "0.45";
+  document.getElementById("h-cancel").style.visibility = dirty ? "visible" : "hidden";
+  const revert = document.getElementById("h-revert");
+  const anyAdj = (a.dx || a.dy || a.turn);
+  revert.style.visibility = anyAdj ? "visible" : "hidden";
+
+  const said = document.getElementById("h-saved");
+  if (dirty) { said.textContent = "not saved yet — press Save"; said.style.color = "var(--editing)"; }
+  else if (saved) { said.textContent = "saved"; said.style.color = "var(--agri)"; }
+  else { said.textContent = "where the survey put it"; said.style.color = "var(--muted)"; }
+  document.getElementById("housepanel").classList.toggle("editing", dirty);
+  draw();
+}
+
+/// Every adjustment goes through here so nothing can change a building without the panel and the
+/// Save button finding out about it.
+function nudge(dx, dy, dturn) {
+  if (!houseSel) return;
+  const a = houseNow(houseSel);
+  housePending = { dx: a.dx + dx, dy: a.dy + dy, turn: a.turn + dturn };
+  showHouse(houseSel);
+}
+
+function setNudge(next) {
+  if (!houseSel) return;
+  housePending = next;
+  showHouse(houseSel);
+}
+
+/// SQUARE IT TO THE BLOCK. The data carries the building's own angle and its block's, so this is
+/// arithmetic rather than eye: turn by the difference. The game has already squared it to its LOT
+/// by the time this runs, so the turn needed is the gap between the two.
+/// Returns the turn needed FROM THE GAME'S BASELINE, so it is set rather than added.
+///
+/// Both angles are degrees off square. The raw ring sits at `skew`; the game has already taken
+/// `skew` out of it where that was between 0.05 and 20 degrees, leaving it square to its LOT. The
+/// block sits at `bskew`, so from lot-square the building wants turning by `skew - bskew`; from
+/// raw - where the game declined to square it - it wants `-bskew`.
+function squareToBlock(b) {
+  const s = b.skew || 0, bs = b.bskew || 0;
+  const gameSquared = Math.abs(s) >= 0.05 && Math.abs(s) <= GAME_SQUARE_LIMIT;
+  return gameSquared ? (s - bs) : -bs;
+}
+
+/// MATCH THE NEIGHBOURS' FRONT. Houses down a block sat at a common setback, so the useful answer
+/// is the one its neighbours agree on: take the median distance-from-the-street of the buildings
+/// near this one on the same road, and slide this one along that road's normal to match.
+///
+/// Median rather than mean on purpose - one house set right back would otherwise drag the whole
+/// line with it, which is the opposite of what lining up means.
+function frontLineFor(b) {
+  const ring = placedRing(b);
+  const [cx, cy] = ringCentre(ring);
+  const mine = nearestRoad(cx, cy);
+  if (!mine) return null;
+
+  const setbacks = [];
+  for (const o of DATA.buildings) {
+    if (o === b || o.role === "outbuilding") continue;
+    const or = placedRing(o);
+    const [ox, oy] = ringCentre(or);
+    if (Math.hypot(ox - cx, oy - cy) > 70) continue;         // same stretch of street only
+    const on = nearestRoad(ox, oy);
+    if (!on || on.rd.n !== mine.rd.n) continue;
+    // and on the same SIDE, or the two rows average into the middle of the road
+    if (on.nx * mine.nx + on.ny * mine.ny < 0) continue;
+    setbacks.push(on.d);
+  }
+  if (setbacks.length < 2) return null;
+  setbacks.sort((p, q) => p - q);
+  const med = setbacks[Math.floor(setbacks.length / 2)];
+  const shift = med - mine.d;
+  return { dx: mine.nx * shift, dy: mine.ny * shift, n: setbacks.length, med };
+}
+
+async function commitHouse() {
+  if (!houseSel || !houseDirty()) return;
+  const said = document.getElementById("h-saved");
+  const b = houseSel, a = housePending;
+  try {
+    const r = await fetch("/__place", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parcel: b.p, index: b.i, dx: a.dx, dy: a.dy, turn: a.turn }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "refused");
+    if (j.moved) PLACES[houseKey(b)] = { dx: a.dx, dy: a.dy, turn: a.turn };
+    else delete PLACES[houseKey(b)];
+    housePending = null;
+    showHouse(b);
+    said.textContent = `saved ${new Date().toTimeString().slice(0, 8)}  ·  ${j.count} moved`;
+    said.style.color = "var(--agri)";
+    loadPlaces();
+  } catch (e) {
+    said.textContent = "NOT SAVED — " + e.message;
+    said.style.color = "var(--flag)";
+  }
+}
+
+/// Same rule as the street panel and the lot panel: nothing is written until Save, and nothing is
+/// discarded without being asked. The suppressed-dialog trap is handled the same way too.
+function houseMayLeave() {
+  if (!houseDirty()) return true;
+  const t0 = performance.now();
+  const go = confirm((houseSel.addr || ("lot " + houseSel.p))
+    + " has been moved but not saved.\n\nOK to discard the move, or Cancel to go back and Save.");
+  if (!go && performance.now() - t0 < 40) {
+    const said = document.getElementById("h-saved");
+    said.innerHTML = "<b style='color:var(--flag)'>This browser is blocking dialogs.</b><br>"
+      + "Press <b>Save</b> to keep the move or <b>Cancel</b> to drop it.";
+    return false;
+  }
+  if (go) housePending = null;
+  return go;
+}
+
 /// The Save/Cancel state and the status line, shared by both ways out of showRoad - a street
 /// ruled off the map stops before the sidewalk rows and still needs its Save button.
 function finishRoadPanel(rd) {
@@ -1138,6 +1500,92 @@ function walkMayLeave() {
 /// The walk itself, drawn where it would be laid: out at the right-of-way edge rather than
 /// against the kerb, because that is the side of the verge a walk actually sits on and it is
 /// what the easement was measured for.
+/// Every building the owner has moved, plus the ghost of where the survey measured it.
+///
+/// The ghost is the whole reason the overlay exists: an adjustment you cannot see the size of is
+/// one you cannot judge. Drawn for the moved ones always, and for the selected one whether it has
+/// moved or not, so grabbing a house shows you immediately what you are working against.
+/// WHERE THIS MAP AND THE GAME DISAGREE ABOUT WHICH WAY A HOUSE FACES.
+///
+/// The drawing squares a footprint by its BLOCK's angle and gives up past 46 degrees; SeatOnSurvey
+/// squares by the building's own LOT angle and gives up past 20. On 222 buildings the two land in
+/// the same place and on 121 they are more than five degrees apart, the worst by 44.
+///
+/// Not corrected here, because which rule is right for Rossville is a judgement about the town
+/// rather than a bug - a block of houses shares an angle, but so does a house with its own lot.
+/// Marked instead, so the ones worth settling by hand can be found rather than stumbled on. The
+/// move tool itself is unaffected: it drags the ring the game will build, whatever this draws.
+function angleGap(b) {
+  const s = b.skew || 0, bs = b.bskew || 0;
+  const game = (Math.abs(s) >= 0.05 && Math.abs(s) <= GAME_SQUARE_LIMIT) ? -s : 0;
+  const drawn = (Math.abs(bs) >= 0.05 && Math.abs(bs) <= SQUARE_LIMIT) ? -bs : 0;
+  return Math.abs(game - drawn);
+}
+
+function drawAngleGaps() {
+  if (!on("l-angle")) return;
+  ctx.save();
+  ctx.strokeStyle = css("--vanished");
+  ctx.setLineDash([3, 3]);
+  ctx.lineWidth = Math.max(1.2, 1.6 * view.s);
+  for (const b of DATA.buildings) {
+    if (angleGap(b) <= 5) continue;
+    if (PLACES[houseKey(b)]) continue;           // already settled by hand
+    const r = gameRing(b);                        // what the game will build, which is the point
+    ctx.beginPath();
+    ctx.moveTo(sx(r[0][0]), sy(r[0][1]));
+    for (let i = 1; i < r.length; i++) ctx.lineTo(sx(r[i][0]), sy(r[i][1]));
+    ctx.closePath(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawMovedHouses() {
+  if (!on("l-moved")) return;
+  const s = view.s;
+  const marks = new Set(Object.keys(PLACES));
+  if (houseSel) marks.add(houseKey(houseSel));
+  if (!marks.size) return;
+
+  ctx.save();
+  for (const b of DATA.buildings) {
+    const key = houseKey(b);
+    if (!marks.has(key)) continue;
+
+    // where the measurement put it, faint and dashed
+    const was = gameRing(b);
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = css("--muted");
+    ctx.lineWidth = Math.max(1, 1 * s);
+    ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    ctx.moveTo(sx(was[0][0]), sy(was[0][1]));
+    for (let i = 1; i < was.length; i++) ctx.lineTo(sx(was[i][0]), sy(was[i][1]));
+    ctx.closePath(); ctx.stroke();
+
+    // and where it stands now
+    const now = placedRing(b);
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    const picked = houseSel && houseKey(houseSel) === key;
+    ctx.strokeStyle = css(picked ? "--editing" : "--authored");
+    ctx.lineWidth = Math.max(1.4, (picked ? 2.2 : 1.6) * s);
+    ctx.beginPath();
+    ctx.moveTo(sx(now[0][0]), sy(now[0][1]));
+    for (let i = 1; i < now.length; i++) ctx.lineTo(sx(now[i][0]), sy(now[i][1]));
+    ctx.closePath(); ctx.stroke();
+
+    // a line from where it was to where it is, so the size of the move reads at a glance
+    const [ax, ay] = ringCentre(was), [bx, by] = ringCentre(now);
+    if (Math.hypot(bx - ax, by - ay) > 0.3) {
+      ctx.strokeStyle = css("--editing");
+      ctx.lineWidth = Math.max(1, 1 * s);
+      ctx.beginPath(); ctx.moveTo(sx(ax), sy(ay)); ctx.lineTo(sx(bx), sy(by)); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 /// The lots the game could not build on, crossed out where they are. A lot the owner ruled and
 /// the game refused looks exactly like one it obeyed until something draws the difference.
 function drawGameVerdict() {
@@ -1404,6 +1852,10 @@ function draw() {
     drawWalks();
     drawGameVerdict();
   }
+  // Over the roads on purpose: a house being moved off a road is exactly the case worth seeing,
+  // and it cannot be judged with the road drawn on top of it.
+  drawAngleGaps();
+  drawMovedHouses();
 
   if (on("l-lot")) {
     // A lot that is part of a property does not get its own outline while the 1991 layer is
@@ -1497,9 +1949,29 @@ function draw() {
       // Cull on the whole footprint, not on its first corner. Culling on b.r[0] made a
       // building vanish whenever that one corner left the view, which on a page used to check
       // the data is the worst possible bug: it looks like the building is not there.
-      const bb = bbox(b);
+      // A MOVED HOUSE IS DRAWN WHERE IT WAS MOVED TO, and only there. Left to the old line it
+      // filled at the measured position while the tool outlined it at the new one, so a house the
+      // owner had shifted appeared twice and neither copy was labelled - the exact confusion this
+      // whole overlay exists to remove. The one it left behind is now the dashed ghost, drawn by
+      // drawMovedHouses, which is a statement about history rather than a second building.
+      const moved = PLACES[houseKey(b)] || (houseSel === b && housePending);
+      const geo = moved ? placedRing(b) : (square ? squared(b) : b.r);
+
+      // Culled on the ring being DRAWN. The cached bbox is of the measured ring, and at seven
+      // pixels to the metre a four-metre nudge is bigger than the whole margin - so a house
+      // dragged while zoomed in could disappear at the moment it was being placed.
+      let bb = bbox(b);
+      if (moved) {
+        let x0 = geo[0][0], y0 = geo[0][1], x1 = x0, y1 = y0;
+        for (const [x, y] of geo) {
+          if (x < x0) x0 = x; if (x > x1) x1 = x;
+          if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+        bb = [x0, y0, x1, y1];
+      }
       if (sx(bb[2]) < -20 || sx(bb[0]) > W + 20 || sy(bb[3]) < -20 || sy(bb[1]) > H + 20) continue;
-      path(square ? squared(b) : b.r);
+
+      path(geo);
       ctx.fillStyle = col + (b.role === "primary" ? "CC" : "77");
       ctx.fill();
       if (s > 0.25) {
@@ -1974,6 +2446,105 @@ async function pollVerify() {
   }
 }
 
+// ---- the house tool's controls -------------------------------------------------------------
+document.getElementById("movetoggle").onclick = () => {
+  if (houseMode && !houseMayLeave()) return;
+  houseMode = !houseMode;
+  document.getElementById("movetoggle").classList.toggle("on", houseMode);
+  document.getElementById("movetoggle").textContent =
+    houseMode ? "Move houses — on" : "Move houses";
+  if (!houseMode) {
+    houseSel = null; housePending = null;
+    document.getElementById("housepanel").classList.remove("on");
+  }
+  draw();
+};
+addEventListener("keydown", e => {
+  if (e.key === "m" || e.key === "M") {
+    if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    document.getElementById("movetoggle").click();
+  }
+});
+
+document.getElementById("h-close").onclick = () => {
+  if (!houseMayLeave()) return;
+  houseSel = null;
+  document.getElementById("housepanel").classList.remove("on");
+  draw();
+};
+document.getElementById("h-turn-l").onclick = () => nudge(0, 0, +1);
+document.getElementById("h-turn-r").onclick = () => nudge(0, 0, -1);
+document.getElementById("h-square").onclick = () => {
+  const a = houseNow(houseSel);
+  setNudge({ dx: a.dx, dy: a.dy, turn: squareToBlock(houseSel) });
+};
+document.getElementById("h-front").onclick = () => {
+  const f = frontLineFor(houseSel);
+  const said = document.getElementById("h-saved");
+  if (!f) {
+    said.textContent = "no neighbours near enough on this street to take a line from";
+    said.style.color = "var(--flag)";
+    return;
+  }
+  const a = houseNow(houseSel);
+  setNudge({ dx: a.dx + f.dx, dy: a.dy + f.dy, turn: a.turn });
+  said.textContent = `lined up with ${f.n} neighbours at ${ft(f.med)} from the street`;
+  said.style.color = "var(--muted)";
+};
+document.getElementById("h-save").onclick = () => commitHouse();
+document.getElementById("h-cancel").onclick = () => { housePending = null; showHouse(houseSel); };
+document.getElementById("h-revert").onclick = () => {
+  setNudge({ dx: 0, dy: 0, turn: 0 });      // saving zeroes deletes the line entirely
+};
+document.getElementById("h-block").onclick = () => straightenBlock();
+
+/// STRAIGHTEN A WHOLE BLOCK. Dozens of houses at a stroke, so it shows what it would do and makes
+/// you say yes - and it goes through the same Save as everything else rather than writing behind
+/// your back. Only the primary buildings: a shed at an angle is usually at that angle.
+async function straightenBlock() {
+  if (!houseSel) return;
+  const said = document.getElementById("h-saved");
+  const [cx, cy] = ringCentre(placedRing(houseSel));
+  const mine = nearestRoad(cx, cy);
+  if (!mine) { said.textContent = "no street near enough to take a block from"; return; }
+
+  const crooked = [];
+  for (const b of DATA.buildings) {
+    if (b.role === "outbuilding") continue;
+    const [ox, oy] = ringCentre(placedRing(b));
+    if (Math.hypot(ox - cx, oy - cy) > 120) continue;
+    const on = nearestRoad(ox, oy);
+    if (!on || on.rd.n !== mine.rd.n) continue;
+    const want = squareToBlock(b);
+    if (Math.abs(want - (houseNow(b).turn || 0)) > 0.2) crooked.push({ b, want });
+  }
+  if (!crooked.length) { said.textContent = "every house on this stretch is already square"; return; }
+
+  if (!confirm(`Straighten ${crooked.length} houses along ${mine.rd.n} to their block's angle?\n\n`
+             + "They are saved as you confirm — each one individually, the same as pressing Save "
+             + "on it. Nothing else about them moves.")) return;
+
+  let done = 0;
+  for (const { b, want } of crooked) {
+    const a = PLACES[houseKey(b)] || { dx: 0, dy: 0, turn: 0 };
+    try {
+      const r = await fetch("/__place", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parcel: b.p, index: b.i, dx: a.dx, dy: a.dy, turn: want }),
+      });
+      const j = await r.json();
+      if (!j.ok) continue;
+      if (j.moved) PLACES[houseKey(b)] = { dx: a.dx, dy: a.dy, turn: want };
+      else delete PLACES[houseKey(b)];
+      done++;
+    } catch (e) { /* reported by the count below */ }
+  }
+  said.textContent = `straightened ${done} of ${crooked.length} along ${mine.rd.n}`;
+  said.style.color = done === crooked.length ? "var(--agri)" : "var(--flag)";
+  loadPlaces();
+  showHouse(houseSel);
+}
+
 document.getElementById("r-save").onclick = () => commitWalk();
 document.getElementById("r-cancel").onclick = () => cancelWalk();
 document.getElementById("r-close").onclick = () => {
@@ -1988,12 +2559,38 @@ document.getElementById("close").onclick = () => {
 
 // ---- interaction ---------------------------------------------------------------------
 let drag = null;
+/// Set while a house is being dragged, which suspends panning: the map must not slide out from
+/// under the building being placed.
+let houseDrag = null;
+
 cv.addEventListener("pointerdown", e => {
+  const r = cv.getBoundingClientRect();
+  // Pressing on the SELECTED house picks it up. On any other house it does not, so a click still
+  // means "select that one" and only a deliberate second grab moves anything.
+  if (houseMode && houseSel) {
+    const hit = pickHouse(e.clientX - r.left, e.clientY - r.top);
+    if (hit === houseSel) {
+      const a = houseNow(houseSel);
+      houseDrag = { x: wx(e.clientX - r.left), y: wy(e.clientY - r.top), dx: a.dx, dy: a.dy };
+      cv.setPointerCapture(e.pointerId);
+      return;
+    }
+  }
   drag = { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy, moved: false };
   cv.setPointerCapture(e.pointerId); cv.classList.add("drag");
 });
 cv.addEventListener("pointermove", e => {
   const r = cv.getBoundingClientRect();
+  if (houseDrag) {
+    const a = houseNow(houseSel);
+    housePending = {
+      dx: houseDrag.dx + (wx(e.clientX - r.left) - houseDrag.x),
+      dy: houseDrag.dy + (wy(e.clientY - r.top) - houseDrag.y),
+      turn: a.turn,
+    };
+    showHouse(houseSel);
+    return;
+  }
   if (drag) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
@@ -2006,7 +2603,30 @@ cv.addEventListener("pointermove", e => {
 });
 cv.addEventListener("pointerup", e => {
   const r = cv.getBoundingClientRect();
+
+  // A HOUSE BEING DRAGGED OWNS THE GESTURE. Checked before the click handling below, or letting
+  // go after a drag would also read as a click and select whatever is underneath.
+  if (houseDrag) {
+    houseDrag = null;
+    drag = null; cv.classList.remove("drag");
+    return;
+  }
+
   if (drag && !drag.moved) {
+    // WHILE THE TOOL IS ON, A CLICK MEANS A HOUSE. Lots and streets keep their meaning the moment
+    // it is switched off again, which is why this is a mode rather than a modifier key.
+    if (houseMode) {
+      const b = pickHouse(e.clientX - r.left, e.clientY - r.top);
+      if (b) { if (houseMayLeave()) showHouse(b); }
+      else if (houseMayLeave()) {
+        houseSel = null;
+        document.getElementById("housepanel").classList.remove("on");
+        draw();
+      }
+      drag = null; cv.classList.remove("drag");
+      return;
+    }
+
     const i = pick(e.clientX - r.left, e.clientY - r.top);
     if (i >= 0) { if (walkMayLeave()) show(i); }
     else if (walkMayLeave()) {
@@ -2331,5 +2951,6 @@ addEventListener("beforeunload", e => {
 resize(); fitView(); draw();
 loadVerdicts();
 loadWalks();
+loadPlaces();
 loadVerdictFromGame();
 </script>

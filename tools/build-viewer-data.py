@@ -57,8 +57,15 @@ def county():
 def buildings():
     d = json.load(open(os.path.join(HERE, "rossville-buildings-seated.json"), encoding="utf-8"))
     out = []
+    # WHICH BUILDING ON ITS LOT, counted the way Content/parcel-buildings.txt numbers them: the
+    # records arrive largest-first per parcel, 0 downwards. The placement overlay is keyed
+    # "<parcel> <index>", so without this the page can name a lot but not a house on it.
+    seen = {}
     for b in d["buildings"]:
+        idx = seen.get(b["parcel"], 0)
+        seen[b["parcel"]] = idx + 1
         out.append({
+            "i": idx,
             "p": b["parcel"],
             "r": [[round(x, 1), round(y, 1)] for x, y in b["ring"]],
             "a": round((b["sqft"] or 0) * 0.09290304, 1),
