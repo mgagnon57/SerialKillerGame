@@ -180,6 +180,12 @@ WALK_HEADER = """# =============================================================
 #  five metres each side is public ground that is NOT road. The walk has somewhere to go
 #  the moment this file says it exists.
 #
+#  WAS IT THERE AT ALL. Some roads were extended after 1991 and only the new end should come
+#  off, so this takes a block as readily as a whole street - and the block wins.
+#
+#    road <name> was absent|built           the whole street, gone from the map
+#    block <road> <from> <to> was absent    this stretch only; the run is cut, not dropped
+#
 #  A WALK IS A PROPERTY OF A BLOCK, not of a street. Chicago Street had walks both
 #  sides through the middle of town and nothing out at the edges. So there are two
 #  scopes, and the block wins:
@@ -212,7 +218,7 @@ def read_walks():
     TWO SCOPES, because a walk in Rossville is a property of a BLOCK and saying so one block at a
     time would be 137 clicks. The road line is the default for the whole street; a block line
     overrides it for that block. Most streets are one click and a couple of exceptions."""
-    out = {"roads": {}, "blocks": {}, "was": {}}
+    out = {"roads": {}, "blocks": {}, "was": {}, "wasBlocks": {}}
     try:
         with open(WALKS, encoding="utf-8") as fh:
             for line in fh:
@@ -226,6 +232,8 @@ def read_walks():
                     out["was"][p[1]] = p[3]
                 elif len(p) == 6 and p[0] == "block" and p[4] == "walk" and p[5] in WALK_SIDES:
                     out["blocks"][f"{p[1]}|{p[2]}|{p[3]}"] = p[5]
+                elif len(p) == 6 and p[0] == "block" and p[4] == "was" and p[5] in WAS_VALUES:
+                    out["wasBlocks"][f"{p[1]}|{p[2]}|{p[3]}"] = p[5]
     except OSError:
         pass
     return out
@@ -236,11 +244,15 @@ def write_walks(w):
 
     # The roads that were not there at all come first: it is the bigger statement, and a street
     # ruled absent makes every other ruling about it moot.
-    if w.get("was"):
-        lines.append("#  ---- roads that did not exist in 1991 ----")
-        for name in sorted(w["was"]):
+    if w.get("was") or w.get("wasBlocks"):
+        lines.append("#  ---- roads and stretches that did not exist in 1991 ----")
+        for name in sorted(w.get("was", {})):
             if w["was"][name] in WAS_VALUES:
                 lines.append(f"road {name} was {w['was'][name]}")
+        for key in sorted(w.get("wasBlocks", {})):
+            bits = key.split("|")
+            if len(bits) == 3 and w["wasBlocks"][key] in WAS_VALUES:
+                lines.append(f"block {bits[0]} {bits[1]} {bits[2]} was {w['wasBlocks'][key]}")
         lines.append("")
 
     for name in sorted(w.get("roads", {})):
@@ -399,16 +411,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         w = read_walks()
 
-        # "was" arrives on its own - it is a statement about the road, not about a block of it.
+        # "was" arrives on its own, at whichever scope was asked for. SOME ROADS WERE EXTENDED
+        # AFTER 1991 and only the new end should come off, so this takes a block as readily as a
+        # whole street.
         if "was" in data:
-            if was:
-                w["was"][road] = was
+            if frm and to:
+                key = f"{road}|{frm}|{to}"
+                if was:
+                    w["wasBlocks"][key] = was
+                else:
+                    w["wasBlocks"].pop(key, None)
+                what = f"{road} {frm}..{to}"
             else:
-                w["was"].pop(road, None)
+                if was:
+                    w["was"][road] = was
+                else:
+                    w["was"].pop(road, None)
+                what = road
             write_walks(w)
-            print(f"  [walk] {road} was -> {was or 'unruled'}")
+            print(f"  [walk] {what} was -> {was or 'unruled'}")
             self._json({"ok": True, "roads": len(w["roads"]), "blocks": len(w["blocks"]),
-                        "gone": len([k for k, v in w["was"].items() if v == 'absent'])})
+                        "gone": len([k for k, v in w["was"].items() if v == 'absent'])
+                              + len([k for k, v in w["wasBlocks"].items() if v == 'absent'])})
             return
 
         if frm and to:

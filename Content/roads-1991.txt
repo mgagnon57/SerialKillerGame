@@ -16,6 +16,12 @@
 #  five metres each side is public ground that is NOT road. The walk has somewhere to go
 #  the moment this file says it exists.
 #
+#  WAS IT THERE AT ALL. Some roads were extended after 1991 and only the new end should come
+#  off, so this takes a block as readily as a whole street - and the block wins.
+#
+#    road <name> was absent|built           the whole street, gone from the map
+#    block <road> <from> <to> was absent    this stretch only; the run is cut, not dropped
+#
 #  A WALK IS A PROPERTY OF A BLOCK, not of a street. Chicago Street had walks both
 #  sides through the middle of town and nothing out at the edges. So there are two
 #  scopes, and the block wins:
@@ -39,6 +45,10 @@
 #  THE ALLEYS ARE RULED BY MEASUREMENT, not by memory: 4 m of track in 4 to 8 m of
 #  ground leaves no room for a walk on any of the 33.
 # ============================================================================
+
+#  ---- roads and stretches that did not exist in 1991 ----
+road earl was absent
+road grove was built
 
 road alley1 walk none
 road alley10 walk none

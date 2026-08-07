@@ -59,6 +59,38 @@ namespace Noir.Unity
         public enum Stood { Unknown, Built, Absent }
 
         private static Dictionary<string, Stood> _wasRoad;
+        private static Dictionary<string, Stood> _wasBlock;    // "road|from|to"
+
+        /// <summary>
+        /// Whether this stretch of this road existed in 1991. False only where the whole road is
+        /// ruled absent, or the block containing this point is.
+        ///
+        /// SOME ROADS WERE EXTENDED AFTER 1991 and only the extension should come off - which is
+        /// why this is asked per metre and not per road. A block is the unit because it is the
+        /// unit the town is described in: "York stopped at Green" is a boundary somebody
+        /// remembers, and a distance in metres is not.
+        /// </summary>
+        public static bool ExistedAt(string road, float metresAlong)
+        {
+            Load();
+            if (_wasRoad.TryGetValue(road, out var whole) && whole == Stood.Absent) return false;
+
+            var block = BlockAt(road, metresAlong);
+            if (block == null) return true;
+            var key = road + "|" + block.Value.From + "|" + block.Value.To;
+            return !(_wasBlock.TryGetValue(key, out var own) && own == Stood.Absent);
+        }
+
+        /// <summary>Whether any block of this road is ruled away, so a caller can skip the work
+        /// of splitting a run that nothing has been said about.</summary>
+        public static bool AnyBlockGone(string road)
+        {
+            Load();
+            foreach (var kv in _wasBlock)
+                if (kv.Value == Stood.Absent && kv.Key.StartsWith(road + "|", System.StringComparison.Ordinal))
+                    return true;
+            return false;
+        }
 
         /// <summary>Whether this road existed in 1991. Only a road ruled ABSENT is false.</summary>
         public static bool Existed(string road)
@@ -135,6 +167,7 @@ namespace Noir.Unity
             _byRoad = new Dictionary<string, Walk>();
             _byBlock = new Dictionary<string, Walk>();
             _wasRoad = new Dictionary<string, Stood>();
+            _wasBlock = new Dictionary<string, Stood>();
 
             string text;
             try { text = ContentLoader.Read(FileName); }
@@ -160,6 +193,11 @@ namespace Noir.Unity
                 {
                     var w = WalkOf(p[5]);
                     if (w != Walk.Unruled) _byBlock[$"{p[1]}|{p[2]}|{p[3]}"] = w;
+                }
+                else if (p.Length == 6 && p[0] == "block" && p[4] == "was")
+                {
+                    if (p[5] == "absent") _wasBlock[$"{p[1]}|{p[2]}|{p[3]}"] = Stood.Absent;
+                    else if (p[5] == "built") _wasBlock[$"{p[1]}|{p[2]}|{p[3]}"] = Stood.Built;
                 }
             }
         }
