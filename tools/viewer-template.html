@@ -269,7 +269,8 @@
       <label class="row"><input type="checkbox" id="l-flag" /><span class="swatch" style="background:var(--vanished)"></span>Where the two sources differ <span class="mono ct" data-ct="disagree_total" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-absent" style="display:none"><input type="checkbox" id="l-absent" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show lots I removed <span class="mono" id="ct-absent" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-1991" style="display:none"><input type="checkbox" id="l-1991" checked /><span class="swatch" style="background:var(--was-built)"></span>What I said was here in 1991 <span class="mono" id="ct-1991" style="color:var(--muted);font-size:11px"></span></label>
-      <label class="row" id="row-game" style="display:none"><input type="checkbox" id="l-game" checked /><span class="swatch" style="background:var(--flag)"></span>What the game could not build <span class="mono" id="ct-game" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row" id="row-gone" style="display:none"><input type="checkbox" id="l-gone" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show roads I removed <span class="mono" id="ct-gone" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row" id="row-game" style="display:none"><input type="checkbox" id="l-game" /><span class="swatch" style="background:var(--flag)"></span>What the game could not build <span class="mono" id="ct-game" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-addr" /><span class="swatch" style="background:transparent;border-style:dashed"></span>Addresses <span class="mono" style="color:var(--muted);font-size:11px">(zoom in)</span></label>
     </div>
 
@@ -725,6 +726,14 @@ async function loadWalks() {
     if (r.ok) {
       const j = await r.json();
       WALKS = { roads: j.roads || {}, blocks: j.blocks || {}, was: j.was || {} };
+
+      // The "show roads I removed" switch only exists once there are some, the same way the
+      // lot version of it does.
+      const gone = Object.values(WALKS.was).filter(v => v === "absent").length;
+      const row = document.getElementById("row-gone");
+      if (row) row.style.display = gone ? "flex" : "none";
+      const ct = document.getElementById("ct-gone");
+      if (ct) ct.textContent = gone;
     }
     const b = await fetch("/__blocks", { cache: "no-store" });
     if (b.ok) BLOCKS = await b.json();
@@ -1159,7 +1168,29 @@ function draw() {
       const col = css(colourVar);
       for (const rd of (DATA.newroads || [])) {
         if ((rd.c === "alley") !== want) continue;
+
+        // A ROAD RULED OUT OF 1991 IS NOT THERE. Same as a lot ruled absent, and drawn the same
+        // way: gone from the map, unless "show roads I removed" is on - and then only as a faint
+        // dotted line, because there has to be something left to click to say it was wrong.
+        const gone = WALKS.was[rd.n] === "absent";
+        if (gone && !on("l-gone")) continue;
+
         const lw = Math.max(1, (rd.w || 10) * s);
+
+        if (gone) {
+          ctx.save();
+          ctx.setLineDash([Math.max(2, 4 * s), Math.max(2, 4 * s)]);
+          ctx.lineWidth = Math.max(1, 1.2 * s);
+          ctx.strokeStyle = col + "44";
+          for (const pl of rd.lines) {
+            ctx.beginPath();
+            ctx.moveTo(sx(pl[0][0]), sy(pl[0][1]));
+            for (let i = 1; i < pl.length; i++) ctx.lineTo(sx(pl[i][0]), sy(pl[i][1]));
+            ctx.stroke();
+          }
+          ctx.restore();
+          continue;
+        }
 
         ctx.setLineDash([]);
         ctx.lineWidth = lw;
