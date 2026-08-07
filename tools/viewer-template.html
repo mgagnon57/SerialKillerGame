@@ -301,6 +301,11 @@
       <label class="row"><input type="checkbox" id="l-bldg" checked /><span class="swatch" style="background:var(--frame)"></span>Measured footprints <span class="mono ct" data-ct="buildings" style="color:var(--muted);font-size:11px"></span><span class="mono" id="ct-later" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-out" checked /><span class="swatch" style="background:var(--other)"></span>…including outbuildings <span class="mono ct" data-ct="outbuildings" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-sq" checked /><span class="swatch" style="background:var(--frame);border-style:dashed"></span>Squared to their block <span class="mono" style="color:var(--muted);font-size:11px">untick for raw</span></label>
+      <!-- 1991 IS THE DATE THIS MAP REPRESENTS, and every measured source is 2007 or later. A
+           footprint on a lot nobody has ruled on is a guess about 1991, so it is drawn as one and
+           counted here. Drawn identically to a confirmed building it reads as settled, which is
+           how a Casey's built long after 1991 sat downtown looking like it belonged. -->
+      <label class="row"><span class="swatch" style="background:var(--frame);opacity:.4;border-style:dashed"></span>Faint = not yet checked for 1991 <span class="mono" id="ct-unchecked" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-flag" /><span class="swatch" style="background:var(--vanished)"></span>Where the two sources differ <span class="mono ct" data-ct="disagree_total" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-absent" style="display:none"><input type="checkbox" id="l-absent" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show lots I removed <span class="mono" id="ct-absent" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-1991" style="display:none"><input type="checkbox" id="l-1991" checked /><span class="swatch" style="background:var(--was-built)"></span>What I said was here in 1991 <span class="mono" id="ct-1991" style="color:var(--muted);font-size:11px"></span></label>
@@ -610,6 +615,7 @@ function settled(i) {
 }
 
 function laterCount() {
+  countUnchecked();               // the two are both "how far off 1991 is this", so they move together
   const el = document.getElementById("ct-later");
   if (!el) return;
   const out = new Set();
@@ -1010,6 +1016,17 @@ function placedRing(b, adj) {
   const ct = document.getElementById("ct-angle");
   if (ct) ct.textContent = n + " over 5°";
 })();
+
+/// How much of the town is still 2016 standing in for 1991. Recounted whenever a ruling lands,
+/// because watching that number fall is the only measure of progress this project has.
+function countUnchecked() {
+  const el = document.getElementById("ct-unchecked");
+  if (!el) return;
+  let un = 0, ok = 0;
+  for (const b of DATA.buildings) ((VERDICTS[b.p] || {}).was ? ok++ : un++);
+  el.textContent = `${un} of ${un + ok}`;
+  el.style.color = un > (un + ok) / 2 ? "var(--flag)" : "var(--muted)";
+}
 
 async function loadPlaces() {
   if (!LIVE) return;
@@ -2233,6 +2250,13 @@ function draw() {
       const moved = PLACES[houseKey(b)] || (houseEdit.target === b && houseEdit.pending);
       const geo = moved ? placedRing(b) : (square ? squared(b) : b.r);
 
+      // FALLBACK MUST LOOK LIKE FALLBACK. 1991 is the date this map represents, and 710 of these
+      // 824 footprints are 2016 imagery standing on a lot nobody has ruled on yet - a guess about
+      // 1991, not a fact about it. Drawn identically to a confirmed building, a guess reads as
+      // settled, which is exactly how a Casey's built after 1991 sat downtown looking like it
+      // belonged. Anything the owner has not confirmed is drawn provisionally.
+      const confirmed = !!((VERDICTS[b.p] || {}).was);
+
       // Culled on the ring being DRAWN. The cached bbox is of the measured ring, and at seven
       // pixels to the metre a four-metre nudge is bigger than the whole margin - so a house
       // dragged while zoomed in could disappear at the moment it was being placed.
@@ -2248,11 +2272,26 @@ function draw() {
       if (sx(bb[2]) < -20 || sx(bb[0]) > W + 20 || sy(bb[3]) < -20 || sy(bb[1]) > H + 20) continue;
 
       path(geo);
-      ctx.fillStyle = col + (b.role === "primary" ? "CC" : "77");
-      ctx.fill();
-      if (s > 0.25) {
-        ctx.strokeStyle = col; ctx.lineWidth = b.role === "primary" ? 1 : .7;
-        ctx.stroke();
+      if (confirmed) {
+        ctx.fillStyle = col + (b.role === "primary" ? "CC" : "77");
+        ctx.fill();
+        if (s > 0.25) {
+          ctx.setLineDash([]);
+          ctx.strokeStyle = col; ctx.lineWidth = b.role === "primary" ? 1 : .7;
+          ctx.stroke();
+        }
+      } else {
+        // Thin wash and a dashed edge: present, legible, and obviously not yet vouched for.
+        ctx.fillStyle = col + (b.role === "primary" ? "44" : "26");
+        ctx.fill();
+        if (s > 0.25) {
+          ctx.save();
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = col + "99";
+          ctx.lineWidth = b.role === "primary" ? 1 : .7;
+          ctx.stroke();
+          ctx.restore();
+        }
       }
     }
   }

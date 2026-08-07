@@ -184,6 +184,28 @@ namespace Noir.Editor
               + $"{RoadRulings.Blocks.Count} blocks known, "
               + $"{Placements.Count} house{(Placements.Count == 1 ? "" : "s")} moved");
 
+            // HOW MUCH OF THIS TOWN IS ACTUALLY 1991, and how much is 2016 standing in for it.
+            //
+            // Every measured source here postdates the target by fifteen years or more: the tax
+            // roll starts in 2007, the footprints are 2016 imagery, the road geometry is current
+            // OSM. They are a FALLBACK - what to draw until somebody who was there says otherwise
+            // - and never a source of truth about 1991. The failure they invite is silent, because
+            // a footprint nobody has ruled on looks exactly like one that has been confirmed: a
+            // shop built decades later sits downtown and reads as though it belonged.
+            //
+            // So the number is printed on every run. It is the only measure of how close this town
+            // is to the year it claims to be.
+            int checkedLots = 0, unchecked_ = 0;
+            foreach (var kv in ParcelBuildings.All)
+            {
+                if (Rulings.For(kv.Key).Was != Rulings.Stood.Unruled) checkedLots += kv.Value.Count;
+                else unchecked_ += kv.Value.Count;
+            }
+            int total = checkedLots + unchecked_;
+            Log($"1991       {checkedLots} of {total} buildings confirmed for 1991; "
+              + $"{unchecked_} still standing on post-2000 sources "
+              + $"({(total == 0 ? 0 : 100 * unchecked_ / total)}% unchecked)");
+
             if (Rulings.Count == 0)
             {
                 LogError("rulings: parcel-1991.txt read as empty - the game is ignoring the "
