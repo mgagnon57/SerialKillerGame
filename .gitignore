@@ -120,3 +120,7 @@ docs/*.html
 # Superpowers skill scratch - ledgers, briefs and review packages for in-flight plans.
 # Working state, not history; the plans and specs under docs/superpowers/ are the record.
 .superpowers/
+
+# Written by the game every time it builds - what it did with each of the owner's rulings.
+# Derived, rewritten on every run, and meaningless without the run that produced it.
+tools/game-verdict.json
