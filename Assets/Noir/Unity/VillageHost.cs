@@ -664,8 +664,24 @@ namespace Noir.Unity
             // The two that MOVE. Registered like the rest, and switching them off hides them
             // exactly as HideActors always did. Not baked: a combined mesh cannot move or change
             // colour.
-            if (signals != null) Layers.Register(Layers.Kind.Signals, signals.gameObject);
-            if (traffic != null) Layers.Register(Layers.Kind.Traffic, traffic.gameObject);
+            // HIDDEN BY SWITCHING OFF THE RENDERERS, NOT THE GAME OBJECT - and the difference is
+            // the whole reason the paragraph above exists.
+            //
+            // These were registered by root, and Layers.Register(kind, root) does
+            // root.SetActive(IsOn(kind)). An inactive GameObject does not get Update(), so
+            // switching the traffic layer off did not hide the traffic - IT STOPPED THE TRAFFIC.
+            // The comment above says in as many words that the layer must decide what is DRAWN and
+            // nothing else; the mechanism it used could not honour that.
+            //
+            // It was not theoretical and it was not visible either. Layers persist in PlayerPrefs,
+            // so `noir.layer.Traffic = 0` - set once in the editor, months ago, for a survey view -
+            // silently froze all 160 vehicles in EVERY run afterwards, including every headless
+            // test. TrafficMovesAndStopsAtRedLights reported total distance travelled 0.0 and
+            // NoCarWaitsForeverAtTheHeadOfAClearQueue reported 120-second waits, and the traffic
+            // diagnostic said "160 of 160 stopped: None=160" - None being the default, because no
+            // car had been given a reason to stop by code that had never run.
+            if (signals != null) Layers.Register(Layers.Kind.Signals, on => ShowRenderers(signals.gameObject, on));
+            if (traffic != null) Layers.Register(Layers.Kind.Traffic, on => ShowRenderers(traffic.gameObject, on));
 
             // DRAWN OR NOT, THEY STILL EXIST. Gating CityTraffic.Create itself on the plan flag
             // was the obvious way to keep cars off a survey drawing and it was wrong twice over:
@@ -866,6 +882,21 @@ namespace Noir.Unity
         }
 
         private int _speedBeforePause = 5;
+
+        /// <summary>
+        /// Hide something without stopping it: every renderer under <paramref name="root"/> off,
+        /// the GameObject left active so its Update still runs.
+        ///
+        /// Used for the two layers that are SIMULATIONS rather than scenery. Deactivating those
+        /// roots is what froze the traffic for months - see the note where they are registered.
+        /// Includes inactive children on purpose: a car parked inside a disabled parent still has
+        /// to come back when the layer is switched on.
+        /// </summary>
+        private static void ShowRenderers(GameObject root, bool on)
+        {
+            if (root == null) return;
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true)) r.enabled = on;
+        }
 
         /// <summary>
         /// Turn off every renderer on the things that move, leaving them running underneath.

@@ -105,11 +105,22 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > **Always passing (4):** `TheCityComesUpAndRuns`, `NoJunctionEverShowsGreenBothWays`,
 > `NoTwoVehiclesOccupyTheSameSpace`, `NoVehicleEverLeavesTheRoad`.
 >
-> **Always failing (2), and they are the real bug:** `TrafficMovesAndStopsAtRedLights`
-> (total distance travelled = **0.0**) and `NoCarWaitsForeverAtTheHeadOfAClearQueue` (120 s at a
-> clear queue). Vehicles exist — `TheCityComesUpAndRuns` asserts that and passes — and the clock
-> now runs, but nothing drives. `CityTraffic` accumulates `Time.deltaTime` into 1/30 s slices;
-> start there.
+> **The traffic now runs, and the score went DOWN because of it.** `Layers.Register(kind, root)`
+> ends in `root.SetActive(IsOn(kind))`, and an inactive GameObject gets no `Update()` — so
+> `noir.layer.Traffic = 0`, set once in the editor for a survey view and kept in PlayerPrefs, had
+> frozen all 160 vehicles in every run since. Signals and traffic are now registered by a
+> renderer-toggling callback instead, which is what the code always said the layer should do.
+>
+> `TrafficMovesAndStopsAtRedLights` passes for the first time. `NoTwoVehiclesOccupyTheSameSpace`
+> and `NoVehicleEverLeavesTheRoad` began FAILING — they had been passing **vacuously**, because
+> frozen cars cannot collide or leave the road. What they now report is real:
+>
+> - two cars within **0.40 m**, 132 m from the nearest junction (grove × gilbert)
+> - a van **1.99 m past the asphalt**
+> - worst clear-queue wait **105 s**, down from 120 s but still far over the 37 s gate
+>
+> Those are genuine faults in the traffic model, visible for the first time. Treat the lower score
+> as progress: four tests are now measuring a running simulation instead of a stopped one.
 >
 > **FLAKY (2):** `ThePlayerCanStandInTheStreet` and `WhyAreThePeopleNotAnimating` swap between
 > pass and fail **on identical code**. Two runs of the same commit gave the opposite pair. The
