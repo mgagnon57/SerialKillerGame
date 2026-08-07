@@ -108,33 +108,51 @@ HEADER = """# ==================================================================
 """
 
 
+#: The verbs this server knows how to format on the way out. Anything else read from the file is
+#: still KEPT and written back verbatim - see read_verdicts.
+KNOWN_VERBS = ("was", "kind", "property", "note", "footprint")
+
+
 def read_verdicts():
+    """Every ruling in the file, keyed by parcel.
+
+    RAISES on any read failure except the file simply not being there. That distinction is the
+    whole point and it used to be `except OSError: pass`, which returned {} - and since the POST
+    handler does `v = read_verdicts()` and then `write_verdicts(v)`, ONE unreadable read rewrote
+    the file from an empty dict and deleted every ruling in it. Atomically, too. A locked file, a
+    permissions blip or a bad sector was all it would have taken to destroy the one file in this
+    project that nothing can rebuild.
+
+    A missing file is different in kind from an unreadable one: it means nobody has ruled on
+    anything yet, which is a real state on a fresh clone.
+    """
     out = {}
     try:
-        with open(VERDICTS, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                parts = line.split(" ", 3)
-                if len(parts) < 4 or parts[0] != "parcel":
-                    continue
-                try:
-                    pid = int(parts[1])
-                except ValueError:
-                    continue
-                key, val = parts[2], parts[3].strip()
-                if val.startswith('"') and val.endswith('"') and len(val) >= 2:
-                    val = val[1:-1]
-                e = out.setdefault(pid, {})
-                # KEEP THIS LIST IN STEP WITH Rulings.KnownVerbs. write_verdicts rewrites the whole
-                # file from what this read, so a verb missing HERE is not ignored - it is DELETED,
-                # silently, the next time anybody saves any lot. `footprint` was hand-written into
-                # the file and would have survived exactly until the next click.
-                if key in ("was", "kind", "property", "note", "footprint"):
-                    e[key] = val
-    except OSError:
-        pass
+        fh = open(VERDICTS, encoding="utf-8")
+    except FileNotFoundError:
+        return out
+    with fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split(" ", 3)
+            if len(parts) < 4 or parts[0] != "parcel":
+                continue
+            try:
+                pid = int(parts[1])
+            except ValueError:
+                continue
+            key, val = parts[2], parts[3].strip()
+            if val.startswith('"') and val.endswith('"') and len(val) >= 2:
+                val = val[1:-1]
+            # EVERY VERB IS KEPT, known or not. This used to be an allowlist, and because
+            # write_verdicts rewrites the whole file from what this read, a verb missing from that
+            # list was not ignored - it was DELETED, silently, the next time anybody clicked any
+            # lot. `footprint` was hand-written into the file and survived only because somebody
+            # noticed and added it here in time. Hand-editing this file is supposed to be safe;
+            # its own header says so. An allowlist is what made that untrue.
+            out.setdefault(pid, {})[key] = val
     return out
 
 
@@ -146,11 +164,13 @@ def write_verdicts(v):
         return '"' + clean + '"'
 
     lines = [HEADER]
+    written = 0
     for pid in sorted(v):
         e = v[pid]
-        if not e.get("was"):
+        if not any(str(x).strip() for x in e.values()):
             continue
-        lines.append(f'parcel {pid} was {e["was"]}')
+        if e.get("was"):
+            lines.append(f'parcel {pid} was {e["was"]}')
         if e.get("kind"):
             lines.append(f'parcel {pid} kind {str(e["kind"]).strip().replace(" ", "-")}')
         if e.get("property"):
@@ -162,12 +182,54 @@ def write_verdicts(v):
             lines.append(f'parcel {pid} footprint {str(e["footprint"]).strip().split()[0]}')
         if e.get("note"):
             lines.append(f'parcel {pid} note {q(e["note"])}')
+        # Anything this server does not know about, written back as it came in. A verb added to
+        # the file by hand or by a later tool must survive a click on an unrelated lot.
+        for key in sorted(e):
+            if key in KNOWN_VERBS:
+                continue
+            if str(e[key]).strip():
+                lines.append(f'parcel {pid} {key} {q(e[key])}')
         lines.append("")
+        written += 1
+
+    # THE CLIFF GUARD. Everything above is careful, and careful was not enough twice already, so
+    # this is the backstop that does not depend on having foreseen the failure: count what is on
+    # disk, and refuse to replace it with dramatically less. It costs one read of a small file and
+    # it is the difference between losing an afternoon and losing the only copy of somebody's
+    # recollection of a town in 1991.
+    #
+    # Deliberately not a clamp or a warning. If this fires, something upstream is wrong and the
+    # right move is to stop and look, not to write "probably fine" over the evidence.
+    on_disk = _count_ruled_parcels()
+    if on_disk >= 10 and written < on_disk * 0.9:
+        raise RuntimeError(
+            f"REFUSING TO WRITE {VERDICTS}: it holds {on_disk} ruled parcels and this write "
+            f"would leave {written}. That is a loss of {on_disk - written}, which is not what "
+            f"saving one lot looks like. Nothing has been changed on disk. Look at what called "
+            f"this before overriding it - this file cannot be rebuilt from anything.")
+
     body = "\n".join(lines) + "\n"
     tmp = VERDICTS + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(body)
     os.replace(tmp, VERDICTS)
+
+
+def _count_ruled_parcels():
+    """How many distinct parcels the file on disk currently rules on. Zero if it is not there."""
+    seen = set()
+    try:
+        with open(VERDICTS, encoding="utf-8") as fh:
+            for line in fh:
+                p = line.split()
+                if len(p) >= 3 and p[0] == "parcel":
+                    try:
+                        seen.add(int(p[1]))
+                    except ValueError:
+                        pass
+    except FileNotFoundError:
+        return 0
+    return len(seen)
 
 
 # ---- where the sidewalks were -------------------------------------------------------------
@@ -399,7 +461,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._json({"ok": False, "error": str(e)}, 400)
             return
 
-        v = read_verdicts()
+        # READ FIRST, AND LET A FAILED READ STOP THE WRITE. write_verdicts rewrites the whole file
+        # from whatever this returns, so "I could not read it" must never be allowed to look like
+        # "it was empty". Reported as a 500 rather than swallowed: the browser shows the save
+        # failing, which is the correct thing for the owner to see.
+        try:
+            v = read_verdicts()
+        except OSError as e:
+            print(f"  [1991] REFUSED to save parcel {pid}: could not read {VERDICTS}: {e}")
+            self._json({"ok": False, "error": f"could not read the rulings file: {e}"}, 500)
+            return
+
         if was:
             # `footprint` is CARRIED THROUGH rather than rebuilt. The panel does not offer it yet,
             # so a lot saved from the browser would otherwise arrive without it and the whole entry
@@ -415,7 +487,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             }
         else:
             v.pop(pid, None)          # empty verdict clears the lot again
-        write_verdicts(v)
+
+        try:
+            write_verdicts(v)
+        except RuntimeError as e:
+            # The cliff guard fired. Nothing was written; say so loudly in both places.
+            print(f"  [1991] {e}")
+            self._json({"ok": False, "error": str(e)}, 500)
+            return
         print(f"  [1991] parcel {pid} -> {was or 'cleared'}"
               + (f' {data.get("kind","")}' if was else "")
               + (f' / {data.get("property","")}' if data.get("property") else ""))
