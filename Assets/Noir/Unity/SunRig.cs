@@ -354,11 +354,23 @@ namespace Noir.Unity
             // its own walls; these panes are quads positioned against the PROCEDURAL walls,
             // which for these places are no longer built. They were left hanging in the air in
             // front of the terraces like lit paintings.
+            // GUARDED, AND THE FALLBACK IS THE POINT. CollectGlazing lives inside CityBuildings'
+            // own `#if UNITY_EDITOR` block, so this line did not compile for a player at all -
+            // Noir.Unity could not be built, which is why there has never been a build.
+            //
+            // Skipping it outside the editor is also the CORRECT behaviour rather than a
+            // concession: the bought buildings are loaded through AssetDatabase and are simply not
+            // there in a player, so there is no pack glass to collect and the procedural panes
+            // below are what the place actually has. In the editor the bought building brings its
+            // own glass and the panes would hang in the air in front of it; in a player there is
+            // no building to hang them in front of.
+#if UNITY_EDITOR
             if (CityBuildings.Handles(place))
             {
                 CityBuildings.CollectGlazing(place, into.Glazing, into.GlazingPlaces);
                 return;
             }
+#endif
 
             BuildWindowPanes(world, place, parent, into.Panes, into.PanePlaces);
         }
@@ -812,11 +824,15 @@ namespace Noir.Unity
             // A bought building's own glass, switched between the pack's day and night
             // materials. Same occupancy test as a pane: the window is lit because somebody is
             // in and awake, which is the only reason a window is ever lit in this game.
+            // Guarded for the same reason as CollectGlazing above: SetGlazing is editor-only, and
+            // outside the editor this list is empty anyway because nothing ever collected into it.
+#if UNITY_EDITOR
             for (int i = 0; i < _fixtures.Glazing.Count; i++)
             {
                 bool on = level > 0.02f && _occupied.Contains(_fixtures.GlazingPlaces[i].Value);
                 CityBuildings.SetGlazing(_fixtures.Glazing[i], on);
             }
+#endif
 
             for (int i = 0; i < _fixtures.Lamps.Count; i++)
                 lights.SetIntensity(_fixtures.Lamps[i], level * LampIntensity);
