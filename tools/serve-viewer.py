@@ -361,8 +361,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             with open(BLOCKS, encoding="utf-8") as fh:
                 for line in fh:
                     p = line.split()
-                    if len(p) == 6 and p[0] == "block":
-                        blocks.add("%s|%s|%s" % (p[1], p[2], p[3]))
+                    if len(p) == 7 and p[0] == "block":
+                        blocks.add("%s|%s|%s" % (p[1], p[3], p[4]))
         except OSError:
             pass
 
@@ -473,10 +473,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             try:
                 with open(BLOCKS, encoding="utf-8") as fh:
                     for line in fh:
+                        # block <road> <line> <from> <to> <start> <end>
                         p = line.split()
-                        if len(p) == 6 and p[0] == "block":
-                            out.append({"road": p[1], "from": p[2], "to": p[3],
-                                        "a": float(p[4]), "b": float(p[5])})
+                        if len(p) == 7 and p[0] == "block":
+                            out.append({"road": p[1], "line": int(p[2]),
+                                        "from": p[3], "to": p[4],
+                                        "a": float(p[5]), "b": float(p[6])})
             except OSError:
                 pass
             self._json(out)

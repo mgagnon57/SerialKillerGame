@@ -34,11 +34,16 @@ namespace Noir.Unity
         public readonly struct Block
         {
             public readonly string Road, From, To;
+            public readonly int Line;
             public readonly float Start, End;
 
-            public Block(string road, string from, string to, float start, float end)
+            /// <param name="line">Which run of the road this is, 0 for the first. Five streets are
+            /// two separate runs in the survey and each one's distances start again at zero, so
+            /// without this two stretches both claim metres 0 to 137 and whichever is met first
+            /// wins - which is how the south strip of Summit came to answer for the north one.</param>
+            public Block(string road, int line, string from, string to, float start, float end)
             {
-                Road = road; From = from; To = to; Start = start; End = end;
+                Road = road; Line = line; From = from; To = to; Start = start; End = end;
             }
         }
 
@@ -70,12 +75,12 @@ namespace Noir.Unity
         /// unit the town is described in: "York stopped at Green" is a boundary somebody
         /// remembers, and a distance in metres is not.
         /// </summary>
-        public static bool ExistedAt(string road, float metresAlong)
+        public static bool ExistedAt(string road, int line, float metresAlong)
         {
             Load();
             if (_wasRoad.TryGetValue(road, out var whole) && whole == Stood.Absent) return false;
 
-            var block = BlockAt(road, metresAlong);
+            var block = BlockAt(road, line, metresAlong);
             if (block == null) return true;
             var key = road + "|" + block.Value.From + "|" + block.Value.To;
             return !(_wasBlock.TryGetValue(key, out var own) && own == Stood.Absent);
@@ -126,12 +131,14 @@ namespace Noir.Unity
         /// <summary>How many roads and blocks carry a ruling.</summary>
         public static int Count { get { Load(); return _byRoad.Count + _byBlock.Count; } }
 
-        /// <summary>The block of this road containing a point that far along it, or null.</summary>
-        public static Block? BlockAt(string road, float metresAlong)
+        /// <summary>The block of this line of this road containing a point that far along it.
+        /// The LINE matters: see Block.Line.</summary>
+        public static Block? BlockAt(string road, int line, float metresAlong)
         {
             LoadBlocks();
             foreach (var b in _blocks)
-                if (b.Road == road && metresAlong >= b.Start && metresAlong <= b.End)
+                if (b.Road == road && b.Line == line
+                    && metresAlong >= b.Start && metresAlong <= b.End)
                     return b;
             return null;
         }
@@ -140,10 +147,10 @@ namespace Noir.Unity
         /// What was laid on this stretch of this road: the block's own ruling if it has one, else
         /// the street's default, else Unruled.
         /// </summary>
-        public static Walk WalkAt(string road, float metresAlong)
+        public static Walk WalkAt(string road, int line, float metresAlong)
         {
             Load();
-            var block = BlockAt(road, metresAlong);
+            var block = BlockAt(road, line, metresAlong);
             if (block != null)
             {
                 var key = road + "|" + block.Value.From + "|" + block.Value.To;
@@ -217,15 +224,17 @@ namespace Noir.Unity
             {
                 var line = raw.Trim();
                 if (line.Length == 0 || line[0] == '#') continue;
+                // block <road> <line> <from> <to> <start> <end>
                 var p = line.Split(' ');
-                if (p.Length != 6 || p[0] != "block") continue;
-                if (!float.TryParse(p[4], System.Globalization.NumberStyles.Float,
+                if (p.Length != 7 || p[0] != "block") continue;
+                if (!int.TryParse(p[2], out int ln)) continue;
+                if (!float.TryParse(p[5], System.Globalization.NumberStyles.Float,
                                     System.Globalization.CultureInfo.InvariantCulture, out float a))
                     continue;
-                if (!float.TryParse(p[5], System.Globalization.NumberStyles.Float,
+                if (!float.TryParse(p[6], System.Globalization.NumberStyles.Float,
                                     System.Globalization.CultureInfo.InvariantCulture, out float b))
                     continue;
-                _blocks.Add(new Block(p[1], p[2], p[3], a, b));
+                _blocks.Add(new Block(p[1], ln, p[3], p[4], a, b));
             }
         }
 

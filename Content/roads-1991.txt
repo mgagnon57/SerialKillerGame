@@ -49,6 +49,8 @@
 #  ---- roads and stretches that did not exist in 1991 ----
 road earl was absent
 road grove was built
+road summit was built
+block summit thompson earl was absent
 
 road alley1 walk none
 road alley10 walk none

@@ -744,24 +744,52 @@ async function loadWalks() {
 
 /// How far along its own polyline a point sits, in metres - the same measure road-blocks.txt
 /// records its cuts in, so the two agree about which block you are standing on.
+/// WHICH LINE, and how far along THAT line - not along the road as a whole.
+///
+/// Five streets are two separate runs in the survey and each one's block distances start again at
+/// zero, so a distance measured across both is meaningless against them. Measuring across both is
+/// how the south strip of Summit came to answer for the north one.
 function alongRoad(rd, x, y) {
-  let run = 0, best = 0, bestD = Infinity;
-  for (const pl of rd.lines)
+  let bestLine = 0, best = 0, bestD = Infinity;
+  for (let li = 0; li < rd.lines.length; li++) {
+    const pl = rd.lines[li];
+    let run = 0;
     for (let i = 1; i < pl.length; i++) {
       const ax = pl[i - 1][0], ay = pl[i - 1][1], bx = pl[i][0], by = pl[i][1];
       const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy);
       if (L < 1e-9) continue;
       const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (L * L)));
       const d = Math.hypot(x - (ax + dx * t), y - (ay + dy * t));
-      if (d < bestD) { bestD = d; best = run + t * L; }
+      if (d < bestD) { bestD = d; best = run + t * L; bestLine = li; }
       run += L;
     }
-  return best;
+  }
+  return { line: bestLine, at: best };
+}
+
+/// The stretches of one line of a road that were there in 1991, in metres along that line.
+/// The same arithmetic RuledAway does on the game's side, and it has to stay the same: the editor
+/// showing a road the game will cut is the confusion this whole pass is about.
+function survivingSpans(rd, li) {
+  const mine = blocksOf(rd.n).filter(b => (b.line || 0) === li);
+  if (!mine.length) return null;                       // nothing known: draw it whole
+  const total = Math.max(...mine.map(b => b.b));
+  const keep = [];
+  let open = 0;
+  for (const b of mine) {
+    if ((WALKS.wasBlocks || {})[rd.n + "|" + b.from + "|" + b.to] !== "absent") continue;
+    if (b.a > open) keep.push([open, Math.min(b.a, total)]);
+    open = Math.max(open, b.b);
+  }
+  if (open === 0) return null;                         // none removed
+  if (open < total) keep.push([open, total]);
+  return keep.filter(s => s[1] - s[0] > 1);
 }
 
 function blockAt(rd, x, y) {
-  const d = alongRoad(rd, x, y);
-  for (const b of blocksOf(rd.n)) if (d >= b.a && d <= b.b) return b;
+  const where = alongRoad(rd, x, y);
+  for (const b of blocksOf(rd.n))
+    if ((b.line || 0) === where.line && where.at >= b.a && where.at <= b.b) return b;
   return null;
 }
 
@@ -1101,8 +1129,14 @@ function drawWalkSpan(rd, blk, s, col) {
     // the cross street rather than a vertex or two either side of it.
     const lo = blk ? blk.a : -Infinity;
     const hi = blk ? blk.b : Infinity;
-    let run = 0;
-    for (const pl of rd.lines)
+
+    // PER LINE, and the accumulator resets with it. A block's distances are along its own line of
+    // the road, so running one total across both lines of a split street draws the block in the
+    // wrong place on the wrong arm.
+    for (let li = 0; li < rd.lines.length; li++) {
+      if (blk && (blk.line || 0) !== li) continue;
+      const pl = rd.lines[li];
+      let run = 0;
       for (let i = 1; i < pl.length; i++) {
         const ax = pl[i - 1][0], ay = pl[i - 1][1], bx = pl[i][0], by = pl[i][1];
         const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy);
@@ -1123,6 +1157,7 @@ function drawWalkSpan(rd, blk, s, col) {
           ctx.stroke();
         }
       }
+    }
     ctx.restore();
   }
 }
@@ -1228,26 +1263,63 @@ function draw() {
           continue;
         }
 
+        // A LINE WITH A STRETCH RULED AWAY IS DRAWN IN PIECES. Some of these streets were
+        // extended after 1991 and only the new end comes off; drawing the road whole made a
+        // ruling that had worked perfectly look as though nothing had happened.
+        const strokeLine = (pl, li) => {
+          const spans = survivingSpans(rd, li);
+          if (!spans) {
+            ctx.beginPath();
+            ctx.moveTo(sx(pl[0][0]), sy(pl[0][1]));
+            for (let i = 1; i < pl.length; i++) ctx.lineTo(sx(pl[i][0]), sy(pl[i][1]));
+            ctx.stroke();
+            return;
+          }
+          for (const [lo, hi] of spans) {
+            let run = 0;
+            ctx.beginPath();
+            let started = false;
+            for (let i = 1; i < pl.length; i++) {
+              const ax = pl[i - 1][0], ay = pl[i - 1][1], bx = pl[i][0], by = pl[i][1];
+              const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy);
+              if (L < 1e-9) continue;
+              const t0 = Math.max(0, Math.min(1, (lo - run) / L));
+              const t1 = Math.max(0, Math.min(1, (hi - run) / L));
+              run += L;
+              if (t1 <= t0) continue;
+              if (!started) { ctx.moveTo(sx(ax + dx * t0), sy(ay + dy * t0)); started = true; }
+              ctx.lineTo(sx(ax + dx * t1), sy(ay + dy * t1));
+            }
+            if (started) ctx.stroke();
+          }
+        };
+
         ctx.setLineDash([]);
         ctx.lineWidth = lw;
         ctx.strokeStyle = col + (want ? "38" : "66");
-        for (const pl of rd.lines) {
-          ctx.beginPath();
-          ctx.moveTo(sx(pl[0][0]), sy(pl[0][1]));
-          for (let i = 1; i < pl.length; i++) ctx.lineTo(sx(pl[i][0]), sy(pl[i][1]));
-          ctx.stroke();
-        }
+        rd.lines.forEach(strokeLine);
 
         ctx.lineWidth = want ? 1.4 : 1;
         ctx.strokeStyle = col;
         if (dashed) ctx.setLineDash([Math.max(3, 6 * s), Math.max(3, 5 * s)]);
-        for (const pl of rd.lines) {
-          ctx.beginPath();
-          ctx.moveTo(sx(pl[0][0]), sy(pl[0][1]));
-          for (let i = 1; i < pl.length; i++) ctx.lineTo(sx(pl[i][0]), sy(pl[i][1]));
-          ctx.stroke();
-        }
+        rd.lines.forEach(strokeLine);
         ctx.setLineDash([]);
+
+        // What was taken away, faint and dotted, so there is something left to click to put it
+        // back - the same courtesy an absent lot gets.
+        if (partly && on("l-gone")) {
+          ctx.save();
+          ctx.setLineDash([Math.max(2, 4 * s), Math.max(2, 4 * s)]);
+          ctx.lineWidth = Math.max(1, 1.2 * s);
+          ctx.strokeStyle = col + "44";
+          for (const pl of rd.lines) {
+            ctx.beginPath();
+            ctx.moveTo(sx(pl[0][0]), sy(pl[0][1]));
+            for (let i = 1; i < pl.length; i++) ctx.lineTo(sx(pl[i][0]), sy(pl[i][1]));
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
       }
     };
     if (on("l-newroad")) drawNet(false, "--newroad", false);

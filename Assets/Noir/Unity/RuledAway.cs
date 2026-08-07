@@ -90,11 +90,26 @@ namespace Noir.Unity
             // surviving stretch. A road cut in the middle legitimately becomes two.
             int cut = 0, pieces = 0;
             var extra = new List<RoadRun>();
+
+            // WHICH RUN OF ITS OWN NAME EACH ONE IS. Five streets are two runs in the survey and
+            // their block offsets each start again at zero, so a run has to say which line it is
+            // before a block can be found on it - see RoadRulings.Block.Line. Counted in layout
+            // order, which is roads.txt order, which is the order build-road-blocks.py numbered
+            // them in.
+            var lineOf = new Dictionary<RoadRun, int>();
+            var seen = new Dictionary<string, int>();
+            foreach (var run in layout.Roads)
+            {
+                seen.TryGetValue(run.Name, out int n);
+                lineOf[run] = n;
+                seen[run.Name] = n + 1;
+            }
+
             foreach (var run in layout.Roads)
             {
                 if (run.Points.Count < 2 || !RoadRulings.AnyBlockGone(run.Name)) continue;
 
-                var spans = Surviving(run);
+                var spans = Surviving(run, lineOf[run]);
                 if (spans.Count == 0) continue;              // handled by the sweep below
                 if (spans.Count == 1 && spans[0].From <= 0.01f && spans[0].To >= Length(run.Points) - 0.01f)
                     continue;                                // nothing actually removed
@@ -139,7 +154,7 @@ namespace Noir.Unity
         }
 
         /// <summary>The stretches of this road that were there in 1991, in metres along it.</summary>
-        private static List<Span> Surviving(RoadRun run)
+        private static List<Span> Surviving(RoadRun run, int line)
         {
             float total = Length(run.Points);
             var keep = new List<Span>();
@@ -149,8 +164,8 @@ namespace Noir.Unity
             // writes them, so this is one walk and not a sort.
             foreach (var blk in RoadRulings.Blocks)
             {
-                if (blk.Road != run.Name) continue;
-                if (RoadRulings.ExistedAt(run.Name, (blk.Start + blk.End) * 0.5f)) continue;
+                if (blk.Road != run.Name || blk.Line != line) continue;
+                if (RoadRulings.ExistedAt(run.Name, line, (blk.Start + blk.End) * 0.5f)) continue;
 
                 if (blk.Start > open) keep.Add(new Span(open, Mathf.Min(blk.Start, total)));
                 open = Mathf.Max(open, blk.End);

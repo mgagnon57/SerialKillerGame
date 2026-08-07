@@ -97,6 +97,16 @@ def length(pts):
 roads = read_roads()
 print("roads: %d" % len(roads))
 
+# WHICH LINE OF THE ROAD THIS IS. Five streets - green, grove, harrison, holmes, summit - are two
+# separate runs in the survey, and each one's distances start again at zero. Blocks keyed on the
+# NAME alone therefore had two different stretches both claiming metres 0 to 137, and everything
+# that asks "which block is this point in" took whichever it met first: clicking the south strip of
+# Summit could land on the north line's block, and the game's cut would use the wrong offsets.
+seen_name = {}
+for road in roads:
+    road["line"] = seen_name.get(road["n"], 0)
+    seen_name[road["n"]] = road["line"] + 1
+
 blocks = []
 for road in roads:
     if len(road["pts"]) < 2:
@@ -135,7 +145,7 @@ for road in roads:
         a, awho = edges[i - 1]
         b, bwho = edges[i]
         blocks.append({
-            "road": road["n"], "c": road["c"],
+            "road": road["n"], "c": road["c"], "line": road["line"],
             "from": awho, "to": bwho,
             "a": round(a, 1), "b": round(b, 1),
         })
@@ -172,16 +182,24 @@ HEADER = """# ==================================================================
 #  by its two cross streets rather than by a number, so re-running this after a
 #  re-survey cannot silently move a ruling onto a different piece of road.
 #
-#    block <road> <from> <to> <start-m> <end-m>
+#    block <road> <line> <from> <to> <start-m> <end-m>
 #
 #  from/to are the crossing streets, or `end` where the road runs out. Distances are
-#  metres along the road from its first point.
+#  metres along THAT LINE of the road, from its first point.
+#
+#  <line> is which run of the road this is, 0 for the first. Five streets - green,
+#  grove, harrison, holmes and summit - are two separate runs in the survey, and each
+#  one's distances start again at zero. Without the line number two different stretches
+#  both claim metres 0 to 137, and anything asking "which block is this point in" takes
+#  whichever it meets first: clicking the south strip of Summit lands on the north
+#  line's block.
 # ============================================================================
 """
 
 lines = [HEADER]
 for b in blocks:
-    lines.append("block %s %s %s %.1f %.1f" % (b["road"], b["from"], b["to"], b["a"], b["b"]))
+    lines.append("block %s %d %s %s %.1f %.1f"
+                 % (b["road"], b["line"], b["from"], b["to"], b["a"], b["b"]))
 with open(OUT, "w", encoding="utf-8", newline="\n") as fh:
     fh.write("\n".join(lines) + "\n")
 print()

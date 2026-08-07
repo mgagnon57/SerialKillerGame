@@ -77,11 +77,24 @@ namespace Noir.Unity
                     Ribbon.Edge(verts, cols, tris, a + push, b + push, c, Stroke, Lift);
             }
 
+            // Which run of its own name each line is - five streets are two runs in the survey and
+            // their block offsets each start again at zero. See RoadRulings.Block.Line.
+            var lineIndex = new Dictionary<RoadLine, int>();
+            var seenName = new Dictionary<string, int>();
+            foreach (var l in world.Roads.Lines)
+            {
+                if (l == null) continue;
+                seenName.TryGetValue(l.Name, out int already);
+                lineIndex[l] = already;
+                seenName[l.Name] = already + 1;
+            }
+
             foreach (var line in world.Roads.Lines)
             {
                 if (line == null || line.Path == null) continue;
                 bool isAlley = line.Class == RoadClass.Alley;
                 if (isAlley != wantAlleys) continue;
+                int myLine = lineIndex.TryGetValue(line, out int li) ? li : 0;
 
                 var colour = Colour(line.Class);
 
@@ -133,7 +146,7 @@ namespace Noir.Unity
                     // Asked per step rather than per road, because a walk is a property of a
                     // BLOCK: Chicago had one both sides through the middle of town and none out
                     // at the edges, and the change happens at a cross street partway along.
-                    var walk = RoadRulings.WalkAt(line.Name, d);
+                    var walk = RoadRulings.WalkAt(line.Name, myLine, d);
                     if (walk != RoadRulings.Walk.Unruled && walk != RoadRulings.Walk.None)
                     {
                         // The push is (-dy, dx), so on a road running north it points WEST and on
