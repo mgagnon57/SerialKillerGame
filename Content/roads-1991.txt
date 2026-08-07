@@ -1,0 +1,63 @@
+# ============================================================================
+#  WHERE THE SIDEWALKS WERE - THE OWNER'S OWN RULING
+#
+#  AUTHORED, not derived, and the same kind of fact as Content/parcel-1991.txt: no
+#  survey, tax roll or aerial layer in this project records which Rossville streets
+#  had a walk in 1991. OpenStreetMap does not tag them for a village this size, the
+#  federal imagery is 2016 and shows the town twenty-five years too late, and the
+#  county measured the right of way but not what was laid in it.
+#
+#  Written by the browser map (docs/rossville-buildings.html, served by
+#  tools/serve-viewer.py): click a street, say which side. Hand-editing is fine - the
+#  file is read back on the next load.
+#
+#  WHY THIS FILE CAN BE ACTED ON. Content/roads.txt carries a measured right of way for
+#  all 66 roads. A street paves a 10 m corridor down the middle of a 20 m easement, so
+#  five metres each side is public ground that is NOT road. The walk has somewhere to go
+#  the moment this file says it exists.
+#
+#  FIELDS, one per line, keyed by the road's name in roads.txt
+#    road <name> walk none            no sidewalk on either side
+#    road <name> walk both            one on each side
+#    road <name> walk north|south     an east-west street with a walk on that side only
+#    road <name> walk east|west       a north-south street with a walk on that side only
+#
+#  A road with no line here has not been ruled on yet, which is not the same as `none`.
+#
+#  THE ALLEYS ARE RULED BY MEASUREMENT, not by memory: 4 m of track in 4 to 8 m of
+#  ground leaves no room for a walk on any of the 33.
+# ============================================================================
+
+road alley1 walk none
+road alley10 walk none
+road alley11 walk none
+road alley12 walk none
+road alley13 walk none
+road alley14 walk none
+road alley15 walk none
+road alley16 walk none
+road alley17 walk none
+road alley18 walk none
+road alley19 walk none
+road alley2 walk none
+road alley20 walk none
+road alley21 walk none
+road alley22 walk none
+road alley23 walk none
+road alley24 walk none
+road alley26 walk none
+road alley27 walk none
+road alley28 walk none
+road alley29 walk none
+road alley3 walk none
+road alley30 walk none
+road alley31 walk none
+road alley32 walk none
+road alley4 walk none
+road alley5 walk none
+road alley6 walk none
+road alley7 walk none
+road alley8 walk none
+road alley9 walk none
+road ann walk none
+road watson walk none

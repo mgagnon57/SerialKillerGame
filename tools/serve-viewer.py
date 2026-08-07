@@ -145,6 +145,79 @@ def write_verdicts(v):
     os.replace(tmp, VERDICTS)
 
 
+# ---- where the sidewalks were -------------------------------------------------------------
+#
+# The same kind of fact as the 1991 rulings and kept the same way: authored, never derived, whole
+# file written beside and swapped. Keyed by the road's NAME rather than by a line number, because
+# the survey splits some streets into two runs - Harrison is two lines and one street, and a walk
+# is a property of the street.
+
+WALKS = os.path.join(HERE, "..", "Content", "roads-1991.txt")
+
+WALK_SIDES = {"none", "both", "north", "south", "east", "west"}
+
+WALK_HEADER = """# ============================================================================
+#  WHERE THE SIDEWALKS WERE - THE OWNER'S OWN RULING
+#
+#  AUTHORED, not derived, and the same kind of fact as Content/parcel-1991.txt: no
+#  survey, tax roll or aerial layer in this project records which Rossville streets
+#  had a walk in 1991. OpenStreetMap does not tag them for a village this size, the
+#  federal imagery is 2016 and shows the town twenty-five years too late, and the
+#  county measured the right of way but not what was laid in it.
+#
+#  Written by the browser map (docs/rossville-buildings.html, served by
+#  tools/serve-viewer.py): click a street, say which side. Hand-editing is fine - the
+#  file is read back on the next load.
+#
+#  WHY THIS FILE CAN BE ACTED ON. Content/roads.txt carries a measured right of way for
+#  all 66 roads. A street paves a 10 m corridor down the middle of a 20 m easement, so
+#  five metres each side is public ground that is NOT road. The walk has somewhere to go
+#  the moment this file says it exists.
+#
+#  FIELDS, one per line, keyed by the road's name in roads.txt
+#    road <name> walk none            no sidewalk on either side
+#    road <name> walk both            one on each side
+#    road <name> walk north|south     an east-west street with a walk on that side only
+#    road <name> walk east|west       a north-south street with a walk on that side only
+#
+#  A road with no line here has not been ruled on yet, which is not the same as `none`.
+#
+#  THE ALLEYS ARE RULED BY MEASUREMENT, not by memory: 4 m of track in 4 to 8 m of
+#  ground leaves no room for a walk on any of the 33.
+# ============================================================================
+"""
+
+
+def read_walks():
+    out = {}
+    try:
+        with open(WALKS, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) != 4 or parts[0] != "road" or parts[2] != "walk":
+                    continue
+                if parts[3] in WALK_SIDES:
+                    out[parts[1]] = parts[3]
+    except OSError:
+        pass
+    return out
+
+
+def write_walks(w):
+    lines = [WALK_HEADER]
+    for name in sorted(w):
+        if w[name] in WALK_SIDES:
+            lines.append(f"road {name} walk {w[name]}")
+    body = "\n".join(lines) + "\n"
+    tmp = WALKS + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(body)
+    os.replace(tmp, WALKS)
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=DOCS, **kw)
@@ -159,6 +232,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        if self.path.startswith("/__walk"):
+            self._walk()
+            return
         if not self.path.startswith("/__verdict"):
             self.send_error(404)
             return
@@ -189,7 +265,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
               + (f' / {data.get("property","")}' if data.get("property") else ""))
         self._json({"ok": True, "count": len(v)})
 
+    def _walk(self):
+        """One street's sidewalk, saved. An empty side clears the road back to unruled, which is
+        not the same as ruling it `none` - see the header of Content/roads-1991.txt."""
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            data = json.loads(self.rfile.read(n) or b"{}")
+            road = str(data["road"]).strip()
+            side = str(data.get("walk", "")).strip()
+            if not road:
+                raise ValueError("no road named")
+            if side and side not in WALK_SIDES:
+                raise ValueError(f"unknown side {side!r}")
+        except Exception as e:
+            self._json({"ok": False, "error": str(e)}, 400)
+            return
+
+        w = read_walks()
+        if side:
+            w[road] = side
+        else:
+            w.pop(road, None)
+        write_walks(w)
+        print(f"  [walk] {road} -> {side or 'unruled'}")
+        self._json({"ok": True, "count": len(w)})
+
     def do_GET(self):
+        if self.path.startswith("/__walks"):
+            self._json(read_walks())
+            return
         if self.path.startswith("/__verdicts"):
             self._json({str(k): v for k, v in read_verdicts().items()})
             return
@@ -228,7 +332,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         # asked for, which is always /favicon.ico. Written as a one-line filter, shipped as
         # "verified" because the happy path answered, and caught by reading the server's own log.
         text = " ".join(str(a) for a in args)
-        if "__version" in text or "__verdicts" in text:
+        if "__version" in text or "__verdicts" in text or "__walks" in text:
             return                       # a poll every two seconds would bury everything else
         super().log_message(fmt, *args)
 

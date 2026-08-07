@@ -1,6 +1,6 @@
-<meta charset="utf-8" />
+﻿<meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Rossville — the buildings, seated on the lots</title>
+<title>Rossville â€” the buildings, seated on the lots</title>
 <style>
   /* Palette is the subject's own: Sanborn's material key for the buildings - the key this
      project decoded off the 1913 sheets - over drafting linen and ink. */
@@ -146,20 +146,24 @@
   #map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
   #map.drag { cursor: grabbing; }
 
-  #detail {
+  #detail, #roadpanel {
     position: absolute; right: 16px; top: 16px; width: 310px; max-height: calc(100% - 32px);
     overflow-y: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px;
     box-shadow: var(--shadow); padding: 15px 16px; display: none;
   }
-  #detail.on { display: block; }
+  #detail.on, #roadpanel.on { display: block; }
   #detail.editing { border-color: var(--editing); box-shadow: 0 0 0 1px var(--editing), var(--shadow); }
-  #detail h2 { margin: 0 0 2px; font-size: 15px; font-weight: 650; }
-  #detail .pin { color: var(--muted); font-size: 12px; }
-  #close {
+  #detail h2, #roadpanel h2 { margin: 0 0 2px; font-size: 15px; font-weight: 650; }
+  #detail .pin, #roadpanel .pin { color: var(--muted); font-size: 12px; }
+  #roadpanel button.w { font: inherit; font-size: 12px; padding: 4px 9px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--ink); border-radius: 4px; }
+  #roadpanel button.w:hover { border-color: var(--muted); }
+  #roadpanel button.w.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  #close, #r-close {
     position: absolute; top: 9px; right: 9px; border: 0; background: none; cursor: pointer;
     color: var(--muted); font-size: 17px; line-height: 1; padding: 3px 6px; border-radius: 3px;
   }
-  #close:hover { background: var(--sunk); color: var(--ink); }
+  #close:hover, #r-close:hover { background: var(--sunk); color: var(--ink); }
 
   dl { margin: 12px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12.5px; }
   dt { color: var(--muted); }
@@ -224,21 +228,21 @@
 <div id="app">
   <aside id="rail">
     <div class="pad">
-      <p class="eyebrow" id="s-built">Vermilion County · FEMA/ORNL</p>
+      <p class="eyebrow" id="s-built">Vermilion County Â· FEMA/ORNL</p>
       <h1>The buildings, seated on the lots</h1>
-      <p class="sub">822 measured footprints on Rossville's 794 surveyed parcels — the first buildings in this project that stand where a survey put them.</p>
+      <p class="sub">822 measured footprints on Rossville's 794 surveyed parcels â€” the first buildings in this project that stand where a survey put them.</p>
     </div>
 
     <div class="stats">
-      <div class="stat good"><b id="s-seated">—</b><span>footprints seated on a county lot</span></div>
-      <div class="stat good"><b id="s-inside">—</b><span>land inside their own lot</span></div>
-      <div class="stat good"><b id="s-addr">—</b><span>agree with the county's address</span></div>
-      <div class="stat"><b id="s-lots">—</b><span>lots carrying a building</span></div>
+      <div class="stat good"><b id="s-seated">â€”</b><span>footprints seated on a county lot</span></div>
+      <div class="stat good"><b id="s-inside">â€”</b><span>land inside their own lot</span></div>
+      <div class="stat good"><b id="s-addr">â€”</b><span>agree with the county's address</span></div>
+      <div class="stat"><b id="s-lots">â€”</b><span>lots carrying a building</span></div>
     </div>
 
     <div class="pad sep">
       <p class="eyebrow">What the footprints say</p>
-      <p class="note" style="margin:0" id="s-findings">—</p>
+      <p class="note" style="margin:0" id="s-findings">â€”</p>
     </div>
 
     <div class="pad sep">
@@ -247,7 +251,7 @@
       <label class="row"><input type="checkbox" id="l-newroad" checked /><span class="swatch" style="background:var(--newroad)"></span>Streets <span class="mono ct" data-ct="streets_new" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-alleyline" checked /><span class="swatch" style="background:var(--alleyline)"></span>Alleys <span class="mono ct" data-ct="alleys_new" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-bldg" checked /><span class="swatch" style="background:var(--frame)"></span>Measured footprints <span class="mono ct" data-ct="buildings" style="color:var(--muted);font-size:11px"></span><span class="mono" id="ct-later" style="color:var(--muted);font-size:11px"></span></label>
-      <label class="row"><input type="checkbox" id="l-out" checked /><span class="swatch" style="background:var(--other)"></span>…including outbuildings <span class="mono ct" data-ct="outbuildings" style="color:var(--muted);font-size:11px"></span></label>
+      <label class="row"><input type="checkbox" id="l-out" checked /><span class="swatch" style="background:var(--other)"></span>â€¦including outbuildings <span class="mono ct" data-ct="outbuildings" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row"><input type="checkbox" id="l-sq" checked /><span class="swatch" style="background:var(--frame);border-style:dashed"></span>Squared to their block <span class="mono" style="color:var(--muted);font-size:11px">untick for raw</span></label>
       <label class="row"><input type="checkbox" id="l-flag" /><span class="swatch" style="background:var(--vanished)"></span>Where the two sources differ <span class="mono ct" data-ct="disagree_total" style="color:var(--muted);font-size:11px"></span></label>
       <label class="row" id="row-absent" style="display:none"><input type="checkbox" id="l-absent" /><span class="swatch" style="background:transparent;border-style:dotted"></span>Show lots I removed <span class="mono" id="ct-absent" style="color:var(--muted);font-size:11px"></span></label>
@@ -256,29 +260,29 @@
     </div>
 
     <div class="pad sep">
-      <p class="eyebrow">Building use — Sanborn's key</p>
-      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--frame)"></span>Residential — frame</label>
-      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--brick)"></span>Commercial — brick</label>
+      <p class="eyebrow">Building use â€” Sanborn's key</p>
+      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--frame)"></span>Residential â€” frame</label>
+      <label class="row" style="cursor:default"><span class="swatch" style="background:var(--brick)"></span>Commercial â€” brick</label>
       <label class="row" style="cursor:default"><span class="swatch" style="background:var(--civic)"></span>Civic, school, government</label>
       <label class="row" style="cursor:default"><span class="swatch" style="background:var(--industry)"></span>Industrial</label>
       <label class="row" style="cursor:default"><span class="swatch" style="background:var(--agri)"></span>Agricultural</label>
-      <p class="note" style="margin:10px 0 0">Colour follows the 1913 Sanborn material key this project already decoded — yellow frame, red brick — so the layer reads the way the town's own fire-insurance sheets do.</p>
+      <p class="note" style="margin:10px 0 0">Colour follows the 1913 Sanborn material key this project already decoded â€” yellow frame, red brick â€” so the layer reads the way the town's own fire-insurance sheets do.</p>
     </div>
 
     <div class="pad sep">
       <p class="eyebrow">Streets and alleys</p>
-      <p class="note" id="s-alleynote" style="margin:0">—</p>
+      <p class="note" id="s-alleynote" style="margin:0">â€”</p>
     </div>
 
     <div class="pad sep">
       <p class="eyebrow">Where the two sources differ</p>
       <div id="s-dis"></div>
-      <p class="note" style="margin:10px 0 0" id="s-disnote">—</p>
+      <p class="note" style="margin:10px 0 0" id="s-disnote">â€”</p>
     </div>
 
     <div class="pad sep">
       <p class="eyebrow">Roads still crossing private land</p>
-      <p class="note" id="s-roadsum" style="margin:0 0 8px">—</p>
+      <p class="note" id="s-roadsum" style="margin:0 0 8px">â€”</p>
       <div id="s-roadbad"></div>
     </div>
 
@@ -290,19 +294,19 @@
 
     <div class="pad sep">
       <p class="eyebrow">Read this before believing it</p>
-      <p class="note" id="s-crooked">—</p>
-      <p class="note">Every record is <code>VAL_METHOD: Automated</code> — machine-traced from imagery, not one checked by a person. Outlines include porches, attached garages and later additions; the 1913 Sanborn footprints exclude them. Imagery is <b>2016</b> and the game is set around <b>2000</b>, so the commercial row here is the town <i>after</i> the February 2004 fire. No heights, no room counts, no year built.</p>
+      <p class="note" id="s-crooked">â€”</p>
+      <p class="note">Every record is <code>VAL_METHOD: Automated</code> â€” machine-traced from imagery, not one checked by a person. Outlines include porches, attached garages and later additions; the 1913 Sanborn footprints exclude them. Imagery is <b>2016</b> and the game is set around <b>2000</b>, so the commercial row here is the town <i>after</i> the February 2004 fire. No heights, no room counts, no year built.</p>
       <p style="margin:12px 0 0"><button class="ghost" id="reset">Reset view</button></p>
     </div>
   </aside>
 
   <div id="stage">
     <canvas id="map"></canvas>
-    <div id="scale"><span class="bar"></span><span id="scale-t">—</span></div>
+    <div id="scale"><span class="bar"></span><span id="scale-t">â€”</span></div>
     <div id="detail">
-      <button id="close" aria-label="Close">×</button>
-      <h2 id="d-addr">—</h2>
-      <div class="pin mono" id="d-pin">—</div>
+      <button id="close" aria-label="Close">Ã—</button>
+      <h2 id="d-addr">â€”</h2>
+      <div class="pin mono" id="d-pin">â€”</div>
       <div id="d-flag" class="note" style="display:none;margin-top:10px;padding:8px 10px;
            background:var(--sunk);border-left:3px solid var(--vanished);border-radius:4px"></div>
       <div id="d-1991" style="display:none;margin-top:12px">
@@ -314,11 +318,11 @@
           <button class="v" data-v="absent" title="the parcel itself did not exist in 1991 - it was split off later">No lot yet</button>
         </div>
         <div id="d-built" style="display:none">
-          <input id="d-kind" list="kindlist" placeholder="what was it? school, shop, dwelling…"
+          <input id="d-kind" list="kindlist" placeholder="what was it? school, shop, dwellingâ€¦"
                  autocomplete="off" />
           <datalist id="kindlist"><option value="dwelling"></option><option value="apartment"></option><option value="shop"></option><option value="church"></option><option value="school"></option><option value="pub"></option><option value="diner"></option><option value="garage"></option><option value="gasstation"></option><option value="postoffice"></option><option value="bank"></option><option value="villagehall"></option><option value="firestation"></option><option value="precinct"></option><option value="surgery"></option><option value="hospital"></option><option value="municipal"></option><option value="publicworks"></option><option value="waterworks"></option><option value="sewageworks"></option><option value="watertower"></option><option value="cemetery"></option><option value="park"></option><option value="playground"></option><option value="green"></option><option value="churchyard"></option><option value="memorial"></option><option value="carpark"></option><option value="mill"></option><option value="factory"></option><option value="elevator"></option><option value="silo"></option><option value="barn"></option><option value="farm"></option><option value="farmyard"></option><option value="railway"></option><option value="cinema"></option><option value="laundry"></option><option value="newsstand"></option><option value="busstop"></option><option value="phonebox"></option><option value="allotments"></option><option value="casino"></option><option value="icecream"></option><option value="carwash"></option><option value="restroom"></option><option value="tower"></option><option value="cornfield"></option><option value="paddock"></option><option value="orchard"></option><option value="district"></option><option value="standing"></option><option value="camp"></option><option value="suburb"></option><option value="copse"></option></datalist>
           <input id="d-prop" list="proplist" autocomplete="off"
-                 placeholder="property name — same name joins lots into one" />
+                 placeholder="property name â€” same name joins lots into one" />
           <datalist id="proplist"></datalist>
           <div id="d-propmates" class="note" style="margin-top:4px"></div>
         </div>
@@ -330,6 +334,19 @@
       </div>
       <dl id="d-county"></dl>
       <div id="d-bldgs"></div>
+    </div>
+
+    <!-- WHERE THE SIDEWALKS WERE. Its own panel rather than a section of the lot's, because it
+         is a fact about a STREET and the lot panel is keyed to a parcel. Clicking the road opens
+         this; clicking a lot opens that; the two never both stand open. -->
+    <div id="roadpanel">
+      <button id="r-close" aria-label="Close">Ã—</button>
+      <h2 id="r-name">â€”</h2>
+      <div class="pin mono" id="r-size">â€”</div>
+      <p class="eyebrow" style="margin:13px 0 6px">Was there a sidewalk in 1991?</p>
+      <div id="r-sides" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+      <p class="note" id="r-room" style="margin:9px 0 0"></p>
+      <div style="margin-top:7px"><span id="r-saved" class="mono" style="font-size:11.5px"></span></div>
     </div>
   </div>
 </div>
@@ -457,7 +474,7 @@ function laterCount() {
     if (e.was === "vacant" || e.was === "absent") out.add(+k);
   let n = 0;
   for (const b of DATA.buildings) if (out.has(b.p)) n++;
-  el.textContent = n ? `  −${n} later` : "";
+  el.textContent = n ? `  âˆ’${n} later` : "";
 }
 
 async function loadVerdicts() {
@@ -525,11 +542,11 @@ async function saveVerdict(pid, was, note, kind, property) {
     if (was) VERDICTS[pid] = { was, note: note || "", kind: kind || "", property: property || "" };
     else delete VERDICTS[pid];
     const t = new Date().toTimeString().slice(0, 8);
-    saveState("saved", (was ? "saved " : "cleared ") + t + `  ·  ${j.count} lots settled`);
+    saveState("saved", (was ? "saved " : "cleared ") + t + `  Â·  ${j.count} lots settled`);
     afterVerdicts();          // the one update path - see afterVerdicts
   } catch (e) {
     // Say it plainly rather than looking as though it saved.
-    saveState("error", "NOT SAVED — " + e.message);
+    saveState("error", "NOT SAVED â€” " + e.message);
   }
 }
 
@@ -604,6 +621,161 @@ function dissolveEdges(polys, eps = 0.5) {
     }
   }
   return out;
+}
+
+// ---- where the sidewalks were ------------------------------------------------------------
+//
+// A fact about a STREET, not about a lot, so it is keyed by the road's NAME and kept in its own
+// file - Content/roads-1991.txt. Harrison is two survey lines and one street; a walk is a
+// property of the street, so both lines answer to one ruling.
+//
+// The alleys arrive already ruled `none`, by measurement rather than by memory: 4 m of track in
+// 4 to 8 m of public ground has nowhere to put a walk. The 33 streets are the question, and each
+// has about five metres a side to put one in.
+let WALKS = {};
+let roadSel = null;
+
+const WALK_CHOICES = [
+  ["none", "None"], ["both", "Both sides"],
+  ["north", "North side"], ["south", "South side"],
+  ["east", "East side"], ["west", "West side"],
+];
+
+async function loadWalks() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__walks", { cache: "no-store" });
+    if (r.ok) { WALKS = await r.json(); draw(); }
+  } catch (e) { /* no server, no rulings */ }
+}
+
+/// Which way a road runs, so the panel offers the two sides that MEAN something: a north-south
+/// street has an east side and a west side and no north one.
+function roadIsNorthSouth(rd) {
+  let dx = 0, dy = 0;
+  for (const pl of rd.lines) {
+    dx += Math.abs(pl[pl.length - 1][0] - pl[0][0]);
+    dy += Math.abs(pl[pl.length - 1][1] - pl[0][1]);
+  }
+  return dy >= dx;
+}
+
+function segDistTo(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const L = dx * dx + dy * dy;
+  const t = L <= 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L));
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+}
+
+/// The road under the cursor, or null. Generous by a few pixels at any zoom, because a road is
+/// a line and a line is hard to hit exactly.
+function pickRoad(px, py) {
+  const x = wx(px), y = wy(py);
+  let best = null, bestD = Infinity;
+  for (const rd of (DATA.newroads || [])) {
+    const reach = Math.max((rd.w || 10) / 2, 7 / view.s);
+    for (const pl of rd.lines)
+      for (let i = 1; i < pl.length; i++) {
+        const d = segDistTo(x, y, pl[i - 1][0], pl[i - 1][1], pl[i][0], pl[i][1]);
+        if (d < reach && d < bestD) { bestD = d; best = rd; }
+      }
+  }
+  return best;
+}
+
+function showRoad(rd) {
+  roadSel = rd;
+  document.getElementById("detail").classList.remove("on");
+  document.getElementById("roadpanel").classList.add("on");
+  document.getElementById("r-name").textContent = rd.n;
+
+  const row = rd.row || 0;
+  const room = row > 0 ? (row - rd.w) / 2 : 0;
+  document.getElementById("r-size").textContent =
+    `${rd.w} m of ${rd.c}` + (row ? ` in a ${row} m right of way` : ", right of way not measured");
+  document.getElementById("r-room").textContent = room >= 2
+    ? `About ${room.toFixed(1)} m each side for verge and a walk.`
+    : "No room either side - this is an alley, and it is ruled by the tape rather than by memory.";
+
+  const ns = roadIsNorthSouth(rd);
+  const offer = WALK_CHOICES.filter(([v]) =>
+    v === "none" || v === "both" || (ns ? (v === "east" || v === "west")
+                                        : (v === "north" || v === "south")));
+
+  const box = document.getElementById("r-sides");
+  box.innerHTML = "";
+  for (const [value, label] of offer) {
+    const b = document.createElement("button");
+    b.className = "w" + (WALKS[rd.n] === value ? " on" : "");
+    b.textContent = label;
+    b.onclick = () => saveWalk(rd.n, WALKS[rd.n] === value ? "" : value);
+    box.appendChild(b);
+  }
+  document.getElementById("r-saved").textContent =
+    WALKS[rd.n] ? "ruled " + WALKS[rd.n] : "not ruled yet";
+  draw();
+}
+
+async function saveWalk(name, side) {
+  const res = document.getElementById("r-saved");
+  try {
+    const r = await fetch("/__walk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ road: name, walk: side }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "refused");
+    if (side) WALKS[name] = side; else delete WALKS[name];
+    res.textContent = (side ? "saved " : "cleared ") + new Date().toTimeString().slice(0, 8)
+                    + `  Â·  ${j.count} roads ruled`;
+    res.style.color = "var(--agri)";
+    if (roadSel) showRoad(roadSel);
+  } catch (e) {
+    res.textContent = "NOT SAVED â€” " + e.message;
+    res.style.color = "var(--flag)";
+  }
+}
+
+/// The walk itself, drawn where it would be laid: out at the right-of-way edge rather than
+/// against the kerb, because that is the side of the verge a walk actually sits on and it is
+/// what the easement was measured for.
+function drawWalks() {
+  if (!DATA.newroads) return;
+  const col = css("--authored");
+  for (const rd of DATA.newroads) {
+    const side = WALKS[rd.n];
+    if (!side || side === "none") continue;
+    const row = rd.row || rd.w;
+    const off = Math.max(rd.w / 2 + 1, row / 2 - 1.2);
+    const ns = roadIsNorthSouth(rd);
+    // The normal is (-dy, dx), so on a road running north it points WEST and on one running
+    // east it points north. Getting this backwards puts every walk on the wrong side of every
+    // street, which is the kind of mistake that looks fine until somebody who lives there sees it.
+    const signs = side === "both" ? [1, -1]
+                : ns ? [side === "east" ? -1 : 1]
+                     : [side === "north" ? 1 : -1];
+
+    ctx.save();
+    ctx.lineCap = "butt";
+    ctx.lineWidth = Math.max(1.2, 1.6 * s);
+    ctx.strokeStyle = col;
+    ctx.setLineDash([Math.max(2, 3 * s), Math.max(2, 3 * s)]);
+    for (const pl of rd.lines)
+      for (let i = 1; i < pl.length; i++) {
+        const ax = pl[i - 1][0], ay = pl[i - 1][1], bx = pl[i][0], by = pl[i][1];
+        const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy);
+        if (len < 0.01) continue;
+        for (const sgn of signs) {
+          const nx = -dy / len * off * sgn, ny = dx / len * off * sgn;
+          ctx.beginPath();
+          ctx.moveTo(sx(ax + nx), sy(ay + ny));
+          ctx.lineTo(sx(bx + nx), sy(by + ny));
+          ctx.stroke();
+        }
+      }
+    ctx.restore();
+  }
 }
 
 const bounds = (() => {
@@ -707,6 +879,7 @@ function draw() {
     };
     if (on("l-newroad")) drawNet(false, "--newroad", false);
     if (on("l-alleyline")) drawNet(true, "--alleyline", true);
+    drawWalks();
   }
 
   if (on("l-lot")) {
@@ -980,6 +1153,7 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
     dirtyOn = -1;
   }
   sel = i;
+  document.getElementById("roadpanel").classList.remove("on"); roadSel = null;
   const prop = propertyOf(i);
   const many = prop.ids.length > 1;
 
@@ -997,8 +1171,8 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
   document.getElementById("d-addr").textContent =
     many ? prop.name : (c.addr || "unaddressed lot");
   document.getElementById("d-pin").textContent = many
-    ? `${prop.ids.length} lots as one property · parcels ${prop.ids.join(", ")}`
-    : `parcel ${i}` + (c.cls ? ` · PIN ${DATA.county[i].pin || ""}` : "");
+    ? `${prop.ids.length} lots as one property Â· parcels ${prop.ids.join(", ")}`
+    : `parcel ${i}` + (c.cls ? ` Â· PIN ${DATA.county[i].pin || ""}` : "");
 
   let lot = 0;
   for (const k of prop.ids) lot += ringArea(DATA.parcels[k]);
@@ -1009,14 +1183,14 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
     exempt:   ["a church, school or hall", "Both sources are right: a tax roll lists taxable dwellings, and this is not one."],
     merged:   ["the downtown terrace",     "Believe the COUNTY. The imagery traces a run of joined brick as one building, so its neighbours read as empty."],
     untaxed:  ["a building the county does not book", "The real conflict. A structure stands here and the roll calls the land vacant."],
-    vanished: ["booked, but nothing stands here", "Believe the IMAGERY. The roll books a dwelling and the photograph shows none — most likely demolished."],
+    vanished: ["booked, but nothing stands here", "Believe the IMAGERY. The roll books a dwelling and the photograph shows none â€” most likely demolished."],
   };
   const why = (DATA.disagree || {})[i];
   const flag = document.getElementById("d-flag");
   if (why && WHY[why]) {
     flag.style.display = "block";
     flag.innerHTML = `<b style="color:var(--ink)">${WHY[why][0]}</b><br>${WHY[why][1]}`
-      + `<br><span style="color:var(--muted)">Neither source can say what stood here in 1991 —`
+      + `<br><span style="color:var(--muted)">Neither source can say what stood here in 1991 â€”`
       + ` the roll starts in 2007 and the imagery is 2016.</span>`;
   } else {
     flag.style.display = "none";
@@ -1061,8 +1235,8 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
       host.innerHTML = ids.length
         ? `<b style="color:var(--ink)">${esc(name)}</b> also covers `
           + ids.map(k => `<a href="#" data-go="${k}" class="mate">parcel ${k}</a>`).join(", ")
-          + ` — ${ids.length + 1} lots, one property.`
-        : `<span style="color:var(--muted)">first lot of “${esc(name)}”. Type the same name on its `
+          + ` â€” ${ids.length + 1} lots, one property.`
+        : `<span style="color:var(--muted)">first lot of â€œ${esc(name)}â€. Type the same name on its `
           + `neighbours to join them.</span>`;
       for (const a of host.querySelectorAll(".mate")) {
         a.onclick = e => {
@@ -1100,10 +1274,10 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
         if (!already) b.classList.add("on");
         showBuilt();
         dirtyOn = i;
-        saveState("dirty", "unsaved — press Save");
+        saveState("dirty", "unsaved â€” press Save");
       };
     }
-    const dirty = () => { dirtyOn = i; saveState("dirty", "unsaved — press Save"); };
+    const dirty = () => { dirtyOn = i; saveState("dirty", "unsaved â€” press Save"); };
     note.oninput = dirty;
     kind.oninput = dirty;
     prop.oninput = () => { dirty(); mates(); };
@@ -1115,7 +1289,7 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
 
   const rows = [];
   rows.push([many ? "Ground, all lots" : "Lot as surveyed",
-             `${fmt(Math.round(lot * M2_FT2))} sq ft · ${(lot / AC).toFixed(2)} ac`]);
+             `${fmt(Math.round(lot * M2_FT2))} sq ft Â· ${(lot / AC).toFixed(2)} ac`]);
   if (many) {
     const classes = [...new Set(prop.ids.map(k => (DATA.county[k] || {}).clsname).filter(Boolean))];
     if (classes.length) rows.push(["County classes", classes.join(", ")]);
@@ -1144,13 +1318,13 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
   if (!bl.length) {
     const booked = (c.dwell || 0) > 0;
     host.innerHTML = `<p class="note" style="margin-top:12px">No footprint found on this lot.${
-      booked ? " <b>The assessor books a dwelling here</b> — one of the two sources is wrong." : ""}</p>`;
+      booked ? " <b>The assessor books a dwelling here</b> â€” one of the two sources is wrong." : ""}</p>`;
     draw(); return;
   }
   const ruled = (VERDICTS[i] || VERDICTS[String(i)] || {}).was;
   const later = ruled === "vacant" || ruled === "absent";
   host.innerHTML = `<p class="eyebrow" style="margin:16px 0 0">${bl.length} structure${bl.length > 1 ? "s" : ""} on this lot`
-    + (later ? ` <span style="color:var(--flag)">— later than 1991, by your ruling</span>` : "")
+    + (later ? ` <span style="color:var(--flag)">â€” later than 1991, by your ruling</span>` : "")
     + `</p>` +
     bl.map(b => {
       const cover = (ringArea(b.r) / lot) * 100;
@@ -1161,13 +1335,18 @@ OK to discard them and move on, or Cancel to go back and press Save.`);
         <dl>
           <dt>Footprint</dt><dd>${fmt(b.sf)} sq ft</dd>
           <dt>Covers</dt><dd>${cover.toFixed(0)}% of lot</dd>
-          ${perFt ? `<dt>Market ÷ footprint</dt><dd>$${perFt}/sq ft</dd>` : ""}
+          ${perFt ? `<dt>Market Ã· footprint</dt><dd>$${perFt}/sq ft</dd>` : ""}
           <dt>Role</dt><dd><span class="chip ${b.role}">${b.role}</span></dd>
         </dl></div>`;
     }).join("");
   draw();
 }
 
+document.getElementById("r-close").onclick = () => {
+  document.getElementById("roadpanel").classList.remove("on");
+  roadSel = null;
+  draw();
+};
 document.getElementById("close").onclick = () => {
   document.getElementById("detail").classList.remove("on"); sel = -1; draw();
 };
@@ -1195,6 +1374,13 @@ cv.addEventListener("pointerup", e => {
   if (drag && !drag.moved) {
     const i = pick(e.clientX - r.left, e.clientY - r.top);
     if (i >= 0) show(i);
+    else {
+      // A CLICK THAT MISSES EVERY LOT IS A CLICK ON THE STREET. Roads run between the parcels,
+      // so nothing has to be held down and no mode has to be entered: click a lot for the lot,
+      // click the road for the road.
+      const rd = pickRoad(e.clientX - r.left, e.clientY - r.top);
+      if (rd) showRoad(rd);
+    }
   }
   drag = null; cv.classList.remove("drag");
 });
@@ -1227,7 +1413,7 @@ document.getElementById("q").addEventListener("input", e => {
   const hits = idx.filter(r => r.s.toLowerCase().includes(q)).slice(0, 24);
   host.innerHTML = hits.map(h => {
     const c = DATA.county[h.i];
-    return `<button data-i="${h.i}">${esc((c && c.addr) || "unaddressed")} <span style="color:var(--muted)">· ${h.i}</span></button>`;
+    return `<button data-i="${h.i}">${esc((c && c.addr) || "unaddressed")} <span style="color:var(--muted)">Â· ${h.i}</span></button>`;
   }).join("") || `<p class="note">Nothing matches.</p>`;
   for (const b of host.querySelectorAll("button")) b.onclick = () => {
     const i = +b.dataset.i, bx = pBox[i];
@@ -1242,10 +1428,10 @@ document.getElementById("q").addEventListener("input", e => {
 // EVERY FIGURE BELOW COMES OUT OF DATA.stats, which build-viewer-data.py computes from the
 // same arrays this page draws. Nothing here is typed in. See tools/viewer-stats.py.
 const ST = DATA.stats || {};
-const num = n => (n === undefined || n === null) ? "—" : n.toLocaleString("en-US");
+const num = n => (n === undefined || n === null) ? "â€”" : n.toLocaleString("en-US");
 
 document.getElementById("s-built").textContent =
-  "Vermilion County · FEMA/ORNL · data built " + (ST.built || "unknown");
+  "Vermilion County Â· FEMA/ORNL Â· data built " + (ST.built || "unknown");
 document.getElementById("s-seated").textContent = num(ST.buildings);
 document.getElementById("s-inside").textContent = ST.inside_own_lot_pct + "%";
 document.getElementById("s-addr").textContent = ST.addr_pct + "%";
@@ -1260,7 +1446,7 @@ document.getElementById("s-findings").innerHTML =
   `Measured off these ${num(ST.setback_lots)} town lots, not asserted: the median house centre `
   + `stands <b style="color:var(--ink)">${ST.setback_ft} ft</b> in from its front lot line on a lot `
   + `<b style="color:var(--ink)">${ST.lot_depth_ft} ft</b> deep and `
-  + `<b style="color:var(--ink)">${ST.lot_front_ft} ft</b> wide — pushed to the front `
+  + `<b style="color:var(--ink)">${ST.lot_front_ft} ft</b> wide â€” pushed to the front `
   + `(${ST.setback_frac} of the way down it, where 0.50 would be dead centre), with the back open `
   + `behind it. Of the ${num(ST.multi_lots)} lots carrying a second structure, ${ST.behind_pct}% put `
   + `it behind the house, a median ${ST.behind_ft} ft further back. The 1913 Sanborn sheets said `
@@ -1269,22 +1455,22 @@ document.getElementById("s-findings").innerHTML =
 
 document.getElementById("s-crooked").innerHTML =
   `<b style="color:var(--ink)">The outlines are crooked, and it is the source.</b> The median house `
-  + `sits <b style="color:var(--ink)">${ST.skew_med}°</b> off square to its own lot and the worst `
-  + `tenth more than ${ST.skew_p90}° — and that is equally true in the raw download, before this `
+  + `sits <b style="color:var(--ink)">${ST.skew_med}Â°</b> off square to its own lot and the worst `
+  + `tenth more than ${ST.skew_p90}Â° â€” and that is equally true in the raw download, before this `
   + `pipeline touches it, so it is FEMA's tracing rather than the seating. Two things here were mine `
   + `and are fixed: a 0.197% squash in the coordinate fit, and a 17 ft registration offset between `
   + `the two agencies' data. The angle no placement can fix, so the map shows it corrected by `
-  + `default — squared to its block, which is steadier than any single lot. Untick “squared to `
-  + `their block” to see the raw tracing underneath.`;
+  + `default â€” squared to its block, which is steadier than any single lot. Untick â€œsquared to `
+  + `their blockâ€ to see the raw tracing underneath.`;
 
 document.getElementById("s-alleynote").innerHTML =
   `The county maps <b style="color:var(--ink)">${ST.streets_new}</b> streets and no alleys at all `
-  + `— counties map what they maintain and address from. The `
+  + `â€” counties map what they maintain and address from. The `
   + `<b style="color:var(--ink)">${ST.alleys_new}</b> alleys are traced out of the parcel gaps `
   + `instead, since a right of way is the ground nobody owns. Two of them carry real names, `
   + `<span class="mono">ann</span> and <span class="mono">watson</span>: the county calls them `
   + `streets, but their easement measures 33 ft and 26 ft, too narrow to pave as one. `
-  + `<b style="color:var(--ink)">Cars use the streets and not the alleys</b> — an alley is for `
+  + `<b style="color:var(--ink)">Cars use the streets and not the alleys</b> â€” an alley is for `
   + `the bins, the garage that faces it, and a boy on a bike.`;
 
 // ---- reviewing the disagreements, one lot at a time ---------------------------------------
@@ -1297,10 +1483,10 @@ document.getElementById("s-alleynote").innerHTML =
   const dc = ST.disagree_counts || {};
   const total = Object.values(dc).reduce((a, b) => a + b, 0);
   const ROWS = [
-    ["exempt",   "--exempt",   "a church, school or hall", "both right — a tax roll lists taxable dwellings, and these are not"],
-    ["merged",   "--merged",   "the downtown terrace",     "believe the COUNTY — the imagery traces a run of joined brick as one building"],
+    ["exempt",   "--exempt",   "a church, school or hall", "both right â€” a tax roll lists taxable dwellings, and these are not"],
+    ["merged",   "--merged",   "the downtown terrace",     "believe the COUNTY â€” the imagery traces a run of joined brick as one building"],
     ["untaxed",  "--untaxed",  "a building on land the county calls vacant", "the real conflict; the roll may be stale"],
-    ["vanished", "--vanished", "booked, but nothing stands there", "believe the IMAGERY — most likely demolished since"],
+    ["vanished", "--vanished", "booked, but nothing stands there", "believe the IMAGERY â€” most likely demolished since"],
   ];
 
   // Lots per cause, ordered by address so a walk through them is a walk down a street rather
@@ -1381,9 +1567,9 @@ document.getElementById("s-alleynote").innerHTML =
     const i = list[at];
     const label = addrOf(i) || `parcel ${i}`;
     return `<div style="margin-top:6px;display:flex;align-items:center;gap:6px">
-      <button class="step" data-d="-1" title="previous">‹</button>
+      <button class="step" data-d="-1" title="previous">â€¹</button>
       <span class="mono" style="font-size:11.5px;color:var(--ink)">${at + 1} of ${list.length}</span>
-      <button class="step" data-d="1" title="next">›</button>
+      <button class="step" data-d="1" title="next">â€º</button>
       <span class="mono" style="font-size:11.5px;color:var(--muted);overflow:hidden;
                                 text-overflow:ellipsis;white-space:nowrap">${esc(label)}</span>
     </div>`;
@@ -1413,7 +1599,7 @@ document.getElementById("s-alleynote").innerHTML =
   window.__disRefresh();
 
   document.getElementById("s-disnote").innerHTML =
-    `${total} lots in all — <b style="color:var(--ink)">click a row to walk through them</b>, `
+    `${total} lots in all â€” <b style="color:var(--ink)">click a row to walk through them</b>, `
     + `and the arrows to move on. Each one flies to the lot with its record open, so the `
     + `question can be answered where it has to be: <i>what stood there in 1991?</i> Neither `
     + `source can say. A tax roll is 2007 at the earliest and the imagery is 2016.`;
@@ -1431,7 +1617,7 @@ document.getElementById("s-alleynote").innerHTML =
         `<div class="mono" style="font-size:11.5px;display:flex;justify-content:space-between;padding:2px 0">
            <span>${esc(n)}</span><span style="color:${v >= 5 ? "var(--flag)" : "var(--muted)"}">${v}%</span>
          </div>`).join("")
-    : `<p class="note">None — every road sits clear of the lots.</p>`;
+    : `<p class="note">None â€” every road sits clear of the lots.</p>`;
 })();
 
 // ---- never show a stale map -------------------------------------------------------------
@@ -1464,7 +1650,7 @@ document.getElementById("s-alleynote").innerHTML =
       // NEVER RELOAD OVER UNSAVED WORK. The map refreshing itself is a convenience; throwing
       // away a ruling somebody has typed and not yet saved is not a trade worth making.
       if (dirtyOn >= 0) {
-        saveState("dirty", "unsaved — press Save (the map will refresh after)");
+        saveState("dirty", "unsaved â€” press Save (the map will refresh after)");
         everConnected = true;
         if (seen === null) seen = v;
         setTimeout(tick, 2000);
@@ -1481,7 +1667,7 @@ document.getElementById("s-alleynote").innerHTML =
         // keeps the view where it is. A tool that edits the rulings - merge-back-strips.py -
         // now shows up on an open map within two seconds without disturbing it.
         if (pageNow !== pageWas) { location.reload(); return; }
-        if (rulesNow !== rulesWas) loadVerdicts();
+        if (rulesNow !== rulesWas) { loadVerdicts(); loadWalks(); }
       }
     } catch (e) {
       misses++;
@@ -1503,4 +1689,5 @@ addEventListener("beforeunload", e => {
 
 resize(); fitView(); draw();
 loadVerdicts();
+loadWalks();
 </script>
