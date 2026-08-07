@@ -57,9 +57,24 @@ namespace Noir.Unity
             s._host = host;
             s._opened = Time.realtimeSinceStartup;
 
-            // Hold the clock. Restored the moment the curtain lifts.
             s._wasSpeed = host != null ? host.SpeedIndex : 1;
-            if (host != null) host.SpeedIndex = 0;
+
+            // Hold the clock. Restored the moment the curtain lifts.
+            //
+            // NOT IN BATCH MODE, WHERE THERE IS NO CURTAIN AND NOBODY BEHIND IT. This is a
+            // courtesy to a person watching the game come up: don't run the town's first minutes
+            // while the frames are still stuttering. Headless there is no window, and holding the
+            // clock is not a courtesy - it is a stopped simulation that looks exactly like a
+            // broken one.
+            //
+            // It looked like one for a long time. The PlayMode suite waits ten real seconds and
+            // then asserts the clock advanced; this curtain holds it for TWELVE STRAIGHT FRAMES
+            // UNDER 25 ms or forty-five seconds, whichever comes first, and the first frame of a
+            // headless build takes sixteen seconds on its own. So the test's whole window sat
+            // inside the curtain. Three of the eight gate tests failed on it - the clock never
+            // advancing, the traffic never moving, and cars waiting forever at a clear queue -
+            // and all three were the same stopped clock reported three ways.
+            if (host != null && !Application.isBatchMode) host.SpeedIndex = 0;
             return s;
         }
 
