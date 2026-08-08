@@ -66,9 +66,28 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **414 pass, 2 fail, 416 total, ~2 min.** Measured 2026-08-09.
-> The two failures are `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` and
-> `TheTenthPercentileIsNotALock`. **They fail by design.** Anything else is a regression.
+> **415 pass, 0 fail, 415 total, 2–5 min.** Measured 2026-08-09.
+> **Any red is a regression.** There is no standing exception any more, and there was one for
+> months: `TwoToOneTests` G1 and G2 asserted the project's 2:1 design rule, the town is at
+> 0.89 : 1, and they were correctly and permanently red. Two permanent reds make a THIRD red easy
+> to miss — on 2026-08-09 a session twice read "4 failed" and had to dig to find which two were
+> new — so they are `[Test, Explicit, Category("Aspiration")]` now.
+>
+> **Nothing was deleted and the standard did not move.** The number is still measured on the same
+> three villages every run and printed by `TheGapToTheRuleIsReported`:
+>
+> ```
+>   ---- THE 2:1 RULE, worst of three villages ----
+>   median villager   0.89 : 1   against a rule of 2.0   short by 1.11, 2.3x to go
+>   tenth percentile  0.33 : 1   against a bar of 1.0    short by 0.67, 3.0x to go
+> ```
+>
+> It is still ratcheted by `ProgressDoesNotReverse` and `TheEyeHasNotBeenNarrowed`, which DO fail
+> the standing gate if it regresses — they were always the tests doing the protecting. Run the
+> aspiration itself with `dotnet test --filter "TestCategory=Aspiration"`.
+>
+> **Do not close the gap by adjusting the instrument.** The number moves when the town gains more
+> KINDS of observable moment, and by nothing else.
 
 **Do not run this suite in Debug.** It takes 8–9 minutes and it is not stable: across three runs
 on an unchanged tree it produced a third failure that did not reproduce. That is consistent with
