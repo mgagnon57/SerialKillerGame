@@ -250,6 +250,11 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   consumed.
 - **A UTF-8 BOM stops `^\s*#` matching the first line**, so `grep -vcE '^\s*$|^\s*#'` over-counts
   a `Content/` file by one. Several of these files have one.
+- **`kinds.txt` resolves a kind through its `words` line, not its `kind` line.** Renaming the
+  `kind` and leaving the `words` makes every map fail to parse. And the `frontage`/`massing`/
+  `grammar` values are keys into `Frontage.cs` and `MassingGrammars.cs` — a value nothing answers
+  to does **not** throw, it falls through to a default and the building just looks wrong. When you
+  touch either side, diff the keys the content declares against the keys the code answers to.
 
 ---
 
