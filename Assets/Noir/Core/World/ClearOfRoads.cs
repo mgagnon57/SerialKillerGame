@@ -42,7 +42,7 @@ namespace Noir.Core.World
         public const float Tolerance = 0.5f;
 
         /// <summary>How far the search will push a building before giving up, in metres.</summary>
-        public const int Reach = 24;
+        public const int Reach = 30;
 
         /// <summary>
         /// What a move is worth. A building that clears the road but lands on top of its
@@ -62,6 +62,10 @@ namespace Noir.Core.World
             foreach (var p in layout.Places)
                 if (table.Row(p.Kind).IsBuilding) buildings.Add(p);
 
+            // THE GROUND A MOVE MUST AVOID IS layout.Places ENTIRE, not just the buildings.
+            // Checking only buildings put a house through the water tower: a `tower` is not a
+            // building by the kind table, and neither are the yards, the greens or the churchyard,
+            // and none of them want a house on top.
             int moved = 0;
             foreach (var p in buildings)
             {
@@ -70,7 +74,7 @@ namespace Noir.Core.World
 
                 if (RoadCorridor.WorstPenetration(layout, p.Bounds) <= Tolerance) continue;
 
-                if (TryClear(layout, buildings, p, out var moveTo))
+                if (TryClear(layout, layout.Places, p, out var moveTo))
                 {
                     var was = p.Bounds;
                     p.Bounds = moveTo;
@@ -90,31 +94,47 @@ namespace Noir.Core.World
         /// face the street square-on. Moving a house diagonally to save a metre would turn a row
         /// of front doors into a zigzag, which is worse than the metre is worth.
         /// </summary>
-        private static bool TryClear(VillageLayout layout, List<PlaceSpec> all, PlaceSpec p,
-                                     out TileRect best)
+        private static bool TryClear(VillageLayout layout, IReadOnlyList<PlaceSpec> all,
+                                     PlaceSpec p, out TileRect best)
         {
             best = p.Bounds;
+
+            // Square on first, over the whole reach, so a house that CAN stay in line does.
             for (int step = 1; step <= Reach; step++)
-            {
                 for (int dir = 0; dir < 4; dir++)
                 {
                     int dx = dir == 0 ? step : dir == 1 ? -step : 0;
                     int dy = dir == 2 ? step : dir == 3 ? -step : 0;
-
-                    var box = new TileRect(p.Bounds.X + dx, p.Bounds.Y + dy, p.Bounds.W, p.Bounds.H);
-                    if (box.X < 0 || box.Y < 0) continue;
-                    if (box.X + box.W > layout.Width || box.Y + box.H > layout.Height) continue;
-                    if (RoadCorridor.WorstPenetration(layout, box) > 0f) continue;
-                    if (HitsAnother(all, p, box)) continue;
-
-                    best = box;
-                    return true;
+                    if (Fits(layout, all, p, dx, dy, out best)) return true;
                 }
-            }
+
+            // AND ONLY THEN OFF THE SQUARE. Eight buildings in Rossville sit where all four
+            // cardinal escapes are blocked by another building within thirty metres - the tight
+            // downtown lots and the terraces. A house set back at an angle reads as odd; a house
+            // standing in Chicago Street reads as broken. The second is worse, so this is the
+            // fallback rather than the rule.
+            for (int step = 1; step <= Reach; step++)
+                for (int dir = 0; dir < 4; dir++)
+                {
+                    int dx = (dir & 1) == 0 ? step : -step;
+                    int dy = (dir & 2) == 0 ? step : -step;
+                    if (Fits(layout, all, p, dx, dy, out best)) return true;
+                }
+
             return false;
         }
 
-        private static bool HitsAnother(List<PlaceSpec> all, PlaceSpec self, TileRect box)
+        private static bool Fits(VillageLayout layout, IReadOnlyList<PlaceSpec> all, PlaceSpec p,
+                                 int dx, int dy, out TileRect box)
+        {
+            box = new TileRect(p.Bounds.X + dx, p.Bounds.Y + dy, p.Bounds.W, p.Bounds.H);
+            if (box.X < 0 || box.Y < 0) return false;
+            if (box.X + box.W > layout.Width || box.Y + box.H > layout.Height) return false;
+            if (RoadCorridor.WorstPenetration(layout, box) > 0f) return false;
+            return !HitsAnother(all, p, box);
+        }
+
+        private static bool HitsAnother(IReadOnlyList<PlaceSpec> all, PlaceSpec self, TileRect box)
         {
             foreach (var o in all)
             {

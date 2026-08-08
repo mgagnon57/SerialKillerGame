@@ -112,8 +112,17 @@ namespace Noir.Core.World
         /// </summary>
         public const int StreetWidth = 10;
 
+        // ---- the same questions, asked of a BUILT world rather than a layout -------------------
+        //
+        // WHY BOTH. A VillageLayout is what the survey passes edit; a RoadNetwork is what the game
+        // ends up driving on, and the two are not the same object or even the same shape - a
+        // layout carries RoadRun with a List<Tile>, the world carries RoadLine with a RoadPath.
+        // Only PlayMode can reach the second, and PlayMode is the only thing that can see what the
+        // passes actually produced. Testing one and shipping the other is how "there are houses in
+        // the road" stayed true for weeks while every test said otherwise.
+
         /// <summary>
-        /// The same question asked of the building's REAL OUTLINE rather than its bounding box.
+        /// The layout question asked of the building's REAL OUTLINE rather than its bounding box.
         ///
         /// USE THIS WHEREVER AN OUTLINE EXISTS, and the grade school is why. It stands on three
         /// parcels in an L, so its bounding box takes in the yard and crosses Benton, Green and
@@ -130,105 +139,131 @@ namespace Noir.Core.World
             foreach (var run in layout.Roads)
             {
                 var pts = run.Points;
-                if (pts == null || pts.Count < 2) continue;
-                if (run.Width < minWidth) continue;
+                if (pts == null || pts.Count < 2 || run.Width < minWidth) continue;
                 float half = run.Width / 2f;
                 if (half <= 0f) continue;
 
                 for (int i = 1; i < pts.Count; i++)
                 {
                     float d = DistanceToOutline(pts[i - 1].X, pts[i - 1].Y, pts[i].X, pts[i].Y, outline);
-                    if (d < half)
-                    {
-                        float pen = half - d;
-                        if (pen > worst) worst = pen;
-                    }
+                    if (d < half && half - d > worst) worst = half - d;
                 }
             }
             return worst;
+        }
+
+        /// <summary>Which street this box stands in, or empty.</summary>
+        public static string RoadUnder(VillageLayout layout, TileRect box) =>
+            RoadUnder(layout, box, 0);
+
+        public static string RoadUnder(VillageLayout layout, TileRect box, int minWidth)
+        {
+            if (layout == null) return "";
+            string name = "";
+            float worst = 0f;
+            foreach (var run in layout.Roads)
+            {
+                var pts = run.Points;
+                if (pts == null || pts.Count < 2 || run.Width < minWidth) continue;
+                float half = run.Width / 2f;
+                for (int i = 1; i < pts.Count; i++)
+                {
+                    float d = DistanceToBox(pts[i - 1].X, pts[i - 1].Y, pts[i].X, pts[i].Y, box);
+                    if (d < half && half - d > worst) { worst = half - d; name = run.Name; }
+                }
+            }
+            return name;
         }
 
         /// <summary>Which street this outline stands in, or empty.</summary>
         public static string RoadUnder(VillageLayout layout, IReadOnlyList<Tile> outline, int minWidth)
         {
             if (layout == null || outline == null || outline.Count < 3) return "";
-            string worstName = "";
+            string name = "";
             float worst = 0f;
-
             foreach (var run in layout.Roads)
             {
                 var pts = run.Points;
-                if (pts == null || pts.Count < 2) continue;
-                if (run.Width < minWidth) continue;
+                if (pts == null || pts.Count < 2 || run.Width < minWidth) continue;
                 float half = run.Width / 2f;
-
                 for (int i = 1; i < pts.Count; i++)
                 {
                     float d = DistanceToOutline(pts[i - 1].X, pts[i - 1].Y, pts[i].X, pts[i].Y, outline);
-                    if (d < half && half - d > worst) { worst = half - d; worstName = run.Name; }
+                    if (d < half && half - d > worst) { worst = half - d; name = run.Name; }
                 }
             }
-            return worstName;
+            return name;
         }
 
-        private static float DistanceToOutline(float ax, float ay, float bx, float by,
-                                               IReadOnlyList<Tile> ring)
+        public static float WorstPenetration(RoadNetwork roads, TileRect box, int minWidth)
         {
-            int n = ring.Count;
-            if (PointInRing(ax, ay, ring) || PointInRing(bx, by, ring)) return 0f;
-
-            float best = float.MaxValue;
-            for (int i = 0; i < n; i++)
-            {
-                var p = ring[i];
-                var q = ring[(i + 1) % n];
-                if (SegmentsCross(ax, ay, bx, by, p.X, p.Y, q.X, q.Y)) return 0f;
-                float d = PointToSegmentSq(p.X, p.Y, ax, ay, bx, by);
-                if (d < best) best = d;
-            }
-            return (float)System.Math.Sqrt(best);
-        }
-
-        private static bool PointInRing(float px, float py, IReadOnlyList<Tile> ring)
-        {
-            bool inside = false;
-            int n = ring.Count;
-            for (int i = 0, j = n - 1; i < n; j = i++)
-            {
-                float xi = ring[i].X, yi = ring[i].Y, xj = ring[j].X, yj = ring[j].Y;
-                if ((yi > py) != (yj > py) &&
-                    px < (xj - xi) * (py - yi) / ((yj - yi) == 0f ? 1e-9f : (yj - yi)) + xi)
-                    inside = !inside;
-            }
-            return inside;
-        }
-
-        /// <summary>Which road this box stands in, or empty. For the message, not the decision.</summary>
-        public static string RoadUnder(VillageLayout layout, TileRect box) =>
-            RoadUnder(layout, box, 0);
-
-        /// <summary>Which road at least <paramref name="minWidth"/> wide this box stands in.</summary>
-        public static string RoadUnder(VillageLayout layout, TileRect box, int minWidth)
-        {
-            if (layout == null) return "";
-            string worstName = "";
             float worst = 0f;
-
-            foreach (var run in layout.Roads)
+            if (roads == null) return 0f;
+            foreach (var line in roads.Lines)
             {
-                var pts = run.Points;
-                if (pts == null || pts.Count < 2) continue;
-                if (run.Width < minWidth) continue;
-                float half = run.Width / 2f;
-
-                for (int i = 1; i < pts.Count; i++)
-                {
-                    float d = DistanceToBox(pts[i - 1].X, pts[i - 1].Y, pts[i].X, pts[i].Y, box);
-                    if (d < half && half - d > worst) { worst = half - d; worstName = run.Name; }
-                }
+                if (line.Width < minWidth || line.Path == null) continue;
+                float half = line.Width / 2f;
+                worst = Deepest(line.Path, half, Corners(box), worst);
             }
-            return worstName;
+            return worst;
         }
+
+        public static float WorstPenetration(RoadNetwork roads, IReadOnlyList<Tile> outline, int minWidth)
+        {
+            float worst = 0f;
+            if (roads == null || outline == null || outline.Count < 3) return 0f;
+            var pts = new Vec2[outline.Count];
+            for (int i = 0; i < outline.Count; i++) pts[i] = new Vec2(outline[i].X, outline[i].Y);
+            foreach (var line in roads.Lines)
+            {
+                if (line.Width < minWidth || line.Path == null) continue;
+                worst = Deepest(line.Path, line.Width / 2f, pts, worst);
+            }
+            return worst;
+        }
+
+        public static string RoadUnder(RoadNetwork roads, TileRect box, int minWidth)
+        {
+            if (roads == null) return "";
+            string name = "";
+            float worst = 0f;
+            var corners = Corners(box);
+            foreach (var line in roads.Lines)
+            {
+                if (line.Width < minWidth || line.Path == null) continue;
+                float d = Deepest(line.Path, line.Width / 2f, corners, 0f);
+                if (d > worst) { worst = d; name = line.Name; }
+            }
+            return name;
+        }
+
+        /// <summary>
+        /// How far past the kerb the deepest of these points reaches.
+        ///
+        /// Uses RoadPath.Project rather than walking the point list, because a RoadPath is not a
+        /// point list - a curved run is resampled and smoothed, and its own projection is the only
+        /// thing that knows where the tarmac actually is. Points that project off either END of
+        /// the run are ignored: a house beyond the end of a street is not in it.
+        /// </summary>
+        private static float Deepest(RoadPath path, float half, Vec2[] points, float worst)
+        {
+            if (half <= 0f) return worst;
+            foreach (var p in points)
+            {
+                var hit = path.Project(p);
+                if (hit.S < 0f || hit.S > path.Length) continue;
+                float lateral = hit.Lateral < 0f ? -hit.Lateral : hit.Lateral;
+                if (lateral < half && half - lateral > worst) worst = half - lateral;
+            }
+            return worst;
+        }
+
+        private static Vec2[] Corners(TileRect r) => new[]
+        {
+            new Vec2(r.X, r.Y), new Vec2(r.X + r.W, r.Y),
+            new Vec2(r.X + r.W, r.Y + r.H), new Vec2(r.X, r.Y + r.H),
+            new Vec2(r.X + r.W / 2f, r.Y + r.H / 2f),
+        };
 
         /// <summary>
         /// Distance from a segment to an axis-aligned box - zero when they meet.
@@ -256,6 +291,44 @@ namespace Noir.Core.World
 
             // The one square root in the file, on a value already reduced to a single scalar.
             return (float)System.Math.Sqrt(best);
+        }
+
+        /// <summary>
+        /// Distance from a segment to a closed ring - zero when they meet. Same three cases as
+        /// the box: an endpoint inside the ring, the segment crossing an edge, or the ring's
+        /// nearest vertex.
+        /// </summary>
+        private static float DistanceToOutline(float ax, float ay, float bx, float by,
+                                               IReadOnlyList<Tile> ring)
+        {
+            int n = ring.Count;
+            if (PointInRing(ax, ay, ring) || PointInRing(bx, by, ring)) return 0f;
+
+            float best = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                var p = ring[i];
+                var q = ring[(i + 1) % n];
+                if (SegmentsCross(ax, ay, bx, by, p.X, p.Y, q.X, q.Y)) return 0f;
+                float d = PointToSegmentSq(p.X, p.Y, ax, ay, bx, by);
+                if (d < best) best = d;
+            }
+            return (float)System.Math.Sqrt(best);
+        }
+
+        private static bool PointInRing(float px, float py, IReadOnlyList<Tile> ring)
+        {
+            bool inside = false;
+            int n = ring.Count;
+            for (int i = 0, j = n - 1; i < n; j = i++)
+            {
+                float xi = ring[i].X, yi = ring[i].Y, xj = ring[j].X, yj = ring[j].Y;
+                float dy = yj - yi;
+                if ((yi > py) != (yj > py) &&
+                    px < (xj - xi) * (py - yi) / (dy == 0f ? 1e-9f : dy) + xi)
+                    inside = !inside;
+            }
+            return inside;
         }
 
         private static bool PointInBox(float px, float py, float x0, float y0, float x1, float y1) =>

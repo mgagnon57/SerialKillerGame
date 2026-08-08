@@ -2152,63 +2152,63 @@ place house 1474,2202 13x7 "511 Earlcourt Ave"
 #  THE COUNTRY - corn, beans, and about seven people to the square mile
 # ==========================================================================
 
-place farm 11,8 15x16 "Home Farm"
+place farm 11,8 15x16 "the old place on 3400 North"
   door 18,23
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 36,6 15x16 "Wicker End"
+place farm 36,6 15x16 "the home place on 3200 North"
   door 43,21
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
 place farmyard 54,7 30x28 "the yard"
   human Mud, diesel and forty years of things that might come in useful.
-place barn 97,7 18x39 "the big barn"
+place barn 97,7 18x39 "the place on 3600 North"
   door 106,7
   human Big enough to lose a car in, and dark enough at noon that you would.
-place barn 8,53 11x14 "the old barn"
+place barn 8,53 11x14 "the corner at 3700 North and 2200 East"
   door 13,66
   human Half the roof is down and the half that is not is worse.
-place silo 25,55 7x7 "the near silo"
+place silo 25,55 7x7 "the place on 3300 North"
   human It booms when you knock on it.
-place silo 49,60 7x7 "the far silo"
+place silo 49,60 7x7 "the corner at 3700 North and 2700 East"
   human Empty since the wet year, and the ladder up the side is still sound.
-place cornfield 5,272 70x50 "the top field"
+place cornfield 5,272 70x50 "the headland on 3700 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 7,332 70x50 "the long field"
+place cornfield 7,332 70x50 "the far end of 3800 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 8,397 70x50 "the bottom field"
+place cornfield 8,397 70x50 "the low ground off 3200 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 6,456 70x50 "the far acre"
+place cornfield 6,456 70x50 "the 1900 East field"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 4,529 50x70 "the far field"
+place cornfield 4,529 50x70 "the corner field on 3000 North"
   human Nobody watches this one from anywhere.
-place cornfield 7,1460 70x50 "the top of the hill"
+place cornfield 7,1460 70x50 "the headland on 3550 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 7,1512 70x50 "the middle field"
+place cornfield 7,1512 70x50 "the far end of 3100 North"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 10,1590 70x50 "the near paddock"
+place pasture 10,1590 70x50 "the pasture on 3100 North"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 10,1642 70x50 "the far paddock"
+place pasture 10,1642 70x50 "the pasture on 3600 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 6,1713 70x50 "the long acre"
+place pasture 6,1713 70x50 "the stock lot on 3800 North"
   human Fenced for horses that were sold years ago.
-place orchard 11,1776 70x50 "the orchard"
+place orchard 11,1776 70x50 "the fruit ground off 2300 East"
   human Planted in rows by somebody who is dead now.
-place orchard 263,9 50x70 "the old orchard"
+place orchard 263,9 50x70 "the orchard on 3600 North"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 270,270 70x50 "the west belt"
+place wood 270,270 70x50 "the timber on 3800 North"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 269,328 70x50 "the west belt, middle"
+place wood 269,328 70x50 "the grove off 2700 East"
   human The stretch between the two roads, and the darkest of the three.
-place copse 264,400 70x50 "the west belt, south"
+place wood 264,400 70x50 "the 2000 East timber"
   human It gives out where the ground turns wet.
-place copse 270,454 70x50 "the west belt, end"
+place wood 270,454 70x50 "the 2300 East timber"
   human Somebody has been cutting firewood out of this one.
-place copse 265,529 50x70 "the far spinney"
+place wood 265,529 50x70 "the 1900 East timber"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 270,657 70x50 "the east wood"
+place wood 270,657 70x50 "the grove off 1900 East"
   human Older than the town, and the boundary bank round it is older still.
-place copse 272,712 70x50 "the east wood, lower"
+place wood 272,712 70x50 "the 2100 East timber"
   human The same wood, on the other side of the road that was put through it.
 place gardens 3,79 30x40 "the west garden plots"
   human Thirty plots, four of them worked properly and the rest an argument.
@@ -2230,162 +2230,162 @@ place camp 310,91 5x5 "the pitch in the east wood"
   human The fire is out. How long it has been out is the question.
 place camp 322,91 5x5 "the far pitch"
   human A bedroll, a case left open, and no track in or out that anybody has found.
-place farm 339,86 15x16 "Home Farm 2"
+place farm 339,86 15x16 "the quarter on 3300 North"
   door 346,101
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 367,86 15x16 "Wicker End 3"
+place farm 367,86 15x16 "the corner at 3200 North and 2300 East"
   door 374,101
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 270,610 30x28 "the yard 4"
+place farmyard 270,610 30x28 "the yard on 3400 North"
   human Mud, diesel and forty years of things that might come in useful.
-place barn 349,713 18x39 "the big barn 5"
+place barn 349,713 18x39 "the north eighty on 3550 North"
   door 358,713
   human Big enough to lose a car in, and dark enough at noon that you would.
-place barn 305,607 11x14 "the old barn 6"
+place barn 305,607 11x14 "the place on 3800 North"
   door 310,620
   human Half the roof is down and the half that is not is worse.
-place silo 269,112 7x7 "the near silo 7"
+place silo 269,112 7x7 "the corner at 3800 North and 2700 East"
   human It booms when you knock on it.
-place silo 283,111 7x7 "the far silo 8"
+place silo 283,111 7x7 "the home place on 3100 North"
   human Empty since the wet year, and the ladder up the side is still sound.
-place farm 325,610 15x16 "Home Farm 9"
+place farm 325,610 15x16 "the south eighty on 3300 North"
   door 332,625
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 349,608 15x16 "Wicker End 10"
+place farm 349,608 15x16 "the north eighty on 3200 North"
   door 356,623
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 272,787 30x28 "the yard 11"
+place farmyard 272,787 30x28 "the yard on 3100 North"
   human Mud, diesel and forty years of things that might come in useful.
-place cornfield 310,781 70x50 "the top field 2"
+place cornfield 310,781 70x50 "the field off 3000 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 272,844 70x50 "the long field 3"
+place cornfield 272,844 70x50 "the tile field on 3200 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 266,1717 70x50 "the bottom field 4"
+place cornfield 266,1717 70x50 "the corner field on 3800 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 268,1768 70x50 "the far acre 5"
+place cornfield 268,1768 70x50 "the tile field on 3000 North"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 268,1824 50x70 "the far field 6"
+place cornfield 268,1824 50x70 "the 2400 East field"
   human Nobody watches this one from anywhere.
-place cemetery 271,1959 70x50 "the top of the hill 7"
+place cemetery 271,1959 70x50 "Rossville Cemetery"
   human It catches the weather first and everything here is a week behind.
-place cornfield 269,2020 70x50 "the middle field 8"
+place cornfield 269,2020 70x50 "the 3800 North field"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 270,2213 70x50 "the near paddock 9"
+place pasture 270,2213 70x50 "the stock lot on 3600 North"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 265,2279 70x50 "the far paddock 10"
+place pasture 265,2279 70x50 "the pasture on 3800 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 399,10 70x50 "the long acre 11"
+place pasture 399,10 70x50 "the lot behind the 2600 East place"
   human Fenced for horses that were sold years ago.
-place orchard 398,70 70x50 "the orchard 12"
+place orchard 398,70 70x50 "the orchard on 3200 North"
   human Planted in rows by somebody who is dead now.
-place orchard 400,271 50x70 "the old orchard 13"
+place orchard 400,271 50x70 "the fruit ground off 2200 East"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 401,396 70x50 "the west belt 14"
+place wood 401,396 70x50 "the grove off 2600 East"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 393,457 70x50 "the west belt, middle 15"
+place wood 393,457 70x50 "the timber on 3700 North"
   human The stretch between the two roads, and the darkest of the three.
-place copse 396,525 70x50 "the west belt, south 16"
+place wood 396,525 70x50 "the windbreak on 3550 North"
   human It gives out where the ground turns wet.
-place copse 397,588 70x50 "the west belt, end 17"
+place wood 397,588 70x50 "the timber on 3400 North"
   human Somebody has been cutting firewood out of this one.
-place copse 528,12 50x70 "the far spinney 18"
+place wood 528,12 50x70 "the windbreak on 3800 North"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 528,270 70x50 "the east wood 19"
+place wood 528,270 70x50 "the fencerow on 3200 North"
   human Older than the town, and the boundary bank round it is older still.
-place copse 530,332 70x50 "the east wood, lower 20"
+place wood 530,332 70x50 "the grove off 2200 East"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 529,402 70x50 "the top field 21"
+place cornfield 529,402 70x50 "the field off 3400 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 526,456 70x50 "the long field 22"
+place cornfield 526,456 70x50 "the 2700 East field"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 523,529 70x50 "the bottom field 23"
+place cornfield 523,529 70x50 "the 2200 East field"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 530,590 70x50 "the far acre 24"
+place cornfield 530,590 70x50 "the 3100 North field"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 786,11 50x70 "the far field 25"
+place cornfield 786,11 50x70 "the headland on 3000 North"
   human Nobody watches this one from anywhere.
-place cornfield 786,272 70x50 "the top of the hill 26"
+place cornfield 786,272 70x50 "the strip along 3000 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 787,328 70x50 "the middle field 27"
+place cornfield 787,328 70x50 "the low ground off 3300 North"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 792,395 70x50 "the near paddock 28"
+place pasture 792,395 70x50 "the lot behind the 2700 East place"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 786,456 70x50 "the far paddock 29"
+place pasture 786,456 70x50 "the hay ground on 3800 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 790,523 70x50 "the long acre 30"
+place pasture 790,523 70x50 "the lot behind the 1900 East place"
   human Fenced for horses that were sold years ago.
-place orchard 789,583 70x50 "the orchard 31"
+place orchard 789,583 70x50 "the orchard on 3700 North"
   human Planted in rows by somebody who is dead now.
-place orchard 920,5 50x70 "the old orchard 32"
+place orchard 920,5 50x70 "the fruit ground off 2500 East"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 899,266 70x50 "the west belt 33"
+place wood 899,266 70x50 "the timber on 3100 North"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 899,324 70x50 "the west belt, middle 34"
+place wood 899,324 70x50 "the fencerow on 3000 North"
   human The stretch between the two roads, and the darkest of the three.
-place copse 896,394 70x50 "the west belt, south 35"
+place wood 896,394 70x50 "the grove off 2400 East"
   human It gives out where the ground turns wet.
-place copse 898,459 70x50 "the west belt, end 36"
+place wood 898,459 70x50 "the fencerow on 3100 North"
   human Somebody has been cutting firewood out of this one.
-place copse 899,529 50x70 "the far spinney 37"
+place wood 899,529 50x70 "the fencerow on 3550 North"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 1051,11 70x50 "the east wood 38"
+place wood 1051,11 70x50 "the grove off 2000 East"
   human Older than the town, and the boundary bank round it is older still.
-place copse 1045,66 70x50 "the east wood, lower 39"
+place wood 1045,66 70x50 "the windbreak on 3400 North"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 1025,271 70x50 "the top field 40"
+place cornfield 1025,271 70x50 "the headland on 3200 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 1022,329 70x50 "the long field 41"
+place cornfield 1022,329 70x50 "the corner field on 3400 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 1028,398 70x50 "the bottom field 42"
+place cornfield 1028,398 70x50 "the tile field on 3100 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 1026,454 70x50 "the far acre 43"
+place cornfield 1026,454 70x50 "the 3700 North field"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 1026,524 50x70 "the far field 44"
+place cornfield 1026,524 50x70 "the 3300 North field"
   human Nobody watches this one from anywhere.
-place cornfield 1158,8 70x50 "the top of the hill 45"
+place cornfield 1158,8 70x50 "the far end of 3000 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 1155,65 70x50 "the middle field 46"
+place cornfield 1155,65 70x50 "the 3000 North field"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 1157,271 70x50 "the near paddock 47"
+place pasture 1157,271 70x50 "the pasture on 3550 North"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 1160,326 70x50 "the far paddock 48"
+place pasture 1160,326 70x50 "the hay ground on 3400 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 1175,402 70x50 "the long acre 49"
+place pasture 1175,402 70x50 "the lot behind the 2300 East place"
   human Fenced for horses that were sold years ago.
-place orchard 1178,461 70x50 "the orchard 50"
+place orchard 1178,461 70x50 "the orchard on 3400 North"
   human Planted in rows by somebody who is dead now.
-place orchard 1174,527 50x70 "the old orchard 51"
+place orchard 1174,527 50x70 "the fruit ground off 2600 East"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 1304,10 70x50 "the west belt 52"
+place wood 1304,10 70x50 "the 2400 East timber"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 1312,73 70x50 "the west belt, middle 53"
+place wood 1312,73 70x50 "the timber on 3300 North"
   human The stretch between the two roads, and the darkest of the three.
-place copse 1305,275 70x50 "the west belt, south 54"
+place wood 1305,275 70x50 "the timber on 3000 North"
   human It gives out where the ground turns wet.
-place copse 1305,332 70x50 "the west belt, end 55"
+place wood 1305,332 70x50 "the fencerow on 3600 North"
   human Somebody has been cutting firewood out of this one.
-place copse 1309,401 50x70 "the far spinney 56"
+place wood 1309,401 50x70 "the timber on 3550 North"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 1310,533 70x50 "the east wood 57"
+place wood 1310,533 70x50 "the fencerow on 3700 North"
   human Older than the town, and the boundary bank round it is older still.
-place copse 1309,593 70x50 "the east wood, lower 58"
+place wood 1309,593 70x50 "the timber on 3200 North"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 1460,8 70x50 "the top field 59"
+place cornfield 1460,8 70x50 "the strip along 3400 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 1455,72 70x50 "the long field 60"
+place cornfield 1455,72 70x50 "the strip along 3200 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 1458,266 70x50 "the bottom field 61"
+place cornfield 1458,266 70x50 "the back forty on 3000 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 1452,325 70x50 "the far acre 62"
+place cornfield 1452,325 70x50 "the strip along 3700 North"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 1452,399 50x70 "the far field 63"
+place cornfield 1452,399 50x70 "the field off 3200 North"
   human Nobody watches this one from anywhere.
-place cornfield 1457,532 70x50 "the top of the hill 64"
+place cornfield 1457,532 70x50 "the far end of 3200 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 1456,585 70x50 "the middle field 65"
+place cornfield 1456,585 70x50 "the field off 3100 North"
   human Split by a hedge somebody grubbed out and never finished.
 
