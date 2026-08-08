@@ -117,6 +117,8 @@ namespace Noir.Unity
                 var car = Put(go.transform, fleet[rng.NextInt(fleet.Count)], vx, vy, yaw);
                 if (car == null) continue;
 
+                CarMesh.Flatten(car);
+
                 car.name = $"Parked_{d.Home.Value}_{d.Unit}";
                 it._homeOf.Add(d.Home);
                 it._cars.Add(car);
@@ -202,7 +204,12 @@ namespace Noir.Unity
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) return null;
 
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            // Instantiate, NOT PrefabUtility.InstantiatePrefab. `CityParking` uses the latter so
+            // its cars stay linked to their prefab in the scene, and that is right for a dozen
+            // cars nobody rebuilds. These get Flattened the moment they land, and you may not
+            // restructure a linked prefab instance - destroying its children throws. A plain copy
+            // is what a thing about to be merged actually wants.
+            var go = Object.Instantiate(prefab);
             go.transform.SetParent(parent, false);
             go.transform.position =
                 new Vector3(vx, parent.position.y + ElevationGrid.HeightAt(vx, vy), -vy);

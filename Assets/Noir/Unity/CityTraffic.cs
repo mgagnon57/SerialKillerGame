@@ -628,6 +628,27 @@ namespace Noir.Unity
                 float s = Mathf.Lerp(segment.FromS, segment.ToS,
                                      Materials3D.Scatter(n, 1, 821) % 100 / 100f);
 
+                // DO NOT "OPTIMISE" THIS INTO ONE MESH PER CAR. IT WAS TRIED AND MEASURED AND IT
+                // MADE THE GAME HALF AS FAST.
+                //
+                // The reasoning was sound and the result was not: the pack ships a car as 11
+                // MeshRenderers and 11 MeshColliders over 12 objects, so this fleet is ~1,750
+                // renderers and ~1,750 mesh colliders being transformed every frame. Collapsing
+                // each car with CarMesh.Flatten - which is a clear win for the 611 PARKED cars -
+                // took the suite from 368 s to 688 s, and removing the kinematic Rigidbody that
+                // came with it made it 728 s rather than better.
+                //
+                // The difference between the two fleets is that these MOVE and they are all drawn
+                // from the same few prefabs. 159 instances of a shared mesh are GPU-instanced and
+                // SRP-batched nearly for free; 159 UNIQUE merged meshes cannot be instanced at
+                // all. Merging traded 1,750 cheap batched renderers for 159 expensive unbatched
+                // ones. It also changed what `Length` measures - the merged bounds are the honest
+                // car length where the old walk took each sub-mesh's own local bounds - which
+                // moved every Reach and put two cars 0.26 m apart in
+                // NoTwoVehiclesOccupyTheSameSpace.
+                //
+                // The mesh colliders are still worth removing on their own. That is a separate
+                // change and it needs PerfHud pointed at it, not another guess. See docs/IDEAS.md.
                 var car = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
                 car.transform.SetParent(transform, false);
 

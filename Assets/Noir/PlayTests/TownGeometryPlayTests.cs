@@ -172,6 +172,50 @@ namespace Noir.PlayTests
                         "every single car left, which means the whole town commutes and it does not");
         }
 
+        /// <summary>
+        /// WHAT THE PARKED CARS COST, WHICH IS THE FIRST THING NOBODY MEASURED.
+        ///
+        /// A polyperfect car is **11 MeshRenderers, 11 MeshFilters and 11 MeshColliders** across
+        /// 12 GameObjects. Six hundred of them, created after `CityChunker.Bake` so they can be
+        /// taken away when their owner drives off, is about **6,700 unbatched renderers and 6,700
+        /// mesh colliders** - in a project that once fought the ground alone from 2,626 draw calls
+        /// down to 319.
+        ///
+        /// The absence has to stay - it is the whole point of drawing them - so the fix is not to
+        /// bake them back into the town but to make ONE car cost one renderer. This is the budget
+        /// that says so.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AParkedCarCostsOneRendererAndNoMeshCollider()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+
+            var drives = CityUnderTest.Host != null ? CityUnderTest.Host.Driveways : null;
+            Assert.That(drives, Is.Not.Null, "no driveways were built");
+            Assert.That(drives.Count, Is.GreaterThan(0));
+
+            var root = drives.gameObject;
+            int renderers = root.GetComponentsInChildren<Renderer>(true).Length;
+            int colliders = root.GetComponentsInChildren<Collider>(true).Length;
+            int meshCol = root.GetComponentsInChildren<MeshCollider>(true).Length;
+            int objects = root.GetComponentsInChildren<Transform>(true).Length;
+
+            float perCar = renderers / (float)drives.Count;
+
+            Debug.Log($"[driveways] cost: {drives.Count} cars, {renderers} renderers "
+                    + $"({perCar:0.00}/car), {colliders} colliders ({meshCol} of them MeshColliders), "
+                    + $"{objects} transforms.");
+
+            Assert.That(perCar, Is.LessThanOrEqualTo(2f),
+                        $"each parked car is costing {perCar:0.0} renderers. These are built after "
+                      + "the chunk bake so they can be taken away, which means nothing batches them "
+                      + "- a car has to arrive as one mesh, not eleven.");
+
+            Assert.That(meshCol, Is.EqualTo(0),
+                        $"{meshCol} MeshColliders on parked cars. PhysX bakes every one of them and "
+                      + "the player queries against them; a car needs at most one primitive box.");
+        }
+
         [UnityTest]
         public IEnumerator TheTownIsOnePiece()
         {

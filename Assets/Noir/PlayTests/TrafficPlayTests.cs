@@ -385,6 +385,57 @@ namespace Noir.PlayTests
             return $"{j.NorthSouth.Name} x {j.EastWest.Name} ({(lit ? "signals" : "priority")})";
         }
 
+        /// <summary>
+        /// WHAT THE MOVING FLEET COSTS, WHICH IS THE HALF THAT MOVES EVERY FRAME.
+        ///
+        /// A Poly Universal Pack car ships as 11 MeshRenderers and **11 MeshColliders** over 12
+        /// objects. At 159 vehicles that is ~1,750 renderers and ~1,750 NON-CONVEX mesh colliders
+        /// being transformed every frame, which makes PhysX rebuild its static tree continuously -
+        /// about the worst thing it can be handed, and it was there long before anybody counted.
+        ///
+        /// Nothing in the traffic model wants them: `Blocked()` is lane arithmetic, `Length()`
+        /// reads mesh bounds, and no wheel is animated - a mover only ever holds the root
+        /// transform. See `CarMesh`.
+        ///
+        /// EXPLICIT AND ASPIRATIONAL, because the obvious fix is measured and WRONG. Collapsing
+        /// each moving car to one mesh - the same change that is a clear win for the 611 parked
+        /// cars - took the PlayMode suite from 368 s to 688 s. These 159 are drawn from a handful
+        /// of shared prefabs and are GPU-instanced nearly for free; 159 unique merged meshes
+        /// cannot be instanced at all. The mesh colliders are still worth removing, and that is
+        /// the part this budget is really asking for, but it needs PerfHud pointed at it rather
+        /// than another confident guess. Same treatment as the 2:1 rule, and for the same reason:
+        /// a permanent red hides the next real one. Run with
+        /// `-testCategory Aspiration`.
+        /// </summary>
+        [UnityTest, Explicit, Category("Aspiration"), Timeout(900000)]
+        public IEnumerator AMovingCarCostsOneRendererAndNoMeshCollider()
+        {
+            var traffic = CityUnderTest.Traffic;
+            Assert.That(traffic, Is.Not.Null, "no traffic was built");
+
+            var cars = CityUnderTest.Vehicles();
+            Assert.That(cars.Count, Is.GreaterThan(0), "no vehicles to measure");
+
+            var root = traffic.gameObject;
+            int renderers = root.GetComponentsInChildren<Renderer>(true).Length;
+            int meshCol = root.GetComponentsInChildren<MeshCollider>(true).Length;
+            int bodies = root.GetComponentsInChildren<Rigidbody>(true).Length;
+
+            float perCar = renderers / (float)cars.Count;
+
+            Debug.Log($"[traffic] cost: {cars.Count} vehicles, {renderers} renderers "
+                    + $"({perCar:0.00}/car), {meshCol} MeshColliders, {bodies} rigidbodies.");
+
+            Assert.That(perCar, Is.LessThanOrEqualTo(2f),
+                        $"each moving car is costing {perCar:0.0} renderers - it has to arrive as "
+                      + "one mesh, not eleven");
+
+            Assert.That(meshCol, Is.EqualTo(0),
+                        $"{meshCol} MeshColliders are being driven around the map every frame");
+
+            yield return null;
+        }
+
         /// <summary>Cars are solid. They may queue nose to tail; they may not share a bumper.</summary>
         [UnityTest, Timeout(900000)]
         public IEnumerator NoTwoVehiclesOccupyTheSameSpace()
