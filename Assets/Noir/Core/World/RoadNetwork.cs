@@ -95,6 +95,42 @@ namespace Noir.Core.World
             _ => 1,                       // a track is a farm entrance: rare, but not nothing
         };
 
+        /// <summary>
+        /// One counted side street's worth of traffic, in vehicles a day.
+        ///
+        /// The divisor that turns a real count into the weight above, chosen so a typical
+        /// Rossville side street still scores the 2 the class ladder gave it and everything else
+        /// moves relative to that. IDOT's counted side streets run 75-375 a day with a median
+        /// near 250, so 125 puts the median at 2 and leaves the ladder's bottom rung where it was.
+        /// </summary>
+        public const int CountPerWeight = 125;
+
+        /// <summary>
+        /// How busy this road actually is — the county's own count where there is one, and the
+        /// class ladder where there is not.
+        ///
+        /// THE LADDER WAS WRONG BY A FACTOR OF FIVE AND COULD NOT SEE ROUTE 1 AT ALL. `mainroad 8
+        /// : street 2` is 4:1; IDOT measures Rossville at **21:1** — Chicago Street (Route 1) at
+        /// 5,200 vehicles a day against a side street's ~250. Worse, `carries mainroad` is true of
+        /// both Route 1 and Attica, so the ladder handed them the same weight when the first
+        /// carries **4.7 times** the second. Measured against real counts the game was putting
+        /// 44.5% of its vehicle-miles on side streets where the county measures 14-20%.
+        ///
+        /// An uncounted road keeps its class weight. IDOT not counting a road is weak evidence
+        /// that it is quiet, but it is not a measurement, and inventing a number here would be the
+        /// same mistake in the other direction. Alleys stay at zero: that is about ambient traffic
+        /// having no reason to be there, not about access. See docs/research/TRAFFIC-COUNTS.md.
+        /// </summary>
+        public static int AmbientTrafficWeight(RoadLine line)
+        {
+            if (line == null) return 1;
+            if (line.Carries == RoadClass.Alley) return 0;
+            if (line.Aadt <= 0) return AmbientTrafficWeight(line.Carries);
+
+            int weight = (line.Aadt + CountPerWeight / 2) / CountPerWeight;
+            return weight < 1 ? 1 : weight;
+        }
+
         public static bool TryParse(string text, out RoadClass klass)
         {
             switch ((text ?? "").Trim().ToLowerInvariant())
@@ -201,14 +237,21 @@ namespace Noir.Core.World
         /// Null means the two agree, which is every road on every map written before this.</param>
         /// <param name="easement">The public land the corridor sits in, in metres. 0 is "not
         /// measured", which is every map written before the survey.</param>
+        /// <summary>
+        /// Vehicles a day the county counted here, both directions, or 0 for "not counted".
+        /// See <see cref="RoadClasses.AmbientTrafficWeight(RoadLine)"/>.
+        /// </summary>
+        public readonly int Aadt;
+
         public RoadLine(string name, RoadClass klass, int width, IReadOnlyList<Tile> points,
-                        RoadClass? carries = null, float easement = 0f)
+                        RoadClass? carries = null, float easement = 0f, int aadt = 0)
         {
             Name = name ?? "";
             Class = klass;
             Carries = carries ?? klass;
             Width = width;
             Easement = easement;
+            Aadt = aadt;
             Points = points ?? Array.Empty<Tile>();
 
             if (Points.Count < 2)

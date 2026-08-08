@@ -79,23 +79,28 @@ road ann 4 691,1587 690,1431   # county, right of way 10.0 m measured, county cl
 
 road attica 10 457,1324 974,1352 2100,1367   # county, right of way 20.0 m measured, county classes it mainroad
   class street
+  aadt 1100   # IDOT count, 2019
   carries mainroad
   easement 20.0
 
 road benton 10 686,1149 824,1102 1435,1095 1775,1093   # county, right of way 20.0 m measured
   class street
+  aadt 300   # IDOT count, 2019
   easement 20.0
 
 road church 10 970,849 980,2101   # county, right of way 20.0 m measured
   class street
+  aadt 200   # IDOT count, 2019
   easement 20.0
 
 road creative 10 1404,1358 1515,1531   # county, right of way 19.7 m measured
   class street
+  aadt 225   # IDOT count, 2019
   easement 19.7
 
 road dale 10 882,1982 1351,1978   # county, right of way 20.0 m measured
   class street
+  aadt 125   # IDOT count, 2019
   easement 20.0
 
 road earl 10 1338,2226 1038,2223   # county, right of way 20.0 m measured
@@ -137,6 +142,7 @@ road harrison 10 900,1348 831,1102   # county, right of way 20.0 m measured
 
 road henderson 10 587,852 1340,845   # county, right of way 20.0 m measured
   class street
+  aadt 250   # IDOT count, 2019
   easement 20.0
 
 road holmes 10 866,1227 1192,1225   # county, right of way 20.0 m measured
@@ -152,6 +158,7 @@ road maple 10 797,1481 1303,1475   # county, right of way 20.0 m measured
 
 road mckibben 10 874,1857 1586,1850   # county, right of way 20.0 m measured
   class street
+  aadt 200   # IDOT count, 2019
   easement 20.0
 
 road park 10 797,1481 509,1483   # county, right of way 20.0 m measured
@@ -172,17 +179,21 @@ road smith 10 695,851 694,667   # county, right of way 20.0 m measured
 
 road stewart 10 866,1731 1468,1725   # county, right of way 20.0 m measured
   class street
+  aadt 375   # IDOT count, 2019
   easement 20.0
 
 road stufflebeam 10 866,1733 692,1732 374,1729   # county, right of way 10.0 m measured
   class street
+  aadt 375   # IDOT count, 2019
   easement 10.0
 
 road summit 10 1116,1099 1158,1171 1168,2287   # county, right of way 20.0 m measured
   class street
+  aadt 225   # IDOT count, 2019
   easement 20.0
 road summit 10 1156,1098 1154,784   # county, right of way 20.0 m measured
   class street
+  aadt 225   # IDOT count, 2019
   easement 20.0
 
 road thompson 10 890,2100 1352,2103   # county, right of way 20.0 m measured
@@ -199,6 +210,7 @@ road york 10 545,727 832,724   # county, right of way 20.0 m measured
 
 road chicago 10 313,0 370,177 465,470 592,855 674,1109 746,1332 775,1423 798,1491 838,1607 856,1687 862,1740 871,1876 880,2049 898,2399   # authored, right of way 13.4 m measured, county classes it mainroad
   class street
+  aadt 5200   # IDOT count, 2019
   carries mainroad
   easement 13.4
 

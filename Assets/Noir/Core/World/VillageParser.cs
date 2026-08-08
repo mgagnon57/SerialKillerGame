@@ -238,6 +238,27 @@ namespace Noir.Core.World
                     break;
                 }
 
+                case "aadt":
+                {
+                    // WHAT THE COUNTY COUNTED, rather than what the class implies.
+                    //
+                    // IDOT's count program does village streets by name, and it does eleven of
+                    // Rossville's: Route 1 at 5,200 a day, Attica at 1,100, Church Street at 200.
+                    // Ambient traffic used to be read off the road CLASS, which is a four-step
+                    // ladder - mainroad 8, street 2 - against a measured spread of twenty-one to
+                    // one, and which gave Route 1 and Attica the identical weight when the first
+                    // carries nearly five times the second.
+                    //
+                    // Optional, and 0 means NOT COUNTED rather than empty: IDOT does not count
+                    // twenty-one of this map's named roads, and a road nobody counted still has
+                    // cars on it. Anything reading this falls back to the class.
+                    Require(tokens, 2, lineNo, "aadt <vehicles per day>");
+                    road.Aadt = (int)ContentText.Number(tokens[1], File, lineNo);
+                    if (road.Aadt < 0)
+                        throw new VillageParseException(lineNo, "a traffic count cannot be negative");
+                    break;
+                }
+
                 case "easement":
                 {
                     // HOW MUCH PUBLIC LAND THIS ROAD HAS, which is a different thing from how

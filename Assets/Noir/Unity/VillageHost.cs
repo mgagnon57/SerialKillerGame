@@ -285,6 +285,12 @@ namespace Noir.Unity
         private CityDriveways _driveways;
 
         /// <summary>
+        /// The cars standing at houses, for anything that needs to count them. Read-only: the
+        /// presence of a car is decided by whether its owner is out of town and by nothing else.
+        /// </summary>
+        public CityDriveways Driveways => _driveways;
+
+        /// <summary>
         /// When the driveways were last reconciled against who is out of town, in sim minutes.
         ///
         /// Not every frame: the answer only changes when somebody's day-plan block changes, and

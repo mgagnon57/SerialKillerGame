@@ -587,10 +587,14 @@ namespace Noir.Unity
                 // CARRIES, not Class: how busy a road is follows what it is FOR, not how wide it
                 // was paved. See RoadLine.Carries - the route through this town is a county
                 // highway on a village street's right of way.
-                var klass = world.Roads.Lines[Graph.Segments[i].Line].Carries;
                 // Zero for an alley, so no car is ever introduced on a back lane - see
                 // RoadClasses.AmbientTrafficWeight. The turn scoring reads the same table.
-                int weight = RoadClasses.AmbientTrafficWeight(klass);
+                //
+                // AND IT IS THE COUNTY'S COUNT NOW, NOT THE CLASS. Asked of the road itself, so
+                // Route 1 gets the 5,200 vehicles a day IDOT measured on it and Attica gets its
+                // 1,100 - the class ladder called both of them `mainroad 8` and put 44.5% of the
+                // town's traffic on side streets the county measures at 14-20%.
+                int weight = RoadClasses.AmbientTrafficWeight(world.Roads.Lines[Graph.Segments[i].Line]);
                 for (int w = 0; w < weight; w++) pitch.Add(i);
             }
 
@@ -1253,13 +1257,17 @@ namespace Noir.Unity
         private int Appeal(int turn)
         {
             var into = Graph.Segments[Graph.Turns[turn].To];
-            var klass = _world != null && into.Line >= 0 && into.Line < _world.Roads.Lines.Count
-                ? _world.Roads.Lines[into.Line].Carries    // what it carries - see the spawn pitch
-                : RoadClass.Street;
+            var line = _world != null && into.Line >= 0 && into.Line < _world.Roads.Lines.Count
+                ? _world.Roads.Lines[into.Line]
+                : null;
 
-            // Alleys score 0, so nothing turns down one on its way somewhere - see
-            // RoadClasses.AmbientTrafficWeight, which the spawn pitch reads from too.
-            int road = RoadClasses.AmbientTrafficWeight(klass);
+            // THE COUNTY'S OWN COUNT WHERE THERE IS ONE. Asked of the ROAD rather than of its
+            // class, so a car leaving a junction is drawn onto Route 1 over a side street in the
+            // proportion IDOT actually measured - 5,200 a day against 200 - instead of the 4:1 the
+            // class ladder could express. Alleys still score 0, so nothing turns down one on its
+            // way somewhere. See RoadClasses.AmbientTrafficWeight, which the spawn pitch reads too.
+            int road = line != null ? RoadClasses.AmbientTrafficWeight(line)
+                                    : RoadClasses.AmbientTrafficWeight(RoadClass.Street);
 
             return road * (Graph.Turns[turn].Kind == TurnKind.Straight ? 3 : 1);
         }

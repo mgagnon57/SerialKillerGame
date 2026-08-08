@@ -66,7 +66,8 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **415 pass, 0 fail, 415 total, 2–5 min.** Measured 2026-08-09.
+> **428 pass, 0 fail, 428 total, ~2 min.** Measured 2026-08-08.
+> (415 on 2026-08-09; +8 `DrivewaysTests`, +5 `TrafficWeightTests`.)
 > **Any red is a regression.** There is no standing exception any more, and there was one for
 > months: `TwoToOneTests` G1 and G2 asserted the project's 2:1 design rule, the town is at
 > 0.89 : 1, and they were correctly and permanently red. Two permanent reds make a THIRD red easy
@@ -124,39 +125,36 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-08: 12 of 12 PASS, 6m 12s.** (Was 8 of 8 on 2026-08-07;
-> TownGeometryPlayTests added three that can see where a building STANDS.)
+> **BASELINE, 2026-08-08: 13 of 13 PASS, 6m 03s.** (Was 8 of 8 on 2026-08-07;
+> TownGeometryPlayTests added three that can see where a building STANDS, and a fourth that can
+> see whether the car outside a house is there today.)
 > `[body] 1390 Animators in the scene`, and the layer preferences are the same after the run as
 > before it.
 >
 > **THE RUN IS NOT ~4 MINUTES AND NEVER WAS.** Measured 371.6 s wall clock, of which
 > `WhyAreThePeopleNotAnimating` alone is **292.9 s** — 79% of the suite. Budget ten minutes.
 >
-> **ONE OF THE TWELVE IS CURRENTLY A COIN TOSS, AND IT IS WRITTEN DOWN RATHER THAN TUNED AWAY.**
-> `NoCarWaitsForeverAtTheHeadOfAClearQueue` asserts a p90 wait under one signal cycle. On an
-> unchanged tree, identical geometry, identical test order and the same 159-car fleet, that p90
-> measured **37.2 s (red) and 21.9 s (green)**. Nothing between those two runs touched the
-> simulation. Do not read a green here as proof the traffic is healthy.
->
-> The cause is known and is NOT flakiness in the test-order sense: the fleet is
-> `DeclaredHouseholds × 0.25` (`CityTraffic.cs:553`), so giving the town back its 107 houses took
-> it **135 → 159 vehicles** on an unchanged 342-segment network, and the give-way model starves
-> under density exactly as `TurnPace`'s docstring already warned. `TurnPace` saturates at
-> `Patience = 25 s`: past that a waiting driver is as eager as it can get and simply waits.
->
-> **The test now names the junction**, so the next session does not have to re-derive this:
+> **THE STARVING JUNCTION WAS FIXED BY THE COUNTY'S TRAFFIC COUNTS, NOT BY MOVING A GATE.**
+> `NoCarWaitsForeverAtTheHeadOfAClearQueue` swung between **37.2 s (red) and 21.9 s (green)** on an
+> unchanged tree with the same 159-car fleet, and named where the tail was:
 >
 > ```
->   [traffic] p90 wait 21.9s against a 36.0s cycle. 3 of 35 stopped vehicles waited longer
->             than one cycle (0 at the signals, 3 at priority), spread over 2 junctions.
->   [traffic]   2 car(s), worst 53.7s, at church x maple (priority)
->   [traffic]   1 car(s), worst 36.3s, at church x alley2 (priority)
+>   before  p90 21.9s: 3 of 35 stopped vehicles waited longer than one cycle, over 2 junctions
+>             2 car(s), worst 53.7s, at church x maple (priority)
+>   after   p90 19.7s: 0 of 26 waited longer than one cycle, over 0 junctions
 > ```
 >
-> The tail is **two junctions, not the fleet** — so this is the give-way rules, not a town that has
-> outgrown its roads. `church` and `maple` are both `county, right of way 20.0 m` in
-> `Content/roads.txt` and their crossing is run on **priority**: only 1 of 74 junctions in this
-> town is signalised. See `docs/IDEAS.md`.
+> **Same fleet.** The only change is that ambient traffic is now weighted by IDOT's own counts
+> instead of the road-class ladder — Route 1 at 5,200 vehicles a day against a side street's ~200,
+> a measured **21:1** where `AmbientTrafficWeight` could only say 4:1. The cars stopped circulating
+> on Church and Maple because the county says they are not there. See
+> `docs/research/TRAFFIC-COUNTS.md`.
+>
+> **The fleet is still eight times too big and that is still open.** IDOT puts ~19 vehicles moving
+> at an average instant and ~46 at peak; `CarsOutPerHousehold = 0.25` runs 159, flat, all day. The
+> curve is scoped in `docs/IDEAS.md` **including the trap**: the sim starts at noon, which is
+> off-peak, so an honest curve gives every PlayMode test a town with ~19 cars in it and the signals
+> test may have nothing to watch. That is a test-design problem, not a reason to inflate the town.
 >
 > **The cycle is 36.0 s, not 37.** `TrafficPlayTests` carried `const float Cycle = 37f` under a
 > comment saying it was "CitySignals' own cycle length" for months. It is 14 s green + 3 s amber +

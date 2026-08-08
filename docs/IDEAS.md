@@ -308,10 +308,38 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
   **Do not do this as a lone constant edit.** Dropping to 19 cars with the current class weighting
   spreads them evenly over a network where 80% of the movement belongs on two roads, so the town
-  would read as empty everywhere rather than quiet-with-a-busy-Route-1. Land it with the weighting
-  below.
+  would read as empty everywhere rather than quiet-with-a-busy-Route-1. **That half is now done** -
+  see the entry above - so the blocker is cleared and this is the next thing to do.
 
-- [ ] **`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**
+  **NOT ATTEMPTED 2026-08-08, ON PURPOSE, AND HERE IS THE TRAP.** The owner chose "measured, with
+  a rush hour" and this was deferred rather than half-landed unattended, because it collides with
+  the test suite in a way worth knowing before starting:
+
+  `VillageHost` starts the simulation at **noon**, which is OFF-PEAK — so a correctly implemented
+  curve puts about **19 cars** on the map for every PlayMode test in the run. `TrafficMovesAndStops
+  AtRedLights` needs a car to arrive at the town's **single** signalised junction while it is being
+  watched, and `NoTwoVehiclesOccupyTheSameSpace` needs enough traffic to be worth asserting. Both
+  are likely to fail on an honestly quiet town, and the fix is NOT to inflate the fleet back: it is
+  that a test about signals should watch the junction at rush hour, and the shared-city rule means
+  it cannot simply wind the clock (the city is built once per run and a clock will not go
+  backwards for the next test).
+
+  So the work is three things, not one: the curve; a way for a traffic test to observe a chosen
+  hour without mutating the shared clock; and re-baselining the traffic gates against a town that
+  is genuinely quiet at noon. Cheapest shape for the curve itself is to build the fleet at the
+  PEAK figure and deactivate the surplus off-peak - the same trick `CityDriveways` uses for cars
+  whose owners are at work - rather than spawning and despawning movers.
+
+- [x] ~~**`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**~~
+  **DONE 2026-08-08.** `Content/roads.txt` carries an `aadt` line beside `easement` on all twelve
+  counted road runs, parsed by the same `VillageParser` the survey pass already uses, through
+  `RoadRun.Aadt` → `RoadLine.Aadt` → `RoadClasses.AmbientTrafficWeight(RoadLine)`. Both readers -
+  the spawn pitch and the turn scoring - ask the road now instead of its class. Measured in
+  `TrafficWeightTests`: **Route 1 42 : side street 2 = 21.0 : 1**, against the class ladder's 8 : 2.
+  An uncounted road keeps its class weight, because IDOT not counting a road is weak evidence that
+  it is quiet and not a measurement. Alleys stay at 0. Original entry follows.
+
+- [ ] ~~**`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**~~
   `RoadNetwork.AmbientTrafficWeight` is `Mainroad 8 : Street 2`. IDOT's counts give **Route 1 5,200
   AADT, Attica 1,100, a side street ~200-250** - so 21:1 arterial-to-local, and Route 1 carries
   **4.7x what Attica does** while the table hands them the identical weight of 8.

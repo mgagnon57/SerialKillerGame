@@ -34,7 +34,7 @@ namespace Noir.Core.World
                 StrokePolyline(grid, run);
                 if (run.Kind == Terrain.Road)
                     lines.Add(new RoadLine(run.Name, run.EffectiveClass, run.Width, run.Points,
-                                           run.EffectiveCarries, run.Easement));
+                                           run.EffectiveCarries, run.Easement, run.Aadt));
             }
             var roads = new RoadNetwork(lines);
 
