@@ -50,12 +50,6 @@ namespace Noir.Unity
             }
 
             int built = 0, onRoad = 0, tooTight = 0, tooSmall = 0, notABuilding = 0;
-
-            // THE CURVE, NOT THE CHORD. WorldBuilder runs Catmull-Rom through the authored road
-            // points, so the centreline the game draws is off the declared polyline at every bend.
-            // This pass was refusing houses against the chord while the town was built round the
-            // curve, which is how buildings kept turning up in roads that every check called clear.
-            var corridors = new RoadCorridor.Corridors(layout);
             foreach (var parcel in ParcelIndex.In1991)
             {
                 if (lotsTaken.Contains(parcel.Id)) continue;
@@ -91,7 +85,7 @@ namespace Noir.Unity
                     continue;
                 }
 
-                if (OnARoad(corridors, box))
+                if (OnARoad(layout, box))
                 {
                     onRoad++;
                     SurveyReport.Say(parcel.Id, false, "would stand in a road");
@@ -186,34 +180,20 @@ namespace Noir.Unity
         /// of the street. A house that does not go up is a gap; a house in the road is a town
         /// whose own audit fails.
         /// </summary>
-        private static bool OnARoad(RoadCorridor.Corridors roads, TileRect box)
+        private static bool OnARoad(VillageLayout layout, TileRect box)
         {
-            // THE BOX, NOT A CIRCLE ROUND ITS CENTRE. This used to measure the distance from the
-            // box's CENTRE and add half its longest side as slack, which treats every building as
-            // a disc: a 30 m school was refused anywhere within 15 m of a kerb it was nowhere
-            // near, on its short axis as well as its long one. Corridors tests the box itself -
-            // its corners, its edge midpoints and its centre - against the curve the game draws.
-            //
-            // Clearance is kept, and is the honest part of the old test: this pass is CHOOSING
-            // where to put a building rather than honouring a measurement, so it should leave
-            // room between a house it invents and the kerb rather than butt one against it.
-            return roads.WorstPenetration(box, 0) > 0f || roads.WorstPenetration(Grown(box), 0) > 0f;
-        }
+            float cx = box.X + box.W / 2f, cy = box.Y + box.H / 2f;
+            float reach = Mathf.Max(box.W, box.H) / 2f;
 
-        /// <summary>
-        /// The box with a kerb's worth of breathing room round it.
-        ///
-        /// ONE METRE, and three was measured to be wrong: at three this pass refused 153 lots
-        /// instead of 23 and the town lost 129 houses, because a 13x7 house set back six metres
-        /// from a ten-metre road is one metre off the kerb - which is what a house on a Rossville
-        /// street actually looks like. The clearance is here to stop a NEW building being butted
-        /// against the tarmac, not to enforce a front garden the town does not have.
-        /// </summary>
-        private static TileRect Grown(TileRect b)
-        {
-            const int Clearance = 1;
-            return new TileRect(b.X - Clearance, b.Y - Clearance,
-                                b.W + Clearance * 2, b.H + Clearance * 2);
+            foreach (var run in layout.Roads)
+            {
+                float half = run.Width / 2f + reach;
+                var pts = run.Points;
+                for (int i = 1; i < pts.Count; i++)
+                    if (PointToSegment(cx, cy, pts[i - 1].X, pts[i - 1].Y, pts[i].X, pts[i].Y) < half)
+                        return true;
+            }
+            return false;
         }
 
         private static float PointToSegment(float px, float py, float ax, float ay, float bx, float by)
