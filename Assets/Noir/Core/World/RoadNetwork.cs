@@ -344,6 +344,25 @@ namespace Noir.Core.World
                     // twice, and the old model held a single junction per pair by construction.
                     foreach (var hit in Crossings(ns.Path, ew.Path))
                         crossings.Add(new Junction(ns, ew, hit.SA, hit.SB, hit.X, hit.Y));
+
+                    // A ROAD THAT ENDS ON ANOTHER ROAD IS A JUNCTION TOO.
+                    //
+                    // Crossings finds a junction by the projected lateral FLIPPING SIGN as one
+                    // centre line passes THROUGH the other. A road that stops dead leaves on the
+                    // side it arrived on and never flips, so a T - or a corner where both ends
+                    // meet - produces no junction at all. Nothing then separates the two streams:
+                    // LaneGraph makes both approaches exits, CityTraffic skips MayCross entirely
+                    // on an exit segment, and Blocked() ignores the pair because the headings
+                    // differ by more than 45 degrees. The lanes simply cross each other.
+                    //
+                    // city.txt never had this shape because it was FIXED BY HAND - forty-three
+                    // road ends were extended past their cross street, and RoadGeometryBaselineTests
+                    // records why: "an end that stops ON a centreline only touches it and the
+                    // intersection finder wants a real crossing". Content/roads.txt is chained
+                    // county segments and is exactly that shape, so the survey network brought
+                    // every one of them back.
+                    foreach (var hit in Touches(ns, ew, crossings))
+                        crossings.Add(new Junction(ns, ew, hit.SA, hit.SB, hit.X, hit.Y));
                 }
             }
             Junctions = crossings;
@@ -386,6 +405,90 @@ namespace Noir.Core.World
                 if (best == null || line.Width > best.Width) best = line;
             }
             return best;
+        }
+
+        /// <summary>
+        /// Junctions where one road ENDS on the other, which Crossings cannot see.
+        ///
+        /// Two shapes, and both are real corners of this town:
+        ///   a TEE    - one road's end lands inside the other's run, and
+        ///   a CORNER - both roads end at the same place, which is how the county's chained
+        ///              segments record Maple meeting Grove: one point, in both roads.
+        ///
+        /// AN END LANDING INSIDE THE OTHER ROAD'S CORRIDOR IS TOUCHING IT. That is the same rule
+        /// `At` uses to decide what a point is on, so a street stopping inside another street's
+        /// carriageway meets it by exactly the definition the rest of this file already uses.
+        /// Anything further off is a road that stops NEAR another road, which is not a junction
+        /// and must not become one.
+        /// </summary>
+        private static List<Crossing> Touches(RoadLine ns, RoadLine ew, List<Junction> already)
+        {
+            var found = new List<Crossing>();
+            if (ns.Path == null || ew.Path == null) return found;
+
+            Consider(ns, ew, onNs: true);
+            Consider(ew, ns, onNs: false);
+            return found;
+
+            void Consider(RoadLine ending, RoadLine through, bool onNs)
+            {
+                foreach (float end in new[] { 0f, ending.Path.Length })
+                {
+                    var tip = ending.Path.PointAt(end);
+                    var (sThrough, lateral) = through.Path.Project(tip);
+
+                    // TOUCHING MEANS TOUCHING, not "somewhere in the corridor". This gated on
+                    // through.HalfWidth first, which is the rule `At` uses for what a point is ON -
+                    // and it is far too loose for a junction: Chicago Street's corridor is wide
+                    // enough that a road stopping 4.7m short of its centre line counted as meeting
+                    // it. The junction then landed metres off one of its own roads and
+                    // SurveyRoadNetworkTests said so, which is what that test is for.
+                    //
+                    // A metre. The county's chained segments record these corners at 0.00-0.61m
+                    // apart, so this takes every real one and nothing else. A road that stops
+                    // FURTHER off is a road that stops NEAR another road, and that is not a
+                    // junction however much it looks like one on a map.
+                    const float Touching = 1.0f;
+                    if (Math.Abs(lateral) > Touching) continue;
+
+                    var back = through.Path.PointAt(sThrough);
+                    float bx = back.X - tip.X, by = back.Y - tip.Y;
+                    if (bx * bx + by * by > Touching * Touching) continue;
+
+                    // BETWEEN THE TWO, so neither road is misrepresented. The corner is where an
+                    // end meets a centre line and the two are within a metre of each other; the
+                    // midpoint is within half a metre of both, so PointAt on either road brings
+                    // you back to the junction - the invariant SurveyRoadNetworkTests enforces.
+                    float x = (back.X + tip.X) * 0.5f, y = (back.Y + tip.Y) * 0.5f;
+
+                    float sNs = onNs ? end : sThrough;
+                    float sEw = onNs ? sThrough : end;
+
+                    // ALREADY FOUND. A tee whose stem overshoots slightly is a genuine crossing
+                    // and Crossings has it; adding a second junction a metre away would put two
+                    // stop lines inside one another's reach, which is the exact shape that strands
+                    // lanes. Judged in metres on the ground rather than in S, since the two roads
+                    // measure S along different paths.
+                    bool duplicate = false;
+                    foreach (var seen in already)
+                    {
+                        if (!ReferenceEquals(seen.NorthSouth, ns) || !ReferenceEquals(seen.EastWest, ew)) continue;
+                        float dx = seen.X - x, dy = seen.Y - y;
+                        if (dx * dx + dy * dy < Reach(ns, ew) * Reach(ns, ew)) { duplicate = true; break; }
+                    }
+                    foreach (var seen in found)
+                    {
+                        float dx = seen.X - x, dy = seen.Y - y;
+                        if (dx * dx + dy * dy < Reach(ns, ew) * Reach(ns, ew)) { duplicate = true; break; }
+                    }
+                    if (duplicate) continue;
+
+                    found.Add(new Crossing(sNs, sEw, x, y));
+                }
+            }
+
+            static float Reach(RoadLine a, RoadLine b) =>
+                a.HalfWidth > b.HalfWidth ? a.HalfWidth : b.HalfWidth;
         }
 
         private readonly struct Crossing
