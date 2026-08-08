@@ -1,4 +1,4 @@
-# Ashcombe — controls
+# Rossville, Illinois, 1991 — controls
 
 Press **H** in game for this same list as an overlay.
 
@@ -30,7 +30,7 @@ drains over a few frames instead of freezing the window.
 
 **Tab** switches between the two modes. This is the most useful key in the game.
 
-### Overview — looking down at the village
+### Overview — looking down at the town
 
 | | |
 |---|---|
@@ -40,7 +40,7 @@ drains over a few frames instead of freezing the window.
 | **WASD** or arrows | pan, relative to where you're facing |
 
 Roofs are **on** when you're far away and **lift off** as you come down close, so from a
-distance you see a village and up close you can watch people indoors. It follows the camera;
+distance you see a town and up close you can watch people indoors. It follows the camera;
 there's nothing to toggle.
 
 ### Street — standing in it
@@ -73,17 +73,17 @@ details, which is the point.
 
 | When | Where | What |
 |---|---|---|
-| **08:30** (`2`) | the lanes near the school | the school run — parents walking children, siblings walking together |
-| **08:00–09:00** | Church Lane / Ashcombe Street junction | people stopping to talk in the street |
-| **14:00** | Ashcombe Mill | the shift change — the hooter, and the men leaving |
-| **19:00–20:00** | The Wheatsheaf | the pub filling up |
-| **21:00** (`5`) + **Tab** | Back Lane, on foot | lit windows where people are home and awake, dark ones where the house is empty |
-| **23:00** (`6`) | anywhere, at 60× | the village going to bed, window by window |
+| **08:30** (`2`) | the streets around the school campus | the school run — parents walking children, siblings walking together |
+| **08:00–09:00** | Chicago Street, at the Church Street junction | people stopping to talk in the street |
+| **12:00** (`3`) | the Chicago Street diner | the middle of the day downtown |
+| **17:00** (`4`) | the grain elevator | the skyline, and the end of the working day |
+| **21:00** (`5`) + **Tab** | an alley, on foot | lit windows where people are home and awake, dark ones where the house is empty |
+| **23:00** (`6`) | anywhere, at 60× | the town going to bed, window by window |
 | any | zoom in from above | roofs lift off — furnished rooms, people in them |
 
 ---
 
-## Reading the village at a glance
+## Reading the town at a glance
 
 | | |
 |---|---|
@@ -92,12 +92,12 @@ details, which is the point.
 | Which way someone faces | the shoulders give the axis, the hair gives the front |
 | Two figures side by side | walking together — same household |
 | Two figures stopped, facing each other | having a conversation |
-| A small box in someone's hand | carrying shopping, or produce from the allotment — and that arm stops swinging |
+| A small box in someone's hand | carrying shopping, or something from the yard — and that arm stops swinging |
 | A chimney | one per home — a terrace with four stacks holds four families |
-| A roof of slate, tile, worn tile or thatch | a property of the building, not of the view — it never changes |
+| A roof of shingle, tile or worn tile | a property of the building, not of the view — it never changes |
 | Shutters up on a frontage | that place is shut |
 
-Clothes are drawn from muted 1979 palettes and are stable per person: the same villager looks
+Clothes are drawn from muted 1991 palettes and are stable per person: the same person looks
 the same every time you see them, and across restarts.
 
 ---
@@ -107,19 +107,20 @@ the same every time you see them, and across restarts.
 From `C:\SerialKillerGame\tools`. None of these need Unity.
 
 ```
-dotnet test Noir.sln                       72 tests, ~9 s
-dotnet run --project Noir.Sim -- check     validate the village layout
+dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj   # baseline: CLAUDE.md
+dotnet run --project Noir.Sim -- check     validate the town layout
 dotnet run --project Noir.Sim -- who       population summary
 dotnet run --project Noir.Sim -- house 7   one floor plan, as text
 dotnet run --project Noir.Sim -- day 3     one person's whole day
 dotnet run --project Noir.Sim -- trace 3   follow one person as it runs
 dotnet run --project Noir.Sim -- density   where everyone is, hour by hour
-dotnet run --project Noir.Sim -- watch     the village moving, in the terminal
+dotnet run --project Noir.Sim -- watch     the town moving, in the terminal
 dotnet run --project Noir.Sim -- tiles     regenerate all textures
 ```
 
-`Content/village.txt` is the map. Edit it and run `check` — it reports overlapping buildings,
-sealed doors and cut-off cottages before you ever open Unity.
+`Content/city.txt` is the map. Edit it and run `check` — it reports overlapping buildings,
+sealed doors and cut-off houses before you ever open Unity. (`village.txt` was the retired
+fixture and no longer exists.)
 
 ---
 
@@ -127,14 +128,14 @@ sealed doors and cut-off cottages before you ever open Unity.
 
 | | |
 |---|---|
-| **Noir → Smoke Test** | builds the whole village and its geometry, reports what came out |
+| **Noir → Smoke Test** | builds the whole town and its geometry, reports what came out |
 | **Noir → Render Snapshots** | renders nine set views to `docs/snapshots/*.png` without play mode |
 | **Noir → Use 3D Renderer** | re-applies the URP 3D renderer if it ever gets reset |
 
 Press ▶ and it bootstraps itself — there is no scene to set up.
 
 **Render Snapshots** is how the look gets tuned without a human in the loop: it builds the
-village in edit mode, lights it with the *same* curve the game uses, and writes nine set views
+town in edit mode, lights it with the *same* curve the game uses, and writes nine set views
 to disk. Fog, shadow range, texture brightness and the night lighting are all adjusted by
 rendering, looking, and rendering again. It is also a regression check — if a change makes the
-village look wrong, the pictures show it in one pass.
+town look wrong, the pictures show it in one pass.

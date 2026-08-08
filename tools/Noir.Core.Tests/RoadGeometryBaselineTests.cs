@@ -73,8 +73,10 @@ namespace Noir.Core.Tests
     /// laundry and left the west shop row 94 m behind. The buildings moved, not the road. See
     /// docs/research/ROADS-AND-BLOCKS.md.
     ///
-    /// These figures were READ OFF THE BUILD, not off any document. docs/STATE.md quotes
-    /// counts from a 960x960 map that no longer exists.
+    /// These figures were READ OFF THE BUILD, not off any document. That distinction is why they
+    /// are still right: the documents that quoted road and junction counts were all quoting a
+    /// 960x960 map that has been 2100x2400 for months, and every one of them has since been
+    /// archived to docs/history/ for exactly that reason.
     /// </summary>
     [TestFixture]
     public class RoadGeometryBaselineTests

@@ -243,8 +243,10 @@ owner says otherwise.
 
 ## 4. Where `city.txt` stands
 
-`Content/city.txt` is **hand-authored** and holds 41 roads, 477 places, 373 doors and 148 human
-lines. Two different kinds of thing are in there and they have different authority:
+`Content/city.txt` is **hand-authored** and holds 37 roads, 477 places, 373 doors and 148 human
+lines. (Measured 2026-08-08. The roads it declares are not what the game drives on: `SurveyRoads`
+replaces them at build time with the 66 in `Content/roads.txt`, which are surveyed rather than
+ruled.) Two different kinds of thing are in there and they have different authority:
 
 | in `city.txt` | authority |
 |---|---|

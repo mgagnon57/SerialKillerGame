@@ -26,7 +26,7 @@ runtime for a noisier answer. Facts here get ONE home. Everywhere else points at
 |---|---|
 | **The year** | **1991.** Not 1995, not 2000, not "1991–2013". Authority: `docs/research/THE-ERA.md` |
 | **The map** | `Content/city.txt`, loaded via `VillageHost.MapFile` |
-| **The one file no re-run can rebuild** | `Content/parcel-1991.txt` — 173 hand-made rulings about what stood on each lot. Everything else in `Content/` is derived and regenerable from `tools/*.py`. Never let a script overwrite it |
+| **The one file no re-run can rebuild** | `Content/parcel-1991.txt` — 173 hand-made rulings about what stood on each lot. See *Content* below: it is not the only file that cannot be rebuilt, and "never overwrite it" has two named exceptions |
 | **Building the town** | `TownPipeline.Build()` and nothing else. See below |
 | **Randomness** | Everything routes through `IRng`, one substream per system: `Xoshiro256ss.Substream(seed, "name")`. No `System.Random`, no `DateTime.Now`. That is what makes a seed reproduce a village |
 | **Which source outranks which** | `docs/SOURCES-OF-TRUTH.md` |
@@ -53,6 +53,12 @@ a build "just for this tool".
 
 ## Verifying a change
 
+> **Precondition for every `Unity.exe` command below: the editor must be closed.** Unity allows
+> one instance per project and takes an exclusive lock on `Library/`; a `-batchmode` run started
+> while the editor is open simply fails. The owner's normal state is *editor open* — he is the one
+> who presses Play — so check for `Unity.exe` first, and if he left it open deliberately, say so
+> rather than killing his work. Unity **6000.3.20f1**.
+
 **1. Core tests — the standing gate.** Run in **Release**: it is four times faster and it is the
 configuration the baseline is stated for.
 
@@ -60,7 +66,7 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **387 pass, 2 fail, 389 total, ~2 min 20 s.** Measured 2026-08-07.
+> **396 pass, 2 fail, 398 total, 2 m 22 s.** Measured 2026-08-08.
 > The two failures are `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` and
 > `TheTenthPercentileIsNotALock`. **They fail by design.** Anything else is a regression.
 
@@ -161,11 +167,102 @@ Unity.exe -batchmode -quit -projectPath C:\SerialKillerGame ^
 Ships `Content/` beside the exe (holding back the gitignored, name-bearing files), forces every
 `Shader.Find` name into Always Included, and exits non-zero on failure. **Do this weekly.** The
 first one ever attempted, on 2026-08-07, took three tries: it would not compile, then loaded no
-content, then drew nothing — each failure invisible to the editor, to the 389-test suite and to
+content, then drew nothing — each failure invisible to the editor, to the whole Core suite and to
 Play. It now boots the town and starts the clock:
 **`[boot] ready after 5.4s — 12 straight frames under 25 ms. Clock running.`**
 
+> **What it boots is not what you see in the editor, and this is not yet fixed.**
+> `AssetDatabase` and `PrefabUtility` are `UnityEditor` APIs that do not exist in a player, so
+> `CityBuildings`, `CityStreets`, `CityGreenery`, `CityTraffic`, `CityParking`, `CitySigns` and
+> `SunRig` all sit behind `#if UNITY_EDITOR`. Only `CityStreets` has an `#else`, and it covers one
+> *measurement*. A standalone build today gives you the procedural survey plan, primitive capsule
+> people, and **none of the bought props**. `CityChunker` has no editor guard at all, so it runs in
+> a player and combines an empty scene. `tools/check-editor-only.py` catches the half of this trap
+> that fails to compile; nothing catches the half that silently draws nothing.
+
+**6. Smoke test — the cheapest thing that builds the real town.** `Noir → Smoke Test`, or:
+
+```
+Unity.exe -batchmode -quit -projectPath C:\SerialKillerGame ^
+  -executeMethod Noir.Editor.SmokeTest.Run -logFile smoke.log
+```
+
 **4. Look at it.** The tests and `MapAudit` cannot see ugly. Render a still and actually view it.
+
+`dotnet test | tail` reports **tail's** exit status, so a crashed run reads as a pass. Run it
+bare, or capture the exit code directly.
+
+---
+
+## Content — what can be rebuilt, and what cannot
+
+`CLAUDE.md` used to say everything but `parcel-1991.txt` was "derived and regenerable from
+`tools/*.py`". That is not true, and believing it is how an irreplaceable file gets deleted.
+
+| File | Rebuild |
+|---|---|
+| `parcel-1991.txt` | **Cannot be rebuilt.** 173 rulings, authored in the browser map (below) |
+| `kinds.txt` | **Hand-edited** — the +6 kinds `cemetery park waterworks sewageworks publicworks municipal`. Keep |
+| `particulars.txt` | **Hand-authored**, 914 clauses. See the era warning under *Traps* |
+| `parcels.txt`, `parcel-county.txt`, `elevation.txt` | **No committed regeneration script.** Downloaded, not derived. Treat as irreplaceable until one exists |
+| `parcel-buildings.txt` | `python tools/seat-buildings.py` — 824 footprints seated on the county's lots |
+| `roads.txt` | `python tools/build-roads.py` — county centrelines, alleys traced from parcel gaps |
+
+**Only two scripts may write `parcel-1991.txt`** — `tools/merge-back-strips.py` and
+`tools/group-terraces.py`, both of which back it up first. Neither should be re-run without
+reading what it would change. Everything else reads it.
+
+**The browser map is how the rulings are made.** `docs/rossville-buildings.html`, built by
+`python tools/build-viewer-data.py`, served by `python tools/serve-viewer.py` on
+`http://127.0.0.1:8750`; the server owns the write path (`POST /__verdict`). The HTML is
+gitignored and regenerable from `tools/viewer-template.html`. Lose this and the one file nothing
+can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
+
+---
+
+## Traps that are still in the code
+
+- **Silence is a failure signal in `SurveyRoads`.** If `Content/roads.txt` is absent or malformed,
+  `SurveyRoads.Apply` no-ops and the town quietly keeps `city.txt`'s roads — deliberate, but it
+  means a run that built the *pre-survey* town looks identical in every log, test and render.
+  Confirm the line appears: `[roads] survey network in use: … from Content/roads.txt, replacing …`
+- **`Time.timeScale` does not speed the sim clock.** The simulation runs on `Time.unscaledDeltaTime`
+  on purpose — how fast a day passes is a property of the game, not of Unity. Anything asserting on
+  sim time waits in *real* seconds. This is why the PlayMode diagnostics carry 105 minutes of
+  timeout budget and cannot be shortened by touching `timeScale`.
+- **The city is built once and shared by every test in a run.** Anything you change on
+  `VillageHost` — especially `SpeedIndex` — must be restored in a teardown. Both "flaky" tests
+  above were this shape.
+- **Core bans transcendentals** for replay determinism. `Daylight` embeds a 365-entry table rather
+  than call six of them. Linear interpolation and integer hashing only — no `Math.Pow` to shape a
+  curve.
+- **Do not give a Core type a name `UnityEngine` also uses:** `Light`, `Terrain`, `Object`,
+  `Random`, `Debug`, `Material`, `Space`, `Bounds`, `Color`, `Camera`, `Input`.
+- **Do not touch the witness layer's vagueness.** `PersonDescription.CarriedThing` is deliberately
+  coarse — `Bag`, `Case`, `Bundle`, `LongObject` — because a witness says "something in his hand",
+  not "a Nokia". That imprecision is the design, not an unfinished enum.
+- **Population scales off `WorldModel.Households`, which counts *units*, not buildings.** 1,300
+  people is the target and the number is load-bearing. A terrace is one building with four front
+  doors; scaling anything off the building count gets it wrong.
+- **`Unity_RunCommand` is broken in this project** — it fails identically on a fresh instance.
+  Unity also only rescans scripts on focus **gain**: already-focused plus an edit means nothing
+  happens, forever. Marker file + focus-loss-then-gain is the way in, and verify the marker was
+  consumed.
+- **A UTF-8 BOM stops `^\s*#` matching the first line**, so `grep -vcE '^\s*$|^\s*#'` over-counts
+  a `Content/` file by one. Several of these files have one.
+
+---
+
+## What does not exist yet
+
+Worth knowing before planning against it, because more than one document has described these as
+though they were built:
+
+- **The dialogue LLM is not in the code.** `Assets/LLMUnity` is vendored, but there is no `ILLM`
+  port, no Anthropic client and no dialogue system anywhere in the tree. It is scoped, not built.
+- **There is no save or replay system.** Nothing in Core or `tools/` serialises anything.
+- **The game has no name.** Banked: PATTERN OF LIFE · SIGNATURE · CREATURE OF HABIT ·
+  HE KEPT TO HIMSELF · SMALL HOURS. Working title NIGHT WORK.
 
 ---
 
@@ -179,12 +276,19 @@ Play. It now boots the town and starts the clock:
 - `docs/research/README.md` — index of the 28 research documents
 - `docs/IDEAS.md` — the backlog
 
-**Dated records — history, not instructions.** `HANDOFF-*.md`, `OVERNIGHT-*.md`, `LESSONS-*.md`,
-`POSTMORTEM-*.md`, `STATE.md`. They describe a moment and were true then. **Do not take a command
-or a number from one of these without checking it here first.**
+- `docs/ASSETS.md`, `docs/ASSET-GAPS.md`, `docs/PACK.md` — what the packs hold and what is missing
+- `docs/CONTROLS.md` — the keys, mirroring the in-game **H** panel
+
+**Archived — `docs/history/`.** The eleven dated `HANDOFF-*`, `OVERNIGHT-*`, `LESSONS-*` and
+`POSTMORTEM-*` records were moved there on 2026-08-08, and `docs/STATE.md` was deleted outright.
+Read them as case studies; take no command, count or path from one. See `docs/history/README.md`.
 
 `docs/code-review-2026-08-07.html` is a deep multi-agent review of the whole project — read it if
 you are wondering what to work on.
+
+**Adding to this file means replacing something in it.** These docs went from eleven to zero
+because they only ever grew. If a session learns something still true tomorrow, it edits the
+sentence here that was wrong. If it is not true tomorrow, it does not go in the repo.
 
 ---
 
@@ -199,3 +303,9 @@ you are wondering what to work on.
 - **Compile headlessly; the owner presses Play.** Automate editor work in editor scripts.
 - **Push at the end of every session.** On 2026-08-07 the branch had never been pushed at all and
   `origin/main` was 166 commits behind, with the one irreplaceable file existing on a single disk.
+- **Never `git add -A` or `git add .`.** Stage only what you edited. The tree carries unrelated
+  dirty files, including `docs/snapshots/**`, which every render run rewrites.
+- **Batch the Unity loop.** One render, look at everything, fix everything, one render. A Unity
+  headless render or PlayMode run takes 5–15 minutes; a session that round-trips it per question
+  is the single largest cost in this project.
+- **Do not run workflows or `ultracode` unless asked for by name.** They spawn agent fleets.

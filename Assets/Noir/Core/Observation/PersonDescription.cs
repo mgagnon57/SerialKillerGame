@@ -10,7 +10,7 @@ using System.Text;
 //
 //  This is not rot — it is a type waiting for the investigation layer, and the assembly's
 //  firewall (see the header of Sighting.cs) is what it is here to be shaped by. But the file
-//  reads as finished work, so: it does not run yet. See docs/STATE.md.
+//  reads as finished work, so: it does not run yet. See CLAUDE.md, "What does not exist yet".
 // ---------------------------------------------------------------------------------------------
 
 namespace Noir.Core.Observation
