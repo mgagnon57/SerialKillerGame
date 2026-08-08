@@ -38,6 +38,17 @@ namespace Noir.Unity
         internal const int Smallest = 5;
 
         /// <summary>
+        /// How far a measured footprint may reach into a street before it is refused, in metres.
+        ///
+        /// Not zero, and the reason is the survey rather than tolerance for error: the footprints
+        /// are traced from imagery and the centrelines come from the county, so the two disagree
+        /// by tens of centimetres all over the town without either being wrong. Half a metre is
+        /// under the width of a kerbstone and well under anything a player could see; past it,
+        /// masonry is on the tarmac.
+        /// </summary>
+        private const float IntoTheRoad = 0.5f;
+
+        /// <summary>
         /// How much of its box a footprint has to fill before the box is taken at face value.
         ///
         /// An L-shaped building - a school with wings, a shop with a back ell - has a bounding box
@@ -142,10 +153,40 @@ namespace Noir.Unity
             }
 
             seated.Sort((a, b) => b.Now.Area.CompareTo(a.Now.Area));
-            int moved = 0, yielded = 0, shaped = 0;
+            int moved = 0, yielded = 0, shaped = 0, inTheRoad = 0;
             var nowhere = new TileRect(0, 0, 0, 0);   // an empty rect overlaps nothing
             foreach (var s in seated)
             {
+                // IN A STREET. Until 2026-08-08 this pass had no road test of any kind, while
+                // FillFromSurvey - the pass that INVENTS buildings - refused to raise one in a
+                // road and said so. So the houses standing in the road were the measured ones,
+                // which is why it was "not all but some" and why looking at the generator never
+                // found it. Parcel 636 is the case that proves it: a 65x68 m footprint seated on
+                // a 30x13 m lot, sprawling 3.8 m into Attica Street.
+                //
+                // ALLEYS ARE DELIBERATELY NOT COUNTED - see RoadCorridor.StreetWidth. Their 4 m
+                // is a flat guess from build-roads.py's corridor table and the building is a
+                // measurement; a garage on the alley line is Rossville, not a fault.
+                // THE OUTLINE, NOT THE BOX, wherever there is one. The grade school stands on
+                // three parcels in an L; its bounding box takes in the yard and crosses Benton,
+                // Green and Chicago, none of which the school is anywhere near. Testing the box
+                // refuses the school and the town loses it.
+                float pen = s.Outline != null && s.Outline.Length >= 3
+                    ? RoadCorridor.WorstPenetration(layout, s.Outline, RoadCorridor.StreetWidth)
+                    : RoadCorridor.WorstPenetration(layout, s.Now, RoadCorridor.StreetWidth);
+                if (pen > IntoTheRoad)
+                {
+                    inTheRoad++;
+                    var road = s.Outline != null && s.Outline.Length >= 3
+                        ? RoadCorridor.RoadUnder(layout, s.Outline, RoadCorridor.StreetWidth)
+                        : RoadCorridor.RoadUnder(layout, s.Now, RoadCorridor.StreetWidth);
+                    var at = ParcelIndex.Find(new Vector2(s.Was.X + s.Was.W / 2f, s.Was.Y + s.Was.H / 2f));
+                    if (at != null)
+                        SurveyReport.Say(at.Value.Id, false,
+                                         $"measured footprint stands {pen:0.0} m into {road} - not seated");
+                    continue;                         // keep the authored box, which is set back
+                }
+
                 int mine = claim[s.Place];
                 var wasClaiming = taken[mine];
                 taken[mine] = nowhere;                // stand aside while asking about the new spot
@@ -178,6 +219,7 @@ namespace Noir.Unity
             Debug.Log($"[survey] {moved} buildings seated on their measured footprint, "
                     + $"{shaped} of them built to its real outline"
                     + (yielded > 0 ? $", {yielded} left alone to avoid overlapping one" : "")
+                    + (inTheRoad > 0 ? $", {inTheRoad} REFUSED for standing in a street" : "")
                     + (skippedAsLater > 0
                         ? $", {skippedAsLater} left to the rules because the owner dated the "
                         + "footprint later than 1991" : "") + ".");
