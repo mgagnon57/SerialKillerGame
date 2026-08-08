@@ -37,6 +37,7 @@ rest.** A fresh session needs nothing from any prior conversation.
 | **`PARCEL-STATISTICS.md`** | the assessor's 794 records analysed — density, lot size, values, absentee rate |
 | **`BUILDING-CENSUS-1913.md`** | **all 503 buildings counted and measured by machine** — materials, footprint sizes, outbuildings |
 | **`LANDMARKS-1906.md`** | the two brick schools (one towered) and the tile works that drained the prairie |
+| **`TRAFFIC-COUNTS.md`** | **IDOT's own counts for Rossville's streets by name.** Route 1 is 5,200 AADT, Attica 1,100, a side street ~200 — and the town carries **~19 moving cars at an average instant** against the 159 the game runs |
 | `agent-reports/` | three deeper research passes: transport, buildings, economy |
 | `sanborn/` | nine map sheets (1898, 1906, 1913), enlarged crops, and two machine-classified renders |
 

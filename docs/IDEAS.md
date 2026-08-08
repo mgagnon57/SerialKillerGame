@@ -289,6 +289,57 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   `Crossings` in Core, where an end landing on another road's centre line is a junction in its own
   right; that is untried and needs the same measurement before it is believed.
 
+- [ ] **THE FLEET IS EIGHT TIMES TOO BIG, AND IT IS WHY THE JUNCTIONS STARVE.** Measured against
+  IDOT's own counts, 2026-08-08 — full working in `docs/research/TRAFFIC-COUNTS.md`.
+
+  `CityTraffic.CarsOutPerHousehold = 0.25` puts **159 cars** on the street against 624 households,
+  all day, flat. Rossville's real counted traffic supports **~19 moving at an average instant** and
+  **~46 in the peak hour**. That is a multiplier of **0.03 off-peak and 0.07 at peak**, not 0.25.
+
+  The constant's docstring is right about what the number MEANS - "not how many cars a household
+  OWNS, but how many are ON THE ROAD AT ONCE" - and wrong about the value, which was reasoned
+  ("roughly one household in four") rather than measured. It is one household in thirty-three.
+
+  **Two changes, not one.** The value is too high AND it is a constant: the real thing is a curve,
+  peaking when the town leaves for Hoopeston and Danville and nearly flat at midday. The sim already
+  knows when the men leave. Feeding `DayPlan`'s away-work curve into the fleet size gets the shape
+  for free, and a town whose traffic has a rush hour is worth more than one that has the right
+  average.
+
+  **Do not do this as a lone constant edit.** Dropping to 19 cars with the current class weighting
+  spreads them evenly over a network where 80% of the movement belongs on two roads, so the town
+  would read as empty everywhere rather than quiet-with-a-busy-Route-1. Land it with the weighting
+  below.
+
+- [ ] **`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**
+  `RoadNetwork.AmbientTrafficWeight` is `Mainroad 8 : Street 2`. IDOT's counts give **Route 1 5,200
+  AADT, Attica 1,100, a side street ~200-250** - so 21:1 arterial-to-local, and Route 1 carries
+  **4.7x what Attica does** while the table hands them the identical weight of 8.
+
+  Measured share of vehicle-miles: **real 80-86% on the two main roads, game 55.5%** - the game puts
+  **2.25-3.26x too much traffic on the side streets**. That is the owner's point exactly: the side
+  roads exist to get a car from a house to Route 1 or Attica and out of town, not to be driven
+  around on.
+
+  **The durable fix is to stop proxying through the class.** `Content/roads.txt` already carries
+  measured `easement` and right-of-way per road because this project takes numbers from the survey
+  rather than from a ruler - and IDOT counts **twelve of these roads by name** (chicago, attica,
+  stewart, stufflebeam, benton, henderson, creative, summit, mckibben, church, dale). An `aadt` line
+  beside `easement`, read by the spawn pitch and the turn scoring, replaces a guessed class ladder
+  with the county's own measurement. The 21 uncounted roads take a floor.
+
+- [ ] **Nobody's car is in their driveway.** `CityParking` fills only authored `carpark` places. Its
+  own docstring makes the argument and then stops short of the houses: *"A PARKED CAR IS CONTENT IN
+  THIS GAME... a city where every car is driving past is a city where nothing is ever anywhere."*
+
+  If ownership scales with households and movement does not, the difference has to be standing
+  somewhere: **roughly 600 cars owned, ~19 moving.** The overwhelming majority of Rossville's
+  vehicles are parked at a house at any moment, and the game draws none of them. For a game about
+  noticing what changed, a car that sat in a driveway on Tuesday and is gone on Wednesday is worth
+  more than any number of cars driving past. Wants: a driveway or kerb spot per dwelling from the
+  parcel geometry, a car that belongs to a household rather than to the road, and the ability for it
+  to be absent because its owner is at work in Hoopeston.
+
 - [ ] **`church x maple` is two county roads crossing on give-way, and a car starves there.**
   Measured 2026-08-08 on the 159-car fleet: `NoCarWaitsForeverAtTheHeadOfAClearQueue` now
   attributes every wait longer than one signal cycle to its junction, and the whole tail is **two

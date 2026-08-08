@@ -152,6 +152,23 @@ namespace Noir.Unity
         /// Roughly one household in four - the rest are parked, garaged, in a lot somewhere, or
         /// were never a car-owning household to begin with. That is why it is well under one, and
         /// why it no longer has to move when the city grows: the household count moves instead.
+        ///
+        /// AND THE VALUE IS MEASURABLY WRONG - 0.25 WAS REASONED, NOT MEASURED. Everything above
+        /// is right about what this number MEANS and wrong about what it IS. IDOT counts Rossville's
+        /// streets by name: Route 1 at 5,200 AADT, Attica at 1,100, a side street at ~200. Total
+        /// vehicle-miles over average speed puts **~19 cars moving at an average instant and ~46 in
+        /// the peak hour** - against the **159** this constant produces from 624 households. One
+        /// household in thirty-three, not one in four.
+        ///
+        /// It is left at 0.25 pending the owner's call because dropping it is a visible change to
+        /// how the town feels, and because it should not land alone: at 19 cars the class weighting
+        /// (`AmbientTrafficWeight`, 4:1 where the county measures 21:1) would spread them evenly
+        /// over a network where 80% of the real movement is on two roads, and the town would read
+        /// as empty everywhere instead of quiet with a busy Route 1. It should also stop being a
+        /// constant - the real curve peaks when the town leaves for Hoopeston and Danville.
+        ///
+        /// This is also why junctions starve: see `church x maple` in docs/IDEAS.md. Full working
+        /// and the IDOT query in docs/research/TRAFFIC-COUNTS.md.
         /// </summary>
         public static float CarsOutPerHousehold = 0.25f;
 
