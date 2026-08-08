@@ -116,7 +116,10 @@ namespace Noir.Unity
                 }
             }
 
-            Debug.Log($"[collision] 1 ground mesh and {walls} building boxes, "
+            int generated = SolidifyGeneratedWalls(parent);
+
+            Debug.Log($"[collision] 1 ground mesh, {walls} bought-building boxes and "
+                    + $"{generated} generated wall chunk(s), "
                     + $"floor {Floor:0.00}m above local terrain.");
             return root;
         }
@@ -187,5 +190,63 @@ namespace Noir.Unity
             mesh.RecalculateNormals();
             return mesh;
         }
+
+        /// <summary>
+        /// THE GENERATED HOUSES, WHICH HAD NO COLLIDER AT ALL.
+        ///
+        /// WHAT WAS WRONG. Everything above collides the BOUGHT prefabs - the Universal Pack
+        /// models placed on authored lots - and those are behind ShowBuildings, which is off by
+        /// default and describes a Chicago brownstone rather than an Illinois frame house. The
+        /// town this project actually draws is VillageMesh's generated massing, it is built
+        /// unconditionally, and nothing ever gave it a surface. A PlayMode run said so plainly
+        /// and nobody had read the line:
+        ///
+        ///     [collision] 1 ground mesh and 0 building boxes
+        ///
+        /// Zero. Press P and you walked through every house in Rossville.
+        ///
+        /// A MESH COLLIDER PER CHUNK, not a box per building. VillageMesh already chunks the
+        /// walls on a grid for culling, and those chunks are the exact geometry that is drawn -
+        /// so this costs one component each, needs no bounds arithmetic, and cannot disagree with
+        /// what the eye sees. Boxes would fill every doorway and every yard between an L.
+        ///
+        /// Found by walking for "Walls" rather than by being handed it, because VillageMesh owns
+        /// its own hierarchy and a signature that named the path would go stale the first time it
+        /// moved. Costs one recursive search once per build.
+        /// </summary>
+        private static int SolidifyGeneratedWalls(Transform parent)
+        {
+            var walls = FindByName(parent, "Walls");
+            if (walls == null)
+            {
+                Debug.LogWarning("[collision] no generated Walls node - the houses have no "
+                               + "surface and the player will walk through them.");
+                return 0;
+            }
+
+            int made = 0;
+            foreach (var mf in walls.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (mf.sharedMesh == null) continue;
+                if (mf.GetComponent<MeshCollider>() != null) continue;
+                var mc = mf.gameObject.AddComponent<MeshCollider>();
+                mc.sharedMesh = mf.sharedMesh;
+                made++;
+            }
+            return made;
+        }
+
+        private static Transform FindByName(Transform where, string name)
+        {
+            if (where == null) return null;
+            if (where.name == name) return where;
+            foreach (Transform child in where)
+            {
+                var hit = FindByName(child, name);
+                if (hit != null) return hit;
+            }
+            return null;
+        }
+
     }
 }
