@@ -289,6 +289,49 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   `Crossings` in Core, where an end landing on another road's centre line is a junction in its own
   right; that is untried and needs the same measurement before it is believed.
 
+- [ ] **THE PEOPLE ARE HALF THE FRAME. THE CARS ARE NOT THE PROBLEM AND NEVER WERE.**
+  Measured 2026-08-08 by `PerfCensus.WhatIsEatingTheFrame`, which switches one layer off and
+  straight back on inside a SINGLE run, so drift cancels:
+
+  ```
+    baseline start   median 11.3 ms   p90 18.2 ms   (88 fps)
+    baseline end     median 12.8 ms   p90 17.7 ms
+    DRIFT +1.5 ms - under 15%, so the numbers hold
+
+    People OFF        5.9 ms   saves  6.2 ms   1385 renderers
+    Traffic OFF      11.1 ms   saves  1.0 ms
+    Driveways OFF    13.4 ms   saves -1.3 ms
+  ```
+
+  **1,385 animators cost more than everything else put together.** The 611 parked cars measure
+  NEGATIVE, i.e. indistinguishable from zero. A whole session was spent optimising car meshes
+  before anybody measured which layer was expensive.
+
+  **THE OBVIOUS FIX IS ALREADY TRIED AND REVERTED - read `AgentBody.cs:204` before repeating it.**
+  `AnimatorCullingMode.CullCompletely` stops people dead: a disabled animator does not update the
+  bounds that decide visibility, so a figure that falls out of view never comes back. Measured at
+  the time: 40 of 40 animators had not advanced a frame in a whole second. `CullUpdateTransforms`
+  is what is there now, and it still evaluates every state machine and every clip off-screen -
+  it only skips writing the bones.
+
+  **What that failure actually says is that the cull must not be keyed on RENDERER VISIBILITY**,
+  because the thing being disabled is what maintains it. That is circular. A DISTANCE cull is not:
+  the camera's position and a citizen's simulated position are both known whatever the animator is
+  doing, so there is no state to get stuck in. Wants: `animator.enabled = false` beyond some
+  radius with hysteresis so a person on the boundary does not flicker, the check sliced across
+  frames the way `CityTraffic.Update` already slices its movers rather than sweeping 1,385 every
+  frame, and `PerfCensus` re-run to prove the saving.
+
+  Worth knowing before starting: the town already has a cheap representation - `AgentMeshView`
+  draws primitives where `AgentFigure` draws rigged people - so "far away people are capsules" may
+  be a shorter path than an animator LOD, and it is measurable the same way.
+
+  **Two limits of the census as it stands.** The renderer count reads 0 for `Traffic` and
+  `Driveways` because those register through the `Action<bool>` overload rather than by root, so
+  `Layers.RootsOf` finds nothing - the timing is right, the count is not. And only three layers
+  were probed: the rest were not wired or not on in that configuration, so Trees, Buildings,
+  Districts, Houses, Streets, Lamps, Powerlines, Farm and Massing are UNMEASURED, not cheap.
+
 - [ ] **THE FLEET IS EIGHT TIMES TOO BIG, AND IT IS WHY THE JUNCTIONS STARVE.** Measured against
   IDOT's own counts, 2026-08-08 — full working in `docs/research/TRAFFIC-COUNTS.md`.
 
