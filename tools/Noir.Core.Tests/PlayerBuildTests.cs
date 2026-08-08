@@ -32,7 +32,24 @@ namespace Noir.Core.Tests
             @"^\s*(?:public|internal)?\s*(?:static\s+|sealed\s+|partial\s+)*class\s+(\w+)");
 
         /// <summary>
-        /// The simple invariant: the runtime assembly may not name UnityEditor outside a guard.
+        /// Editor-only TYPES, reached by their bare name.
+        ///
+        /// `using UnityEditor;` is itself normally inside a guard, so runtime code never writes
+        /// the word "UnityEditor" - it writes `AssetDatabase.LoadAssetAtPath` and the name simply
+        /// resolves in the editor and vanishes outside it. Both of the CityStreets failures in the
+        /// first ever player build looked like this, and the UnityEditor grep below sailed past
+        /// them. These are the ones this project actually uses.
+        /// </summary>
+        private static readonly string[] EditorOnlyTypes =
+        {
+            "AssetDatabase", "PrefabUtility", "EditorApplication", "EditorUtility",
+            "AssetImporter", "ModelImporter", "EditorBuildSettings", "EditorSceneManager",
+            "MenuItem", "EditorGUILayout", "EditorGUI", "Handles", "SceneView", "BuildPipeline",
+        };
+
+        /// <summary>
+        /// The simple invariant: the runtime assembly may not reach UnityEditor outside a guard -
+        /// by namespace, or by the bare name of one of its types.
         /// </summary>
         [Test]
         public void RuntimeCodeNeverNamesUnityEditorOutsideAGuard()
@@ -49,8 +66,13 @@ namespace Noir.Core.Tests
                     if (guarded[i]) continue;
                     string s = lines[i].Trim();
                     if (s.StartsWith("//") || s.StartsWith("*")) continue;
+
                     if (Regex.IsMatch(lines[i], @"\bUnityEditor\b"))
-                        offenders.Add($"{Rel(file)}:{i + 1}  {s}");
+                    { offenders.Add($"{Rel(file)}:{i + 1}  {s}"); continue; }
+
+                    foreach (string type in EditorOnlyTypes)
+                        if (Regex.IsMatch(lines[i], $@"(?<![\w.]){Regex.Escape(type)}\s*\."))
+                        { offenders.Add($"{Rel(file)}:{i + 1}  uses {type}  |  {s}"); break; }
                 }
             }
 
@@ -95,17 +117,34 @@ namespace Noir.Core.Tests
             {
                 string[] lines = File.ReadAllLines(file);
                 bool[] guarded = GuardMap(lines);
+                string current = null;
 
                 for (int i = 0; i < lines.Length; i++)
                 {
+                    var c = ClassDecl.Match(lines[i]);
+                    if (c.Success) current = c.Groups[1].Value;
+
                     if (guarded[i]) continue;
                     string s = lines[i].Trim();
                     if (s.StartsWith("//") || s.StartsWith("*")) continue;
 
                     foreach (var kv in editorOnly)
                         foreach (string mem in kv.Value)
+                        {
+                            // Qualified: SomeClass.Member
                             if (Regex.IsMatch(lines[i], $@"\b{Regex.Escape(kv.Key)}\s*\.\s*{Regex.Escape(mem)}\b"))
-                                offenders.Add($"{Rel(file)}:{i + 1}  calls {kv.Key}.{mem}  |  {s}");
+                            { offenders.Add($"{Rel(file)}:{i + 1}  calls {kv.Key}.{mem}  |  {s}"); continue; }
+
+                            // BARE, INSIDE ITS OWN CLASS. `_glazing.Clear()` in CityBuildings is
+                            // an editor-only field used from unguarded code in the very class that
+                            // declares it - no dot-prefix, so the qualified check above walks
+                            // straight past. That is exactly what broke the first player build,
+                            // and this test as first written did not see it either.
+                            if (current == kv.Key &&
+                                Regex.IsMatch(lines[i], $@"(?<![\w.]){Regex.Escape(mem)}\b"))
+                                offenders.Add($"{Rel(file)}:{i + 1}  uses its own editor-only " +
+                                              $"{kv.Key}.{mem}  |  {s}");
+                        }
                 }
             }
 

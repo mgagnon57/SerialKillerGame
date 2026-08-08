@@ -114,6 +114,13 @@ namespace Noir.Unity
         /// special-case the renderer again - that is how the two numbers drifted apart in the
         /// first place.
         /// </summary>
+        // EDITOR ONLY, and it always was - it measures a prefab through AssetDatabase and
+        // PrefabUtility, neither of which exists in a player. It sat outside every guard in this
+        // file and compiled anyway, because `using UnityEditor;` at the top IS guarded, so in the
+        // editor the names resolve and outside it they simply vanish. Both call sites (the two
+        // SeatAt calls) are already inside the editor-only block below, so nothing outside the
+        // editor ever wanted this. Found by the first player build this project has ever had.
+#if UNITY_EDITOR
         private static float Narrow(RoadClass klass, string path)
         {
             if (!_tileWidth.TryGetValue(path, out float measured))
@@ -140,6 +147,7 @@ namespace Noir.Unity
             float scale = want / measured;
             return Mathf.Abs(scale - 1f) < 0.02f ? 1f : scale;      // already right: leave it be
         }
+#endif
 
         private static readonly Dictionary<string, float> _tileWidth = new Dictionary<string, float>();
 

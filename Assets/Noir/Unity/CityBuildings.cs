@@ -78,7 +78,17 @@ namespace Noir.Unity
         {
             var root = new GameObject("CityBuildings");
             root.transform.SetParent(parent, false);
+
+            // GUARDED, because `_glazing` is declared inside this class's own editor-only block
+            // and this line is outside it. It compiled every day, passed every test and ran fine
+            // on Play; it could not be BUILT, and nobody found out because nobody had ever built
+            // the game. Found by the first player build this project has ever attempted.
+            //
+            // Nothing is lost outside the editor: the dictionary only holds the bought buildings'
+            // own glass, and in a player there are no bought buildings to hold it for.
+#if UNITY_EDITOR
             _glazing.Clear();
+#endif
 
             // EDITOR ONLY, AND UNLIKE THE PEOPLE THERE IS NO FALLBACK. Everything below loads
             // through AssetDatabase and PrefabUtility, which are UnityEditor APIs and do not exist
