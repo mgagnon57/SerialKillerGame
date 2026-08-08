@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Noir.Core.Contracts;
 
-namespace Noir.Unity
+namespace Noir.Core.Survey
 {
     /// <summary>
     /// Where the owner says the sidewalks were. Read from Content/roads-1991.txt, with the blocks
@@ -168,7 +169,7 @@ namespace Noir.Unity
 
         private static void Load()
         {
-            var written = ContentLoader.WrittenAt(FileName);
+            var written = Content.WrittenAt(FileName);
             if (_byRoad != null && written == _stamp) return;
             _stamp = written;
             _byRoad = new Dictionary<string, Walk>();
@@ -177,7 +178,7 @@ namespace Noir.Unity
             _wasBlock = new Dictionary<string, Stood>();
 
             string text;
-            try { text = ContentLoader.Read(FileName); }
+            try { text = Content.Read(FileName); }
             catch { return; }
 
             foreach (var raw in text.Split('\n'))
@@ -211,13 +212,13 @@ namespace Noir.Unity
 
         private static void LoadBlocks()
         {
-            var written = ContentLoader.WrittenAt(BlocksFileName);
+            var written = Content.WrittenAt(BlocksFileName);
             if (_blocks != null && written == _blockStamp) return;
             _blockStamp = written;
             _blocks = new List<Block>();
 
             string text;
-            try { text = ContentLoader.Read(BlocksFileName); }
+            try { text = Content.Read(BlocksFileName); }
             catch { return; }
 
             foreach (var raw in text.Split('\n'))

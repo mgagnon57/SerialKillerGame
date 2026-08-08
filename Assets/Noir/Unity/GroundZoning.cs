@@ -1,6 +1,7 @@
 using UnityEngine;
 using Noir.Core.World;
 using Terrain = Noir.Core.World.Terrain;
+using Noir.Core.Survey;
 
 namespace Noir.Unity
 {

@@ -56,6 +56,12 @@ namespace Noir.Unity
         /// </summary>
         public static Result Build(string mapFile, ulong seed)
         {
+            // FIRST, before anything asks for a file. The survey tables live in
+            // Noir.Core.Survey now and read through Noir.Core.Contracts.Content, which has to be
+            // told where content comes from; Core cannot open a file for itself and that is the
+            // point of the whole arrangement.
+            Content.Install(ContentLoader.AsSource);
+
             if (!ContentLoader.Exists)
                 throw new Exception($"Content not found at {ContentLoader.Root}");
 

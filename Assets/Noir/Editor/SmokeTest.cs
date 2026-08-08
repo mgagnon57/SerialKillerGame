@@ -5,6 +5,7 @@ using Noir.Core.People;
 using Noir.Core.Sim;
 using Noir.Core.World;
 using Noir.Unity;
+using Noir.Core.Survey;
 
 namespace Noir.Editor
 {

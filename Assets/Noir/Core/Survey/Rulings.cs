@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Noir.Core.Contracts;
 
-namespace Noir.Unity
+namespace Noir.Core.Survey
 {
     /// <summary>
     /// What the owner says stood on each lot in 1991. Read from Content/parcel-1991.txt.
@@ -144,6 +145,28 @@ namespace Noir.Unity
         /// <summary>How many lots carry a ruling of any kind.</summary>
         public static int Count { get { Load(); return _byParcel.Count; } }
 
+        /// <summary>
+        /// Throw the cache away and reparse on the next question.
+        ///
+        /// FOR CALLERS THAT KNOW THE FILE CHANGED, which the throttle below cannot. Load() only
+        /// asks the filesystem once a second - deliberately, because GroundZoning.ZoningAt calls
+        /// through here once per TILE and Rossville is five million of them - so anything that
+        /// rewrites the file and then reads it back inside that second gets the old answer.
+        ///
+        /// That is not a hypothetical about tests. tools/merge-back-strips.py and
+        /// group-terraces.py both rewrite Content/parcel-1991.txt, and the browser map writes it
+        /// on every click; a tool that wrote and then re-read would have been reading its own
+        /// stale copy. The tests that finally exercise this parser hit it immediately - every one
+        /// of them after the first read the FIRST one's data.
+        /// </summary>
+        public static void Forget()
+        {
+            _byParcel = null;
+            _byProperty = null;
+            _stamp = default;
+            _checkedAt = 0;
+        }
+
         private static void Load()
         {
             // Reparse when the file moves under us. The browser map writes it while the editor is
@@ -161,17 +184,17 @@ namespace Noir.Unity
                 int now = System.Environment.TickCount;
                 if (unchecked(now - _checkedAt) < 1000) return;
                 _checkedAt = now;
-                if (ContentLoader.WrittenAt(FileName) == _stamp) return;
+                if (Content.WrittenAt(FileName) == _stamp) return;
             }
 
-            _stamp = ContentLoader.WrittenAt(FileName);
+            _stamp = Content.WrittenAt(FileName);
             _checkedAt = System.Environment.TickCount;
             _revision++;
             _byParcel = new Dictionary<int, Ruling>();
             _byProperty = new Dictionary<string, List<int>>();
 
             string text;
-            try { text = ContentLoader.Read(FileName); }
+            try { text = Content.Read(FileName); }
             catch { return; }
 
             foreach (var raw in text.Split('\n'))

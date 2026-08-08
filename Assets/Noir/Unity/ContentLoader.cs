@@ -1,5 +1,6 @@
 using System.IO;
 using UnityEngine;
+using Noir.Core.Contracts;
 
 namespace Noir.Unity
 {
@@ -13,6 +14,23 @@ namespace Noir.Unity
     /// </summary>
     public static class ContentLoader
     {
+        /// <summary>
+        /// This loader, behind the Core-side interface.
+        ///
+        /// The survey tables used to call ContentLoader directly, which is what pinned five
+        /// thousand lines of pure parsing and plane geometry inside the Unity assembly where no
+        /// test can compile them. They ask Noir.Core.Contracts.Content now; this is what answers.
+        /// Install it once, early - TownPipeline.Build does it before anything reads a file.
+        /// </summary>
+        private sealed class Source : IContentSource
+        {
+            public string Read(string fileName) => ContentLoader.Read(fileName);
+            public System.DateTime WrittenAt(string fileName) => ContentLoader.WrittenAt(fileName);
+        }
+
+        /// <summary>Hand this to Content.Install. Idempotent; the instance carries no state.</summary>
+        public static IContentSource AsSource { get; } = new Source();
+
         public static string Root => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Content"));
 
         /// <summary>

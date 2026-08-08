@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
 using Noir.Core.People;
 using Noir.Core.World;
+using Noir.Core.Survey;
 
 namespace Noir.Unity
 {
