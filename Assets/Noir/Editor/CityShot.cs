@@ -300,7 +300,21 @@ namespace Noir.Editor
                 // 1335), and every street is a known offset from it. Move the town and the
                 // cameras follow.
                 const float cx = 750f, cy = 1335f;
-                Vector3 At(float east, float north) => new Vector3(cx + east, 0f, -(cy - north));
+                // ON THE GROUND, NOT AT NOUGHT.
+                //
+                // This returned y = 0f, and every eye-level shot below then added 1.5-1.6 m to
+                // it - which put the camera UNDERGROUND, because the ground under the crossing is
+                // at y = 3.90 m. The stills came out as a slab of terrain filling most of the
+                // frame and were read as bad framing; the camera was simply buried.
+                //
+                // Exactly the assumption PlayerPlayTests already records being wrong once:
+                // "true while the whole map was one plane at nought, and meaningless once
+                // ElevationGrid gave it 24m of relief and put the ground under Second Street at
+                // +4.2m". Player.Spawn asks the grid; these cameras never did.
+                Vector3 At(float east, float north) =>
+                    new Vector3(cx + east,
+                                ElevationGrid.HeightAt(cx + east, cy - north),
+                                -(cy - north));
 
                 // THE CROSSROADS. Chicago and Attica, the only signalised junction in the
                 // village, from the middle of the road looking north up Route 1.
@@ -312,8 +326,21 @@ namespace Noir.Editor
                 Frame(camGo, At(280f, -130f), 1150f, 42f, 20f);
                 Capture(cam, Path.Combine(OutputDir, "city-block.png"));
 
-                // THE STOREFRONTS - the 100 block of North Chicago, from the pavement.
-                Frame(camGo, At(0f, 60f) + Vector3.up * 1.5f, 34f, 5f, 180f);
+                // THE STOREFRONTS - the 100 block of SOUTH Chicago, from the middle of the road
+                // looking north at the crossing.
+                //
+                // MOVED 2026-08-07, because the old framing had stopped being a photograph of
+                // anything. It stood at At(0,+60) - the NORTH block - at eye height looking back
+                // south, and once the survey layer reached the offline renderers FillFromSurvey
+                // put a building on that spot: the shot came out as a wall of brick roof filling
+                // two thirds of the frame, with the camera inside the building. Every test was
+                // green and the still was useless, which is the whole argument for looking at it.
+                //
+                // South, because that is where the terrace IS. DowntownFromSanborn lays it on
+                // parcel 237 - the even side of the 100 block of South Chicago, the run that
+                // burned in February 2004 - so this is the one view in the set that shows the
+                // 1913 survey standing up as a building instead of as a number in a log.
+                Frame(camGo, At(0f, -70f) + Vector3.up * 1.6f, 34f, 5f, 0f);
                 Capture(cam, Path.Combine(OutputDir, "city-terrace.png"));
 
                 // 408 HOLMES AVE. The killer's house, from the middle of Holmes Avenue looking
