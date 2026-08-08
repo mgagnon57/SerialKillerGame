@@ -106,6 +106,18 @@ namespace Noir.Unity
             /// up and the lot lines off, which is the view the owner reads the map in.
             /// </summary>
             Labels,
+
+            /// <summary>
+            /// The cars standing at people's houses — which is nearly every car the town owns.
+            ///
+            /// Its own switch and not Parking's: Parking is public lots, this is the driveway of a
+            /// private house, and the useful thing is being able to take the parked cars away and
+            /// still see the lot lines under them. Added at the END of the enum on purpose —
+            /// Layers persists by NAME (<c>KeyPrefix + kind</c> concatenates the enum's ToString),
+            /// so a new member cannot renumber anybody's saved switches, but there is no reason to
+            /// find that out the hard way.
+            /// </summary>
+            Driveways,
         }
 
         /// <summary>How the panel labels each one, and the order it lists them in.</summary>
@@ -120,7 +132,7 @@ namespace Noir.Unity
             Kind.RailBed, Kind.Powerlines, Kind.Farm,
             Kind.Buildings, Kind.Districts, Kind.Houses, Kind.Story,
             Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Massing,
-            Kind.Plan, Kind.Footprints, Kind.Labels,
+            Kind.Plan, Kind.Footprints, Kind.Labels, Kind.Driveways,
         };
 
         public static string Label(Kind k)

@@ -280,6 +280,19 @@ namespace Noir.Unity
 
         private GameObject _village;
         private XRay _xray;
+
+        /// <summary>The cars standing at houses. See <see cref="CityDriveways"/>.</summary>
+        private CityDriveways _driveways;
+
+        /// <summary>
+        /// When the driveways were last reconciled against who is out of town, in sim minutes.
+        ///
+        /// Not every frame: the answer only changes when somebody's day-plan block changes, and
+        /// the two that matter are twenty past six and ten past five. A sweep of the citizen list
+        /// once a sim-minute is far cheaper than 286 cars asking every frame, and no player can
+        /// see the difference between a car leaving at 06:20 and one leaving at 06:20:59.
+        /// </summary>
+        private int _drivewaysAt = -1;
         private AgentMeshView _agentView;
         private OrbitCamera _rig;
         private SunRig _lighting;
@@ -673,6 +686,17 @@ namespace Noir.Unity
             traffic = CityTraffic.Create(World, transform, signals);
             profile.Done("CityTraffic");
 
+            // THE OTHER 98% OF THE TOWN'S CARS, WHICH ARE NOT GOING ANYWHERE.
+            //
+            // IDOT counts Rossville at ~19 vehicles moving at an average instant and the village
+            // owns something like two per household, so the cars standing at houses outnumber the
+            // ones being driven by a factor of about sixty - and the game drew none of them until
+            // now. Built HERE, beside the traffic and after CityChunker.Bake, for exactly the
+            // reason the traffic is: a combined mesh cannot be taken away when its owner drives it
+            // to Hoopeston. See docs/research/TRAFFIC-COUNTS.md.
+            _driveways = CityDriveways.Create(World, Seed, transform);
+            profile.Done("CityDriveways");
+
             // The two that MOVE. Registered like the rest, and switching them off hides them
             // exactly as HideActors always did. Not baked: a combined mesh cannot move or change
             // colour.
@@ -694,6 +718,14 @@ namespace Noir.Unity
             // car had been given a reason to stop by code that had never run.
             if (signals != null) Layers.Register(Layers.Kind.Signals, on => ShowRenderers(signals.gameObject, on));
             if (traffic != null) Layers.Register(Layers.Kind.Traffic, on => ShowRenderers(traffic.gameObject, on));
+
+            // Renderers, not the root, for the reason spelled out above - and it composes with the
+            // absence: a car whose owner is at work is an INACTIVE GameObject, so turning the layer
+            // back on re-enables the renderers of the cars that are actually there and leaves the
+            // ones that drove away hidden.
+            if (_driveways != null)
+                Layers.Register(Layers.Kind.Driveways,
+                                on => ShowRenderers(_driveways.gameObject, on));
 
             // DRAWN OR NOT, THEY STILL EXIST. Gating CityTraffic.Create itself on the plan flag
             // was the obvious way to keep cars off a survey drawing and it was wrong twice over:
@@ -1085,6 +1117,15 @@ namespace Noir.Unity
             if (Sim == null) return;
 
             HandleHotkeys();
+
+            // The town takes its cars to work. Once a sim-minute, not once a frame - see
+            // _drivewaysAt. This is the one thing in the game whose CHANGE is the content: the
+            // driveway that is empty this morning and was not yesterday.
+            if (_driveways != null && Sim.Clock.MinuteOfDay != _drivewaysAt)
+            {
+                _drivewaysAt = Sim.Clock.MinuteOfDay;
+                _driveways.Refresh(Sim);
+            }
 
             // Drain a queued skip first, a frame's worth at a time.
             if (_skipTicksRemaining > 0)
