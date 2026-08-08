@@ -152,6 +152,12 @@ namespace Noir.Unity
                 taken.Add(place.Bounds);
             }
 
+            // THE CURVE THE GAME WILL DRAW, not the polyline the map declares. WorldBuilder runs
+            // Catmull-Rom through the authored points, so at a bend the real centreline is off the
+            // chord - and testing the chord let 45 measured buildings be seated into streets that
+            // only the built town could see. Built once; it is a resample at one metre.
+            var corridors = new RoadCorridor.Corridors(layout);
+
             seated.Sort((a, b) => b.Now.Area.CompareTo(a.Now.Area));
             int moved = 0, yielded = 0, shaped = 0, inTheRoad = 0;
             var nowhere = new TileRect(0, 0, 0, 0);   // an empty rect overlaps nothing
@@ -172,14 +178,12 @@ namespace Noir.Unity
                 // Green and Chicago, none of which the school is anywhere near. Testing the box
                 // refuses the school and the town loses it.
                 float pen = s.Outline != null && s.Outline.Length >= 3
-                    ? RoadCorridor.WorstPenetration(layout, s.Outline, RoadCorridor.StreetWidth)
-                    : RoadCorridor.WorstPenetration(layout, s.Now, RoadCorridor.StreetWidth);
+                    ? corridors.WorstPenetration(s.Outline, RoadCorridor.StreetWidth)
+                    : corridors.WorstPenetration(s.Now, RoadCorridor.StreetWidth);
                 if (pen > IntoTheRoad)
                 {
                     inTheRoad++;
-                    var road = s.Outline != null && s.Outline.Length >= 3
-                        ? RoadCorridor.RoadUnder(layout, s.Outline, RoadCorridor.StreetWidth)
-                        : RoadCorridor.RoadUnder(layout, s.Now, RoadCorridor.StreetWidth);
+                    var road = corridors.RoadUnder(s.Now, RoadCorridor.StreetWidth);
                     var at = ParcelIndex.Find(new Vector2(s.Was.X + s.Was.W / 2f, s.Was.Y + s.Was.H / 2f));
                     if (at != null)
                         SurveyReport.Say(at.Value.Id, false,

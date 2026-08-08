@@ -66,15 +66,21 @@ namespace Noir.Core.World
             // Checking only buildings put a house through the water tower: a `tower` is not a
             // building by the kind table, and neither are the yards, the greens or the churchyard,
             // and none of them want a house on top.
+            // AGAINST THE CURVE THE GAME WILL DRAW, not the polyline the map declares. See
+            // RoadCorridor.Corridors: WorldBuilder runs Catmull-Rom through the authored points,
+            // so at a bend the real centreline is off the chord. Clearing against the chord left
+            // 134 buildings standing in a road the moment the town was actually built.
+            var roads = new RoadCorridor.Corridors(layout);
+
             int moved = 0;
             foreach (var p in buildings)
             {
                 // Measured buildings are not ours to move - see the header.
                 if (p.Outline != null && p.Outline.Length >= 3) continue;
 
-                if (RoadCorridor.WorstPenetration(layout, p.Bounds) <= Tolerance) continue;
+                if (roads.WorstPenetration(p.Bounds, 0) <= Tolerance) continue;
 
-                if (TryClear(layout, layout.Places, p, out var moveTo))
+                if (TryClear(layout, roads, layout.Places, p, out var moveTo))
                 {
                     var was = p.Bounds;
                     p.Bounds = moveTo;
@@ -94,8 +100,8 @@ namespace Noir.Core.World
         /// face the street square-on. Moving a house diagonally to save a metre would turn a row
         /// of front doors into a zigzag, which is worse than the metre is worth.
         /// </summary>
-        private static bool TryClear(VillageLayout layout, IReadOnlyList<PlaceSpec> all,
-                                     PlaceSpec p, out TileRect best)
+        private static bool TryClear(VillageLayout layout, RoadCorridor.Corridors roads,
+                                     IReadOnlyList<PlaceSpec> all, PlaceSpec p, out TileRect best)
         {
             best = p.Bounds;
 
@@ -105,7 +111,7 @@ namespace Noir.Core.World
                 {
                     int dx = dir == 0 ? step : dir == 1 ? -step : 0;
                     int dy = dir == 2 ? step : dir == 3 ? -step : 0;
-                    if (Fits(layout, all, p, dx, dy, out best)) return true;
+                    if (Fits(layout, roads, all, p, dx, dy, out best)) return true;
                 }
 
             // AND ONLY THEN OFF THE SQUARE. Eight buildings in Rossville sit where all four
@@ -118,19 +124,20 @@ namespace Noir.Core.World
                 {
                     int dx = (dir & 1) == 0 ? step : -step;
                     int dy = (dir & 2) == 0 ? step : -step;
-                    if (Fits(layout, all, p, dx, dy, out best)) return true;
+                    if (Fits(layout, roads, all, p, dx, dy, out best)) return true;
                 }
 
             return false;
         }
 
-        private static bool Fits(VillageLayout layout, IReadOnlyList<PlaceSpec> all, PlaceSpec p,
+        private static bool Fits(VillageLayout layout, RoadCorridor.Corridors roads,
+                                 IReadOnlyList<PlaceSpec> all, PlaceSpec p,
                                  int dx, int dy, out TileRect box)
         {
             box = new TileRect(p.Bounds.X + dx, p.Bounds.Y + dy, p.Bounds.W, p.Bounds.H);
             if (box.X < 0 || box.Y < 0) return false;
             if (box.X + box.W > layout.Width || box.Y + box.H > layout.Height) return false;
-            if (RoadCorridor.WorstPenetration(layout, box) > 0f) return false;
+            if (roads.WorstPenetration(box, 0) > 0f) return false;
             return !HitsAnother(all, p, box);
         }
 

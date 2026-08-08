@@ -56,8 +56,9 @@ namespace Noir.PlayTests
 
                 if (pen <= Tolerance) continue;
                 if (pen > worst) worst = pen;
+                var road = RoadCorridor.RoadUnder(world.Roads, place.Bounds, RoadCorridor.StreetWidth);
                 offenders.Add($"{place.Name} {place.Bounds} — {pen:0.0} m into "
-                            + RoadCorridor.RoadUnder(world.Roads, place.Bounds, RoadCorridor.StreetWidth));
+                            + (road.Length > 0 ? road : "<an outline-only hit>"));
             }
 
             Debug.Log($"[geometry] {offenders.Count} buildings standing in a street, worst {worst:0.0} m");

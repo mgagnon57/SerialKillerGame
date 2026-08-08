@@ -112,6 +112,117 @@ namespace Noir.Core.World
         /// </summary>
         public const int StreetWidth = 10;
 
+        /// <summary>
+        /// THE ROADS AS THE GAME WILL ACTUALLY HAVE THEM, built once and asked many times.
+        ///
+        /// WHY THIS TYPE EXISTS, and it is the whole of a defect that took a PlayMode test to see.
+        /// The survey passes measured buildings against the road's DECLARED POLYLINE - straight
+        /// segments between the authored points. The game does not have that road. WorldBuilder
+        /// hands the same points to <see cref="RoadPath.Through"/>, which runs Catmull-Rom through
+        /// them: every declared vertex stays exactly where it was and every segment BETWEEN them
+        /// becomes an arc. At a bend the drawn centreline bulges off the chord and sweeps over
+        /// ground the straight-line test called clear.
+        ///
+        /// So the town was being cleared of a road it does not have. The layout-level test read
+        /// zero buildings in a road and the built-town test read 134, and both were right about
+        /// the thing they were measuring - 36 of the 134 on `harrison`, which bends twice.
+        ///
+        /// Built once per pass rather than per question because Catmull-Rom plus a resample at one
+        /// metre is not something to redo for every candidate position of every house.
+        /// </summary>
+        public sealed class Corridors
+        {
+            private readonly string[] _names;
+            private readonly int[] _widths;
+            private readonly RoadPath[] _paths;
+
+            public Corridors(VillageLayout layout)
+            {
+                var names = new List<string>();
+                var widths = new List<int>();
+                var paths = new List<RoadPath>();
+
+                if (layout != null)
+                    foreach (var run in layout.Roads)
+                    {
+                        var pts = run.Points;
+                        if (pts == null || pts.Count < 2 || run.Width <= 0) continue;
+
+                        var v = new Vec2[pts.Count];
+                        for (int i = 0; i < pts.Count; i++) v[i] = new Vec2(pts[i].X, pts[i].Y);
+
+                        names.Add(run.Name);
+                        widths.Add(run.Width);
+                        paths.Add(RoadPath.Through(v));      // the same call WorldBuilder makes
+                    }
+
+                _names = names.ToArray();
+                _widths = widths.ToArray();
+                _paths = paths.ToArray();
+            }
+
+            public int Count => _paths.Length;
+
+            public float WorstPenetration(TileRect box, int minWidth)
+            {
+                float worst = 0f;
+                var corners = CornersOf(box);
+                for (int i = 0; i < _paths.Length; i++)
+                {
+                    if (_widths[i] < minWidth) continue;
+                    worst = Deepest(_paths[i], _widths[i] / 2f, corners, worst);
+                }
+                return worst;
+            }
+
+            public float WorstPenetration(IReadOnlyList<Tile> outline, int minWidth)
+            {
+                if (outline == null || outline.Count < 3) return 0f;
+                var pts = new Vec2[outline.Count];
+                for (int i = 0; i < outline.Count; i++) pts[i] = new Vec2(outline[i].X, outline[i].Y);
+
+                float worst = 0f;
+                for (int i = 0; i < _paths.Length; i++)
+                {
+                    if (_widths[i] < minWidth) continue;
+                    worst = Deepest(_paths[i], _widths[i] / 2f, pts, worst);
+                }
+                return worst;
+            }
+
+            public string RoadUnder(TileRect box, int minWidth)
+            {
+                string name = "";
+                float worst = 0f;
+                var corners = CornersOf(box);
+                for (int i = 0; i < _paths.Length; i++)
+                {
+                    if (_widths[i] < minWidth) continue;
+                    float d = Deepest(_paths[i], _widths[i] / 2f, corners, 0f);
+                    if (d > worst) { worst = d; name = _names[i]; }
+                }
+                return name;
+            }
+
+            /// <summary>
+            /// The box's corners, its centre, AND the midpoint of each edge.
+            ///
+            /// Corners alone miss a road clipping the middle of a long wall, which is precisely
+            /// the shape of a house standing side-on to a street it overhangs.
+            /// </summary>
+            private static Vec2[] CornersOf(TileRect r)
+            {
+                float x0 = r.X, y0 = r.Y, x1 = r.X + r.W, y1 = r.Y + r.H;
+                float mx = (x0 + x1) / 2f, my = (y0 + y1) / 2f;
+                return new[]
+                {
+                    new Vec2(x0, y0), new Vec2(x1, y0), new Vec2(x1, y1), new Vec2(x0, y1),
+                    new Vec2(mx, y0), new Vec2(x1, my), new Vec2(mx, y1), new Vec2(x0, my),
+                    new Vec2(mx, my),
+                };
+            }
+        }
+
         // ---- the same questions, asked of a BUILT world rather than a layout -------------------
         //
         // WHY BOTH. A VillageLayout is what the survey passes edit; a RoadNetwork is what the game
