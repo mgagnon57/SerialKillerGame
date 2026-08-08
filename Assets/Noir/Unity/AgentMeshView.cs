@@ -122,6 +122,22 @@ namespace Noir.Unity
             for (int i = 0; i < _figures.Length; i++)
             {
                 var agent = sim.GetAgent(i);
+
+                // OUT OF TOWN, SO NOT DRAWN. The men who work in Hoopeston or Danville are
+                // anchored at their own front door in the simulation - every consumer of a
+                // block's place assumes a real one - and simply not rendered between half six
+                // and ten past five. An empty pavement on a Tuesday morning is the point.
+                //
+                // Toggling the root is safe here where it would not be elsewhere: AgentFigure is
+                // a plain class, not a MonoBehaviour, and is posed from this loop every frame, so
+                // there is no Update to lose. That distinction is exactly what the frozen-traffic
+                // bug turned on.
+                bool away = agent.Doing == Activity.AwayFromTown;
+                var root = _figures[i].Root;
+                if (root != null && root.gameObject.activeSelf == away)
+                    root.gameObject.SetActive(!away);
+                if (away) continue;
+
                 bool walking = agent.Heading.X != 0f || agent.Heading.Y != 0f;
 
                 // ---- which way they are facing ----

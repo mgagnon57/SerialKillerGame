@@ -26,6 +26,17 @@ namespace Noir.Core.People
         Nurse,
         Verger,
         Caretaker,
+
+        /// <summary>
+        /// Employed, but not in Rossville. Hoopeston's canneries five miles north, Danville
+        /// twenty south, the elevators, section work on the CSX, over-the-road trucking.
+        ///
+        /// APPENDED, so every value above keeps its number - see the note on Occupations about
+        /// why a trade's number must not move. Assigned once by PopulationGenerator.AssignJobs
+        /// rather than derived per call, so a hand-built test fixture that says Occupation.None
+        /// means what it says and is not quietly given a commute.
+        /// </summary>
+        AwayWork,
     }
 
     /// <summary>
@@ -257,6 +268,35 @@ namespace Noir.Core.People
         }
 
         public bool IsChildIn(int year) => StageIn(year) == LifeStage.Child;
+
+        /// <summary>
+        /// WHETHER THIS PERSON LEAVES ROSSVILLE TO WORK.
+        ///
+        /// THE HOLE THIS FILLS. Rossville's authored amenities carry about 168 job slots between
+        /// them, against roughly 450 working-age adults. Everybody else had <see cref="Work"/>
+        /// unset, and an adult with no workplace is planned as a person with a free day: five
+        /// errands, in town, at ten in the morning. That is the exact opposite of a farm town.
+        /// The men of a Vermilion County village in 1991 were gone by six - the canneries and the
+        /// Silgan plant at Hoopeston five miles north, Danville twenty south, the grain elevators,
+        /// section work on the CSX, over-the-road trucking, and the ground itself.
+        ///
+        /// DERIVED, NOT STORED, and that is deliberate. It is a pure function of
+        /// <see cref="Key"/>, which is already unique per person and already stable across runs,
+        /// so this needed no new field on a struct with fourteen constructor arguments and no
+        /// migration of anything that builds one. Same seed, same town, same men on the road.
+        ///
+        /// THE SPLIT IS THE PERIOD, not a guess. Nearly every working-age man not employed in
+        /// the village worked outside it; married women in a farm town in 1991 were far likelier
+        /// to be at home, or to hold one of the part-time jobs the village itself provides - which
+        /// they already have, because those are handed out first and this only ever asks about
+        /// people left over.
+        /// </summary>
+        public bool WorksAwayIn(int year)
+        {
+            if (Work.IsValid) return false;                        // employed here in the village
+            if (StageIn(year) != LifeStage.Adult) return false;    // at school, or retired
+            return Job == Occupation.AwayWork;
+        }
 
         /// <summary>Walking speed in tiles per second, before terrain.</summary>
         public float BaseSpeedIn(int year)

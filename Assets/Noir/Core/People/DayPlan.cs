@@ -20,6 +20,17 @@ namespace Noir.Core.People
         AtThePlayground,
         OnTheAllotment,
 
+        /// <summary>
+        /// Out of Rossville altogether, at a job the map does not contain.
+        ///
+        /// Anchored at the person's HOME rather than at nowhere, because every consumer of
+        /// Block.Where - Simulation's agent destinations, the counter queues, the companion
+        /// search - assumes a real place, and a PlaceId.None would be a null with extra steps.
+        /// AgentMeshView reads the activity and simply does not draw them, which is what being
+        /// out of town looks like from the street: an empty house and an empty pavement.
+        /// </summary>
+        AwayFromTown,
+
         // There was a WaitingForTheBus here. Nothing ever assigned it: village.txt places a bus
         // stop and says "two buses a day to Marlbury, and everyone knows both times", but no
         // DayPlanner path has ever sent anybody to wait at one, so the value could not occur and
@@ -231,6 +242,29 @@ namespace Noir.Core.People
                                       from, end, jitter, dayOfWeek, rng);
                         cursor = end;
                     }
+                }
+            }
+            else if (!weekend && who.WorksAwayIn(year))
+            {
+                // GONE BY SIX. Rossville employs about 168 people and holds roughly 450 of
+                // working age; the rest worked out of town - Hoopeston's canneries five miles
+                // north, Danville twenty south, the elevators, the railroad, the ground. Until
+                // this branch existed every one of them was planned as a person with a free
+                // weekday and sent out to do five errands at ten in the morning, which is why the
+                // streets read as a retirement village rather than a farm town.
+                //
+                // Anchored at home and drawn nowhere - see Activity.AwayFromTown. The commute
+                // itself is not simulated: there is no road off this map yet, and inventing one
+                // to drive down would be a worse lie than simply not being here.
+                int out_ = 6 * 60 + 20 + jitter;          // on the road before half past six
+                int back = 17 * 60 + 10 + jitter;
+
+                if (out_ > cursor) blocks.Add(new Block(cursor, out_, who.Home, Activity.AtHome));
+                int from = Math.Max(cursor, out_);
+                if (back > from)
+                {
+                    blocks.Add(new Block(from, back, who.Home, Activity.AwayFromTown));
+                    cursor = back;
                 }
             }
 
