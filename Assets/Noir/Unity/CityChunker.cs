@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -10,7 +10,7 @@ namespace Noir.Unity
     /// The city is assembled out of bought pieces, and a piece is a renderer: a townhouse is six
     /// sections, a street tile is one, and every hydrant, bin, sign and parked car is another.
     /// That is the right way to BUILD it and the wrong way to DRAW it - the village manages the
-    /// whole of Ashcombe in 1,835 renderers by combining its procedural geometry on a grid, and
+    /// whole of Rossville in 1,835 renderers by combining its procedural geometry on a grid, and
     /// the city had drifted well past that with nothing merged at all.
     ///
     /// So: group every renderer by which chunk of the map it stands in and which material it

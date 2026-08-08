@@ -6,7 +6,7 @@ the pack's store page.
 
 ## The goal
 
-Ashcombe's buildings are generated in code. `Grammars.cs` picks a footprint and massing,
+Rossville's buildings are generated in code. `Grammars.cs` picks a footprint and massing,
 `VillageMesh` / `RoofBuilder` / `Frontage` turn that into walls and roofs, and `Materials3D`
 colours them. There are no models in the project at all — no `.fbx`, no `.prefab`, no `.mat`.
 
@@ -21,7 +21,7 @@ gable ends, chimney, door and window — standing in the village under `SunRig`'
 
 - `docs/snapshots/compare-polypack-close.png` — the pack cottage
 - `docs/snapshots/compare-polypack.png` — the same in village context
-- `docs/snapshots/compare-ashcombe.png` — what Ashcombe builds today, for contrast
+- `docs/snapshots/compare-ashcombe.png` — what Rossville builds today, for contrast
 
 **The kit is genuinely modular and metric**, and its vocabulary lines up with concepts the
 codebase already has. Walls come in 1–5m widths in 3m and 4m tall families, with door and
@@ -56,12 +56,12 @@ failure rather than an error, so each needs to be encoded rather than rediscover
    into a left one, so the far half has to be reflected through the ridge plane by a parent with
    a negative axis. Both halves then sit at the same local offset.
 
-5. **Neither the pack's materials nor Ashcombe's textured ones can be used.** The kit's atlas
+5. **Neither the pack's materials nor Rossville's textured ones can be used.** The kit's atlas
    materials sampled to a flat blue. But `Materials3D.Wall` and `Materials3D.Roofs` are tiled
-   against Ashcombe's own world-space UVs, and the kit's meshes are atlas-mapped — every vertex
+   against Rossville's own world-space UVs, and the kit's meshes are atlas-mapped — every vertex
    of a panel lands on one palette texel — so under those a wall rendered *invisible*.
    `Materials3D.Stone`, the one untextured member of the set, was the only one that worked.
-   **Pack geometry must be painted with flat, untextured colours in Ashcombe's palette.**
+   **Pack geometry must be painted with flat, untextured colours in Rossville's palette.**
 
 6. **Door and window inserts have inconsistent pivots.** A door is centred on its own opening;
    a window is not. Seat inserts by measuring the piece's bounds and moving its centre onto the
@@ -176,7 +176,7 @@ Three editor scripts, all evaluation aids rather than product code:
   height profiles. This is how the conventions above were established; keep it until the catalog
   is settled, then delete.
 - `Assets/Noir/Editor/PolyPackCottage.cs` — assembles the prototype cottage and photographs it
-  beside a real Ashcombe cottage under identical light.
+  beside a real Rossville cottage under identical light.
 - `Assets/Noir/Editor/PolyPackPreview.cs` — renders the publisher's own demo scenes, for judging
   the kit's stock look.
 

@@ -133,8 +133,8 @@ namespace Noir.Unity
             //
             // The field lattice - hedgerows, stone walls, the patchwork of boundaries - is the
             // single most village thing on screen, and it was being drawn to the horizon around
-            // a city. Rather than add a switch to the map format, ask the map: Ashcombe is full
-            // of `terrain field` and Northgate has none, so the content already says which this
+            // a city. Rather than add a switch to the map format, ask the map: Rossville is full
+            // of `terrain field` and Rossville has none, so the content already says which this
             // is. Outskirt woodland stays either way, because a town has trees around it too.
             bool farmland = HasFarmland(world);
 

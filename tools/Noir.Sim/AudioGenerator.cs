@@ -4,7 +4,7 @@ using System.IO;
 namespace Noir.Sim
 {
     /// <summary>
-    /// Every sound in Ashcombe, synthesised into Content/audio/ as 16-bit PCM.
+    /// Every sound in the fixture village, synthesised into Content/audio/ as 16-bit PCM.
     ///
     /// Nothing here is recorded and nothing is bought. That is not thrift for its own sake: a
     /// generated bell can be retuned by editing one number, a bed can be made twelve seconds

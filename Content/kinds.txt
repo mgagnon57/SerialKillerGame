@@ -153,10 +153,10 @@ kind church
 kind school
   # `school2` and `elementary` were a SECOND KIND until 2026-08-03, authored so that
   # CityBuildings could hand Rossville the pack's American School_City while leaving
-  # Ashcombe's village school alone. It cost more than it bought: a kind the PlaceKind
+  # the old village's school alone. It cost more than it bought: a kind the PlaceKind
   # enum has never heard of is numbered past it, and DayPlanner asks for
   # PlaceKind.School by its ENUM MEMBER - so Rossville's 165 children had no school to
-  # be sent to and not one of them ever went. Ashcombe is retired; there is one map.
+  # be sent to and not one of them ever went. The retired village is gone; there is one map.
   # Kept as words so old content still parses.
   words     school elementary school2
   form      building
@@ -871,7 +871,7 @@ kind railway
   describe  yes
 
 # ---- the country ------------------------------------------------------------
-#  Northgate grew to 360x360 and three of its four quadrants are open land. These
+#  Rossville grew to 360x360 and three of its four quadrants are open land. These
 #  are the kinds that live out there. Between them they open the pack's 486 farm
 #  prefabs, which the city had used none of.
 #
@@ -1085,12 +1085,12 @@ kind camp
 # `home yes` IS THE WHOLE POPULATION OF THE RING. Two hundred and twenty-eight
 # houses stood on this map with nobody in any of them, because a household is
 # made per UNIT of a place whose kind says people live there - and this kind did
-# not say so. Every one of Northgate's 365 people lived in the twenty-seven
+# not say so. Every one of Rossville's 365 people lived in the twenty-seven
 # apartment buildings downtown; the suburbs were scenery.
 #
 # Every cell already declared `units 10` in city.txt and had done all along. The
 # ring was one word away from being lived in: 28 cells x 10 = 280 households
-# against downtown's 162, which takes Northgate from 365 people to about 995.
+# against downtown's 162, which takes Rossville from 365 people to about 995.
 #
 # It is deliberately the CELL that is the home and not the house. WorldModel's
 # place array is fixed at load, so a generator cannot register a place, and the
@@ -1123,7 +1123,7 @@ kind suburb
 # lays the road kit's parking tiles over the top - see the note there about the five
 # Road_Parking pieces that had never been placed.
 #
-# Northgate had a hospital, a casino, a cinema, a school, a police station and a bank
+# Rossville had a hospital, a casino, a cinema, a school, a police station and a bank
 # and nowhere for a single car to stand still.
 kind carpark
   words     carpark parking lot

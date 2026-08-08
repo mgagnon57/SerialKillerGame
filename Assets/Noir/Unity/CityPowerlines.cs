@@ -24,7 +24,7 @@ namespace Noir.Unity
     /// hardcode where the town stops - which moves, and has moved four times - each candidate
     /// spot asks the map what its ground is. Pavement means town and gets nothing; grass, field
     /// or wood means country and gets a pole. A road that runs from the fields into the middle
-    /// of Northgate therefore gets poles for exactly as far as the fields go.
+    /// of Rossville therefore gets poles for exactly as far as the fields go.
     ///
     /// Static, so this goes inside the node CityChunker bakes.
     /// </summary>

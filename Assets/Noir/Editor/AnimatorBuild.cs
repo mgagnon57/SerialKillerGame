@@ -120,7 +120,7 @@ namespace Noir.Editor
 
             // Something has to be playing before anybody is told what to play. An idle is the
             // honest choice; the alphabetically-first state, which is what Unity picks on its own,
-            // means everybody in Northgate starts the day digging.
+            // means everybody in Rossville starts the day digging.
             machine.defaultState = fallback ?? machine.states[0].state;
 
             EditorUtility.SetDirty(controller);

@@ -18,7 +18,7 @@ namespace Noir.Unity
     ///   THE FOLDER IS TWO KITS. Sign_Stop_A_City measures y -0.38..0.38 - it is the PLATE, 3cm
     ///   thick, pivoted at its own centre and meant to be mounted on something. Sign_Stop_B_City
     ///   measures y -0.10..2.38 and is the plate AND its post. Catalogued together and dropped at
-    ///   ground level, half the road signs in Northgate were bare metal discs sunk to their
+    ///   ground level, half the road signs in Rossville were bare metal discs sunk to their
     ///   equator in the pavement.
     ///
     ///   A SIGN THAT SAYS NOTHING IS WORSE THAN NO SIGN. Picking uniformly out of 171 put deer

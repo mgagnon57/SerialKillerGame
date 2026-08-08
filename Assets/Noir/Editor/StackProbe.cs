@@ -145,8 +145,8 @@ namespace Noir.Editor
                 cam.backgroundColor = new Color(0.62f, 0.72f, 0.85f);
                 cam.farClipPlane = 800f;
 
-                // "Fourth at Northgate" - the block at 840,570, bounded by Fourth Street (825) to
-                // the west and Northgate Avenue (555) to the north. Reported by name, so this is
+                // "Fourth at Rossville" - the block at 840,570, bounded by Fourth Street (825) to
+                // the west and Fourth Street (555) to the north. Reported by name, so this is
                 // the one to look at rather than a block chosen for convenience.
                 //
                 // From Fourth, looking east at the block's west frontage.
@@ -154,7 +154,7 @@ namespace Noir.Editor
                 camGo.transform.LookAt(new Vector3(842f, 6f, -600f));
                 Shoot(cam, Path.Combine(Out, "probe-city-frontage.png"));
 
-                // From Northgate, looking south at its north frontage.
+                // From Rossville, looking south at its north frontage.
                 camGo.transform.position = new Vector3(870f, 5f, -548f);
                 camGo.transform.LookAt(new Vector3(870f, 6f, -572f));
                 Shoot(cam, Path.Combine(Out, "probe-city-north.png"));
@@ -250,7 +250,7 @@ namespace Noir.Editor
                 if (district != null)
                 foreach (Transform child in district.transform)
                 {
-                    if (!child.name.EndsWith("_570")) continue;   // the NORTH run of Fourth at Northgate
+                    if (!child.name.EndsWith("_570")) continue;   // the NORTH run of Fourth at Rossville
                     if (shown++ >= 4) break;
 
                     Bounds raw = default, faced = default;

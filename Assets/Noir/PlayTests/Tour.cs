@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using UnityEngine;
@@ -8,7 +8,7 @@ using Noir.Unity;
 namespace Noir.PlayTests
 {
     /// <summary>
-    /// Drives a camera round the whole of Northgate WHILE IT IS RUNNING and writes what it sees.
+    /// Drives a camera round the whole of Rossville WHILE IT IS RUNNING and writes what it sees.
     ///
     /// Not a test - it asserts almost nothing. It exists so the city can be handed to somebody
     /// as a thing to look at rather than as a list of claims about itself. The stills the editor
@@ -52,10 +52,10 @@ namespace Noir.PlayTests
         // its resting position worked out and checked against the map.
         private static readonly Stop[] Route =
         {
-            new Stop("Northgate Avenue, looking east",       430f, 435f, 1.6f,  36f,  3f,  90f),
-            new Stop("Northgate meets First Street",         435f, 435f, 0f,    55f, 45f,  90f),
+            new Stop("Fourth Street, looking east",       430f, 435f, 1.6f,  36f,  3f,  90f),
+            new Stop("Rossville meets First Street",         435f, 435f, 0f,    55f, 45f,  90f),
             new Stop("Under the Elevated, at Second Street", 525f, 435f, 0f,    70f, 10f,  90f),
-            new Stop("The terrace on Northgate",             480f, 422f, 1.5f,  30f,  8f,  20f),
+            new Stop("The terrace on Rossville",             480f, 422f, 1.5f,  30f,  8f,  20f),
             new Stop("Downtown, the Meridian",               478f, 479f, 0f,   120f, 25f,  40f),
             new Stop("The whole town",                       480f, 480f, 0f,   265f, 38f,  30f),
             new Stop("Franklin Park",                        390f, 570f, 0f,    60f, 20f, 300f),

@@ -32,7 +32,7 @@ namespace Noir.Core.Tests
         public void PrintWalkableRegions()
         {
             // THE REAL TOWN, NOT THE TEST FIXTURE. Village.World is village.txt - the old
-            // 210x120 Ashcombe map every unit test in this project is built on - and the map
+            // 210x120 the fixture village map every unit test in this project is built on - and the map
             // with the cut in it is city.txt, which is what VillageHost.MapFile points at.
             // Run against the fixture this reported one region and no stranded doors, which is
             // perfectly true and answers nothing.

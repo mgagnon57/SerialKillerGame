@@ -9,7 +9,7 @@ using Terrain = Noir.Core.World.Terrain;
 namespace Noir.Unity
 {
     /// <summary>
-    /// Everything Ashcombe sounds like: the bell on the hour, a bed of outdoor ambience that
+    /// Everything Rossville sounds like: the bell on the hour, a bed of outdoor ambience that
     /// follows the clock, and footsteps that know what you are walking on.
     ///
     /// Atmosphere is half sound, and until this existed the village was a silent film. The

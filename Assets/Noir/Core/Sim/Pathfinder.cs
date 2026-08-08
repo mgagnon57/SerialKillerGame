@@ -35,12 +35,12 @@ namespace Noir.Core.Sim
         /// Guard against pathological searches, as a fraction of the map rather than a constant.
         ///
         /// A fixed number is a cap on a village and a corruption switch on a town: the same
-        /// 20,000 that no Ashcombe journey could reach is a quarter of the searches on a map
+        /// 20,000 that no Rossville journey could reach is a quarter of the searches on a map
         /// four times the size, and every one of those is somebody who does not set off. Tying
         /// it to the grid keeps the guard doing the job it was written for at any size.
         ///
         /// The old constant survives as the FLOOR, not the ceiling. A quarter of a small map is
-        /// a smaller allowance than the village has always had — 5,100 on Ashcombe — and
+        /// a smaller allowance than the village has always had — 5,100 on Rossville — and
         /// tightening the guard while fixing what it broke would have been a poor trade.
         /// </summary>
         public readonly int MaxNodesExamined;
@@ -53,7 +53,7 @@ namespace Noir.Core.Sim
         /// The most any ONE search may examine, whatever the map's size.
         ///
         /// Scaling the guard with the map fixed a real bug and introduced a worse one, because
-        /// the cap was only ever reasoned about in tiles. On Ashcombe a quarter of the grid was
+        /// the cap was only ever reasoned about in tiles. On Rossville a quarter of the grid was
         /// 5,100 nodes; Rossville's grid is 5,040,000 tiles, so the same rule produced 1,260,000
         /// - and a node costs 329 nanoseconds, measured. That is 415 MILLISECONDS inside a
         /// single tick, from a single search, which is what the town's stutter turned out to be.

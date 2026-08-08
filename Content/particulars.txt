@@ -1,4 +1,4 @@
-# PARTICULARS â€” the true, useless, human details.
+﻿# PARTICULARS â€” the true, useless, human details.
 #
 # Each line is a clause. The renderer prefixes a name: "Ivy Pethick whistles badly, and
 # constantly." Two or three are drawn per citizen at generation (mean 2.4).
@@ -12,7 +12,7 @@
 #   - specific, not characterful. "keeps a jar of buttons" beats "is eccentric".
 #   - ordinary. No secrets, no tragedies, no foreshadowing.
 #   - observable, or nearly so. Someone watching for a week could plausibly learn it.
-#   - 1991, rural Illinois. The radio, the propane, the county fair, the elevator, the Schwan's truck.
+#   - 1979, rural England. The wireless, the immersion, the pools, four-star, the fish van.
 #   - never a demographic label and never an assessment. A particular is the texture of a
 #     life, not a judgement on one.
 #   - never a checklist of who is unprotected. No keys, no unlocked doors, no empty houses,
@@ -70,10 +70,10 @@ winds the mantel clock every Sunday whether it wants it or not
 reads the paper back to front, sport first
 arrives eleven minutes early for everything and waits outside   # lingers
 washes the front step on a Friday, kneeling
-puts the coffee on before taking a coat off
+puts the kettle on before taking a coat off
 cannot pass a dropped glove without setting it on a wall
 shakes the tablecloth out of the same window every time
-walks to the end of the block last thing at night and comes straight back
+walks to the end of the lane last thing at night and comes straight back
 turns the mattress on the first Saturday of the month
 sets an alarm and is awake ten minutes before it, every day of the year
 turns the calendar over on the last day of the month and not the first
@@ -82,7 +82,7 @@ says the time aloud on looking at a clock, to nobody in particular
 crosses to the sunny side of the street and crosses back further along
 carries the whole week's shopping in one trip however many trips it wants   # carries
 begins every job by making tea and lets the tea go cold
-stops at the top of Church Street every time and has never said it is for breath   # lingers
+stops at the top of Church Lane every time and has never said it is for breath   # lingers
 does up a coat from the bottom button upward and is unaware of doing it
 wipes the letterbox flap in passing, on any house
 takes a cup of tea outdoors to drink it, in whatever month   # lingers
@@ -93,12 +93,12 @@ keeps a jar of buttons on the windowsill and has never used one
 saves string
 keeps the good chair for a visitor who does not come
 collects the free newspapers and does not read them
-brings the milk in before the coffee, always in that order
+brings the milk in before the kettle, always in that order
 leaves a light on in the hall
 is the only person who locks the door
 keeps a torch by the bed and one in the shed
 never uses the front door
-will not have the water heater on for more than twenty minutes
+will not have the immersion on for more than twenty minutes
 washes the milk bottles before putting them out, which nobody else does
 keeps the front room for Christmas and funerals
 lays a fire in the grate in July, in case
@@ -114,7 +114,7 @@ has the chair at exactly the angle to the fire and moves it back if it is shifte
 runs the cold tap a while before filling anything, and cannot say why
 keeps the good scissors somewhere separate and produces them like a document
 has a barometer, a thermometer and a clock in one row and lines them up
-puts the furnace on at the same hour whatever the weather is doing
+puts the coal on at the same hour whatever the fire is doing
 counts the stair rods on the way up when carrying nothing
 keeps every instruction booklet for every appliance ever owned, in one drawer
 turns the pictures in the hall a quarter-inch and looks back at them from the door
@@ -162,25 +162,25 @@ pickles onions in a jar so old the label has come away from it entirely
 # ---- shops, money and the post --------------------------------------------
 never posts a letter without checking the box twice
 writes the shopping list on the back of envelopes
-stands outside the phone booth while someone else is in it   # lingers
-plays the lottery every week and has never checked the numbers
+stands outside the phone box while someone else is in it   # lingers
+does the pools every week and has never checked the results
 saves Green Shield stamps with nothing in mind
 still says prices in old money and converts them out loud
-knows the elevator account number by heart and nobody else's
+knows the Co-op divi number by heart and nobody else's
 counts out the exact coins before reaching the counter
 is in the Post Office every Thursday and buys one stamp
 keeps a Christmas club going all year and will not say how much
-waits for the Schwan's truck on a Friday and buys the same thing   # lingers
+waits for the fish van on a Friday and buys the same fish   # lingers
 writes to a cousin in Canada and has never met the cousin
-still checks the coin return on the pay phone, out of habit
+still presses Button B in the phone box, out of habit
 buys a postal order rather than put money in an envelope
-will not buy off the bookmobile on principle, and does not explain the principle
+will not use the mobile shop on principle, and does not explain the principle
 keeps the change from the milk in a tin on the shelf and counts it on Sundays
 buys the same three things at Pethick's and asks the price of each
-puts dimes aside for the propane and has never once run out
+puts sixpences aside for the gas and has never once run out
 will not have a chequebook and has explained why at length
 keeps every receipt in a shoebox in date order and has never looked one up
-has a savings book with one dollar in it, opened in 1949
+has a savings book with one shilling in it, opened in 1949
 buys a paper from the shop and a second paper from the van, both dailies
 will not be served out of turn and steps back to make sure of it
 tips the coalman the same amount every delivery and has since decimalisation
@@ -189,12 +189,12 @@ buys a birthday card in January to be ready and cannot find it in June
 brings the same string bag to the shop and has mended the handle twice   # carries
 gets stamps a book at a time and uses four a year
 puts the pension straight into an envelope and the envelope into a clock
-will only be measured for anything by one particular counter in Hoopeston
+will only be measured for anything by one particular counter in Marlbury
 asks after the shopkeeper's family by name and in order of age
 keeps a rent book made up to the penny though the rent has not changed
 
-# ---- the tavern --------------------------------------------------------------
-has lived next door to the tavern for nine years and has never been in
+# ---- the pub --------------------------------------------------------------
+has lived next door to the pub for nine years and has never been in
 drinks a half slower than anybody has ever drunk a half
 plays dominoes and will not talk while doing it
 buys the round first so that it is done with
@@ -233,11 +233,11 @@ sings the descant whether it is wanted or not
 polishes the brass on a Wednesday and checks it again on Friday
 knows the hymn numbers before they go up on the board
 goes to evensong and not to matins, and has a reason
-runs the card party and takes the pencils home afterwards
-reads the church bulletin cover to cover, adverts included
+runs the whist drive and takes the pencils home afterwards
+reads the parish magazine cover to cover, adverts included
 puts the same amount in the collection every week, folded small
-takes the rummage in early to have first look at it   # carries
-can name every pastor since the war, in order
+takes the jumble in early to have first look at it   # carries
+can name every vicar since the war, in order
 stacks the chairs in the hall after everybody else has gone home
 counts the congregation every Sunday and remembers the number
 brings the same cake to every sale and it is always gone first   # carries
@@ -254,22 +254,22 @@ stacks the hall crockery in a particular order and rewashes it if anybody helps
 sells raffle tickets at the door and refuses to sell to the same person twice
 knows which of the bells is which by sound alone
 writes down the number of the hymn in the margin of the magazine
-puts the coffee on in the hall before the meeting starts and misses the start
+puts the kettle on in the hall before the meeting starts and misses the start
 argues the date of the fete every year and loses every year
 
-# ---- garden and yard -------------------------------------------------
+# ---- garden and allotment -------------------------------------------------
 grows dahlias nobody is allowed to pick
 plants the same row of beans in the same place every year
 has won the leek class twice and mentions it from March onwards
 forces rhubarb under an old bucket and guards the bucket
-talks to the pole beans and denies it
+talks to the runner beans and denies it
 is genuinely proud of the compost heap and says so
-burns yard rubbish on a Sunday, which annoys the whole block
-grows more squash than anybody wants and leaves them on porches   # carries
-put a chair in the garden shed and spends longer sitting than digging   # lingers
+burns garden rubbish on a Sunday, which annoys the whole lane
+grows more marrows than anybody wants and leaves them on doorsteps   # carries
+put a chair in the allotment shed and spends longer sitting than digging   # lingers
 writes the variety on a lolly stick for every row
 measures the onions and writes the measurements down
-has a garden plot and has never grown a flower on it
+has an allotment and has never grown a flower on it
 takes cuttings from other people's gardens and admits it
 saves seed in labelled envelopes and gives it away by the pinch   # carries
 mows in stripes and goes back over any that are crooked
@@ -281,7 +281,7 @@ waters at nine at night and says any other hour is wasted
 has never thinned a row in a life and gets small carrots and expects to
 buys one plant a year from the market and calls it the extravagance
 edges the lawn with a bread knife kept for the purpose
-sends a pumpkin to the county fair and takes it home afterwards
+sends a marrow to the harvest festival and takes it home afterwards
 argues for the old varieties and has a list of what has been lost
 has a wheelbarrow with a wooden handle spliced twice
 keeps the grass off two graves that are nothing to do with anybody living
@@ -292,7 +292,7 @@ picks the beans at first light and leaves them in a bag on somebody's step   # c
 # ---- animals --------------------------------------------------------------
 feeds a cat that belongs to somebody else
 leaves the radio on for the dog
-knows every dog in town by name and no children
+knows every dog in the village by name and no children
 puts out a saucer of milk and denies it
 keeps racing pigeons and is beaten every year by the same man
 has a budgerigar that says one word, badly
@@ -308,9 +308,9 @@ knows which cow is which at fifty yards
 keeps bees and has been stung twice and tells the story of the first
 puts a coat on the dog in October, which the dog resents
 counts the swifts back every May and writes the date on the door frame
-has a cat that goes to the tavern and comes home separately
+has a cat that goes to the pub and comes home separately
 keeps a jackdaw that turned up injured and stayed on, and it steals spoons
-knows the sound of every dog on the alley through a closed window
+knows the sound of every dog on Back Lane through a closed window
 saves bacon rind for the birds and hangs it on a particular branch
 has a lurcher that walks precisely to heel and has never been taught to
 keeps the same tin for the dog biscuits and rattles it out of habit
@@ -321,27 +321,27 @@ keeps ferrets and talks about them to people who have not asked
 whistles for a cat that has never once come when whistled for
 puts a saucer of water out in August for whatever wants it
 
-# ---- the radio and the television --------------------------------------
-calls the radio "the set" and is teased for it
-talks to the radio when the news is on
-keeps the radio on the farm report, having never owned an acre
-argues with the ball game on the radio
-watches the television with the sound down and the radio on as well
+# ---- the wireless and the television --------------------------------------
+calls the wireless "the wireless" and is teased for it
+talks to the wireless when the news is on
+keeps the wireless on the shipping forecast, having never seen the sea
+argues with the cricket on the radio
+watches the television with the sound down and the wireless on as well
 will not miss The Archers and will not admit to following it
 rents the set and has had the man out four times about the picture
 stands up for the anthem at closedown
 watches the test card while waiting for the programmes to start
 unplugs the television every night in case of lightning
 has never got the aerial straight and puts up with the snow
-rings the week's viewing in the TV Guide on a Saturday
+rings the week's viewing in the Radio Times on a Saturday
 listens to Two-Way Family Favourites and knows where every town is
 watches Songs of Praise for the churches and not the singing
 listens to one transistor in the shed and another in the kitchen
 turns the television off at the news and back on after it
-keeps the TV Guide from Christmas week and no other week
+keeps the Radio Times from Christmas week and no other week
 has the set in the corner facing away from the window on principle
 will watch anything at all with a horse in it
-tunes the radio to a foreign station on a Sunday and does not understand a word
+tunes the wireless to a foreign station on a Sunday and does not understand a word
 says the colour is too bright on everybody's set and adjusts it uninvited
 listens to the weather forecast standing up, as though it were an announcement
 has a valve set that takes two minutes to warm and will not be hurried
@@ -350,7 +350,7 @@ puts a cloth over the television when it is not in use
 turns it off the moment the credits start, mid-word
 keeps the set on all evening for the company of it and does not look at it
 knows the schedule off by heart and announces what is coming next
-has a radio in the shed permanently on the AM station by old habit  # elder
+has a radio in the shed permanently on the Home Service by old habit  # elder
 takes the batteries out of the transistor every night and puts them back at six
 
 # ---- weather --------------------------------------------------------------
@@ -375,10 +375,10 @@ will not have the fire lit before the first of November whatever the weather
 says a green Christmas makes a fat churchyard, and says it every December
 watches the river level from the bridge and reports it as a number   # lingers
 has one particular cloud shape that means something and will explain it
-sweeps snow from a stretch of sidewalk that is not the right stretch
+sweeps snow from a stretch of pavement that is not the right stretch
 knows the date of every hard frost since 1955 and can be checked  # elder
 says there is snow in that wind, in April, and is occasionally right
-notes the first robin in the church bulletin and disputes anybody else's
+notes the first cuckoo in the parish magazine and disputes anybody else's
 puts a stone out to tell the weather by whether it is wet, as a joke that has stopped being one
 keeps a coat in the shed for rain and another in the car for the same rain
 
@@ -387,31 +387,31 @@ waits for the bus when walking would be quicker
 has a bicycle that has not been ridden in eleven years
 knows the bus timetable by heart and does not take the bus
 takes the same seat on the bus and stands rather than sit in another
-washes the Caprice every Sunday and drives it twice a week
-carries a crank for a tractor that does not need one   # carries
+washes the Cortina every Sunday and drives it twice a week
+carries a starting handle for a Morris Minor that does not need one   # carries
 will not go above forty in anything
 rides a Raleigh with a dynamo lamp and no bell
-mends a puncture faster than anybody in town, and offers
+mends a puncture faster than anybody in the village, and offers
 takes three attempts to reverse into the same space every time
 keeps the MOT certificate in the glovebox with eleven older ones
 checks the oil on a car not driven since Easter
-walks to Hoopeston rather than pay the fare
+walks to Marlbury rather than pay the fare
 pumps the tyres up on a Saturday whether they are down or not
 drives a van with the last owner's trade still painted on the side
 keeps a rug on the back seat that has been there since the car was bought
 signals every turn by hand as well, out of an older habit
-will not park facing downhill and will circle a lot to avoid it
-buys premium for a car that would run perfectly on regular
+will not park facing downhill and will circle a car park to avoid it
+buys four-star for a car that would run perfectly on two
 has a spare wheel that has never been on the road and is proud of it
-counts the miles to Hoopeston out loud on every trip and gets the same figure
+counts the miles to Marlbury out loud on every trip and gets the same figure
 keeps a tin of boiled sweets in the door pocket that nobody is offered
 polishes the chrome and lets the paintwork go
 will only fill up at Ivey's and would run dry rather than not
 has a bicycle clip in every coat pocket and one bicycle
 lets the engine warm for four minutes before moving, whatever the season
-knows the sound of every vehicle on the street and names them without looking
+knows the sound of every vehicle in the lane and names them without looking
 keeps the log book in a plastic wallet and produces it at the least excuse
-gets a ride into Hoopeston on sale day and comes back with nothing
+gets the bus into Marlbury on market day and comes back with nothing
 starts the car once a week in winter and lets it run, and never goes anywhere   # lingers
 carries a length of rope in the boot that has been used once, for somebody else
 has never learned to reverse a trailer and will not be taught
@@ -421,7 +421,7 @@ has an umbrella in every coat
 keeps hair in curlers until four in the afternoon  # f
 cuts hair at home, badly, in the kitchen window
 has never once been seen without a hat
-wears a tie to the doctor's office  # m
+wears a tie to the surgery  # m
 keeps a good coat for funerals and it is thirty years old
 wears one pinny for the house and another for the yard, and never confuses them  # f
 ties a headscarf the same way every time and it never blows off  # f
@@ -477,27 +477,27 @@ makes wine out of anything and labels the bottles with the year and the weather
 keeps a list of every book borrowed from the mobile library since it started
 carves initials into the handle of every tool owned
 enters the vegetable show and the handwriting class and only wins the handwriting
-tapes the countdown off the radio every Sunday and talks over the ends
+tapes the chart off the wireless every Sunday and talks over the ends
 has a metal detector and finds nothing and goes out again   # carries
 sorts a tin of assorted screws by size on a winter evening, repeatedly
 learns one new bird call a year and practises it on the way to work
-keeps a rain-warped notebook of every tractor seen on the Hoopeston road   # carries
+keeps a rain-warped notebook of every tractor seen on the Marlbury road   # carries
 
 # ---- ailments and remedies ------------------------------------------------
-has a knee that knows about rain before the radio does
+has a knee that knows about rain before the wireless does
 rubs embrocation on everything, and the smell arrives first
 takes Andrews every morning and recommends it to strangers
 wears a hearing aid that whistles, and does not know
 uses the same bottle of Vick for four unrelated complaints
 gets chilblains every winter and blames the wrong thing
-goes to the doctor's office for other people and never on own account
+goes to the surgery for other people and never on own account
 carries a stick and does not lean on it   # carries
 swears by a hot brick in the bed and has never been talked out of it
 counts the tablets into a saucer the night before
 puts the same back out every hay time and is surprised each year
 gargles with salt water at the first sign of anything and swears by it
 has a bottle of medicine from 1968 in the cupboard and will not part with it
-sits in the waiting room a full half hour early and reads every notice
+sits in the surgery waiting room a full half hour early and reads every notice
 takes a spoonful of malt every morning and has since it was thought necessary
 will not take anything the doctor gives without asking what is in it
 has one tooth that aches in cold weather and reports on it
@@ -537,8 +537,8 @@ will not take the last of anything from a plate, and it stays there
 counts the chimes and will not speak until they have finished
 throws the first drop of tea from the pot away and cannot say why
 will not lend anything on a Monday and rearranges the week around it
-keeps a lucky dime that has been carried so long it is smooth
-turns round if a hare crosses the road, and takes the long way
+keeps a lucky sixpence that has been carried so long it is smooth
+turns round if a hare crosses the lane, and takes the long way
 will not whistle indoors and stops other people doing it
 holds the collar of a coat when a black cat goes by
 puts new bread on the table crust upward and turns it if anybody gets it wrong
@@ -550,7 +550,7 @@ corrects other people's grammar and is wrong half the time
 signs a name with a flourish that takes longer than the name
 displays a photograph taken at twenty-two and no later one
 will not wear glasses in the street
-lets it be known that the onions took second at Hoopeston
+lets it be known that the onions took second at Marlbury
 uses the house name in full on every envelope
 tells people the barometer is a good one, and it is
 claims to have read a book that has only been opened
@@ -568,7 +568,7 @@ can name the tune within three notes and makes sure of being first
 says it was nothing, at length
 keeps a letter of thanks from the county council and brings it out unprompted
 holds the door and waits to be thanked, and comments if not
-says the family have been in this township four hundred years, on no evidence
+says the family have been in this parish four hundred years, on no evidence
 tells the same joke to each new arrival and watches for the moment
 was asked once to read the lesson and mentions it at every service since
 claims never to have had a day's illness and is careful to be seen well
@@ -576,20 +576,20 @@ claims never to have had a day's illness and is careful to be seen well
 # ---- grudges and standing disagreements -----------------------------------
 has not spoken to a neighbour since a raffle in 1971 and neither remembers why
 disputes six inches of hedge and has the deeds out to prove it
-goes to Hoopeston rather than buy from one particular counter
+goes to Marlbury rather than buy from one particular counter
 was passed over for the flower rota once and mentions it every year
 objects to the state of the bus stop at every meeting, on the same grounds
 crosses the road rather than pass a certain gate
 believes a fence panel was moved in 1968
 will not lend a ladder, to anybody, ever
 fell out with a brother over a clock and neither will name it
-says the wrong man won the squash class, and has said so for three years
+says the wrong man won the marrow class, and has said so for three years
 returns borrowed things cleaned, pointedly
 takes a different pew since a disagreement about a hymn
 has written three letters to the council about one drain and kept the carbons
 will not have the name of a certain builder said in the house
 disputes the boundary of a grave plot and has been to the diocese about it
-was overcharged a quarter in 1966 and has not been back
+was overcharged sixpence in 1966 and has not been back
 holds it against the school that a gate was moved
 will not sit downwind of one particular bonfire and makes the point of moving
 believes the bus was rerouted out of spite and can say by whom
@@ -619,7 +619,7 @@ talks about the standpipe in seventy-six as though it were last week
 was in the Land Army and can still stook a sheaf  # elder f
 goes to the Legion on the same night and drinks the same thing
 knows every name on the memorial and which house it lived in
-still calls the clinic by the name of the doctor before this one
+still calls the surgery by the name of the doctor before this one
 can say what was on this land before the mill was extended  # elder
 remembers the last day the branch line ran and what the weather was  # elder
 keeps a wartime tin of sewing things and has used everything in it twice  # elder
@@ -628,12 +628,12 @@ remembers a hard winter by what was eaten in it and not by the year
 can say which cottages in the row had gas laid on first, and in what order  # elder
 has a set of pre-decimal coins in a bag and counts them out to explain a price
 kept every school report and can quote a line from one
-still refers to the Hoopeston sale by the day it used to be held on
+still refers to Marlbury market by the day it used to be held on
 says the tree at the corner was planted for something and cannot recall what
 keeps a photograph of a football team and names every man in it  # elder
 tells the story of the flood in the same words, and the words are good ones
 has a christening gown in tissue that three generations have worn
-remembers the last man who could hang a barn door, by name and what was charged
+remembers the last thatcher in the parish by name and what was charged
 
 # ---- family and neighbours ------------------------------------------------
 buys sweets for children who are no longer children
@@ -645,17 +645,17 @@ left a grandchild's drawing on the kitchen wall nine years ago and it is there y
 calls a nephew by the wrong brother's name and is corrected every time
 keeps the family bible up to date and will show you on any excuse
 remembers everybody's birthday and sends nothing
-has a daughter in Hoopeston and pretends the drive is difficult
+has a daughter in Marlbury and pretends the bus is difficult
 takes the neighbours' bins in without mentioning it   # carries
 was at school with half the street and uses their school names
 gives lifts to people who could easily walk
 signs the card from both of them, in one hand
-puts a dollar in a tin for each grandchild and has never said so
+puts a shilling in a tin for each grandchild and has never said so
 sends the same postcard from the same place every year to the same six people
 keeps a chair at the table for a relation who visits twice a year
 addresses letters to a married daughter by the maiden name, still
 telephones a sister on the same evening and talks for exactly nine minutes
-knows every family on the street by which house they had before this one
+knows every family in the lane by which house they had before this one
 takes the dog out at the hour the mill hooter goes and needs no other clock
 makes two of everything baked and the second one goes over the wall   # carries
 writes the Christmas cards in October and posts them in the second week of December
@@ -663,7 +663,7 @@ speaks of a grown nephew as though the nephew were still fourteen
 counts the cousins on both sides and gets a different total each time
 brings a paper in for next door and has done for six years without being asked   # carries
 sends flowers to a funeral in another county every year for the same person
-gives every new baby in the township the same knitted thing
+gives every new baby in the parish the same knitted thing
 is godparent to four people and remembers all four birthdays
 had the same neighbour for thirty years and still knocks before going round
 carries a photograph of a grandchild and produces it on very slight encouragement
@@ -680,21 +680,21 @@ splices rope the old way and has taught nobody
 can tell whose hedge is whose by the cut of it
 knows the weight of a sack by looking at it
 can name every flower on the river path, in Latin if pushed
-is asked to wire every plug in town, and does
+is asked to wire every plug in the village, and does
 writes a beautiful hand and does everybody's labels
 can gut and fillet on a plank at the back door in under a minute
 tells the time to the minute without a watch and is checked and is right
 can carry a full bucket in each hand and not spill either
-puts a new washer on a tap in the time it takes the coffee to perk
+puts a new washer on a tap in the time it takes the kettle to boil
 knows which chimney in the row draws badly and why, and has told everybody twice
 can pick out any tune on a piano and cannot read a note
 cuts everybody's hair in the back kitchen and takes nothing for it
 can find water with a hazel fork and has been proved right twice
 adds up a column of figures faster than the shop's till
 remembers a telephone number after hearing it once, and every one since
-makes a barrow load of kindling last two weeks
+makes a barrow load of kindling last a fortnight
 mends a chair so it never comes apart again and refuses payment
-can drive a tractor, a van and a grain truck, and does all three when asked
+can drive a tractor, a van and a milk float, and does all three when asked
 knows the up train times without looking and has not been to the station in years
 strips and reassembles a lawnmower on a groundsheet in an afternoon
 plaits onions into ropes that hang all winter and gives them as presents   # carries
@@ -725,28 +725,28 @@ cannot spell one particular word and works round it in writing
 saws crooked, cheerfully, and has built a good deal of the shed that way
 mishears names and uses the mishearing for years afterwards
 has never learned to swim and goes out in a boat quite happily
-cannot leave a radio alone and detunes it looking for something better
+cannot leave a wireless alone and detunes it looking for something better
 reads a recipe through afterwards to find out what was left out of it
 
 # ---- quietly proud --------------------------------------------------------
 has not missed a day at the mill in nineteen years and does not mention it  # works
 cuts the memorial grass and lets people assume it is the council
-taught half the town to swim in the river and never brings it up
+taught half the village to swim in the river and never brings it up
 has the tidiest woodpile for miles, and knows it
 has given blood forty times and keeps the card in a drawer
 can still lift a churn and finds reasons to   # carries
 put the hall roof right single-handed and let the committee take the credit
 laid the hedge the old way when everybody else went to wire
 knits for the church sale and puts somebody else's name on the label
-has the neatest yard on the block and pretends it is nothing
+has the neatest garden on Back Lane and pretends it is nothing
 reads the paper aloud to a neighbour every Tuesday and calls it nothing
 paid for the swings and made the committee promise not to say so
-walks the section roads every spring and reports every broken fence, anonymously
+walks the footpaths every spring and reports every broken stile, anonymously
 has kept the churchyard gate oiled for eleven years and nobody has noticed
 sat the same examination four times and passed it, and never says which
 drove the mobile library route as a volunteer through the whole of seventy-six
-has the finest handwriting in the township and lets a schoolteacher take the credit
-mends the town noticeboard every time the wind has it, within a day
+has the finest handwriting in the parish and lets a schoolteacher take the credit
+mends the village noticeboard every time the wind has it, within a day
 sends a cheque to the lifeboats every year and has never seen the sea
 taught somebody to read, as an adult, and neither of them has ever said
 keeps the war memorial free of moss with a toothbrush and an old blade
@@ -754,7 +754,7 @@ returned a wallet with everything in it and refused to give a name
 has never once been late for anything in a working life, and would not say so
 grew the biggest onion in the county in 1968 and has the photograph face down
 gave the hall its piano and had it entered in the book as anonymous
-carried the mail round in the snow of seventy-eight for two weeks, unpaid  # elder
+carried the mail round in the snow of sixty-three for a fortnight, unpaid  # elder
 sits up with anybody's sick animal at any hour and calls it nothing at all
 
 # ---- work and the shift ---------------------------------------------------
@@ -801,7 +801,7 @@ keeps a stub of candle in the shed and has done since before the electric came
 brushes the yard down last thing, in the dark, in every month of the year
 has a wheelbarrow, a truck and a sack barrow and uses only the barrow
 saves every offcut of timber and has never once found the one wanted
-keeps a kerosene heater going in the shed all winter for the sake of the tools
+keeps a paraffin heater going in the shed all winter for the sake of the tools
 labels the drawers and then puts things in the wrong ones
 has an old kitchen chair in the shed and a rug on it
 puts a new handle on a spade rather than buy a spade
@@ -817,63 +817,63 @@ has a shed clock that is an hour out and is left that way deliberately
 puts every screw back in the tin it came from, wherever it came from
 keeps a broom by the door and uses it standing in the doorway   # lingers
 has a bicycle upside down in the yard permanently, and it is somebody else's
-tars the shed roof on the first warm Saturday and the smell reaches the street
+tars the shed roof on the first warm Saturday and the smell reaches the lane
 saves the sawdust in a sack and cannot say for what
 keeps a tin of assorted washers that has solved four problems in twenty years
 
 # ---- the river, the woods and the fields ----------------------------------
-knows every fence gap between here and Hoopeston and which of them are wrong
+knows every stile between here and Marlbury and which of them are wrong
 picks blackberries from one particular hedge and will not say which
 goes to the spinney for holly in December and takes a saw and a sack   # carries
 can name the field by the shape of it from the top of the hill
-has walked the river bottom every Sunday since coming to the township
+has walked the water meadow every Sunday since coming to the parish
 knows where the first primroses come up and visits them like an appointment
 watches the mill leat for trout and has never fished it   # lingers
 throws a stick in the river at the bridge and goes to the other side for it
 collects sloes in October and the gin is not opened until the next Christmas
-knows which gate in the township swings shut on its own and props it
+knows which gate in the parish swings shut on its own and props it
 counts the lambs in the top field each morning and would notice one missing
 takes the same short cut across the corner of a field and has permission for it
 gathers kindling on the way home from anywhere, in any weather   # carries
 knows the depth of the ford by which stone is showing
 has a favourite tree and has been seen standing under it doing nothing   # lingers
 picks mushrooms at dawn and is home before anybody else is out
-knows where every fox den in the township is and tells nobody
+knows where every badger sett in the parish is and tells nobody
 takes a bucket to the hazel in September and gets there first every year   # carries
 walks the riverbank counting herons and reports the total to whoever will listen
 has a stretch of hedge that gets laid every year though it is not this land
 knows which of the fields floods and by how much and has been right since 1959
 carries a stick cut from the same hedge every year and burns last year's   # carries
 puts a plank across the ditch at the same place every autumn
-knows all the section corners and has shown them to people who did not ask
+knows all the parish boundary stones and has shown them to people who did not ask
 brings back a pocketful of odd stones from the ploughed field, every time
 watches the mill race for an hour at a time and calls it clearing the head   # lingers
 
 # ---- the road, the market and Marlbury ------------------------------------
-goes into Hoopeston on sale day and buys one thing badly needed and one not
+goes into Marlbury on market day and buys one thing badly needed and one not
 knows the price of everything on the market and buys from one stall only
 takes the early bus in and the late bus back and fills the day somehow
-carries a shopping list into Hoopeston and comes back with none of it   # carries
-has a cafe in Hoopeston with a particular table and gets there for eleven
-knows every driver on the Hoopeston route by name and their days off
-walks the last mile home rather than be dropped in town
-buys wool in Hoopeston and nowhere else and pays more for it
-has not been further than Hoopeston since 1964 and does not consider it a lack
-gets a haircut in Hoopeston though there is somebody nearer
-knows which store in Hoopeston will take a return without a receipt
+carries a shopping list into Marlbury and comes back with none of it   # carries
+has a cafe in Marlbury with a particular table and gets there for eleven
+knows every driver on the Marlbury route by name and their days off
+walks the last mile home from the bus rather than get off in the village
+buys wool in Marlbury and nowhere else and pays more for it
+has not been further than Marlbury since 1964 and does not consider it a lack
+gets a haircut in Marlbury though there is somebody nearer
+knows which shop in Marlbury will take a return without a receipt
 buys the same magazine at the station bookstall and reads it on the bus back
 takes a flask on the bus and drinks it at the same point in the journey   # carries
 has a favourite seat on the top deck and will stand rather than not have it
 comes back from market with a plant that will not survive the winter   # carries
 knows the timetable well enough to give it out and gives it out
-buys fish in Hoopeston on a Friday and carries it home in newspaper   # carries
-goes to Hoopeston for the library and to nowhere else in the town
+buys fish in Marlbury on a Friday and carries it home in newspaper   # carries
+goes to Marlbury for the library and to nowhere else in the town
 counts the churches visible from the bus and gets a different number each way
-has a standing order at a Hoopeston store for one item, monthly
+has a standing order at a Marlbury shop for one item, monthly
 stops at the same lay-by on the way back and looks at the same view   # lingers
-brings candy back for the whole block and cannot be persuaded to stop   # carries
-knows every street name in Hoopeston and has never driven there
-buys the local paper in Hoopeston a day before it reaches town, and mentions it
+brings sweets back for the whole lane and cannot be persuaded to stop   # carries
+knows every road name in Marlbury and has never driven there
+buys the local paper in Marlbury a day before it reaches the village, and mentions it
 takes a list of other people's errands and does them all before doing any own
 sits on the bench by the market cross for exactly one hour, whatever the weather   # lingers
 
@@ -926,13 +926,13 @@ writes the year on the inside of the pantry door with every new January
 goes to the horse fair every year and has never bought or sold anything
 looks at the swallows going in September and says the same sentence
 picks the apples on the same weekend and stores them not touching, on newspaper
-gets the propane in for winter in July because it is cheaper, and says so
+gets the coal in for winter in July because it is cheaper, and says so
 has a jar of pennies that gets emptied at the fete and nowhere else
 starts talking about Christmas in the second week of September
 puts the garden to bed on a fixed Saturday and will not be rushed by weather
 
 # ---- sound and quiet ------------------------------------------------------
-has a clock that ticks loud enough to be heard on the porch and will not have it stopped
+has a clock that ticks loud enough to be heard in the lane and will not have it stopped
 can sleep through the mill hooter and cannot sleep through a dripping tap
 hums when concentrating and stops the moment anybody comes in
 knows the church bell is a fraction flat and has said so for years
@@ -942,10 +942,10 @@ shuts every door with the same particular click and can be identified by it
 whistles one phrase going up the path and another coming down
 counts the church clock chimes even in the middle of a conversation
 sings only in the yard, and only when there is running water
-cannot bear the radio and the coffee grinder at the same time and turns one off
+cannot bear the wireless and the kettle at the same time and turns one off
 has a squeaking gate and has decided against oiling it
 speaks to a cat in one voice and to people in another
-knocks on a door in a rhythm everybody on the street recognises
+knocks on a door in a rhythm everybody in the lane recognises
 clears the throat before every sentence and is unaware of it
 listens to the eleven o'clock train from three miles off and remarks on it
 has a laugh that carries across the green and does not know that it does
@@ -954,7 +954,7 @@ turns the volume down before the doorbell can possibly ring
 finds the quiet of Sunday afternoon unbearable and goes out into it anyway
 rings the bell at the shop door twice, going in and coming out
 sighs on sitting down, every time, and is teased about it
-plays the radio loud enough to be heard in the yard and stands in the yard
+plays the wireless loud enough to be heard in the garden and stands in the garden
 puts a hand up to the ear on hearing anything at all, out of long habit
 
 # ---- reading, writing and the paper ---------------------------------------
@@ -964,15 +964,15 @@ keeps every letter ever received in shoeboxes by year
 writes in the margins of library books, in pencil, and rubs them out
 reads the same three books over and re-reads them in the same order
 has never finished one particular novel and starts it again every winter
-underlines things in the church bulletin with a ruler
+underlines things in the parish magazine with a ruler
 writes a diary of one line a day and has since 1953  # elder
 buys the local paper on a Thursday and reads it at the same table
 has a fountain pen that is filled from a bottle and refuses a biro
 copies out recipes and never cooks any of them
-keeps a dictionary on the table and looks up words from the radio
+keeps a dictionary on the table and looks up words from the wireless
 writes letters that are four pages long to people who send back a card
 reads standing up at the kitchen counter and never in a chair
-has a library card that has been used every two weeks for twenty years
+has a library ticket that has been used every fortnight for twenty years
 reads out the interesting bits to whoever is in the room and does not stop
 writes the shopping down in a shorthand nobody else could follow
 keeps the crossword clues that were unsolved and returns to them months later
@@ -995,7 +995,7 @@ gave up for Lent every year and never at any other time
 keeps a tin of tobacco that has gone dry and will not throw it out
 has one whisky on a Sunday and measures it against a mark on the glass
 buys a bar of chocolate on a Thursday and eats a square a day
-chews tobacco, still, and is the only one in the township who does  # elder
+takes snuff, still, and is the only one in the parish who does  # elder
 counts how many are left in the packet before going out, every time
 smokes only outdoors and only standing, in any weather   # lingers
 has a cigarette case that is never used and is carried
@@ -1016,19 +1016,19 @@ sang in a choir once and hums the alto line to everything ever since
 has a mouth organ in a coat pocket and plays it walking   # carries
 taps out the rhythm of a tune on any surface until asked to stop
 buys one record a year and it is always the same kind of record
-can name a piece from four notes on the radio and cannot say from where
+can name a piece from four notes on the wireless and cannot say from where
 learned the piano to grade three and stopped, and plays those pieces still
 puts a record on to be got on with rather than listened to
 has a gramophone with a handle and prefers it to the electric  # elder
 sings the wrong harmony with total commitment
 knows every verse of one long ballad and needs very little persuading
-has gone to the same Hoopeston concert since it began and sits at the back
-whistles the tune off the farm report and does not know its name
+has gone to the same Marlbury concert since it began and sits at the back
+whistles the tune of the shipping forecast and does not know its name
 keeps sheet music in a piano stool for a piano that was sold
 sings while cycling and stops when anybody is in sight
 knows which of the church hymn tunes came from a folk song and will explain
 has a set of handbells that come out at Christmas and only then
-plays the accordion for the card party and takes nothing for it
+plays the accordion for the whist drive and takes nothing for it
 listens to the same brass band programme and marks the pieces in the paper
 
 # ===========================================================================================

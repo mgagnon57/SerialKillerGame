@@ -42,7 +42,7 @@ Ground materials. All optional:
 | `field.png` | farmland, the allotments |
 | `wood.png` | the spinney |
 | `water.png` | the river |
-| `road.png` | Ashcombe Street and the lanes |
+| `road.png` | Main Street and the lanes |
 | `path.png` | footpaths, verges, yards |
 | `floor.png` | building interiors |
 | `churchyard.png` | the churchyard |

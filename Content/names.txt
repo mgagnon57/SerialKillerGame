@@ -1,7 +1,7 @@
-﻿# Names for Rossville, Illinois - 1991.
+# Names for Rossville, Illinois - 1991.
 # One directive per line: male | female | male-child | female-child | surname
 #
-# RETUNED TWICE OVER, on 2026-08-01. This pool used to be Ashcombe's: West Country English
+# RETUNED TWICE OVER, on 2026-08-01. This pool used to be the retired village's: West Country English
 # surnames for an English village in 1979. Both halves of that are now wrong. The town is
 # Rossville, Vermilion County, Illinois - settled out of Kentucky, Ohio and Indiana, with an
 # Irish minority that came for the railroad - and the year is 1991. A Cornish Trelawny in
@@ -24,7 +24,7 @@
 # A few German families in a town this size is fine and likely. A HEAVY layer would have built
 # a Lutheran church, and there isn't one. See docs/research/WHO-LIVES-THERE.md.
 #
-# PETHICK, HALLORAN AND IVEY MUST STAY. Content/fixture-village.txt - Ashcombe, still parsed by the
+# PETHICK, HALLORAN AND IVEY MUST STAY. Content/fixture-village.txt - the test fixture, still parsed by the
 # older editor tools - names its shop, its surgery and its garage after them, and
 # particulars.txt quotes all three. They are the only survivors of the English pool, and all
 # three pass as American anyway.
@@ -472,7 +472,7 @@ surname Greenwood
 surname Watson
 surname Stufflebeam
 
-# The three survivors of Ashcombe's pool. fixture-village.txt still needs them - see the top.
+# The three survivors of the old English pool. fixture-village.txt still needs them - see the top.
 surname Pethick
 surname Halloran
 surname Ivey

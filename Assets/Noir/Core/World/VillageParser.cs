@@ -32,7 +32,7 @@ namespace Noir.Core.World
     /// Unity's netstandard2.1 profile (so JSON would mean taking a dependency), and this format
     /// is simply nicer to hand-edit - a village is mostly coordinates and one-line prose.
     ///
-    ///   village Ashcombe
+    ///   village Rossville
     ///   size 120 90
     ///   terrain field 0,0 120x28
     ///   road main 5 4,46 116,46

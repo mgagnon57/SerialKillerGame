@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -10,7 +10,7 @@ using Noir.Unity;
 namespace Noir.Editor
 {
     /// <summary>
-    /// Loads the city block from Content/city.txt and photographs it under the same sun Ashcombe
+    /// Loads the city block from Content/city.txt and photographs it under the same sun Rossville
     /// uses, so the two can be compared without a variable between them but the buildings.
     ///
     /// It also prints the renderer count, which is the number the whole approach turns on: the
@@ -279,13 +279,13 @@ namespace Noir.Editor
                 }
 
                 // THE TOWN MOVED AND THESE DID NOT. Every camera below used to be aimed at the
-                // city when it sat in the map's north-west corner, so after Northgate was
+                // city when it sat in the map's north-west corner, so after Rossville was
                 // re-centred on 360..720 the whole set quietly went on photographing empty
                 // fields - a street view of a wheatfield, a "junction" with no junction in it.
                 // The stills said nothing was wrong because there was nothing in them.
                 //
                 // The town is now the middle: paved 360..600, with First Street at x=435,
-                // Second at x=525, Northgate Avenue at y=435 and Franklin at y=525.
+                // Second at x=525, Fourth Street at y=435 and Franklin at y=525.
                 //
                 // EVERY CAMERA STANDS IN A STREET, a car park or open ground. Frame() puts the
                 // camera a long way BACK from its target, which is how an earlier set ended up

@@ -21,7 +21,7 @@ namespace Noir.Core.Tests
     /// fortnight, counts the distinct propositions a fortnight yielded in each column, and
     /// requires the median villager to clear two to one.
     ///
-    /// IT IS RED TODAY, ON THREE GATES, AND THAT IS THE POINT. Ashcombe is at about 1.1 : 1.
+    /// IT IS RED TODAY, ON THREE GATES, AND THAT IS THE POINT. The fixture village is at about 1.1 : 1.
     /// A red test reading "the village is at 1.1 : 1 and the rule is 2 : 1" is worth more than
     /// any green one here, because it converts the aliveness work from a nice-to-have into the
     /// named remedy for a measured failure, and because it says exactly what the fix is.

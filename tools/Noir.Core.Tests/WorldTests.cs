@@ -392,7 +392,7 @@ place tavern 4,4 7x6 ""P""
         }
 
         [Test]
-        public void EveryPlaceInAshcombeHasItsOwnKey()
+        public void EveryPlaceInTheFixtureVillageHasItsOwnKey()
         {
             var world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("fixture-village.txt")));
             var seen = new Dictionary<ulong, string>();
@@ -456,7 +456,7 @@ place tavern 2,2 6x5 ""P""
     /// This is what stops a careless edit to village.txt from quietly stranding a cottage.
     /// </summary>
     [TestFixture]
-    public class AshcombeTests
+    public class FixtureVillageTests
     {
         private static WorldModel _world;
 
@@ -467,7 +467,7 @@ place tavern 2,2 6x5 ""P""
         [Test]
         public void LoadsWithTheExpectedShape()
         {
-            Assert.That(_world.Name, Is.EqualTo("Ashcombe"));
+            Assert.That(_world.Name, Is.EqualTo("Fixture"));
             // Deliberately a range rather than exact numbers: the map is authored content and
             // will keep being edited. What matters is that it stays a village rather than
             // silently becoming a city or collapsing to a hamlet.
@@ -620,7 +620,7 @@ place tavern 2,2 6x5 ""P""
             // Tied to the number of HOMES rather than to an absolute count of jobs.
             //
             // It was InRange(35, 70), pinned to a hundred-person village, and it fired the
-            // moment Ashcombe grew - which is exactly when a test about PROPORTION should not.
+            // moment the fixture village grew - which is exactly when a test about PROPORTION should not.
             // The village had gained an estate and then a factory to employ it; the ratio was
             // fine and the constant was stale.
             //

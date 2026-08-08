@@ -30,7 +30,7 @@ namespace Noir.Bench
     /// <summary>
     /// Villages, towns and cities built from a seed and nothing else.
     ///
-    /// The benchmark has to measure the ENGINE, not Ashcombe. Ashcombe is one hand-authored
+    /// The benchmark has to measure the ENGINE, not the fixture village. The fixture village is one hand-authored
     /// layout at one size; anything inferred from it about a town of six hundred is an
     /// extrapolation from a sample of one. These are built in code so that population, map
     /// area and place count can each be moved independently, and so the harness runs with no
@@ -84,7 +84,7 @@ namespace Noir.Bench
         }
 
         /// <summary>
-        /// Ratios lifted from Ashcombe: one shop and one pub for a hundred and nine people,
+        /// Ratios lifted from the fixture village: one shop and one pub for a hundred and nine people,
         /// one school, one church. Holding them constant as population grows is what keeps
         /// behaviour comparable across the sweep — a city with one shop would put every
         /// citizen in the same queue and measure that instead of the simulation.
@@ -198,7 +198,7 @@ namespace Noir.Bench
                 if (k.HasValue && k.Value != PlaceKind.Mill) fixedJobs += JobsFor(k.Value, 0);
 
             // The mills soak up whatever employment is left over. Getting the employed share
-            // near Ashcombe's matters more than it looks: an employed citizen commutes twice a
+            // near the fixture village's matters more than it looks: an employed citizen commutes twice a
             // day at a fixed hour, and an unemployed one wanders at random. Those are different
             // load profiles, and a sweep that drifts between them is comparing two things.
             int targetJobs = (int)(targetPopulation * 0.45);

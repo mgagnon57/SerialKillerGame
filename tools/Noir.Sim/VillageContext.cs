@@ -1,4 +1,4 @@
-﻿using Noir.Core.People;
+using Noir.Core.People;
 using Noir.Core.World;
 
 namespace Noir.Sim
@@ -24,7 +24,7 @@ namespace Noir.Sim
 
         /// <summary>
         /// The authored village, optionally repeated <paramref name="tiles"/> times each way.
-        /// One copy is Ashcombe exactly as written; more than one is the same content on a map
+        /// One copy is the fixture village exactly as written; more than one is the same content on a map
         /// several times the size, which is the only way to see a cost that only appears there.
         /// </summary>
         public static VillageContext Load(int tiles, ulong seed = 1979)

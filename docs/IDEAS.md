@@ -559,7 +559,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [x] ~~The street lamps are a cylinder with a box on top.~~ FIXED - `SunRig.BuildStreetLamps` now
   places the pack's own `Lamp_Street_*`. It was `PrimitiveType.Cylinder` for the column and
-  `PrimitiveType.Cube` for the lantern, which was the right answer while Ashcombe had no pack
+  `PrimitiveType.Cube` for the lantern, which was the right answer while Rossville had no pack
   behind it and the alternative was light appearing out of nothing five metres up. The pack ships
   SIXTEEN lamps in `Lamps City` and none of the four tall `Lamp_Street` ones had ever been placed -
   `CityStreets` only catalogued the short `Lamp_Sidewalk` kind as pavement dressing, so the city had

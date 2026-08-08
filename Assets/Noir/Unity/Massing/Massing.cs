@@ -1,4 +1,4 @@
-﻿namespace Noir.Unity
+namespace Noir.Unity
 {
     public enum RoofForm
     {
@@ -20,7 +20,7 @@
     /// them, and which way the ridge runs.
     ///
     /// WHY THIS EXISTS. Every roofed building in the village used to get the identical
-    /// AddHipRoof, at the identical 2.2 pitch, on identical 3.0 walls. St Anne's, Ashcombe Mill,
+    /// AddHipRoof, at the identical 2.2 pitch, on identical 3.0 walls. St Anne's, the mill,
     /// the school and a two-up-two-down were the same box, differing only in footprint and a sign
     /// by the door. Frontage.cs already did good work telling them apart - a hanging board for
     /// the pub, a brass plate for the surgery - but all of it is AT THE FRONT DOOR, and none of

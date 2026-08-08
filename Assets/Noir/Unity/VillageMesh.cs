@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.Contracts;
@@ -769,7 +769,7 @@ namespace Noir.Unity
             // the fog: at this range the far edge is about 98% fogged out, so the land ends
             // in haze rather than ending in a line. It is still only a dozen quads.
             //
-            // The west and east sides are built AROUND the lane rather than over it. Ashcombe
+            // The west and east sides are built AROUND the lane rather than over it. Rossville
             // Street reaches both edges of the map, and a main road that simply stopped in the
             // middle of a hedged field would be the one thing out here that reads as an error
             // rather than as distance - so the carriageway carries on at its own level until

@@ -88,13 +88,13 @@ namespace Noir.Sim
             //
             // The authored village is built either way. When a target is given it is not what is
             // measured, but the projection at the end scales places per head off it, and a
-            // projection anchored to the sample town rather than to Ashcombe would be scaling
+            // projection anchored to the sample town rather than to the fixture village would be scaling
             // the target against itself and reporting no work to do.
             var authoredWorld = WorldBuilder.Build(layout);
             int authoredPeople = lab.Generate(authoredWorld, realNames, realParticulars, seed).Count;
 
             WorldModel world = authoredWorld;
-            string worldNote = "Ashcombe exactly as authored — this is a measurement, not a sample.";
+            string worldNote = "The fixture village exactly as authored — this is a measurement, not a sample.";
 
             if (targetPopulation > 0)
             {
@@ -104,7 +104,7 @@ namespace Noir.Sim
                                                  out int homes, out int trials);
                 lab.Populations += trials;
                 worldNote = $"a sample town of {homes} homes, sized in {trials} trials until its "
-                          + $"generated population landed on the target. Ashcombe holds {authoredPeople}.";
+                          + $"generated population landed on the target. The fixture village holds {authoredPeople}.";
             }
 
             // ---- the run everything is reported from ----
@@ -312,7 +312,7 @@ namespace Noir.Sim
 
             // What it cost, in work rather than in seconds — see Lab.
             r.Line($"  COST — {lab.Populations:#,0} populations generated, "
-                 + $"{(targetPopulation > 0 ? "Ashcombe plus one sample town" : "one world")} built, "
+                 + $"{(targetPopulation > 0 ? "the fixture village plus one sample town" : "one world")} built, "
                  + "no simulation ticked.");
             r.Line($"         {lab.Tables.Count} distinct table sizes were built and cached. Almost all "
                  + "of that is the");
@@ -430,13 +430,13 @@ namespace Noir.Sim
             if (target <= 0) return;
 
             // DERIVED, and the only derived figure in this command. It assumes the town keeps
-            // Ashcombe's places-per-head, which a town will not do exactly — a settlement of six
+            // the fixture village's places-per-head, which a town will not do exactly — a settlement of six
             // hundred gets a second shop before it gets six times the churches.
             double scale = target / (double)population;
             int placesAt = (int)Math.Ceiling(layout.Places.Count * scale);
             int humansAt = (int)Math.Ceiling(needHuman * scale);
 
-            r.Line($"    DERIVED, not measured — at {target} people, holding Ashcombe's {population} people");
+            r.Line($"    DERIVED, not measured — at {target} people, holding the fixture village's {population} people");
             r.Line($"    across {layout.Places.Count} places:");
             r.Line($"      places        {layout.Places.Count,6}  ->{placesAt,7}   "
                  + $"{placesAt - layout.Places.Count} more building names to invent, all distinct");

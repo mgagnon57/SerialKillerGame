@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using Noir.Core.World;
 
 namespace Noir.Core.Tests
@@ -41,7 +41,7 @@ namespace Noir.Core.Tests
         [Test]
         public void OddWidthCentresHalfATilePast()
         {
-            // Ashcombe's roads are odd-width, and they must keep meaning what they meant.
+            // the fixture village's roads are odd-width, and they must keep meaning what they meant.
             var world = Build("village Test\nsize 120 90\nterrain path 0,0 120x90\n"
                             + "road main 5 4,46 116,46\n");
 
@@ -82,7 +82,7 @@ namespace Noir.Core.Tests
 
             foreach (var j in world.Roads.Junctions)
             {
-                Assert.That(j.Y, Is.EqualTo(75f), "both junctions are on Northgate");
+                Assert.That(j.Y, Is.EqualTo(75f), "both junctions are on the fixture village");
                 Assert.That(j.Reach, Is.EqualTo(15f));
             }
             Assert.That(world.Roads.Junctions[0].X, Is.EqualTo(165f));

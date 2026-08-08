@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 #if UNITY_EDITOR
@@ -1197,7 +1197,7 @@ namespace Noir.Unity
             // This was a flat 60 straight / 20 right / 20 left whatever road you were on, and
             // the consequence only showed up once the map became a village: a car on Route 1
             // turned off it two junctions in five, so through traffic dissolved into the side
-            // streets and the steady state was every lane equally busy. Northgate reported one
+            // streets and the steady state was every lane equally busy. Rossville reported one
             // vehicle on the main road and a hundred and five on residential streets, which is
             // the exact opposite of a small town on a state highway.
             //

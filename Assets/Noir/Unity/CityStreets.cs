@@ -353,7 +353,7 @@ namespace Noir.Unity
             alleys = new GameObject("CityAlleys");
             alleys.transform.SetParent(parent, false);
 
-            // Clear of Ashcombe's ground, which is still drawn underneath the whole city at y=0.
+            // Clear of Rossville's ground, which is still drawn underneath the whole city at y=0.
             //
             // A road tile is TWO levels: its pavement is a plane at y=0 and its asphalt is a
             // plane at y=-0.1, ten centimetres lower, which is the kerb. The old lift of 0.04
@@ -953,7 +953,7 @@ namespace Noir.Unity
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (path.IndexOf("Collider", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
 
-                // Nature ships the whole world in one folder. A palm or a cactus on Northgate
+                // Nature ships the whole world in one folder. A palm or a cactus on Rossville
                 // Avenue is not a bug in the pack, it is a bug in asking the pack for "a tree"
                 // and taking whatever comes back.
                 if (path.IndexOf("Palm", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;

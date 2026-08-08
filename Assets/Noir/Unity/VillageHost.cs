@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -131,7 +131,7 @@ namespace Noir.Unity
         /// <summary>
         /// Which map the game loads.
         ///
-        /// Northgate is built from bought models placed on authored lots; Ashcombe generated its
+        /// Rossville is built from bought models placed on authored lots; the old village generated its
         /// geometry to fill lots instead, and is kept in the tree because it is the only thing
         /// the two can be compared against. Point this at "village.txt" to get it back.
         /// </summary>
@@ -305,7 +305,7 @@ namespace Noir.Unity
                 : "[host] Survey plan (the default). Noir > Show The Built Town raises the "
                 + "buildings, the greenery and the CSX line instead.");
 
-            var go = new GameObject("Ashcombe");
+            var go = new GameObject("Rossville");
             DontDestroyOnLoad(go);
             go.AddComponent<VillageHost>();
         }
@@ -396,7 +396,7 @@ namespace Noir.Unity
                 // rather than inspected.
                 Sim = new Simulation(World, People, Seed, startMinuteOfDay: 12 * 60);
 
-                Debug.Log($"Ashcombe: {World.Width}×{World.Height}, {World.PlaceCount} places, "
+                Debug.Log($"Rossville: {World.Width}×{World.Height}, {World.PlaceCount} places, "
                         + $"{People.Count} people in {People.HouseholdCount} households.");
             }
             catch (Exception ex)
@@ -423,7 +423,7 @@ namespace Noir.Unity
 
             // The ground, roads and props are still drawn by the village renderer; only the
             // BUILDINGS are bought models. Nothing happens here for a map that has no city
-            // kinds in it, so Ashcombe still builds exactly as it did.
+            // kinds in it, so Rossville still builds exactly as it did.
             var city = new GameObject("City");
             city.transform.SetParent(_village.transform, false);
             // THE ROADS COME OUT TOO. Asphalt, kerbs, painted lanes, crossings, lay-bys and
@@ -909,7 +909,7 @@ namespace Noir.Unity
         /// Cheaper and far safer than not building them: a hidden car still drives its lane, is
         /// still counted by the jam instrument, and still occupies the space in front of the car
         /// behind it, so nothing about the town's behaviour changes when you switch the drawing
-        /// off. A plan is a way of LOOKING at Northgate, not a different Northgate.
+        /// off. A plan is a way of LOOKING at the town, not a different town.
         /// </summary>
         private void HideActors()
         {

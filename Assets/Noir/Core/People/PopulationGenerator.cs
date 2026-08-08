@@ -507,7 +507,7 @@ namespace Noir.Core.People
         /// Worth knowing before anyone tunes <see cref="HalfDistance"/>: this weighting falls
         /// off like 1/d, so once every candidate is well beyond fifty tiles the odds between
         /// two of them settle at the ratio of their distances and the constant stops mattering.
-        /// Measured on a town four times Ashcombe's area, dropping it from 50 to 12 moved the
+        /// Measured on a town four times Rossville's area, dropping it from 50 to 12 moved the
         /// mean errand by four tiles. If errands ever need to be genuinely local at town scale
         /// the answer is a shorter shortlist or a steeper curve, not a smaller number here.
         /// </summary>

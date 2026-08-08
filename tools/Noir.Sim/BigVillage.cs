@@ -5,7 +5,7 @@ using Noir.Core.World;
 namespace Noir.Sim
 {
     /// <summary>
-    /// Ashcombe repeated in a grid, as a stand-in for a map we have not authored yet.
+    /// The fixture village repeated in a grid, as a stand-in for a map we have not authored yet.
     ///
     /// Costs that are invisible at 170x120 are the ones that decide whether the engine can ever
     /// hold a town, and the only honest way to find them is to run the real content on a bigger
@@ -16,7 +16,7 @@ namespace Noir.Sim
     public static class BigVillage
     {
         /// <summary>
-        /// <paramref name="tiles"/> copies each way: 2 gives four Ashcombes and about four times
+        /// <paramref name="tiles"/> copies each way: 2 gives four copies of the fixture village and about four times
         /// the people.
         /// </summary>
         public static VillageLayout Repeat(VillageLayout one, int tiles)
@@ -71,7 +71,7 @@ namespace Noir.Sim
             new TileRect(r.X + dx, r.Y + dy, r.W, r.H);
 
         /// <summary>
-        /// Roads across every seam, because Ashcombe has a river along its southern edge and
+        /// Roads across every seam, because the fixture village has a river along its southern edge and
         /// four copies stacked without crossings is four villages rather than one town. An
         /// unreachable destination is a different failure from an expensive one, and a map that
         /// mixed them would measure neither.

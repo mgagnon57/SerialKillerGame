@@ -44,7 +44,7 @@ namespace Noir.Sim
         /// Children one teacher can hold. DERIVED, and the weakest number in this command: a
         /// Place has a footprint and a job count and no capacity field at all, so a school's
         /// roll has to be inferred from its staff. Thirty is a 1979 rural primary class, and
-        /// village.txt's own Ashcombe Primary says "forty-one children, two classrooms".
+        /// The fixture village's own grade school says "forty-one children, two classrooms".
         /// </summary>
         public const int DefaultPupilsPerTeacher = 30;
 

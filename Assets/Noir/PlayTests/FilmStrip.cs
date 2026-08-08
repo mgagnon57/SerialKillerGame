@@ -46,7 +46,7 @@ namespace Noir.PlayTests
         {
             Directory.CreateDirectory(Dir);
 
-            // Looking down on Northgate Avenue meeting First Street, from high enough to see
+            // Looking down on Fourth Street meeting First Street, from high enough to see
             // both approaches and low enough to tell one car from another.
             var camGo = new GameObject("FilmCamera");
             var cam = camGo.AddComponent<Camera>();

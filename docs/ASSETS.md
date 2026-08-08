@@ -40,7 +40,7 @@ AND SOUND, not surface detail.
 
   THE CONTROLLABLE PERSON, and the reason to start here rather than with a paid controller is
   measured: **78 of our 79 characters are already imported as `animationType: 3`, a Humanoid rig.**
-  Starter Assets drives any Humanoid, so it should be walking around Northgate in an afternoon at
+  Starter Assets drives any Humanoid, so it should be walking around Rossville in an afternoon at
   no cost. It brings a Cinemachine third-person camera with it.
 
   What it touches: a new controllable agent alongside `OrbitCamera`, which already does Tab to
@@ -132,7 +132,7 @@ AND SOUND, not surface detail.
   `Asleep` needs nothing. They are indoors, behind a wall, in the dark, and the only thing that
   ever shows it is the window not being lit.
 
-  RUNNING IS THE CHILD AT PLAY AND NOBODY ELSE. An adult jogging across Northgate reads as
+  RUNNING IS THE CHILD AT PLAY AND NOBODY ELSE. An adult jogging across Rossville reads as
   fleeing, which is a story event rather than a commute, and this game should not say that by
   accident. `AgentAnimation` enforces it.
 
@@ -287,6 +287,6 @@ $150 together, and every one of them drops in without authoring anything in a sc
 here, because content authored in an editor window is content `MapAudit` and the PlayMode tests
 cannot see.
 
-And before any of it: **Unity Starter Assets, free.** Walk around Northgate at eye height with a
+And before any of it: **Unity Starter Assets, free.** Walk around Rossville at eye height with a
 real body first. Half of what looks worth buying from a spreadsheet stops looking worth buying once
 you have stood in the street.

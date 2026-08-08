@@ -61,7 +61,7 @@ namespace Noir.Unity
             // ---- the ground ----
             //
             // One mesh, the whole map and a margin past it, so somebody who walks off the edge of
-            // Northgate is standing on the countryside rather than falling out of the world. USED
+            // Rossville is standing on the countryside rather than falling out of the world. USED
             // TO BE A FLAT BOX: correct while the whole map was one flat plane, wrong the moment
             // real elevation gave the map 24m of relief - a flat floor at y=0.06 would have had
             // the player walking on stilts at one edge of town and buried at the other. A

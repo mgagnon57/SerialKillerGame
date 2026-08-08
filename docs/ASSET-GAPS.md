@@ -9,7 +9,7 @@ be wrong in both directions: things we assumed missing are here, and the biggest
 it looks like.
 
 **The headline: almost nothing needs buying. The pack was audited when this was an English village
-called Northgate with no calendar, and a third of it was written off on genre grounds that no longer
+called after an English village with no calendar, and a third of it was written off on genre grounds that no longer
 apply.**
 
 ---
@@ -17,7 +17,7 @@ apply.**
 ## Part 1 — The re-audit: the genre labels are marketing, not content
 
 `PACK.md` files **1,374 Fantasy, 479 Steampunk, 105 Primeval and 458 seasonal** prefabs under
-*"Wrong genre for Northgate."* That judgement was made against a different town and, crucially,
+*"Wrong genre for the old village."* That judgement was made against a different town and, crucially,
 **before the simulation had a calendar**. Both premises have changed.
 
 Opening the folders shows the labels describe which *tab of the store* the content shipped in, not

@@ -12,7 +12,7 @@ namespace Noir.Editor
     /// This has now cost real time twice, in the same folder each way up:
     ///
     ///   Sign_Stop_A_City is the sign PLATE, 3cm thick and pivoted at its own centre. Dropped on
-    ///   the pavement it is a metal disc sunk to its equator. Half the road signs in Northgate
+    ///   the pavement it is a metal disc sunk to its equator. Half the road signs in Rossville
     ///   were like that, because the catalogue took everything beginning with "Sign_" and the
     ///   folder is two kits - plates and mounted signs - with nothing in the name to say which.
     ///

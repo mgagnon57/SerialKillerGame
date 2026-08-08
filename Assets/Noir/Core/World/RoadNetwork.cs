@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Noir.Core.Contracts;
 
@@ -118,7 +118,7 @@ namespace Noir.Core.World
     /// facts - where the centre line runs, which way it points, and what class it is - so the
     /// world keeps them instead of making each caller rediscover them.
     ///
-    /// STRAIGHT AND AXIS-ALIGNED, Northgate's roads all are today - but the road itself no
+    /// STRAIGHT AND AXIS-ALIGNED, Rossville's roads all are today - but the road itself no
     /// longer assumes that: <see cref="Path"/> below is where the centre line actually runs,
     /// straight or curved, and is the answer that always holds. Centre/From/To remain alongside
     /// it, not as a stale approximation but because for a straight road they are exactly right -

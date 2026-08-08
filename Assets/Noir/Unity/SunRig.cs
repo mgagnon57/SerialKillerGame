@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -216,7 +216,7 @@ namespace Noir.Unity
             var shader = Shader.Find("Skybox/Procedural");
             if (shader != null)
             {
-                _sky = new Material(shader) { name = "AshcombeSky" };
+                _sky = new Material(shader) { name = "RossvilleSky" };
                 if (_sky.HasProperty("_SunSize")) _sky.SetFloat("_SunSize", 0.04f);
                 if (_sky.HasProperty("_AtmosphereThickness")) _sky.SetFloat("_AtmosphereThickness", 1.2f);
                 RenderSettings.skybox = _sky;
@@ -296,7 +296,7 @@ namespace Noir.Unity
             //
             // This was a hand-written list of six kinds, and the five it left out - the school,
             // the post office, the village hall, the surgery and the garage - were the only
-            // walled buildings in Ashcombe with no windows at all. Not dark windows: none. A
+            // walled buildings in Rossville with no windows at all. Not dark windows: none. A
             // front door, a sign, and thirty metres of unbroken stone, in a street where every
             // cottage has a row of them. The hall is authored open until ten at night and stood
             // next to the lit mill as a solid black box.
@@ -526,7 +526,7 @@ namespace Noir.Unity
                 // A BOUGHT LAMP POST, not a cylinder with a box on top.
                 //
                 // This used to be exactly that - PrimitiveType.Cylinder for the column and
-                // PrimitiveType.Cube for the lantern - which was the right answer while Ashcombe
+                // PrimitiveType.Cube for the lantern - which was the right answer while the old village
                 // had no pack behind it and the alternative was light appearing out of nothing
                 // five metres up. The pack ships sixteen lamps in `Lamps City`, four of them the
                 // tall `Lamp_Street` sort meant for a carriageway, and not one had ever been
@@ -645,7 +645,7 @@ namespace Noir.Unity
         /// <summary>
         /// A lamp's tiebreak in the pool's ordering. Negative so it can never collide with a
         /// place id, and derived from the tile so it stays the same whatever order the lamps
-        /// happen to be placed in. Ashcombe is 170 tiles across; 4096 is room to spare.
+        /// happen to be placed in. Rossville is 170 tiles across; 4096 is room to spare.
         /// </summary>
         private static int LampKey(int x, int y) => -(1 + y * 4096 + x);
 

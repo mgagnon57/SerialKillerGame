@@ -465,7 +465,7 @@ namespace Noir.Core.People
         /// <paramref name="free"/> is the discretionary window in minutes - what is left after
         /// work, school and church. IT HAS TO COUNT, and it did not: the answer was one or two
         /// whether the person had two hours to fill or fourteen, so the retired and the
-        /// unemployed - the large majority of Northgate, and the only people about during the
+        /// unemployed - the large majority of Rossville, and the only people about during the
         /// working day - did their shopping before eleven and then sat at home until bed. A town
         /// whose streets are empty every afternoon is not a quiet town, it is an unfinished one.
         ///
@@ -513,7 +513,7 @@ namespace Noir.Core.People
 
             // The same thing for a kind only kinds.txt knows. A city kind is numbered past the
             // enum's members, so it has no C# name to pass to the line above, and every one of
-            // Northgate's own amenities was therefore unreachable from here.
+            // Rossville's own amenities was therefore unreachable from here.
             void ConsiderNamed(string name, Activity act, int minutes, int weight)
             {
                 if (!PlaceKindTable.Current.TryNamed(name, out var kind)) return;
@@ -575,7 +575,7 @@ namespace Noir.Core.People
             //
             // This was missing entirely, and it was the largest single hole in the village. The
             // 2:1 instrument watched a hundred and twelve people for a fortnight and recorded
-            // ZERO visits in 1,568 household-days: nobody in Ashcombe had ever once knocked on
+            // ZERO visits in 1,568 household-days: nobody in Rossville had ever once knocked on
             // anybody's door, because the errand list was a list of AMENITIES and a neighbour is
             // not an amenity. It matters past the ratio, too - "who would notice her gone, and
             // how fast" is the question the whole eventual game turns on, and it has no answer
@@ -593,7 +593,7 @@ namespace Noir.Core.People
                           who.IsChildIn(year) ? (int)(3 + 9 * social)
                                       : (int)(3 + 12 * social) + (who.StageIn(year) == LifeStage.Elder ? 6 : 0));
 
-            // ---- what Northgate has that Ashcombe never did ----
+            // ---- what the town has that the old village never did ----
             //
             // A cinema, a casino, a diner and a newspaper shop, all standing open, all lit, and
             // before this NOBODY HAD EVER WALKED INTO ONE. They are kinds the enum has never

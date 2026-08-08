@@ -23,7 +23,7 @@ namespace Noir.Unity
     /// lines below follow it. Adding a package mid-project to get an orbit we already know how to
     /// write is a poor trade; swap in Cinemachine later by pointing a vcam at the same target.
     ///
-    /// PRESS P to go from looking at Northgate to standing in it, and P again to come back.
+    /// PRESS P to go from looking at Rossville to standing in it, and P again to come back.
     /// </summary>
     public sealed class Player : MonoBehaviour
     {

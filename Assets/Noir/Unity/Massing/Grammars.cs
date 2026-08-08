@@ -79,7 +79,7 @@ namespace Noir.Unity
     ///
     /// The bulk IS the signal - a mill is recognisable because it is half again as tall as
     /// anything near it. The shallow pitch is part of that: a steep roof on a tall building
-    /// reads as a church, and Ashcombe already has one of those.
+    /// reads as a church, and Rossville already has one of those.
     /// </summary>
     public sealed class MillMassing : IMassingGrammar
     {

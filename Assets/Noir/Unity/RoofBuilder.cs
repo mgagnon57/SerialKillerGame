@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.World;
@@ -150,7 +150,7 @@ namespace Noir.Unity
         /// This WAS a switch listing the five or six open-ground kinds by hand, with a
         /// `default: return true` underneath. Two things were wrong with that. It had already
         /// drifted out of step with VillageLayout.IsBuilding once, and left a 1.7 m pyramid with
-        /// a chimney on it hanging three metres above bare grass beside Ashcombe Street. And the
+        /// a chimney on it hanging three metres above bare grass beside Main Street. And the
         /// `default` meant any kind authored purely in content got a roof whether or not its row
         /// said `roof no` - so the open-kind property Stage 4 bought was quietly broken for
         /// anything that was not a building.

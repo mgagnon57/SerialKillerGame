@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 #  THE FLOOR — what the village has already managed, and may not lose.
 #
 #  Read by tools/Noir.Sim/Ratio.cs and asserted by tools/Noir.Core.Tests/
@@ -240,8 +240,50 @@
 #  comparing against these numbers should know the pool underneath them changed.
 # ============================================================================
 
-ratio.median      0.89
-ratio.p10         0.40
+#  ---- 2026-08-08: RE-MEASURED. The fixture village was renamed. -------------
+#
+#  ONE LINE MOVED AND IT IS ratio.p10: 0.40 -> 0.32. Everything else held.
+#  texture.median is 29 and texture.min is 11, both EXACTLY as recorded above.
+#  That is the whole argument for this entry, and it is why this is not the
+#  mechanisation the rule at the top forbids: you cannot strip a village of its
+#  texture and leave the texture columns untouched to four significant figures.
+#
+#  WHAT HAPPENED. Content/fixture-village.txt was an English village - Glebe
+#  House, Yew Cottage, Coronation Row - and its every place was renamed to a
+#  1991 Illinois one. The geometry did not move: same 144 lines of coordinates,
+#  same 67 places, same kinds, same doors, same hours.
+#
+#  WHY A RENAME MOVES A NUMBER AT ALL, which is the part worth keeping:
+#
+#      Place.cs:169   KeySource = authored `key` line, ELSE the place's Name
+#      WorldBuilder.cs:86   Substream(seed, "interior:" + place.KeySource)
+#      Prop.cs:212          Substream(seed, "placeprops:" + place.KeySource)
+#
+#  A place's DISPLAY NAME was seeding its interior and its props. Renaming 54
+#  buildings therefore re-rolled 54 interiors and everything standing in them -
+#  which changes what a watcher happens to see, and so moves the tail of the
+#  distribution. Same rules, same village, different dice. Compare the entry
+#  for 2026-07-28, where retuning names.txt moved the population draw the same
+#  way and for the same reason.
+#
+#  FIXED SO IT CANNOT RECUR. All 54 renamed places now carry an explicit
+#  `key fixture-<kind>-<x>-<y>` line, derived from position rather than from
+#  what the building is called. Renaming a building is now free: the seed no
+#  longer depends on the display name, so the next person to make the fixture
+#  read better does not have to re-measure this file.
+#
+#  Measured `dotnet run -c Release --project tools/Noir.Sim -- ratio
+#  --seeds 1979,1980,1981`, fourteen days, worst of three, rounded down:
+#
+#      seed 1979   148 people   median 0.90   p10 0.41   tex 12/31  sight 12.9%
+#      seed 1980   148 people   median 0.90   p10 0.43   tex 17/32  sight 12.8%
+#      seed 1981   150 people   median 0.89   p10 0.41   tex 11/29  sight 12.4%
+#
+#      worst: median 0.8889  p10 0.3293  tex 11/29  sight 0.1235
+# ============================================================================
+
+ratio.median      0.88
+ratio.p10         0.32
 texture.median      29
 texture.min         11
 sight.median     0.123

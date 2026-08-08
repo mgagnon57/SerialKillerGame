@@ -524,7 +524,7 @@ namespace Noir.Sim
             r.Line("                                                 people go on one high street instead");
             r.Line();
             r.Line("    Falsify it rather than believe it. `encounters --tile 2` runs this same content");
-            r.Line("    on four Ashcombes and about four times the people at the same density, which is");
+            r.Line("    on four copies of the fixture village and about four times the people at the same density, which is");
             r.Line("    the only preview of the town this harness can build before one is authored.");
             r.Line();
             r.M("enc_projection", ("from", n), ("to", Target), ("tiles_per_head", tilesPerHead),

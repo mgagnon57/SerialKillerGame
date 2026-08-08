@@ -96,7 +96,7 @@ namespace Noir.Unity
     /// reason that has nothing to do with draw calls: Unity culls a mesh by its bounding box,
     /// and the bounding box of the whole village's floor contains the camera wherever the
     /// camera is. Standing in one street the GPU was handed the entire floor, every wall in
-    /// Ashcombe and every roof on it. Chunking exists to give the culler something it can
+    /// Rossville and every roof on it. Chunking exists to give the culler something it can
     /// actually discard.
     ///
     /// The grid is anchored to the GRID ORIGIN rather than to the map, so where a chunk

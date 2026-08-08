@@ -38,7 +38,7 @@ namespace Noir.Unity
     /// So the state is shown by lighting the pack's own lamps - one lit, two dark, which is what
     /// a signal is and is something a single sphere could never show. The earlier conclusion
     /// that the glass could not be driven came from tinting the SHARED material, which is the
-    /// same glass every window in Northgate uses; the fix is a material of our own in the three
+    /// same glass every window in Rossville uses; the fix is a material of our own in the three
     /// lens slots, not a different prefab.
     ///
     /// Built OUTSIDE the node CityChunker bakes: a combined mesh cannot change colour.
@@ -444,7 +444,7 @@ namespace Noir.Unity
 
             // Our own unlit material in the three lens slots. The pack's glass is a shared
             // material used by every window in the city, so tinting it in place would turn every
-            // pane in Northgate red - which is how the first attempt at this concluded, wrongly,
+            // pane in Rossville red - which is how the first attempt at this concluded, wrongly,
             // that the lenses could not be driven at all.
             for (int i = 0; i < 3; i++)
                 slots[i == 0 ? head.Red : i == 1 ? head.Amber : head.Green] = lensMaterial;

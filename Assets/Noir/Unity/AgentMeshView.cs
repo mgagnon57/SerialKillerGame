@@ -75,7 +75,7 @@ namespace Noir.Unity
                 // A BOUGHT PERSON IF THERE IS ONE, and the primitives if there is not. The pack
                 // has about twenty figures in register for an ordinary town, so the fallback is
                 // not dead code - it is what a map whose people the pack cannot cast still looks
-                // like, and it is what Ashcombe has always looked like.
+                // like, and it is what Rossville has always looked like.
                 IAgentBody body = null;
 #if UNITY_EDITOR
                 body = AgentBody.Build(transform, citizen, look);
@@ -226,7 +226,7 @@ namespace Noir.Unity
                 // a refactor. See docs/ASSETS.md.
                 //
                 // Running is the child at play and nothing else: an adult jogging across
-                // Northgate reads as fleeing, which is a story event rather than a commute.
+                // Rossville reads as fleeing, which is a story event rather than a commute.
                 //
                 // The pace handed over is metres per REAL second, which is the speed the eye sees
                 // the person travel at and the only speed a stride can honestly be matched to. At

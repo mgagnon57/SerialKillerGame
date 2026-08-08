@@ -15,7 +15,7 @@ namespace Noir.Unity
             {
                 { "cottage",   Fallback },
                 // "shopfront" IS a Main Street block now. It used to be ShopfrontMassing, a
-                // 3.6 m hip-roofed English village shop, which was right while Ashcombe was a
+                // 3.6 m hip-roofed village shop, which was right while the old village was a
                 // live map and is simply wrong on an Illinois main street. Every kind whose
                 // content row says `massing shopfront` - the shops, the bank, the diner, the
                 // motion picture house, the ice cream parlour - is part of the same terrace on

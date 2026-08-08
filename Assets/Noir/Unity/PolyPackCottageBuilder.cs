@@ -59,11 +59,11 @@ namespace Noir.Unity
 
 #if UNITY_EDITOR
             // The pack's own atlas materials sample to a flat blue here, so every piece is
-            // repainted in Ashcombe's palette as it goes in. That is where this was always
+            // repainted in Rossville's palette as it goes in. That is where this was always
             // heading - the village is deliberately muted and the kit's stock colours are not.
             //
             // Flat colour rather than Materials3D.Wall or .Roofs, which carry a surface texture
-            // tiled against Ashcombe's own world-space UVs. The kit's meshes are atlas-mapped -
+            // tiled against Rossville's own world-space UVs. The kit's meshes are atlas-mapped -
             // every vertex of a panel lands on one palette texel - and under those materials a
             // wall came out invisible. Materials3D.Stone is the one untextured member of the set
             // and it was the one piece that rendered correctly, which is the whole argument.
@@ -79,7 +79,7 @@ namespace Noir.Unity
             var roof = Painted
                 ? Flat("PaintedRoof", new Color32(0xA8, 0x58, 0x3C, 0xFF))   // terracotta pantile
                 : Flat("PackRoofSlate", new Color32(0x6B, 0x70, 0x79, 0xFF));
-            // A painted front door is the most English thing a cottage owns, and Ashcombe already
+            // A painted front door is the most English thing a cottage owns, and the old village already
             // has the right red on the shelf - the postbox's.
             var timber = Painted
                 ? Flat("PaintedDoor", new Color32(0x8E, 0x1F, 0x1C, 0xFF))
@@ -313,7 +313,7 @@ namespace Noir.Unity
 
         private static readonly Dictionary<string, Material> _flats = new Dictionary<string, Material>();
 
-        /// <summary>An opaque, untextured URP Lit material in one of Ashcombe's colours.</summary>
+        /// <summary>An opaque, untextured URP Lit material in one of Rossville's colours.</summary>
         private static Material Flat(string name, Color colour)
         {
             if (_flats.TryGetValue(name, out var existing) && existing != null) return existing;

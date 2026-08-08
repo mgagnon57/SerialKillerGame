@@ -65,7 +65,7 @@ namespace Noir.Editor
             // 08:35 is the peak: seventeen people out, the school gate at 80,43 taking
             // twenty-seven children, and parents walking back. 17:30 is the second peak, at
             // the mill door on Mill Lane as the shift comes off.
-            // Yaw 0 looks north (+Z), 180 south. Ashcombe Primary is 70,32 18x12 with its door
+            // Yaw 0 looks north (+Z), 180 south. the grade school is 70,32 18x12 with its door
             // at 80,43, which is the SOUTH face, so the gate is watched from further south
             // looking back at it. The mill is 118,98 24x14 with its door at 130,98 - the NORTH
             // face - so that one is watched from the north looking south.

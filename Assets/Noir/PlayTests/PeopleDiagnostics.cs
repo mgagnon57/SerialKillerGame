@@ -119,7 +119,7 @@ namespace Noir.PlayTests
 
             // ---- and do they play the right thing while walking? ----
             //
-            // The sim opens at six in the morning, when the honest answer for most of Northgate is
+            // The sim opens at six in the morning, when the honest answer for most of Rossville is
             // that they are asleep behind a wall - so a state count taken now says nothing. What
             // matters is narrower and can be asked at any hour: of the people the simulation says
             // are ON THE MOVE, how many are in the state they should be? A person walking while
@@ -137,7 +137,7 @@ namespace Noir.PlayTests
             float slowest = float.MaxValue, fastest = 0f, rates = 0f;
 
             // DRIVEN, NOT WAITED FOR. Batchmode frames are quick, so a frame is worth a fraction
-            // of a game second and no amount of yielding gets Northgate out of bed - eight rounds
+            // of a game second and no amount of yielding gets Rossville out of bed - eight rounds
             // of ninety frames reached six minutes past six, which is a town where the only honest
             // answer is that everybody is asleep. Ticking the simulation directly walks the clock
             // to the hours where people are actually out.
