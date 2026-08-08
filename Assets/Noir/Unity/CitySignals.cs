@@ -48,7 +48,13 @@ namespace Noir.Unity
         /// <summary>Seconds. A green long enough to clear a queue, an amber long enough to see.</summary>
         private const float Green = 14f, Amber = 3f, AllRed = 1f;
 
-        private static float Cycle => (Green + Amber + AllRed) * 2f;
+        /// <summary>
+        /// Seconds for both arms to have their turn. PUBLIC BECAUSE A TEST WAS HARDCODING IT AND
+        /// GOT IT WRONG: TrafficPlayTests carried `const float Cycle = 37f` with the comment
+        /// "CitySignals' own cycle length", and it has been 36.0s since the day these numbers were
+        /// chosen. A gate one second looser than the thing it claims to measure is not a gate.
+        /// </summary>
+        public static float Cycle => (Green + Amber + AllRed) * 2f;
 
         /// <summary>
         /// How the traffic on the two arms of a junction is separated.

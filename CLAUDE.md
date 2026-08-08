@@ -124,10 +124,45 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-09: 12 of 12 PASS, ~4 min.** (Was 8 of 8 on 2026-08-07;
+> **BASELINE, 2026-08-08: 12 of 12 PASS, 6m 12s.** (Was 8 of 8 on 2026-08-07;
 > TownGeometryPlayTests added three that can see where a building STANDS.)
 > `[body] 1390 Animators in the scene`, and the layer preferences are the same after the run as
 > before it.
+>
+> **THE RUN IS NOT ~4 MINUTES AND NEVER WAS.** Measured 371.6 s wall clock, of which
+> `WhyAreThePeopleNotAnimating` alone is **292.9 s** — 79% of the suite. Budget ten minutes.
+>
+> **ONE OF THE TWELVE IS CURRENTLY A COIN TOSS, AND IT IS WRITTEN DOWN RATHER THAN TUNED AWAY.**
+> `NoCarWaitsForeverAtTheHeadOfAClearQueue` asserts a p90 wait under one signal cycle. On an
+> unchanged tree, identical geometry, identical test order and the same 159-car fleet, that p90
+> measured **37.2 s (red) and 21.9 s (green)**. Nothing between those two runs touched the
+> simulation. Do not read a green here as proof the traffic is healthy.
+>
+> The cause is known and is NOT flakiness in the test-order sense: the fleet is
+> `DeclaredHouseholds × 0.25` (`CityTraffic.cs:553`), so giving the town back its 107 houses took
+> it **135 → 159 vehicles** on an unchanged 342-segment network, and the give-way model starves
+> under density exactly as `TurnPace`'s docstring already warned. `TurnPace` saturates at
+> `Patience = 25 s`: past that a waiting driver is as eager as it can get and simply waits.
+>
+> **The test now names the junction**, so the next session does not have to re-derive this:
+>
+> ```
+>   [traffic] p90 wait 21.9s against a 36.0s cycle. 3 of 35 stopped vehicles waited longer
+>             than one cycle (0 at the signals, 3 at priority), spread over 2 junctions.
+>   [traffic]   2 car(s), worst 53.7s, at church x maple (priority)
+>   [traffic]   1 car(s), worst 36.3s, at church x alley2 (priority)
+> ```
+>
+> The tail is **two junctions, not the fleet** — so this is the give-way rules, not a town that has
+> outgrown its roads. `church` and `maple` are both `county, right of way 20.0 m` in
+> `Content/roads.txt` and their crossing is run on **priority**: only 1 of 74 junctions in this
+> town is signalised. See `docs/IDEAS.md`.
+>
+> **The cycle is 36.0 s, not 37.** `TrafficPlayTests` carried `const float Cycle = 37f` under a
+> comment saying it was "CitySignals' own cycle length" for months. It is 14 s green + 3 s amber +
+> 1 s all-red, twice — and the `[signals]` line has printed `36.0s cycle` every single run. The
+> test asks `CitySignals.Cycle` now. A number sitting next to a comment asserting it is right is
+> the hardest kind to see.
 >
 > **All eight pass.** The three traffic faults are fixed at the root, not worked around:
 > phantom junctions that were never on their own roads, a test that measured a car against the

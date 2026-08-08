@@ -289,6 +289,34 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   `Crossings` in Core, where an end landing on another road's centre line is a junction in its own
   right; that is untried and needs the same measurement before it is believed.
 
+- [ ] **`church x maple` is two county roads crossing on give-way, and a car starves there.**
+  Measured 2026-08-08 on the 159-car fleet: `NoCarWaitsForeverAtTheHeadOfAClearQueue` now
+  attributes every wait longer than one signal cycle to its junction, and the whole tail is **two
+  junctions, not the fleet** - 2 cars up to **53.7 s** at `church x maple`, 1 car at 36.3 s at
+  `church x alley2`, 0 at the signals. So this is the give-way rules, not a town over capacity.
+
+  `church` (`970,849 1303`-ish N-S) and `maple` (`797,1481 1303,1475` E-W) are BOTH declared
+  `county, right of way 20.0 m` in `Content/roads.txt`. Two county roads meeting, and the crossing
+  is run on **priority** - the town has exactly **1 signalised junction out of 74**. A car on the
+  give-way arm waits for a gap in a continuous county-road stream and may not get one.
+
+  **`TurnPace` already documents this failure mode and saturates before it helps.** A waiting
+  driver launches harder the longer it waits - which is honest, and is why it is used by both
+  `WhenClear` and the motion itself - but `Patience = 25 s` caps the effect. Past 25 seconds the
+  car is as eager as it can get and just sits. The docstring's own example is "a car starved at
+  Ross and Attica for 111 of the 120 seconds it was watched".
+
+  **DO NOT fix this with a "go anyway after N seconds" timeout.** That was tried here and REVERTED
+  because it produced a real 0.00 m collision: "go anyway" is precisely "enter the junction in
+  front of a car that is still coming". Candidate fixes worth measuring instead: signalise (or
+  four-way-stop) major/major crossings so `InTheTown` is not the only route to a light; give the
+  priority stream platooning so gaps exist at all; or a courtesy rule where a queued major-road
+  car yields. Each is a content-or-model decision, not a threshold.
+
+  **Consequence today: the p90 arm of that test is a coin toss** - 37.2 s and 21.9 s measured on
+  an unchanged tree with the same fleet and the same test order. Do not tune the gate; it is
+  already the honest 36.0 s. See CLAUDE.md.
+
 - [ ] **Curved roads on the outer parts - the map is too square.** The pack HAS the
   pieces: `Road_Turn_20x20_City`, `Road_Turn_Shift_20x20_City` (an S-bend), and
   `Road_Dirt_A/B_Turn_20x20m` for lanes, all found and unused. The blocker is not
