@@ -66,7 +66,7 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **396 pass, 2 fail, 398 total, 2 m 22 s.** Measured 2026-08-08.
+> **414 pass, 2 fail, 416 total, ~2 min.** Measured 2026-08-09.
 > The two failures are `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` and
 > `TheTenthPercentileIsNotALock`. **They fail by design.** Anything else is a regression.
 
@@ -105,7 +105,8 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-07: 8 of 8 PASS, ~2 min.** The first time this suite has ever been green.
+> **BASELINE, 2026-08-09: 12 of 12 PASS, ~4 min.** (Was 8 of 8 on 2026-08-07;
+> TownGeometryPlayTests added three that can see where a building STANDS.)
 > `[body] 1390 Animators in the scene`, and the layer preferences are the same after the run as
 > before it.
 >
