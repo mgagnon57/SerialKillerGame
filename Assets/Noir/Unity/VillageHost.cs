@@ -51,6 +51,11 @@ namespace Noir.Unity
 
         private Player _player;
 
+        /// <summary>Whoever is walking about, if anybody is. Read by the testimony panel, which
+        /// asks about where the player is STANDING - the answer is a function of where they have
+        /// been, so it has to know where that is.</summary>
+        public Player Player => _player;
+
         /// <summary>The last minute written to the track, so a frame does not write it twice.</summary>
         private int _lastTrackedMinute = -1;
 

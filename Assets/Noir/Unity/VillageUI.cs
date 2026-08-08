@@ -289,6 +289,7 @@ namespace Noir.Unity
             DrawTopBar();
             DrawInspector();
             DrawHelp();
+            DrawTestimony();
             DrawZoningLegend();
             DrawHoverTip();
 
@@ -533,6 +534,108 @@ namespace Noir.Unity
                  + $"out {outside}";
         }
 
+        private bool _showTestimony;
+        private string[] _said;
+        private string _asked;            // who was asked, and where they were asked about
+        private int _askedDay = -1;
+
+        /// <summary>
+        /// ASK A NEIGHBOUR WHAT THEY SAW. T.
+        ///
+        /// This is the loop. Everything under Noir.Core.Observation and Noir.Core.Witness -
+        /// 4,852 lines of sightlines, degradation, night witnesses and recollection - has been
+        /// finished, firewalled and tested for weeks, and until this panel NOTHING IN THE GAME
+        /// HAD EVER ASKED IT A QUESTION. VillageHost has been recording the player's track since
+        /// 2026-08-05 into a PlayerTrack nothing read. This is the thing that reads it.
+        ///
+        /// WALK PAST SOMEBODY'S HOUSE FIRST. The answer is a function of where you have BEEN:
+        /// Recollection replays the neighbour's own day from the seed and checks it against your
+        /// track, minute by minute. Ask before you have walked anywhere and the honest answer is
+        /// that they saw nobody, which is why "Nothing. I never saw anybody." is a sentence here
+        /// rather than an empty list. An alibi is evidence too.
+        ///
+        /// STATIONARY WITNESSES ONLY, and that is the engine's own honest limit - a citizen's
+        /// position comes from the door of wherever their plan has them, so the witnesses are the
+        /// man at his gate and the woman behind the counter, not somebody walking the other way.
+        ///
+        /// WHAT COMES BACK IS SENTENCES, NEVER SIGHTINGS. VillageHost.AskWhatTheySaw returns
+        /// string[], because Noir.Unity does not reference Noir.Core.Observation and must not
+        /// start: hand the UI a Sighting and every future panel has the evidence types in reach.
+        /// The panel gets testimony. It cannot reason backwards from a sentence, and neither can
+        /// anybody who edits it later.
+        /// </summary>
+        private void DrawTestimony()
+        {
+            var keys = Keyboard.current;
+            if (keys != null && keys.tKey.wasPressedThisFrame)
+            {
+                _showTestimony = !_showTestimony;
+                if (_showTestimony) Ask();
+            }
+            if (!_showTestimony) return;
+
+            float w = S(660f), h = S(420f);
+            var rect = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f, w, h);
+            GUI.Box(rect, GUIContent.none, _panel);
+
+            GUILayout.BeginArea(new Rect(rect.x + S(26f), rect.y + S(20f), rect.width - S(52f), rect.height - S(40f)));
+
+            GUILayout.Label("What did you see?", _title);
+            GUILayout.Label("<color=#8a8a86>press T to close</color>", _small);
+            GUILayout.Space(S(12f));
+
+            if (_asked == null)
+            {
+                GUILayout.Label("Nobody to ask - stand in the town and press T.", _label);
+            }
+            else
+            {
+                GUILayout.Label(_asked, _label);
+                GUILayout.Space(S(10f));
+
+                if (_said == null || _said.Length == 0)
+                {
+                    GUILayout.Label("<color=#8a8a86>(nothing came back)</color>", _small);
+                }
+                else
+                {
+                    foreach (string line in _said)
+                        GUILayout.Label("“" + line + "”", _label);
+                }
+
+                GUILayout.Space(S(12f));
+                GUILayout.Label(
+                    "<color=#6f6f6b>They can only tell you about where they were standing, and "
+                  + "only about today. Walk somewhere and ask again.</color>", _small);
+            }
+
+            GUILayout.EndArea();
+        }
+
+        /// <summary>
+        /// Put the question to whoever lives nearest, about today.
+        ///
+        /// Nearest to the PLAYER when they are in the street, and to the middle of the view
+        /// otherwise, so the panel answers about the place you are looking at either way.
+        /// </summary>
+        private void Ask()
+        {
+            _said = null; _asked = null; _askedDay = -1;
+            if (_host == null || _host.World == null || _host.People == null) return;
+
+            var at = _host.Player != null ? _host.Player.Where : null;
+            if (at == null) { _asked = null; return; }
+
+            var tile = Space3D.TileAt(at.Value);
+            var who = _host.NearestNeighbour(tile);
+            int day = _host.Sim != null ? _host.Sim.Clock.Day : 0;
+
+            var citizen = _host.People.Get(who);
+            _said = _host.AskWhatTheySaw(who, day);
+            _askedDay = day;
+            _asked = $"<b>{citizen.FullName}</b>, asked about day {day}:";
+        }
+
         private bool _showHelp;
 
         /// <summary>
@@ -553,7 +656,7 @@ namespace Noir.Unity
 
             GUILayout.BeginArea(new Rect(rect.x + S(26f), rect.y + S(20f), rect.width - S(52f), rect.height - S(40f)));
 
-            GUILayout.Label("Ashcombe", _title);
+            GUILayout.Label("Rossville, Illinois — 1991", _title);
             GUILayout.Label("<color=#8a8a86>press H to close</color>", _small);
             GUILayout.Space(S(14f));
 
@@ -569,6 +672,9 @@ namespace Noir.Unity
             Row("Q  E", "rotate");
             Row("R  Shift+F", "tilt up / down");
             Row("wheel", "zoom");
+            GUILayout.Space(S(10f));
+
+            Row("T", "<b>ask the nearest neighbour what they saw</b>");
             GUILayout.Space(S(10f));
 
             Row("click", "select somebody");
