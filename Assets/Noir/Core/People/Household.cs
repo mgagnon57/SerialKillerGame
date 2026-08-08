@@ -56,7 +56,7 @@ namespace Noir.Core.People
 
         public PlaceId School => Catchment(PlaceKind.School);
         public PlaceId Church => Catchment(PlaceKind.Church);
-        public PlaceId Surgery => Catchment(PlaceKind.Surgery);
+        public PlaceId Clinic => Catchment(PlaceKind.Clinic);
 
         private readonly CitizenId[] _members;
 
@@ -83,7 +83,7 @@ namespace Noir.Core.People
                          HouseholdShape shape, CitizenId[] members, int unit,
                          PlaceId school, PlaceId church, PlaceId surgery, ulong key)
             : this(id, dwelling, surname, shape, members, unit,
-                   new[] { PlaceKind.School, PlaceKind.Church, PlaceKind.Surgery },
+                   new[] { PlaceKind.School, PlaceKind.Church, PlaceKind.Clinic },
                    new[] { school, church, surgery }, key) { }
 
         public Household(HouseholdId id, PlaceId dwelling, string surname,

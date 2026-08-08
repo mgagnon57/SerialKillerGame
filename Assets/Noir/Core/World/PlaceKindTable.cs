@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Noir.Core.Contracts;
 
@@ -236,7 +236,7 @@ namespace Noir.Core.World
         /// <summary>
         /// The kind with this canonical name, or false if the table has never heard of it.
         ///
-        /// A kind the PlaceKind enum knows can be named in C# as PlaceKind.Pub. A kind only
+        /// A kind the PlaceKind enum knows can be named in C# as PlaceKind.Tavern. A kind only
         /// kinds.txt knows - which is every city kind, numbered past the enum's members - cannot
         /// be, and that is not a small gap: it meant the day planner's whole errand list was a
         /// VILLAGE's list running in a city, offering shops and greens while the cinema, the
@@ -645,7 +645,7 @@ namespace Noir.Core.World
             Need(d, d.WantsDescription.HasValue, "describe");
 
             // The three attributes that only mean anything in company. Required when they are
-            // relevant and refused when they are not, so that a service time on a phone box is a
+            // relevant and refused when they are not, so that a service time on a phone booth is a
             // load failure rather than a line somebody wrote and then wondered about.
             bool open = !d.IsBuilding.Value;
             if (open) Need(d, d.Ground.HasValue, "ground");

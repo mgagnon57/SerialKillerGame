@@ -1,5 +1,5 @@
 # ==========================================================================
-#  NORTHGATE, ON ROSSVILLE, ILLINOIS'S OWN STREET GRID
+#  ROSSVILLE, ILLINOIS - THE TOWN ON ITS OWN STREET GRID
 #
 #  Not a grid that looks like Rossville - the actual one, taken from
 #  OpenStreetMap and converted to metres about the crossing of Chicago Street
@@ -1339,13 +1339,13 @@ place shop 749,1271 20x18 "Henderson's"
 place shop 742,1245 14x24 "the Attica Street market"
   door 742,1257
   human Fruit stacked to a geometry that survives being sold from.
-place pub 734,1221 14x22 "the Livingood House"
+place tavern 734,1221 14x22 "the Livingood House"
   door 734,1232
-  human The car park is bigger than the pub and on Fridays it is not big enough.
-place pub 720,1179 14x22 "the Commercial Hotel"
+  human The parking lot is bigger than the tavern and on Fridays it is not big enough.
+place tavern 720,1179 14x22 "the Commercial Hotel"
   door 720,1190
   human Older than the road, and it shows in the floor.
-place pub 712,1155 12x22 "the grain office"
+place tavern 712,1155 12x22 "the grain office"
   door 712,1166
   human Four o'clock and the same men are in it who were in it at noon.
 place postoffice 706,1137 14x16 "Rossville Post Office"
@@ -1392,7 +1392,7 @@ place shop 781,1371 10x13 "the jeweller"
   human Ironmongery, and a man who can find the one screw you need in a minute.
 place shop 785,1386 10x13 "the meat market"
   door 785,1392
-  human Everything a fortnight from its date and nobody has ever complained.
+  human Everything two weeks past its date and nobody has ever complained.
 place shop 790,1401 10x13 "the barber"
   door 790,1407
   human A tailor who has outlived three fashions and expects to outlive a fourth.
@@ -2210,11 +2210,11 @@ place copse 270,657 70x50 "the east wood"
   human Older than the town, and the boundary bank round it is older still.
 place copse 272,712 70x50 "the east wood, lower"
   human The same wood, on the other side of the road that was put through it.
-place allotments 3,79 30x40 "the west allotments"
+place gardens 3,79 30x40 "the west garden plots"
   human Thirty plots, four of them worked properly and the rest an argument.
-place allotments 44,81 50x40 "the east allotments"
+place gardens 44,81 50x40 "the east garden plots"
   human Sheds built from doors, and every one of them locked.
-place allotments 6,606 50x14 "the south allotments"
+place gardens 6,606 50x14 "the south garden plots"
   human The best soil in Vermilion County and everybody knows it.
 place churchyard 69,609 30x24 "the old burial ground"
   human Older than anything still standing, and the names have gone off the stones.

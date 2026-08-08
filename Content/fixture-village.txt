@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 #  ASHCOMBE
 #
 #  170 x 120 tiles, one tile = one metre.
@@ -61,7 +61,7 @@ place playground 96,34 12x10 "the playground"
   human The swings are the meeting point for anyone under eleven and their mothers.
 
 # ---- the centre ----------------------------------------------------------
-place pub 52,44 14x11 "The Wheatsheaf"
+place tavern 52,44 14x11 "the Commercial Hotel"
   door 58,54
   hours 11:00-14:30
   hours 17:30-23:00
@@ -94,11 +94,11 @@ place green 30,62 20x10 "the Green"
 place busstop 64,62 2x2 "the bus stop"
   human Two buses a day to Marlbury, and everyone knows both times.
 
-place phonebox 70,62 1x1 "the telephone box"
+place phonebooth 70,62 1x1 "the telephone booth"
   human The only telephone for some people, so there is often somebody waiting.
 
 # ---- east end ------------------------------------------------------------
-place surgery 128,62 12x10 "the Surgery"
+place clinic 128,62 12x10 "the clinic"
   door 133,62
   hours 08:30-11:30 mon-fri
   hours 16:00-18:00 mon,tue,thu,fri
@@ -133,7 +133,7 @@ place farm 120,4 19x13 "Long Barrow Farm"
   jobs 4
   human Arable, so the yard is empty for weeks and then full of everyone at harvest.
 
-place allotments 30,88 26x10 "the allotments"
+place gardens 30,88 26x10 "the garden plots"
   human Twenty-two plots, a waiting list, and a shed nobody admits to sleeping in.
 
 # ============================================================================

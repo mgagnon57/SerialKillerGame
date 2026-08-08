@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Noir.Core.World;
 
 namespace Noir.Unity
@@ -23,7 +23,7 @@ namespace Noir.Unity
                 // simulation does with them.
                 { "shopfront", new MainStreetMassing() },
                 { "mainstreet", new MainStreetMassing() },
-                { "pub",       new PubMassing() },
+                { "tavern",       new TavernMassing() },
                 { "hall",      new HallMassing() },
                 { "school",    new SchoolMassing() },
                 { "church",    new ChurchMassing() },
@@ -100,7 +100,7 @@ namespace Noir.Unity
         /// difference to live.
         /// </summary>
         private static bool OnMainStreet(PlaceKind kind) =>
-            kind == PlaceKind.Shop || kind == PlaceKind.Pub
+            kind == PlaceKind.Shop || kind == PlaceKind.Tavern
          || kind == PlaceKind.PostOffice || kind == PlaceKind.VillageHall;
 
         private static readonly HashSet<string> _warned = new HashSet<string>();

@@ -163,7 +163,7 @@ namespace Noir.Core.World
 
                     // The cellar first. A village pub can manage without a kitchen and cannot
                     // manage without somewhere to keep the beer.
-                    case "pub":
+                    case "tavern":
                     case "inn":
                         return new Brief(RoomKind.Bar,
                             new[] { RoomKind.StockRoom, RoomKind.Washroom, RoomKind.Kitchen }, false, 3, 4);

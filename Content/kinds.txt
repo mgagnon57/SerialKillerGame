@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 #  WHAT KINDS OF PLACE THERE ARE
 #
 #  One row per kind. Adding an amenity to the village is a row here and a few
@@ -43,8 +43,8 @@
 #  service    minutes at the counter: this many, plus a draw under the spread.
 #             Only where there is a counter.
 #  hours      when it is open, WHEN THE PLACE DOES NOT SAY FOR ITSELF. Every
-#             place in Ashcombe states its own, so these are what a second shop
-#             or a new surgery would open for if nobody wrote it down.
+#             place in the town states its own, so these are what a second shop
+#             or a new clinic would open for if nobody wrote it down.
 #  jobs       how many work there, again only when the place does not say.
 #  roles      what those people are called, in slot order. The last name covers
 #             every slot after it: "farmer farmhand" is one farmer and the rest
@@ -78,14 +78,14 @@ kind dwelling
   describe  no
 
 # ---- the places people go -------------------------------------------------
-kind pub
-  words     pub
+kind tavern
+  words     tavern bar saloon
   form      building
   rooms     auto
   grammar   open
   roof      yes
-  frontage  pub
-  massing   pub
+  frontage  tavern
+  massing   tavern
   props     none
   counter   no
   hours     11:00-14:30 17:30-23:00
@@ -176,13 +176,13 @@ kind school
 
 # Longer at the counter than anywhere else, and it is the whole reason a
 # waiting room fills: six minutes and up, against four at the post office.
-kind surgery
-  words     surgery
+kind clinic
+  words     clinic doctors
   form      building
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  surgery
+  frontage  clinic
   massing   shopfront
   props     none
   counter   yes
@@ -283,7 +283,7 @@ kind villagehall
 
 # ---- open ground ----------------------------------------------------------
 # None of these is a building, so none is walled, roofed or given an interior.
-# A phone box counts as street furniture: it is one tile, and walling it would
+# A phone booth counts as street furniture: it is one tile, and walling it would
 # leave nowhere to stand in it.
 kind playground
   words     playground
@@ -317,8 +317,8 @@ kind busstop
   catchment no
   describe  yes
 
-kind phonebox
-  words     phonebox
+kind phonebooth
+  words     phonebooth
   form      open
   ground    grass
   rooms     none
@@ -407,8 +407,8 @@ kind park
   catchment no
   describe  yes
 
-kind allotments
-  words     allotments
+kind gardens
+  words     gardens allotment
   form      open
   ground    field
   rooms     none
@@ -506,7 +506,7 @@ kind hospital
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  surgery
+  frontage  clinic
   massing   shopfront
   props     none
   counter   yes

@@ -396,7 +396,7 @@ namespace Noir.Core.People
             var door = Locality.AnchorOf(world.GetPlace(workplace));
             var candidates = new List<PlaceId>();
 
-            // Never the building they are trying to get out of. The Wheatsheaf is the obvious
+            // Never the building they are trying to get out of. The tavern is the obvious
             // candidate for a dinner hour and it is also where three publicans work, so without
             // this a publican's break is a shift.
             void Offer(PlaceKind kind)
@@ -416,8 +416,8 @@ namespace Noir.Core.People
             else
             {
                 Offer(PlaceKind.Playground);
-                Offer(PlaceKind.Allotments);
-                Offer(PlaceKind.Pub);
+                Offer(PlaceKind.Gardens);
+                Offer(PlaceKind.Tavern);
             }
 
             var chosen = Locality.ChooseNearby(world, door, candidates, dayOfWeek, from,
@@ -426,9 +426,9 @@ namespace Noir.Core.People
 
             switch (world.GetPlace(chosen).Kind)
             {
-                case PlaceKind.Pub: return (chosen, Activity.AtThePub);
+                case PlaceKind.Tavern: return (chosen, Activity.AtThePub);
                 case PlaceKind.Playground: return (chosen, Activity.AtThePlayground);
-                case PlaceKind.Allotments: return (chosen, Activity.OnTheAllotment);
+                case PlaceKind.Gardens: return (chosen, Activity.OnTheAllotment);
                 default: return (chosen, Activity.Walking);
             }
         }
@@ -555,12 +555,12 @@ namespace Noir.Core.People
                 Consider(PlaceKind.Shop, Activity.Shopping, 25, 45);
                 Consider(PlaceKind.PostOffice, Activity.Shopping, 20, 18);
                 Consider(PlaceKind.Green, Activity.Walking, 40, 20);
-                Consider(PlaceKind.Allotments, Activity.OnTheAllotment, 90,
+                Consider(PlaceKind.Gardens, Activity.OnTheAllotment, 90,
                          who.StageIn(year) == LifeStage.Elder ? 45 : 22);
                 Consider(PlaceKind.VillageHall, Activity.Visiting, 100, (int)(18 * social));
 
                 if (from >= evening - 120)
-                    Consider(PlaceKind.Pub, Activity.AtThePub, 90 + rng.NextInt(60),
+                    Consider(PlaceKind.Tavern, Activity.AtThePub, 90 + rng.NextInt(60),
                              (int)(20 + 70 * social));
 
                 if (who.StageIn(year) == LifeStage.Elder)

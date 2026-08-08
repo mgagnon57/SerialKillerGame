@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Noir.Core.Contracts;
 
@@ -36,7 +36,7 @@ namespace Noir.Core.World
     ///   size 120 90
     ///   terrain field 0,0 120x28
     ///   road main 5 4,46 116,46
-    ///   place pub 52,38 9x7 "The Wheatsheaf"
+    ///   place tavern 52,38 9x7 "the Commercial Hotel"
     ///     door 56,44
     ///     hours 11:00-14:30
     ///     hours 17:00-23:00

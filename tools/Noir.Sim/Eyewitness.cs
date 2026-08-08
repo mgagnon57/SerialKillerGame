@@ -102,7 +102,7 @@ namespace Noir.Sim
                 // You can see a queue in a lit shop from the street, and you can see the bar of
                 // a pub through its window. Their house, the mill floor and a barn you cannot,
                 // and the watcher records only what those buildings do: the door, and the light.
-                seeInside[p] = place.HasACounter || place.Kind == PlaceKind.Pub;
+                seeInside[p] = place.HasACounter || place.Kind == PlaceKind.Tavern;
             }
 
             var logs = new ObservationLog[n];

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.Contracts;
@@ -354,7 +354,7 @@ namespace Noir.Unity
 
             switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
             {
-                case "pub":
+                case "tavern":
                     return Hanging(parent, f, "sign:pub", 1.45f, 0.95f, 1.00f, 2.25f, board);
 
                 case "shop":
@@ -371,7 +371,7 @@ namespace Noir.Unity
                 case "school":
                     return Fascia(parent, f, "nameboard:school", 3.0f, 0.60f, 2.30f, Materials3D.Stone);
 
-                case "surgery":
+                case "clinic":
                     return Fascia(parent, f, "fascia:surgery", 2.6f, 0.42f, 2.35f, board)
                          + Plate(parent, f, "plate:surgery", 0.62f, 0.45f, 1.55f, Brass);
 
@@ -414,7 +414,7 @@ namespace Noir.Unity
         {
             // The bracket's UNDERSIDE has to meet the top of the board, not its centre line. At
             // +0.10 with a 7 cm section the iron sat 6.5 cm clear of the board it was supposedly
-            // holding up, and from the pavement outside the Wheatsheaf you could see daylight
+            // holding up, and from the sidewalk outside the tavern you could see daylight
             // through the gap. Half the section plus a five-millimetre bite into the board, so
             // the two overlap rather than sharing a plane and shimmering along the join.
             Piece(parent, name + ":bracket", f.On(centreY + height * 0.5f + 0.03f, project * 0.5f),
@@ -462,7 +462,7 @@ namespace Noir.Unity
         {
             switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
             {
-                case "pub":
+                case "tavern":
                     return Materials3D.Scatter(place.Bounds.X, place.Bounds.Y, 4111) % 2 == 0
                         ? Paint("SignPubGreen", new Color32(0x1F, 0x3A, 0x2A, 0xFF), 0.22f)
                         : Paint("SignPubRed", new Color32(0x5E, 0x23, 0x20, 0xFF), 0.22f);
@@ -474,7 +474,7 @@ namespace Noir.Unity
                 // a coincidence anywhere in England.
                 case "post": return Materials3D.Postbox;
 
-                case "surgery":
+                case "clinic":
                     return Paint("SignSurgery", new Color32(0xE4, 0xE2, 0xD8, 0xFF), 0.30f);
 
                 case "garage":

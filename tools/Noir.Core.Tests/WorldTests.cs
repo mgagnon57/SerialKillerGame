@@ -46,7 +46,7 @@ size 20 12
 terrain field 0,0 20x3
 road main 3 1,6 18,6
 
-place pub 4,2 6x4 ""The Anchor""
+place tavern 4,2 6x4 ""The Anchor""
   door 6,5
   hours 11:00-14:30
   hours 17:30-23:00 mon-sat
@@ -80,7 +80,7 @@ place green 12,8 5x3 ""the Green""
         public void ParsesPlaceAttributes()
         {
             var pub = VillageParser.Parse(Sample).Places[0];
-            Assert.That(pub.Kind, Is.EqualTo(PlaceKind.Pub));
+            Assert.That(pub.Kind, Is.EqualTo(PlaceKind.Tavern));
             Assert.That(pub.Name, Is.EqualTo("The Anchor"));
             Assert.That(pub.Door, Is.EqualTo(new Tile(6, 5)));
             Assert.That(pub.JobSlots, Is.EqualTo(2));
@@ -124,14 +124,14 @@ place green 12,8 5x3 ""the Green""
         public void BuildingWithoutADoorIsRejected()
         {
             Assert.Throws<VillageParseException>(() =>
-                VillageParser.Parse("village X\nsize 20 20\nplace pub 2,2 5x5 \"P\"\n"));
+                VillageParser.Parse("village X\nsize 20 20\nplace tavern 2,2 5x5 \"P\"\n"));
         }
 
         [Test]
         public void PlaceOutsideTheMapIsRejected()
         {
             Assert.Throws<VillageParseException>(() =>
-                VillageParser.Parse("village X\nsize 10 10\nplace pub 8,8 5x5 \"P\"\n  door 9,9\n"));
+                VillageParser.Parse("village X\nsize 10 10\nplace tavern 8,8 5x5 \"P\"\n  door 9,9\n"));
         }
     }
 
@@ -144,7 +144,7 @@ place green 12,8 5x3 ""the Green""
 village B
 size 30 20
 road main 3 1,15 28,15
-place pub 4,4 7x6 ""P""
+place tavern 4,4 7x6 ""P""
   door 7,9
   human somewhere
 "));
@@ -409,12 +409,12 @@ place pub 4,4 7x6 ""P""
     [TestFixture]
     public class PlaceHoursTests
     {
-        private static Place Pub()
+        private static Place Tavern()
         {
             var layout = VillageParser.Parse(@"
 village H
 size 20 20
-place pub 2,2 6x5 ""P""
+place tavern 2,2 6x5 ""P""
   door 4,6
   hours 11:00-14:30
   hours 17:30-23:00
@@ -426,7 +426,7 @@ place pub 2,2 6x5 ""P""
         [Test]
         public void ClosedBetweenSittings()
         {
-            var p = Pub();
+            var p = Tavern();
             Assert.That(p.IsOpenAt(12 * 60, 0), Is.True);
             Assert.That(p.IsOpenAt(16 * 60, 0), Is.False, "closed in the afternoon");
             Assert.That(p.IsOpenAt(20 * 60, 0), Is.True);
@@ -436,7 +436,7 @@ place pub 2,2 6x5 ""P""
         [Test]
         public void MinutesUntilOpenCountsForward()
         {
-            var p = Pub();
+            var p = Tavern();
             Assert.That(p.MinutesUntilOpen(12 * 60, 0), Is.EqualTo(0), "already open");
             Assert.That(p.MinutesUntilOpen(16 * 60, 0), Is.EqualTo(90), "90 minutes to evening opening");
         }
@@ -607,8 +607,8 @@ place pub 2,2 6x5 ""P""
         {
             foreach (var kind in new[]
             {
-                PlaceKind.Pub, PlaceKind.Shop, PlaceKind.Church, PlaceKind.School,
-                PlaceKind.Surgery, PlaceKind.PostOffice, PlaceKind.Mill,
+                PlaceKind.Tavern, PlaceKind.Shop, PlaceKind.Church, PlaceKind.School,
+                PlaceKind.Clinic, PlaceKind.PostOffice, PlaceKind.Mill,
                 PlaceKind.Farm, PlaceKind.Garage, PlaceKind.VillageHall, PlaceKind.Playground
             })
                 Assert.That(_world.PlacesOfKind(kind).Count, Is.GreaterThan(0), $"no {kind} in the village");

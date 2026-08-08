@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Noir.Core.Contracts;
@@ -96,8 +96,8 @@ kind shed
         public void TwoKindsMayNotShareAWord()
         {
             var ex = Assert.Throws<PlaceKindTableException>(() => PlaceKindTable.Parse(
-                WithEveryEnumKind(Complete.Replace("words shed", "words shed pub"))));
-            Assert.That(ex.Message, Does.Contain("pub"));
+                WithEveryEnumKind(Complete.Replace("words shed", "words shed tavern"))));
+            Assert.That(ex.Message, Does.Contain("tavern"));
         }
 
         [Test]
@@ -123,7 +123,7 @@ kind shed
         [Test]
         public void RolesRunOutIntoTheLastOneNamed()
         {
-            var surgery = PlaceKindTable.Parse(TestContent.ReadRaw("kinds.txt")).Row(PlaceKind.Surgery);
+            var surgery = PlaceKindTable.Parse(TestContent.ReadRaw("kinds.txt")).Row(PlaceKind.Clinic);
 
             Assert.That(surgery.RoleAt(0), Is.EqualTo("doctor"));
             Assert.That(surgery.RoleAt(1), Is.EqualTo("nurse"));
@@ -211,10 +211,10 @@ kind shed
             var named = new HashSet<int>();
             foreach (PlaceKind k in Enum.GetValues(typeof(PlaceKind))) named.Add((int)k);
 
-            // THE THREE THAT ARE ACTUALLY ASKED FOR. Household exposes School, Church and Surgery
+            // THE THREE THAT ARE ACTUALLY ASKED FOR. Household exposes School, Church and Clinic
             // and DayPlanner asks for School twice; every one of those goes through the enum, so
             // every one of them must be a member with a row behind it.
-            foreach (var kind in new[] { PlaceKind.School, PlaceKind.Church, PlaceKind.Surgery })
+            foreach (var kind in new[] { PlaceKind.School, PlaceKind.Church, PlaceKind.Clinic })
             {
                 Assert.That(named.Contains((int)kind), Is.True);
                 Assert.That(table.Row(kind), Is.Not.Null, $"{kind} has no row");

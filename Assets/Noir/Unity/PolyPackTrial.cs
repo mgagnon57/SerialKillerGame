@@ -78,7 +78,7 @@ namespace Noir.Unity
                 if (place.Kind == PlaceKind.Green) { bounds = place.Bounds; return true; }
 
             foreach (var place in world.AllPlaces)
-                if (place.Kind == PlaceKind.Allotments) { bounds = place.Bounds; return true; }
+                if (place.Kind == PlaceKind.Gardens) { bounds = place.Bounds; return true; }
 
             bounds = default;
             return false;

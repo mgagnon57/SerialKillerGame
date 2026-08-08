@@ -268,7 +268,7 @@ namespace Noir.Bench
             {
                 double per = (b.MicrosPerTick - a.MicrosPerTick) * 1000.0 /
                              (fat.World.PlaceCount - lean.World.PlaceCount);
-                table.Note($"marginal cost per place per tick: {per:0.00} ns. Extra places are phone boxes:");
+                table.Note($"marginal cost per place per tick: {per:0.00} ns. Extra places are phone boothes:");
                 table.Note("no jobs, no counter, nobody ever goes to one, one tile each.");
 
                 if (a.SecondsPerTick.Noisy || b.SecondsPerTick.Noisy)

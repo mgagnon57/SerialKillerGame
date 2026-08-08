@@ -406,7 +406,7 @@ namespace Noir.Sim
                         + "foot in a dwelling that was not their own. Zero. \"Who would notice them "
                         + "gone and how fast\" therefore has the same answer for all of them, and the "
                         + "answer is nobody. FIX: DayPlanner.ChooseErrand offers Shop, PostOffice, "
-                        + "Green, Allotments, VillageHall, Pub, Churchyard and Playground. It does "
+                        + "Green, Gardens, VillageHall, Tavern, Churchyard and Playground. It does "
                         + "not offer a dwelling. Expect this number to move sharply — in either "
                         + "direction — the first time it does, and re-measure Content/watched.floor "
                         + "in that same commit rather than assuming the sign.");

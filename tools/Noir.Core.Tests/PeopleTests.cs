@@ -916,7 +916,7 @@ namespace Noir.Core.Tests
             var pf = new Pathfinder(Village.World.Grid);
             var path = new List<Tile>();
 
-            var pub = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Pub)[0]);
+            var pub = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Tavern)[0]);
             var shop = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Shop)[0]);
 
             Assert.That(pf.TryFindPath(pub.Door, shop.Door, path), Is.True);
@@ -1000,7 +1000,7 @@ namespace Noir.Core.Tests
         {
             var pf = new Pathfinder(Village.World.Grid);
             var path = new List<Tile>();
-            var door = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Pub)[0]).Door;
+            var door = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Tavern)[0]).Door;
 
             Assert.That(pf.TryFindPath(door, door, path), Is.True);
             Assert.That(path, Is.Empty, "a path to where you already are should have no steps");

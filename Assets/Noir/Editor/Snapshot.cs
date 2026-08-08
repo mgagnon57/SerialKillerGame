@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -319,7 +319,7 @@ namespace Noir.Editor
         /// percent each run would make every comparison between them worthless.
         ///
         /// Everything that is not a dwelling goes on its authored opening hours instead, which
-        /// is free and happens to be true: the Wheatsheaf is lit at nine and dark at eleven,
+        /// is free and happens to be true: the tavern is lit at nine and dark at eleven,
         /// the mill's late shift is still on at nine, and the farms are up before anyone.
         /// </summary>
         private static HashSet<int> LitPlaces(WorldModel world, float hour)

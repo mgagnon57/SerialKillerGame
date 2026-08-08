@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 #if UNITY_EDITOR
@@ -739,7 +739,7 @@ namespace Noir.Unity
 
             // What actually stands on a pavement, as against one bin every seventh cell. Each of
             // these is a role rather than a prefab, so the pack's own variants get used: there
-            // are five bins, four bollards and two phone boxes in here and a hand-written list
+            // are five bins, four bollards and two phone boothes in here and a hand-written list
             // would have picked one of each.
             var kerbside = new List<List<string>>
             {
@@ -803,7 +803,7 @@ namespace Noir.Unity
                 // THE COUNTRY BELONGS TO CityFarm. A farmyard is authored with path for its
                 // ground because it is bare and hard-standing, and this used to read that as
                 // "pavement" - so it laid city flagstones over the yard, then walked its kerb
-                // and hung street lamps, a phone box and a litter bin round a working farm.
+                // and hung street lamps, a phone booth and a litter bin round a working farm.
                 // Whoever owns a place dresses it; this one does not own these.
                 if (Owned(world, cx, cy)) continue;
 
@@ -888,7 +888,7 @@ namespace Noir.Unity
         /// intervals of a few metres, and at ten it reads as a road with an ornament on it. Lamps
         /// keep a fixed rhythm because street lighting is laid out by a highways department;
         /// everything else is rolled, so no two blocks carry the same run of hydrant, meter,
-        /// phone box and planter.
+        /// phone booth and planter.
         /// </summary>
         private static int Kerb(Transform parent, int cx, int cy, float vx, float vy,
                                 List<string> lamps, List<List<string>> kerbside,
@@ -1006,7 +1006,7 @@ namespace Noir.Unity
 
                 // A car park is hard-standing, and its ground is authored as path for exactly
                 // the same reason the farmyard's is. Without this the lots would be paved with
-                // city flagstones and then have street lamps, hydrants and a phone box hung
+                // city flagstones and then have street lamps, hydrants and a phone booth hung
                 // round their kerbs. See CityParking.
                 case "carpark":
                     return true;

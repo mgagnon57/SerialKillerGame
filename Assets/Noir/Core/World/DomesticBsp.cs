@@ -38,7 +38,7 @@ namespace Noir.Core.World
             var interior = new TileRect(exterior.X + 1, exterior.Y + 1, exterior.W - 2, exterior.H - 2);
             if (interior.W < MinSide || interior.H < MinSide)
             {
-                // A shed or a phone box: one room, no internal structure.
+                // A shed or a phone booth: one room, no internal structure.
                 if (interior.W > 0 && interior.H > 0)
                     result.Rooms.Add((interior, RoomKind.Living));
                 return result;

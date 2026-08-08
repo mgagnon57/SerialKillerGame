@@ -47,7 +47,7 @@
 # ============================================================================
 
 # ---- moving --------------------------------------------------------------
-# Movement beats activity. Somebody on the way to the pub is walking, not
+# Movement beats activity. Somebody on the way to the tavern is walking, not
 # drinking: at fifty metres the eye reads the gait and never the errand.
 #
 # THE `m/s` IS THE SPEED THE CLIP WAS ANIMATED AT, and it is what stops the feet
@@ -68,7 +68,7 @@
 # townsperson in four walking drunk at nine in the morning is the wrong town.
 moving          1.5m/s  Walking, Walking Male, Walking Female
 # Running is the child at the playground and NOBODY else. An adult jogging across
-# Northgate reads as fleeing, which is a story event rather than a commute, and
+# a small town reads as fleeing, which is a story event rather than a commute, and
 # this game should not say that by accident.
 hurrying        3.6m/s  Running
 
