@@ -115,6 +115,18 @@ namespace Noir.Unity
 
             // Last, so it can see everything already standing - including the terrace above.
             FillFromSurvey.Apply(layout);
+
+            // AND THEN NOTHING IS LEFT STANDING IN A ROAD. This runs after every other pass on
+            // purpose: FillFromSurvey refuses to RAISE a house in a road, but the fifty that were
+            // already in one came out of city.txt, authored against the 37 ruled roads that
+            // SurveyRoads replaced with the county's 66. The streets moved and the houses did not.
+            // Measured buildings are never moved - see the header of ClearOfRoads.
+            int cleared = ClearOfRoads.Apply(layout, out int stuck);
+            if (cleared > 0 || stuck > 0)
+                Debug.Log($"[survey] {cleared} buildings moved off a road corridor"
+                        + (stuck > 0 ? $", {stuck} could not be cleared and are STILL IN A ROAD" : "")
+                        + ".");
+
             SurveyReport.Write();
 
             return Finish(layout, seed, mapFile);

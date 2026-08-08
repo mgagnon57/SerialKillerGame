@@ -258,7 +258,10 @@ namespace Noir.Unity
         /// scatter of detail are honest about what the land is and are noise against the one
         /// question being asked, which is whether a centreline sits on its right of way.
         /// </summary>
-        public static bool FlatGroundColour = true;
+        /// TURNED OFF 2026-08-08. This is a survey instrument and it was left switched on, so
+        /// pressing Play showed a flat green sheet with line-art roads on it rather than the town.
+        /// It is the default a demo runs on. See RoadCentrelines below - the same fault.
+        public static bool FlatGroundColour = false;
 
         /// <summary>
         /// Draw each road as a thin line down its middle instead of laying real road tiles.
@@ -269,7 +272,11 @@ namespace Noir.Unity
         ///
         /// Turn it off to get the built streets back - see RoadCentrelines.
         /// </summary>
-        public static bool RoadsAsCentrelines = true;
+        /// TURNED OFF 2026-08-08, with FlatGroundColour. Between them these two were the reason
+        /// the game did not look like Rossville on Play: no paved streets, no ground texture, no
+        /// junction pieces. Neither had a key, a menu tick or a preference - the only way to find
+        /// them switched on was to read this file, which is why they stayed on for weeks.
+        public static bool RoadsAsCentrelines = false;
 
         private GameObject _village;
         private XRay _xray;

@@ -57,6 +57,23 @@ namespace Noir.Core.Tests
             return layout;
         }
 
+        /// <summary>
+        /// Rossville as the game builds it, as far as Core can go: city.txt's authored places
+        /// with the SURVEYED road network in place of the ruled one.
+        ///
+        /// That substitution is the whole point. SurveyRoads does exactly this at build time -
+        /// throws away city.txt's 37 ruled roads and puts the county's 66 measured ones in their
+        /// place - and it is the moment the streets move out from under houses that were authored
+        /// against the old lines.
+        /// </summary>
+        public static VillageLayout LayoutWithPlaces()
+        {
+            var layout = VillageParser.Parse(TestContent.Read("city.txt"));
+            layout.Roads.Clear();
+            foreach (var run in Layout().Roads) layout.Roads.Add(run);
+            return layout;
+        }
+
         /// <summary>Every measured footprint, as the bounding box SeatOnSurvey would seat.</summary>
         public static List<Footprint> Footprints()
         {
