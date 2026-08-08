@@ -80,13 +80,39 @@ namespace Noir.Editor
                     if (!string.IsNullOrEmpty(path)) models.Add(path);
                 }
 
-                // STILL A GAP, AND IT IS THE PEOPLE. The probe above builds what the CITY places;
-                // the 763 figures are placed by AgentMeshView from VillageHost, which needs a
-                // generated population and so is not built here. On 2026-08-07 a PlayMode run that
-                // forced the people layer up logged 1,390 "isReadable is false" errors against
-                // boy-*, girl-* and man-* meshes - which is very likely why nobody's legs move.
-                // Fixing it means giving this probe a population, or reading the figure prefabs
-                // directly. Logged rather than guessed at.
+                // AND THE PEOPLE, READ STRAIGHT OFF THEIR PREFABS.
+                //
+                // The probe above builds what the CITY places. The figures are placed by
+                // AgentMeshView from VillageHost, which needs a generated population, so they were
+                // never in it - and a PlayMode run that forced the people layer up logged 1,390
+                // "isReadable is false" errors against boy-*, girl-* and man-* meshes. Giving this
+                // probe a population would be the heavy way round; the prefabs are right there and
+                // the meshes they reference are the same assets either way.
+                //
+                // SkinnedMeshRenderer, not MeshFilter. A skinned mesh has no MeshFilter at all,
+                // which is the same omission this tool started with - see the note above.
+                int folk = 0;
+                foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { AgentBody.Folk }))
+                {
+                    string prefabPath = AssetDatabase.GUIDToAssetPath(guid);
+                    var figure = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                    if (figure == null) continue;
+                    folk++;
+
+                    foreach (var s in figure.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                    {
+                        if (s.sharedMesh == null) continue;
+                        string p = AssetDatabase.GetAssetPath(s.sharedMesh);
+                        if (!string.IsNullOrEmpty(p)) models.Add(p);
+                    }
+                    foreach (var f in figure.GetComponentsInChildren<MeshFilter>(true))
+                    {
+                        if (f.sharedMesh == null) continue;
+                        string p = AssetDatabase.GetAssetPath(f.sharedMesh);
+                        if (!string.IsNullOrEmpty(p)) models.Add(p);
+                    }
+                }
+                Debug.Log($"[readable] {folk} figure prefabs walked for their skinned meshes.");
 
                 Debug.Log($"[readable] the city places meshes from {models.Count} model assets.");
 

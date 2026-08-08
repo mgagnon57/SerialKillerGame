@@ -96,7 +96,14 @@ namespace Noir.Unity
         }
 
 #if UNITY_EDITOR
-        private const string Folk = "Assets/polyperfect/Poly Universal Pack/Prefabs/People";
+        /// <summary>
+        /// Where the figures live. PUBLIC so MeshReadable can walk the same folder rather than
+        /// keep a second copy of this path - the tool that makes their meshes readable and the
+        /// code that instantiates them must never disagree about where they are. It has to be
+        /// public rather than internal because MeshReadable is in Noir.Editor and this is in
+        /// Noir.Unity, and `internal` does not cross an assembly.
+        /// </summary>
+        public const string Folk = "Assets/polyperfect/Poly Universal Pack/Prefabs/People";
         private const string Controller = "Assets/Noir/Animations/Townsfolk.controller";
 
         /// <summary>

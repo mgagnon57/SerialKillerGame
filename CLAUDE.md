@@ -60,7 +60,7 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **366 pass, 2 fail, 368 total, ~2 min 10 s.** Measured 2026-08-07.
+> **387 pass, 2 fail, 389 total, ~2 min 20 s.** Measured 2026-08-07.
 > The two failures are `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` and
 > `TheTenthPercentileIsNotALock`. **They fail by design.** Anything else is a regression.
 
@@ -99,51 +99,33 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-07: 8 tests, 5 pass, 3 fail, ~2 min. Reproduced exactly twice**, down to
-> the player landing at `(1050.00, 3.84, -1200.00)` in both runs. It is deterministic now.
+> **BASELINE, 2026-08-07: 8 of 8 PASS, ~2 min.** The first time this suite has ever been green.
+> `[body] 1390 Animators in the scene`, and the layer preferences are the same after the run as
+> before it.
 >
-> **Passing (5):** `TheCityComesUpAndRuns`, `NoJunctionEverShowsGreenBothWays`,
-> `TrafficMovesAndStopsAtRedLights`, `ThePlayerCanStandInTheStreet`,
-> `WhyAreThePeopleNotAnimating`.
+> **All eight pass.** The three traffic faults are fixed at the root, not worked around:
+> phantom junctions that were never on their own roads, a test that measured a car against the
+> wrong road's centre line, and roads that END on other roads making no junction at all. The
+> "flaky" pair were never flaky - one was a collision mesh wound upside down, the other was a
+> test reading a layer preference another test had scribbled on.
 >
-> **Failing (3), all genuine faults in the traffic model** — not infrastructure, not flakiness:
-> `NoTwoVehiclesOccupyTheSameSpace` (two cars within 0.40 m on open road, 132 m from any
-> junction), `NoVehicleEverLeavesTheRoad` (a van 1.99 m past the asphalt),
-> `NoCarWaitsForeverAtTheHeadOfAClearQueue` (worst wait 105 s against a 37 s gate).
-> **That is the next work.**
+> **THERE WERE NEVER ANY FLAKY TESTS.** Two were called flaky in this very file, by me, and both
+> were real bugs with a persistent cause:
 >
-> **THERE WERE NO FLAKY TESTS.** Two were called flaky — by me, in this file — and both were one
-> bug: `CityCollision`'s ground mesh was wound to face DOWNWARDS, so the player dropped onto the
-> back of the floor. PhysX stops a `CharacterController` on a backface *sometimes*, which is what
-> intermittent looks like when nobody has measured it. Flaky is a diagnosis of last resort; spend
-> the twenty minutes first.
+> - `ThePlayerCanStandInTheStreet` — `CityCollision`'s ground mesh was wound to face DOWNWARDS, so
+>   the player dropped onto the back of the floor. PhysX stops a `CharacterController` on a
+>   backface *sometimes*, which is what intermittent looks like when nobody has measured it.
+> - `WhyAreThePeopleNotAnimating` — `Layers.Set` wrote `PlayerPrefs`, so `LayerProof`'s walk
+>   through every layer combination **permanently rewrote the editor's layer preferences**.
+>   Whatever combination a run ended on stuck. When it ended with People off, `VillageHost` never
+>   built `AgentMeshView` and this test failed with no error in the log at all.
 >
-> **The traffic now runs, and the score went DOWN because of it.** `Layers.Register(kind, root)`
-> ends in `root.SetActive(IsOn(kind))`, and an inactive GameObject gets no `Update()` — so
-> `noir.layer.Traffic = 0`, set once in the editor for a survey view and kept in PlayerPrefs, had
-> frozen all 160 vehicles in every run since. Signals and traffic are now registered by a
-> renderer-toggling callback instead, which is what the code always said the layer should do.
+> Flaky is a diagnosis of last resort. Both of these cost under an hour once somebody measured
+> instead of shrugging.
 >
-> `TrafficMovesAndStopsAtRedLights` passes for the first time. `NoTwoVehiclesOccupyTheSameSpace`
-> and `NoVehicleEverLeavesTheRoad` began FAILING — they had been passing **vacuously**, because
-> frozen cars cannot collide or leave the road. What they now report is real:
->
-> - two cars within **0.40 m**, 132 m from the nearest junction (grove × gilbert)
-> - a van **1.99 m past the asphalt**
-> - worst clear-queue wait **105 s**, down from 120 s but still far over the 37 s gate
->
-> Those are genuine faults in the traffic model, visible for the first time. Treat the lower score
-> as progress: four tests are now measuring a running simulation instead of a stopped one.
->
-> **FLAKY (2):** `ThePlayerCanStandInTheStreet` and `WhyAreThePeopleNotAnimating` swap between
-> pass and fail **on identical code**. Two runs of the same commit gave the opposite pair. The
-> player one fails as "fell through the world — ended at y=1.94 with the ground at 3.90", which is
-> a timing race on the collision shell, not a wrong number. **Do not treat either as a signal
-> until they are made deterministic.**
->
-> **Fixed to get here:** `BootScreen` was holding the clock — it sets `SpeedIndex = 0` and lifts
-> only after twelve straight sub-25 ms frames or 45 s, and a batch build's first frame alone takes
-> 16 s. Three failures were that one stopped clock reported three ways.
+> **Also fixed to get here:** `BootScreen` was holding the clock — it sets `SpeedIndex = 0` and
+> lifts only after twelve straight sub-25 ms frames or 45 s, and a batch build's first frame alone
+> takes 16 s. Three failures were that one stopped clock reported three ways.
 
 **There are 14 tests, not the 13 every document claims.** Six are diagnostics wearing a test's
 clothes — three of them call `Assert.Pass()`, and `Tour`/`FilmStrip`/`LayerProof` assert only that
@@ -160,13 +142,28 @@ Unity.exe -batchmode -quit -projectPath C:\SerialKillerGame ^
   -executeMethod Noir.Editor.MeshReadable.Enable -logFile <log>
 ```
 
-Measured 2026-08-07: **22 models needed it, 294 already had it.** Before that step the PlayMode
-log carried **3,503** "not Read/Write enabled" warnings, each with a full stack trace, and came to
-4 MB; after it, **zero**, and the log was 439 KB. It did not cure the hang — but it is the
-difference between a log you can read and one you cannot.
+Measured 2026-08-07: **79 models needed it, 316 already had it**, across 395 model assets — the
+city's tiles *and* the 79 figure prefabs, which were invisible to this tool until it learned to
+walk `SkinnedMeshRenderer` as well as `MeshFilter` (a skinned mesh has no `MeshFilter` at all).
+Before it ran, the PlayMode log carried **3,503** city "not Read/Write enabled" warnings and, once
+the people were built, **1,390** more against `boy-*`, `girl-*` and `man-*`. After it: **zero**.
 
 Also measured, and worth knowing because a doc claims otherwise: the town builds in
 **`[build] 1941 ms`**, not the two minutes quoted elsewhere.
+
+**5. Build a player.** The only check that compiles the runtime assemblies WITHOUT `UNITY_EDITOR`.
+
+```
+Unity.exe -batchmode -quit -projectPath C:\SerialKillerGame ^
+  -executeMethod Noir.Editor.BuildPlayer.Windows64 -logFile <log>
+```
+
+Ships `Content/` beside the exe (holding back the gitignored, name-bearing files), forces every
+`Shader.Find` name into Always Included, and exits non-zero on failure. **Do this weekly.** The
+first one ever attempted, on 2026-08-07, took three tries: it would not compile, then loaded no
+content, then drew nothing — each failure invisible to the editor, to the 389-test suite and to
+Play. It now boots the town and starts the clock:
+**`[boot] ready after 5.4s — 12 straight frames under 25 ms. Clock running.`**
 
 **4. Look at it.** The tests and `MapAudit` cannot see ugly. Render a still and actually view it.
 

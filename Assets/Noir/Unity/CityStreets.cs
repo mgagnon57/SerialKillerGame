@@ -268,7 +268,41 @@ namespace Noir.Unity
                     + $"{LanesEachWay(klass)} lane(s) each way.");
             return _asphalt[klass] = half;
 #else
-            return RoadClasses.CorridorWidth(klass) / 2f - 2f;
+            // MEASURED, NOT GUESSED - and the guess was badly wrong.
+            //
+            // Outside the editor there is no AssetDatabase to measure the tile with, so this
+            // returned `corridor / 2 - 2`, described in the editor branch above as "a fallback, if
+            // the mesh cannot be read". In a player it is not a fallback, it is ALWAYS the answer,
+            // and it does not agree with the measurement:
+            //
+            //     class      corridor   guessed half   MEASURED half
+            //     Street         10 m        3.0 m         3.0 m     ok
+            //     Alley           4 m        0.0 m         3.55 m    zero asphalt
+            //     Mainroad       30 m       13.0 m         6.0 m     more than double
+            //
+            // Zero is the bad one: LaneOffset multiplies by it, so every lane on an alley collapses
+            // onto the centre line and VergeOffset puts the pavement in the middle of the road.
+            // Nobody had ever seen it because nobody had ever built a player.
+            //
+            // These are the numbers the editor measures off the real tiles, logged by the branch
+            // above as "[streets] Street: 6.0m of asphalt in a 10m corridor". They are constants
+            // here rather than a formula because they are measurements of specific art; if the
+            // road kit changes, run in the editor, read the [streets] lines, and update these.
+            switch (klass)
+            {
+                case RoadClass.Street: return 3.0f;
+                case RoadClass.Alley:  return 3.55f;
+                default:
+                    // Not measured on this map - Rossville has no freeway, main road or track in
+                    // Content/roads.txt, so no [streets] line has ever been logged for them. The
+                    // old formula stands, and says so, rather than inventing a number that looks
+                    // authoritative.
+                    Debug.LogWarning($"[streets] no measured asphalt width for {klass} in a player "
+                                   + "build - falling back to corridor/2-2, which is a guess. "
+                                   + "Run in the editor, read the [streets] line, and put the "
+                                   + "measurement in CityStreets.Asphalt.");
+                    return RoadClasses.CorridorWidth(klass) / 2f - 2f;
+            }
 #endif
         }
 

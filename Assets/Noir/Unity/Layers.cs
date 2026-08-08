@@ -284,8 +284,31 @@ namespace Noir.Unity
         public static void Set(Kind kind, bool on)
         {
             _on[kind] = on;
-            PlayerPrefs.SetInt(KeyPrefix + kind, on ? 1 : 0);
-            PlayerPrefs.Save();
+
+            // REMEMBERED FOR A PERSON, AND THERE IS NOBODY HERE IN BATCH MODE.
+            //
+            // These switches are a UI preference: which layers the owner last chose to look at.
+            // Persisting them is right when a person flicked the switch and wrong when a TEST did,
+            // and a test does - LayerProof walks every layer combination to photograph them, and
+            // each step went through here and rewrote the preference. Whatever combination the run
+            // happened to end on was then what the editor came up with next time.
+            //
+            // That is not hypothetical and it is not harmless. On 2026-08-07 a diagnostic run left
+            // `noir.layer.People = 0`, so VillageHost skipped building AgentMeshView entirely, and
+            // WhyAreThePeopleNotAnimating failed with "no AgentMeshView - are the people drawn?"
+            // and "[body] 0 Animators in the scene". No exception, nothing in the log, and it
+            // passed again whenever some other run happened to leave the switch on. It was written
+            // down in this project's own notes as a FLAKY TEST. It was a test reading a preference
+            // another test had scribbled on.
+            //
+            // Same rule as the audio and the boot curtain: batch mode has no person whose
+            // preferences matter. The switch still takes effect for this run; it just does not
+            // outlive it.
+            if (!Application.isBatchMode)
+            {
+                PlayerPrefs.SetInt(KeyPrefix + kind, on ? 1 : 0);
+                PlayerPrefs.Save();
+            }
 
             // Built the first time it is asked for, not at startup - see RegisterLazy. Must come
             // after _on is set, because Register activates the new root from it.
