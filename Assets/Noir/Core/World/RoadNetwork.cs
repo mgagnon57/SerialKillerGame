@@ -308,10 +308,55 @@ namespace Noir.Core.World
     }
 
     /// <summary>Where two roads cross. The place a signal goes and a car has to wait.</summary>
+    /// <summary>
+    /// One road arriving at a junction, and how far along itself it is when it gets there.
+    ///
+    /// A junction was a PAIR - one north-south road and one east-west one - which cannot describe
+    /// the two things this town actually contains. Where Maple runs into Park, or 3550north into
+    /// Attica, two roads of the SAME axis meet at a shared point and there is no pair to make. And
+    /// where two crossings fall closer together than their own reach, they are one piece of tarmac
+    /// with three or four roads arriving at it, not two junctions that happen to be near.
+    ///
+    /// It has a constructor, which the first draft of this did not - readonly fields with no
+    /// constructor can never be assigned, so the whole struct would have been silently zero.
+    /// </summary>
+    public readonly struct Arm
+    {
+        /// <summary>The road arriving.</summary>
+        public readonly RoadLine Road;
+
+        /// <summary>How far along that road the junction falls. What LaneGraph cuts lanes at.</summary>
+        public readonly float S;
+
+        /// <summary>The way that road is heading through the junction.</summary>
+        public readonly Vec2 Tangent;
+
+        public Arm(RoadLine road, float s, Vec2 tangent)
+        {
+            Road = road;
+            S = s;
+            Tangent = tangent;
+        }
+
+        public override string ToString() => $"{Road?.Name ?? "?"}@{S:0.#}";
+    }
+
     public readonly struct Junction
     {
         /// <summary>The centre of the crossing, in continuous village coordinates.</summary>
         public readonly float X, Y;
+
+        /// <summary>
+        /// Every road that arrives here, in the order they were found.
+        ///
+        /// TWO for an ordinary crossroads, and that is what <see cref="NorthSouth"/> and
+        /// <see cref="EastWest"/> report - they are kept so the nine files that read them keep
+        /// working, and they are the first north-south and first east-west arm respectively.
+        ///
+        /// More than two once coincident crossings are merged; exactly two of the SAME axis where
+        /// one road runs into another head-on, which is the case that had no junction at all.
+        /// </summary>
+        public readonly Arm[] Arms;
 
         public readonly RoadLine NorthSouth, EastWest;
 
@@ -343,6 +388,50 @@ namespace Noir.Core.World
             Y = y;
             TangentNorthSouth = ns.Path.TangentAt(sNs);
             TangentEastWest = ew.Path.TangentAt(sEw);
+            Arms = new[]
+            {
+                new Arm(ns, sNs, TangentNorthSouth),
+                new Arm(ew, sEw, TangentEastWest),
+            };
+        }
+
+        /// <summary>
+        /// A junction built from its arms - three or four roads at one piece of tarmac, or two of
+        /// the same axis meeting head-on.
+        ///
+        /// `NorthSouth` and `EastWest` still answer, because nine files ask them and a signal head
+        /// still has to face somewhere. They report the first arm of each axis; where every arm
+        /// shares an axis the second arm answers for the other, so the pair is never half null and
+        /// nothing downstream has to learn about arms to keep working.
+        /// </summary>
+        public Junction(Arm[] arms, float x, float y)
+        {
+            Arms = arms ?? Array.Empty<Arm>();
+            X = x;
+            Y = y;
+
+            Arm ns = default, ew = default;
+            bool haveNs = false, haveEw = false;
+            foreach (var arm in Arms)
+            {
+                if (arm.Road == null) continue;
+                if (arm.Road.IsNorthSouth && !haveNs) { ns = arm; haveNs = true; }
+                else if (!arm.Road.IsNorthSouth && !haveEw) { ew = arm; haveEw = true; }
+            }
+
+            // SAME-AXIS JUNCTIONS ARE THE WHOLE POINT, so one of the two may be missing. Fill it
+            // from the other arm rather than leaving a null: every consumer of this pair predates
+            // arms and would throw. A two-arm same-axis node then reports both halves of the same
+            // straight road, which is exactly what it is.
+            if (!haveNs && Arms.Length > 0) ns = Arms[Arms.Length > 1 ? 1 : 0];
+            if (!haveEw && Arms.Length > 0) ew = Arms[0];
+
+            NorthSouth = ns.Road;
+            EastWest = ew.Road;
+            SNorthSouth = ns.S;
+            SEastWest = ew.S;
+            TangentNorthSouth = ns.Tangent;
+            TangentEastWest = ew.Tangent;
         }
 
         /// <summary>
@@ -354,8 +443,26 @@ namespace Noir.Core.World
         /// it is deliberately - Phase A ships no oblique junction, and widening the reach here
         /// would move every existing junction's lane cuts for no present gain.
         /// </summary>
-        public float Reach => NorthSouth.HalfWidth > EastWest.HalfWidth
-            ? NorthSouth.HalfWidth : EastWest.HalfWidth;
+        public float Reach
+        {
+            get
+            {
+                // THE WIDEST ARM, not the wider of the two principal ones. A merged node may have
+                // four roads at it and the widest may be neither of the pair that `NorthSouth` and
+                // `EastWest` happen to report - under-reporting the reach there would let the
+                // clusterer leave two nodes overlapping, which is the exact fault it exists to
+                // remove. Falls back to the pair when there are no arms, so a default-constructed
+                // Junction still answers.
+                float widest = 0f;
+                if (Arms != null)
+                    foreach (var arm in Arms)
+                        if (arm.Road != null && arm.Road.HalfWidth > widest) widest = arm.Road.HalfWidth;
+
+                if (widest > 0f) return widest;
+                return NorthSouth.HalfWidth > EastWest.HalfWidth
+                    ? NorthSouth.HalfWidth : EastWest.HalfWidth;
+            }
+        }
     }
 
     /// <summary>
@@ -408,7 +515,139 @@ namespace Noir.Core.World
                         crossings.Add(new Junction(ns, ew, hit.SA, hit.SB, hit.X, hit.Y));
                 }
             }
-            Junctions = crossings;
+            Junctions = Cluster(crossings);
+        }
+
+        /// <summary>
+        /// Fold crossings that are closer together than their own reach into single junctions.
+        ///
+        /// THIS IS WHAT STOPS A LANE BEING DROPPED. `LaneGraph` cuts a lane at every junction and
+        /// keeps the piece between two cuts - and when two junctions are nearer than
+        /// `reachA + reachB`, that piece has no length left, so the lane arrives somewhere with no
+        /// way out. Every car that reaches it stops there for the rest of the run and stands its
+        /// whole queue behind it. `NoLaneArrivesAtAJunctionItCannotLeave` catches it, which is how
+        /// the alley mouths were caught trying to land before this.
+        ///
+        /// THE RADIUS IS THE SUM OF THE TWO REACHES, NOT THE WIDER HALF-WIDTH. That correction is
+        /// load-bearing: benton x summit sit 5.46 m apart against a 5.0 m half-width, so the
+        /// half-width rule leaves exactly the pair it was written for unmerged. The sum is also
+        /// the quantity LaneGraph actually fails on, so the merge condition and the failure
+        /// condition are now the same arithmetic rather than two numbers that have to be kept in
+        /// step by hand.
+        ///
+        /// The merged centre is the mean of the cluster, which keeps every arm within a metre of
+        /// the node on this map - `EveryJunctionLandsOnBothOfItsOwnRoads` is what would say
+        /// otherwise.
+        /// </summary>
+        /// <summary>
+        /// How far a merged junction may sit from a road it claims to join, in metres.
+        ///
+        /// `EveryJunctionLandsOnBothOfItsOwnRoads` is the test that enforces this, and it is the
+        /// reason the merge is refused rather than forced: a node that is on none of its own
+        /// roads is worse than two nodes that are each on theirs.
+        /// </summary>
+        private const float OnItsRoad = 1.0f;
+
+        private static List<Junction> Cluster(List<Junction> found)
+        {
+            var taken = new bool[found.Count];
+            var merged = new List<Junction>(found.Count);
+
+            for (int i = 0; i < found.Count; i++)
+            {
+                if (taken[i]) continue;
+
+                var group = new List<int> { i };
+                taken[i] = true;
+
+                // Grown transitively: A near B and B near C is one junction, not two overlapping
+                // pairs. Re-scanning after each addition is what makes it a cluster rather than a
+                // set of pairs, and the counts here are small enough that it costs nothing.
+                for (bool grew = true; grew; )
+                {
+                    grew = false;
+                    for (int j = 0; j < found.Count; j++)
+                    {
+                        if (taken[j]) continue;
+                        foreach (int k in group)
+                        {
+                            float dx = found[j].X - found[k].X, dy = found[j].Y - found[k].Y;
+                            float reach = found[j].Reach + found[k].Reach;
+                            if (dx * dx + dy * dy >= reach * reach) continue;
+
+                            group.Add(j);
+                            taken[j] = true;
+                            grew = true;
+                            break;
+                        }
+                        if (grew) break;
+                    }
+                }
+
+                if (group.Count == 1) { merged.Add(found[i]); continue; }
+
+                // AN S-BEND CROSSING THE SAME ROAD TWICE IS TWO JUNCTIONS, NOT ONE. If every
+                // crossing in this cluster joins the identical pair of roads, they are the same
+                // two roads meeting twice - which `TwoRoadsMayCrossMoreThanOnce` exists to
+                // protect - and folding them together deletes a real crossing rather than
+                // tidying a duplicate.
+                bool samePair = true;
+                for (int g = 1; g < group.Count && samePair; g++)
+                {
+                    var a = found[group[0]];
+                    var b = found[group[g]];
+                    samePair = (ReferenceEquals(a.NorthSouth, b.NorthSouth)
+                                && ReferenceEquals(a.EastWest, b.EastWest))
+                            || (ReferenceEquals(a.NorthSouth, b.EastWest)
+                                && ReferenceEquals(a.EastWest, b.NorthSouth));
+                }
+                if (samePair)
+                {
+                    foreach (int k in group) merged.Add(found[k]);
+                    continue;
+                }
+
+                float x = 0f, y = 0f;
+                var arms = new List<Arm>();
+                foreach (int k in group)
+                {
+                    x += found[k].X;
+                    y += found[k].Y;
+                    foreach (var arm in found[k].Arms)
+                    {
+                        bool already = false;
+                        foreach (var have in arms)
+                            if (ReferenceEquals(have.Road, arm.Road)) { already = true; break; }
+                        if (!already) arms.Add(arm);
+                    }
+                }
+                x /= group.Count;
+                y /= group.Count;
+
+                // AND THE MERGED NODE HAS TO SIT ON EVERY ROAD IT CLAIMS TO JOIN. The mean of a
+                // cluster is not on any of them in general: summit x benton came out 2.7 m off
+                // both, and `EveryJunctionLandsOnBothOfItsOwnRoads` says so. Where the mean
+                // cannot serve all the arms, the honest answer is that these were not one piece
+                // of tarmac after all - so they are left as they were found rather than moved to
+                // a point that is on nothing.
+                bool onEveryRoad = true;
+                foreach (var arm in arms)
+                {
+                    if (arm.Road?.Path == null) continue;
+                    var at = arm.Road.Path.PointAt(arm.S);
+                    float ax = at.X - x, ay = at.Y - y;
+                    if (ax * ax + ay * ay > OnItsRoad * OnItsRoad) { onEveryRoad = false; break; }
+                }
+                if (!onEveryRoad)
+                {
+                    foreach (int k in group) merged.Add(found[k]);
+                    continue;
+                }
+
+                merged.Add(new Junction(arms.ToArray(), x, y));
+            }
+
+            return merged;
         }
 
         /// <summary>The road covering this point, or null. The widest wins where two overlap.</summary>
