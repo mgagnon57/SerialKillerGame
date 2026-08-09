@@ -138,8 +138,25 @@ is to judge it in one look.
   > **And I misread the result before there was a camera that could show it** — see W1's own gate
   > below. The roofs are three-tab asphalt with visible tabs and courses in `roof-close.png`.
 - **(B)** `ROOF-3`, the keying change — public signature, two callers.
-- **(C)** `ROOF-4` + `UVX-A1` + `ROOF-13` in `RoofBuilder.cs`. A1 **takes the gable triangles away
-  from** ROOF-4's rotation, so landing them separately means rotating UVs A1 then deletes.
+- **(C)** ✅ **ROOF-4 and UVX-A1 DONE 2026-08-09** (`ROOF-13` still open). A1 **takes the gable
+  triangles away from** ROOF-4's rotation, so landing them separately means rotating UVs A1 then
+  deletes — they went in one commit.
+  > **A1 turned out to cover A2 and A3 as well.** `Unweld` already gives every triangle its own
+  > three vertices and UVs, so A1 is a *remap*, not a split: `WallsInTheirOwnPlane` walks the wall
+  > submesh and maps each triangle by its own normal — drop the axis it faces, keep the other two.
+  > The church tower and bell-cote are boxes with the identical fault, so one rule serves all
+  > three instead of three special cases that must agree about winding forever. **Cross A2 and A3
+  > off W2.**
+  >
+  > `Roofs: 651 buildings, 196,362 vertices` — **unchanged**, the gate this wave sets itself. Both
+  > changes rewrite UV values and neither touches the vertex list.
+  >
+  > **⚠ TWO THINGS NOT DONE, recorded rather than glossed.** The **hip ends are still
+  > cross-grained**: one planar projection per roof can serve the two main slopes or the two hip
+  > ends, not both, and the rotation picks the main slopes. The proper fix is per-face mapping
+  > along each fall line — the same shape of change `WallsInTheirOwnPlane` just made for walls.
+  > And **the gable remap has not been photographed**: the house in `roof-close.png` is hipped, so
+  > no gable is in frame and no committed camera points at a gabled building or at the church.
 - **(D)** `SurfaceTextures.cs` opened **once** for ROOF-2 plus CW-4/5/6 and TEX-9. That file is hot.
 - **(E)** the small material fixes and TEX-4.
 - **(F)** `ROOF-6` + `MS-6`, then **one** `dotnet run --project tools/Noir.Sim -- tiles`. That command
