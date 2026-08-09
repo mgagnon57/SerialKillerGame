@@ -417,6 +417,41 @@ having pushed the bug fix a day earlier.
 
 ---
 
+### W4 — Both hub files, rewritten once, one PlayMode run — **MOSTLY DONE 2026-08-08**
+
+> **Green on the single run, as designed.** PlayMode **14 of 14** (the 15th is the traffic-cost
+> aspiration, correctly skipped), Core still **439**, and `TheGapToTheRuleIsReported` printed
+> **0.89 : 1** and **0.33 : 1** identically — nothing in the wave moved Core, which is what the
+> gate was there to prove.
+>
+> **All three census checks against the saved baselines passed:**
+>
+> ```
+>   Sad Idle=      baseline 6  ->  0     (gone, exactly as predicted)
+>   Running=       baseline 0  ->  0     (still absent)
+>   out of town    baseline 0  ->  224   (near 200, as predicted)
+> ```
+>
+> `Sad Idle` disappearing is the proof ROW-5 works: it lives only in the `default` row, which was
+> reached only by the away-from-town people the census should never have been counting.
+>
+> **GATE-3's answer is the opposite of the fear, and it is good news.** `SKELETONS: of 24 rigged
+> figures watched for a second, 24 moved a hip bone, 0 did not.` The town is NOT T-posing. The
+> clip-advance line that read "1 of 40", "0 of 40" and "40 of 0" across three passing runs was a
+> broken instrument, not a frozen crowd. Landed as a log, as instructed; the assert is W5's.
+>
+> **GATE-8 was done differently from the plan, deliberately.** The plan put part two in the test
+> assembly behind `if (!Application.isBatchMode) return;`. It is fixed in `Layers.IsOn` instead —
+> there is then no `[RuntimeInitializeOnLoadMethod]` that can mis-fire at all, and the hazard the
+> correction was written to contain (Play once, lose your trees permanently) cannot arise. The
+> suite's own opt-out from Trees/Farm/Powerlines DOES live in `CityUnderTest` behind that guard,
+> because that one genuinely is a test-assembly concern.
+>
+> **STILL OPEN IN THIS WAVE — not attempted, not silently dropped:** RIG-2 (per-figure stride
+> term), RIG-10 (silent Read/Write early-return), RIG-11 (`MeshReadable` walking 79 rather than
+> the 25 cast), GATE-6 (three dead hourly censuses), GATE-7 (`LayerProof` teardown), SIM-8 (the
+> bag on the hand bone). Fifteen of the twenty landed.
+
 ### W4 — Both hub files, rewritten once, one PlayMode run
 
 Twenty items, but only **four files**. Five clusters independently want to edit `Drive` and four want

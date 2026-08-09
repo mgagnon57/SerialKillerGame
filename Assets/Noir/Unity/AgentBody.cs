@@ -162,9 +162,23 @@ namespace Noir.Unity
                 if (b.size.y > 0.01f)
                 {
                     float tall = look.Height / b.size.y;
-                    // Breadth is a touch of width without making anybody a cylinder.
-                    float wide = tall * Mathf.Lerp(0.94f, 1.08f, Mathf.InverseLerp(0.9f, 1.18f, look.Breadth));
-                    go.transform.localScale = new Vector3(wide, tall, wide);
+
+                    // UNIFORM, AND THE WIDTH VARIATION IS DELIBERATELY GONE.
+                    //
+                    // This was `new Vector3(wide, tall, wide)` with X and Z off Y by -6%/+8%.
+                    // Non-uniform scale above a SKINNED hierarchy shears: bones rotate inside it,
+                    // and a limb rotating under anisotropic scale changes thickness as it swings,
+                    // so a short wide person gets forearms the wrong width for their length. It
+                    // reads as a rendering fault from twenty feet; the ±7% silhouette it bought
+                    // reads as nothing at all at that distance. `AgentFigure` already refuses to
+                    // do this to the primitives and says so.
+                    //
+                    // NOT A DETERMINISM CHANGE. `look.Breadth` is still hashed per citizen and is
+                    // still used by the primitive figures, so no seed reproduces a different
+                    // village - the rigged people simply stop being sheared by it. Build variety
+                    // comes from 25 cast models and the per-citizen UV shift, which is where it
+                    // was always doing the real work. Owner's decision, 2026-08-08.
+                    go.transform.localScale = new Vector3(tall, tall, tall);
                 }
             }
 
@@ -186,7 +200,15 @@ namespace Noir.Unity
             var animator = go.GetComponentInChildren<Animator>();
             if (animator == null) animator = go.AddComponent<Animator>();
 
-            _controller ??= AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Controller);
+            // `if (== null)`, NOT `??=`. Unity's fake null is the trap: a destroyed UnityEngine
+            // .Object compares equal to null through its overloaded operator, but it is NOT a null
+            // reference, and `??=` / `?.` / `??` are compiled to a reference check that the
+            // overload never gets to see. So after a domain reload or an asset reimport this
+            // would keep a dead controller forever and every figure would silently lose its
+            // animation - while the field reads as "not null" to the null-coalescing operator and
+            // as "null" to everything else in the file.
+            if (_controller == null)
+                _controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Controller);
             if (_controller != null) animator.runtimeAnimatorController = _controller;
 
             // NO AVATAR MEANS NO RETARGETING, AND IT FAILS SILENTLY. A humanoid clip played
@@ -208,6 +230,17 @@ namespace Noir.Unity
             // advanced their clip by a single frame. CullUpdateTransforms keeps the state machine
             // running and only skips writing the bones, which is the saving actually wanted.
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+
+            // THE SIM RUNS UNSCALED AND SO MUST THE LEGS.
+            //
+            // `Simulation` steps on `Time.unscaledDeltaTime` deliberately - how fast a day passes
+            // is a property of the game, not of Unity, and CLAUDE.md says so. The animator was on
+            // the default `Normal`, which is scaled. So the moment anything touched `timeScale`
+            // the people's legs and the people's POSITIONS ran on different clocks, and the walk
+            // stopped matching the ground under it - which is the same skating fault the pace
+            // ratio exists to remove, arriving by a different door. The PlayMode suite sets
+            // timeScale to 8, so every animation measurement ever taken here was taken through it.
+            animator.updateMode = AnimatorUpdateMode.UnscaledTime;
 
             body.Animator = animator;
             return body;

@@ -25,6 +25,31 @@ namespace Noir.PlayTests
     /// </summary>
     public static class CityUnderTest
     {
+        /// <summary>
+        /// The three layers this suite does not need, said out loud in its own file.
+        ///
+        /// `Layers.IsOn` gives batch mode the compiled default now - everything on - instead of
+        /// whatever the owner last toggled, which used to decide silently what a headless test
+        /// measured. Everything on means 12,804 trees and 17,405 farm pieces built for every run,
+        /// and nothing in this assembly looks at any of them. So the suite opts out HERE, where
+        /// the opt-out is readable, rather than by depending on a preference nobody can see.
+        ///
+        /// THE BATCH GUARD IS LOAD-BEARING, NOT A TIDINESS. `Noir.PlayTests.asmdef` carries
+        /// `defineConstraints ['UNITY_INCLUDE_TESTS']` and NO `excludePlatforms`, so this fires on
+        /// every entry into Play - not only under the test runner. Without the first line the
+        /// owner presses Play one afternoon and permanently loses his trees, his farm and his
+        /// power lines, because `Layers.Set` writes PlayerPrefs when a person is present.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void DrawWhatTheSuiteActuallyLooksAt()
+        {
+            if (!Application.isBatchMode) return;
+
+            Layers.Set(Layers.Kind.Trees, false);
+            Layers.Set(Layers.Kind.Farm, false);
+            Layers.Set(Layers.Kind.Powerlines, false);
+        }
+
         /// <summary>Long enough to build the whole city, short enough to fail rather than hang.</summary>
         private const int BuildFrames = 4000;
 

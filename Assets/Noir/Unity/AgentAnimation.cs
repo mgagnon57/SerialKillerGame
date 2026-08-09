@@ -89,7 +89,11 @@ namespace Noir.Unity
         }
 
         /// <summary>Read the table again. For the editor checks, which change the file.</summary>
-        public static void Reload() => _rows = null;
+        public static void Reload()
+        {
+            _rows = null;
+            _missing.Clear();       // so a name that is still wrong after a rebuild says so again
+        }
 
         /// <summary>
         /// The clip this person should play, or null for "animate nothing".
@@ -163,28 +167,83 @@ namespace Noir.Unity
         {
             if (animator == null || animator.runtimeAnimatorController == null) return;
 
+            // ONE Resolve, NOT TWO. `ClipFor` resolves the row again internally, so every figure
+            // paid for the lookup and the `doing.ToString().ToLowerInvariant()` allocation twice
+            // per frame - 1,385 people times two strings times sixty frames, for one answer.
             string row = Resolve(doing, moving, hurrying);
-            string clip = ClipFor(doing, moving, hurrying, who);
-            if (string.IsNullOrEmpty(clip)) return;
+            string clip = PickFor(row, who);
 
             // THE CURE FOR SLIDING FEET, and it is arithmetic rather than an asset. A walk cycle
             // is animated at one speed; the simulation moves people at another, and at 1x the gap
             // between the two IS the skate. Playing the clip at the ratio closes it exactly.
             //
-            // Set before the early return below, because the state does not change while somebody
-            // walks the length of a street and their pace does.
+            // ABOVE THE EMPTY-ROW RETURN, WHICH IS WHERE IT WAS NOT. A row that names nothing -
+            // `asleep` - used to return before this line, leaving the animator running at whatever
+            // CLAMPED ratio the person's last walk had set. So somebody who went to bed mid-stride
+            // kept their walk speed forever, and it was the clamped one at that.
             float made = PaceOf(row);
-            animator.speed = made > 0f && pace >= 0f
-                ? Mathf.Min(pace / made, Fastest)
-                : 1f;
+            float wanted = made > 0f && pace >= 0f ? Mathf.Min(pace / made, Fastest) : 1f;
+
+            if (string.IsNullOrEmpty(clip)) { animator.speed = wanted; return; }
 
             int state = Animator.StringToHash(clip);
-            if (!animator.HasState(0, state)) return;
+
+            // FREEZE, DO NOT TREADMILL - AND THIS IS THE WHOLE DOTTED-CLIP FAULT.
+            //
+            // The speed write used to happen ABOVE this check, so a clip whose state does not
+            // exist left the animator running the state it was already in, at walking speed, and
+            // returned in silence. A person standing at a door played the walk cycle on the spot.
+            // Speed 0 holds the pose instead, which is visibly a person standing still rather
+            // than a person jogging nowhere - and it is the honest thing to show when the game
+            // does not have the clip it wanted.
+            if (!animator.HasState(0, state))
+            {
+                animator.speed = 0f;
+                Missing(clip);
+                return;
+            }
+
+            animator.speed = wanted;
 
             var now = animator.GetCurrentAnimatorStateInfo(0);
             if (now.shortNameHash == state) return;          // already there; do not restart it
 
-            animator.CrossFadeInFixedTime(state, 0.25f);
+            // WHERE IN THE CYCLE THEY START, so a street is not a chorus line. Two people given
+            // the same idle on the same frame otherwise breathe in perfect unison, which reads as
+            // machinery. Hashed off the citizen rather than rolled, so the same person always
+            // enters the same clip at the same point and a seed still reproduces the village.
+            float offset = who == 0 ? 0f : (Mix(who) % 1000UL) / 1000f;
+
+            animator.CrossFadeInFixedTime(state, 0.25f, 0, offset);
         }
+
+        /// <summary>The clip for an already-resolved row. See <see cref="ClipFor"/>.</summary>
+        private static string PickFor(string row, ulong who)
+        {
+            var clips = Pick(row);
+            if (clips == null || clips.Length == 0) return null;
+            if (clips.Length == 1) return clips[0];
+            return clips[(int)(Mix(who) % (ulong)clips.Length)];
+        }
+
+        /// <summary>
+        /// Names a clip with no state, once, and never again until the table is reloaded.
+        ///
+        /// Once because this is called per figure per frame: a missing state would otherwise print
+        /// eighty thousand identical lines a second and take the editor with it. The set is
+        /// cleared by <see cref="Reload"/>, so fixing the table and rebuilding says it again if it
+        /// is still wrong.
+        /// </summary>
+        private static void Missing(string clip)
+        {
+            if (_missing.Contains(clip)) return;
+            _missing.Add(clip);
+            Debug.LogWarning($"[anim] no state named '{clip}' in the controller, so everybody who "
+                           + "wants it is frozen. Rebuild with Noir/Build The Townsfolk Animator, "
+                           + "and check the name has no period in it.");
+        }
+
+        private static readonly HashSet<string> _missing =
+            new HashSet<string>(System.StringComparer.Ordinal);
     }
 }

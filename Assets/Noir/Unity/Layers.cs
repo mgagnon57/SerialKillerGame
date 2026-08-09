@@ -288,6 +288,27 @@ namespace Noir.Unity
         public static bool IsOn(Kind kind)
         {
             if (_on.TryGetValue(kind, out bool cached)) return cached;
+
+            // BATCH MODE GETS THE COMPILED DEFAULT, NOT A PERSON'S PREFERENCES.
+            //
+            // `Set` already refused to WRITE PlayerPrefs headless; this is the read, and it was
+            // still going to the same place - so whatever the owner last toggled in the editor
+            // silently decided what every headless test measured. CLAUDE.md documents where that
+            // ends: `noir.layer.Traffic = 0`, set once months earlier for a survey view, froze all
+            // 160 vehicles in EVERY subsequent run including the tests, and three gate tests
+            // reported it three different ways before anybody found the cause.
+            //
+            // Fixed HERE rather than by a `[RuntimeInitializeOnLoadMethod]` in the test assembly,
+            // which was the other candidate and is a trap: `Noir.PlayTests.asmdef` has no
+            // `excludePlatforms`, so such a hook fires on EVERY entry into Play, not only under
+            // the test runner - and the owner would press Play one day and permanently lose his
+            // trees, farm and power lines. There is no hook to mis-fire this way.
+            if (Application.isBatchMode)
+            {
+                _on[kind] = true;
+                return true;
+            }
+
             bool stored = PlayerPrefs.GetInt(KeyPrefix + kind, 1) == 1;
             _on[kind] = stored;
             return stored;

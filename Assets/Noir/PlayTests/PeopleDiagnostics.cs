@@ -117,6 +117,70 @@ namespace Noir.PlayTests
             Debug.Log($"[body] of {sample.Count} animators watched over a second, "
                     + $"{moved} advanced their clip and {sample.Count - moved} did not.");
 
+            // ---- and does the SKELETON actually move? ----
+            //
+            // THE STRONGEST FINDING IN THE AUDIT, AND IT HAS BEEN INVISIBLE FOR MONTHS. The line
+            // above printed "1 of 40 advanced" in one recorded run, "0 of 40" in the next and
+            // "40 of 0" in the third - and ALL THREE PASSED, because nothing asserts on it. A clip
+            // whose normalizedTime advances is not the same claim as a person who moves: a figure
+            // can sit in its bind pose with the state machine ticking happily behind it.
+            //
+            // So this asks the bones. A hip that has not moved a millimetre in a second, while its
+            // animator says it is playing, is a T-posing figure.
+            //
+            // MEASURED IN LOCAL SPACE. Two world positions a kilometre out carry about 1.2e-4 m of
+            // float error, which is only eight times under a millimetre threshold - close enough
+            // to turn precision into a verdict. Local space has no such offset.
+            //
+            // AlwaysAnimate is FORCED for the measurement, or the answer is about the camera
+            // rather than the rig - and restored in try/finally rather than a [TearDown], which a
+            // yield break can skip straight past.
+            // Through the view's own hierarchy, which excludes the deactivated away-figures BY
+            // CONSTRUCTION. Walking `_figures` by index picks them up instead, and about four in
+            // twenty-four are out of town at any hour - they would count as failures for no fault.
+            var peopleRoot = Object.FindFirstObjectByType<AgentMeshView>();
+            Assert.That(peopleRoot, Is.Not.Null, "no AgentMeshView - are the people drawn?");
+            var rigged = peopleRoot.GetComponentsInChildren<Animator>();
+            var hips = new List<(Animator a, Transform bone, Vector3 was)>();
+            var modesWere = new List<(Animator a, AnimatorCullingMode mode)>();
+
+            try
+            {
+                foreach (var a in rigged)
+                {
+                    if (a == null || !a.isActiveAndEnabled || a.runtimeAnimatorController == null) continue;
+                    if (!a.isHuman) continue;
+
+                    var hip = a.GetBoneTransform(HumanBodyBones.Hips);
+                    if (hip == null) continue;
+
+                    modesWere.Add((a, a.cullingMode));
+                    a.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                    hips.Add((a, hip, hip.localPosition));
+                    if (hips.Count >= 24) break;
+                }
+
+                for (int frame = 0; frame < 60; frame++) yield return null;
+
+                int still = 0;
+                float worst = 0f;
+                foreach (var (a, bone, was) in hips)
+                {
+                    float shift = Vector3.Distance(bone.localPosition, was);
+                    if (shift > worst) worst = shift;
+                    if (shift < 0.001f) still++;
+                }
+
+                Debug.Log($"[body] SKELETONS: of {hips.Count} rigged figures watched for a second, "
+                        + $"{hips.Count - still} moved a hip bone and {still} did not. "
+                        + $"Largest shift {worst * 1000f:0.0} mm. "
+                        + "A figure whose animator is playing and whose hips never move is T-posing.");
+            }
+            finally
+            {
+                foreach (var (a, mode) in modesWere) if (a != null) a.cullingMode = mode;
+            }
+
             // ---- and do they play the right thing while walking? ----
             //
             // The sim opens at six in the morning, when the honest answer for most of Rossville is

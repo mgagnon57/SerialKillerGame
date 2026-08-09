@@ -402,11 +402,24 @@ namespace Noir.Unity
             public float Slowest, Fastest;
             public string Wanted;
 
+            /// <summary>Out of town and not drawn. See Report - they are skipped, not counted.</summary>
+            public int Away;
+
+            /// <summary>
+            /// People whose wanted clip has NO state in the controller, so Drive freezes them.
+            ///
+            /// A counter and not yet an assert: animations.txt is allowed to name a clip nobody
+            /// has downloaded, which is the whole "import a few at a time" workflow.
+            /// </summary>
+            public int Stateless;
+
             public override string ToString() =>
                 $"{People} people, {Animated} with an animator, {Running} animating "
               + $"(nearest {AnimatingBudget}, the rest hold a pose), "
               + $"{Moving} on the move, "
               + $"{Wrong} of those NOT in the state they should be. "
+              + $"{Away} out of town and not drawn. "
+              + (Stateless > 0 ? $"{Stateless} WANT A CLIP THE CONTROLLER HAS NO STATE FOR. " : "")
               + (Moving > 0 ? $"Walk playing at {Rate:0.00}x "
                             + $"({Slowest:0.00}-{Fastest:0.00}). " : "")
               + $"Wanted: {Wanted}";
@@ -418,12 +431,24 @@ namespace Noir.Unity
             if (sim == null) return new Census { Wanted = "no simulation" };
 
             int walking = 0, walkingAndIdle = 0, animated = 0, rated = 0;
+            int away = 0, stateless = 0;
             float slowest = float.MaxValue, fastest = 0f, rates = 0f;
             var states = new Dictionary<string, int>();
 
             for (int i = 0; i < _figures.Length; i++)
             {
                 var agent = sim.GetAgent(i);
+
+                // OUT OF TOWN, SO NOT COUNTED - `Refresh` already refuses to draw these.
+                //
+                // About two hundred people are in Hoopeston or Danville at any weekday hour, with
+                // their figure switched off entirely. They were being counted here as ordinary
+                // townsfolk: they inflated `People`, they were asked what clip they wanted, and
+                // their answers went into the state census - so a fifth of the town's "Wanted"
+                // histogram described people nobody can see. Skipping them is not hiding a fault,
+                // it is the census agreeing with the renderer about who is here.
+                if (agent.Doing == Activity.AwayFromTown) { away++; continue; }
+
                 bool moves = agent.Heading.X != 0f || agent.Heading.Y != 0f;
                 if (moves) walking++;
 
@@ -444,6 +469,19 @@ namespace Noir.Unity
                     who: _host.People.Get(new CitizenId(i)).Key.Value) ?? "(nothing)";
 
                 states[want] = states.TryGetValue(want, out int n) ? n + 1 : 1;
+
+                // WANTED A CLIP THE CONTROLLER HAS NO STATE FOR - counted for EVERYBODY, above the
+                // moving check on purpose. Below it, only walkers could ever be seen, and the
+                // dotted-clip fault's victims were people standing at doors: non-moving by
+                // definition, and therefore invisible to a counter placed one line lower.
+                //
+                // A COUNTER AND NOT AN ASSERT IN THIS WAVE. `animations.txt` is explicitly allowed
+                // to name a clip that has not been downloaded yet - that is the "import a few at a
+                // time" workflow the whole system is built for - so asserting on this today would
+                // turn the six-minute gate red on a case the format promises is legal. Read the
+                // number first.
+                if (want != "(nothing)" && !animator.HasState(0, Animator.StringToHash(want)))
+                    stateless++;
 
                 if (!moves) continue;
 
@@ -474,6 +512,7 @@ namespace Noir.Unity
             return new Census
             {
                 People = _figures.Length, Animated = animated, Running = Animating,
+                Away = away, Stateless = stateless,
                 Moving = walking, Wrong = walkingAndIdle,
                 Rate = rated > 0 ? rates / rated : 0f,
                 Slowest = slowest == float.MaxValue ? 0f : slowest, Fastest = fastest,
