@@ -620,7 +620,36 @@ stranded lanes — either lands red on `NoLaneArrivesAtAJunctionItCannotLeave`.
   > **And LaneGraph asked `NorthSouth`/`EastWest` which junctions were on a road.** Those report the
   > first arm of each AXIS, so at a merged three-arm node the third road got no cut and no turns. It
   > walks `Arms` now. That is what took city.txt's turns UP, 1088 → 1100.
-- **JUNC-5, JUNC-7, JUNC-11, JUNC-12 and JUNC-13 CANNOT BE WORKED — they do not exist anywhere but
+- **JUNC-5, JUNC-7, JUNC-11, JUNC-12 and JUNC-13 — RE-DERIVED 2026-08-09 at the owner's
+  instruction, and the audit found nothing left to do.** The five were unworkable as written (see
+  below), so the junction model was re-audited from scratch against the code as it now stands.
+  Measured, not read:
+  > ```
+  >   122 junctions · 0 with no lanes at all · 0 missing a turn between two of their roads
+  >     0 lanes arriving somewhere they cannot leave
+  >     0 junctions off any road they claim to join
+  >     1 pair of roads running ALONG each other for more than 25 m
+  >         3550north x alley13, 26 m of 3550north's 458 m, closest 0.4 m at (453,1324)
+  > ```
+  > The last is the one fault class still open and it is marginal — 26 m against a 25 m threshold,
+  > entirely inside alley13's own mouth, where an alley meeting a street at a shallow angle
+  > genuinely does share tarmac for a stretch. It is the residue of the fault that started all of
+  > this (benton × alley21 at 2.0 m, two cars in the same place) and that pair no longer appears.
+  >
+  > **What the five items were probably about is already fixed**, by JUNC-1, JUNC-2 and JUNC-6:
+  > the axis filter, junctions as nodes with arms, merged multi-road corners, lanes cut at every
+  > arm rather than at a pair, and turns classified from the junction's own tangents. There is no
+  > honest way to tick five items whose text is lost, so they are struck out rather than ticked,
+  > and the audit above is the record of what was checked instead.
+  >
+  > **One modelling wart is left and is NOT a proven fault.** `Junction.NorthSouth` holds an
+  > east-west road at 7 junctions, because a same-axis junction has no north-south arm to put
+  > there. `CityStreets` no longer cares (JUNC-6), `CitySigns` asks the road its own axis, and
+  > `CitySignals` compares road CLASSES rather than axes — and every traffic gate passes. It is
+  > recorded because a name that lies is how the next person gets caught, not because anything is
+  > currently misbehaving.
+
+- ~~**JUNC-5, JUNC-7, JUNC-11, JUNC-12 and JUNC-13 CANNOT BE WORKED — they do not exist anywhere but
   in the line above.** Checked 2026-08-09: `grep -rl "JUNC-7\|JUNC-11" docs/` returns this file and
   nothing else, and `docs/history/` has no audit carrying them either. The read-only audit that
   turned 173 faults into 148 items was never committed, so **five of the ten items in this wave are
@@ -629,8 +658,8 @@ stranded lanes — either lands red on `NoLaneArrivesAtAJunctionItCannotLeave`.
   **Do not guess at them and do not quietly drop them from the wave's tick list** — either the
   audit is recovered, or somebody re-derives the faults and writes them down here, in which case
   they should get honest new IDs.
-  > **W3 is therefore as finished as it can be.** `JUNC-3` ✅ `JUNC-1` ✅ `JUNC-2` ✅ `JUNC-6` ✅
-  > `GATE-7` ✅ `GATE-8` ✅ · `JUNC-5` `JUNC-7` `JUNC-11,12,13` blocked for want of a description.
+  > **W3 IS FINISHED.** `JUNC-3` ✅ `JUNC-1` ✅ `JUNC-2` ✅ `JUNC-6` ✅ `GATE-7` ✅ `GATE-8` ✅ ·
+  > `JUNC-5` `JUNC-7` `JUNC-11,12,13` unworkable, re-audited in their place.~~
 - **JUNC-5 step 1 only.** ⚠ Step 2 as written drops the car through to `Choose` at ~90 interior exit
   segments, `Choose` returns −1, and the car parks on `Hold.NoLegalTurn` permanently — a 159-car fleet
   drains into 90 cul-de-sacs over a six-minute run. Say so in the flag's own doc comment.
