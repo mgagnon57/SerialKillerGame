@@ -66,6 +66,37 @@ sv = _load("serve_viewer", os.path.join(HERE, "serve-viewer.py"))
 # ---------------------------------------------------------------------------------------------
 WRITE = "--write" in sys.argv
 
+
+def idot_counts():
+    """The county's traffic counts, by road name, from tools/rossville-aadt.txt.
+
+    READ RATHER THAN INVENTED, AND READ RATHER THAN EATEN. These twelve numbers used to live only
+    as hand-typed `aadt` lines inside Content/roads.txt - the file this script REGENERATES - and
+    this writer emitted no aadt line at all. So a single regeneration deleted them silently, and
+    the starving junction at church x maple would have come straight back. A measured fact a tool
+    quietly drops is not stored; it is borrowed until somebody runs the tool.
+
+    A road absent from the file is not an error: IDOT does not count twenty-one of this map's
+    named roads, because there is nothing on them to count.
+    """
+    counts = {}
+    path = os.path.join(HERE, "rossville-aadt.txt")
+    if not os.path.exists(path):
+        print("WARNING: no tools/rossville-aadt.txt - the IDOT counts will NOT be written.")
+        return counts
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            bits = line.split()
+            if len(bits) >= 2:
+                counts[bits[0].lower()] = int(bits[1])
+    return counts
+
+# The county's traffic counts, keyed by road name. Read once at import; see idot_counts.
+AADT = idot_counts()
+
 # Names the county spells differently from this project. The county is not automatically right
 # about a name - it is right about geometry - so the project's own spelling wins and the
 # county's is recorded beside it.
@@ -604,17 +635,37 @@ def main():
                 w_(f"  carries {carries}")
             if row and row >= width:
                 w_(f"  easement {row:.1f}")
+            if n.lower() in AADT:
+                w_(f"  aadt {AADT[n.lower()]}   # IDOT count, see tools/rossville-aadt.txt")
         w_("")
 
     path = os.path.join(CONTENT, "roads.txt")
 
+    counted = sum(1 for line in L if line.startswith("  aadt "))
+
     if not WRITE:
+        have = 0
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                have = sum(1 for line in fh if line.startswith("  aadt "))
+
         print(f"DRY RUN - nothing written. {len(roads)} roads would be written to")
         print(f"  {os.path.normpath(path)}")
         print("  and tools/roads-proposed.json (the browser map's copy).")
+        print(f"  IDOT counts: {counted} aadt lines would be written, {have} are in the file now.")
+
+        # THE FIVE MISSING ROADS. The file on disk carries more road runs than this generator
+        # produces, and nobody knows why yet - so a --write is still a LOSS even now that the
+        # counts survive it. Said out loud every run rather than left in a document.
+        runs = 0
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                runs = sum(1 for line in fh if line.startswith("road "))
+        if runs > len(roads):
+            print(f"  ** WARNING: {runs} road runs are in the file and this makes {len(roads)}. "
+                  f"A --write would DROP {runs - len(roads)}. Find them first. **")
+
         print("Re-run with --write to back up and write.")
-        print("WARNING: Content/roads.txt carries twelve IDOT `aadt` counts that this generator")
-        print("does NOT emit. A write drops them - check after any --write run.")
         return
 
     sv.backup(path, "build-roads")

@@ -62,10 +62,33 @@ have nothing behind them."* A green default gate run has seen nothing of the str
 
 ---
 
-## Decisions
+## Decisions — ANSWERED 2026-08-08, all on the documented recommendation
 
-Four block work: **#1 (408 Holmes)**, **#2 (the addresses)**, **#3 (the smoothing)** and **#10 (the
-escape hatch)**. Answer #1 before #2 — the anchor should constrain the system, not the reverse.
+| | decision | answer |
+|---|---|---|
+| **1** | 408 Holmes Ave | **(c)** the house wins **and sets the rule** |
+| **2** | the other addresses | **(a)** delete the Earl Court nineteen, re-address the rest |
+| **3** | the drawn road vs the county's points | **(c)** straight between points, corners only where ruled |
+| **4** | Holmes Avenue's hole | **(a)** join the ends — a digitising gap |
+| **5** | where Rossville parked | **(a)** ~70% in a garage off the back lane |
+| **6** | speed limits | **(a)** 30 town / 55 approaches / 20 school |
+| **7** | Street or Avenue | **(a)** adopt the county's suffixes, (c) for anything that reads wrong |
+| **8** | road surface | **(a)** asphalt / oil-and-chip / gravel, (c) for corrections |
+| **9** | alley through a garage | **(a)** only primary buildings count |
+| **10** | the escape hatch | **(a)** explicit `roads.txt.off` rename |
+| **11** | the traffic fleet | **(c)** now, **(a)** after |
+| **12** | the road checkers | **(a)** plus **(c)** for the 1.6% specifically |
+
+**Taken on the recommendations rather than waited for**, which is what the file says happens when no
+answer comes back. Two are worth a second look from the owner when he has the time, because they are
+the two that change what the town IS rather than how it is measured:
+
+- **#1 (c)** rules that the killer's house at 408 Holmes sets the address scheme and the other 201
+  lots follow. If the parity that reproduces 408 turns out not to exist, this collapses into (a) and
+  the house moves ~250 ft east — which is a story decision, not a survey one.
+- **#5 (a)** puts ~70% of 611 cars in a garage off the back lane rather than on a front drive. That
+  is the most visible single ruling in this plan: it moves most of the parked cars I put in front
+  gardens this afternoon round to the alleys.
 
 ### 1. 408 Holmes Ave — **blocks W9, and take it first**
 
