@@ -14,7 +14,13 @@ namespace Noir.Editor
     /// state machine somebody draws by hand: states, arrows, conditions, parameters, and a
     /// combinatorial mess the moment there are nine of them. None of that is needed here, because
     /// `AgentAnimation.Drive` calls CrossFadeInFixedTime with a state hash - it names the state it
-    /// wants directly, so the states only have to EXIST. Nine states and no arrows.
+    /// wants directly, so the states only have to EXIST.
+    ///
+    /// **Eighty-seven states and no arrows.** This said "nine" until 2026-08-08, which was true of
+    /// the first version and had been wrong by an order of magnitude for a long time - and the
+    /// number is the entire argument for the design, because eighty-seven states in a hand-drawn
+    /// graph is exactly the combinatorial mess the paragraph above is describing. A stale number
+    /// there quietly turns the case FOR this approach into an argument nobody can check.
     ///
     /// That also means the simulation stays the thing that decides. A transition graph is a second
     /// opinion about what a person should be doing, sitting between the day planner and the screen
@@ -170,6 +176,16 @@ namespace Noir.Editor
                 if (Application.isBatchMode) EditorApplication.Exit(1);
                 return;
             }
+
+            // THE LISTING IS REGENERATED HERE BECAUSE THIS IS THE STEP NOBODY CAN SKIP.
+            //
+            // `docs/animations-downloaded.md` says "Do not edit - rerun `Noir/Check The
+            // Animations`", and it drifted anyway: it still named `Standing Idle Looking Ver. 1`
+            // after the rename, because regenerating it was a SECOND thing to remember and
+            // remembering is not a mechanism. Adding a clip already forces this rebuild - the
+            // controller carries only the clips a row asked for - so hanging the listing off it
+            // makes the document that describes the animations impossible to forget.
+            AnimationCheck.WriteListing();
 
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }

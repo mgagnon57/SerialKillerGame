@@ -252,6 +252,37 @@ into `AnimatorBuild`'s class summary.
 
 ---
 
+### W2 — Stale documents and blind tooling — **DONE 2026-08-08**
+
+> **Landed, all thirteen.** Core still **431**, both Unity assemblies compile,
+> `check-editor-only.py` exit 0 with **`AgentBody: Folk` now in its inventory** — it was invisible
+> before, because the member pattern could not see `public const` inside a guard.
+>
+> **THIS WAVE'S GATE WAS WRONG AND THE GATE IS NOT MET.** It says "`AnimationCheck` exits 0". It
+> exits **1**, and it did before any of this work: five clips carry root motion.
+>
+> ```
+>   Walking Female      travel 1.56 m/s      genuinely travels - downloaded without In Place
+>   Walking Male        travel 1.57 m/s      the same
+>   Pushing             travel 0.13 m/s      against a StandingStill threshold of 0.10
+>   Singing             travel 0.14 m/s      the same
+>   Sitting Drinking    travel 0.14 m/s      the same
+> ```
+>
+> **None of it reaches the game**: `AgentBody.cs:202` sets `applyRootMotion = false`, so the
+> travel is never applied. The checker has no way to know that. Deliberately NOT resolved here -
+> loosening `StandingStill` to make the gate green would be adjusting the instrument, and the two
+> Walking clips are a real "re-download with In Place" job. Whoever takes it should decide whether
+> the checker ought to know about `applyRootMotion` at all.
+>
+> **DOC-3 was verified rather than trusted**: `SKM_Woman_Rabbit_Easter`, `animationType: 2`. Note
+> that a plain grep reports the pack folder empty - it is gitignored, so it needs `rg --no-ignore`.
+>
+> **DOC-8 turned out to matter more than its one line suggests.** `rig.ms` in the perf report is
+> the ORBIT CAMERA, printed beside `sim.ms` in a town with 1,385 rigged people - so the one column
+> a reader takes as "what the skinned figures cost" was the camera, and the animators, which were
+> half the frame, appeared nowhere. Renamed `camera.ms`.
+
 ### W2 — Stale documents and blind tooling
 
 Nothing here is visible to PlayMode and nothing touches Core behaviour, so it shares one cheap gate

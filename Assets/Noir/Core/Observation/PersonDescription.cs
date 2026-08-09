@@ -2,15 +2,20 @@ using System;
 using System.Text;
 
 // ---------------------------------------------------------------------------------------------
-//  STAGED, NOT LIVE. NOTHING CONSTRUCTS A PersonDescription — 2026-07-29.
+//  LIVE. THE GAME PRODUCES THESE AND PRINTS THEM — corrected 2026-08-08.
 //
-//  An audit found zero hits for `new PersonDescription(` anywhere in the repository, tests
-//  included, and zero references to this type outside this directory. Every band declared below
-//  is therefore unreachable: nothing can produce anything but the default "somebody, unnoticed".
+//  This block used to open "STAGED, NOT LIVE. NOTHING CONSTRUCTS A PersonDescription", dated
+//  2026-07-29 and true on that date. It went on saying so after it stopped being true, and a
+//  confident header is believed rather than checked: it has already sent one auditor to a wrong
+//  finding about dead code.
 //
-//  This is not rot — it is a type waiting for the investigation layer, and the assembly's
-//  firewall (see the header of Sighting.cs) is what it is here to be shaped by. But the file
-//  reads as finished work, so: it does not run yet. See CLAUDE.md, "What does not exist yet".
+//  Witness/Degradation.cs fills these bands, Witness/Recollection.cs puts them into Sightings,
+//  and VillageHost.AskWhatTheySaw hands the sentences to VillageUI — press T on a neighbour. So
+//  "every band declared below is unreachable" is false. Measure before deleting anything here
+//  for being unused.
+//
+//  The firewall in Sighting.cs's header is the constraint this type is shaped by, and that part
+//  was always true and still is.
 // ---------------------------------------------------------------------------------------------
 
 namespace Noir.Core.Observation

@@ -1222,6 +1222,15 @@ namespace Noir.Unity
         public double RefreshMs { get; private set; }
 
         /// <summary>What the last frame's rig tick cost, in milliseconds.</summary>
+        /// <summary>
+        /// Milliseconds the CAMERA took this frame. `_rig` is an <see cref="OrbitCamera"/>.
+        ///
+        /// NOT THE CHARACTER RIGS, WHICH IS WHAT EVERYONE READS IT AS. The perf report printed
+        /// this in a column headed `rig.ms` next to `sim.ms` and `refresh.ms`, in a town with
+        /// 1,385 rigged people in it — so the one number a reader would take as "what the skinned
+        /// figures cost" was the orbit camera, and the animators, which really were half the
+        /// frame, appeared nowhere. The column says `camera.ms` now.
+        /// </summary>
         public double RigMs { get; private set; }
 
         /// <summary>
