@@ -175,6 +175,18 @@ namespace Noir.PlayTests
                         + $"{hips.Count - still} moved a hip bone and {still} did not. "
                         + $"Largest shift {worst * 1000f:0.0} mm. "
                         + "A figure whose animator is playing and whose hips never move is T-posing.");
+
+                // RATCHETED FROM W4'S MEASUREMENT, WHICH WAS 24 OF 24 MOVING.
+                //
+                // The bar is a quarter rather than zero because a still figure is not automatically
+                // a fault - a clip can genuinely hold a pose for a beat, and one unlucky sample
+                // should not turn the six-minute gate red. What this has to catch is the failure
+                // the log spent months unable to show: a town where the animators tick and NOTHING
+                // MOVES. That reads as all of them, not a quarter.
+                Assert.That(still, Is.LessThanOrEqualTo(Mathf.Max(1, hips.Count / 4)),
+                    $"{still} of {hips.Count} rigged figures did not move a hip bone in a whole "
+                  + $"second while their animator was playing. Largest shift {worst * 1000f:0.0} mm. "
+                  + "That is a T-posing town, and the clip-advance line above cannot see it.");
             }
             finally
             {
@@ -221,6 +233,16 @@ namespace Noir.PlayTests
                 Debug.Log($"[body] {host.Sim.Clock.MinuteOfDay / 60:00}:"
                         + $"{host.Sim.Clock.MinuteOfDay % 60:00}  {census}");
 
+                // DOT-7, RATCHETED LIVE. W4 measured this at zero every hour. A person whose
+                // wanted clip has no state in the controller is FROZEN by Drive - deliberately,
+                // since freezing is honest where treadmilling was a lie - but frozen is still a
+                // person not animating, and the whole dotted-clip fault was exactly this going
+                // uncounted. Above the Moving check, because its victims stand at doors.
+                Assert.That(census.Stateless, Is.EqualTo(0),
+                    $"{census.Stateless} people want a clip the controller has no state for, so "
+                  + "they are frozen. Either a row names a clip nobody downloaded, or the "
+                  + "controller is stale - rebuild with Noir/Build The Townsfolk Animator.");
+
                 if (census.Moving == 0) continue;
                 sampled += census.Moving;
                 wrong += census.Wrong;
@@ -255,8 +277,27 @@ namespace Noir.PlayTests
             // as 0.00x for that frame and is a person about to stop, not a fault. The band is wide
             // on purpose - what it has to catch is the match not running at all, which pins the
             // rate at exactly 1.00x, or giving up at the ceiling, which pins it at 2.00x.
+            // THE FLOOR IS 0.35, AND HERE IS WHERE THAT NUMBER COMES FROM.
+            //
+            // It was 0.50 against a measured 0.54, which is four hundredths of clearance - a gate
+            // that fires on its own without anybody changing anything, and this run measured 0.54,
+            // 0.62 and 0.72 on different hours. The floor was not describing a fault; it was
+            // describing this town.
+            //
+            // The clip is authored at 1.5 m/s. Rossville's adults walk 1.19-1.51 m/s BEFORE
+            // terrain slows them, so the average villager's honest ceiling is about
+            // 1.35 / 1.5 = 0.90x and the slow end sits near 1.19 / 1.5 = 0.79x - and then terrain,
+            // door pauses and the sampling of people about to stop pull the hourly mean well under
+            // that. A floor of 0.35 is comfortably below anything the town produces and still
+            // catches the two failures that matter, which are the ones the band was always for:
+            // the match not running at all (pinned at exactly 1.00x, caught by the assert below)
+            // and the match giving up at the ceiling (pinned at 2.00x, caught by the 1.4 above).
+            //
+            // NOT FIXED BY RE-AUTHORING THE 1.5. That figure is a FACT ABOUT THE CLIP measured off
+            // its own root motion, not a dial - lowering it to flatter the ratio would put the
+            // skate straight back in for everybody. Owner's decision, 2026-08-08.
             float mean = hours > 0 ? rates / hours : 0f;
-            Assert.That(mean, Is.GreaterThan(0.5f).And.LessThan(1.4f),
+            Assert.That(mean, Is.GreaterThan(0.35f).And.LessThan(1.4f),
                 $"the walk averaged {mean:0.00}x over {hours} hours "
               + $"(span {slowest:0.00}-{fastest:0.00}) - the feet will skate");
             Assert.That(mean, Is.Not.EqualTo(1f).Within(0.001f),

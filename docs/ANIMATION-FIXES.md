@@ -537,6 +537,46 @@ Corrections the skeptics forced, which you must apply:
 
 ---
 
+### W5 — Content rows, the selector channel, and the ratchets — **DONE 2026-08-08 (pending the owner's five minutes in Play)**
+
+> Core **439 → 447**, `CLAUDE.md` edited in the same commit. Controller rebuilt to **86 states**,
+> one fewer than before, because `Running` is genuinely gone rather than merely unreferenced.
+>
+> **SIM-2, the selector channel.** `AgentAnimation.Situation` carries place, life stage and sex,
+> which `Drive` used to throw away before the lookup. The ladder is seven rungs, place before
+> person and stage before sex, written into both the code and the file's own header. Stage beats
+> sex deliberately: `athome:child` must win over `athome:male` for a nine-year-old, or SIM-7 is
+> undone the day somebody adds a row for men.
+>
+> **The rows.** `atthepub@diner` and `atthepub@casino` (four in ten lunchtime diner customers were
+> playing `Drunk Idle`), `visiting@cinema`, six `atwork@` rows so a farmer stops faxing,
+> `Bartending` moved to `atwork@tavern` where the staff are, `athome:child` without Smoking or
+> Gaming, `attheplayground:child` split from the adults, and `Idle`/`Standing Idle 03` given a
+> reachable row. `Sad Idle` was left on the net **deliberately** — a town where somebody is
+> visibly sad at random is telling a story nobody wrote.
+>
+> **GATE-10's floor is 0.35 with the derivation in the assert.** It was 0.50 against a measured
+> 0.54 — four hundredths of clearance on a gate that would have fired on its own. The clip is
+> authored at 1.5 m/s and Rossville's adults walk 1.19–1.51 before terrain, so the honest ceiling
+> is about 0.90x. Re-authoring the 1.5 was refused: it is a fact about the clip, measured off its
+> own root motion, not a dial.
+>
+> **Eight new Core tests, and the one that matters most** asserts every `moving*` row still carries
+> its `m/s`. The parser writes 0 for a row that omits it and 0 means exactly 1.00x, so splitting
+> locomotion by sex and forgetting the figure on one row silently returns the sliding feet to half
+> the town — an edit that looks obviously correct. The others check every `@place` is a real kind
+> in `kinds.txt` and every `:person` is one the ladder knows, because a mistyped selector falls
+> through in total silence.
+>
+> **GATE-3 and DOT-7 are now live asserts**, ratcheted off W4's measurements (24 of 24 hips moving;
+> zero stateless). GATE-3's bar is a quarter rather than zero — a clip may honestly hold a pose,
+> and what it must catch is a town where nothing moves at all.
+>
+> **STILL OWED: the owner's five minutes in Play at SpeedIndex 3 (1x).** No offline render shows
+> rigged people. And RIG-2, RIG-3 and RIG-8 were not attempted — see the W4 note for the rest.
+> **RIG-2 being absent means there is nothing yet for RIG-3 to judge**, so that pair should be
+> taken together.
+
 ### W5 — Content rows, the selector channel, and the ratchets
 
 Every one of these is an edit to `Content/animations.txt` or a threshold set from W4's measured

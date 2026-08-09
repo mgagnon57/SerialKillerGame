@@ -59,6 +59,35 @@
 #  until there is, a clip that is only true of one person in a room does not go
 #  on a row. `Bartending` is the exception that proves the shape of the rule - one
 #  drinker in ten being the one behind the counter is about right.
+#  A SITUATION MAY BE QUALIFIED BY PLACE AND BY PERSON, and the ladder is fixed.
+#  `atwork@tavern:elder` is ONE word to the reader - the key is everything up to
+#  the first space - so the parser needed no change at all to support this.
+#
+#      atwork@tavern:elder     everything known
+#      atwork@tavern:male
+#      atwork@tavern           the place
+#      atwork:elder            the person
+#      atwork:male
+#      atwork                  the bare situation
+#      default                 the net
+#
+#  Place beats person; stage beats sex. Stage first because a child is a child
+#  before he is a boy - `athome:child` must beat `athome:male` for a nine-year-old
+#  or the whole point of that row (children do not smoke) is lost the day somebody
+#  adds a row for men. Places are `child adult elder` and `male female`, and the
+#  PLACE is the KIND's name from kinds.txt - `diner`, `tavern`, `farm` - so a row
+#  applies to every diner in the town rather than to one building.
+#
+#  A QUALIFIED KEY THAT MATCHES NOTHING FALLS THROUGH IN SILENCE. `atwork@tavren`
+#  costs nothing, warns nobody and simply never fires, so take place names from
+#  kinds.txt rather than guessing them. `Noir/Check The Animations` counts how
+#  often each row is actually reached, which is the only way a dead row shows up.
+#
+#  AND A SPLIT LOCOMOTION ROW MUST KEEP ITS `m/s`. The parser writes 0 for a row
+#  that omits it and 0 means "play at exactly 1.00x", so a forgotten figure on
+#  `moving:female` silently puts the skate back into half the town. A Core test
+#  asserts every row whose key starts `moving` carries one.
+#
 # ============================================================================
 
 # ---- moving --------------------------------------------------------------
@@ -81,22 +110,35 @@
 # The drunk and injured walks in the same download are NOT here for exactly this
 # reason: they are much slower, they would skate against this figure, and one
 # townsperson in four walking drunk at nine in the morning is the wrong town.
-moving          1.5m/s  Walking, Walking Male, Walking Female
-# Running is the child at the playground and NOBODY else. An adult jogging across
-# a small town reads as fleeing, which is a story event rather than a commute, and
-# this game should not say that by accident.
-hurrying        3.6m/s  Running
+moving          1.5m/s  Walking
+moving:male     1.5m/s  Walking Male, Walking
+moving:female   1.5m/s  Walking Female, Walking
+# `hurrying`/`Running` USED TO BE HERE AND IS DELETED. It required somebody MOVING
+# while at the playground, which the simulation never produces - a child at the
+# playground is AT it, not travelling to it - so the clip never played a single
+# frame. Measured before deleting: `Running=` appears zero times across all three
+# recorded runs against censuses reporting up to 317 people on the move. If running
+# belongs in this game it belongs to a story event, with its own channel.
 
 # ---- standing still, by what they are there for --------------------------
 # Talking is the one everybody sees close up, because it is what stops two people
 # in the street in front of you, so it gets the widest set in the file.
 talking         Talking, Talking At Watercooler, Standing Arguing, Arm Gesture, Head Gesture, Happy Hand Gesture, Hands Forward Gesture, Whatever Gesture, Shrugging, Laughing, Thoughtful Head Nod, Telling A Secret, Strong Gesture, Acknowledging, Agreeing
 
-atthepub        Drinking, Sitting Drinking, Drunk Idle, Drunk Idle Variation, Laughing, Smoking, Cards, Talking, Standing Arguing, Bartending
+atthepub@diner  Sitting Drinking, Sitting Talking, Sitting Idle, Talking, Drinking, Counting
+atthepub@casino Cards, Counting, Standing Idle, Talking, Thinking, Smoking
+visiting@cinema Sitting Idle, Seated Idle, Sitting, Bored, Yawn
+atthepub        Drinking, Sitting Drinking, Drunk Idle, Drunk Idle Variation, Laughing, Smoking, Cards, Talking, Standing Arguing
 
 # A fax machine and a filing cabinet are period-correct for 2000 and a
 # touchscreen tablet is not, which is why one of those was imported and the other
 # was left in the download.
+atwork@farm     Digging, Dig And Plant Seeds, Plant A Plant, Plant Tree, Pull Plant, Watering, Pick Fruit, Lifting, Carrying, Wiping Sweat
+atwork@mill     Lifting, Carrying, Pushing, Moving Object, Wiping Sweat, Inspecting, Working On Device
+atwork@factory  Lifting, Carrying, Pushing, Moving Object, Working On Device, Inspecting, Wiping Sweat
+atwork@garage   Inspecting, Kneeling Inspecting, Lifting, Pushing, Working On Device, Wiping Sweat, Moving Object
+atwork@tavern   Bartending, Talking, Counting, Moving Object, Standing Idle, Wiping Sweat
+atwork@shop     Standing Idle, Counting, Taking Item, Picking Up Object, Talking, Inspecting, Rummaging
 atwork          Standing Idle, Typing, Writing, Using A Filing Cabinet, Using A Fax Machine, Counting, Inspecting, Lifting, Carrying, Pushing, Moving Object, Talking On Phone, Wiping Sweat, Working On Device
 
 shopping        Looking Around, Look Around, Looking, Inspecting, Rummaging, Standing Idle 03 Examine, Standing Idle 02 Looking, Picking Up Object, Taking Item, Counting, Thinking
@@ -109,12 +151,14 @@ ontheallotment  Digging, Dig And Plant Seeds, Plant A Plant, Plant Tree, Pull Pl
 # sitting on nothing reads better than one standing to attention for an hour.
 atchurch        Sitting Idle, Sitting, Seated Idle, Praying, Singing, Sitting Talking, Sitting Clap
 atschool        Sitting Idle, Sitting, Seated Idle, Sitting Talking, Writing, Hand Raising, Sitting Laughing, Bored, Yawn
+athome:child    Sitting Idle, Sitting, Seated Idle, Sitting Talking, Sitting Laughing, Yawn, Petting Animal, Neutral Idle, Breathing Idle
 athome          Sitting Idle, Sitting, Seated Idle, Sitting Talking, Sitting Laughing, Gaming, Yawn, Petting Animal, Smoking, Neutral Idle, Breathing Idle
 visiting        Sitting Idle, Sitting Talking, Sitting Laughing, Seated Idle, Talking, Standing Greeting, Shaking Hands 1, Shaking Hands 2, Laughing
 
 # The playground row is what a child does STANDING there. The running about is
 # the `hurrying` row above, which this activity is the only thing that reaches.
-attheplayground Looking Around, Cheering, Standing Clap, Clapping, Waving, Happy Idle
+attheplayground:child Looking Around, Cheering, Standing Clap, Clapping, Waving, Happy Idle
+attheplayground Standing Idle, Idle, Standing Idle 03, Looking Around, Weight Shift, Bored
 
 # Between two places and stopped - waiting to cross, or arrived and not yet in.
 travellingto    Standing Idle, Neutral Idle, Looking Around, Bored, Weight Shift, Standing Idle Looking Ver 1

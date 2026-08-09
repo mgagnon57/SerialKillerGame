@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.People;
+using Noir.Core.World;
 
 namespace Noir.Unity
 {
@@ -332,8 +333,7 @@ namespace Noir.Unity
                 // frames in ten and would peg the playback rate to its floor while the person is
                 // visibly walking. Per tick times ticks a second times the clock's multiplier is
                 // the same number, and it is the same on every machine.
-                AgentAnimation.Drive(_figures[i].Animator, agent.Doing, walking,
-                                     hurrying: agent.Doing == Activity.AtThePlayground,
+                AgentAnimation.Drive(_figures[i].Animator, SituationOf(i, agent, walking),
                                      who: _host.People.Get(new CitizenId(i)).Key.Value,
                                      pace: Mathf.Sqrt((agent.Position - agent.PreviousPosition)
                                                           .LengthSquared) * perSecond);
@@ -425,6 +425,33 @@ namespace Noir.Unity
               + $"Wanted: {Wanted}";
         }
 
+
+        /// <summary>
+        /// What the animation table is allowed to know about this person, right now.
+        ///
+        /// WHERE and WHO, which `Drive` used to throw away before the lookup - see
+        /// AgentAnimation.Situation for the eight faults that came out of that. The place is the
+        /// KIND's name from kinds.txt (`diner`, `tavern`, `farm`), not the building's own name, so
+        /// a row applies to every diner in the town rather than to Dot's in particular.
+        /// </summary>
+        private AgentAnimation.Situation SituationOf(int i, in Noir.Core.Sim.AgentState agent, bool moving)
+        {
+            var citizen = _host.People.Get(new CitizenId(i));
+
+            string place = null;
+            if (agent.At.IsValid)
+            {
+                var at = _host.World.GetPlace(agent.At);
+                if (at != null) place = PlaceKindTable.Current.Row(at.Kind).Name;
+            }
+
+            return new AgentAnimation.Situation(
+                agent.Doing, moving,
+                place: place,
+                stage: citizen.StageIn(VillageHost.Year).ToString().ToLowerInvariant(),
+                sex: citizen.Male ? "male" : "female");
+        }
+
         public Census Report()
         {
             var sim = _host.Sim;
@@ -464,8 +491,7 @@ namespace Noir.Unity
                 animated++;
 
                 string want = AgentAnimation.ClipFor(
-                    agent.Doing, moves,
-                    hurrying: agent.Doing == Activity.AtThePlayground,
+                    SituationOf(i, agent, moves),
                     who: _host.People.Get(new CitizenId(i)).Key.Value) ?? "(nothing)";
 
                 states[want] = states.TryGetValue(want, out int n) ? n + 1 : 1;
