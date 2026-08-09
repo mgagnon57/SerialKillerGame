@@ -66,6 +66,12 @@ sv = _load("serve_viewer", os.path.join(HERE, "serve-viewer.py"))
 # ---------------------------------------------------------------------------------------------
 WRITE = "--write" in sys.argv
 
+# A path argument writes THERE instead of over Content/roads.txt - no backup needed, nothing at
+# risk, and it is the only safe way to diff what this generator would produce against what is
+# actually in use. That comparison is what proved the generator faithful: 24 lines differ and every
+# one is an `aadt` line changing position, nothing else.
+ELSEWHERE = next((a for a in sys.argv[1:] if not a.startswith("--")), None)
+
 
 def idot_counts():
     """The county's traffic counts, by road name, from tools/rossville-aadt.txt.
@@ -643,6 +649,13 @@ def main():
 
     counted = sum(1 for line in L if line.startswith("  aadt "))
 
+    if ELSEWHERE:
+        with open(ELSEWHERE, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("\n".join(L))
+        print(f"wrote {ELSEWHERE}  ({len(roads)} roads, {counted} aadt lines) - "
+              "Content/roads.txt untouched")
+        return
+
     if not WRITE:
         have = 0
         if os.path.exists(path):
@@ -654,16 +667,19 @@ def main():
         print("  and tools/roads-proposed.json (the browser map's copy).")
         print(f"  IDOT counts: {counted} aadt lines would be written, {have} are in the file now.")
 
-        # THE FIVE MISSING ROADS. The file on disk carries more road runs than this generator
-        # produces, and nobody knows why yet - so a --write is still a LOSS even now that the
-        # counts survive it. Said out loud every run rather than left in a document.
+        # ROADS vs ROAD RUNS - and confusing the two produced a false alarm worth recording.
+        # `len(roads)` is 61 UNIQUE NAMES; the file has 66 `road ` LINES, because Summit, Grove,
+        # Green, Harrison and Holmes each arrive as two runs. Comparing the two numbers looks like
+        # five roads going missing and is nothing of the kind. Compare runs with runs.
         runs = 0
         if os.path.exists(path):
             with open(path, encoding="utf-8") as fh:
                 runs = sum(1 for line in fh if line.startswith("road "))
-        if runs > len(roads):
-            print(f"  ** WARNING: {runs} road runs are in the file and this makes {len(roads)}. "
-                  f"A --write would DROP {runs - len(roads)}. Find them first. **")
+        mine = sum(1 for line in L if line.startswith("road "))
+        if runs != mine:
+            print(f"  ** WARNING: {runs} road runs in the file, {mine} here. Diff before writing. **")
+        else:
+            print(f"  {mine} road runs, matching the file. {len(roads)} distinct names.")
 
         print("Re-run with --write to back up and write.")
         return

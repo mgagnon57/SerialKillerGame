@@ -6,12 +6,21 @@
 > overwrite an earlier one) and then writes. Verified: `git status --porcelain` is byte-identical
 > across a no-flag run.
 >
-> **Two things the audit did not know, both found by running it:**
-> 1. The generator produces **61 roads**; `Content/roads.txt` currently holds **66 road runs**. So a
->    `--write` would drop five roads as well as the twelve `aadt` counts. Do not treat `--write` as
->    "regenerate and carry on" until that gap is understood.
-> 2. The audit's "no backup exists" was already refuted twice over: `Content/roads.txt.before-aadt`
->    is on disk, and the twelve `aadt` lines are clean in HEAD.
+> **The generator is faithful, and TRUST-4 closed the one real hole.** `tools/rossville-aadt.txt`
+> now holds the twelve IDOT counts and the generator writes them, so a regeneration carries them
+> instead of eating them. Proven by writing to a scratch path and diffing against the file in use:
+> **24 lines differ and every one is an `aadt` line changing position** (the generator emits it
+> after `easement`; the hand edit put it before). Nothing else moves.
+>
+> **A CORRECTION TO WHAT THIS BLOCK SAID FOR AN HOUR.** It claimed a `--write` would drop five
+> roads, because the generator reports "61 roads" against 66 `road ` lines in the file. Those count
+> different things: 61 is DISTINCT NAMES, 66 is RUNS, and Summit, Grove, Green, Harrison and Holmes
+> each arrive as two. Both files have 61 names and 66 runs. There were never five missing roads —
+> it was my own counting error, published in a commit message before it was checked. The dry run
+> compares runs with runs now and says so.
+>
+> The audit's "no backup exists" was also already refuted twice over: `Content/roads.txt.before-aadt`
+> is on disk, and the twelve `aadt` lines are clean in HEAD.
 >
 > The warning below is kept for the record of what it was like.
 
