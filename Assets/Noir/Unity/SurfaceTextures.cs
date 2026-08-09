@@ -123,7 +123,44 @@ namespace Noir.Unity
             ["floor"] = ("Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Alb.png",
                          "Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Nrm.png",
                          null),
+
+            // ---- THE ROOFS ----------------------------------------------------------------
+            //
+            // THREE ALBEDOS AND FOUR COVERINGS, and the arithmetic is why. The plan for this work
+            // said the owner's settled mix "happens to match the four shades the pack already
+            // ships, so no colour has to be invented". Measured, it does not:
+            //
+            //     Roof_Shingles_A_Farm_Alb   mean (64,64,64)   span 12   neutral mid grey
+            //     Roof_Shingles_B_Farm_Alb   mean (63,62,61)   span 24   the SAME value as A
+            //     Roof_Shingles_C_Farm_Alb   mean (105,70,42)  span 79   brown
+            //     Roof_Shingles_D_Farm_Alb   mean (78,80,70)   span 57   GREEN cast - ruled out
+            //     Roof_Shingles_E_Farm_Alb   mean (44,44,45)   span 21   charcoal, NO NORMAL MAP
+            //
+            // A and B are the same tone, D is the green he specifically excluded, and the only
+            // true charcoal in the pack ships without the normal map that carries all the shingle.
+            // So charcoal and brown-black are TINTED - see Materials3D.Roofing - and B is used for
+            // charcoal rather than A because its albedo carries twice the tonal variation, which
+            // is what stops a whole street of dark roofs reading as one flat shape.
+            //
+            // THE SPANS ARE THE POINT. Twelve levels out of 255 is not a texture, it is a colour:
+            // every course line, every tab edge and every granule is in the NORMAL map, which does
+            // nothing at all without a tangent stream. See MeshChunks.Emit.
+            ["roof_shingle_grey"] = (Roofs + "Roof_Shingles_A_Farm_Alb.png",
+                         Roofs + "Roof_Shingles_A_Farm_Nrm.png",
+                         Roofs + "Roof_Shingles_A_Farm_AO.png"),
+            ["roof_shingle_charcoal"] = (Roofs + "Roof_Shingles_B_Farm_Alb.png",
+                         Roofs + "Roof_Shingles_B_Farm_Nrm.png",
+                         Roofs + "Roof_Shingles_B_Farm_AO.png"),
+            ["roof_shingle_brown"] = (Roofs + "Roof_Shingles_C_Farm_Alb.png",
+                         Roofs + "Roof_Shingles_C_Farm_Nrm.png",
+                         Roofs + "Roof_Shingles_C_Farm_AO.png"),
+            ["roof_shingle_black"] = (Roofs + "Roof_Shingles_C_Farm_Alb.png",
+                         Roofs + "Roof_Shingles_C_Farm_Nrm.png",
+                         Roofs + "Roof_Shingles_C_Farm_AO.png"),
         };
+
+        private const string Roofs =
+            "Assets/polyperfect/Poly Universal Pack/Textures/Buildings/Roofs/";
 
 #if UNITY_EDITOR
         private static readonly Dictionary<string, Texture2D> _packCache = new Dictionary<string, Texture2D>();
@@ -148,7 +185,14 @@ namespace Noir.Unity
         /// gets duplicated into a tracked folder, and a build player without AssetDatabase falls
         /// straight back to Apply.
         /// </summary>
-        public static void ApplyPack(Material material, string name, float tilingMetres = TilingMetres)
+        /// <param name="tint">What to multiply the bound albedo by. WHITE for ground, where the
+        /// texture carries the colour and a hue in the material would multiply two mid-tones into
+        /// something far darker than either - the fault that once made the whole village look like
+        /// it was under a tarpaulin. NOT white for the roofs: the pack ships three usable shingle
+        /// albedos and the town needs four coverings, so charcoal and brown-black are the grey and
+        /// the brown taken down. See the roof entries in _packSets for the measurement.</param>
+        public static void ApplyPack(Material material, string name, float tilingMetres = TilingMetres,
+                                     Color? tint = null)
         {
 #if UNITY_EDITOR
             if (material != null && _packSets.TryGetValue(name, out var set))
@@ -156,8 +200,9 @@ namespace Noir.Unity
                 var albedo = LoadPackTexture(set.Albedo);
                 if (albedo != null)
                 {
-                    if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
-                    if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
+                    var colour = tint ?? Color.white;
+                    if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", colour);
+                    if (material.HasProperty("_Color")) material.SetColor("_Color", colour);
 
                     var scale = Vector2.one / tilingMetres;
                     if (material.HasProperty("_BaseMap"))
@@ -211,7 +256,24 @@ namespace Noir.Unity
 
             int found = 0;
             foreach (var kv in _cache) if (kv.Value != null) found++;
-            Debug.Log($"Surface textures: {found} loaded from Content/textures/.");
+            // "LOOSE", NOT "LOADED", AND IT IS THE MOST USEFUL LINE IN THE BUILD LOG.
+            //
+            // This counts what fell back to the PROCEDURAL placeholder because ApplyPack found no
+            // pack set, or found one and could not load it. It is therefore a failure count, not
+            // an inventory, and reading it as an inventory is how a silent fallback survives:
+            // before the roofs were moved onto the pack's shingle sets it read SEVEN - the four
+            // English coverings plus water, wall and brick - and looked exactly like success.
+            //
+            // THREE is the healthy number: water, which the pack has nothing tileable for, and
+            // wall and brick, which have no pack set yet. Anything higher means a pack path
+            // silently failed and something in the town is still a flat placeholder.
+            var loose = new List<string>();
+            foreach (var kv in _cache) if (kv.Value != null) loose.Add(kv.Key);
+            loose.Sort();
+
+            Debug.Log($"Surface textures: {found} loose ({string.Join(", ", loose)}) - "
+                    + "everything else is on a real pack set. Three is healthy; more means a "
+                    + "pack path failed and fell back to a flat placeholder.");
         }
     }
 }

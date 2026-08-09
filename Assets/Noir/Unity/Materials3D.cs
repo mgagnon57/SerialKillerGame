@@ -388,10 +388,24 @@ namespace Noir.Unity
                 if (_roofs != null) return _roofs;
                 _roofs = new[]
                 {
-                    Roofing("RoofSlate", "roof_slate"),
-                    Roofing("RoofTile", "roof_tile"),
-                    Roofing("RoofWorn", "roof_worn"),
-                    Roofing("RoofThatch", "roof_thatch"),
+                    // THREE-TAB ASPHALT SHINGLE, WHICH IS WHAT ROSSVILLE HAS. The four coverings
+                    // here were slate, clay tile, worn tile and THATCH - Ashcombe's English
+                    // village, shipped into east-central Illinois and never revisited. That is
+                    // the "weird shit ... left over textures" the owner reported.
+                    //
+                    // The tints are measured against the pack albedo they multiply; see the roof
+                    // entries in SurfaceTextures._packSets for why three albedos serve four
+                    // coverings. The FLAT colour beside each is what a shipped player falls back
+                    // to when no texture binds at all, and it is the colour of the covering
+                    // rather than white - which is what ROOF-1 is for.
+                    Roofing("RoofShingleGrey", "roof_shingle_grey",
+                            tint: Color.white, flat: Grey(0.25f)),
+                    Roofing("RoofShingleCharcoal", "roof_shingle_charcoal",
+                            tint: Grey(0.70f), flat: Grey(0.17f)),
+                    Roofing("RoofShingleBrown", "roof_shingle_brown",
+                            tint: Color.white, flat: new Color(0.41f, 0.27f, 0.16f)),
+                    Roofing("RoofShingleBlack", "roof_shingle_black",
+                            tint: Grey(0.38f), flat: new Color(0.16f, 0.11f, 0.07f)),
                     Roofing("Brick", "brick"),      // chimneys - see ChimneyIndex
                     Wall,                           // gable ends, towers - see WallIndex
                 };
@@ -420,24 +434,63 @@ namespace Noir.Unity
         /// <summary>A spire is lead or slate, never brick.</summary>
         public static int SpireIndex => 0;
 
-        private static Material Roofing(string name, string texture)
+        /// <summary>A neutral at a given value, so the tints below read as what they are.</summary>
+        private static Color Grey(float v) => new Color(v, v, v);
+
+        /// <summary>
+        /// One roof covering.
+        ///
+        /// THREE THINGS HAVE TO LINE UP AND THEY USED NOT TO.
+        ///
+        /// `flat` is the colour the material carries. It was `Color.white`, and white only shows
+        /// when NO texture binds - which is exactly the case a shipped player is in, because
+        /// `ApplyPack` is entirely `#if UNITY_EDITOR` and the loose PNG loader can miss too. So
+        /// the editor looked fine and the product had PURE WHITE ROOFS. `Apply` overwrites this
+        /// with white the moment a texture does bind, deliberately, so nothing is double-tinted.
+        ///
+        /// `texture` is both the loose PNG name under Content/textures/ and the key into the
+        /// pack set table. `tools/Noir.Sim -- tiles` generates the loose one in the SAME colour
+        /// this covering ends up, so the two paths agree.
+        ///
+        /// `tint` multiplies the pack albedo. White for the two coverings whose pack albedo is
+        /// already the right colour; less for the two that are the same albedo taken down.
+        ///
+        /// TILING 1.5 m, NOT 2.5. The pack shingle sheets carry four courses, so 2.5 m of roof
+        /// per repeat put a course line every 24 inches - a shingle the size of a paving slab.
+        /// At 1.5 m it lands 5.1 to 6.4 inches depending on the pitch of the house you are
+        /// standing in front of, which is the American three-tab exposure and is the spread the
+        /// owner ruled correct rather than a bug: four house types, four pitches, one street.
+        /// </summary>
+        private static Material Roofing(string name, string texture,
+                                        Color? tint = null, Color? flat = null)
         {
-            var m = Make(name, Color.white, 0.04f);
-            SurfaceTextures.Apply(m, texture, 2.5f);
+            var m = Make(name, flat ?? Color.white, 0.04f);
+            SurfaceTextures.ApplyPack(m, texture, 1.5f, tint);
             return m;
         }
 
         /// <summary>
-        /// Which covering a building has. Slate and tile are the village; worn tile is the older
-        /// end of it; thatch is rare, which is what makes it worth noticing.
+        /// Which covering a building has: the owner's own mix, settled 2026-08-09.
+        ///
+        /// SLATE GREY 40 · CHARCOAL 40 · BROWN 20, with ONE ROOF IN TWENTY a brown-black. The
+        /// three named shares are held in their 40:40:20 ratio across the 95 that are left once
+        /// the brown-blacks are taken out, which is what "one in twenty" means and why these are
+        /// 38/38/19 rather than 40/40/20.
+        ///
+        /// NO GREEN, and that is a period ruling rather than a taste one: faded green is a modern
+        /// architectural shingle and reads wrong for 1991 east-central Illinois. The pack's
+        /// Shingles_D is exactly that green, which is why it is the one sheet of five this town
+        /// does not touch.
+        ///
+        /// Was slate 34 / tile 36 / worn 22 / thatch 8.
         /// </summary>
         public static int RoofingFor(int x, int y)
         {
             int roll = (int)(Scatter(x, y, 5309) % 100);
-            if (roll < 34) return 0;   // slate
-            if (roll < 70) return 1;   // tile
-            if (roll < 92) return 2;   // worn tile
-            return 3;                  // thatch
+            if (roll < 38) return 0;   // slate grey
+            if (roll < 76) return 1;   // charcoal
+            if (roll < 95) return 2;   // brown
+            return 3;                  // brown-black, one in twenty
         }
 
         /// <summary>

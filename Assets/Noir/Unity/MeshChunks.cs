@@ -316,6 +316,24 @@ namespace Noir.Unity
                 }
 
                 if (!hasNormals) mesh.RecalculateNormals();
+
+                // TANGENTS, WITHOUT WHICH EVERY NORMAL MAP IN THIS PROJECT IS INERT.
+                //
+                // Nothing in this codebase has ever written a tangent stream - `RecalculateTangents`,
+                // `SetTangents` and `.tangents` returned ZERO hits across Assets/Noir before this
+                // line. URP builds its tangent frame from a vertex stream, so a bound normal map
+                // with no tangents does nothing at all, and the ground estate has been binding pack
+                // normal maps into nothing this entire time.
+                //
+                // IT MATTERS MOST FOR THE ROOFS, and it is why it goes in before them rather than
+                // after. The pack's roof albedos are nearly flat - `Roof_Shingles_A_Farm_Alb` spans
+                // twelve levels out of 255 - because ALL THE SHINGLE IS IN THE NORMAL MAP. Bind
+                // those sets without this and the roofs come out flat and materially darker with no
+                // course lines at all, which is worse than the terracotta placeholder they replace.
+                //
+                // It adds a stream, not a vertex: the recorded vertex count must not move.
+                mesh.RecalculateTangents();
+
                 mesh.RecalculateBounds();
 
                 var go = new GameObject(mesh.name);

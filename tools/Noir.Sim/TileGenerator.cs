@@ -93,13 +93,27 @@ namespace Noir.Sim
             // exactly how it looked. Each is a real texture rather than a tint, because
             // materials carry white and textures carry the colour.
             //
-            // Roofs keep some grain, because courses of tile or slate genuinely do run in
-            // lines - but at 0.80 the lines were louder than the roof and every elevation
-            // came out scribbled.
-            SaveSurface(outputDir, "roof_slate", 96, 100, 110, 16, 0.40, 2101);
-            SaveSurface(outputDir, "roof_tile", 158, 92, 70, 20, 0.40, 2201);
-            SaveSurface(outputDir, "roof_worn", 126, 100, 88, 18, 0.38, 2301);
-            SaveSurface(outputDir, "roof_thatch", 168, 142, 92, 22, 0.50, 2401);
+            // Roofs keep some grain, because courses of shingle genuinely do run in lines -
+            // but at 0.80 the lines were louder than the roof and every elevation came out
+            // scribbled.
+            //
+            // THREE-TAB ASPHALT SHINGLE, IN THE OWNER'S OWN MIX, settled 2026-08-09. These were
+            // slate (96,100,110 - blue-grey), clay tile (158,92,70 - TERRACOTTA), worn tile and
+            // THATCH (168,142,92 - straw). Ashcombe was an English village; this is Rossville,
+            // Vermilion County, Illinois, and it is 1991. Straw and terracotta on six hundred
+            // roofs is the "weird shit ... left over textures" he reported.
+            //
+            // THESE ARE THE FALLBACK, NOT THE ROOF. The editor binds the pack's real shingle
+            // sets - albedo, normal and AO - through SurfaceTextures.ApplyPack, and all the
+            // shingle detail is in the normal map. A shipped player has no AssetDatabase and
+            // gets these instead, so their COLOURS are matched to what the pack path produces:
+            // a build should look like a slightly softer version of the editor, never like a
+            // different town. Grain is up from 0.40 because a shingle course reads harder than
+            // a slate one, and it is the only shingle a player will get.
+            SaveSurface(outputDir, "roof_shingle_grey", 64, 64, 64, 14, 0.55, 2101);
+            SaveSurface(outputDir, "roof_shingle_charcoal", 44, 43, 43, 12, 0.55, 2201);
+            SaveSurface(outputDir, "roof_shingle_brown", 105, 70, 42, 20, 0.50, 2301);
+            SaveSurface(outputDir, "roof_shingle_black", 40, 27, 16, 12, 0.50, 2401);
 
             Console.WriteLine();
             Console.WriteLine("Done. Unity picks these up on Play.");
