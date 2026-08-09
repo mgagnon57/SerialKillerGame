@@ -46,6 +46,25 @@ def _load(name, path):
 
 ft = _load("fit_transform", os.path.join(HERE, "fit-transform.py"))
 cr = _load("check_roads", os.path.join(HERE, "check-roads.py"))
+sv = _load("serve_viewer", os.path.join(HERE, "serve-viewer.py"))
+
+# ---------------------------------------------------------------------------------------------
+#  THIS SCRIPT USED TO OVERWRITE Content/roads.txt THE MOMENT YOU RAN IT, WITH NO BACKUP.
+#
+#  No flag, no confirmation, no copy aside - `open(path, "w")` unconditionally, at the bottom of a
+#  600-line file. So a single dry run to check a hypothesis silently reverted the survey network
+#  AND deleted the twelve IDOT traffic counts that fixed the starving junction at church x maple,
+#  because the writer below emits no `aadt` line. Recoverable from git, but you would not know it
+#  had happened: the tool prints "wrote Content/roads.txt" either way and looks like it worked.
+#
+#  Same idiom as the sibling that got it right - build-road-blocks.py:26. No flag is a DRY RUN
+#  that prints what it would do and writes nothing. `--write` backs up first, through the helper
+#  that refuses to overwrite an earlier backup, and only then writes.
+#
+#  tools/roads-proposed.json is behind the same flag on purpose: it is the browser map's copy, and
+#  a dry run must not refresh what the owner is looking at.
+# ---------------------------------------------------------------------------------------------
+WRITE = "--write" in sys.argv
 
 # Names the county spells differently from this project. The county is not automatically right
 # about a name - it is right about geometry - so the project's own spelling wins and the
@@ -588,9 +607,20 @@ def main():
         w_("")
 
     path = os.path.join(CONTENT, "roads.txt")
+
+    if not WRITE:
+        print(f"DRY RUN - nothing written. {len(roads)} roads would be written to")
+        print(f"  {os.path.normpath(path)}")
+        print("  and tools/roads-proposed.json (the browser map's copy).")
+        print("Re-run with --write to back up and write.")
+        print("WARNING: Content/roads.txt carries twelve IDOT `aadt` counts that this generator")
+        print("does NOT emit. A write drops them - check after any --write run.")
+        return
+
+    sv.backup(path, "build-roads")
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(L))
-    print(f"wrote Content/roads.txt  ({len(roads)} roads)")
+    print(f"wrote Content/roads.txt  ({len(roads)} roads), backup taken first")
 
     with open(os.path.join(HERE, "roads-proposed.json"), "w", encoding="utf-8") as fh:
         json.dump([{"n": n, "w": width, "c": klass, "src": s, "row": row,
