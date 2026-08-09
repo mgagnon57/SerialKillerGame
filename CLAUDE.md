@@ -325,10 +325,21 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
 - **Population scales off `WorldModel.Households`, which counts *units*, not buildings.** 1,300
   people is the target and the number is load-bearing. A terrace is one building with four front
   doors; scaling anything off the building count gets it wrong.
-- **`Unity_RunCommand` is broken in this project** — it fails identically on a fresh instance.
-  Unity also only rescans scripts on focus **gain**: already-focused plus an edit means nothing
-  happens, forever. Marker file + focus-loss-then-gain is the way in, and verify the marker was
-  consumed.
+- **`Unity_RunCommand` WORKS. This file said it was broken and that cost a whole session.**
+  Verified 2026-08-08 against a live editor: it compiled and ran a `CommandScript`, found the
+  cameras, read `EditorApplication.isPlaying`, walked `AgentMeshView`'s animators and moved the
+  scene view. So does `Unity_GetConsoleLogs`, and so does the multi-angle scene capture — which
+  photographs the real town, streets, railway and all.
+
+  **What that means, and it is the whole point: DRIVE UNITY YOURSELF.** Open it, close it,
+  recompile, enter Play, capture pictures, read state out of the running game. Do not write "please
+  press Play and tell me what you see" — that is the owner doing an assistant's job, and this line
+  is why it kept happening. The one thing measured as failing is capturing a *specific camera by
+  id while in Play* (`Failed to render scene preview`); the multi-angle scene capture with
+  `focusObjectIds` works and is the way to look at something.
+
+  Still true: Unity only rescans scripts on focus **gain**, so already-focused plus an edit means
+  nothing happens, forever. Marker file + focus-loss-then-gain, and verify the marker was consumed.
 - **A UTF-8 BOM stops `^\s*#` matching the first line**, so `grep -vcE '^\s*$|^\s*#'` over-counts
   a `Content/` file by one. Several of these files have one.
 - **`kinds.txt` resolves a kind through its `words` line, not its `kind` line.** Renaming the
