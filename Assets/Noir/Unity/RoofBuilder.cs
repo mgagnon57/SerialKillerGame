@@ -59,9 +59,10 @@ namespace Noir.Unity
 
                 var into = chunks.At(place.Bounds.X, place.Bounds.Y);
 
-                // The covering is still chosen from the building's own corner, so which roof a
-                // house has is a property of where it stands and not of how the map happens to
-                // be divided up. Chunking must not be visible in the picture at all.
+                // The covering is chosen from the BUILDING, not from its corner, so which roof a
+                // house has survives that house being moved - and chunking is still invisible in
+                // the picture, which is what the old per-corner key was protecting. See
+                // Materials3D.RoofingFor.
                 // ON THE GROUND IT STANDS ON. The walls already follow the terrain (VillageMesh
                 // samples ElevationGrid for every wall segment) but the roof did not, so on a map
                 // with real elevation the two came apart. Rossville's dwellings sit on ground
@@ -69,8 +70,7 @@ namespace Noir.Unity
                 // It never showed before because the only town with contour is Rossville and its
                 // houses were bought models, which are seated through Space3D.ToWorld.
                 var massing = MassingGrammars.Of(place).Lifted(Space3D.GroundUnder(place.Bounds));
-                AddRoof(place.Bounds, massing, into,
-                        Materials3D.RoofingFor(place.Bounds.X, place.Bounds.Y));
+                AddRoof(place.Bounds, massing, into, Materials3D.RoofingFor(place));
 
                 // A chimney per home. On a terrace that means one per unit, which is exactly
                 // what tells you from the street how many families live in the building -

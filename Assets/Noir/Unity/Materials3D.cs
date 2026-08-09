@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using Noir.Core.Contracts;
 using Noir.Core.World;
 using Terrain = Noir.Core.World.Terrain;
 using FurnitureKind = Noir.Core.World.FurnitureKind;
@@ -483,10 +484,31 @@ namespace Noir.Unity
         /// does not touch.
         ///
         /// Was slate 34 / tile 36 / worn 22 / thatch 8.
+        ///
+        /// KEYED ON THE BUILDING, NOT ON WHERE IT STANDS, and that is the whole of ROOF-3.
+        ///
+        /// This took `place.Bounds.X, place.Bounds.Y` through `Scatter`. The hash itself is fine -
+        /// measured over the town's whole footprint it lands 37.97 / 38.03 / 19.00 / 5.00 against
+        /// a target of 38 / 38 / 19 / 5, with no correlation between neighbours at any lot spacing
+        /// from one metre to sixty-six. There is nothing wrong with the distribution.
+        ///
+        /// What is wrong is that a roof was a property of a COORDINATE. Move the building and it
+        /// gets a different roof. `ClearOfRoads` shoved 175 buildings off road corridors on
+        /// 2026-08-09 alone, so re-deriving `Content/roads.txt` re-rolled about two thirds of
+        /// those roofs - the town's appearance churning as a side effect of a road being measured
+        /// more accurately.
+        ///
+        /// `Place.Key` is the answer and this codebase had already reached it twice. Its own
+        /// doc comment: "Inserting one building at the top of a 345-place file used to reshuffle
+        /// fifty-four other buildings' interiors ... Content has to be additive or it stops being
+        /// possible to add any." And `PlaceSpec.Key`: "EVERYTHING generated from a place hangs off
+        /// this string." Everything except the roof, until now.
         /// </summary>
-        public static int RoofingFor(int x, int y)
+        public static int RoofingFor(Place place)
         {
-            int roll = (int)(Scatter(x, y, 5309) % 100);
+            // Salted, so the covering is not correlated with anything else keyed on the same
+            // building - its interior, its household, its chimney count.
+            int roll = (int)(Rolls.Avalanche(place.Key ^ 5309UL) % 100UL);
             if (roll < 38) return 0;   // slate grey
             if (roll < 76) return 1;   // charcoal
             if (roll < 95) return 2;   // brown

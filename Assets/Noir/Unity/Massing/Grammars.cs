@@ -86,8 +86,7 @@ namespace Noir.Unity
         public Massing Profile(Place place) => new Massing(6.5f, RoofForm.Gable, 1.6f);
 
         public void Extras(Place place, MeshChunk into) =>
-            MassingExtras.Lucam(place, Profile(place), into,
-                                Materials3D.RoofingFor(place.Bounds.X, place.Bounds.Y));
+            MassingExtras.Lucam(place, Profile(place), into, Materials3D.RoofingFor(place));
     }
 
     /// <summary>
