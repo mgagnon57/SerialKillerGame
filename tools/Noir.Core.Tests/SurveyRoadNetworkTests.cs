@@ -364,31 +364,40 @@ namespace Noir.Core.Tests
             TestContext.Out.WriteLine($"near, but clear of each other                 : {near.Count}");
             foreach (var (gap, what) in near) TestContext.Out.WriteLine($"    {gap,5:0.0}m  {what}");
 
-            // A RATCHET AT THE MEASURED FOUR, NOT A ZERO, AND THE FOUR ARE A DATA FAULT.
+            // A RATCHET AT THE MEASURED TWO, NOT A ZERO, AND BOTH ARE A DATA FAULT.
             //
             // It was eight streets and six alleys. Letting `Touches` accept an end inside the
             // other road's CARRIAGEWAY rather than within a metre of its centre line took the
             // alleys to none and the streets to four, and the four left are all 5.4-8.3 m:
             //
-            //     benton and summit    8.3 m      dale and chicago     5.4 m
-            //     dale and grove       6.1 m      thompson and chicago 7.4 m
             //
             // Every one is a road whose county segment STOPS SHORT of the street it should meet -
-            // Dale Avenue ends 0.4 m outside Route 1's carriageway - so there is genuinely no
-            // tarmac between them and inventing a junction would be inventing a road. The fix is
-            // `extend_to_streets` in tools/build-roads.py, which already opens a mouth for an
-            // alley that stops short and is simply not run over the streets. That rewrites
-            // Content/roads.txt and belongs in its own change.
+            // Dale Avenue ended 0.4 m outside Route 1's carriageway - so there is genuinely no
+            // tarmac between them and inventing a junction would be inventing a road.
+            //
+            // TWO OF THE FOUR WERE THEN CARRIED OUT TO MEET THEIR STREET by
+            // `extend_streets_to_streets`, which is the alley-mouth code pointed at street ends:
+            // dale and thompson both now reach Route 1. The two left are
+            //
+            //     benton and summit  8.3 m at (1117,1091)
+            //     dale and grove     6.1 m at (1351,1979)
+            //
+            // and they are left because THE GENERATOR AND THE MODEL DO NOT MEASURE THE SAME GAP.
+            // build-roads.py works on the DECLARED points and judges these already close enough
+            // to have their junction; this walks the SMOOTHED centre line, which bows away from
+            // the declared polyline between vertices, and gets a metre or two more. Neither is
+            // wrong - they are different questions - but until the generator asks the model's
+            // question, closing these two means widening a tolerance in the dark. See ALLEY-2b.
             //
             // TWO CLAIMS, so the ratchet cannot hide the fault it was written for. The count may
             // only fall - and NOTHING may overlap more deeply than five metres, which is where
-            // the four sit clear above and where every one of the fourteen that were fixed sat
+            // the two sit clear above and where every one of the sixteen that were fixed sat
             // below. benton x alley21, the pair that put two cars in the same place, was 2.0 m.
             Assert.That(alleys, Is.Empty,
                 "An alley shares ground with a road and no junction was made:\n  " +
                 string.Join("\n  ", alleys));
 
-            Assert.That(offenders.Count, Is.LessThanOrEqualTo(4),
+            Assert.That(offenders.Count, Is.LessThanOrEqualTo(2),
                 "These streets share ground with no junction between them:\n  " +
                 string.Join("\n  ", offenders) + "\n\n" +
                 "A car on one cannot turn onto the other, and a car on each can be in the same " +

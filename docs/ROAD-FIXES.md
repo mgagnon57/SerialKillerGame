@@ -273,6 +273,33 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 
 ---
 
+## DOOR-1 — nine doors nobody can walk through · **DIAGNOSED 2026-08-09, fix in progress**
+
+> The owner ruled: fix them, then gate the validator at zero so it cannot creep again. It went
+> 6 → 7 → 9 across one night's road work, unasserted the whole way.
+>
+> **`Noir/Audit the Doors` (`Noir.Editor.DoorAudit`) exists for this** — the validator can only say
+> *which* door fails, which is not enough to fix one. It prints the ground under the door, the
+> ground all round it, which walkable region it is in and how big that region is against the main
+> one. That turned nine separate-looking failures into **two faults**:
+>
+> **A — five doors buried in Wall**, with all eight neighbours Wall too: `401 Dale Ave`,
+> `502 Stewart Ave`, `501 Mckibben Ave`, `502 Mckibben Ave`, `208 Henderson Street`. The door tile
+> itself is not walkable.
+>
+> **B — four doors sealed inside their own building**: `201 Perry Street` (pocket of 79 tiles),
+> `315 Mc Kibben Street` (114), `400 South Grove Street` (164), `316 Mc Kibben Street` (165). The
+> door is on Floor and the only walkable ground beside it is the building's own interior — there
+> is no way out. The main region is 4,935,969 tiles, so these are not "cut off from the town",
+> they are cut off from everything.
+>
+> Both are the same sentence: **the door is not on the outside face.** `ClearOfRoads` moved 175
+> buildings off road corridors that run and it *does* carry each door with its building
+> (`ClearOfRoads.cs:87`), so the door keeps its place on the wall — what it cannot carry is the
+> room outside the wall. The audit now also names any neighbouring place covering a tile beside
+> the door, which is what says whether a building painted over its own door or a neighbour moved
+> against it.
+
 ## SPLINE-1 — the curve overshot, and nine roads left their own ends backwards · ✅ **FIXED 2026-08-09**
 
 > **Not one of the 148. Found by looking at a picture**, which is the only reason it was found at
@@ -309,10 +336,15 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 > The survey network went 112 → 110 junctions: two of them were the overshoot crossing something
 > it never really reached.
 >
-> **⚠ STILL OPEN: 16.7 m is a lot.** Summit is three declared points over 1.2 km, so the curve is
-> rounding a corner the county recorded as a corner. Whether a street should bow 55 ft between
-> survey vertices is a question about the town's shape, and `SOURCES-OF-TRUTH.md` says the owner
-> is the authority on shape. Ask him before smoothing roads any further — or any less.
+> **CLOSED — the owner ruled on it, 2026-08-09: leave it, corners stay rounded.** Summit's 16.7 m
+> is the curve rounding a corner the county recorded as a corner, and a real street corner has a
+> turning radius; a car cannot pivot on a point. He is the authority on the town's shape
+> (`SOURCES-OF-TRUTH.md`) and he grew up on these streets.
+>
+> **So do not "fix" this later by straightening streets, and do not smooth them further either.**
+> Both directions are now a decision to be re-taken with him, not a defect to be chased. The
+> number to watch is not the bow — it is `EveryBentRoadFindsItsWayBackToACoordinateOnItsOwnAxis`
+> and the backwards count, which must stay at zero on both maps.
 
 ## ALLEY-2b — four streets stop short of the street they should meet · **OPEN, and well understood**
 

@@ -207,11 +207,18 @@ def _PARCELS(village):
     return _PARCEL_CACHE["p"]
 
 
-def _nearest_on_streets(p, roads):
-    """The closest point on any non-alley centreline, and how far away it is."""
+def _nearest_on_streets(p, roads, exclude=None):
+    """The closest point on any non-alley centreline, and how far away it is.
+
+    `exclude` keeps a road from finding ITSELF, which does not matter while only alleys are
+    extended - an alley is never in this list - and matters entirely once streets are, because
+    every street's own end sits at distance zero from its own centreline.
+    """
     best, at = float("inf"), None
     for name, _w, klass, lines, _src in roads:
         if klass == "alley":
+            continue
+        if exclude is not None and name == exclude:
             continue
         for pl in lines:
             for i in range(len(pl) - 1):
@@ -226,6 +233,93 @@ def _nearest_on_streets(p, roads):
                 if d < best:
                     best, at = d, q
     return best, at
+
+
+#: How far a STREET end may be carried to reach the street it stops short of. Shorter than an
+#: alley's reach on purpose: an alley's gap has a known cause and a known size - derive-alleys.py
+#: blanked 11 m around every street - while a street that stops 20 m short of another is more
+#: likely a road that genuinely ends there.
+STREET_REACH = 12.0
+
+#: Close enough that the junction already forms. Half a street's 10 m corridor: `RoadNetwork.
+#: Touches` counts an end as meeting a road when it lands inside that road's CARRIAGEWAY, so
+#: anything nearer than this already has its junction and must not be moved.
+STREET_TOUCH = 5.0
+
+#: How straight-on the approach has to be. A street that stopped short was HEADING for the one it
+#: missed; a street that merely ends near another is a different thing entirely and moving it would
+#: invent a road. 0.87 is thirty degrees.
+STREET_AHEAD = 0.87
+
+STREET_MOUTHS = {"opened": 0, "already": 0, "too far": 0, "refused": 0, "off to one side": 0}
+
+
+def extend_streets_to_streets(name, runs, roads, parcels=None):
+    """Carry a street's end out to the street it stops short of.
+
+    THE SAME FAULT THE ALLEYS HAD, IN A SMALLER NUMBER OF PLACES AND FROM A DIFFERENT CAUSE.
+    `NoTwoStreetsTouchWithoutAJunctionBetweenThem` found four pairs whose corridors overlap with
+    no junction between them, because the county's chained segments stop just outside the other
+    road's carriageway - Dale Avenue ends 0.4 m short of Route 1's. A car cannot turn from Dale
+    onto Route 1, which is a real route through this town.
+
+    REFUSED IN THREE WAYS, because a street is not an alley and the reach cannot be as generous:
+
+      - anything already inside the target's carriageway is left alone - its junction exists;
+      - anything more than STREET_REACH away is left alone - it probably just ends there;
+      - anything whose target is OFF TO ONE SIDE rather than straight ahead is left alone, which
+        is the guard that stops this inventing roads. A street that stopped short was pointing at
+        the one it missed.
+
+    and then the same parcel refusal the alleys get, so no mouth is driven through a front garden.
+    """
+    out = []
+    for pl in runs:
+        pl = [tuple(p) for p in pl]
+        if len(pl) < 2:
+            out.append(pl)
+            continue
+
+        for which in (0, -1):
+            end = pl[which]
+            gap, q = _nearest_on_streets(end, roads, exclude=name)
+
+            if q is None or gap <= STREET_TOUCH:
+                STREET_MOUTHS["already"] += 1 if q is not None else 0
+                continue
+            if gap > STREET_REACH:
+                STREET_MOUTHS["too far"] += 1
+                continue
+
+            # WAS IT HEADING THERE? The road's own direction at this end, against the direction
+            # to the street it stopped short of.
+            inward = pl[1] if which == 0 else pl[-2]
+            ax, ay = end[0] - inward[0], end[1] - inward[1]
+            alen = math.hypot(ax, ay)
+            bx, by = q[0] - end[0], q[1] - end[1]
+            blen = math.hypot(bx, by)
+            if alen < 1e-6 or blen < 1e-6:
+                continue
+            if (ax * bx + ay * by) / (alen * blen) < STREET_AHEAD:
+                STREET_MOUTHS["off to one side"] += 1
+                continue
+
+            tip = (int(round(q[0])), int(round(q[1])))
+
+            if parcels is not None and parcels.hit(tip) is not None:
+                STREET_MOUTHS["refused"] += 1
+                continue
+
+            if which == 0:
+                pl = [tip] + pl
+            else:
+                pl = pl + [tip]
+            STREET_MOUTHS["opened"] += 1
+            print(f"[streets] {name} carried to meet the road it stopped {gap:.1f} m short of, "
+                  f"at {tip[0]},{tip[1]}")
+
+        out.append(pl)
+    return out
 
 
 def extend_to_streets(name, runs, roads, parcels=None):
@@ -561,6 +655,28 @@ def main():
                 keep.extend(clip_and_round(pl))
             FLOOR[name] = "street"
             roads.append((name, None, "mainroad", keep, "authored"))
+
+    # ---- AND GIVE A STREET A MOUTH TOO, WHERE IT STOPS SHORT OF ONE -------------------------
+    #
+    # BEFORE THE ALLEYS, deliberately. The alley mouths are aimed at street centrelines, so the
+    # streets have to be in their final shape first or an alley is carried to where a street used
+    # to stop. Same reasoning as doing the alley extension after chain/simplify/clip rather than
+    # upstream of them.
+    #
+    # Four pairs on 2026-08-09: benton x summit, dale x grove, dale x chicago, thompson x chicago.
+    # See extend_streets_to_streets for the three refusals - this is a much narrower reach than
+    # the alleys get, because an alley's gap has a known cause and a street's does not.
+    for i, (nm, w, kl, runs, src) in enumerate(roads):
+        if kl == "alley":
+            continue
+        roads[i] = (nm, w, kl,
+                    extend_streets_to_streets(nm, runs, roads, _PARCELS(village)), src)
+
+    print(f"[streets] mouths: {STREET_MOUTHS['opened']} opened, "
+          f"{STREET_MOUTHS['already']} already meeting, "
+          f"{STREET_MOUTHS['off to one side']} off to one side, "
+          f"{STREET_MOUTHS['too far']} too far, "
+          f"{STREET_MOUTHS['refused']} refused (would cross a lot)")
 
     # ---- ALLEY NAMES COME FROM THE REGISTRY, NOT FROM THE LENGTH RANK -----------------------
     #

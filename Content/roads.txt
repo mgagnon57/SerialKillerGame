@@ -98,7 +98,7 @@ road creative 10 1404,1358 1515,1531   # county, right of way 19.7 m measured
   easement 19.7
   aadt 225   # IDOT count, see tools/rossville-aadt.txt
 
-road dale 10 882,1982 1351,1978   # county, right of way 20.0 m measured
+road dale 10 877,1982 882,1982 1351,1978   # county, right of way 20.0 m measured
   class street
   easement 20.0
   aadt 125   # IDOT count, see tools/rossville-aadt.txt
@@ -196,7 +196,7 @@ road summit 10 1156,1098 1154,784   # county, right of way 20.0 m measured
   easement 20.0
   aadt 225   # IDOT count, see tools/rossville-aadt.txt
 
-road thompson 10 890,2100 1352,2103   # county, right of way 20.0 m measured
+road thompson 10 883,2100 890,2100 1352,2103   # county, right of way 20.0 m measured
   class street
   easement 20.0
 

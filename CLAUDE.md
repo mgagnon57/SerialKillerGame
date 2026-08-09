@@ -321,6 +321,13 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
 - **The city is built once and shared by every test in a run.** Anything you change on
   `VillageHost` — especially `SpeedIndex` — must be restored in a teardown. Both "flaky" tests
   above were this shape.
+- **DO NOT EDIT ANY `.cs` WHILE A BATCH RUN IS GOING.** A `-batchmode` Unity refreshes the asset
+  database as it starts — 67 s of the 82 s startup — so a file saved in that window is compiled,
+  and a file saved half-written is a compile error. On 2026-08-09 a new editor script was added
+  during an eighteen-minute PlayMode run and the whole run died with
+  `Test run completed. Exiting with code 3 (RunError). Scripts had compilation errors.` Eighteen
+  minutes for nothing, and the log says it near the top where nobody looks. Docs and `Content/`
+  are safe to edit mid-run; source is not. Queue the edit, or accept losing the run.
 - **Core bans transcendentals** for replay determinism. `Daylight` embeds a 365-entry table rather
   than call six of them. Linear interpolation and integer hashing only — no `Math.Pow` to shape a
   curve. `Math.Sqrt` is fine and always was: IEEE-754 requires it correctly rounded.
