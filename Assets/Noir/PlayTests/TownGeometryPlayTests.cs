@@ -333,5 +333,100 @@ namespace Noir.PlayTests
               + "right, because ApplyPack is editor-only and Roofing passed Color.white as the "
               + "fallback. Either the pack set stopped binding or somebody put the white back.");
         }
+
+        /// <summary>
+        /// NO SURFACE IN THE TOWN IS TEXTURED THROUGH A PINHOLE. The gate for the whole UVX
+        /// series, and it can only exist now that the walls carry a real texture: a flat colour
+        /// hides a degenerate UV completely.
+        ///
+        /// A gable end is a triangle at constant x. Mapped from above with `(x, -z)` — the roof's
+        /// own projection, which it inherited — every point on it has the same U and its height
+        /// never enters the mapping at all, so the whole wall is textured from a single line of
+        /// the image and smears from eaves to ridge. `RoofBuilder.WallsInTheirOwnPlane` fixed
+        /// that; this is what says so, and what will say so again the next time somebody adds a
+        /// surface to the roof mesh and forgets.
+        ///
+        /// MEASURED AS TEXEL DENSITY, not as a UV area, because a UV area means nothing on its
+        /// own — a small triangle SHOULD have a small one. What cannot happen is a triangle that
+        /// covers square metres of wall out of a sliver of image, and that ratio is exactly what
+        /// a person sees as a smear.
+        ///
+        /// IT WALKS THE BAKED NODES, AND THAT IS NOT INCIDENTAL. `CityChunker.Bake` combines the
+        /// town into a handful of meshes and DESTROYS the renderers it consumed, so the obvious
+        /// version of this test — walk the MeshFilters under the city root — finds an empty
+        /// subtree and passes without looking at anything. A test that cannot fail is worse than
+        /// no test, because it is believed. Both counts below are asserted for that reason.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator NoTriangleInTheTownIsTexturedThroughAPinhole()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+
+            var filters = new List<MeshFilter>();
+            foreach (var mf in Object.FindObjectsByType<MeshFilter>(FindObjectsSortMode.None))
+                for (var t = mf.transform; t != null; t = t.parent)
+                    if (t.name == "Baked") { filters.Add(mf); break; }
+
+            Debug.Log($"[uv] {filters.Count} baked meshes to walk");
+            Assert.That(filters, Is.Not.Empty,
+                "no baked meshes were found, so this looked at nothing. CityChunker.Bake parents "
+              + "what it builds under a node called \"Baked\"; if that name changed, this test "
+              + "has been passing vacuously ever since.");
+
+            var worst = new List<string>();
+            int triangles = 0;
+
+            foreach (var mf in filters)
+            {
+                var mesh = mf.sharedMesh;
+                if (mesh == null || !mesh.isReadable) continue;
+
+                var verts = mesh.vertices;
+                var uvs = mesh.uv;
+                if (uvs == null || uvs.Length != verts.Length) continue;
+
+                var tris = mesh.triangles;
+                float worstRatio = 0f;
+                int worstAt = -1;
+
+                for (int i = 0; i + 2 < tris.Length; i += 3)
+                {
+                    int a = tris[i], b = tris[i + 1], c = tris[i + 2];
+
+                    float world = Vector3.Cross(verts[b] - verts[a], verts[c] - verts[a]).magnitude * 0.5f;
+                    if (world < 1f) continue;              // a square metre, or it is trim
+
+                    var u1 = uvs[b] - uvs[a];
+                    var u2 = uvs[c] - uvs[a];
+                    float uv = Mathf.Abs(u1.x * u2.y - u1.y * u2.x) * 0.5f;
+
+                    triangles++;
+
+                    float ratio = uv < 1e-7f ? float.MaxValue : world / uv;
+                    if (ratio > worstRatio) { worstRatio = ratio; worstAt = i / 3; }
+                }
+
+                // 400 m2 of surface per unit of UV area is twenty metres of wall across one
+                // repeat - already stretched, and nowhere near the degenerate case this hunts.
+                if (worstRatio > 400f)
+                    worst.Add($"{mf.name} triangle {worstAt}: "
+                            + (worstRatio == float.MaxValue
+                                ? "UV area is ZERO - textured from a single line of the image"
+                                : $"{worstRatio:0} m2 of surface per unit of UV area"));
+            }
+
+            Debug.Log($"[uv] {triangles} triangles of a square metre or more checked, "
+                    + $"{worst.Count} stretched past the limit");
+
+            Assert.That(triangles, Is.GreaterThan(1000),
+                "hardly any triangles were checked - the test proved nothing");
+
+            Assert.That(worst, Is.Empty,
+                "These surfaces are textured through a pinhole:\n  " + string.Join("\n  ", worst)
+              + "\n\nA triangle covering square metres out of a sliver of image is what a person "
+              + "sees as a smear. The classic case is a vertical wall carrying the roof's own "
+              + "top-down (x, -z) mapping, where height never enters the UV - see "
+              + "RoofBuilder.WallsInTheirOwnPlane.");
+        }
     }
 }
