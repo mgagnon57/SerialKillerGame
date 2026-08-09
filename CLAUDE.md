@@ -66,8 +66,9 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **428 pass, 0 fail, 428 total, ~2 min.** Measured 2026-08-08.
-> (415 on 2026-08-09; +8 `DrivewaysTests`, +5 `TrafficWeightTests`.)
+> **431 pass, 0 fail, 431 total, ~2–5 min.** Measured 2026-08-08.
+> (415 earlier the same day; +8 `DrivewaysTests`, +5 `TrafficWeightTests`,
+> +3 `AnimatorContractTests`.)
 > **Any red is a regression.** There is no standing exception any more, and there was one for
 > months: `TwoToOneTests` G1 and G2 asserted the project's 2:1 design rule, the town is at
 > 0.89 : 1, and they were correctly and permanently red. Two permanent reds make a THIRD red easy

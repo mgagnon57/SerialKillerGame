@@ -10,12 +10,27 @@
 #  its first clip and is never looked up by anybody. The rows below are long and
 #  they stay long.
 #
-#  ADDING AN ANIMATION IS A LINE HERE AND NOTHING ELSE. Drop the .fbx in
+#  ADDING AN ANIMATION IS A LINE HERE AND ONE REBUILD. Drop the .fbx in
 #  Assets/Noir/Animations - it configures its own import - add its name to a row,
-#  and everybody in that situation can play it. No C#, no Animator graph, no
-#  editor work. `Noir/Check The Animations` lists any clip in the folder that no
-#  row mentions, so one that has been downloaded and forgotten says so out loud
+#  and then run `Noir/Build The Townsfolk Animator`. No C#, no Animator graph by
+#  hand. `Noir/Check The Animations` lists any clip in the folder that no row
+#  mentions, so one that has been downloaded and forgotten says so out loud
 #  rather than sitting there unused.
+#
+#  THE REBUILD IS NOT OPTIONAL AND THIS HEADER USED TO SAY IT WAS - "a line here
+#  and nothing else", "no editor work". It is wrong: the controller carries only
+#  the clips a row asked for AT THE TIME IT WAS BUILT, so a row added without a
+#  rebuild is a clip nobody in the town can play, and nothing says so. Two Core
+#  tests in AnimatorContractTests hold the table and the controller together now,
+#  and they go red the moment these two drift apart.
+#
+#  AND NO PERIOD IN A CLIP NAME. Unity's AddState sanitises it - a file called
+#  `Standing Idle Looking Ver. 1` became a state called `Standing Idle Looking
+#  Ver_ 1`, AgentAnimation hashed the dotted name it read here, found nothing,
+#  and returned silently having already set speed. One person in six treadmilled
+#  the walk cycle on the spot at every door pause for as long as that file
+#  existed. AnimatorBuild fails the build on a renamed state now, and a Core test
+#  refuses a period in a filename.
 #
 #  MORE THAN ONE CLIP TO A ROW IS THE POINT. Where a row names several, each
 #  person is given one of them, chosen off their own citizen key - so a bar holds
@@ -102,7 +117,7 @@ visiting        Sitting Idle, Sitting Talking, Sitting Laughing, Seated Idle, Ta
 attheplayground Looking Around, Cheering, Standing Clap, Clapping, Waving, Happy Idle
 
 # Between two places and stopped - waiting to cross, or arrived and not yet in.
-travellingto    Standing Idle, Neutral Idle, Looking Around, Bored, Weight Shift, Standing Idle Looking Ver. 1
+travellingto    Standing Idle, Neutral Idle, Looking Around, Bored, Weight Shift, Standing Idle Looking Ver 1
 walking         Standing Idle, Neutral Idle, Looking Around, Weight Shift
 
 # Asleep is deliberately empty. They are indoors, behind a wall, in the dark, and
@@ -113,4 +128,4 @@ asleep
 # Every situation with nothing else to say. This row is worth more variety than
 # it looks: it is what anybody unaccounted for is doing, so a thin one is a
 # street of identical statues even when every other row in the file is rich.
-default         Standing Idle, Neutral Idle, Breathing Idle, Idle, Standing Idle 03, Standing Idle Looking Ver. 1, Weight Shift, Happy Idle, Sad Idle, Thinking, Bored
+default         Standing Idle, Neutral Idle, Breathing Idle, Idle, Standing Idle 03, Standing Idle Looking Ver 1, Weight Shift, Happy Idle, Sad Idle, Thinking, Bored

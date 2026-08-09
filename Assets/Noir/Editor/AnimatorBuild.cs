@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Noir.Unity;
 using UnityEditor;
@@ -21,9 +22,19 @@ namespace Noir.Editor
     /// where the decision belongs.
     ///
     /// STATE NAMES ARE THE CLIP NAMES, which are Mixamo's names, which are what AgentAnimation
-    /// asks for. Nothing is translated anywhere along that chain, so a clip called "Standing Idle"
-    /// on the website is the state the code crossfades to, and adding a tenth animation is a
-    /// download plus a rerun of this.
+    /// asks for. So a clip called "Standing Idle" on the website is the state the code crossfades
+    /// to, and adding an animation is a download, a row in Content/animations.txt, and a rerun of
+    /// this. THE RERUN IS NOT OPTIONAL: this controller carries only the clips a row asked for at
+    /// the time it was built, so a row added without one is a clip nobody can play.
+    ///
+    /// AND "NOTHING IS TRANSLATED ALONG THAT CHAIN" IS WHAT THIS USED TO SAY, CONFIDENTLY, AND IT
+    /// WAS FALSE. `AnimatorStateMachine.AddState` is not a setter - `MakeUniqueStateName` owns the
+    /// name that comes back, and it sanitises. A clip named `Standing Idle Looking Ver. 1` became
+    /// a state named `Standing Idle Looking Ver_ 1`; `Drive` hashed the dotted name from the
+    /// table, matched nothing, and returned silently after already writing speed. One person in
+    /// six treadmilled the walk cycle on the spot at every door pause, invisibly, for as long as
+    /// that file existed - and the sentence asserting it could not happen is a large part of why
+    /// nobody looked. The loop below compares what it asked for against what it got.
     ///
     ///   Unity.exe -batchmode -quit -projectPath . -executeMethod Noir.Editor.AnimatorBuild.Run
     /// </summary>
@@ -102,6 +113,17 @@ namespace Noir.Editor
             AnimatorState fallback = null;
             int placed = 0;
 
+            // WHAT WAS ASKED FOR AGAINST WHAT CAME BACK.
+            //
+            // `AddState` is not a setter. `MakeUniqueStateName` owns the name that comes back, and
+            // it sanitises: a clip called `Standing Idle Looking Ver. 1` became a state called
+            // `Standing Idle Looking Ver_ 1`. `AgentAnimation.Drive` then hashes the DOTTED name,
+            // finds no such state, and bails silently after having already written speed - so one
+            // person in six treadmilled the walk cycle in place at every door pause, and no
+            // instrument in the project could see it. It survived because nothing ever compared
+            // these two strings.
+            var renamed = new List<string>();
+
             foreach (var pair in clips)
             {
                 // Laid out on a grid rather than added blind. AddState with no position drops
@@ -112,6 +134,8 @@ namespace Noir.Editor
                 var state = machine.AddState(pair.Key, new Vector3(
                     (placed / 20) * 260f, (placed % 20) * 60f, 0f));
                 placed++;
+
+                if (state.name != pair.Key) renamed.Add($"'{pair.Key}' -> '{state.name}'");
 
                 state.motion = pair.Value;
                 state.writeDefaultValues = false;
@@ -128,6 +152,24 @@ namespace Noir.Editor
 
             Debug.Log($"[animator] {Output}: {clips.Count} states, no transitions, "
                     + $"default '{machine.defaultState.name}'.");
+
+            // SAVED FIRST, THEN FAILED. Deliberate: the controller is written either way, so 86 of
+            // the 87 clips keep working while somebody fixes the one name. A build step that
+            // refused to save would take the whole town's animation down over a full stop.
+            //
+            // No attempt is made to mirror Unity's sanitisation rule and none should be - it is
+            // internal, undocumented, and does more than replace a period. The check is that the
+            // two strings are equal, which needs no knowledge of the rule at all.
+            if (renamed.Count > 0)
+            {
+                Debug.LogError($"[animator] Unity renamed {renamed.Count} state(s) on the way in, so "
+                             + "AgentAnimation will hash a name the controller does not have and "
+                             + "those people will silently not animate:\n  "
+                             + string.Join("\n  ", renamed)
+                             + "\n  Rename the CLIP so the name survives - see Content/animations.txt.");
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                return;
+            }
 
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }

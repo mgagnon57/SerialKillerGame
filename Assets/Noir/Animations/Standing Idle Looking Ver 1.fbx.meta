@@ -32,7 +32,7 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Standing Idle Looking Ver. 1
+      name: Standing Idle Looking Ver 1
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
@@ -530,13 +530,13 @@ ModelImporter:
         length: 0
         modified: 0
     skeleton:
-    - name: Standing Idle Looking Ver. 1(Clone)
+    - name: Standing Idle Looking Ver 1(Clone)
       parentName: 
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: mixamorig:Hips
-      parentName: Standing Idle Looking Ver. 1(Clone)
+      parentName: Standing Idle Looking Ver 1(Clone)
       position: {x: 0.013153176, y: 0.9894803, z: 0.011610028}
       rotation: {x: -0.04544983, y: 0.08336786, z: -0.02506802, w: 0.99516624}
       scale: {x: 1, y: 1, z: 1}
