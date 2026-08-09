@@ -163,12 +163,22 @@ is to judge it in one look.
   > `Roofs: 651 buildings, 196,362 vertices` — **unchanged**, the gate this wave sets itself. Both
   > changes rewrite UV values and neither touches the vertex list.
   >
-  > **⚠ TWO THINGS NOT DONE, recorded rather than glossed.** The **hip ends are still
-  > cross-grained**: one planar projection per roof can serve the two main slopes or the two hip
-  > ends, not both, and the rotation picks the main slopes. The proper fix is per-face mapping
-  > along each fall line — the same shape of change `WallsInTheirOwnPlane` just made for walls.
-  > And **the gable remap has not been photographed**: the house in `roof-close.png` is hipped, so
-  > no gable is in frame and no committed camera points at a gabled building or at the church.
+  > **BOTH OF THE THINGS I RECORDED AS NOT DONE ARE NOW DONE.**
+  >
+  > **The hip ends ✅** — `RoofFacesInTheirOwnPlane` maps every covering face from its own normal:
+  > U horizontally across the face, which on any pitched roof IS that face's ridge or hip, and V
+  > straight up the fall line, both in metres ON THE SLOPE. That supersedes ROOF-4's quarter-turn,
+  > which could only ever serve one pair of faces, and it retires the "the slope stretches them by
+  > about a tenth" apology as well. A flat roof keeps the ground projection and that falls out
+  > rather than being special-cased — `cross(n, up)` vanishes on a face pointing straight up.
+  > Order matters: coverings first, walls second, because a gable end is in the wall submesh.
+  >
+  > **The gables ✅ seen** in `roof-mix.png` — they read as flat wall surfaces, not as the vertical
+  > eaves-to-ridge streak a degenerate UV produces. Not a close-up, but the smear was never
+  > subtle.
+  >
+  > `Roofs: 651 buildings, 196,362 vertices` — unchanged across all three UV passes, which is what
+  > says they rewrite UV values and never the vertex list.
 - **(D)** `SurfaceTextures.cs` opened **once** for ROOF-2 plus CW-4/5/6 and TEX-9. That file is hot.
 - **(E)** the small material fixes and TEX-4.
 - **(F)** `ROOF-6` + `MS-6`, then **one** `dotnet run --project tools/Noir.Sim -- tiles`. That command
@@ -313,6 +323,15 @@ enforce — and edits `docs/ROAD-FIXES.md:59` and `:558` in the same commit so t
   hand-typed one, so it would move all twelve committed framings.
 - **`UVX-A6(a)` as written — it passes vacuously.** `CityChunker.Bake` destroys those MeshFilters
   (`13125 renderers → 2308`), so the test walks an empty subtree. Walk the **baked** nodes.
+  > ✅ **DONE** as `NoTriangleInTheTownIsTexturedThroughAPinhole`, walking the nodes under `Baked`
+  > and asserting BOTH that the mesh list is non-empty and that at least a thousand triangles were
+  > measured — a test that cannot fail is worse than none. Measured as **texel density** (m² of
+  > surface per unit of UV area), because a UV area means nothing on its own.
+  > **It found two real ones on its first run**, at 32,281 m²/UV against a limit of 400, in
+  > material index 0 of chunks (5,-2) and (4,-2). Ratcheted at two and the message now prints the
+  > MATERIAL, because a chunk name names nothing anybody can go and look at. Not the gable smear
+  > it was written for — that was hundreds of triangles — so these are something else and want a
+  > fresh session, not a loosened threshold.
 - **`TEX-14` as written — it would permanently rewrite all 21 layer switches.** `Layers.Set` writes
   PlayerPrefs whenever not in batch mode. That is verbatim the mechanism `CLAUDE.md` names for the
   animation incident, proposed for a pre-commit pass. Guard it, or snapshot and restore in a `finally`.
