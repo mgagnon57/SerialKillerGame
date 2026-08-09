@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using Noir.Core.Contracts;
 using Noir.Core.World;
+using Noir.Unity;
 
 namespace Noir.PlayTests
 {
@@ -278,6 +279,59 @@ namespace Noir.PlayTests
                 + "here is either a building walled in on every side, which that pass counts and "
                 + "reports, or a door the pass could not judge because it was moved after the "
                 + "world was built.");
+        }
+
+        /// <summary>
+        /// EVERY ROOF COVERING IS WIRED TO SOMETHING. A wiring assertion, deliberately, and not a
+        /// threshold on a colour.
+        ///
+        /// The fault it guards is the one a shipped player had for months: `Roofing` handed
+        /// `Make` `Color.white`, and white only shows when NO texture binds - which is exactly a
+        /// build's situation, because `SurfaceTextures.ApplyPack` is entirely `#if UNITY_EDITOR`.
+        /// So the editor looked correct and the product had pure white roofs, and no test could
+        /// tell the difference because in the editor there was none.
+        ///
+        /// A material passes if it has a texture OR a colour that is not white. That is the whole
+        /// claim: something other than "untouched" happened to it. Asserting a particular colour
+        /// instead would pin the palette in a second place and contradict the covering table the
+        /// moment somebody re-tints one - the number would have to be kept in step by hand, which
+        /// is how the four road-geometry constants in this project came to disagree with the
+        /// suite for months.
+        ///
+        /// It also catches the subtler regression: binding a pack set but leaving the base colour
+        /// white on a covering whose whole shade IS the tint, which would take charcoal back to
+        /// mid grey and brown-black back to brown.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryRoofCoveringIsWiredToATextureOrAColour()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+
+            var roofs = Materials3D.Roofs;
+            Assert.That(roofs, Is.Not.Null.And.Length.GreaterThan(4),
+                        "the roof palette should carry four coverings, the chimney brick and the wall");
+
+            var bare = new List<string>();
+            for (int i = 0; i < roofs.Length; i++)
+            {
+                var m = roofs[i];
+                if (m == null) { bare.Add($"[{i}] is null"); continue; }
+
+                bool hasMap = m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap") != null;
+                bool tinted = m.HasProperty("_BaseColor") && m.GetColor("_BaseColor") != Color.white;
+
+                Debug.Log($"[roofs] {m.name}: map={(hasMap ? "yes" : "NO")} "
+                        + $"colour={(m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor").ToString() : "none")}");
+
+                if (!hasMap && !tinted) bare.Add($"[{i}] {m.name}");
+            }
+
+            Assert.That(bare, Is.Empty,
+                "These roof materials have neither a texture nor a colour - they are white:\n  "
+              + string.Join("\n  ", bare) + "\n\n"
+              + "A white roof is what a shipped player got for months while the editor looked "
+              + "right, because ApplyPack is editor-only and Roofing passed Color.white as the "
+              + "fallback. Either the pack set stopped binding or somebody put the white back.");
         }
     }
 }
