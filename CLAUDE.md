@@ -77,8 +77,10 @@ dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 > to miss — on 2026-08-09 a session twice read "4 failed" and had to dig to find which two were
 > new — so they are `[Test, Explicit, Category("Aspiration")]` now.
 >
-> **Nothing was deleted and the standard did not move.** The number is still measured on the same
-> three villages every run and printed by `TheGapToTheRuleIsReported`:
+> **Nothing was deleted and the standard did not move.** The number is measured every run on the
+> same three ~148-person **fixture** villages, seeds 1979/1980/1981 — **not on Rossville, which has
+> never been measured against this rule** — printed by `TheGapToTheRuleIsReported` and recorded
+> with its full instrument in `Content/watched.floor`:
 >
 > ```
 >   ---- THE 2:1 RULE, worst of three villages ----
@@ -90,16 +92,19 @@ dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 > the standing gate if it regresses — they were always the tests doing the protecting. Run the
 > aspiration itself with `dotnet test --filter "TestCategory=Aspiration"`.
 >
-> **Do not close the gap by adjusting the instrument.** The number moves when the town gains more
-> KINDS of observable moment, and by nothing else.
+> **Do not close the gap by adjusting the instrument — and do not assume more KINDS of moment will
+> close it either.** `Content/watched.floor`'s 2026-08-01 entry is the counter-example, recorded
+> with the instrument provably unmoved: texture went 24 → 29 kinds and the ratio went DOWN,
+> 1.21 → 0.89. Anything that puts a person in view gives a watcher both columns at once. What
+> moves it is a kind of moment that is not simply more time in the open.
 
 **Do not run this suite in Debug.** It takes 8–9 minutes and it is not stable: across three runs
 on an unchanged tree it produced a third failure that did not reproduce. That is consistent with
 the known 13900K Vmin instability on this machine — verify in Release before blaming code.
 
 **2. Unity assemblies compile.** A green `dotnet test` is not evidence that Unity compiles. The
-test suite compiles `Assets/Noir/Core` and nothing else — **14,270 of the 53,680 lines under
-`Assets/Noir`, or 27%.** The other 73%, including the whole survey layer, has no automated cover
+test suite compiles `Assets/Noir/Core` and nothing else — **17,289 of the 59,739 lines under
+`Assets/Noir`, or 29%.** The other 71%, including the whole survey layer, has no automated cover
 at all and is reached only by PlayMode and by looking at it.
 
 ```
@@ -137,7 +142,9 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > **The town the game now drives on: `120 junctions: 2 signalised in the town (8 heads), 118 on
 > priority out in the country`** — against 74 junctions and one signal before the alley mouths
 > landed on 2026-08-09. The road network changed more that day than on any other: the mouths, the
-> axis filter, the smoothing curve and what counts as two roads touching. See `docs/ROAD-FIXES.md`.
+> axis filter, the smoothing curve and what counts as two roads touching. **This line is the only
+> record of that count in the repository.** `docs/research/ROADS-FROM-SURVEY.md` is where the
+> account belongs, and it still says the junction graph has not been rebuilt.
 >
 > **THE RUN IS NOT ~4 MINUTES AND NEVER WAS.** Measured 371.6 s wall clock, of which
 > `WhyAreThePeopleNotAnimating` alone is **292.9 s** — 79% of the suite. Budget ten minutes.
@@ -194,9 +201,10 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > lifts only after twelve straight sub-25 ms frames or 45 s, and a batch build's first frame alone
 > takes 16 s. Three failures were that one stopped clock reported three ways.
 
-**There are 14 tests, not the 13 every document claims.** Six are diagnostics wearing a test's
-clothes — three of them call `Assert.Pass()`, and `Tour`/`FilmStrip`/`LayerProof` assert only that
-the right number of image files appeared. They carry 105 minutes of the timeout budget between
+**There are 23 tests. `-testCategory "!Diagnostic"` selects 16, one of those 16 is `[Explicit]`,
+and that is exactly the "15 of 15, 1 skipped" above.** The other seven are diagnostics wearing a
+test's clothes — four call `Assert.Pass()`, and `Tour`/`FilmStrip`/`LayerProof` assert only that
+the right number of image files appeared. They carry **150 minutes** of the timeout budget between
 them, which is why the whole suite never finished: run un-split it can take **four hours**, and it
 was being killed at twenty minutes and called a hang. It was never hung. It was slow by design and
 nobody had ever seen the end of it.
@@ -235,9 +243,9 @@ Play. It now boots the town and starts the clock:
 > **What it boots is not what you see in the editor, and this is not yet fixed.**
 > `AssetDatabase` and `PrefabUtility` are `UnityEditor` APIs that do not exist in a player, so
 > `CityBuildings`, `CityStreets`, `CityGreenery`, `CityTraffic`, `CityParking`, `CitySigns` and
-> `SunRig` all sit behind `#if UNITY_EDITOR`. Only `CityStreets` has an `#else`, and it covers one
-> *measurement*. A standalone build today gives you the procedural survey plan, primitive capsule
-> people, and **none of the bought props**. `CityChunker` has no editor guard at all, so it runs in
+> `SunRig` all sit behind `#if UNITY_EDITOR`. Only `CityStreets` has an `#else` that does anything
+> — it covers one *measurement*; `SunRig`'s returns `null`. A standalone build today gives you the
+> procedural survey plan, primitive capsule people, and **none of the bought props**. `CityChunker` has no editor guard at all, so it runs in
 > a player and combines an empty scene. `tools/check-editor-only.py` catches the half of this trap
 > that fails to compile; nothing catches the half that silently draws nothing.
 
@@ -294,7 +302,7 @@ bare, or capture the exit code directly.
 | `particulars.txt` | **Hand-authored**, 914 clauses. See the era warning under *Traps* |
 | `parcels.txt`, `parcel-county.txt`, `elevation.txt` | **No committed regeneration script.** Downloaded, not derived. Treat as irreplaceable until one exists |
 | `parcel-buildings.txt` | `python tools/seat-buildings.py` — 824 footprints seated on the county's lots |
-| `roads.txt` | `python tools/build-roads.py` — county centrelines, alleys traced from parcel gaps |
+| `roads.txt` | `python tools/build-roads.py --write` — county centrelines, alleys traced from parcel gaps. **Bare, it is a dry run:** it prints what it would write and writes nothing. `--write` backs up first. The twelve IDOT counts come from `tools/rossville-aadt.txt` |
 
 **Only two scripts may write `parcel-1991.txt`** — `tools/merge-back-strips.py` and
 `tools/group-terraces.py`, both of which back it up first. Neither should be re-run without
@@ -316,8 +324,9 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   Confirm the line appears: `[roads] survey network in use: … from Content/roads.txt, replacing …`
 - **`Time.timeScale` does not speed the sim clock.** The simulation runs on `Time.unscaledDeltaTime`
   on purpose — how fast a day passes is a property of the game, not of Unity. Anything asserting on
-  sim time waits in *real* seconds. This is why the PlayMode diagnostics carry 105 minutes of
-  timeout budget and cannot be shortened by touching `timeScale`.
+  sim time waits in *real* seconds. This is why the PlayMode diagnostics carry two and a half hours
+  of timeout budget between them (counted under *Verifying a change*) and cannot be shortened by
+  touching `timeScale`.
 - **The city is built once and shared by every test in a run.** Anything you change on
   `VillageHost` — especially `SpeedIndex` — must be restored in a teardown. Both "flaky" tests
   above were this shape.
@@ -339,10 +348,13 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   centrelines are chained segments and the alley mouths add a 13 m stub to a 200 m run, which is
   precisely that shape — on 2026-08-09 **nine of 68 roads left one of their own ends backwards and
   Summit Street was drawn 39 m (128 ft) off its own survey line.** Nothing could see it: it moves
-  no count and fails no test. Do not "unify" these two back into one curve without re-rendering
-  the rail bed, and do not put a road through the uniform one.
+  no count and fails no test. **Ruled by the owner, 2026-08-09: leave it, corners stay rounded** —
+  a real street corner has a turning radius and a car cannot pivot on a point. Do not straighten
+  the streets and do not smooth them further; both are decisions to re-take with him, not defects
+  to chase. Do not "unify" these two curves back into one without re-rendering the rail bed, and
+  do not put a road through the uniform one.
 - **Do not give a Core type a name `UnityEngine` also uses:** `Light`, `Terrain`, `Object`,
-  `Random`, `Debug`, `Material`, `Space`, `Bounds`, `Color`, `Camera`, `Input`.
+  `Random`, `Debug`, `Material`, `Space`, `Bounds`, `Color`, `Camera`, `Input`, `Animation`.
 - **Do not touch the witness layer's vagueness.** `PersonDescription.CarriedThing` is deliberately
   coarse — `Bag`, `Case`, `Bundle`, `LongObject` — because a witness says "something in his hand",
   not "a Nokia". That imprecision is the design, not an unfinished enum.
@@ -394,7 +406,7 @@ though they were built:
 - `CLAUDE.md` (this file) — the entry point and the load-bearing facts
 - `docs/SOURCES-OF-TRUTH.md` — what outranks what, and the owner's standing facts
 - `docs/research/THE-ERA.md` — the year, and what building to it settles
-- `docs/research/README.md` — index of the 28 research documents
+- `docs/research/README.md` — the index of the research documents; read it before any of them
 - `docs/IDEAS.md` — the backlog
 
 - `docs/ASSETS.md`, `docs/ASSET-GAPS.md`, `docs/PACK.md` — what the packs hold and what is missing
@@ -421,7 +433,8 @@ sentence here that was wrong. If it is not true tomorrow, it does not go in the 
 - **Headless runs must be silent.** Batch mode has blared game audio into the owner's headphones.
   If you hear it, suspect your own process first.
 - **Do not open a browser at him.** Verify from logs, files and tests.
-- **Compile headlessly; the owner presses Play.** Automate editor work in editor scripts.
+- **Drive Unity yourself; do not ask him to press Play.** Automate editor work in editor scripts,
+  and read the `Unity_RunCommand` trap above for what actually works.
 - **Push at the end of every session.** On 2026-08-07 the branch had never been pushed at all and
   `origin/main` was 166 commits behind, with the one irreplaceable file existing on a single disk.
 - **Never `git add -A` or `git add .`.** Stage only what you edited. The tree carries unrelated
