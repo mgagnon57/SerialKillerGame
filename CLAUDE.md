@@ -66,11 +66,11 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **453 pass, 0 fail, 453 total, ~5 min.** Measured 2026-08-09.
+> **458 pass, 0 fail, 458 total, ~5 min.** Measured 2026-08-09.
 > (447 on 2026-08-08, and 415 earlier that day; +8 `DrivewaysTests`, +5 `TrafficWeightTests`,
 > +3 `AnimatorContractTests`, +8 `AnimationTableTests`, +8 `AnimationRowTests`,
 > +4 `RoadPathTests` and +2 `SurveyRoadNetworkTests` — `RoadPath.ArcAt`, and the gate on two
-> roads sharing tarmac with no junction between them.)
+> roads sharing tarmac with no junction between them; +5 `DoorsThatOpenTests`.)
 > **Any red is a regression.** There is no standing exception any more, and there was one for
 > months: `TwoToOneTests` G1 and G2 asserted the project's 2:1 design rule, the town is at
 > 0.89 : 1, and they were correctly and permanently red. Two permanent reds make a THIRD red easy
@@ -128,13 +128,13 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-09: 14 of 14 PASS, 1 skipped, ~11 min.** (13 of 13 on 2026-08-08, 8 of 8 on
+> **BASELINE, 2026-08-09: 15 of 15 PASS, 1 skipped, ~11 min.** (13 of 13 on 2026-08-08, 8 of 8 on
 > 2026-08-07; TownGeometryPlayTests added three that can see where a building STANDS, and a fourth
 > that can see whether the car outside a house is there today.)
 > `[body] 1390 Animators in the scene`, and the layer preferences are the same after the run as
 > before it.
 >
-> **The town the game now drives on: `118 junctions: 2 signalised in the town (8 heads), 116 on
+> **The town the game now drives on: `120 junctions: 2 signalised in the town (8 heads), 118 on
 > priority out in the country`** — against 74 junctions and one signal before the alley mouths
 > landed on 2026-08-09. The road network changed more that day than on any other: the mouths, the
 > axis filter, the smoothing curve and what counts as two roads touching. See `docs/ROAD-FIXES.md`.

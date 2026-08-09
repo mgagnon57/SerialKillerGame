@@ -149,6 +149,34 @@ namespace Noir.Unity
         private static Result Finish(VillageLayout layout, ulong seed, string named)
         {
             var world = WorldBuilder.Build(layout, seed);
+
+            // AND THEN EVERY DOOR OPENS ONTO SOMETHING.
+            //
+            // AFTER THE BUILD AND BEFORE THE VALIDATION, which is the only place it can go. A door
+            // is judged on the GRID - can it be stood on, is it joined to the town - and the grid
+            // does not exist until the world is built. Judged on the layout instead, a neighbour's
+            // LOT reads as its walls and ninety doors look bricked up when nine are.
+            //
+            // ClearOfRoads shoves buildings off road corridors and carries each door along at its
+            // authored offset, which is right - a door is part of a building. What it cannot carry
+            // is the ground outside the wall, so on 2026-08-09 nine doors ended up opening into a
+            // neighbour's back wall, in mutual pairs, each sealing the other.
+            //
+            // ONE REBUILD, and only when something moved: the door is carved into the grid as the
+            // world is built, so a moved door is not in the grid that found it. The build is about
+            // two seconds and this is the only pass that needs a second one.
+            int refaced = DoorsThatOpen.Apply(layout, world, out int walledIn);
+            if (refaced > 0 || walledIn > 0)
+            {
+                Debug.Log($"[survey] {refaced} door(s) moved round to a wall with ground outside it"
+                        + (walledIn > 0
+                            ? $", {walledIn} building(s) are WALLED IN ON EVERY SIDE and cannot be helped"
+                            : "")
+                        + ".");
+
+                if (refaced > 0) world = WorldBuilder.Build(layout, seed);
+            }
+
             var validation = WorldValidator.Validate(world);
 
             // NAMED FROM THE MAP, not written out. These said "village.txt:" while the game had

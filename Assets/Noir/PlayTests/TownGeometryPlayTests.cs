@@ -242,5 +242,42 @@ namespace Noir.PlayTests
                 + "opens onto ground nothing can reach, and the people behind it will stand still "
                 + "all day with nothing in the log to say why.");
         }
+
+        /// <summary>
+        /// EVERY DOOR IN ROSSVILLE OPENS ONTO SOMETHING, AT ZERO.
+        ///
+        /// A gate rather than a ratchet, at the owner's instruction on 2026-08-09. This number was
+        /// printed and never asserted, and across one night of road work it went 6 to 7 to 9 while
+        /// every gate stayed green - which is what an unasserted number does.
+        ///
+        /// THIS CAN ONLY LIVE IN PLAYMODE. The fault needs the survey passes to exist at all:
+        /// `city.txt` on its own has no unreachable door, and the nine appeared because
+        /// `ClearOfRoads` shoved 175 buildings off road corridors and each door went with its
+        /// building into a neighbour's back wall. `DoorsThatOpen` re-faces them, and this is what
+        /// says it worked on the town the game actually builds.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryDoorOpensOntoSomething()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+
+            var report = WorldValidator.Validate(CityUnderTest.World);
+
+            var doors = new List<string>();
+            foreach (var e in report.Errors)
+                if (e.Contains("door")) doors.Add(e);
+
+            Debug.Log($"[geometry] {doors.Count} door(s) nobody can walk through");
+            foreach (var d in doors) Debug.Log("[geometry]   DOOR " + d);
+
+            Assert.That(doors, Is.Empty,
+                "These doors cannot be walked through:\n  " + string.Join("\n  ", doors) + "\n\n" +
+                "Each one is somebody who cannot leave his own house. DoorsThatOpen runs in "
+                + "TownPipeline.Finish and moves a sealed door round to a wall with reachable "
+                + "ground outside it, preferring the wall nearest a road - so a door still failing "
+                + "here is either a building walled in on every side, which that pass counts and "
+                + "reports, or a door the pass could not judge because it was moved after the "
+                + "world was built.");
+        }
     }
 }

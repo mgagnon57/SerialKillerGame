@@ -190,6 +190,30 @@ namespace Noir.Core.World
                 return worst;
             }
 
+            /// <summary>
+            /// How far a point is from the nearest road's carriageway, 0 if it is on one.
+            ///
+            /// Here because "which way does the front door face" is a question about distance to
+            /// a road, and every other method on this class asks about PENETRATION - how deep a
+            /// box reaches INTO a corridor - which is zero for everything that is not already in
+            /// the road and therefore cannot rank one wall of a house against another.
+            /// </summary>
+            public float DistanceTo(float x, float y)
+            {
+                var p = new Vec2(x, y);
+                float nearest = float.MaxValue;
+
+                for (int i = 0; i < _paths.Length; i++)
+                {
+                    var (_, lateral) = _paths[i].Project(p);
+                    float d = (lateral < 0f ? -lateral : lateral) - _widths[i] / 2f;
+                    if (d < 0f) d = 0f;
+                    if (d < nearest) nearest = d;
+                }
+
+                return nearest;
+            }
+
             public string RoadUnder(TileRect box, int minWidth)
             {
                 string name = "";

@@ -273,7 +273,7 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 
 ---
 
-## DOOR-1 — nine doors nobody can walk through · **DIAGNOSED 2026-08-09, fix in progress**
+## DOOR-1 — nine doors nobody can walk through · ✅ **FIXED 2026-08-09, gated at zero**
 
 > The owner ruled: fix them, then gate the validator at zero so it cannot creep again. It went
 > 6 → 7 → 9 across one night's road work, unasserted the whole way.
@@ -299,6 +299,31 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 > room outside the wall. The audit now also names any neighbouring place covering a tile beside
 > the door, which is what says whether a building painted over its own door or a neighbour moved
 > against it.
+>
+> **THE FIX: `DoorsThatOpen`, a Core pass in `TownPipeline.Finish`.** A sealed door is moved round
+> to a wall of its own building that has reachable ground outside it, preferring the wall nearest a
+> road — because that is what a front door is. The building never moves: where a house stands is
+> survey, which wall its door is in is not.
+>
+> **It runs after the world is built and forces one rebuild, and that is the whole correctness of
+> it.** A door is judged on the GRID — can it be stood on, is it joined to the town — and the grid
+> does not exist until the world is built. Judged on the LAYOUT instead, a neighbour's *lot* reads
+> as its walls: the first cut moved **ninety** doors, eighty-one of them working front doors taken
+> off the street to solve a problem they did not have. The validator went to zero either way, which
+> is exactly why a green run proves nothing about how much was disturbed to get there.
+>
+> `WorldValidator.Regions` was extracted so the pass and the gate label reachability with the same
+> code. Two implementations of "reachable" is how a pass comes to fix something a gate still fails.
+>
+> ```
+>   9 door(s) moved round to a wall with ground outside it
+>   validator: 0 error(s), 19 warning(s)      (was 9 errors, 28 warnings)
+> ```
+>
+> Gated at zero by `EveryDoorOpensOntoSomething` in PlayMode — it has to be PlayMode, because
+> `city.txt` on its own has no unreachable door and the fault only exists once the survey passes
+> have run. Five `DoorsThatOpenTests` in Core cover the pass itself, including the ninety-door
+> overreach.
 
 ## SPLINE-1 — the curve overshot, and nine roads left their own ends backwards · ✅ **FIXED 2026-08-09**
 
