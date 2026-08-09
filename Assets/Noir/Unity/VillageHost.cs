@@ -393,6 +393,36 @@ namespace Noir.Unity
             // error onto. An empty scene has none.
             EnsureCamera();
 
+            // THE CURTAIN GOES UP BEFORE THE WORK, NOT AFTER IT.
+            //
+            // This used to be created two thirds of the way down this method, and so it could not
+            // possibly do its job: UNITY DRAWS NO FRAME UNTIL Awake RETURNS, so a loading screen
+            // built during Awake first appears once the loading it exists to cover has finished.
+            // The owner pressed Play, watched Unity's default blue for over a minute with no sign
+            // of life, and reasonably concluded it had frozen - which is precisely the failure
+            // EnsureCamera's own comment warns about a few lines further down.
+            //
+            // So the curtain is raised here, and `Build` below is deferred to the first Update.
+            // One frame is presented with the screen on it, and only then does the six seconds of
+            // town-building start - behind something that says so.
+            BootScreen.Phase = "Building the town";
+            BootScreen.Create(this, transform);
+        }
+
+        /// <summary>Set once the town has been built, so <see cref="Update"/> only does it once.</summary>
+        private bool _built;
+
+        /// <summary>
+        /// Everything that was in <see cref="Awake"/> until 2026-08-08, run one frame later.
+        ///
+        /// The move is the whole point: see the note in Awake. Nothing here changed except when it
+        /// happens, and the only thing that can notice is code assuming <see cref="World"/> exists
+        /// the instant Awake returns. Nothing in the tree does - the PlayMode suite polls through
+        /// `CityUnderTest.WaitUntilBuilt`, and every system the town needs is created BY this
+        /// method rather than racing it.
+        /// </summary>
+        private void Build()
+        {
             try
             {
                 // ONE CALL. The kind table, the era table, the parse, all five survey passes in
@@ -766,11 +796,10 @@ namespace Noir.Unity
                 });
             profile.Done("AgentMeshView (the people)");
 
-            // THE CURTAIN. Up before anything can be mistaken for the game running, down only
-            // when the frames have actually settled - and it holds the clock while it is up, so
-            // nothing has quietly started behind it. See BootScreen.
+            // The curtain itself is raised in Awake now, a frame before any of this ran - see the
+            // note there. All that is left here is to say what the wait is FOR, which changes at
+            // this point from building the town to the shader compile below.
             BootScreen.Phase = "Loading assets and shaders";
-            BootScreen.Create(this, transform);
 
             // EVERY SHADER THE TOWN NEEDS, COMPILED NOW, before a single frame is presented.
             // Otherwise each variant compiles the first time something needs to draw with it,
@@ -1120,6 +1149,19 @@ namespace Noir.Unity
 
         private void Update()
         {
+            // ONE FRAME LATE, AND DELIBERATELY. Awake raised the boot screen and returned without
+            // building anything, so Unity has now presented a frame with the curtain on it. The
+            // six seconds of town-building happen behind that instead of behind Unity's default
+            // blue, which is what "I pressed Play and it froze" actually was.
+            //
+            // Before the Sim guard below, because the whole point is that there is no Sim yet.
+            if (!_built)
+            {
+                _built = true;
+                Build();
+                return;
+            }
+
             if (Sim == null) return;
 
             HandleHotkeys();
