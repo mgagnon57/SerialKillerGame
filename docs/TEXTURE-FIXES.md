@@ -122,8 +122,21 @@ same treatment the pack and the llama binaries already get.
 **do not open Unity between them** — ROOF-4 is invisible until ROOF-2 lands and the point of batching
 is to judge it in one look.
 
-- **(A)** `ROOF-0` + `ROOF-1` + `ROOF-2` + `ROOF-5` — the tangent line; `Roofing()` handing `Make()`
-  a real colour instead of `Color.white`; the roof entries added to `_packSets`; tiling 2.5 → 1.5.
+- **(A)** ✅ **DONE 2026-08-09.** `ROOF-0` + `ROOF-1` + `ROOF-2` + `ROOF-5` — the tangent line;
+  `Roofing()` handing `Make()` a real colour instead of `Color.white`; the roof entries added to
+  `_packSets`; tiling 2.5 → 1.5. Plus `TEX-11`'s palette as four named colours, the loose PNGs
+  regenerated to match, and the four dead English coverings deleted.
+  > **`Surface textures: 7 loaded` → `3 loose (brick, wall, water)`.** The line now names them and
+  > says what it is: a count of what FELL BACK to the flat placeholder, not an inventory.
+  > `Roofs: 651 buildings, 196,362 vertices` — record that; it is the number `UVX-A1` must not move.
+  >
+  > **⚠ THE PLAN'S CLAIM THAT THE PACK SHIPS THE FOUR SHADES IS WRONG.** Measured: A and B are the
+  > same tone (64 and 63), D has the green cast he excluded, and E — the only true charcoal —
+  > ships with **no normal map**. Three albedos serve four coverings; charcoal is B at 0.70 and
+  > brown-black is C at 0.38. Do not "restore" a fourth sheet.
+  >
+  > **And I misread the result before there was a camera that could show it** — see W1's own gate
+  > below. The roofs are three-tab asphalt with visible tabs and courses in `roof-close.png`.
 - **(B)** `ROOF-3`, the keying change — public signature, two callers.
 - **(C)** `ROOF-4` + `UVX-A1` + `ROOF-13` in `RoofBuilder.cs`. A1 **takes the gable triangles away
   from** ROOF-4's rotation, so landing them separately means rotating UVs A1 then deletes.
@@ -141,8 +154,17 @@ has **pure white roofs** — the editor gets better and the product does not cha
 > Then editor **closed**: `MeshReadable.Enable` → `SmokeTest.Run` → the three greppable lines above →
 > `CityShot.RenderBuiltNoon` → **open the PNGs**.
 >
-> **LOOK AT IT.** Terracotta and straw gone from every roof in `suburb-block.png`, and the shingle
-> courses running **along** the ridge on the north-south-ridged bungalows, not up the slope.
+> **LOOK AT IT — AND AT SOMETHING THAT CAN SHOW IT.** Terracotta and straw are gone from every
+> roof in `suburb-block.png` ✅. The course direction is NOT yet right: ROOF-4 is outstanding, and
+> `roof-close.png` now shows why — roof UVs are a top-down PLANAR projection in metres
+> (`Vector2(x, -z)`), so courses follow the world axes and one projection covers both slopes of a
+> hipped roof.
+>
+> **`suburb-block.png` CANNOT settle the shingle and neither can the street shots.** The overview
+> is 1,150 m up, where a course is far below a pixel; `town-street` and `city-street` are at eye
+> height on the DOWNTOWN block, which is flat-roofed commercial with the pitched roofs above the
+> frame. Reading those three, I reported the new roofs as flat with no shingle. They are not.
+> `Noir/Render The Roofs` was added for this and `roof-close.png` is the frame that settles it.
 
 ### W2 — The rest of the UVs · ~5 h + one window ~20 min
 `ROOF-10` `TEX-11` `UVX-A2,A3,A4,A7,A9,A10` `TEX-10,12` `MS-1,2,5,9,10` · roof-AO experiment
