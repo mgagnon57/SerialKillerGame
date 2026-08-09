@@ -98,6 +98,39 @@ namespace Noir.Unity
                     + $"{(n - rigged) * AgentFigure.PartCount} primitive parts.");
         }
 
+        /// <summary>
+        /// How many people are animating at once, whatever the camera is doing.
+        ///
+        /// A FIXED RADIUS WAS TRIED FIRST AND IT SWITCHED THE TOWN OFF. `OrbitCamera` opens in
+        /// Overview at 330 m and goes to 1600 m, so an eighty-metre cull left **0 of 1,385**
+        /// animating - which measures beautifully (12.0 ms to 1.4 ms) and is not an optimisation,
+        /// it is a static town. It also took `WhyAreThePeopleNotAnimating` red, correctly: with
+        /// nobody animating, the walk rate is 0.00x and the test that guards against skating feet
+        /// has nothing left to measure.
+        ///
+        /// So the budget is a HEAD COUNT and the radius chases it. Cost is bounded and predictable
+        /// whatever the view, the nearest people are always the ones moving, and the town is never
+        /// completely still. At the measured ~4.5 us per animator, 150 is about 0.7 ms against the
+        /// 6.2 ms all 1,385 were costing.
+        /// </summary>
+        public const int AnimatingBudget = 150;
+
+        /// <summary>Where the radius starts, and the ends it may not pass. Metres.</summary>
+        private const float NearestFloor = 15f, NearestCeiling = 2500f;
+
+        /// <summary>
+        /// The radius that currently delivers <see cref="AnimatingBudget"/>, chased frame by frame.
+        ///
+        /// A feedback loop rather than a sort: ordering 1,385 people by distance every frame to
+        /// take the nearest 150 costs more than it saves, and this converges in well under a
+        /// second and then sits still. Overshoot does not matter - being 20 short or 20 over for a
+        /// few frames is invisible and costs microseconds.
+        /// </summary>
+        private float _nearest = 80f;
+
+        /// <summary>How many figures had a running animator on the last <see cref="Refresh"/>.</summary>
+        public int Animating { get; private set; }
+
         public void Refresh()
         {
             var sim = _host.Sim;
@@ -118,6 +151,13 @@ namespace Noir.Unity
                 Mathf.Clamp(_host.SpeedIndex, 0, VillageHost.Speeds.Length - 1)] > 0f;
 
             Reselect(_host.Selected.Value);
+
+            // Where the eye is, fetched once rather than 1,385 times. Null when there is no camera
+            // at all - an offline render between shots - and then nobody is culled, because a still
+            // that quietly froze half the town would be a worse lie than a slow one.
+            var camera = Camera.main;
+            Vector3? eye = camera != null ? camera.transform.position : (Vector3?)null;
+            int animating = 0;
 
             for (int i = 0; i < _figures.Length; i++)
             {
@@ -232,6 +272,41 @@ namespace Noir.Unity
 
                 _figures[i].Pose(ground, _yaw[i], _phase[i], _swing[i], agent.Carrying);
 
+                // ---- THE ANIMATOR LOD, WHICH IS HALF THE FRAME ----
+                //
+                // Measured by PerfCensus.WhatIsEatingTheFrame: switching the People layer off took
+                // the frame from 12.0 ms to 5.9 ms. The 1,385 animators cost MORE THAN EVERYTHING
+                // ELSE IN THE TOWN PUT TOGETHER - the traffic is 1.0 ms and the 611 parked cars
+                // measure zero.
+                //
+                // NOT AnimatorCullingMode.CullCompletely, which was tried and reverted and whose
+                // failure is written up at AgentBody.cs:204: a disabled animator stops updating the
+                // bounds that decide visibility, and the cull keys on that visibility, so anybody
+                // who leaves the view never comes back. Forty of forty froze.
+                //
+                // THAT FAILURE IS CIRCULAR, AND THIS IS NOT. A camera position and a simulated
+                // position are both known whatever the animator is doing, so a DISTANCE cull has no
+                // state to get stuck in. Nothing here can wedge: the test that decides re-enabling
+                // does not depend on the thing being disabled.
+                //
+                // THE FIGURE IS STILL DRAWN. Only `enabled` goes, not the renderer and not the
+                // root - a distant person keeps standing there in the pose they were caught in,
+                // which at eighty metres is not something an eye can pick out. Switching the root
+                // off instead would pop people out of a view they are plainly inside.
+                var animator = _figures[i].Animator;
+                if (animator != null && eye.HasValue)
+                {
+                    // Hysteresis: a person walking the boundary must not flicker on and off every
+                    // few frames, so it costs a tenth of the radius to change your mind.
+                    float far = (ground - eye.Value).sqrMagnitude;
+                    float edge = animator.enabled ? _nearest * 1.1f : _nearest;
+                    bool animate = far < edge * edge;
+
+                    if (animator.enabled != animate) animator.enabled = animate;
+                    if (!animate) continue;      // and skip Drive, which is not free either
+                    animating++;
+                }
+
                 // WHERE THE BOUGHT ANIMATION WILL LAND. The primitive figure above swings its own
                 // legs off `_phase` and needs none of this; a rigged character does, and the
                 // simulation state it needs - what this person is doing, and whether they are on
@@ -262,6 +337,17 @@ namespace Noir.Unity
                                      who: _host.People.Get(new CitizenId(i)).Key.Value,
                                      pace: Mathf.Sqrt((agent.Position - agent.PreviousPosition)
                                                           .LengthSquared) * perSecond);
+            }
+
+            Animating = animating;
+
+            // Chase the budget. Only when there is a camera to measure from - with none, nothing
+            // was culled this frame and moving the radius on that would be reacting to nothing.
+            if (eye.HasValue)
+            {
+                if (animating < AnimatingBudget * 9 / 10) _nearest *= 1.08f;
+                else if (animating > AnimatingBudget * 11 / 10) _nearest *= 0.94f;
+                _nearest = Mathf.Clamp(_nearest, NearestFloor, NearestCeiling);
             }
         }
 
@@ -294,6 +380,17 @@ namespace Noir.Unity
             public int People, Animated, Moving, Wrong;
 
             /// <summary>
+            /// How many animators are actually RUNNING, after the distance LOD in
+            /// <see cref="Refresh"/> has switched off everybody past
+            /// <see cref="AnimatingBudget"/> has kept only the nearest people running.
+            ///
+            /// Reported because without it the saving cannot be read. "Switching the People layer
+            /// off now costs 0.0 ms" means the LOD is working if a few dozen are still running,
+            /// and means the town has quietly been turned off if the answer is none.
+            /// </summary>
+            public int Running;
+
+            /// <summary>
             /// The rate the walk is playing at, averaged over everybody on the move.
             ///
             /// The AVERAGE and not the extremes, because a person whose last simulation step
@@ -306,7 +403,9 @@ namespace Noir.Unity
             public string Wanted;
 
             public override string ToString() =>
-                $"{People} people, {Animated} with an animator, {Moving} on the move, "
+                $"{People} people, {Animated} with an animator, {Running} animating "
+              + $"(nearest {AnimatingBudget}, the rest hold a pose), "
+              + $"{Moving} on the move, "
               + $"{Wrong} of those NOT in the state they should be. "
               + (Moving > 0 ? $"Walk playing at {Rate:0.00}x "
                             + $"({Slowest:0.00}-{Fastest:0.00}). " : "")
@@ -330,6 +429,13 @@ namespace Noir.Unity
 
                 var animator = _figures[i].Animator;
                 if (animator == null || animator.runtimeAnimatorController == null) continue;
+
+                // A FROZEN DISTANT FIGURE IS NOT THE GLIDING BUG THIS CENSUS HUNTS. The animator
+                // LOD in Refresh keeps only the nearest AnimatingBudget people running, so a walker out
+                // there really is holding a pose - deliberately, and invisibly at that range.
+                // Counting them as "walking but idle" would report the optimisation as the very
+                // fault it was measured to be safe against, and hide a real one behind the noise.
+                if (!animator.enabled) continue;
                 animated++;
 
                 string want = AgentAnimation.ClipFor(
@@ -367,7 +473,7 @@ namespace Noir.Unity
 
             return new Census
             {
-                People = _figures.Length, Animated = animated,
+                People = _figures.Length, Animated = animated, Running = Animating,
                 Moving = walking, Wrong = walkingAndIdle,
                 Rate = rated > 0 ? rates / rated : 0f,
                 Slowest = slowest == float.MaxValue ? 0f : slowest, Fastest = fastest,

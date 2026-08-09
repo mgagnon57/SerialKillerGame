@@ -240,6 +240,33 @@ Unity.exe -batchmode -quit -projectPath C:\SerialKillerGame ^
   -executeMethod Noir.Editor.SmokeTest.Run -logFile smoke.log
 ```
 
+**4b. Frame rate — measure it INSIDE one run, never between runs.**
+
+```
+Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform PlayMode ^
+  -assemblyNames Noir.PlayTests -testFilter "Noir.PlayTests.PerfCensus.WhatIsEatingTheFrame" ^
+  -testResults <xml> -logFile <log>
+```
+
+> **~6 minutes, against 17 for the whole suite.** Switches one layer off and straight back on and
+> reports median frame time, so drift is common to every sample and cancels. It measures the
+> baseline at BOTH ends and prints the gap: if that exceeds 15%, the instrument moved and the table
+> is soft.
+>
+> **DO NOT INFER FRAME RATE FROM HOW LONG THE SUITE TAKES.** A whole session was lost to it on
+> 2026-08-08: four runs read 368 s, 688 s, 728 s, 708 s, two changes were made and reverted on the
+> strength of it, and then the control run came back at 708 s with code *functionally identical to
+> the 368 s one*. Suite duration does not repeat on this machine.
+>
+> **A NEGATIVE "saves" FIGURE IS THE INSTRUMENT, NOT THE TOWN.** Flipping `enabled` on a thousand
+> renderers dirties culling for longer than the settle window, so the fattest layer can read slower
+> with itself switched off. Lean on the baseline pair, which needs no toggle.
+>
+> **AND ALWAYS READ THE ANIMATING COUNT NEXT TO THE MILLISECONDS.** An 80 m animator cull measured
+> 11.3 ms → 1.4 ms, 88 → 712 fps, and was a static town: `0 of 1385 animating`, because
+> `OrbitCamera` opens at 330 m. The head-count budget that shipped instead is 219 fps with ~150
+> animating. The fastest number was the wrong one.
+
 **4. Look at it.** The tests and `MapAudit` cannot see ugly. Render a still and actually view it.
 
 `dotnet test | tail` reports **tail's** exit status, so a crashed run reads as a pass. Run it

@@ -31,8 +31,20 @@ namespace Noir.PlayTests
     /// </summary>
     public class PerfCensus
     {
-        /// <summary>Frames thrown away after a change before believing anything.</summary>
-        private const int Settle = 45;
+        /// <summary>
+        /// Frames thrown away after a change before believing anything.
+        ///
+        /// GENEROUS BECAUSE THE TOGGLE ITSELF SHOWS UP IN THE MEASUREMENT. At 45 frames the layer
+        /// with the most renderers to switch read SLOWER with itself turned off - `Driveways OFF`
+        /// once, `People OFF` (1,385 renderers) another time, both by about 3-5 ms, which is not a
+        /// thing that can be true. Flipping `enabled` on a thousand-odd renderers dirties Unity's
+        /// culling and batching for longer than 45 frames at 200 fps, which is a fifth of a second.
+        ///
+        /// So the "saves" column is only as trustworthy as this number, and a NEGATIVE saving is
+        /// the instrument talking rather than the town. The baseline pair either side of the run
+        /// is the measurement to lean on - it brackets everything and needs no toggle at all.
+        /// </summary>
+        private const int Settle = 150;
 
         /// <summary>Frames in one sample. At ~30 fps this is about four seconds.</summary>
         private const int Sample = 120;

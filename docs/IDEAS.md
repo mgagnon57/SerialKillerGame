@@ -289,7 +289,31 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   `Crossings` in Core, where an end landing on another road's centre line is a junction in its own
   right; that is untried and needs the same measurement before it is believed.
 
-- [ ] **THE PEOPLE ARE HALF THE FRAME. THE CARS ARE NOT THE PROBLEM AND NEVER WERE.**
+- [x] ~~**THE PEOPLE ARE HALF THE FRAME.**~~ **FIXED 2026-08-08 — 88 fps to 219 fps.**
+  `AgentMeshView` now animates only the nearest `AnimatingBudget` (150) people; the rest hold a
+  pose. Measured by `PerfCensus` on the same camera, both runs with drift under 15%:
+
+  ```
+    before   baseline 11.3 / 12.8 ms   (88 fps)    1385 animating
+    after    baseline  4.6 /  4.1 ms   (219 fps)    ~150 animating
+  ```
+
+  **A FIXED RADIUS IS THE WRONG SHAPE AND THE NUMBER IT PRODUCES IS A LIE.** Eighty metres read
+  1.4 ms / 712 fps - and `0 of 1385 animating`, because `OrbitCamera` opens at 330 m. That is not
+  an optimisation, it is a static town, and it took `WhyAreThePeopleNotAnimating` red for exactly
+  the right reason: with nobody animating the walk rate is 0.00x and the test guarding against
+  skating feet has nothing to measure. **The animating count is what caught it** - the timing alone
+  looked like a triumph.
+
+  So the budget is a HEAD COUNT with the radius chasing it by feedback (no per-frame sort of 1,385
+  people). Cost is bounded at any zoom, the nearest people always move, and the town is never
+  still. Measured converging to 161 / 151 / 136 as the day moves.
+
+  Still open, smaller: a person beyond the budget holds a pose while still SLIDING along the ground
+  if they are walking. Invisible at overview range, potentially not at street level with a big
+  crowd - worth a look before the budget is raised or lowered.
+
+- [ ] ~~**THE PEOPLE ARE HALF THE FRAME. THE CARS ARE NOT THE PROBLEM AND NEVER WERE.**~~
   Measured 2026-08-08 by `PerfCensus.WhatIsEatingTheFrame`, which switches one layer off and
   straight back on inside a SINGLE run, so drift cancels:
 
