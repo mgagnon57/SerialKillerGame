@@ -103,6 +103,80 @@ def idot_counts():
 # The county's traffic counts, keyed by road name. Read once at import; see idot_counts.
 AADT = idot_counts()
 
+
+def _alley_registry():
+    """The frozen alley names and the polylines they were derived from."""
+    out = []
+    path = os.path.join(HERE, "rossville-alley-names.txt")
+    if not os.path.exists(path):
+        print("WARNING: no tools/rossville-alley-names.txt - alleys will be renamed by length rank.")
+        return out
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            bits = line.split()
+            pts = [tuple(float(v) for v in t.split(",")) for t in bits[1:] if "," in t]
+            if len(pts) >= 2:
+                out.append((bits[0], pts))
+    return out
+
+
+ALLEYS_NAMED = _alley_registry()
+
+
+def _point_to_segment(p, a, b):
+    (px, py), (ax, ay), (bx, by) = p, a, b
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return math.dist(p, a)
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return math.dist(p, (ax + t * dx, ay + t * dy))
+
+
+def _polyline_gap(one, two):
+    """How far apart two polylines are - the worst of each one's points to the other's SEGMENTS.
+
+    NOT MIDPOINT TO MIDPOINT, and that is the whole correctness of the registry. Eleven of the 31
+    alleys are stitched runs whose own joins land 39.5-92.5 m from their midpoint, so a midpoint
+    rule with any sane radius orphans exactly the parent names it exists to protect - and renames
+    them, which is the fault it was written to prevent.
+    """
+    def worst(src, dst):
+        return max(min(_point_to_segment(p, dst[i], dst[i + 1]) for i in range(len(dst) - 1))
+                   for p in src)
+    return max(worst(one, two), worst(two, one))
+
+
+#: How far a derived alley may sit from its registered polyline and still be the same alley.
+#: Generous: the derivation moving a whole alley 12 m is a different alley, not a nudge.
+ALLEY_SAME = 12.0
+
+
+def registry_name(runs):
+    """The frozen name for this derived alley, or None if it is genuinely new.
+
+    `runs` is what clip_and_round returns - a LIST OF POLYLINES, because a run that leaves the map
+    and comes back is split rather than bridged. Every run is compared against every registered
+    polyline and the closest wins.
+    """
+    best, gap = None, ALLEY_SAME
+    for name, pts in ALLEYS_NAMED:
+        for run in runs:
+            if len(run) < 2:
+                continue
+            d = _polyline_gap([tuple(q) for q in run], pts)
+            if d < gap:
+                best, gap = name, d
+    return best
+
+
+def registry_next():
+    """The first alley number not already spoken for."""
+    used = [int(n[5:]) for n, _ in ALLEYS_NAMED if n[5:].isdigit()]
+    return max(used) + 1 if used else 1
+
 # Names the county spells differently from this project. The county is not automatically right
 # about a name - it is right about geometry - so the project's own spelling wins and the
 # county's is recorded beside it.
@@ -395,10 +469,27 @@ def main():
             FLOOR[name] = "street"
             roads.append((name, None, "mainroad", keep, "authored"))
 
-    for i, a in enumerate(sorted(alleys, key=lambda a: -a["len"]), start=1):
+    # ---- ALLEY NAMES COME FROM THE REGISTRY, NOT FROM THE LENGTH RANK -----------------------
+    #
+    # This was `enumerate(sorted(alleys, key=lambda a: -a["len"]), start=1)`, so a name was never
+    # a name - it was a RANK, and a rank is a property of the whole set. Add one alley, lengthen
+    # one, change the derivation by a metre, and every alley below it in the order silently became
+    # a different road. Anything referring to `alley12` then pointed at different ground with no
+    # error and nothing in a diff to show it.
+    named = []
+    fresh = registry_next()
+    for a in sorted(alleys, key=lambda a: -a["len"]):
         pl = clip_and_round([tuple(p) for p in a["pts"]])
-        if pl:
-            roads.append((f"alley{i}", None, "alley", pl, "parcels"))
+        if not pl:
+            continue
+        name = registry_name(pl)
+        if name is None:
+            name, fresh = f"alley{fresh}", fresh + 1
+        named.append((name, pl))
+
+    # Emit in the registry's own order so the file reads stably, with anything new after it.
+    for name, pl in sorted(named, key=lambda t: int(t[0][5:])):
+        roads.append((name, None, "alley", pl, "parcels"))
 
     # ---- MEASURE the right of way, rather than inherit it --------------------------------
     # city.txt calls every street 10 and every alley 4, and those numbers came along with the
