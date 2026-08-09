@@ -128,3 +128,21 @@ tools/game-verdict.json
 tools/.verified/
 
 tools/__pycache__/
+
+# ---- AI REFERENCE ART: A WORKING-COPY ASSET, AND A LOUD ONE ----
+#
+# 24 MB of AI impressions of Rossville in 1991, generated 2026-08-06, sitting inside Assets/
+# where Unity imports them. Their own README is unambiguous about what they are:
+#
+#     "Mood, not measurement ... Do not measure anything off these. Do not cite them.
+#      Do not let them settle a question."
+#
+# Against docs/SOURCES-OF-TRUTH.md they sit BELOW authored: parcel-1991.txt is authored by
+# somebody who was there and outranks the sources; these are authored by a model that has
+# never been there and outrank nothing. They are a target to build toward and to argue with,
+# which is worth keeping on disk and is not worth 24 MB of repository.
+#
+# Same treatment as the pack and the llama binaries above: kept in the working copy, not
+# vendored. If they should ship, remove this deliberately.
+Assets/Noir/Reference/
+Assets/Noir/Reference.meta
