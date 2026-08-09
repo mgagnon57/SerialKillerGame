@@ -314,6 +314,29 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 > survey vertices is a question about the town's shape, and `SOURCES-OF-TRUTH.md` says the owner
 > is the authority on shape. Ask him before smoothing roads any further — or any less.
 
+## ALLEY-2b — four streets stop short of the street they should meet · **OPEN, and well understood**
+
+> Named by `NoTwoStreetsTouchWithoutAJunctionBetweenThem` on 2026-08-09, which is ratcheted at
+> exactly these four so a fifth fails the suite:
+>
+> ```
+>   benton and summit      8.3 m at (1117,1091)
+>   dale and grove         6.1 m at (1351,1979)
+>   dale and chicago       5.4 m at ( 883,1983)
+>   thompson and chicago   7.4 m at ( 891,2101)
+> ```
+>
+> Their corridors overlap, so a car ought to be able to turn between them, and there is no
+> junction because there is genuinely **no tarmac** in the gap: Dale Avenue's county segment stops
+> 0.4 m outside Route 1's carriageway. Inventing a junction there would be inventing a road.
+>
+> **The fix already exists and is simply not pointed at the streets.** `extend_to_streets` in
+> `tools/build-roads.py` carries an alley's end out to the street it stops short of, refuses where
+> the new stretch would cross somebody's lot, and counts what it did — that is what opened the 58
+> alley mouths. Run it over street-class ends too, with the same refusal. It rewrites
+> `Content/roads.txt`, so it wants its own change and its own PlayMode run, and **W3 must be
+> finished first**: that ordering is the one this file has already been burned by twice.
+
 ## The waves
 
 ### ALLEY-2 — the alley mouths · ✅ **LANDED 2026-08-09**
@@ -627,10 +650,20 @@ stranded lanes — either lands red on `NoLaneArrivesAtAJunctionItCannotLeave`.
   > `Gap` both take a `RoadLine` and read `Centre`/`From`/`To`, so they have to walk the path too;
   > check 7's corridor test should become the `Path`-and-half-width one `RoadNetwork.CouldMeet`
   > now uses, with no axis filter.
-- **GATE-8** ⚠ ratchets **street-class near-misses only** (3 today, clean gap to 28 m) and prints the
+- **GATE-8 — ✅ DONE 2026-08-09** as `NoTwoStreetsTouchWithoutAJunctionBetweenThem`, and the split
+  the item asks for is exactly the one it makes: street class is ratcheted, alleys are asserted at
+  zero, and everything within 30 m that does NOT overlap is printed unasserted so the gap between
+  the worst real fault and the first innocent pair is visible. **The numbers came out differently
+  from the item's and the item's could not be checked** — the audit that produced "3 today, clean
+  gap to 28 m" is not in the repo (see JUNC-7 above), and the model has changed twice since. What
+  was measured: **8 street pairs and 6 alley pairs** whose carriageways overlap with no junction,
+  taken to **4 and 0** by letting `Touches` accept an end inside the other road's carriageway. The
+  four that remain are ALLEY-2b above. The gate also refuses any overlap deeper than 5 m, so the
+  count cannot be ratcheted upward past the shape that traps a car.
+- ~~**GATE-8** ⚠ ratchets **street-class near-misses only** (3 today, clean gap to 28 m) and prints the
   55 alley near-misses unasserted. Do not ratchet the combined 58 — 55 of them are the `STREET_CLEAR`
   artefact the item itself assigns elsewhere, so the gate would pin the number it argues must not
-  drive it.
+  drive it.~~
 
 > **Gates.** `RoadGeometryBaselineTests`' five constants (111/442/1088/38) and the segment checksum
 > **all go red legitimately** — re-record before/after in the commit message, and note the baseline

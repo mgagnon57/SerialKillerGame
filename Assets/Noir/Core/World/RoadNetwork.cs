@@ -820,25 +820,37 @@ namespace Noir.Core.World
                     var tip = ending.Path.PointAt(end);
                     var (sThrough, lateral) = through.Path.Project(tip);
 
-                    // TOUCHING MEANS TOUCHING, not "somewhere in the corridor". This gated on
-                    // through.HalfWidth first, which is the rule `At` uses for what a point is ON -
-                    // and it is far too loose for a junction: Chicago Street's corridor is wide
-                    // enough that a road stopping 4.7m short of its centre line counted as meeting
-                    // it. The junction then landed metres off one of its own roads and
-                    // SurveyRoadNetworkTests said so, which is what that test is for.
+                    // TOUCHING IS TOUCHING THE ROAD, NOT ITS CENTRE LINE. A road that stops inside
+                    // the other's CARRIAGEWAY has met it - the tarmac overlaps, a car can turn out
+                    // of one onto the other, and if the model says otherwise it is the model that
+                    // is wrong.
                     //
-                    // A metre - see the constant, which CouldMeet's box margin also reads so the
-                    // two can never drift apart and quietly reject a real touch.
-                    if (Math.Abs(lateral) > Touching) continue;
+                    // THIS WAS ONE METRE FROM THE CENTRE LINE, AND HERE IS THE HISTORY, because
+                    // the metre was not arbitrary and must not simply be undone. It was tightened
+                    // from the carriageway rule because Chicago Street's corridor is wide enough
+                    // that a road stopping 4.7 m short counted as meeting it, and the junction
+                    // then landed metres off one of its own roads. That was a real fault - but it
+                    // was a fault in where the NODE was put, not in whether the roads met. The
+                    // node is re-projected onto every arm now and has to land inside its own
+                    // reach, and `EveryJunctionLandsOnEveryRoadItClaimsToJoin` measures exactly
+                    // that. The reason for the metre is gone; the cost of it was not.
+                    //
+                    // The cost, measured 2026-08-09 by `NoTwoStreetsTouchWithoutAJunctionBetween-
+                    // Them`: EIGHT pairs of streets whose carriageways overlap with no junction
+                    // between them, including grove x thompson at 2.2 m - which `CityStreets` had
+                    // just been drawing as a corner. Every one is a car trap of the same shape as
+                    // benton x alley21, which put two vehicles in the same place.
+                    float reach = through.HalfWidth > Touching ? through.HalfWidth : Touching;
+                    if (Math.Abs(lateral) > reach) continue;
 
                     var back = through.Path.PointAt(sThrough);
                     float bx = back.X - tip.X, by = back.Y - tip.Y;
-                    if (bx * bx + by * by > Touching * Touching) continue;
+                    if (bx * bx + by * by > reach * reach) continue;
 
-                    // BETWEEN THE TWO, so neither road is misrepresented. The corner is where an
-                    // end meets a centre line and the two are within a metre of each other; the
-                    // midpoint is within half a metre of both, so PointAt on either road brings
-                    // you back to the junction - the invariant SurveyRoadNetworkTests enforces.
+                    // BETWEEN THE TWO, so neither road is misrepresented. The junction sits midway
+                    // between the end and the centre line it stopped against; the clusterer then
+                    // re-projects every arm onto it and refuses the merge outright if any arm
+                    // cannot be reached, so a node can no longer end up on neither road.
                     float x = (back.X + tip.X) * 0.5f, y = (back.Y + tip.Y) * 0.5f;
 
                     float sNs = onNs ? end : sThrough;

@@ -353,10 +353,10 @@ namespace Noir.Core.Tests
         //   junctions were on a road, and those report the first arm of each AXIS - so at the two
         //   merged nodes above, the third road got no cut at all and no turns with it. It walks
         //   the arms now.
-        private const int BaselineJunctions = 109;
-        private const int BaselineSegments = 440;
-        private const int BaselineTurns = 1100;
-        private const int BaselineEntries = 37;
+        private const int BaselineJunctions = 110;
+        private const int BaselineSegments = 442;
+        private const int BaselineTurns = 1106;
+        private const int BaselineEntries = 36;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
@@ -377,7 +377,19 @@ namespace Noir.Core.Tests
         //
         // The railway is untouched: it still draws through the uniform `Smooth`, and
         // SmoothReproducesTheRailwaysOwnCatmullRomToTheBit still holds it to the bit.
+        //
+        // AND RE-RECORDED AGAIN, 109 -> 110 / 440 -> 442 / 1100 -> 1106 / 37 -> 36, for
+        // `Touches` accepting an end inside the other road's CARRIAGEWAY instead of within a
+        // metre of its centre line. The metre was tightened from exactly this rule because a
+        // junction could then land metres off one of its own roads - a real fault, but in where
+        // the NODE went rather than in whether the roads met. The node is re-projected onto every
+        // arm now and must land inside its own reach, so the reason for the metre is gone; the
+        // cost of it was not. `NoTwoStreetsTouchWithoutAJunctionBetweenThem` measured the cost at
+        // EIGHT pairs of streets and SIX of alleys whose carriageways overlapped with no junction
+        // between them - car traps of the same shape as benton x alley21, which put two vehicles
+        // in the same place. Alleys to zero, streets to four, and those four are roads whose
+        // county segment stops short rather than a rule that is still too tight.
         private const string BaselineSegmentChecksum =
-            "9F5A95EEFF14E163D93E9014B59B30834C0C0BCB8BDC4525FD51B26FBD42F18A";
+            "58A6C5611312E758816B9F94A03F24C144E2059B522C5B2FC91775CDA113EB37";
     }
 }

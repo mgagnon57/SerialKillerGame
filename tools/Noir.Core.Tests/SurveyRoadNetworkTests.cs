@@ -279,6 +279,130 @@ namespace Noir.Core.Tests
                 "the car is drawn. See RoadPath.ArcAt.");
         }
 
+        /// <summary>
+        /// TWO ROADS THAT TOUCH AND DO NOT MEET. The fault that put two cars in the same place.
+        ///
+        /// alley21's mouth landed ON Benton and no junction was made, because both roads counted
+        /// as east-west and the finder only ever compared north-south against east-west. Cars came
+        /// out of the alley through Benton's traffic and `NoTwoVehiclesOccupyTheSameSpace` measured
+        /// them at 0.60 m. JUNC-2 fixed the finder; this is the gate that says so, and that says
+        /// so again the next time somebody re-derives Content/roads.txt.
+        ///
+        /// STREET CLASS IS RATCHETED, ALLEYS ARE PRINTED. The two are not the same claim. Two
+        /// streets whose carriageways overlap with no junction between them is a car trap. An
+        /// alley running within a couple of metres of a street for part of its length is ordinary
+        /// - a back lane behind a row of houses does that - and `derive-alleys.py` traces them out
+        /// of parcel gaps, so their exact offset carries the tolerance of the county's lot lines
+        /// rather than of a survey. Ratcheting the combined figure would pin a number that is
+        /// mostly an artefact of how the alleys were traced.
+        ///
+        /// The near-misses that do NOT touch are printed too, ordered, so the gap between the
+        /// worst real fault and the first innocent pair is visible rather than assumed.
+        /// </summary>
+        [Test]
+        public void NoTwoStreetsTouchWithoutAJunctionBetweenThem()
+        {
+            var world = SurveyTown();
+            var offenders = new List<string>();
+            var alleys = new List<string>();
+            var near = new List<(float Gap, string What)>();
+
+            var lines = world.Roads.Lines;
+            for (int a = 0; a < lines.Count; a++)
+            for (int b = a + 1; b < lines.Count; b++)
+            {
+                var one = lines[a];
+                var two = lines[b];
+                if (one?.Path == null || two?.Path == null) continue;
+
+                float touching = one.HalfWidth + two.HalfWidth;
+
+                float closest = float.MaxValue;
+                float atX = 0f, atY = 0f;
+                for (float s = 0f; s <= one.Path.Length; s += 1f)
+                {
+                    var p = one.Path.PointAt(s);
+                    var (t, _) = two.Path.Project(p);
+                    var q = two.Path.PointAt(t);
+                    float dx = q.X - p.X, dy = q.Y - p.Y;
+                    float d = (float)System.Math.Sqrt(dx * dx + dy * dy);
+                    if (d < closest) { closest = d; atX = p.X; atY = p.Y; }
+                }
+
+                // Is there a junction where they come closest? Judged against the node's own
+                // reach, because a merged junction sits between its arms and is not exactly on
+                // any one of their centre lines.
+                bool met = false;
+                foreach (var j in world.Roads.Junctions)
+                {
+                    float dx = j.X - atX, dy = j.Y - atY;
+                    if (dx * dx + dy * dy <= (j.Reach + touching) * (j.Reach + touching)) { met = true; break; }
+                }
+                if (met) continue;
+
+                string what = $"{one.Name} and {two.Name} come within {closest:0.0}m at " +
+                              $"({atX:0},{atY:0})";
+
+                if (closest <= touching)
+                {
+                    bool alley = one.Class == RoadClass.Alley || two.Class == RoadClass.Alley;
+                    if (alley) alleys.Add(what + " (alley)");
+                    else offenders.Add(what);
+                }
+                else if (closest < 30f)
+                {
+                    near.Add((closest, what));
+                }
+            }
+
+            near.Sort((p, q) => p.Gap.CompareTo(q.Gap));
+
+            TestContext.Out.WriteLine($"street corridors overlapping with no junction : {offenders.Count}");
+            foreach (var o in offenders) TestContext.Out.WriteLine("    " + o);
+            TestContext.Out.WriteLine($"alley corridors overlapping with no junction  : {alleys.Count}");
+            foreach (var o in alleys) TestContext.Out.WriteLine("    " + o);
+            TestContext.Out.WriteLine($"near, but clear of each other                 : {near.Count}");
+            foreach (var (gap, what) in near) TestContext.Out.WriteLine($"    {gap,5:0.0}m  {what}");
+
+            // A RATCHET AT THE MEASURED FOUR, NOT A ZERO, AND THE FOUR ARE A DATA FAULT.
+            //
+            // It was eight streets and six alleys. Letting `Touches` accept an end inside the
+            // other road's CARRIAGEWAY rather than within a metre of its centre line took the
+            // alleys to none and the streets to four, and the four left are all 5.4-8.3 m:
+            //
+            //     benton and summit    8.3 m      dale and chicago     5.4 m
+            //     dale and grove       6.1 m      thompson and chicago 7.4 m
+            //
+            // Every one is a road whose county segment STOPS SHORT of the street it should meet -
+            // Dale Avenue ends 0.4 m outside Route 1's carriageway - so there is genuinely no
+            // tarmac between them and inventing a junction would be inventing a road. The fix is
+            // `extend_to_streets` in tools/build-roads.py, which already opens a mouth for an
+            // alley that stops short and is simply not run over the streets. That rewrites
+            // Content/roads.txt and belongs in its own change.
+            //
+            // TWO CLAIMS, so the ratchet cannot hide the fault it was written for. The count may
+            // only fall - and NOTHING may overlap more deeply than five metres, which is where
+            // the four sit clear above and where every one of the fourteen that were fixed sat
+            // below. benton x alley21, the pair that put two cars in the same place, was 2.0 m.
+            Assert.That(alleys, Is.Empty,
+                "An alley shares ground with a road and no junction was made:\n  " +
+                string.Join("\n  ", alleys));
+
+            Assert.That(offenders.Count, Is.LessThanOrEqualTo(4),
+                "These streets share ground with no junction between them:\n  " +
+                string.Join("\n  ", offenders) + "\n\n" +
+                "A car on one cannot turn onto the other, and a car on each can be in the same " +
+                "place at the same time - which is exactly what happened at benton x alley21 on " +
+                "2026-08-09, measured at 0.60 m apart in PlayMode. If the crossing is real, the " +
+                "junction finder has to see it; if it is not, the two roads should not be laid " +
+                "over one another.");
+
+            foreach (var o in offenders)
+                Assert.That(o, Does.Not.Match(@"within [0-4]\.\d+m"),
+                    "This pair overlaps by more than five metres with no junction, which is the " +
+                    "shape that traps a car rather than the shape of a road stopping short:\n  " + o);
+        }
+
         private static string RepoRoot()
         {
             var dir = new DirectoryInfo(System.AppContext.BaseDirectory);
