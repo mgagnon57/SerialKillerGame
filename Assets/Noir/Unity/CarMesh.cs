@@ -104,12 +104,18 @@ namespace Noir.Unity
             car.AddComponent<MeshFilter>().sharedMesh = merged;
             car.AddComponent<MeshRenderer>().sharedMaterials = materials.ToArray();
 
-            var box = car.AddComponent<BoxCollider>();
-            box.center = merged.bounds.center;
-            box.size = merged.bounds.size;
-
-            // `moving` deliberately changes nothing today. See the parameter docs: the kinematic
-            // Rigidbody that belongs here halved the frame rate and was reverted.
+            // NO COLLIDER AT ALL, AND THAT IS DELIBERATE.
+            //
+            // The eleven MeshColliders a pack car ships with are replaced by NOTHING rather than by
+            // one box. A box was tried on 2026-08-08 and the owner immediately could not move
+            // around the town: 611 solid objects appeared in front gardens that morning, in exactly
+            // the places a player walks and a camera swings, and none of them had ever been there
+            // before. Parked cars are scenery. Nothing in this game asks them to be solid - the
+            // player walks the street, the traffic model is lane arithmetic, and picking wants the
+            // building behind the car rather than the car.
+            //
+            // If they should ever be solid, that is a deliberate feature with its own test, not a
+            // side effect of a mesh optimisation.
             _ = moving;
         }
     }
