@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Noir.Core.People;
 
 namespace Noir.Core.Tests
 {
@@ -46,49 +47,23 @@ namespace Noir.Core.Tests
         private static string Animations() => Path.Combine(RepoRoot(), "Assets", "Noir", "Animations");
 
         /// <summary>
-        /// Every clip name the table asks for.
+        /// Every clip name the table asks for — through the real parser, not a copy of it.
         ///
-        /// A row is `key [pace] Clip, Clip, Clip`. The key is the first whitespace-delimited word;
-        /// a pace like `1.5m/s` may follow it and is not a clip. Everything after that is the
-        /// comma-separated list.
+        /// This used to hand-roll the row format here: split the key off, spot an optional
+        /// `1.5m/s`, take the rest as a comma list. That is a SECOND parser for a file that
+        /// already has one, and a test whose parser disagrees with the game's tests nothing —
+        /// it can pass while the game reads the file differently. `AnimationTable` moved to Core
+        /// in W3 precisely so this could ask the real thing.
         /// </summary>
         private static HashSet<string> Wanted()
         {
+            var table = AnimationTable.Parse(
+                File.ReadAllText(Path.Combine(RepoRoot(), "Content", "animations.txt")));
+
             var wanted = new HashSet<string>(StringComparer.Ordinal);
-            string path = Path.Combine(RepoRoot(), "Content", "animations.txt");
-
-            foreach (var raw in File.ReadAllLines(path))
-            {
-                var line = raw.Trim();
-                if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal)) continue;
-
-                // Split the key (and an optional pace) off the front.
-                int cut = line.IndexOf(' ');
-                if (cut < 0) continue;
-                var rest = line.Substring(cut).Trim();
-
-                if (rest.Length > 0 && !rest.Contains(","))
-                {
-                    // A single-clip row: might still start with a pace.
-                }
-
-                int space = rest.IndexOf(' ');
-                if (space > 0)
-                {
-                    var first = rest.Substring(0, space);
-                    if (first.EndsWith("m/s", StringComparison.Ordinal)) rest = rest.Substring(space).Trim();
-                }
-                else if (rest.EndsWith("m/s", StringComparison.Ordinal))
-                {
-                    continue;                       // a pace and nothing else
-                }
-
-                foreach (var clip in rest.Split(','))
-                {
-                    var name = clip.Trim();
-                    if (name.Length > 0) wanted.Add(name);
-                }
-            }
+            foreach (var row in table.Rows)
+            foreach (var clip in row.Value)
+                wanted.Add(clip);
             return wanted;
         }
 

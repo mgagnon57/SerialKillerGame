@@ -41,7 +41,31 @@ can be landed while waiting.
 
 ---
 
-## Decisions: answer these first
+## Decisions — ANSWERED 2026-08-08
+
+| | decision | answer |
+|---|---|---|
+| **1** | Should anyone ever run? | **(A)** delete the row, root and branch |
+| **2** | May a row key carry a selector? | **(B)** `@place` **and** `:person` |
+| **3** | May the Core gate go red on a stale controller? | **(1)** yes — both are normal `[Test]` |
+| **4** | Non-uniform scale shearing limbs | **(A)** uniform scale; lose the ±7% width |
+| **5** | What should a headless run draw? | recommendation stands — (A) |
+| **6** | The 0.50 walk floor against a measured 0.54 | recommendation stands — (A) lower to ~0.35 |
+| **7** | Loop Pose on all 87 | recommendation stands — (A) **measure first** |
+| **8** | The player build | **(C)** — the manifest pattern across **all seven**, people as pilot |
+| **9** | Two small ones | yes to both |
+
+**8 is the one that went BEYOND the recommendation, and it changes the size of that wave.** The
+plan recommended (A), hours of work, making the silent degradations loud. (C) is the largest of the
+three — the doc's own estimate for the middle option was "realistically a week with several Unity
+round-trips", and this is wider than that. It is not a thing to land unattended in one sitting.
+Do it as the option itself frames it: **people as the pilot**, with (A)'s "make the failure loud"
+work as the groundwork, since a named log line per system is how you find out which of the seven
+actually break before rebuilding all of them.
+
+---
+
+## Decisions: the reasoning behind each
 
 ### 1. Should anyone in Rossville ever run? — **blocks W5**
 
@@ -334,6 +358,30 @@ worse than the bug.
 > (DOC-6) is rewritten *after* W1 so it describes a guard that now exists.
 
 ---
+
+### W3 — The table moves to Core, alone — **DONE 2026-08-08**
+
+> **Landed.** Core **431 → 439**, exactly as predicted, `CLAUDE.md` edited in the same commit.
+> Both assemblies compile. **`AnimatorBuild.Run` and `AnimationCheck.Run` each exercised by batch
+> and each clean — zero `No content source installed`**, which is the trap this wave named and the
+> only way to catch it.
+>
+> `Assets/Noir/Core/People/AnimationTable.cs` — pure `Parse(string)`, `Rows`/`Paces`/`Warnings`,
+> no file reading and no logging. `AgentAnimation` keeps only the two things Core cannot do: find
+> the file (through `Content` now, not `ContentLoader`) and print the warnings.
+>
+> **The three DOT-3 tests were rewritten onto it**, which removed a second hand-rolled parser for
+> `animations.txt` living inside a test — a test whose parser disagrees with the game's proves
+> nothing, and that is the same duplicate-logic fault RIG-12 was about.
+>
+> **The three orphan `.meta` files this wave warned about are committed too** — `ClearOfRoads.cs`,
+> `RoadCorridor.cs` and `TownGeometryPlayTests.cs` all had committed source and uncommitted meta,
+> so a fresh clone would have generated new GUIDs for them.
+>
+> **Sequencing note for whoever runs two menu items in a row:** Unity takes an exclusive lock on
+> the project, and back-to-back `-batchmode -quit` launches fail the second with *"Multiple Unity
+> instances cannot open the same project"* if the first has not fully exited. Wait for the process
+> to go before launching the next.
 
 ### W3 — The table moves to Core, alone
 

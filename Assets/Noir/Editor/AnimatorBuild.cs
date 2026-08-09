@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Noir.Core.Contracts;
 using Noir.Unity;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -97,6 +98,13 @@ namespace Noir.Editor
             // Downloading more than you use is the CORRECT workflow - you cannot tell whether a
             // clip is right until you have it - so this filters at build time rather than
             // asking anybody to prune a folder.
+
+            // THE CONTENT SOURCE, WHICH THE GAME INSTALLS AND A MENU ITEM DOES NOT.
+            // AgentAnimation reads through Noir.Core.Contracts.Content now that the parser
+            // lives in Core, and Content throws "No content source installed" until somebody
+            // hands it one. TownPipeline.Build does that for the game; this runs from a menu
+            // with no pipeline anywhere near it, so it has to do it itself. Idempotent.
+            Content.Install(ContentLoader.AsSource);
             AgentAnimation.Reload();
             var wanted = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
             foreach (var row in AgentAnimation.Rows)

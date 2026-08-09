@@ -3,6 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using Noir.Core.People;
+using Noir.Core.Contracts;
 using Noir.Unity;
 
 namespace Noir.Editor
@@ -96,6 +97,12 @@ namespace Noir.Editor
             }
 
             // ---- what the table asks for and the folder has not got ----
+            // THE CONTENT SOURCE, WHICH THE GAME INSTALLS AND A MENU ITEM DOES NOT.
+            // AgentAnimation reads through Noir.Core.Contracts.Content now that the parser
+            // lives in Core, and Content throws "No content source installed" until somebody
+            // hands it one. TownPipeline.Build does that for the game; this runs from a menu
+            // with no pipeline anywhere near it, so it has to do it itself. Idempotent.
+            Content.Install(ContentLoader.AsSource);
             AgentAnimation.Reload();          // the file may have been edited since Play
 
             var missing = new SortedSet<string>(System.StringComparer.Ordinal);

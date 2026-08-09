@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Noir.Core.Contracts;
 using Noir.Core.People;
 
 namespace Noir.Unity
@@ -66,56 +67,23 @@ namespace Noir.Unity
             get
             {
                 if (_rows != null) return _rows;
-                _rows = new Dictionary<string, string[]>(System.StringComparer.OrdinalIgnoreCase);
-                _paces = new Dictionary<string, float>(System.StringComparer.OrdinalIgnoreCase);
 
+                // PARSED IN CORE NOW - see AnimationTable. This method used to hold the parser,
+                // which meant the only way to test it was a PlayMode run, which meant in practice
+                // it was never tested at all: the dotted-clip fault lived in exactly that gap.
+                // What is left here is the two things Core cannot do - find the file, and log.
                 string text = null;
-                try { text = ContentLoader.Read("animations.txt"); }
+                try { text = Content.Read("animations.txt"); }
                 catch { /* see the summary: no table is a survivable state */ }
 
-                if (string.IsNullOrEmpty(text))
-                {
-                    Debug.LogWarning("[anim] no Content/animations.txt - nobody will animate.");
-                    return _rows;
-                }
+                var table = AnimationTable.Parse(text);
 
-                foreach (var raw in text.Split('\n'))
-                {
-                    var line = raw.Trim();
-                    if (line.Length == 0 || line[0] == '#') continue;
+                foreach (var warning in table.Warnings) Debug.LogWarning("[anim] " + warning);
 
-                    // `situation  clip, another clip` - the situation is the first word, the rest
-                    // of the line is a comma-separated list, and a row may name nothing at all.
-                    int gap = line.IndexOfAny(new[] { ' ', '\t' });
-                    string what = gap < 0 ? line : line.Substring(0, gap);
-                    string rest = gap < 0 ? "" : line.Substring(gap).Trim();
-
-                    // An optional `1.4m/s` before the clips: the speed the clip was ANIMATED at,
-                    // which is what lets the playback rate be matched to the ground the person
-                    // actually covers. Written with the unit on it rather than as a bare number
-                    // on purpose - Mixamo ships clips called "180 Turn", and a bare leading number
-                    // would silently eat one.
-                    _paces[what] = 0f;
-                    int unit = rest.IndexOf("m/s", System.StringComparison.OrdinalIgnoreCase);
-                    if (unit > 0 && float.TryParse(rest.Substring(0, unit).Trim(),
-                                                   System.Globalization.NumberStyles.Float,
-                                                   System.Globalization.CultureInfo.InvariantCulture,
-                                                   out float pace) && pace > 0f)
-                    {
-                        _paces[what] = pace;
-                        rest = rest.Substring(unit + 3).Trim();
-                    }
-
-                    var clips = new List<string>();
-                    foreach (var piece in rest.Split(','))
-                    {
-                        var clip = piece.Trim();
-                        if (clip.Length > 0) clips.Add(clip);
-                    }
-
-                    _rows[what] = clips.ToArray();
-                }
-
+                _rows = new Dictionary<string, string[]>(table.Rows,
+                                                         System.StringComparer.OrdinalIgnoreCase);
+                _paces = new Dictionary<string, float>(table.Paces,
+                                                       System.StringComparer.OrdinalIgnoreCase);
                 return _rows;
             }
         }
