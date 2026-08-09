@@ -273,6 +273,47 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 
 ---
 
+## SPLINE-1 — the curve overshot, and nine roads left their own ends backwards · ✅ **FIXED 2026-08-09**
+
+> **Not one of the 148. Found by looking at a picture**, which is the only reason it was found at
+> all: `CityStreets` called alley8 × alley12 a *dead end facing east* while the render plainly
+> showed both alleys running through it. Chasing the disagreement rather than trusting either one
+> is what turned it up.
+>
+> `RoadPath.Smooth` is uniform Catmull-Rom: every span between declared points is one unit of
+> parameter however long it is on the ground. Where consecutive spans differ wildly it overshoots —
+> the curve leaves a vertex in the wrong direction, loops out, and comes back. **Opening the alley
+> mouths is what created that shape**: a 13 m stub prepended to a 200 m run.
+>
+> ```
+>   city.txt    0 of 37 roads
+>   roads.txt   9 of 68 roads leave one end BACKWARDS
+>     summit    83m then 1116m   wandered 39.2 m off its own polyline
+>     alley2    14m then  139m   wandered  6.8 m
+>     alley8    15m then  212m   wandered  5.0 m
+> ```
+>
+> **Thirty-nine metres is a hundred and twenty-eight feet.** Summit Street was drawn, driven and
+> built along a line that far from where the county says it runs.
+>
+> Fixed with **centripetal** Catmull-Rom (alpha = 0.5), which is provably free of cusps and
+> self-intersections for any control points at all, applied through `RoadPath.SmoothCentripetal`
+> and used by `RoadPath.Through`. **The railway keeps the uniform curve** — `Smooth` is untouched
+> and `SmoothReproducesTheRailwaysOwnCatmullRomToTheBit` still holds the committed rail bed to the
+> bit. After: **0 backwards on both maps**, summit's worst stray 39.2 m → **16.7 m**, which is the
+> curve rounding a real corner rather than overshooting one — the same thing harrison does on
+> city.txt at 6.3 m by design.
+>
+> `city.txt`'s counts did not move at all — 109 / 440 / 1100 / 37 either side — and only the
+> segment checksum did. Same roads, same junctions, same lanes, drawn where the survey put them.
+> The survey network went 112 → 110 junctions: two of them were the overshoot crossing something
+> it never really reached.
+>
+> **⚠ STILL OPEN: 16.7 m is a lot.** Summit is three declared points over 1.2 km, so the curve is
+> rounding a corner the county recorded as a corner. Whether a street should bow 55 ft between
+> survey vertices is a question about the town's shape, and `SOURCES-OF-TRUTH.md` says the owner
+> is the authority on shape. Ask him before smoothing roads any further — or any less.
+
 ## The waves
 
 ### ALLEY-2 — the alley mouths · ✅ **LANDED 2026-08-09**

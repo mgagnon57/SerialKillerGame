@@ -361,8 +361,23 @@ namespace Noir.Core.Tests
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
         // Re-recorded for the road refit described above, again for the removal of the four
-        // placeholder country roads, and again for the two model bugs described above.
+        // placeholder country roads, again for the two model bugs described above, and again for
+        // CENTRIPETAL smoothing.
+        //
+        // THE COUNTS DID NOT MOVE FOR THAT LAST ONE - 109/440/1100/37 either side of it - and
+        // that is the point: the same roads, the same junctions and the same lanes, drawn where
+        // the survey put them. Uniform Catmull-Rom parameterises every span between declared
+        // points as one unit however long it is on the ground, and overshoots where consecutive
+        // spans differ wildly. Content/roads.txt is chained county segments with a short mouth
+        // stub on the end, so NINE of its sixty-eight roads left one of their own ends BACKWARDS
+        // - Summit Street drawn 39 m from where the county says it runs, alley8 leaving its own
+        // mouth pointing the wrong way. Zero on both maps now, and Summit's worst stray from its
+        // own polyline is 16.7 m, which is the curve rounding a real corner rather than
+        // overshooting one - the same thing harrison does here at 6.3 m by design.
+        //
+        // The railway is untouched: it still draws through the uniform `Smooth`, and
+        // SmoothReproducesTheRailwaysOwnCatmullRomToTheBit still holds it to the bit.
         private const string BaselineSegmentChecksum =
-            "ADC40AF3B9269CF97FAAF69DB7908F297E8D5D14B6460BAEA1CA2A78789C1F3D";
+            "9F5A95EEFF14E163D93E9014B59B30834C0C0BCB8BDC4525FD51B26FBD42F18A";
     }
 }

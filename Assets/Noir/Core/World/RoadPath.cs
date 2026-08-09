@@ -145,7 +145,12 @@ namespace Noir.Core.World
             if (points.Count == 2 && (points[0].X == points[1].X || points[0].Y == points[1].Y))
                 return Straight(points[0], points[1]);
 
-            var dense = Resample(Smooth(points), ResamplePitch);
+            // CENTRIPETAL, not the uniform curve the railway uses. A road's declared points
+            // come from chained county segments with a short mouth stub on the end, and uniform
+            // Catmull-Rom overshoots badly when consecutive spans differ that much - nine roads
+            // left one of their own ends backwards and Summit Street was drawn 39 m off its
+            // survey line. See SmoothCentripetal.
+            var dense = Resample(SmoothCentripetal(points), ResamplePitch);
 
             var cumulative = new float[dense.Length];
             for (int i = 1; i < dense.Length; i++)
@@ -196,6 +201,108 @@ namespace Noir.Core.World
                   + (p0 * 2f - p1 * 5f + p2 * 4f - p3) * t2
                   + (p1 * 3f - p0 - p2 * 3f + p3) * t3) * 0.5f;
         }
+
+        /// <summary>
+        /// THE SAME CURVE, PARAMETERISED BY THE SQUARE ROOT OF CHORD LENGTH RATHER THAN BY INDEX -
+        /// centripetal Catmull-Rom, and it is what a ROAD is smoothed with now.
+        ///
+        /// WHY. The uniform form above treats every span between declared points as one unit of
+        /// parameter however long it is on the ground, and where consecutive spans differ wildly
+        /// it overshoots - the curve leaves a vertex in the wrong direction, loops out and comes
+        /// back. That is not a theoretical property. Content/roads.txt is chained county segments
+        /// with a short mouth stub on the end, so nine of its sixty-eight roads had spans like
+        /// 15 m followed by 212 m, and every one of the nine left one of its ends BACKWARDS:
+        ///
+        ///     summit   83m then 1116m   wanders 39.2 m off its own polyline
+        ///     alley2   14m then  139m   wanders  6.8 m
+        ///     alley8   15m then  212m   wanders  5.0 m
+        ///
+        /// Thirty-nine metres is a hundred and twenty-eight feet. Summit Street was being drawn,
+        /// driven and built along a line that far from where the county says it runs, and the
+        /// alleys came out of their own mouths pointing the wrong way - which is what
+        /// `CityStreets` faithfully reported when it called alley8 x alley12 a dead end facing
+        /// east while both alleys plainly ran through it.
+        ///
+        /// Centripetal is the standard answer and the reason it is standard: alpha = 0.5 is
+        /// provably free of cusps and self-intersections for any control points whatsoever. The
+        /// declared vertices still lie exactly on the curve.
+        ///
+        /// THE RAILWAY KEEPS THE UNIFORM CURVE. `Smooth` above is untouched and still draws the
+        /// committed rail bed to the bit - its own test says so. The rail's polyline is evenly
+        /// sampled and has never had this problem, and re-cutting it would move a snapshot that
+        /// is checked against reality rather than against arithmetic.
+        /// </summary>
+        public static Vec2[] SmoothCentripetal(IReadOnlyList<Vec2> pts)
+        {
+            if (pts.Count < 3)
+            {
+                var copy = new Vec2[pts.Count];
+                for (int i = 0; i < pts.Count; i++) copy[i] = pts[i];
+                return copy;
+            }
+
+            var result = new List<Vec2>((pts.Count - 1) * SmoothSteps + 1) { pts[0] };
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                var p0 = pts[i - 1 < 0 ? 0 : i - 1];
+                var p1 = pts[i];
+                var p2 = pts[i + 1];
+                var p3 = pts[i + 2 > pts.Count - 1 ? pts.Count - 1 : i + 2];
+
+                // Knots spaced by sqrt(chord). A repeated end point contributes zero, which would
+                // divide by zero in the interpolation below, so it is nudged to the smallest
+                // spacing that keeps the arithmetic finite - the same clamp the uniform form gets
+                // for free by spacing everything at 1.
+                float t0 = 0f;
+                float t1 = t0 + Knot(p0, p1);
+                float t2 = t1 + Knot(p1, p2);
+                float t3 = t2 + Knot(p2, p3);
+
+                for (int s = 1; s <= SmoothSteps; s++)
+                    result.Add(Centripetal(p0, p1, p2, p3, t0, t1, t2, t3,
+                                           t1 + (t2 - t1) * s / SmoothSteps));
+            }
+            return result.ToArray();
+        }
+
+        /// <summary>
+        /// The knot spacing: the square root of the chord, floored so two identical control points
+        /// - which is what clamping an end produces - cannot collapse a span to nothing.
+        /// </summary>
+        private static float Knot(Vec2 a, Vec2 b)
+        {
+            // Math.Sqrt, the same call Distance itself makes. Core's ban is on TRANSCENDENTALS -
+            // pow, the trig pair, exp and log - not on roots; Distance has always taken one.
+            float root = (float)Math.Sqrt(Distance(a, b));
+            return root < 1e-3f ? 1e-3f : root;
+        }
+
+        /// <summary>
+        /// Barry-Goldman: three linear interpolations folded down to one point. Written this way
+        /// rather than as a cubic in t because the knots are not evenly spaced, so there is no
+        /// single basis matrix to fold them into.
+        /// </summary>
+        private static Vec2 Centripetal(Vec2 p0, Vec2 p1, Vec2 p2, Vec2 p3,
+                                        float t0, float t1, float t2, float t3, float t)
+        {
+            var a1 = Between(p0, p1, t0, t1, t);
+            var a2 = Between(p1, p2, t1, t2, t);
+            var a3 = Between(p2, p3, t2, t3, t);
+
+            var b1 = Between(a1, a2, t0, t2, t);
+            var b2 = Between(a2, a3, t1, t3, t);
+
+            return Between(b1, b2, t1, t2, t);
+        }
+
+        private static Vec2 Between(Vec2 a, Vec2 b, float ta, float tb, float t)
+        {
+            float span = tb - ta;
+            if (span > -1e-9f && span < 1e-9f) return a;
+            float u = (t - ta) / span;
+            return new Vec2(a.X + (b.X - a.X) * u, a.Y + (b.Y - a.Y) * u);
+        }
+
 
         /// <summary>Even spacing along the polyline, so equal steps of s are equal ground.</summary>
         private static Vec2[] Resample(Vec2[] pts, float pitch)

@@ -317,7 +317,17 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   above were this shape.
 - **Core bans transcendentals** for replay determinism. `Daylight` embeds a 365-entry table rather
   than call six of them. Linear interpolation and integer hashing only — no `Math.Pow` to shape a
-  curve.
+  curve. `Math.Sqrt` is fine and always was: IEEE-754 requires it correctly rounded.
+- **A ROAD AND THE RAILWAY ARE SMOOTHED BY DIFFERENT CURVES, on purpose.** `RoadPath.Smooth` is
+  uniform Catmull-Rom and draws the **railway**; `RoadPath.SmoothCentripetal` is alpha=0.5 and
+  draws every **road**. The uniform form treats each span between declared points as one unit of
+  parameter however long it is on the ground, so where consecutive spans differ wildly it
+  overshoots: the curve leaves a vertex in the wrong direction and loops back. The county's
+  centrelines are chained segments and the alley mouths add a 13 m stub to a 200 m run, which is
+  precisely that shape — on 2026-08-09 **nine of 68 roads left one of their own ends backwards and
+  Summit Street was drawn 39 m (128 ft) off its own survey line.** Nothing could see it: it moves
+  no count and fails no test. Do not "unify" these two back into one curve without re-rendering
+  the rail bed, and do not put a road through the uniform one.
 - **Do not give a Core type a name `UnityEngine` also uses:** `Light`, `Terrain`, `Object`,
   `Random`, `Debug`, `Material`, `Space`, `Bounds`, `Color`, `Camera`, `Input`.
 - **Do not touch the witness layer's vagueness.** `PersonDescription.CarriedThing` is deliberately
