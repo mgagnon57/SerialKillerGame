@@ -92,8 +92,11 @@ namespace Noir.Unity
 
             Unweld(chunks);
 
-            // AFTER the unweld, so a gable's mapping can be rewritten without dragging the roof
-            // slope it shares a corner with. See WallsInTheirOwnPlane.
+            // AFTER the unweld, so a face's mapping can be rewritten without dragging the one it
+            // shares a corner with. Coverings first, then the walls the roof mesh also carries -
+            // the wall pass runs second because a gable end is in the wall submesh and must not
+            // be given a roof slope's mapping on the way past.
+            RoofFacesInTheirOwnPlane(chunks);
             WallsInTheirOwnPlane(chunks);
 
             var renderers = chunks.Emit(go.transform, "Roofs", coverings,
@@ -241,6 +244,76 @@ namespace Noir.Unity
 
                 verts.Clear(); verts.AddRange(splitVerts);
                 uvs.Clear(); uvs.AddRange(splitUvs);
+            }
+        }
+
+        /// <summary>
+        /// EVERY SLOPE GETS ITS COURSES ALONG ITS OWN RIDGE, INCLUDING THE HIP ENDS.
+        ///
+        /// ROOF-4 turned the whole roof's mapping a quarter turn where the ridge runs
+        /// north-south, which fixed the two main slopes and could never fix the hips: one planar
+        /// projection can serve the slopes or the ends, not both, because they fall in
+        /// perpendicular directions. On a hipped house the ends came out cross-grained - courses
+        /// running up the slope, which is a roof that would leak.
+        ///
+        /// So each face is mapped in ITS OWN plane, from its own normal. U runs horizontally
+        /// across the face, which on any pitched roof is along that face's ridge or hip; V runs
+        /// straight up the fall line. Both are measured in metres ON THE SLOPE rather than on the
+        /// ground, so the courses are the exposure a roofer would actually lay and do not stretch
+        /// with the pitch - which also retires the "the slope stretches them by about a tenth"
+        /// apology the old planar mapping carried.
+        ///
+        /// A FLAT ROOF HAS NO FALL LINE and keeps the ground projection: `cross(n, up)` vanishes
+        /// when the face points straight up, and there is no direction along it that means
+        /// anything. That is correct rather than a special case - a built-up flat roof has no
+        /// courses to line up.
+        ///
+        /// After the unweld, for the same reason the walls are: every triangle owns its three UVs
+        /// by then, so a face can be re-mapped without dragging the one it shares an eave with.
+        /// </summary>
+        private static void RoofFacesInTheirOwnPlane(MeshChunks chunks)
+        {
+            foreach (var chunk in chunks.All)
+            {
+                var verts = chunk.Verts;
+                var uvs = chunk.Uvs;
+
+                // The coverings only. The wall submesh has its own pass, and the chimney brick is
+                // a box whose faces are handled by neither - a stack is under a metre across and
+                // its smear has never been visible.
+                for (int submesh = 0; submesh < chunk.Tris.Length; submesh++)
+                {
+                    if (submesh == Materials3D.WallIndex || submesh == Materials3D.ChimneyIndex) continue;
+
+                    var tris = chunk.Tris[submesh];
+                    for (int i = 0; i + 2 < tris.Count; i += 3)
+                    {
+                        int i0 = tris[i], i1 = tris[i + 1], i2 = tris[i + 2];
+                        var p0 = verts[i0];
+
+                        var n = Vector3.Cross(verts[i1] - p0, verts[i2] - p0);
+                        if (n.sqrMagnitude < 1e-9f) continue;
+                        n.Normalize();
+
+                        // Horizontal along the face. Zero on a face that points straight up.
+                        var across = Vector3.Cross(n, Vector3.up);
+                        if (across.sqrMagnitude < 1e-6f)
+                        {
+                            foreach (int v in new[] { i0, i1, i2 })
+                                uvs[v] = new Vector2(verts[v].x, -verts[v].z);
+                            continue;
+                        }
+
+                        across.Normalize();
+                        var upSlope = Vector3.Cross(across, n);
+
+                        foreach (int v in new[] { i0, i1, i2 })
+                        {
+                            var p = verts[v];
+                            uvs[v] = new Vector2(Vector3.Dot(p, across), Vector3.Dot(p, upSlope));
+                        }
+                    }
+                }
             }
         }
 
