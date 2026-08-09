@@ -215,6 +215,42 @@ namespace Noir.Editor
             new Shot("town-holmes", 1175f, 1218f, 26f, 4f, 0f, 1.6f),
         }, dressed: true);
 
+        /// <summary>
+        /// THE ROOF, CLOSE ENOUGH TO SETTLE IT. Nothing in this project could judge a roof.
+        ///
+        /// The overview is 1,150 m up, where a shingle course is far below one pixel and every
+        /// covering reads as a flat colour whatever it actually is. The two street shots are at
+        /// eye height on the downtown block, where the buildings are FLAT-ROOFED commercial and
+        /// the pitched roofs are above the frame entirely. So "the roofs look flat" was not a
+        /// finding, it was the only thing any existing camera could have reported.
+        ///
+        /// These stand about twenty metres off a residential block and look DOWN the slope at a
+        /// shallow angle, which is the one view where an asphalt course line is resolvable and
+        /// where its direction is unambiguous - the courses must run ALONG the ridge, not up the
+        /// slope. Three shots because the covering is a property of the building, so one frame
+        /// might be all grey by luck.
+        /// </summary>
+        [MenuItem("Noir/Render The Roofs")]
+        public static void RoofFrames() => Run("roof", new[]
+        {
+            // Down a residential street, high enough to see over the near roof onto the far ones.
+            new Shot("roof-block", 1175f, 1240f, 34f, 22f, 0f, 9f),
+
+            // ONE HOUSE, FILLING THE FRAME, FROM FOURTEEN METRES. The shot that answers whether
+            // there is shingle at all, and it has to be this close: at 35 m the courses are
+            // already below what the frame can resolve, which is how "the roofs look flat" gets
+            // reported when the only thing actually measured is the camera.
+            //
+            // AIMED AT A BUILDING WHOSE COORDINATES WERE MEASURED, not at a street name. 401 Dale
+            // Ave is 1177,1943 13x7 off the door audit, so its middle is 1183,1946 - three
+            // earlier attempts at this frame were aimed by guessing where houses were and
+            // photographed grass, a railway and a field in turn.
+            new Shot("roof-close", 1183f, 1946f, 14f, 24f, 0f, 4f),
+
+            // A second block, so a run of grey roofs cannot pass as the whole mix.
+            new Shot("roof-mix", 900f, 1560f, 40f, 26f, 20f, 11f),
+        }, dressed: true);
+
         private static void Run(string label, Shot[] shots, bool dressed = false)
         {
             GameObject root = null, camGo = null, sunGo = null;
@@ -325,7 +361,21 @@ namespace Noir.Editor
                     }
 
                     // World space is x east, -z south (Space3D), so a map point is (mx, 0, -my).
-                    var target = new Vector3(at.x, shot.Eye, -at.y);
+                    //
+                    // EYE HEIGHT IS ABOVE THE GROUND, NOT ABOVE SEA LEVEL, and it was not. This
+                    // read `new Vector3(at.x, shot.Eye, -at.y)` - an ABSOLUTE Y - so every
+                    // eye-height camera in this file was standing 1.6 m above world zero while
+                    // Rossville sits on ground several metres higher. The camera was underground,
+                    // aiming into the hill.
+                    //
+                    // `town-holmes` is the one that proves it. Its own comment calls 408 Holmes
+                    // "the first fixed story anchor" and the frame has never shown the house: it
+                    // showed the UNDERSIDES of roofs against a bright band of sky, with hedge
+                    // blocks floating in a grey plane, because that is what the world looks like
+                    // from below the ground. It was also the smallest PNG in its set, which is
+                    // what a frame full of flat ground weighs.
+                    float ground = ElevationGrid.HeightAt(at.x, at.y);
+                    var target = new Vector3(at.x, ground + shot.Eye, -at.y);
                     CityShot.Frame(camGo, target, shot.Dist, shot.Pitch, yaw);
                     CityShot.Capture(cam, Path.Combine(CityShot.OutputDir, shot.Name + ".png"));
                 }
