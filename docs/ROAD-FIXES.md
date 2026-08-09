@@ -75,11 +75,11 @@ have nothing behind them."* A green default gate run has seen nothing of the str
 
 | | decision | answer |
 |---|---|---|
-| **1** | 408 Holmes Ave | **(c)** the house wins **and sets the rule** |
+| **1** | 408 Holmes Ave | **(a)** THE COUNTY WINS EVERYWHERE — owner's call, against the recommendation |
 | **2** | the other addresses | **(a)** delete the Earl Court nineteen, re-address the rest |
 | **3** | the drawn road vs the county's points | **(c)** straight between points, corners only where ruled |
 | **4** | Holmes Avenue's hole | **(a)** join the ends — a digitising gap |
-| **5** | where Rossville parked | **(a)** ~70% in a garage off the back lane |
+| **5** | where Rossville parked | **(c)** MOSTLY FRONT DRIVEWAYS — owner's call, against the recommendation |
 | **6** | speed limits | **(a)** 30 town / 55 approaches / 20 school |
 | **7** | Street or Avenue | **(a)** adopt the county's suffixes, (c) for anything that reads wrong |
 | **8** | road surface | **(a)** asphalt / oil-and-chip / gravel, (c) for corrections |
@@ -88,16 +88,27 @@ have nothing behind them."* A green default gate run has seen nothing of the str
 | **11** | the traffic fleet | **(c)** now, **(a)** after |
 | **12** | the road checkers | **(a)** plus **(c)** for the 1.6% specifically |
 
-**Taken on the recommendations rather than waited for**, which is what the file says happens when no
-answer comes back. Two are worth a second look from the owner when he has the time, because they are
-the two that change what the town IS rather than how it is measured:
+Ten were taken on the documented recommendation. **The two that matter most were put to the owner
+and he went AGAINST the recommendation on both** — recorded here as his rulings, not the plan's,
+because both change what the town IS rather than how it is measured.
 
-- **#1 (c)** rules that the killer's house at 408 Holmes sets the address scheme and the other 201
-  lots follow. If the parity that reproduces 408 turns out not to exist, this collapses into (a) and
-  the house moves ~250 ft east — which is a story decision, not a survey one.
-- **#5 (a)** puts ~70% of 611 cars in a garage off the back lane rather than on a front drive. That
-  is the most visible single ruling in this plan: it moves most of the parked cars I put in front
-  gardens this afternoon round to the alleys.
+- **#1 (a) — THE COUNTY WINS EVERYWHERE.** Confirmed twice, the second time after being told
+  explicitly that 408 Holmes is **the house the owner grew up in** and that the county puts that
+  number on a different lot across the street. He chose the county anyway, and gave the reason:
+
+  > *"I want to reset to use the county. I made changes before some of the new stuff was added.
+  > Need a solid source and then we can do some edits."*
+
+  **So the order is: solid source first, deliberate edits second.** The authored addresses predate
+  the survey layer entirely; rebuilding all 202 on the county gives one rule, and re-anchoring his
+  house afterwards becomes an edit made against something trustworthy rather than a guess buried in
+  data nobody had checked. Do not treat 408 Holmes as settled, and do not quietly "fix" it in
+  either direction — it is an edit he will make on purpose.
+
+- **#5 (c) — MOSTLY FRONT DRIVEWAYS.** The plan recommended ~70% in back-lane garages as
+  period-correct. He chose front drives, which is what the 611 cars placed on 2026-08-08 already
+  do, so **no rework** — and the alleys keep their traffic-free justification rather than gaining
+  a parking one.
 
 ### 1. 408 Holmes Ave — **blocks W9, and take it first**
 
