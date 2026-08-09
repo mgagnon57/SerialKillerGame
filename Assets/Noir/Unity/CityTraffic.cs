@@ -330,11 +330,14 @@ namespace Noir.Unity
             // was supposed to be on ran through x=735 at that latitude. The PlayMode suite read
             // it exactly right: "999.00m past the asphalt".
             //
-            // Ask the path instead. `along` is a village coordinate on the road's own axis and
-            // the path is parameterised from line.From, so the arc length is the difference.
+            // Ask the path instead - and ask it for the arc length too. This read
+            // `along - line.From`, which assumes arc length grows the way the declared axis
+            // does; a curve declared high-to-low runs the other way and every car on it was
+            // drawn at the far end of the road. See RoadPath.ArcAt, which is now the only place
+            // that conversion is written down.
             if (!line.IsStraight && line.Path != null)
             {
-                float arc = along - line.From;
+                float arc = line.Path.ArcAt(along, line.IsNorthSouth);
 
                 // THE MARGIN RUNS OFF THE END OF THE PATH, and RoadPath.PointAt clamps.
                 //

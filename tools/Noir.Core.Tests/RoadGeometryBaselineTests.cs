@@ -314,16 +314,55 @@ namespace Noir.Core.Tests
         //   segments  494 -> 442
         //   turns    1218 -> 1088
         //   entries    44 -> 38
-        private const int BaselineJunctions = 111;
-        private const int BaselineSegments = 442;
-        private const int BaselineTurns = 1088;
-        private const int BaselineEntries = 38;
+        //
+        // RE-RECORDED 2026-08-09, AND THIS ONE IS A BUG FIX RATHER THAN A CONTENT CHANGE. Nothing
+        // in Content/city.txt moved. Two things in the model did, and both were wrong before:
+        //
+        //   junctions 111 -> 109. `Cluster` folds crossings closer together than their own reach
+        //   into one node, and then checked whether the merged centre sat on every arm - using
+        //   each arm's PRE-MERGE S, which is the crossing the merge just moved away from. It asked
+        //   the wrong question and refused every real multi-road corner. Two of them are here:
+        //   Route 1 x Maple x alley1 at (797,1478), and alley4 x Maple x alley5 at (1068,1478)
+        //   where two alleys meet Maple from opposite sides five metres apart. Each is one piece
+        //   of tarmac and is now one node. Every arm is re-projected onto the merged centre.
+        //
+        //   segments 442 -> 440, turns 1088 -> 1100, entries 38 -> 37, and the checksum. THE SAME
+        //   FALSE ASSUMPTION, WRITTEN OUT THREE TIMES: that arc length grows the same way the
+        //   declared axis does. RoadPath measures s from Points[0], so a road declared
+        //   right-to-left runs the other way, and each of the three read the wrong end of it -
+        //   LaneGraph cut the lane there (`line.From + s`), LaneGraph took the tangent it
+        //   classifies turns from there (`AlongOf(way, S) - line.From`), and CityTraffic DREW THE
+        //   CARS there (`along - line.From`). On this map that is railroad, mis-cut by 104 m, and
+        //   chicago by 86 m; on Content/roads.txt it reached 608 m. Even a well-behaved curve was
+        //   half a tile out, because a declared curve's path runs through tile CENTRES.
+        //
+        //   A FOURTH COPY set where a lane STOPS: `line.From + line.Path.Length`, an arc length
+        //   added to an axis minimum, so a bend got a lane as long as its ARC laid out along its
+        //   CHORD. alley13 runs x=296 to x=452 and was given lanes to x=489. That one is why the
+        //   counts here hold at 440/1100/37 while the checksum moved again: the segments are the
+        //   same segments, they just stop where the road does.
+        //
+        //   The cut and the tangent now ask the junction, which already recorded both; the extent
+        //   asks the path's own bounding box. The one remaining coordinate-to-arc-length
+        //   conversion is RoadPath.ArcAt and it is written down once. A straight axis-aligned road
+        //   still answers `From + s` exactly and its box is exactly From..To, so the 32 straight
+        //   roads here have not moved a millimetre - only the five that bend.
+        //   `EveryBentRoadFindsItsWayBackToACoordinateOnItsOwnAxis` walks both maps and holds it.
+        //
+        //   The turns rose rather than fell because LaneGraph asked NorthSouth/EastWest which
+        //   junctions were on a road, and those report the first arm of each AXIS - so at the two
+        //   merged nodes above, the third road got no cut at all and no turns with it. It walks
+        //   the arms now.
+        private const int BaselineJunctions = 109;
+        private const int BaselineSegments = 440;
+        private const int BaselineTurns = 1100;
+        private const int BaselineEntries = 37;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
-        // Re-recorded for the road refit described above, and again for the removal of the four
-        // placeholder country roads.
+        // Re-recorded for the road refit described above, again for the removal of the four
+        // placeholder country roads, and again for the two model bugs described above.
         private const string BaselineSegmentChecksum =
-            "8FCD6CD7D6878747EE26A2B262F7097FF752C4AE7809A66584C939D6B69F35EC";
+            "ADC40AF3B9269CF97FAAF69DB7908F297E8D5D14B6460BAEA1CA2A78789C1F3D";
     }
 }

@@ -478,12 +478,25 @@ namespace Noir.Core.Tests
             var graph = Build(Header
                 + "road bend 30 20,20 20,120 60,180 140,200\n  class mainroad\n", out var world);
 
+            // AND THIS TEST THEN ASSERTED THE NEXT BUG ALONG. It expected the run to end at
+            // `bend.From + bend.Path.Length`, which is exactly what LaneGraph computed - an ARC
+            // LENGTH added to an AXIS MINIMUM. Its own premise line below says why that cannot be
+            // a position: arc length exceeds the chord on a bend. This fixture's bend ends at
+            // y=200 and the sum is 277, so the test was demanding 77 m of lane past the end of the
+            // road while its name promised the opposite. On Content/roads.txt the same arithmetic
+            // gave alley13 thirty-six metres of lane past the end of the alley, and PlayMode found
+            // the cars on it: two stacked at 0.00 m, one 65 m from the nearest asphalt in town.
+            //
+            // Where the road stops is the path's own extent on the road's declared axis.
             var bend = world.Roads.Lines[0];
             Assert.That(bend.To, Is.LessThan(210f), "the fixture's premise: bend ends well inside the map");
             Assert.That(bend.Path.Length, Is.GreaterThan(bend.To - bend.From),
                         "the fixture's premise: arc length must exceed the chord for the bug to bite");
 
-            float pathEnd = bend.From + bend.Path.Length;
+            float pathEnd = bend.Path.MaxY;
+            Assert.That(pathEnd, Is.LessThan(bend.From + bend.Path.Length - 30f),
+                        "the fixture's premise: the two must differ by more than the margin, or "
+                      + "this test cannot tell the off-stage margin from the old arithmetic");
 
             int checkedSegments = 0;
             foreach (var seg in graph.Segments)

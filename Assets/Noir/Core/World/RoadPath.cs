@@ -33,6 +33,19 @@ namespace Noir.Core.World
         public float Length { get; }
 
         /// <summary>
+        /// The smallest axis-aligned box holding every point of this path.
+        ///
+        /// Here so that asking "could these two roads possibly meet?" costs four comparisons
+        /// instead of walking both centre lines. RoadNetwork asks it once per pair of roads and
+        /// there are N squared pairs, so the cheap answer is the whole point - and it is only
+        /// ever used to say NO. A pair whose boxes overlap is still measured properly.
+        /// </summary>
+        public float MinX { get; }
+        public float MinY { get; }
+        public float MaxX { get; }
+        public float MaxY { get; }
+
+        /// <summary>
         /// Sub-divisions inserted between each pair of declared vertices. FOUR, because that is
         /// what MapFeatures.Smoothed has always used and the committed rail bed was built with -
         /// see RoadPath.Smooth.
@@ -56,6 +69,11 @@ namespace Noir.Core.World
             _from = from;
             _to = to;
             IsStraightAxisAligned = true;
+
+            MinX = from.X < to.X ? from.X : to.X;
+            MaxX = from.X < to.X ? to.X : from.X;
+            MinY = from.Y < to.Y ? from.Y : to.Y;
+            MaxY = from.Y < to.Y ? to.Y : from.Y;
 
             float dx = to.X - from.X, dy = to.Y - from.Y;
 
@@ -83,6 +101,19 @@ namespace Noir.Core.World
             Length = cumulative[cumulative.Length - 1];
             _from = dense[0];
             _to = dense[dense.Length - 1];
+
+            // OVER THE DENSE SAMPLES, not the declared vertices. A Catmull-Rom arc bulges past
+            // its own control points, and a box drawn round the vertices would cut the corner
+            // off - which is exactly where a bending road meets the one it bends towards.
+            float minX = dense[0].X, maxX = minX, minY = dense[0].Y, maxY = minY;
+            for (int i = 1; i < dense.Length; i++)
+            {
+                if (dense[i].X < minX) minX = dense[i].X;
+                if (dense[i].X > maxX) maxX = dense[i].X;
+                if (dense[i].Y < minY) minY = dense[i].Y;
+                if (dense[i].Y > maxY) maxY = dense[i].Y;
+            }
+            MinX = minX; MaxX = maxX; MinY = minY; MaxY = maxY;
         }
 
         /// <summary>
@@ -251,6 +282,87 @@ namespace Noir.Core.World
         {
             var t = TangentAt(s);
             return new Vec2(-t.Y, t.X);
+        }
+
+        /// <summary>
+        /// How far along this path you have travelled when you reach a given coordinate on one
+        /// axis - the inverse of asking PointAt for its x or its y.
+        ///
+        /// THE ONE CONVERSION, because it was open-coded as `along - line.From` in three places
+        /// and that arithmetic is wrong. It assumes arc length grows the same way the declared
+        /// axis does, which is true of a straight road - RoadLine always builds Path From->To -
+        /// and false of a curve, which is Through(Points) in DECLARED order. The county's chained
+        /// segments are declared in whichever direction the surveyor walked them, so park,
+        /// greenwood, alley13 and alley18 all run right to left. Every one of the three callers
+        /// was reading the wrong end of those roads: LaneGraph cut their lanes there, LaneGraph
+        /// classified their turns off the tangent there, and CityTraffic DREW THE CARS there.
+        ///
+        /// Not clamped. A lane runs thirty metres past the edge of the map so traffic arrives
+        /// from off-stage, so a legitimate `along` can sit outside the path's own span; beyond
+        /// either end this carries on at that end's rate, which is what PointAt's caller then
+        /// draws along the tangent.
+        ///
+        /// ⚠ A COORDINATE IS NOT ALWAYS ONE PLACE. Where a road runs square across the axis it is
+        /// parameterised by, every point on that stretch answers to the same number - alley21's
+        /// overall run is east-west, so it goes by x, and it leaves Benton heading due north.
+        /// This walks the dense samples in order and takes the FIRST bracket, so such a stretch
+        /// resolves to its near end, which for an alley mouth is the mouth. That is asserted, on
+        /// that alley, by `ArcAtFindsTheMouthOfAnAlleyThatLeavesItsStreetSquare`.
+        ///
+        /// A road that genuinely doubles back to the same coordinate later has two answers and
+        /// gets the first. None on this map does. The real fix for both is an arc-length
+        /// parameter on `LaneSegment` rather than a coordinate on the road's declared axis - a
+        /// change to what the recorded segment checksum pins, so not this one.
+        /// </summary>
+        public float ArcAt(float along, bool northSouth)
+        {
+            if (IsStraightAxisAligned)
+            {
+                float from = northSouth ? _from.Y : _from.X;
+                float to = northSouth ? _to.Y : _to.X;
+                float span = to - from;
+
+                // The axis that does not move along this path. Every point on it answers, so the
+                // start is as good as any and is the one that keeps a caller's arithmetic sane.
+                if (span == 0f) return 0f;
+
+                return (along - from) / span * Length;
+            }
+
+            float previous = northSouth ? _dense[0].Y : _dense[0].X;
+            for (int i = 1; i < _dense.Length; i++)
+            {
+                float axis = northSouth ? _dense[i].Y : _dense[i].X;
+                if (axis != previous)
+                {
+                    float lo = previous < axis ? previous : axis;
+                    float hi = previous < axis ? axis : previous;
+                    if (along >= lo && along <= hi)
+                    {
+                        float t = (along - previous) / (axis - previous);
+                        return _cumulative[i - 1] + (_cumulative[i] - _cumulative[i - 1]) * t;
+                    }
+                }
+                previous = axis;
+            }
+
+            // Past one end or the other. Whichever the coordinate is nearer to.
+            float atStart = northSouth ? _dense[0].Y : _dense[0].X;
+            float atEnd = northSouth ? _dense[_dense.Length - 1].Y : _dense[_dense.Length - 1].X;
+            float toStart = along - atStart, toEnd = along - atEnd;
+            if (toStart < 0f) toStart = -toStart;
+            if (toEnd < 0f) toEnd = -toEnd;
+
+            float edge = toEnd < toStart ? Length : 0f;
+            float overshoot = toEnd < toStart ? along - atEnd : along - atStart;
+            var heading = TangentAt(edge);
+            float rate = northSouth ? heading.Y : heading.X;
+
+            // Running square across this axis at the end: no distance along the path takes you
+            // any further along it, so the end itself is the honest answer.
+            if (rate > -1e-6f && rate < 1e-6f) return edge;
+
+            return edge + overshoot / rate;
         }
 
         /// <summary>

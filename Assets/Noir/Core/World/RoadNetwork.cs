@@ -480,6 +480,11 @@ namespace Noir.Core.World
             Lines = lines ?? Array.Empty<RoadLine>();
 
             var crossings = new List<Junction>();
+
+            // ACROSS THE AXES. Exactly the pairing this file has always made, kept first and kept
+            // whole so a map whose roads only ever meet at right angles produces the same
+            // junctions in the same order it did before. That invariance is the evidence the
+            // sweep below adds rather than disturbs.
             for (int i = 0; i < Lines.Count; i++)
             {
                 var ns = Lines[i];
@@ -489,33 +494,94 @@ namespace Noir.Core.World
                 {
                     var ew = Lines[j];
                     if (ew.Path == null || ew.IsNorthSouth) continue;
-
-                    // EVERY crossing, not one. A road that bends can meet the same straight road
-                    // twice, and the old model held a single junction per pair by construction.
-                    foreach (var hit in Crossings(ns.Path, ew.Path))
-                        crossings.Add(new Junction(ns, ew, hit.SA, hit.SB, hit.X, hit.Y));
-
-                    // A ROAD THAT ENDS ON ANOTHER ROAD IS A JUNCTION TOO.
-                    //
-                    // Crossings finds a junction by the projected lateral FLIPPING SIGN as one
-                    // centre line passes THROUGH the other. A road that stops dead leaves on the
-                    // side it arrived on and never flips, so a T - or a corner where both ends
-                    // meet - produces no junction at all. Nothing then separates the two streams:
-                    // LaneGraph makes both approaches exits, CityTraffic skips MayCross entirely
-                    // on an exit segment, and Blocked() ignores the pair because the headings
-                    // differ by more than 45 degrees. The lanes simply cross each other.
-                    //
-                    // city.txt never had this shape because it was FIXED BY HAND - forty-three
-                    // road ends were extended past their cross street, and RoadGeometryBaselineTests
-                    // records why: "an end that stops ON a centreline only touches it and the
-                    // intersection finder wants a real crossing". Content/roads.txt is chained
-                    // county segments and is exactly that shape, so the survey network brought
-                    // every one of them back.
-                    foreach (var hit in Touches(ns, ew, crossings))
-                        crossings.Add(new Junction(ns, ew, hit.SA, hit.SB, hit.X, hit.Y));
+                    if (!CouldMeet(ns, ew)) continue;
+                    Meet(ns, ew, crossings);
                 }
             }
+
+            // ALONG THE SAME AXIS, WHICH IS ALSO A JUNCTION.
+            //
+            // `IsNorthSouth` is decided by where a road STARTS and ENDS - `dy >= dx` between the
+            // two - so it says nothing about which way the road is pointing when it meets another
+            // one. alley21 runs 121 m west and 63 m north, so it is east-west by that measure;
+            // its first 13 m run due north into Benton, which is east-west too. The axis filter
+            // never compared the pair, no junction was made, and cars drove out of the alley
+            // through Benton's traffic - `NoTwoVehiclesOccupyTheSameSpace` measured 0.60 m
+            // between two of them on 2026-08-09, 123 m from the nearest junction the model knew
+            // about. Maple into Park and 3550north into Attica are the same shape.
+            //
+            // Every pair once, hence j > i: `Crossings` and `Touches` both look both ways.
+            for (int i = 0; i < Lines.Count; i++)
+            {
+                var a = Lines[i];
+                if (a.Path == null) continue;
+
+                for (int j = i + 1; j < Lines.Count; j++)
+                {
+                    var b = Lines[j];
+                    if (b.Path == null || b.IsNorthSouth != a.IsNorthSouth) continue;
+                    if (!CouldMeet(a, b)) continue;
+                    Meet(a, b, crossings);
+                }
+            }
+
             Junctions = Cluster(crossings);
+        }
+
+        /// <summary>
+        /// Whether two roads are near enough one another to be worth measuring.
+        ///
+        /// FOUR COMPARISONS AGAINST WALKING TWO CENTRE LINES. This is what pays for dropping the
+        /// axis filter above: that filter was rejecting most pairs for free, and its replacement
+        /// has to be at least as cheap or the junction finder gets slower on a map where two
+        /// thirds of the roads are 40 m alleys nowhere near each other.
+        ///
+        /// It may only ever say NO, and only where no junction could exist. A crossing lies on
+        /// both centre lines, so both boxes hold it; a touch lands within <see cref="Touching"/>
+        /// of the other centre line, which is what the margin is for.
+        /// </summary>
+        private static bool CouldMeet(RoadLine a, RoadLine b)
+        {
+            var p = a.Path;
+            var q = b.Path;
+            return p.MinX - Touching <= q.MaxX && q.MinX - Touching <= p.MaxX
+                && p.MinY - Touching <= q.MaxY && q.MinY - Touching <= p.MaxY;
+        }
+
+        /// <summary>
+        /// Every place two roads meet, added to <paramref name="into"/> in the order found.
+        ///
+        /// The first road takes the north-south slot on the junctions this makes, whatever axis
+        /// it is actually on. That is only a label - LaneGraph cuts lanes at `Arms`, and `Reach`
+        /// reads them too - but three renderers still read `Junction.NorthSouth` as a compass
+        /// direction, and until JUNC-6 lands they will draw a crossroads tile square to a road
+        /// that is not square to it.
+        /// </summary>
+        private static void Meet(RoadLine a, RoadLine b, List<Junction> into)
+        {
+            // EVERY crossing, not one. A road that bends can meet the same straight road
+            // twice, and the old model held a single junction per pair by construction.
+            foreach (var hit in Crossings(a.Path, b.Path))
+                into.Add(new Junction(a, b, hit.SA, hit.SB, hit.X, hit.Y));
+
+            // A ROAD THAT ENDS ON ANOTHER ROAD IS A JUNCTION TOO.
+            //
+            // Crossings finds a junction by the projected lateral FLIPPING SIGN as one
+            // centre line passes THROUGH the other. A road that stops dead leaves on the
+            // side it arrived on and never flips, so a T - or a corner where both ends
+            // meet - produces no junction at all. Nothing then separates the two streams:
+            // LaneGraph makes both approaches exits, CityTraffic skips MayCross entirely
+            // on an exit segment, and Blocked() ignores the pair because the headings
+            // differ by more than 45 degrees. The lanes simply cross each other.
+            //
+            // city.txt never had this shape because it was FIXED BY HAND - forty-three
+            // road ends were extended past their cross street, and RoadGeometryBaselineTests
+            // records why: "an end that stops ON a centreline only touches it and the
+            // intersection finder wants a real crossing". Content/roads.txt is chained
+            // county segments and is exactly that shape, so the survey network brought
+            // every one of them back.
+            foreach (var hit in Touches(a, b, into))
+                into.Add(new Junction(a, b, hit.SA, hit.SB, hit.X, hit.Y));
         }
 
         /// <summary>
@@ -535,19 +601,9 @@ namespace Noir.Core.World
         /// condition are now the same arithmetic rather than two numbers that have to be kept in
         /// step by hand.
         ///
-        /// The merged centre is the mean of the cluster, which keeps every arm within a metre of
-        /// the node on this map - `EveryJunctionLandsOnBothOfItsOwnRoads` is what would say
-        /// otherwise.
+        /// The merged centre is the mean of the cluster, and every arm is then re-asked where it
+        /// meets that centre - `EveryJunctionLandsOnEveryRoadItClaimsToJoin` is what says so.
         /// </summary>
-        /// <summary>
-        /// How far a merged junction may sit from a road it claims to join, in metres.
-        ///
-        /// `EveryJunctionLandsOnBothOfItsOwnRoads` is the test that enforces this, and it is the
-        /// reason the merge is refused rather than forced: a node that is on none of its own
-        /// roads is worse than two nodes that are each on theirs.
-        /// </summary>
-        private const float OnItsRoad = 1.0f;
-
         private static List<Junction> Cluster(List<Junction> found)
         {
             var taken = new bool[found.Count];
@@ -624,19 +680,50 @@ namespace Noir.Core.World
                 x /= group.Count;
                 y /= group.Count;
 
-                // AND THE MERGED NODE HAS TO SIT ON EVERY ROAD IT CLAIMS TO JOIN. The mean of a
-                // cluster is not on any of them in general: summit x benton came out 2.7 m off
-                // both, and `EveryJunctionLandsOnBothOfItsOwnRoads` says so. Where the mean
-                // cannot serve all the arms, the honest answer is that these were not one piece
-                // of tarmac after all - so they are left as they were found rather than moved to
-                // a point that is on nothing.
+                // EVERY ARM IS RE-ASKED WHERE IT MEETS THE NEW CENTRE.
+                //
+                // An arm's S is where its ORIGINAL crossing was, and the whole point of merging is
+                // that the centre has moved off it. Checking the old S against the new centre asks
+                // the wrong question and always gets the wrong answer - it refused every real
+                // multi-road corner in this town: maple and park ending where Chicago Street goes
+                // past, greenwood and alley3 doing the same 555 m south, 3550north becoming Attica
+                // with alley13 arriving 5 m west. Each is one piece of tarmac with three roads on
+                // it, and each was left as two nodes inside one another's reach, which is exactly
+                // the shape that strands the lane between them.
+                //
+                // Projection also clamps, so a road that ENDS at the corner answers with its end
+                // rather than running on past it.
+                for (int a = 0; a < arms.Count; a++)
+                {
+                    var road = arms[a].Road;
+                    if (road?.Path == null) continue;
+                    var (s, _) = road.Path.Project(new Vec2(x, y));
+                    arms[a] = new Arm(road, s, road.Path.TangentAt(s));
+                }
+
+                // AND THE MERGED NODE HAS TO REACH EVERY ROAD IT CLAIMS TO JOIN. The mean of a
+                // cluster is not on any of them in general. Where it cannot serve all the arms,
+                // the honest answer is that these were not one piece of tarmac after all - so they
+                // are left as they were found rather than moved to a point that is on nothing.
+                //
+                // MEASURED AGAINST THE MERGED NODE'S OWN REACH, not a flat metre. A junction is a
+                // square of tarmac as wide as its widest road, and an arm that stops anywhere
+                // inside it has arrived - that is the same rule `Touches` uses for a road ending
+                // on another. A flat metre is the right tolerance for a single crossing, where the
+                // hit is interpolated to one resample pitch; it is the wrong one for a node that
+                // has deliberately been moved to the middle of several. `Touching` is the floor,
+                // so a cluster of hairline alleys is still allowed its resample pitch.
+                float footprint = Touching;
+                foreach (var arm in arms)
+                    if (arm.Road != null && arm.Road.HalfWidth > footprint) footprint = arm.Road.HalfWidth;
+
                 bool onEveryRoad = true;
                 foreach (var arm in arms)
                 {
                     if (arm.Road?.Path == null) continue;
                     var at = arm.Road.Path.PointAt(arm.S);
                     float ax = at.X - x, ay = at.Y - y;
-                    if (ax * ax + ay * ay > OnItsRoad * OnItsRoad) { onEveryRoad = false; break; }
+                    if (ax * ax + ay * ay > footprint * footprint) { onEveryRoad = false; break; }
                 }
                 if (!onEveryRoad)
                 {
@@ -690,6 +777,20 @@ namespace Noir.Core.World
         }
 
         /// <summary>
+        /// TOUCHING MEANS TOUCHING, not "somewhere in the corridor". This gated on the through
+        /// road's HalfWidth first, which is the rule `At` uses for what a point is ON - and it is
+        /// far too loose for a junction: Chicago Street's corridor is wide enough that a road
+        /// stopping 4.7 m short of its centre line counted as meeting it. The junction then landed
+        /// metres off one of its own roads and SurveyRoadNetworkTests said so.
+        ///
+        /// A metre. The county's chained segments record these corners at 0.00-0.61 m apart, so
+        /// this takes every real one and nothing else. A road that stops FURTHER off is a road
+        /// that stops NEAR another road, and that is not a junction however much it looks like
+        /// one on a map.
+        /// </summary>
+        private const float Touching = 1.0f;
+
+        /// <summary>
         /// Junctions where one road ENDS on the other, which Crossings cannot see.
         ///
         /// Two shapes, and both are real corners of this town:
@@ -726,11 +827,8 @@ namespace Noir.Core.World
                     // it. The junction then landed metres off one of its own roads and
                     // SurveyRoadNetworkTests said so, which is what that test is for.
                     //
-                    // A metre. The county's chained segments record these corners at 0.00-0.61m
-                    // apart, so this takes every real one and nothing else. A road that stops
-                    // FURTHER off is a road that stops NEAR another road, and that is not a
-                    // junction however much it looks like one on a map.
-                    const float Touching = 1.0f;
+                    // A metre - see the constant, which CouldMeet's box margin also reads so the
+                    // two can never drift apart and quietly reject a real touch.
                     if (Math.Abs(lateral) > Touching) continue;
 
                     var back = through.Path.PointAt(sThrough);

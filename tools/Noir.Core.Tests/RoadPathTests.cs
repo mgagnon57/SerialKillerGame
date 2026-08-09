@@ -249,5 +249,109 @@ namespace Noir.Core.Tests
             Assert.That(smoothed[2].X, Is.EqualTo(-1.25f).Within(1e-4f));
             Assert.That(smoothed[2].Y, Is.EqualTo(45f).Within(1e-4f));
         }
+
+        /// <summary>
+        /// ARC LENGTH DOES NOT GROW THE WAY THE DECLARED AXIS DOES, and believing it did was the
+        /// same bug three times over: LaneGraph cut the lane at the wrong end of the road,
+        /// LaneGraph classified that junction's turns off the tangent at the wrong end, and
+        /// CityTraffic drew the cars there. Worst drift measured 608 m on greenwood.
+        ///
+        /// The two paths below are the SAME PIECE OF ROAD written in opposite orders, which is
+        /// the only thing that differs between the county's chained segments. Ask each where it
+        /// reaches y=50 and they must answer the same place on the ground.
+        /// </summary>
+        [Test]
+        public void ArcAtFindsTheSamePlaceWhicheverEndTheRoadWasDeclaredFrom()
+        {
+            var forward = RoadPath.Through(new[]
+            {
+                new Vec2(0f, 0f), new Vec2(0f, 100f), new Vec2(40f, 160f), new Vec2(120f, 200f),
+            });
+            var backward = RoadPath.Through(new[]
+            {
+                new Vec2(120f, 200f), new Vec2(40f, 160f), new Vec2(0f, 100f), new Vec2(0f, 0f),
+            });
+
+            var there = forward.PointAt(forward.ArcAt(50f, northSouth: true));
+            var back = backward.PointAt(backward.ArcAt(50f, northSouth: true));
+
+            Assert.That(there.Y, Is.EqualTo(50f).Within(0.5f), "forward path missed y=50");
+            Assert.That(back.Y, Is.EqualTo(50f).Within(0.5f),
+                        "the same road declared high-to-low answered a different y - this is the "
+                      + "bug, and it put cars 608 m from the asphalt");
+            Assert.That(back.X, Is.EqualTo(there.X).Within(0.5f),
+                        "same road, same coordinate, two different places");
+        }
+
+        /// <summary>
+        /// A STRAIGHT AXIS-ALIGNED ROAD STILL ANSWERS `along - From` EXACTLY. That is what lets
+        /// this land without moving the 32 straight roads in city.txt by a millimetre, and it is
+        /// asserted rather than assumed because the recorded segment checksum depends on it.
+        /// </summary>
+        [Test]
+        public void ArcAtOnAStraightRoadIsTheDifferenceItAlwaysWas()
+        {
+            var north = RoadPath.Straight(new Vec2(314f, 20f), new Vec2(314f, 620f));
+
+            foreach (float along in new[] { 20f, 21f, 200f, 319.5f, 619f, 620f })
+                Assert.That(north.ArcAt(along, northSouth: true), Is.EqualTo(along - 20f).Within(0f),
+                            "straight roads must be bit-identical or the baseline moves for nothing");
+        }
+
+        /// <summary>
+        /// PAST THE END, NOT CLAMPED. A lane runs thirty metres past the edge of the map so
+        /// traffic arrives from off-stage rather than appearing out of nothing, so a legitimate
+        /// coordinate sits outside the path's own span. Clamping there stacked every car in the
+        /// margin on one point - "came within 0.00m" - which is a test failure with a road under
+        /// it, not a collision.
+        /// </summary>
+        [Test]
+        public void ArcAtRunsPastEitherEndAtThatEndsRate()
+        {
+            var bend = RoadPath.Through(new[]
+            {
+                new Vec2(0f, 0f), new Vec2(0f, 100f), new Vec2(40f, 160f), new Vec2(120f, 200f),
+            });
+
+            Assert.That(bend.ArcAt(-30f, northSouth: true), Is.LessThan(0f),
+                        "thirty metres short of the start is before the start");
+            Assert.That(bend.ArcAt(-30f, northSouth: true), Is.EqualTo(-30f).Within(0.5f),
+                        "the first leg runs due north, so a metre off it is a metre of arc");
+            Assert.That(bend.ArcAt(230f, northSouth: true), Is.GreaterThan(bend.Length),
+                        "past the last point is past the end of the path");
+        }
+
+        /// <summary>
+        /// A CAR AT THE MOUTH IS DRAWN AT THE MOUTH, on the shape that had the most reason not to
+        /// be. alley21 is the alley whose mouth on Benton started all of this: its overall run is
+        /// east-west, so a coordinate on its declared axis is an x - and its first 13 m run
+        /// essentially due NORTH out of Benton, barely moving in x at all. Parameterising by x
+        /// there is asking one number to identify one of thirteen metres.
+        ///
+        /// It answers the mouth, because the smoothed centre line starts moving in x from the
+        /// first sample, so the very first bracket is the right one. Asserted rather than assumed:
+        /// the alternative is a car sitting 13 m up an alley with nothing under it, and this is
+        /// the road where it would have happened.
+        ///
+        /// The arithmetic this replaced was out by 121 m here.
+        /// </summary>
+        [Test]
+        public void ArcAtFindsTheMouthOfAnAlleyThatLeavesItsStreetSquare()
+        {
+            // North out of the mouth for 13, then away west - alley21, to the metre.
+            var alley = RoadPath.Through(new[]
+            {
+                new Vec2(1463f, 1095f), new Vec2(1463f, 1108f), new Vec2(1451f, 1122f),
+                new Vec2(1440f, 1151f), new Vec2(1356f, 1158f),
+            });
+
+            var at = alley.PointAt(alley.ArcAt(1463f, northSouth: false));
+
+            Assert.That(at.X, Is.EqualTo(1463f).Within(1.5f), "not even on the right x");
+            Assert.That(at.Y, Is.EqualTo(1095f).Within(1.5f),
+                        "the mouth on Benton, not somewhere up the alley - a coordinate on the "
+                      + "declared axis has to resolve to the near end of a stretch that runs "
+                      + "square across it, or every car entering this alley is drawn 13 m in");
+        }
     }
 }

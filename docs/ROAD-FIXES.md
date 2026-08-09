@@ -275,12 +275,20 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 
 ## The waves
 
-### ALLEY-2 — the alley mouths · **BUILT AND PROVEN, NOT LANDED** · 2026-08-08
+### ALLEY-2 — the alley mouths · ✅ **LANDED 2026-08-09**
 
-> **The fix works and is committed as code. `Content/roads.txt` is deliberately NOT written**, and
-> the reason is this file's own ordering warning, which I broke and then measured.
+> **`Content/roads.txt` is written.** `python tools/build-roads.py --write` took its backup and
+> opened **58 mouths, refused 1** (would cross a lot), **7 too far**. `tools/check-alleys.py` on the
+> written file: **57 of 70 ends reach a street**, 1 alley touches none at either end (3%), median
+> end-to-street gap **0.4 m**. All 12 `aadt` lines and 33 alley names preserved.
 >
-> Written to a scratch path and to the real file, then reverted:
+> **It could not land alone, and the ordering warning below is why.** Opening the mouths made the
+> alleys drivable, and the first thing they drove into was the axis filter: an alley whose overall
+> run is east-west, meeting an east-west street, made no junction, so cars came out of it through
+> the traffic. JUNC-1 and JUNC-2 both had to land first — see W3. The sequence in the warning was
+> right; only the item it named was wrong (JUNC-2 is the one that drops the filter).
+>
+> **What it cost when I got the order wrong**, kept because it is the measurement that settled it:
 >
 > ```
 >   before   2 of 66 ends reach a street ·  31 of 33 stranded (94%) · median 14.9 m · 1.6% private
@@ -301,9 +309,20 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 > checker had just made the fault measurable, and walked straight into the ordering the plan warned
 > about. Restored from the backup the generator now takes, Core back to 447 of 447.
 >
-> **So the sequence is settled and paid for: JUNC-1 first, then run `build-roads.py --write`.** The
-> mouth code needs no further work - it is idempotent, keeps all 12 counts and 33 alley names, and
-> refuses the one mouth that would cross a lot.
+> **⚠ ONE DOOR WAS LOST TO THIS AND IT IS NOT FIXED.** The geometry validator went from 6 errors to
+> 7: `'the rooms over the meat market': door (821,1497) is not walkable`. No road within 16 m of that
+> door moved — the cause is further back. Opening the mouths made 58 more corridors, so the survey
+> pass shoved **182 buildings off a road corridor instead of 165** and refused **25 rather than 23**
+> for standing on one, and the downtown re-settled around the difference. It is a diagnostic print,
+> not an assertion, and no PlayMode gate fails on it. It is still a person who cannot leave his rooms.
+> Belongs with the other six, which predate all of this.
+>
+> **The sequence that actually worked, paid for twice: JUNC-1, then `build-roads.py --write`, then
+> JUNC-2.** Writing the mouths after JUNC-1 alone cleared the car trap and went 447/447 on Core, and
+> the fault it left behind was invisible to Core entirely — only PlayMode could see two cars in the
+> same place, because only PlayMode drives on it. The mouth code needed no further work: it is
+> idempotent, keeps all 12 counts and 33 alley names, and refuses the one mouth that would cross a
+> lot.
 
 ### W0 — Disarm the generator · **DONE 2026-08-08**
 
@@ -440,18 +459,88 @@ stranded lanes — either lands red on `NoLaneArrivesAtAJunctionItCannotLeave`.
 - **JUNC-3 opens in its own commit** because it was measured as producing *literally zero change* on
   both maps: delete the `Line` equality from the Straight case only, so a car may go straight across
   onto a road with a different name.
-- **JUNC-1** makes a junction a node with arms instead of a pair. ⚠ **Cluster at `a.Reach + b.Reach`,
-  not `max(HalfWidth)`** — the proposed radius leaves benton × summit (5.46 m against a 5.0 radius)
-  unmerged and misses its own acceptance criterion. LaneGraph drops a piece when the arc separation is
-  under reachA + reachB. Also the `Arm` struct as drafted has no constructor, so its readonly fields
-  can never be assigned. Choose the merged X,Y so no arm exceeds 1 m or
-  `EveryJunctionLandsOnBothOfItsOwnRoads` trips.
-- **JUNC-2** drops the axis filter and pays for it with a bounding-box reject that makes junction
-  finding 47% cheaper than today.
+- **JUNC-1** ✅ **DONE, commit `e1c7056`.** Makes a junction a node with arms instead of a pair.
+  ⚠ **Cluster at `a.Reach + b.Reach`, not `max(HalfWidth)`** — the proposed radius leaves benton ×
+  summit (5.46 m against a 5.0 radius) unmerged and misses its own acceptance criterion. LaneGraph
+  drops a piece when the arc separation is under reachA + reachB. Also the `Arm` struct as drafted has
+  no constructor, so its readonly fields can never be assigned.
+  > **"Choose the merged X,Y so no arm exceeds 1 m" WAS THE WRONG INSTRUCTION AND I FOLLOWED IT.**
+  > There is no such point for a real multi-road corner: where Maple ends, Park begins and Route 1
+  > goes past, nothing is within a metre of all three. The guard I wrote from this line was worse
+  > still — it measured each arm's **pre-merge** S against the new centre, which is the crossing the
+  > merge had just moved away from, so it refused every genuine corner in the town and left the
+  > overlapping pairs it exists to remove. Re-project each arm onto the merged centre, then require
+  > it to land inside the node's own **reach**. See JUNC-2 below for what refusing them cost.
+- **JUNC-2** ✅ **DONE 2026-08-09.** Drops the axis filter and pays for it with a bounding-box reject
+  (`RoadPath.MinX/MaxX/MinY/MaxY`, four comparisons per pair). `IsNorthSouth` is `dy >= dx` between a
+  road's first and last point, so it describes the whole run and says nothing about which way the road
+  points when it meets another one — alley21 runs 121 m west and 63 m north, so it is "east-west", and
+  its first 13 m run due north into Benton, which is east-west too. The pair was never compared, no
+  junction was made, and **cars drove out of the alley through Benton's traffic**:
+  `NoTwoVehiclesOccupyTheSameSpace` measured 0.60 m between two of them, 123 m from the nearest
+  junction the model knew about.
+  > **FOUR MORE BUGS CAME OUT WITH IT, ALL THE SAME FALSE ASSUMPTION** — that arc length grows the
+  > way a road's declared axis does. `RoadPath` measures s from `Points[0]`, and the county's chained
+  > segments are declared in whichever direction the surveyor walked, so park, greenwood, alley13 and
+  > alley18 all run right to left. Written out four times: LaneGraph cut the lane at `line.From + s`,
+  > LaneGraph took the tangent it classifies turns from at `AlongOf(way, S) - line.From`, LaneGraph
+  > ENDED the lane at `line.From + line.Path.Length`, and **`CityTraffic` drew the cars at
+  > `along - line.From`**. Worst drift 608 m on `roads.txt`, 104 m on `city.txt`'s own railroad.
+  > The fourth gave alley13 lanes to x=489 on an alley that stops at x=452 — thirty-six metres of
+  > lane past the end of the road, and cars on it. **Only PlayMode could see that**: Core went
+  > 451/451 green with it in. The cut and the tangent ask the junction now, the extent asks the
+  > path's own bounding box, and the one remaining conversion is `RoadPath.ArcAt`, written down once
+  > and held by `EveryBentRoadFindsItsWayBackToACoordinateOnItsOwnAxis` over both maps.
+  > **Two tests were asserting these bugs and had to be corrected, not loosened**:
+  > `ABendDeclaredInDecreasingOrderClassifiesTheSameAsIncreasingOrder` passed only because the cut
+  > and the tangent were wrong in ways that cancelled on its fixture, and
+  > `ACurvedRoadThatEndsInsideTheMapGetsNoOffStageMargin` expected `From + Path.Length` — 77 m of
+  > lane past the end of its own fixture's road, under a name promising the opposite.
+  > **And LaneGraph asked `NorthSouth`/`EastWest` which junctions were on a road.** Those report the
+  > first arm of each AXIS, so at a merged three-arm node the third road got no cut and no turns. It
+  > walks `Arms` now. That is what took city.txt's turns UP, 1088 → 1100.
 - **JUNC-5 step 1 only.** ⚠ Step 2 as written drops the car through to `Choose` at ~90 interior exit
   segments, `Choose` returns −1, and the car parks on `Hold.NoLegalTurn` permanently — a 159-car fleet
   drains into 90 cul-de-sacs over a six-minute run. Say so in the flag's own doc comment.
-- **JUNC-6** ⚠ needs an explicit **2-arm case laying no tile**, excluded from the `inJunction` tests
+- **JUNC-6 — MEASURED 2026-08-09, AND IT IS LIVE NOW.** JUNC-2 has landed, so the shape this item
+  guards against exists in the town today. Counted off the built world:
+  > ```
+  >   city.txt    109 junctions ·  0 same-axis ·  0 wrong-axis in the NorthSouth slot ·  2 merged
+  >   roads.txt   112 junctions ·  7 same-axis ·  7 wrong-axis in the NorthSouth slot · 18 merged
+  > ```
+  > **city.txt is untouched by this**, so the authored map cannot be used to see it. The seven are
+  > attica × 3550north, attica × alley2, attica × alley6, attica × alley10, alley10 × 3550north,
+  > **benton × alley21** (the one the cars collided at) and benton × alley24. Every one has an
+  > EAST-WEST road in the `NorthSouth` slot, and `CityStreets.cs:384-387` reads
+  > `j.NorthSouth.From < j.Y - reach` — an x extent against a y coordinate. The arms come out
+  > nonsense and the tile is laid to the wrong yaw.
+  > **And the 18 merged nodes are a second half nobody has scoped:** `CityStreets.cs:554` gates on
+  > `ReferenceEquals(j.NorthSouth, line) || ReferenceEquals(j.EastWest, line)`, which is the same
+  > first-arm-of-each-axis rule LaneGraph had, so a merged node's third road gets no stop line and
+  > no gap in its stroke. Walk `Arms` there too.
+  >
+  > **Only `CityStreets` is actually broken — the item says three renderers and that is now
+  > measured wrong.** `CitySigns.cs:114-130` reads `stops.IsNorthSouth`, asking the ROAD its own
+  > axis rather than trusting the slot it came out of, so it is already right. `CitySignals.cs:258`
+  > and `:291` compare `Carries` between the two, which is a road-class question and axis-agnostic.
+  > Both survive a same-axis pair unchanged. Do not "fix" them.
+  >
+  > The clean shape for `CityStreets` is to stop inferring arms from `From`/`To` at all: each
+  > `Arm` knows its `S` and its road's `Path.Length`, so the road continues backwards out of the
+  > junction when `S > reach` and forwards when `S < Length - reach`, and the tangent says which
+  > compass direction each of those is (village y runs SOUTH, so north is the smaller y — the same
+  > convention `CityStreets.cs:384` already uses). Correct for three roads, four roads and oblique
+  > ones, and it is the same data `Reach` already reads.
+  >
+  > **THE PIECES ARE ALREADY IN THE PACK — do not lay a crossroads for want of one.** The item
+  > says "a 2-arm case laying no tile", which is right for two arms facing OPPOSITE ways (a road
+  > passing straight through, or two roads meeting head-on, which is what all seven of these are).
+  > It is wrong for two arms at a right angle, and `Roads City/` has the piece for that:
+  > `Road_Turn_10x10_City`, `Mainroad_Turn_30x30_City`, `Freeway_Turn_30x30_City`. A single arm is
+  > a dead end and has `Road_End_10x10_City` / `Mainroad_End_30x30_City`. So the full table is
+  > 4→Cross, 3→Tee, 2 opposite→nothing, 2 square→Turn, 1→End, 0→nothing and a warning. The turn
+  > and end pieces have a built-in orientation that has to be READ OFF A RENDER, not guessed.
+  ⚠ needs an explicit **2-arm case laying no tile**, excluded from the `inJunction` tests
   at **both** `CityStreets.cs:470-476` and `:542-547`, or 3550north × attica logs the crossing warning
   forever. Three renderers read `Junction.NorthSouth` as a compass direction and will draw a crossroads
   tile and a stop sign in the middle of a straight street once same-axis junctions exist.
@@ -645,9 +734,14 @@ delete `CityStreets.VergeOffset`; CONS-5 gives it its first caller. **CONS-5 win
 - **W1:** Core 428 → ~436. These are *additions*, not reds — but move the `CLAUDE.md` baseline in the
   same commit or the next session reads a green run as a regression. Paste the run's number.
 - **W3:** `RoadGeometryBaselineTests`' five constants and the checksum all go red legitimately, and
-  further than predicted. `EveryJunctionLandsOnBothOfItsOwnRoads` may trip on merged nodes — choose the
-  merged X,Y so no arm exceeds 1 m, or re-state the test in the same commit with the reason recorded.
-  **Do not quietly widen the tolerance.**
+  further than predicted. ✅ **DONE 2026-08-09**, re-recorded with the reason in the constants' own
+  comment: junctions 111 → 109, segments 442 → 440, turns 1088 → 1100, entries 38 → 37. Both moves are
+  bug fixes, not content changes — nothing in `city.txt` was touched. The test that was
+  `EveryJunctionLandsOnBothOfItsOwnRoads` **was** re-stated, and deliberately not by widening a
+  tolerance: it is `EveryJunctionLandsOnEveryRoadItClaimsToJoin` now, it checks every arm rather than
+  the pair, and it gained a *sharper* second claim that has no tolerance at all — the S on record must
+  be the nearest the road ever comes to the junction. That is what caught the 214 m alley, and it is
+  size-independent, so the reach-sized first claim cannot hide anything behind it.
 - **W4 is the wave that goes red on purpose.** All four `RoadsSitOnPublicLandTests` and three
   `DrivewaysTests` go red on retargeting. Every one must be a **named** red with a re-recorded value,
   and **the session must not "fix" a test by loosening it back to green.**

@@ -158,6 +158,23 @@ namespace Noir.Core.World
         public static float TravelOf(Heading way, float along) =>
             Headings.Increasing(way) ? along : -along;
 
+        /// <summary>
+        /// Which way a road is heading where it meets a junction, as the junction itself recorded
+        /// it. Falls back to the nearest point on the road for the case that cannot arise - a
+        /// segment cut at a junction that has no arm for its own road.
+        /// </summary>
+        private static Vec2 TangentAt(RoadNetwork roads, int junction, int lineIndex)
+        {
+            var road = roads.Lines[lineIndex];
+            var at = roads.Junctions[junction];
+
+            foreach (var arm in at.Arms)
+                if (ReferenceEquals(arm.Road, road)) return arm.Tangent;
+
+            var (s, _) = road.Path.Project(new Vec2(at.X, at.Y));
+            return road.Path.TangentAt(s);
+        }
+
         public LaneGraph(RoadNetwork roads, float width, float height, float margin = 30f)
         {
             if (roads == null) throw new ArgumentNullException(nameof(roads));
@@ -183,18 +200,34 @@ namespace Noir.Core.World
                 for (int j = 0; j < roads.Junctions.Count; j++)
                 {
                     var junction = roads.Junctions[j];
-                    float s;
-                    if (ReferenceEquals(junction.NorthSouth, line)) s = junction.SNorthSouth;
-                    else if (ReferenceEquals(junction.EastWest, line)) s = junction.SEastWest;
-                    else continue;                                        // not on this road
 
-                    // From + s, deliberately, rather than raw arc length. For a straight road the
-                    // two are identical and FromS/ToS keep the exact values they have today,
-                    // which is what the recorded baseline pins. For a curve it is a convenience:
-                    // arc length measured from the path start, offset onto the road's declared
-                    // axis. Nothing carries traffic on a curve until Phase C, and Phase B should
-                    // settle whether segments want a true arc-length origin before it does.
-                    stops.Add((line.From + s, junction.Reach, j));
+                    // ASKED OF THE ARMS, not of the NorthSouth/EastWest pair. Those two report
+                    // the FIRST arm of each axis, which is all a plain crossroads has - but a
+                    // merged node has three or four, and the ones the pair does not name were
+                    // getting no cut at all. Route 1 x Maple x alley1 is one node on this map
+                    // now, and alley1 would have driven straight through it.
+                    float s = float.NaN;
+                    foreach (var arm in junction.Arms)
+                        if (ReferenceEquals(arm.Road, line)) { s = arm.S; break; }
+                    if (float.IsNaN(s)) continue;                         // not on this road
+
+                    // ASK THE ROAD WHERE THAT IS, rather than adding s to where the road starts.
+                    //
+                    // This was `line.From + s`, which quietly assumes arc length grows the same
+                    // way the declared axis does. It does not. `RoadPath.Through` measures s from
+                    // Points[0], and the county's chained segments are declared in whichever
+                    // direction the surveyor walked them - park, greenwood, alley13 and alley18
+                    // all run right to left, so s=0 is their HIGH x and `From + 0` put the stop
+                    // at their low one. The lane was then cut at the wrong end of the road: the
+                    // junction got no segment arriving at it at all, and whatever did arrive from
+                    // the other road had nowhere to go. Six lanes on 2026-08-09, every one of
+                    // them a corner where two same-axis roads meet.
+                    //
+                    // For a straight axis-aligned road PointAt(s) is (From + s, Centre) exactly -
+                    // RoadPath.Straight is built from From to To - so every number the recorded
+                    // baseline pins stays where it is. Only a bend moves, and only onto the truth.
+                    var where = line.Path.PointAt(s);
+                    stops.Add((line.IsNorthSouth ? where.Y : where.X, junction.Reach, j));
                 }
 
                 var ways = line.IsNorthSouth
@@ -219,15 +252,26 @@ namespace Noir.Core.World
                     // field, in a straight line, on nothing.
                     //
                     // Whether the road reaches the edge is asked of the DECLARED extent
-                    // (line.To), not of the arc length: a curve's arc length exceeds its chord,
-                    // so a bend that ends well inside the map could otherwise trip this test and
-                    // be handed the off-stage margin anyway. The run's end itself stays in arc
-                    // length (pathEnd), consistent with where the stops above are measured. For a
-                    // straight road line.To and pathEnd are identical, so nothing here moves it.
+                    // (line.From, line.To), which is a statement about the map and does not move.
+                    //
+                    // WHERE THE ROAD STOPS IS ASKED OF THE PATH'S OWN EXTENT, and this was the
+                    // fourth place carrying the assumption that arc length grows the way the
+                    // declared axis does. It read `line.From + line.Path.Length` - an arc length
+                    // added to an axis minimum - so a curve got a lane as long as its ARC laid out
+                    // along its CHORD. alley13 runs x=296 to x=452 and was given lanes to x=489:
+                    // thirty-six metres of lane past the end of the alley. Cars drove onto it,
+                    // `PointOn` extrapolated them off the end, and PlayMode caught both halves at
+                    // once - two of them stacked at 0.00 m by attica x 3550north, and one 65 m
+                    // from the nearest asphalt in the town.
+                    //
+                    // `RoadPath`'s bounding box is where the road actually reaches on each axis.
+                    // For a straight axis-aligned road it is exactly From..To, so the recorded
+                    // baseline does not move for the 32 straight roads in city.txt.
                     float span = line.IsNorthSouth ? height : width;
-                    float pathEnd = line.From + line.Path.Length;
-                    float low = line.From <= 0.01f ? line.From - margin : line.From;
-                    float high = line.To >= span - 0.01f ? pathEnd + margin : pathEnd;
+                    float pathLow = line.IsNorthSouth ? line.Path.MinY : line.Path.MinX;
+                    float pathHigh = line.IsNorthSouth ? line.Path.MaxY : line.Path.MaxX;
+                    float low = line.From <= 0.01f ? pathLow - margin : pathLow;
+                    float high = line.To >= span - 0.01f ? pathHigh + margin : pathHigh;
 
                     float start = TravelOf(way, Headings.Increasing(way) ? low : high);
                     float end = TravelOf(way, Headings.Increasing(way) ? high : low);
@@ -288,10 +332,19 @@ namespace Noir.Core.World
                         // Headings.Between yields: the cross product's sign is which way the
                         // wheel turns, and the dot tells a straight-on from a U-turn. No angle
                         // is taken - see CoreDeterminismTests.
-                        var tIn = roads.Lines[into.Line].Path.TangentAt(
-                            AlongOf(into.Way, into.ToS) - roads.Lines[into.Line].From);
-                        var tOut = roads.Lines[onward.Line].Path.TangentAt(
-                            AlongOf(onward.Way, onward.FromS) - roads.Lines[onward.Line].From);
+                        // ASKED OF THE JUNCTION, which already recorded where each of its roads
+                        // meets it and which way that road was heading when it got there.
+                        //
+                        // This used to re-derive the arc length as `AlongOf(way, S) - line.From`,
+                        // which is the same false assumption the cut above carried: that arc
+                        // length grows with the declared axis. It does not on a curve authored
+                        // high-to-low, so the tangent was sampled at the wrong end of the road
+                        // and every turn at that junction classified off the wrong heading.
+                        // `ABendDeclaredInDecreasingOrderClassifiesTheSameAsIncreasingOrder` only
+                        // passed because the cut was ALSO wrong, in a way that happened to
+                        // cancel on that fixture.
+                        var tIn = TangentAt(roads, into.ToJunction, into.Line);
+                        var tOut = TangentAt(roads, onward.FromJunction, onward.Line);
 
                         // Flip each tangent to point the way its OWN SEGMENT travels, rather
                         // than assuming the path already points that way. That assumption held
