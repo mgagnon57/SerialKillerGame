@@ -192,9 +192,17 @@ first sentence or the next reader will believe the town got better.
 ⚠ **The 2.00 and 1.00 targets do not move.** They are the design document's sentence. Lowering a
 standard because the instrument got honest is the cheat one level up.
 
-⚠ **`CLAUDE.md`'s "the number moves when the town gains more KINDS of observable moment, and by
-nothing else" gets deleted and replaced** — `watched.floor`'s own 2026-07-28 entry records the ratio
-moving 1.04 → 1.21 on a population change with no new verb.
+✅ **DONE 2026-08-09, ahead of the rest of this wave.** `CLAUDE.md`'s "the number moves when the town
+gains more KINDS of observable moment, and by nothing else" is deleted and replaced. Two entries in
+`watched.floor` falsify it independently: 2026-07-28 records the ratio moving 1.04 → 1.21 on a
+population change with no new verb, and 2026-08-01 records it moving the *other* way — texture 24 →
+29 kinds, ratio 1.21 → 0.89 — under a heading stating the instrument did not move. The replacement
+keeps the anti-gaming clause, which was never in doubt, and takes the floor's own conclusion for the
+causal one: what moves the number is a kind of moment that is not simply more time in the open.
+
+⚠ **The rest of W7 is still to do.** This was the one piece that could land without touching
+`Salience`, and it was worth taking early because it is a rule in the authority file that a session
+will act on. Re-pointing the rule and re-baselining still comes last.
 
 ### W8 — The router and the remainder · open-ended · the one optional reshuffle
 
