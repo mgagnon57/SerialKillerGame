@@ -150,20 +150,14 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > `WhyAreThePeopleNotAnimating` alone is **292.9 s** — 79% of the suite. Budget ten minutes.
 >
 > **THE STARVING JUNCTION WAS FIXED BY THE COUNTY'S TRAFFIC COUNTS, NOT BY MOVING A GATE.**
-> `NoCarWaitsForeverAtTheHeadOfAClearQueue` swung between **37.2 s (red) and 21.9 s (green)** on an
-> unchanged tree with the same 159-car fleet, and named where the tail was:
->
-> ```
->   before  p90 21.9s: 3 of 35 stopped vehicles waited longer than one cycle, over 2 junctions
->             2 car(s), worst 53.7s, at church x maple (priority)
->   after   p90 19.7s: 0 of 26 waited longer than one cycle, over 0 junctions
-> ```
->
-> **Same fleet.** The only change is that ambient traffic is now weighted by IDOT's own counts
-> instead of the road-class ladder — Route 1 at 5,200 vehicles a day against a side street's ~200,
-> a measured **21:1** where `AmbientTrafficWeight` could only say 4:1. The cars stopped circulating
-> on Church and Maple because the county says they are not there. See
-> `docs/research/TRAFFIC-COUNTS.md`.
+> `NoCarWaitsForeverAtTheHeadOfAClearQueue` swings **37.2 s to 21.9 s on an unchanged tree** with
+> the same 159-car fleet — so do not chase it by tightening the gate, make it name which junction
+> is starving, and **run it twice before believing a traffic number moved, never in the same run
+> as a topology change.** The fix was to weight ambient traffic by IDOT's own counts instead of
+> the road-class ladder: a measured **21:1** where `AmbientTrafficWeight` could only say 4:1, held
+> now by `TrafficWeightTests`. Cars stopped circulating on Church and Maple because the county
+> says they are not there. See `docs/research/TRAFFIC-COUNTS.md`; the junction-by-junction tail is
+> in `docs/IDEAS.md`.
 >
 > **The fleet is still eight times too big and that is still open.** IDOT puts ~19 vehicles moving
 > at an average instant and ~46 at peak; `CarsOutPerHousehold = 0.25` runs 159, flat, all day. The
@@ -176,12 +170,6 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > 1 s all-red, twice — and the `[signals]` line has printed `36.0s cycle` every single run. The
 > test asks `CitySignals.Cycle` now. A number sitting next to a comment asserting it is right is
 > the hardest kind to see.
->
-> **All eight pass.** The three traffic faults are fixed at the root, not worked around:
-> phantom junctions that were never on their own roads, a test that measured a car against the
-> wrong road's centre line, and roads that END on other roads making no junction at all. The
-> "flaky" pair were never flaky - one was a collision mesh wound upside down, the other was a
-> test reading a layer preference another test had scribbled on.
 >
 > **THERE WERE NEVER ANY FLAKY TESTS.** Two were called flaky in this very file, by me, and both
 > were real bugs with a persistent cause:
@@ -196,10 +184,6 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 >
 > Flaky is a diagnosis of last resort. Both of these cost under an hour once somebody measured
 > instead of shrugging.
->
-> **Also fixed to get here:** `BootScreen` was holding the clock — it sets `SpeedIndex = 0` and
-> lifts only after twelve straight sub-25 ms frames or 45 s, and a batch build's first frame alone
-> takes 16 s. Three failures were that one stopped clock reported three ways.
 
 **There are 23 tests. `-testCategory "!Diagnostic"` selects 16, one of those 16 is `[Explicit]`,
 and that is exactly the "15 of 15, 1 skipped" above.** The other seven are diagnostics wearing a
@@ -269,14 +253,12 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > baseline at BOTH ends and prints the gap: if that exceeds 15%, the instrument moved and the table
 > is soft.
 >
-> **DO NOT INFER FRAME RATE FROM HOW LONG THE SUITE TAKES.** A whole session was lost to it on
-> 2026-08-08: four runs read 368 s, 688 s, 728 s, 708 s, two changes were made and reverted on the
-> strength of it, and then the control run came back at 708 s with code *functionally identical to
-> the 368 s one*. Suite duration does not repeat on this machine.
+> **DO NOT INFER FRAME RATE FROM HOW LONG THE SUITE TAKES.** Suite duration does not repeat on this
+> machine, and a whole session was lost to believing it did on 2026-08-08.
 >
-> **A NEGATIVE "saves" FIGURE IS THE INSTRUMENT, NOT THE TOWN.** Flipping `enabled` on a thousand
-> renderers dirties culling for longer than the settle window, so the fattest layer can read slower
-> with itself switched off. Lean on the baseline pair, which needs no toggle.
+> **A NEGATIVE "saves" FIGURE IS THE INSTRUMENT, NOT THE TOWN.** Lean on the baseline pair, which
+> needs no toggle. Both of these are argued out in full, with the numbers, in `PerfCensus.cs`'s own
+> class header.
 >
 > **AND ALWAYS READ THE ANIMATING COUNT NEXT TO THE MILLISECONDS.** An 80 m animator cull measured
 > 11.3 ms → 1.4 ms, 88 → 712 fps, and was a static town: `0 of 1385 animating`, because
