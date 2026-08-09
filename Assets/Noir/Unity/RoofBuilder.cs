@@ -92,6 +92,10 @@ namespace Noir.Unity
 
             Unweld(chunks);
 
+            // AFTER the unweld, so a gable's mapping can be rewritten without dragging the roof
+            // slope it shares a corner with. See WallsInTheirOwnPlane.
+            WallsInTheirOwnPlane(chunks);
+
             var renderers = chunks.Emit(go.transform, "Roofs", coverings,
                                         ShadowCastingMode.On, true);
 
@@ -240,6 +244,63 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>
+        /// EVERY WALL SURFACE CARRIED BY THE ROOF MESH GETS MAPPED IN ITS OWN PLANE.
+        ///
+        /// A gable end is not roofing - it is the masonry of the building carried up to the ridge
+        /// - and the wall submesh already draws it in the wall's own material. What it did NOT
+        /// get was the wall's own mapping: it inherited the roof's top-down (x, -z) projection,
+        /// and on a VERTICAL surface that is degenerate. The west gable of a house is a triangle
+        /// at constant x, so every point on it has the same U, and its height does not appear in
+        /// the mapping at all. The texture is smeared into a vertical streak from eaves to ridge.
+        ///
+        /// It is worse than it sounds and it gets worse still with a real texture on it. A flat
+        /// colour hides a degenerate UV completely; the moment the walls carry anything with a
+        /// pattern, a smeared gable is the most obvious thing on the elevation. The owner accepted
+        /// that trade knowingly, which is why this rides in the same commit as the roof rather
+        /// than a later wave.
+        ///
+        /// ONE RULE FOR ALL OF THEM, not one per shape. This walks the wall submesh and maps each
+        /// triangle by its own normal: drop the axis the triangle faces, keep the other two. That
+        /// is the gable ends, the church tower and the bell-cote in one pass - the tower and the
+        /// bell-cote are boxes with the identical fault, and writing three special cases would be
+        /// three things that have to agree about winding and mapping forever.
+        ///
+        /// AFTER THE UNWELD, and it has to be: unwelding gives every triangle its own three
+        /// vertices and its own three UVs, so a triangle's mapping can be rewritten without
+        /// dragging a neighbour's with it. Before the unweld these vertices are shared with the
+        /// roof slopes, and re-mapping one would move the other.
+        /// </summary>
+        private static void WallsInTheirOwnPlane(MeshChunks chunks)
+        {
+            foreach (var chunk in chunks.All)
+            {
+                var verts = chunk.Verts;
+                var uvs = chunk.Uvs;
+                var wall = chunk.Tris[Materials3D.WallIndex];
+
+                for (int i = 0; i + 2 < wall.Count; i += 3)
+                {
+                    int i0 = wall[i], i1 = wall[i + 1], i2 = wall[i + 2];
+                    var p0 = verts[i0];
+                    var n = Vector3.Cross(verts[i1] - p0, verts[i2] - p0);
+
+                    float ax = Mathf.Abs(n.x), ay = Mathf.Abs(n.y), az = Mathf.Abs(n.z);
+
+                    // Which way the surface faces decides which two axes are its plane. A gable
+                    // end faces along x or z and keeps HEIGHT as its second axis, which is the
+                    // whole point: a wall's texture runs up it.
+                    foreach (int v in new[] { i0, i1, i2 })
+                    {
+                        var p = verts[v];
+                        uvs[v] = ax >= ay && ax >= az ? new Vector2(-p.z, p.y)
+                               : az >= ay ? new Vector2(p.x, p.y)
+                               : new Vector2(p.x, -p.z);
+                    }
+                }
+            }
+        }
+
         /// <summary>An axis-aligned box, appended to its chunk of the roof mesh.</summary>
         private static void AddBox(MeshChunk into, int submesh, Vector3 centre, Vector3 size)
         {
@@ -365,11 +426,25 @@ namespace Noir.Unity
             verts.Add(a); verts.Add(b); verts.Add(c); verts.Add(e);   // 0..3 eaves
             verts.Add(r0); verts.Add(r1);                             // 4,5 ridge
 
-            // UVs in metres of ground covered, so tiles run at a consistent size across every
+            // UVs in metres of ground covered, so courses run at a consistent size across every
             // roof in the village whatever the building's size. The slope stretches them by
             // about a tenth, which is less than the variation in a real roof.
+            //
+            // TURNED WITH THE RIDGE. A shingle sheet's courses run across its U axis, so a plain
+            // (x, -z) projection lays them east-west on every roof in the town - correct on the
+            // houses whose ridge runs east-west and ninety degrees wrong on the rest, where the
+            // courses run UP THE SLOPE. A course is a line of overlapping tabs shedding water
+            // downhill; running it up the slope is not a texture error, it is a roof that would
+            // leak. Rotating the mapping by a quarter turn where the ridge runs north-south puts
+            // every course along its own ridge.
+            //
+            // The whole roof turns together, including the hip ends, because they are the same
+            // covering laid by the same roofer. GABLE ends are NOT: they are wall, they are in
+            // the wall submesh, and `WallsInTheirOwnPlane` re-maps them after the unweld.
             for (int i = baseIndex; i < verts.Count; i++)
-                uvs.Add(new Vector2(verts[i].x, -verts[i].z));
+                uvs.Add(alongX
+                    ? new Vector2(verts[i].x, -verts[i].z)
+                    : new Vector2(-verts[i].z, verts[i].x));
 
             void Tri(int i, int j, int k)
             {
