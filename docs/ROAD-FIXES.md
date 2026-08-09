@@ -275,6 +275,36 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 
 ## The waves
 
+### ALLEY-2 — the alley mouths · **BUILT AND PROVEN, NOT LANDED** · 2026-08-08
+
+> **The fix works and is committed as code. `Content/roads.txt` is deliberately NOT written**, and
+> the reason is this file's own ordering warning, which I broke and then measured.
+>
+> Written to a scratch path and to the real file, then reverted:
+>
+> ```
+>   before   2 of 66 ends reach a street ·  31 of 33 stranded (94%) · median 14.9 m · 1.6% private
+>   after   57 of 70 ends reach a street ·   1 of 35 stranded  (3%) · median  0.4 m · 1.5% private
+> ```
+>
+> **Core went 447 -> 445 with two failures, and only one of them was expected.**
+>
+> - `TheSurveyNetworkIsTheSizeItShouldBe`: **117 junctions** against `InRange(40, 90)`. This wave
+>   already predicts that gate widening "to the measured value (expect ~104-116)". Alleys reaching
+>   streets is precisely what makes junctions, so 117 is the fix working, not a fault.
+> - `NoLaneArrivesAtAJunctionItCannotLeave`: **`ann` lane 0 South ends at junction 5 with no turn
+>   out.** That is a car trap - every vehicle that arrives stops there for the rest of the run and
+>   stands its whole queue behind it. Same fault class as the starving junction fixed that morning.
+>
+> This file says **"⚠ Eight alley mouths land on a street of the same axis and make no junction
+> until JUNC-1 lands - so W3 before W6"**. ALLEY-2 is W6 work; I pulled it forward because ALLEY-6's
+> checker had just made the fault measurable, and walked straight into the ordering the plan warned
+> about. Restored from the backup the generator now takes, Core back to 447 of 447.
+>
+> **So the sequence is settled and paid for: JUNC-1 first, then run `build-roads.py --write`.** The
+> mouth code needs no further work - it is idempotent, keeps all 12 counts and 33 alley names, and
+> refuses the one mouth that would cross a lot.
+
 ### W0 — Disarm the generator · **DONE 2026-08-08**
 
 > All five landed. Verified against the gates this wave set for itself:
