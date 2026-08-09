@@ -4,8 +4,14 @@ Compiled 2026-08-05, after *"roads are way off"* and *"the roads have always bee
 do not trust much from the previous"*. Both are right, and the second turns out to be the more
 useful instruction: almost nothing about the old road data survives inspection.
 
-Proposal at `Content/roads.txt` (derived, re-runnable, **nothing reads it yet**). Built by
-`tools/build-roads.py`; alleys by `tools/derive-alleys.py`; scored by `tools/check-roads.py`.
+At `Content/roads.txt` (derived, re-runnable). Built by `tools/build-roads.py`; alleys by
+`tools/derive-alleys.py`; scored by `tools/check-roads.py`.
+
+> **IT IS NO LONGER A PROPOSAL AND HAS NOT BEEN FOR SOME TIME.** This said "nothing reads it yet".
+> `SurveyRoads.Apply` replaces `city.txt`'s road block wholesale whenever the file exists, and it
+> does: the game, every render and every audit have driven on these roads since the survey layer
+> landed. The line below about the junction graph was stale in the same way and is now answered —
+> see *What is not settled*.
 
 ---
 
@@ -207,13 +213,61 @@ is correct, because alleys do not have sidewalks.
 
 ## What is not settled
 
-- **`roads.txt` is a proposal and nothing reads it.** `city.txt` still holds the old roads. It
-  also holds 477 authored places, human lines and story anchors, and rewriting its road block
-  is a deliberate act rather than a side effect of a data refresh.
-- **The junction graph has not been rebuilt.** The old network's junctions were counted and
-  argued over at length (115 → 125 → 126 across the last refit). This proposal is geometry
-  only; whether the runs meet cleanly enough to form the same junction set is unchecked, and it
-  is the thing to check before wiring it in.
+- ~~**`roads.txt` is a proposal and nothing reads it.**~~ **SETTLED.** `SurveyRoads.Apply` swaps
+  it in for `city.txt`'s road block at build time, so the game drives on it and always did once
+  the file existed. `city.txt` keeps its 477 authored places, human lines and story anchors and
+  is never rewritten by a data refresh — which is the property that paragraph was really
+  protecting, and it still holds.
+
+- ~~**The junction graph has not been rebuilt.**~~ **SETTLED, 2026-08-09, and it was the whole
+  day's work.** The answer to "whether the runs meet cleanly enough to form the same junction
+  set" turned out to be no, twice over, and neither reason was geometry:
+
+  > **The finder only ever compared a north-south road against an east-west one.** `IsNorthSouth`
+  > is `dy >= dx` between a road's first and last point, so it describes the whole run and says
+  > nothing about which way the road points where it meets another. alley21 runs 121 m west and
+  > 63 m north — "east-west" — and its first 13 m run due north into Benton, which is east-west
+  > too. The pair was never compared, no junction was made, and cars came out of the alley
+  > through Benton's traffic: `NoTwoVehiclesOccupyTheSameSpace` measured two of them **0.60 m
+  > apart**, 123 m from the nearest junction the model knew about.
+  >
+  > **And a junction was a PAIR of roads.** Where Maple ends, Park begins and Route 1 goes past,
+  > that is one piece of tarmac with three roads on it and there is no pair to make. A junction
+  > is a node with `Arm`s now, crossings closer together than `reachA + reachB` fold into one,
+  > and every arm is re-projected onto the merged centre.
+  >
+  > Underneath both sat **one false assumption written out four times** — that arc length grows
+  > the way a road's declared axis does. `RoadPath` measures s from `Points[0]` and the county's
+  > chained segments are declared in whichever direction the surveyor walked, so park, greenwood,
+  > alley13 and alley18 all run right to left. LaneGraph cut their lanes at the wrong end,
+  > classified their turns off the wrong tangent, ended their lanes past the end of the road, and
+  > **CityTraffic drew the cars there**. Worst drift 608 m on greenwood; 104 m on `city.txt`'s own
+  > railroad, where nothing had ever tested a curved road's lane cuts.
+
+  ```
+    junctions      74  ->  122        (city.txt's own network: 111 -> 110)
+    lanes arriving somewhere they cannot leave        0
+    junctions off any road they claim to join         0
+    junctions missing a turn between two of their roads   0
+    pairs of roads sharing tarmac with no junction   14 -> 2, both a data fault (ALLEY-2b)
+  ```
+
+  Held by `SurveyRoadNetworkTests` — `EveryJunctionLandsOnEveryRoadItClaimsToJoin`,
+  `NoLaneArrivesAtAJunctionItCannotLeave`, `EveryBentRoadFindsItsWayBackToACoordinateOnItsOwnAxis`
+  and `NoTwoStreetsTouchWithoutAJunctionBetweenThem`. The full account, item by item, is
+  `docs/ROAD-FIXES.md`.
+
+- **The alleys reach the town now.** `build-roads.py` carries an alley's end out to the street it
+  stops short of, refusing where the new stretch would cross a lot: 58 mouths opened, 1 refused,
+  7 too far. Ends reaching a street went **2 of 66 → 57 of 70**, alleys stranded at both ends
+  31 of 33 → 1 of 35, median gap 14.9 m → 0.4 m. Two streets that stopped short of Route 1 —
+  Dale and Thompson — were carried out the same way.
+
+- **The smoothing curve changed with them.** Roads are `SmoothCentripetal` now; the railway keeps
+  the uniform Catmull-Rom it was drawn with. Uniform smoothing overshoots where consecutive spans
+  differ wildly, which is exactly what a 13 m alley mouth on a 200 m run produces: **nine of 68
+  roads left one of their own ends backwards, and Summit was drawn 39 m from its own survey
+  line.** Zero on both maps now.
 - **Two roads get slightly worse**, and they are left as measured rather than special-cased:
   summit 4.3% → 5.3%, and one derived alley at 4.0% where the old line happened to score 0.0%.
 - **The country roads are now included** — 1350 East, 3450 North, 3650 North, 3680 North, Abner,

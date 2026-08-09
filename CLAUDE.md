@@ -133,18 +133,20 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-09: 15 of 15 PASS, 1 skipped, ~11 min.** (13 of 13 on 2026-08-08, 8 of 8 on
-> 2026-08-07; TownGeometryPlayTests added three that can see where a building STANDS, and a fourth
-> that can see whether the car outside a house is there today.)
+> **BASELINE, 2026-08-09: 16 of 16 PASS, 1 skipped, ~11 min.** (13 of 13 on 2026-08-08, 8 of 8 on
+> 2026-08-07; TownGeometryPlayTests added three that can see where a building STANDS, a fourth
+> that can see whether the car outside a house is there today, a fifth that fails if any door in
+> the town cannot be walked through, and a sixth that fails if the roofs ever go white again.)
 > `[body] 1390 Animators in the scene`, and the layer preferences are the same after the run as
 > before it.
 >
 > **The town the game now drives on: `120 junctions: 2 signalised in the town (8 heads), 118 on
 > priority out in the country`** — against 74 junctions and one signal before the alley mouths
 > landed on 2026-08-09. The road network changed more that day than on any other: the mouths, the
-> axis filter, the smoothing curve and what counts as two roads touching. **This line is the only
-> record of that count in the repository.** `docs/research/ROADS-FROM-SURVEY.md` is where the
-> account belongs, and it still says the junction graph has not been rebuilt.
+> axis filter, the smoothing curve and what counts as two roads touching. The account now lives
+> in `docs/research/ROADS-FROM-SURVEY.md`, whose two open questions — "nothing reads roads.txt"
+> and "the junction graph has not been rebuilt" — are both answered there with the measurements;
+> item by item it is `docs/ROAD-FIXES.md`.
 >
 > **THE RUN IS NOT ~4 MINUTES AND NEVER WAS.** Measured 371.6 s wall clock, of which
 > `WhyAreThePeopleNotAnimating` alone is **292.9 s** — 79% of the suite. Budget ten minutes.
