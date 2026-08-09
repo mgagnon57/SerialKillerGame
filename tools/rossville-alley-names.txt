@@ -57,3 +57,10 @@ alley29  688,1350 688,1418
 alley30  1329,1284 1313,1286 1269,1286
 alley31  1412,1662 1362,1664
 alley32  647,1272 645,1320
+
+# Added 2026-08-08. These two were being derived and then SILENTLY DROPPED - they had
+# no measurable right of way because they stopped short of the streets at both ends, so
+# the width stage discarded them. Opening their mouths gave them one. They are frozen here
+# so the next derivation cannot renumber them.
+alley33  1246,846 1246,860 1247,948 1247,963
+alley34  1252,1416 1253,1460 1253,1476

@@ -146,7 +146,14 @@ def _polyline_gap(one, two):
     def worst(src, dst):
         return max(min(_point_to_segment(p, dst[i], dst[i + 1]) for i in range(len(dst) - 1))
                    for p in src)
-    return max(worst(one, two), worst(two, one))
+
+    # THE BETTER DIRECTION, NOT THE WORSE ONE, and that is deliberate. A registered polyline may be
+    # the EXTENDED form of the alley - with a mouth on each end - while the thing being matched is
+    # the freshly derived form that stops short. Taking the worst direction punishes exactly that
+    # difference and renumbers the alley the registry exists to keep, which is the fault the whole
+    # file is here to prevent. Taking the better one asks "does one lie along the other", which is
+    # the real question. A 12 m ceiling still keeps two genuinely different corridors apart.
+    return min(worst(one, two), worst(two, one))
 
 
 #: How far a derived alley may sit from its registered polyline and still be the same alley.
@@ -176,6 +183,92 @@ def registry_next():
     """The first alley number not already spoken for."""
     used = [int(n[5:]) for n, _ in ALLEYS_NAMED if n[5:].isdigit()]
     return max(used) + 1 if used else 1
+
+
+#: How far an alley end may be carried to reach a street, in metres.
+#:
+#: The median gap is 14.9 m and the blanking radius that caused it is 11 m, so anything much beyond
+#: 25 m is not a mouth that was blanked away - it is an alley that genuinely ends in the middle of a
+#: block, and dragging it to the nearest street would be inventing a road rather than restoring one.
+MOUTH_REACH = 25.0
+
+#: Close enough to already be a mouth. Matches tools/check-alleys.py.
+MOUTH_TOUCH = 8.0
+
+MOUTHS = {"opened": 0, "already": 0, "too far": 0, "refused": 0}
+
+_PARCEL_CACHE = {}
+
+
+def _PARCELS(village):
+    """One Parcels index, not one per alley - it builds a grid over every lot in the town."""
+    if "p" not in _PARCEL_CACHE:
+        _PARCEL_CACHE["p"] = cr.Parcels(village)
+    return _PARCEL_CACHE["p"]
+
+
+def _nearest_on_streets(p, roads):
+    """The closest point on any non-alley centreline, and how far away it is."""
+    best, at = float("inf"), None
+    for name, _w, klass, lines, _src in roads:
+        if klass == "alley":
+            continue
+        for pl in lines:
+            for i in range(len(pl) - 1):
+                a, b = pl[i], pl[i + 1]
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                if dx == 0 and dy == 0:
+                    continue
+                t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)
+                t = max(0.0, min(1.0, t))
+                q = (a[0] + t * dx, a[1] + t * dy)
+                d = math.dist(p, q)
+                if d < best:
+                    best, at = d, q
+    return best, at
+
+
+def extend_to_streets(name, runs, roads, parcels=None):
+    """Carry each end of an alley out to the street it stops short of.
+
+    REFUSED RATHER THAN FORCED where the new stretch would run across somebody's lot. An alley
+    mouth driven through a front garden is a worse fault than an alley with no mouth: the first is
+    a road through a house, the second is only a road to nowhere. The refusals are counted and
+    printed, because a mouth that cannot be opened is a thing somebody should look at rather than a
+    silence.
+    """
+    out = []
+    for pl in runs:
+        pl = [tuple(p) for p in pl]
+        if len(pl) < 2:
+            out.append(pl)
+            continue
+
+        for which in (0, -1):
+            gap, q = _nearest_on_streets(pl[which], roads)
+            if q is None or gap <= MOUTH_TOUCH:
+                MOUTHS["already"] += 1 if q is not None and gap <= MOUTH_TOUCH else 0
+                continue
+            if gap > MOUTH_REACH:
+                MOUTHS["too far"] += 1
+                continue
+
+            # On the integer lattice, because VillageParser reads road points with ContentText.Int
+            # and a fractional coordinate is a parse error rather than a rounding question.
+            tip = (int(round(q[0])), int(round(q[1])))
+
+            if parcels is not None and parcels.hit(tip) is not None:
+                MOUTHS["refused"] += 1
+                continue
+
+            if which == 0:
+                pl = [tip] + pl
+            else:
+                pl = pl + [tip]
+            MOUTHS["opened"] += 1
+
+        out.append(pl)
+    return out
 
 # Names the county spells differently from this project. The county is not automatically right
 # about a name - it is right about geometry - so the project's own spelling wins and the
@@ -485,7 +578,26 @@ def main():
         name = registry_name(pl)
         if name is None:
             name, fresh = f"alley{fresh}", fresh + 1
+            print(f"[alleys] not in the registry, numbered {name} "
+                  f"(len {a['len']:.0f} m) - add it to tools/rossville-alley-names.txt to freeze it")
         named.append((name, pl))
+
+    # ---- AND GIVE EVERY ALLEY A MOUTH ------------------------------------------------------
+    #
+    # derive-alleys.py blanks 11 m around every street centreline before tracing, so a street's own
+    # corridor is not mistaken for an alley - and nothing ever put the mouth back. The result was a
+    # town whose back lanes touch nothing: 2 of 66 alley ends within 8 m of a street, 31 of 33
+    # alleys stranded at BOTH ends, median gap 14.9 m, which is about the blanking radius plus half
+    # a street corridor. The alleys stopped exactly where the blanking stopped them.
+    #
+    # It survived because it looks right from above - correct places, correct widths, and islands.
+    # A car could not enter one from any direction.
+    #
+    # DONE HERE AND NOT IN derive-alleys.py, which is the correction that matters: this runs AFTER
+    # chain, simplify and clip_and_round, so the extension is aimed at the runs that actually ship.
+    # Computed upstream against raw county centrelines it is three transforms away from the shipped
+    # geometry and lands barely two thirds of the mouths inside tolerance.
+    named = [(n, extend_to_streets(n, pl, roads, _PARCELS(village))) for n, pl in named]
 
     # Emit in the registry's own order so the file reads stably, with anything new after it.
     for name, pl in sorted(named, key=lambda t: int(t[0][5:])):
@@ -739,6 +851,9 @@ def main():
     path = os.path.join(CONTENT, "roads.txt")
 
     counted = sum(1 for line in L if line.startswith("  aadt "))
+    print(f"[alleys] mouths opened {MOUTHS['opened']}, already touching {MOUTHS['already']}, "
+          f"refused (would cross a lot) {MOUTHS['refused']}, too far to be a blanked mouth "
+          f"{MOUTHS['too far']}")
 
     if ELSEWHERE:
         with open(ELSEWHERE, "w", encoding="utf-8", newline="\n") as fh:
