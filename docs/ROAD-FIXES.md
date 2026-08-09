@@ -563,13 +563,17 @@ stranded lanes — either lands red on `NoLaneArrivesAtAJunctionItCannotLeave`.
   > **And LaneGraph asked `NorthSouth`/`EastWest` which junctions were on a road.** Those report the
   > first arm of each AXIS, so at a merged three-arm node the third road got no cut and no turns. It
   > walks `Arms` now. That is what took city.txt's turns UP, 1088 → 1100.
-- **JUNC-7, JUNC-11, JUNC-12 and JUNC-13 CANNOT BE WORKED — they do not exist anywhere but in the
-  line above.** Checked 2026-08-09: `grep -rl "JUNC-7\|JUNC-11" docs/` returns this file and
+- **JUNC-5, JUNC-7, JUNC-11, JUNC-12 and JUNC-13 CANNOT BE WORKED — they do not exist anywhere but
+  in the line above.** Checked 2026-08-09: `grep -rl "JUNC-7\|JUNC-11" docs/` returns this file and
   nothing else, and `docs/history/` has no audit carrying them either. The read-only audit that
-  turned 173 faults into 148 items was never committed, so four of the ten items in this wave are
-  four ID numbers with no statement of what is wrong. **Do not guess at them and do not quietly
-  drop them from the wave's tick list** — either the audit is recovered, or somebody re-derives
-  the faults and writes them down here, in which case they should get honest new IDs.
+  turned 173 faults into 148 items was never committed, so **five of the ten items in this wave are
+  ID numbers with no statement of what is wrong**. JUNC-5 is the sharpest illustration: the bullet
+  below describes in detail why its *step 2* must not be done, and nowhere says what *step 1* is.
+  **Do not guess at them and do not quietly drop them from the wave's tick list** — either the
+  audit is recovered, or somebody re-derives the faults and writes them down here, in which case
+  they should get honest new IDs.
+  > **W3 is therefore as finished as it can be.** `JUNC-3` ✅ `JUNC-1` ✅ `JUNC-2` ✅ `JUNC-6` ✅
+  > `GATE-7` ✅ `GATE-8` ✅ · `JUNC-5` `JUNC-7` `JUNC-11,12,13` blocked for want of a description.
 - **JUNC-5 step 1 only.** ⚠ Step 2 as written drops the car through to `Choose` at ~90 interior exit
   segments, `Choose` returns −1, and the car parks on `Hold.NoLegalTurn` permanently — a 159-car fleet
   drains into 90 cul-de-sacs over a six-minute run. Say so in the flag's own doc comment.
