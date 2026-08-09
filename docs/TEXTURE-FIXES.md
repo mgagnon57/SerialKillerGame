@@ -206,9 +206,12 @@ reds, not two.
 ### W3 — The gates and the shipped player · ~5 h + one PlayMode run + one build
 `TEX-1,2,3,6,7,8,13,14` `ROOF-8` `UVX-A6(a)` `MS-13`
 
-`ROOF-8` becomes a **wiring** assertion, not a threshold: for each roof material,
-`GetTexture("_BaseMap") != null || GetColor("_BaseColor") != Color.white`. It goes red if somebody
-reverts `Roofing` to white, instead of asserting a number that contradicts ROOF-2's own table.
+`ROOF-8` ✅ **DONE 2026-08-09** as `EveryRoofCoveringIsWiredToATextureOrAColour` in
+`TownGeometryPlayTests`, exactly as specified: a **wiring** assertion, not a threshold — for each
+roof material, `GetTexture("_BaseMap") != null || GetColor("_BaseColor") != Color.white`. It goes
+red if somebody reverts `Roofing` to white, instead of asserting a number that contradicts ROOF-2's
+own table. It also catches the subtler regression: binding a pack set but leaving the base colour
+white on a covering whose whole shade IS the tint, which would take charcoal back to mid grey.
 
 **The build and the launch go at the end**, because launching `Rossville.exe` is the *only* thing in
 this project that can prove ROOF-1. Everything before it proves the editor got better.
@@ -220,13 +223,63 @@ this project that can prove ROOF-1. Everything before it proves the editor got b
 PB-7 de-guards it onto a Resources manifest, which **directly falsifies** UVX-A5's stated risk that a
 shipped player is unaffected. Rewrite that line before landing.
 
-### W5 — The English inheritance · ~2 days, two windows, separate days
+### W5 — The English inheritance · **ENG-1 ✅ and the witness clauses ✅, 2026-08-09**
 `ENG-14` **first** · `ENG-2..13` · `ENG-1` alone, last · `ENG-10`, `ENG-15` separate days
 
 `ENG-14` builds the instrument first, because the PlayMode gate switches off every layer this cluster
 changes — until a camera points at the country with the Farm layer built, **nothing here is
-falsifiable**. `ENG-1` — **13 miles of hedge in ~12,800 dashes** along the street verges — is the
-biggest visual change in the project and gets its own commit and its own frame.
+falsifiable**.
+
+- **ENG-1 ✅ DONE, and it was bigger than the estimate.** The plan says "13 miles of hedge in
+  ~12,800 dashes". Measured off the built town it was **17,849 — 44.9% of every prop in Rossville**.
+  > ```
+  >   before   39,772 props   Hedge 17,849 (44.9%)  Fence 9,201  Tree 7,492  Bush 3,979
+  >   after    22,335 props   Hedge      0          Fence 9,179  Tree 7,518  Bush 4,387
+  > ```
+  > `PropGenerator` hedged 42% of every grass or field tile touching a road. An Illinois front yard
+  > runs open to the sidewalk, and a Vermilion County roadside is a mown verge and a drainage
+  > ditch. The fence rows `OnFieldEdge` draws are untouched — that is the osage-orange remnant and
+  > it is the part that IS real. `PropKind.Hedge` and its run-drawing stay: nothing plants one, but
+  > a map may still author one.
+  >
+  > **`AddingABuildingMovesNoPropOutsideItsOwnChunk` went red and was right to.** Its premise
+  > `was.Count > 500` was calibrated when 45% of props were hedge, so it was really measuring how
+  > English the map was. Re-recorded at 300 (the fixture yields 356) with the reason written in.
+  > **Do not delete that check** — noticing a sample that has become meaningless is its whole job.
+
+- **The witness clauses ✅ DONE** — this is most of what `ENG-2..13` must have been.
+  `Content/particulars.txt` is 914 hand-authored clauses and **98 of them were English**.
+  > **"Marlbury" does not exist** — 21 clauses sent people to an invented English market town.
+  > Owner's ruling 2026-08-09: **split by errand.** Hoopeston (5 mi N) for the everyday — market
+  > day, the haircut, the cafe, the Friday fish, the bus route, the paper a day early. Danville
+  > (county seat, 20 mi S) for the occasional — the library, the yarn, the concert, the daughter,
+  > and "has not been further than here since 1964", which only works as the far limit.
+  >
+  > parish→township · the lane→the street · pub→tavern · vicar→pastor · jumble→rummage ·
+  > allotment→garden plot · fete→the fair · wireless→radio · chequebook→checkbook · bins→trash
+  > cans · pavement→sidewalk · boot→trunk · wool→yarn · noticeboard→bulletin board · adverts→ads ·
+  > fortnight→two weeks · library ticket→library card · shilling→dollar · Home Guard→Civil
+  > Defense · chutney→relish · the snow of sixty-three→of seventy-eight.
+  >
+  > **Two jokes were re-built rather than translated**, because the word WAS the joke: *calls the
+  > wireless "the wireless"* → *calls the refrigerator "the icebox"*, and *keeps the wireless on
+  > the shipping forecast, having never seen the sea* → *keeps the radio on the farm report,
+  > having never farmed*. **The thatcher clause** — the one line this plan singled out as awaiting
+  > a ruling — is now *remembers the last man who shingled a roof by hand*. It was never about
+  > thatch; it is about a trade going out.
+  >
+  > Nature words keep the habit and lose the accent, on his ruling: cricket→the ball game,
+  > conker→buckeye, badger sett→badger hole, water meadow→the bottoms. **The cuckoo stays** — the
+  > yellow-billed cuckoo is a real Illinois spring marker.
+  >
+  > **British SPELLING is left alone on purpose** — colour, favourite, neighbour, recognised is
+  > this project's house style in every comment in the tree, not an Ashcombe leftover.
+  >
+  > ⚠ **STILL ENGLISH AND NOT DONE: `Activity.OnTheAllotment`.** A C# enum in the witness
+  > vocabulary (`DayPlan.cs:21`) plus a keyed row in `Content/animations.txt:146`
+  > (`ontheallotment`). Renaming it touches Core, Unity and Editor and a content row that
+  > "does not throw, it falls through to a default" if the two drift — so it wants its own commit
+  > and the animation-table gates watched, not a rushed rename at the end of a long session.
 
 ### W6 — The documents, last and once
 `ROOF-9` `MS-8` `TEX-18,19` `CW-7` · the **one** `CLAUDE.md` edit
