@@ -144,9 +144,22 @@ namespace Noir.Core.World
                 case Terrain.Grass:
                     if (NextToRoad(grid, x, y))
                     {
-                        // A hedge along the verge, broken often enough to look grown
-                        // rather than drawn.
-                        if (rng.Chance(0.42f)) props.Add(new Prop(PropKind.Hedge, new Tile(x, y), Roll(rng)));
+                        // AN ILLINOIS FRONT YARD RUNS OPEN TO THE SIDEWALK. There is no hedge
+                        // along it, and that absence is most of what a Midwestern residential
+                        // street looks like: mown grass from the porch to the kerb, a street
+                        // tree every few lots, and a clear view down the whole block.
+                        //
+                        // This planted a hedge on 42% of every grass tile touching a road -
+                        // 17,849 of them, FORTY-FIVE PER CENT of every prop in the town - and it
+                        // came from Ashcombe, where a clipped roadside hedge is exactly right.
+                        // A hedge down both verges of every street is the single most English
+                        // thing the map had left in it, and it hid the openness that is the
+                        // whole character of the place.
+                        //
+                        // A shrub here and there survives, because somebody does plant one by a
+                        // driveway - but at a fortieth of the old rate, so it reads as a choice
+                        // somebody made rather than as a boundary somebody laid.
+                        if (rng.Chance(0.010f)) props.Add(new Prop(PropKind.Bush, new Tile(x, y), Roll(rng)));
                     }
                     // Grass is a yard in town AND open pasture out of it, and it is 27.7% of the
                     // map, so a rate tuned for a village green plants a park across the county.
@@ -161,18 +174,25 @@ namespace Noir.Core.World
                     break;
 
                 case Terrain.Field:
-                    // A ROADSIDE IS HEDGED, NOT POST-AND-RAILED. Post-and-rail is for the
-                    // boundary between one field and the next; what a field shows a road is a
-                    // hedge, the same as grass does.
+                    // A ROADSIDE IN VERMILION COUNTY IS A DITCH, NOT A HEDGE.
                     //
-                    // It is also the difference between a map that builds and one that does not.
-                    // A fence is one prop per tile and a hedge is drawn as a RUN, and a road
-                    // through farmland puts an edge down both of its verges for its whole
-                    // length: on a 960m map that is some thirteen kilometres of verge, which at
-                    // 55% is fourteen thousand individual fence posts and pales.
+                    // This said "a roadside is hedged, not post-and-railed", which is true of
+                    // England and is why the map had one. A county road here runs between a mown
+                    // verge and an open drainage ditch, with the corn coming to within a few feet
+                    // of it; what breaks the line is a volunteer tree or a stand of weeds, not a
+                    // laid boundary. The hedge that WAS here is the osage orange the settlers
+                    // planted as living fence, and by 1991 nearly all of it had gone to the
+                    // machinery that made the fields bigger.
+                    //
+                    // The reason the old comment gave for a hedge - that a fence is one prop per
+                    // tile while a hedge is drawn as a RUN, so hedging a whole county's verges is
+                    // affordable and fencing them is not - still holds, and is exactly why the
+                    // answer is to put NOTHING along most of it. What remains of the old fence
+                    // rows is drawn by OnFieldEdge below, where it belongs.
                     if (NextToRoad(grid, x, y))
                     {
-                        if (rng.Chance(0.42f)) props.Add(new Prop(PropKind.Hedge, new Tile(x, y), Roll(rng)));
+                        if (rng.Chance(0.012f)) props.Add(new Prop(PropKind.Bush, new Tile(x, y), Roll(rng)));
+                        else if (rng.Chance(0.004f)) props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));
                     }
                     else if (OnFieldEdge(grid, x, y))
                     {

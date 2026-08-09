@@ -329,7 +329,19 @@ place tavern 4,4 7x6 ""P""
             Tally(before, was);
             Tally(after, now);
 
-            Assert.That(was.Count, Is.GreaterThan(500),
+            // 300, DOWN FROM 500 ON 2026-08-09, AND NOT BECAUSE THE TEST GOT WEAKER.
+            //
+            // This is the test refusing to prove nothing, which is the right instinct and is why
+            // it went red the moment the roadside hedges came out. It was calibrated when 17,849
+            // hedges - FORTY-FIVE PER CENT of every prop in the town - were being planted along
+            // the verges, so the number it was really measuring was how English the map was.
+            // With them gone this fixture yields 356 undisturbed props, which is still hundreds
+            // of independent positions and variants compared across two builds.
+            //
+            // Re-record it downward if the prop estimate falls again; do NOT delete the check.
+            // Its whole job is to notice when the sample has quietly become too small to mean
+            // anything, and 356 is comfortably not that.
+            Assert.That(was.Count, Is.GreaterThan(300),
                 "hardly any props were compared — the test proved nothing");
 
             var differences = new List<string>();
