@@ -330,9 +330,28 @@ namespace Noir.Core.World
                     // towards and arrives in the matching lane of the new road. That is what
                     // keeps a two-lane arterial and a one-lane main road compatible without
                     // anybody writing down a special case for the pair.
+                    // GOING STRAIGHT ON DOES NOT REQUIRE THE ROAD TO KEEP ITS NAME.
+                    //
+                    // This read `onward.Line == into.Line && onward.Lane == into.Lane`, so a car
+                    // could only continue straight if the road it arrived on and the road it left
+                    // on were the SAME LINE. That is a rule about names, not about geometry: where
+                    // Maple runs into Park at a shared point, or 3550north into Attica, the driver
+                    // is going straight along one continuous piece of tarmac and the two halves
+                    // merely have different labels in the survey. The old rule refused the turn
+                    // and made a car trap out of a street.
+                    //
+                    // Only the LANE has to match now, which is the part that is actually about the
+                    // road: straight on keeps you in the lane you were in, and a turn is what moves
+                    // you across. `kind` is already computed from the tangents, so a genuine turn
+                    // cannot be mislabelled Straight just because the names happen to differ.
+                    //
+                    // MEASURED AS ZERO CHANGE ON BOTH MAPS TODAY, which is why it lands on its own:
+                    // no same-axis junction exists yet for it to matter at, so this can be proved
+                    // neutral before the junction model changes underneath it. It is the safe half
+                    // of the fix, landed first on purpose.
                     bool legal = kind switch
                     {
-                        TurnKind.Straight => onward.Line == into.Line && onward.Lane == into.Lane,
+                        TurnKind.Straight => onward.Lane == into.Lane,
                         TurnKind.Left     => into.Lane == 0 && onward.Lane == 0,
                         _                 => into.Lane == fromLanes - 1 && onward.Lane == toLanes - 1,
                     };
