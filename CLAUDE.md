@@ -193,6 +193,11 @@ them, which is why the whole suite never finished: run un-split it can take **fo
 was being killed at twenty minutes and called a hang. It was never hung. It was slow by design and
 nobody had ever seen the end of it.
 
+**`PeopleDiagnostics.WhyAreThePeopleNotAnimating` carries no `Category("Diagnostic")`**, so the
+gate command above still runs it, and at 292.9 s it is 79% of the eleven minutes. It is also the
+only test that can see the people animate — categorising it out buys a two-minute gate that is
+blind to the thing this project spent a week fixing.
+
 **Run this first, or the run drowns.** `Assets/polyperfect/` is gitignored, so the pack's mesh
 import settings are NOT in the repo and Read/Write defaults to off:
 
