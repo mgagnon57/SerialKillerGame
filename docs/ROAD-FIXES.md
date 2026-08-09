@@ -499,11 +499,38 @@ stranded lanes — either lands red on `NoLaneArrivesAtAJunctionItCannotLeave`.
   > **And LaneGraph asked `NorthSouth`/`EastWest` which junctions were on a road.** Those report the
   > first arm of each AXIS, so at a merged three-arm node the third road got no cut and no turns. It
   > walks `Arms` now. That is what took city.txt's turns UP, 1088 → 1100.
+- **JUNC-7, JUNC-11, JUNC-12 and JUNC-13 CANNOT BE WORKED — they do not exist anywhere but in the
+  line above.** Checked 2026-08-09: `grep -rl "JUNC-7\|JUNC-11" docs/` returns this file and
+  nothing else, and `docs/history/` has no audit carrying them either. The read-only audit that
+  turned 173 faults into 148 items was never committed, so four of the ten items in this wave are
+  four ID numbers with no statement of what is wrong. **Do not guess at them and do not quietly
+  drop them from the wave's tick list** — either the audit is recovered, or somebody re-derives
+  the faults and writes them down here, in which case they should get honest new IDs.
 - **JUNC-5 step 1 only.** ⚠ Step 2 as written drops the car through to `Choose` at ~90 interior exit
   segments, `Choose` returns −1, and the car parks on `Hold.NoLegalTurn` permanently — a 159-car fleet
   drains into 90 cul-de-sacs over a six-minute run. Say so in the flag's own doc comment.
-- **JUNC-6 — MEASURED 2026-08-09, AND IT IS LIVE NOW.** JUNC-2 has landed, so the shape this item
-  guards against exists in the town today. Counted off the built world:
+- **JUNC-6 — ✅ BUILT 2026-08-09.** `CityStreets` asks the arms now, and the built town reports what
+  it laid instead of one undifferentiated total:
+  > ```
+  >   3583 road tiles on 67 roads and 111 junctions
+  >   (46 three-way, 7 corners, 1 dead end, 4 straight through and laid as plain road)
+  > ```
+  > The seven corners are real and are all the county's chain changing its name at a bend: abner ×
+  > park, abner × perry, goodwine × holmes, grove × maple, grove × thompson, grove × henderson,
+  > harrison × york. The dead end is alley8 × alley12. Every one used to be laid as a four-way
+  > crossroads with two arms painted into whatever was behind the bend.
+  >
+  > **⚠ LAYING NOTHING LEAVES A HOLE, and the first cut of this had one.** `Lay` skips any tile
+  > within reach of any junction, on the understanding that a junction tile has covered that
+  > ground. Where JUNC-6 deliberately lays none, that is false and the road simply stops for the
+  > width of the crossing. The untiled nodes are collected and handed to the carriageway walk;
+  > tiles went 3573 → 3583, which is those four crossings being paved.
+  >
+  > **The turn and end pieces' own orientation is not written down in the pack**, so
+  > `Noir/Render The Odd Junctions` exists to settle it: one frame straight down on each corner
+  > yaw, the dead end, a straight-through node and an ordinary crossroads for comparison.
+
+  The measurement that scoped it, kept because it is what said the item was live:
   > ```
   >   city.txt    109 junctions ·  0 same-axis ·  0 wrong-axis in the NorthSouth slot ·  2 merged
   >   roads.txt   112 junctions ·  7 same-axis ·  7 wrong-axis in the NorthSouth slot · 18 merged
@@ -546,6 +573,19 @@ stranded lanes — either lands red on `NoLaneArrivesAtAJunctionItCannotLeave`.
   tile and a stop sign in the middle of a straight street once same-axis junctions exist.
 - **GATE-7** — the fix already exists twice in this tree (commit `412f7cb` did it to `PlanLabels`, and
   `RoadCentrelines.cs:17-27` does it too): walk the `Path` instead of guarding on `IsStraight`.
+  > **LOCATED 2026-08-09: it is `MapAudit`, in three checks, and one of them also carries the axis
+  > filter JUNC-2 has just removed from the model.**
+  > - `:88` — *places laid over a road*: `if (!line.IsStraight) continue`
+  > - `:149` — *car parks with no way in*: same
+  > - `:168` — *roads that meet without a junction*: `if (!ns.IsStraight || !ew.IsStraight) continue`,
+  >   and then `if (!ns.IsNorthSouth || ew.IsNorthSouth) continue`
+  >
+  > On `Content/city.txt` that blinds it to five roads. On `Content/roads.txt` it blinds it to most
+  > of them, so the audit has been reporting on a town the game does not build — which is the same
+  > fault the survey layer had everywhere else and the reason `TownPipeline` exists. `Overlaps` and
+  > `Gap` both take a `RoadLine` and read `Centre`/`From`/`To`, so they have to walk the path too;
+  > check 7's corridor test should become the `Path`-and-half-width one `RoadNetwork.CouldMeet`
+  > now uses, with no axis filter.
 - **GATE-8** ⚠ ratchets **street-class near-misses only** (3 today, clean gap to 28 m) and prints the
   55 alley near-misses unasserted. Do not ratchet the combined 58 — 55 of them are the `STREET_CLEAR`
   artefact the item itself assigns elsewhere, so the gate would pin the number it argues must not

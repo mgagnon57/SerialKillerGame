@@ -162,6 +162,45 @@ namespace Noir.Editor
         /// renderers of brick town. "The parts I changed render fine on their own" is not the
         /// same claim as "the thing the user is about to press Play on comes up".
         /// </summary>
+        /// <summary>
+        /// THE JUNCTIONS THAT ARE NOT CROSSROADS, from straight above, one frame each.
+        ///
+        /// Every other set here is about atmosphere. This one is a measurement: the kit's turn and
+        /// end pieces each have a built-in orientation that is written down nowhere in the pack, so
+        /// the yaw CityStreets seats them at is a guess until somebody looks. A corner laid a
+        /// quarter turn out does not change any count, does not fail any test, and is obvious in
+        /// one picture - the asphalt simply runs off into the grass and the two roads it was meant
+        /// to join arrive at a kerb.
+        ///
+        /// The coordinates are read off the build's own log, not authored: `[streets] corner at
+        /// x,y yaw n - arms N E, road x road`. Re-read them if the network changes.
+        ///
+        /// STRAIGHT DOWN, deliberately. A corner seen at an angle is ambiguous about which way it
+        /// turns; from directly overhead the tile's own painted markings settle it.
+        /// </summary>
+        [MenuItem("Noir/Render The Odd Junctions")]
+        public static void Junctions() => Run("junction", new[]
+        {
+            // One of each yaw the corner case produces, so a systematic quarter-turn error cannot
+            // hide behind a case that happens to be symmetric.
+            new Shot("junction-corner-ne", 511f, 1590f, 55f, 89f, 0f),     // abner x perry,     N E
+            new Shot("junction-corner-se", 510f, 1484f, 55f, 89f, 0f),     // abner x park,      S E
+            new Shot("junction-corner-sw", 833f, 725f, 55f, 89f, 0f),      // harrison x york,   S W
+            new Shot("junction-corner-nw", 1352f, 2103f, 55f, 89f, 0f),    // grove x thompson,  N W
+
+            // The one dead end, which is an alley, so the piece is the small kit's.
+            new Shot("junction-dead-end", 1168f, 2159f, 45f, 89f, 0f),     // alley8 x alley12,  E
+
+            // A straight-through node, where JUNC-6 lays no junction tile at all and the
+            // carriageway walk has to pave over it instead. If that handoff is wrong there is a
+            // hole in the road here, which is the one failure mode of laying nothing.
+            new Shot("junction-straight-through", 455f, 1324f, 60f, 89f, 0f),   // attica x 3550north
+
+            // And a plain crossroads for comparison, so "the corner looks odd" can be judged
+            // against what this kit's junctions normally look like from the same height.
+            new Shot("junction-crossroads", 750f, 1335f, 60f, 89f, 0f),
+        });
+
         [MenuItem("Noir/Render The Built Town")]
         public static void Town() => Run("town", new[]
         {

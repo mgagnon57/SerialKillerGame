@@ -205,6 +205,62 @@ namespace Noir.Unity
         }
 
         /// <summary>
+        /// The piece for a junction with TWO arms at a right angle: a street that turns a corner.
+        ///
+        /// Rossville has these because the county records a street as chained segments and the
+        /// chain gets a new name where it bends - Maple becomes Park, 3550north becomes Attica.
+        /// Before JUNC-2 no junction was recorded at all where two same-axis roads met, so this
+        /// case could not arise and there was nothing to lay. Now there is, and laying a
+        /// four-way crossing at a corner paints two arms into whatever is behind the bend.
+        ///
+        /// THE PIECE WAS ALREADY IN THE KIT. It was never opened because nothing ever asked for
+        /// a corner.
+        /// </summary>
+        /// <summary>
+        /// The class of the widest road at this junction running along the given axis - what the
+        /// tee piece has to fit, since the through road is most of the tile. Falls back to the
+        /// widest road of any axis where nothing matches.
+        /// </summary>
+        private static RoadClass ClassAlong(Junction j, bool northSouth, RoadClass fallback)
+        {
+            var best = fallback;
+            float widest = -1f;
+
+            foreach (var arm in j.Arms)
+            {
+                if (arm.Road == null) continue;
+
+                // Asked of the TANGENT, not of the road's IsNorthSouth: a road is on the axis it
+                // is pointing along here, not the one its two end points imply over its whole run.
+                bool armIsNorthSouth = Mathf.Abs(arm.Tangent.Y) > Mathf.Abs(arm.Tangent.X);
+                if (armIsNorthSouth != northSouth) continue;
+                if (arm.Road.HalfWidth > widest) { widest = arm.Road.HalfWidth; best = arm.Road.Class; }
+            }
+
+            return best;
+        }
+
+        private static string Turn(RoadClass widest, float reach)
+        {
+            if (reach < 8f) return Kit + "Road_Turn_10x10_City.prefab";
+            if (widest == RoadClass.Freeway) return Kit + "Freeway_Turn_30x30_City.prefab";
+            return Kit + "Mainroad_Turn_30x30_City.prefab";
+        }
+
+        /// <summary>
+        /// The piece for a junction with ONE arm: a road that stops here and goes no further.
+        ///
+        /// A dead end is a junction in the model - `Touches` records a road ending on another -
+        /// and one of the two may have nothing beyond it. Ten of these on Content/roads.txt are
+        /// alleys stopping at a lot line.
+        /// </summary>
+        private static string End(RoadClass widest, float reach)
+        {
+            if (reach < 8f) return Kit + "Road_End_10x10_City.prefab";
+            return Kit + "Mainroad_End_30x30_City.prefab";
+        }
+
+        /// <summary>
         /// HALF the width of the actual asphalt for this class, measured off its own tile.
         ///
         /// A tile is carriageway AND pavement - a thirty-metre main-road tile is twelve metres of
@@ -372,31 +428,92 @@ namespace Noir.Unity
             int tiles = 0, dressing = 0;
 
             // 1. The junctions first, so the straights know which ground is already spoken for.
-            int tees = 0;
-            foreach (var j in world.Roads.Junctions)
+            //
+            // AND WHICH GROUND IS NOT. The carriageway walk below skips any tile within reach of a
+            // junction, on the understanding that a junction tile has already covered it. Where
+            // this loop lays nothing - a straight-through node, or one with no arms at all - that
+            // understanding is false and the road would have a hole in it. So the ones that got
+            // no tile are collected and the walk is told to lay straight across them.
+            var untiled = new HashSet<int>();
+
+            int tees = 0, corners = 0, deadEnds = 0, straightThrough = 0;
+            for (int ji = 0; ji < world.Roads.Junctions.Count; ji++)
             {
+                var j = world.Roads.Junctions[ji];
                 float reach = j.Reach;
                 bool inTown = CitySignals.InTheTown(world, j);
 
-                // WHICH ARMS ACTUALLY EXIST. A road only reaches out of the junction on a side
-                // where its own declared run continues past it - so a track that dead-ends here
-                // contributes one arm, not two, and this is a three-way junction.
-                bool north = j.NorthSouth.From < j.Y - reach;
-                bool south = j.NorthSouth.To   > j.Y + reach;
-                bool west  = j.EastWest.From   < j.X - reach;
-                bool east  = j.EastWest.To     > j.X + reach;
+                // WHICH ARMS ACTUALLY EXIST, ASKED OF THE ARMS.
+                //
+                // This read `j.NorthSouth.From < j.Y - reach` and three more like it: a road's
+                // declared extent on ITS OWN axis, compared against the junction's coordinate on
+                // the OTHER one. That only means anything while the NorthSouth slot holds a
+                // north-south road, and since JUNC-2 it does not - seven junctions on
+                // Content/roads.txt are two SAME-AXIS roads meeting, and every one of them has an
+                // east-west road in that slot. It could not see past the pair either, so at the
+                // eighteen merged nodes the third and fourth roads contributed no arms at all.
+                //
+                // An arm leaves backwards along its own path when there is road behind the stop
+                // line, and forwards when there is road beyond it. The tangent says which compass
+                // direction that is, and village y runs SOUTH - so north is the smaller y, which
+                // is the same convention the four lines above were using.
+                bool north = false, south = false, east = false, west = false;
+
+                foreach (var arm in j.Arms)
+                {
+                    var road = arm.Road;
+                    if (road?.Path == null) continue;
+
+                    if (arm.S > reach) Leaves(-arm.Tangent.X, -arm.Tangent.Y);
+                    if (arm.S < road.Path.Length - reach) Leaves(arm.Tangent.X, arm.Tangent.Y);
+                }
+
+                void Leaves(float dx, float dy)
+                {
+                    if (Mathf.Abs(dx) >= Mathf.Abs(dy)) { if (dx >= 0f) east = true; else west = true; }
+                    else { if (dy >= 0f) south = true; else north = true; }
+                }
 
                 int arms = (north ? 1 : 0) + (south ? 1 : 0) + (west ? 1 : 0) + (east ? 1 : 0);
+
+                // The widest road at the node, which is what the piece has to fit. Not the wider
+                // of the pair: a merged node may have four roads and the widest may be neither.
+                var widest = RoadClass.Track;
+                float widestHalf = -1f;
+                bool anyFreeway = false;
+                foreach (var arm in j.Arms)
+                {
+                    if (arm.Road == null) continue;
+                    if (arm.Road.Class == RoadClass.Freeway) anyFreeway = true;
+                    if (arm.Road.HalfWidth > widestHalf) { widestHalf = arm.Road.HalfWidth; widest = arm.Road.Class; }
+                }
 
                 string piece;
                 float yaw = 0f;
 
-                if (arms == 3)
+                if (arms == 2 && ((north && south) || (east && west)))
+                {
+                    // STRAIGHT THROUGH IS NOT A JUNCTION TO LOOK AT. Two arms facing opposite
+                    // ways is one continuous piece of road - either a crossing whose other road
+                    // stops short of it, or, and this is the case JUNC-2 created, two roads of
+                    // the same axis meeting head-on where the county's chain changed its name.
+                    // Maple becomes Park; there is nothing there but tarmac. Lay no tile, and put
+                    // this node on the untiled list so the carriageway walk paves straight over it
+                    // instead of leaving the hole it would otherwise leave.
+                    straightThrough++;
+                    untiled.Add(ji);
+                    continue;
+                }
+
+                if (arms == 4)
+                {
+                    piece = Cross(anyFreeway ? RoadClass.Freeway : RoadClass.Mainroad, reach, inTown);
+                }
+                else if (arms == 3)
                 {
                     // The through road is the one with both of its arms; the stem is the odd one.
                     bool throughIsNorthSouth = north && south;
-                    var through = throughIsNorthSouth ? j.NorthSouth : j.EastWest;
-                    piece = Tee(through.Class, reach, inTown);
+                    piece = Tee(ClassAlong(j, throughIsNorthSouth, widest), reach, inTown);
 
                     // The tile is drawn with its through road along x and its stem toward +z,
                     // which is village NORTH because village y runs into Unity -z. Yaw turns +z
@@ -406,17 +523,49 @@ namespace Noir.Unity
                         : (north ? 0f : 180f);
                     tees++;
                 }
+                else if (arms == 2)
+                {
+                    // A CORNER. The kit's turn piece joins its +z arm to its +x arm at yaw 0 -
+                    // north and east in village terms - so the yaw is how far round from there
+                    // this corner's own pair sits. VERIFY THIS AGAINST A RENDER before trusting
+                    // it: the prefab's built-in orientation is not written down anywhere and
+                    // guessing it wrong turns every corner in the town inside out.
+                    piece = Turn(widest, reach);
+                    yaw = north && east ? 0f
+                        : east && south ? 90f
+                        : south && west ? 180f
+                        : 270f;
+                    corners++;
+                }
+                else if (arms == 1)
+                {
+                    // A DEAD END. Same warning as the corner: the end piece's own facing is read
+                    // off a render, not assumed. Taken here as the road arriving from +z at yaw 0.
+                    piece = End(widest, reach);
+                    yaw = north ? 0f : east ? 90f : south ? 180f : 270f;
+                    deadEnds++;
+                }
                 else
                 {
-                    var klass = j.NorthSouth.Class == RoadClass.Freeway
-                             || j.EastWest.Class == RoadClass.Freeway
-                        ? RoadClass.Freeway : RoadClass.Mainroad;
-                    piece = Cross(klass, reach, inTown);
-
-                    if (arms < 3)
-                        Debug.LogWarning($"[streets] the junction at {j.X},{j.Y} has {arms} arms "
-                                       + "and is being laid as a crossing anyway.");
+                    // No arms at all. A junction where both roads stop exactly at it and neither
+                    // continues - which should be impossible, since something has to have brought
+                    // the crossing into being. Say so rather than laying tarmac over it.
+                    Debug.LogWarning($"[streets] the junction at {j.X},{j.Y} has no arms at all "
+                                   + $"({j.Arms?.Length ?? 0} roads meet there). Nothing laid.");
+                    untiled.Add(ji);
+                    continue;
                 }
+
+                // WHERE THE UNUSUAL ONES ARE, so they can be photographed rather than counted.
+                // The turn and end pieces each have a built-in orientation that is not written
+                // down anywhere in the pack, and a corner laid at the wrong yaw is invisible in
+                // any total - it is only ever wrong to look at.
+                if (arms <= 2)
+                    Debug.Log($"[streets] {(arms == 1 ? "dead end" : "corner")} at {j.X:0},{j.Y:0} "
+                            + $"yaw {yaw:0} - arms"
+                            + (north ? " N" : "") + (south ? " S" : "")
+                            + (east ? " E" : "") + (west ? " W" : "")
+                            + $", {string.Join(" x ", System.Array.ConvertAll(j.Arms, a => a.Road?.Name ?? "?"))}");
 
                 if (Seat(root.transform, piece,
                          j.X - reach, j.Y - reach, reach * 2f, reach * 2f, yaw) != null) tiles++;
@@ -425,14 +574,18 @@ namespace Noir.Unity
             // 2. The carriageways, each into the root that owns its class.
             foreach (var line in world.Roads.Lines)
                 tiles += Lay(line.Class == RoadClass.Alley ? alleys.transform : root.transform,
-                             line, world);
+                             line, world, untiled);
 
             // 3. Everything that is not a carriageway, sampled off the terrain grid as before:
             //    pavement where a street has an edge, parks, and the backs of blocks.
             dressing += Dress(root.transform, world);
 
+            // BROKEN OUT BY SHAPE, because "111 junctions" hid the fact that seven of them were
+            // being laid as crossroads with two arms painted into open ground.
             Debug.Log($"[streets] {tiles} road tiles on {world.Roads.Lines.Count} roads and "
-                    + $"{world.Roads.Junctions.Count} junctions ({tees} of them three-way), "
+                    + $"{world.Roads.Junctions.Count} junctions "
+                    + $"({tees} three-way, {corners} corners, {deadEnds} dead ends, "
+                    + $"{straightThrough} straight through and laid as plain road), "
                     + $"{dressing} pieces of furniture, "
                     + $"{root.GetComponentsInChildren<Renderer>().Length} renderers.");
 #endif
@@ -447,9 +600,10 @@ namespace Noir.Unity
         /// is where a pedestrian crossing goes and because it puts a painted stop line exactly
         /// where the traffic has to stop.
         /// </summary>
-        private static int Lay(Transform parent, RoadLine line, WorldModel world)
+        private static int Lay(Transform parent, RoadLine line, WorldModel world,
+                               HashSet<int> untiled)
         {
-            if (!line.IsStraight) return LayCurved(parent, line, world);
+            if (!line.IsStraight) return LayCurved(parent, line, world, untiled);
 
             int module = RoadClasses.CorridorWidth(line.Class);
             float half = module / 2f;
@@ -469,10 +623,17 @@ namespace Noir.Unity
                 // Inside a crossing? Tested by REACH rather than by an exact cell, because a
                 // thirty-metre junction swallows three ten-metre tiles of the track that meets
                 // it, and only the middle one shares its centre.
+                // A JUNCTION THAT WAS NOT TILED HAS NOT SPOKEN FOR ITS GROUND. Skipping every
+                // tile near every junction assumed one had been laid there; at a straight-through
+                // node none is, and the road would simply stop for the width of the crossing.
                 bool inJunction = false;
-                foreach (var j in world.Roads.Junctions)
+                for (int ji = 0; ji < world.Roads.Junctions.Count; ji++)
+                {
+                    if (untiled.Contains(ji)) continue;
+                    var j = world.Roads.Junctions[ji];
                     if (Mathf.Abs(cx - j.X) < j.Reach && Mathf.Abs(cy - j.Y) < j.Reach)
                     { inJunction = true; break; }
+                }
                 if (inJunction) continue;
 
                 // Next to a crossing? Then this is where the zebra and the stop line go - but
@@ -518,7 +679,8 @@ namespace Noir.Unity
         /// A sharper road would show them, and that is a real limit of laying a straight prefab
         /// along a curve rather than a defect to chase.
         /// </summary>
-        private static int LayCurved(Transform parent, RoadLine line, WorldModel world)
+        private static int LayCurved(Transform parent, RoadLine line, WorldModel world,
+                                     HashSet<int> untiled)
         {
             int module = RoadClasses.CorridorWidth(line.Class);
             float half = module / 2f;
@@ -539,10 +701,15 @@ namespace Noir.Unity
                 // which is the same derivation GroundShot uses to aim a camera down the rail.
                 float yaw = Mathf.Atan2(tangent.X, -tangent.Y) * Mathf.Rad2Deg;
 
+                // See Lay(): an untiled junction has not covered its own ground.
                 bool inJunction = false;
-                foreach (var j in world.Roads.Junctions)
+                for (int ji = 0; ji < world.Roads.Junctions.Count; ji++)
+                {
+                    if (untiled.Contains(ji)) continue;
+                    var j = world.Roads.Junctions[ji];
                     if (Mathf.Abs(at.X - j.X) < j.Reach && Mathf.Abs(at.Y - j.Y) < j.Reach)
                     { inJunction = true; break; }
+                }
                 if (inJunction) continue;
 
                 // Near a crossing, and in the town: the crosswalk tile, which carries the zebra
@@ -551,8 +718,14 @@ namespace Noir.Unity
                 bool atCrossing = false;
                 foreach (var j in world.Roads.Junctions)
                 {
-                    if (!ReferenceEquals(j.NorthSouth, line) && !ReferenceEquals(j.EastWest, line))
-                        continue;
+                    // ANY ARM, not the pair. `NorthSouth` and `EastWest` report the first arm of
+                    // each axis, so at the eighteen merged nodes on Content/roads.txt the third
+                    // and fourth roads were never recognised as being at their own junction and
+                    // got no stop line and no zebra approaching it.
+                    bool mine = false;
+                    foreach (var arm in j.Arms)
+                        if (ReferenceEquals(arm.Road, line)) { mine = true; break; }
+                    if (!mine) continue;
 
                     float dx = at.X - j.X, dy = at.Y - j.Y;
                     if (dx * dx + dy * dy >= module * 1.5f * (module * 1.5f)) continue;
