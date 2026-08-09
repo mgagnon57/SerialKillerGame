@@ -137,7 +137,19 @@ is to judge it in one look.
   >
   > **And I misread the result before there was a camera that could show it** — see W1's own gate
   > below. The roofs are three-tab asphalt with visible tabs and courses in `roof-close.png`.
-- **(B)** `ROOF-3`, the keying change — public signature, two callers.
+- **(B)** ✅ **DONE 2026-08-09.** `ROOF-3`, the keying change — public signature, two callers,
+  both in `Noir.Unity` (the plan's note that the Editor assembly is "not optional" for this item
+  is wrong; nothing in `Noir.Editor` calls it).
+  > **The hash was never the problem, and that was measured before anything was touched.**
+  > `Scatter(Bounds.X, Bounds.Y, 5309)` lands 37.97 / 38.03 / 19.00 / 5.00 against a target of
+  > 38 / 38 / 19 / 5, with neighbour agreement 32.2–32.9% at every lot spacing from 1 m to 66 m
+  > (chance is 32.9%). No banding, no correlation.
+  >
+  > The fault is that a roof was a property of a **coordinate**: `ClearOfRoads` moved 175
+  > buildings on 2026-08-09, so re-deriving `roads.txt` re-rolled about two thirds of those
+  > coverings. `RoofingFor` takes the `Place` and rolls on `Rolls.Avalanche(place.Key ^ 5309)`.
+  > `PlaceSpec.Key` already says "EVERYTHING generated from a place hangs off this string" — the
+  > roof was the last thing that did not.
 - **(C)** ✅ **ROOF-4 and UVX-A1 DONE 2026-08-09** (`ROOF-13` still open). A1 **takes the gable
   triangles away from** ROOF-4's rotation, so landing them separately means rotating UVs A1 then
   deletes — they went in one commit.
