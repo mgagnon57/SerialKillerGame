@@ -66,11 +66,15 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **462 pass, 0 fail, 462 total, ~4 m 40 s.** Measured 2026-08-09.
-> (+4 `SurfaceTextureTests` — the texture estate is in this gate for the first time: the declared
-> palette against the files on disk, every texture name the town asks for, the pack paths, and
-> `NoMaterialIsBuiltWhiteAndThenTextured`, which was watched firing on the real historical
-> offender before it was believed.)
+> **469 pass, 0 fail, 469 total, ~4 m 36 s.** Measured 2026-08-10.
+> (462 the day before; +4 `SurfaceTextureTests` — the texture estate reached this gate for the
+> first time — then +7 more, and every one of them is a GATE ON A SILENT FAULT rather than a new
+> feature's test: `AmenitiesAreNotHousesTests` (an amenity may not have the default house
+> footprint; it found the town's church on its first run), `HomeIsAColumnNotAnEnumMemberTests`
+> (six places asked `Kind == PlaceKind.Dwelling` about a town whose `kinds.txt` says
+> `apartment / home yes`), `NoContentLoadFailsInSilenceTests` (six content loads swallowed a
+> failure and returned; one of them costs 195 m of relief), two on `watched.floor` failing open,
+> and `EveryActivityHasARowInTheRealFile`.)
 > (447 on 2026-08-08, and 415 earlier that day; +8 `DrivewaysTests`, +5 `TrafficWeightTests`,
 > +3 `AnimatorContractTests`, +8 `AnimationTableTests`, +8 `AnimationRowTests`,
 > +4 `RoadPathTests` and +2 `SurveyRoadNetworkTests` — `RoadPath.ArcAt`, and the gate on two

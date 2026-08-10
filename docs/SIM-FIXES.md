@@ -16,6 +16,32 @@ in Cross-plan below, and the standing facts it measured are in `CLAUDE.md`.
 
 ---
 
+## Where this stands, 2026-08-10
+
+| Wave | |
+|---|---|
+| **W0** Measure the tree | the numbers below are measured, and the tree was clean before any of it |
+| **W1** The seven schools | ✅ **DONE** — and the guard found an eighth, the church |
+| **W2** The free gates | **in progress.** `watched.floor`, the `IsHome` sweep and the silent content loads are done, with a Core gate apiece. 30-odd items remain |
+| **W3–W8** | not started. W3 and W4 are the two ruled reshuffles and must go in that order |
+
+**Measured after everything above:**
+
+```
+  Core      469 of 469        the town's shape changed and every gate held
+  PlayMode  18 of 18, 1 Explicit skipped
+  smoke     PASSED            zero false warnings from the six new fallback lines
+  dwellings 608 → 623   people 1385 → 1400   in work 181 → 153
+```
+
+**FIVE NEW CORE GATES, AND EVERY ONE IS A GATE ON A SILENCE.** Not one is a test for a new feature.
+That is what this plan's W2 is for and it is the pattern worth continuing: `AmenitiesAreNotHouses`,
+`HomeIsAColumnNotAnEnumMember`, `NoContentLoadFailsInSilence`, the two on `watched.floor`, and
+`EveryActivityHasARowInTheRealFile`. **Three of the five found a real fault on their first run** —
+the church, two files a batch edit had missed, and four more silent content loads.
+
+---
+
 ## ⚠ Read this before you touch the seed
 
 **The literal reading of ruling one is a trap, and it was measured.** The ruling is "take `day` out
