@@ -80,6 +80,15 @@ namespace Noir.Core.Tests
         /// against building positions that are known to be wrong. When the houses are re-derived
         /// from the corrected streets, this list goes back to empty and the assertion below goes
         /// back to Is.Empty.
+        ///
+        /// ⚠ **THE SUSPENSION IS LIFTED, 2026-08-10, BY THE OWNER.** The condition it named has
+        /// been met: the houses have been re-derived against the corrected streets by
+        /// `SeatOnSurvey`, `ClearOfRoads` and the school and church corrections. The list is a
+        /// RATCHET from here - it may shrink and it may never grow.
+        ///
+        /// It is NOT yet empty, and it must not be forced there: going to empty means MOVING
+        /// alleys, which is a separate ruling he has deliberately not made. His words on the
+        /// choice were "a ratchet only - no alley moves until you say so".
         /// </summary>
         private static readonly string[] AlleysAllowedOverABuildingUntilHousesAreRefitted =
             { "alley1", "alley12", "alley2", "alley3", "alley4" };
@@ -220,6 +229,83 @@ namespace Noir.Core.Tests
               + "now: " + string.Join(", ", names) + "\n"
               + "was: " + string.Join(", ", allowed) + "\n\n"
               + string.Join("\n  ", through));
+        }
+
+        /// <summary>
+        /// AN ALLEY RUNS ALONG THE BACK LOT LINE, AND THIS MEASURES THE LOT - which is what the
+        /// owner's standing fact actually says, and which nothing had ever asserted.
+        ///
+        /// *"I have never seen a town where the alley runs right through their back yard."*
+        /// (docs/SOURCES-OF-TRUTH.md section 3, fact 2.) The test above measures BUILDINGS - a
+        /// house is a house, and that is the unambiguous half. But a lot is not a building: an
+        /// alley can miss every house in a block and still run up the middle of seven back
+        /// gardens, and that is the thing he described. `tools/check-roads.py` has printed it all
+        /// along and no gate ever read it.
+        ///
+        /// Measured 2026-08-10, share of each alley's length whose centre lands inside a parcel:
+        ///
+        ///     alley1  78.4%   alley12 42.2%   alley8 15.7%   alley9 12.9%   alley5 11.4%
+        ///     alley4  10.2%   alley10  8.0%          16 alleys; 7 over a tenth of their length
+        ///
+        /// `check-roads.py` prints 75.3% for alley1, not 78.4%, and BOTH are right: the tool walks
+        /// the DECLARED polyline and this walks the SMOOTHED path the game lays. Three points of
+        /// difference is the curve bowing off its own line, which is the same measurement
+        /// `DrawnRoadFollowsItsSurveyLineTests` puts a number on. This one is the drawn alley,
+        /// which is the one somebody's back garden actually has in it.
+        ///
+        /// **A RATCHET, NOT A TARGET, AND EXPLICITLY SO ON HIS INSTRUCTION.** Turning this into a
+        /// zero means MOVING alleys, and moving them is what the 2026-08-04 suspension existed to
+        /// prevent while the houses were wrong - the houses would end up deciding where the alleys
+        /// go all over again. The ruling on 2026-08-10 was to make the violation visible and stop
+        /// it worsening, and nothing more: "a ratchet only - no alley moves until you say so".
+        /// </summary>
+        [Test]
+        public void NoAlleyRunsFurtherAcrossLotsThanTheWorstOneToday()
+        {
+            var parcels = Parcels();
+            var world = City();
+
+            var measured = new List<(float Share, string Name, int Inside, int Total)>();
+
+            foreach (var line in world.Roads.Lines.Where(l => l.Class == RoadClass.Alley))
+            {
+                int inside = 0, total = 0;
+                for (float d = 0f; d < line.Path.Length; d += 4f)
+                {
+                    var c = line.Path.PointAt(d);
+                    total++;
+                    if (InAnyParcel(parcels, c.X, c.Y)) inside++;
+                }
+                if (total > 0) measured.Add((inside / (float)total, line.Name, inside, total));
+            }
+
+            Assert.That(measured, Is.Not.Empty, "no alleys were measured, so this proves nothing");
+
+            var ordered = measured.OrderByDescending(m => m.Share).ToList();
+
+            TestContext.Out.WriteLine("alley length on a lot, worst first (0% is right):");
+            foreach (var m in ordered.Take(8))
+                TestContext.Out.WriteLine(
+                    $"  {m.Share * 100,6:0.0}%  {m.Name,-10} ({m.Inside}/{m.Total} samples)");
+
+            float worst = ordered[0].Share;
+            int overATenth = ordered.Count(m => m.Share > 0.10f);
+            TestContext.Out.WriteLine(
+                $"  {ordered.Count} alleys; {overATenth} with more than a tenth on a lot");
+
+            // Measured at 0.784 and 7. Both may only fall.
+            Assert.That(worst, Is.LessThanOrEqualTo(0.79f),
+                $"'{ordered[0].Name}' runs {worst * 100:0.0}% of its length across lots, which is "
+              + "worse than any alley did when this was measured (78.4%). An alley runs along the "
+              + "BACK LOT LINE. This is a ratchet and it may only fall - and it must NOT be closed "
+              + "by moving an alley without the owner saying so, because that is exactly what the "
+              + "2026-08-04 suspension existed to prevent.");
+
+            Assert.That(overATenth, Is.LessThanOrEqualTo(7),
+                $"{overATenth} alleys run more than a tenth of their length across lots, against 7 "
+              + "when this was measured: "
+              + string.Join(", ", ordered.Where(m => m.Share > 0.10f)
+                                         .Select(m => $"{m.Name} {m.Share * 100:0.0}%")));
         }
 
         [Test]

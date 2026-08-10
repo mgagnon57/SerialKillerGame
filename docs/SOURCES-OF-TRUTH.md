@@ -134,6 +134,24 @@ owner says otherwise.
    > `RoadsSitOnPublicLandTests` now compares against an exact list of five alleys that may cross a
    > building. **That list may shrink and must never grow.** When the houses are re-seated against
    > the corrected streets it goes back to empty and the assertion goes back to `Is.Empty`.
+   >
+   > ⚠ **THE SUSPENSION IS LIFTED, 2026-08-10.** The condition it named has been met: the houses
+   > have been re-derived against the corrected streets by `SeatOnSurvey`, `ClearOfRoads` and the
+   > school and church corrections. **A ratchet, not a target, and that is the ruling as given —
+   > "a ratchet only, no alley moves until you say so."** Going to zero means MOVING alleys, which
+   > is what the suspension existed to prevent while the houses were wrong, and it is a separate
+   > decision he has deliberately not taken.
+   >
+   > **AND THE RULE IS ABOUT A LOT, WHICH NOTHING HAD EVER ASSERTED.** The existing test measures
+   > BUILDINGS — a house is a house, and that is the unambiguous half. But an alley can miss every
+   > house on a block and still run up the middle of seven back gardens, which is what the sentence
+   > above actually describes. `tools/check-roads.py` has printed it all along and no gate read it.
+   > `NoAlleyRunsFurtherAcrossLotsThanTheWorstOneToday` measures it now, on the DRAWN path:
+   >
+   > ```
+   >   alley1  78.4%   alley12 42.2%   alley8 15.7%   alley9 12.9%   alley5 11.4%
+   >   16 alleys; 7 with more than a tenth of their length on a lot.   0% is right.
+   > ```
 
 3. **Harrison Street turns at the Benton junction. Green and Benton stop at Route 1.** Owner,
    2026-08-04, both called before either was measured:
