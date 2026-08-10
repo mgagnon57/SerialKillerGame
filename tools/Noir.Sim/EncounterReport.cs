@@ -91,7 +91,12 @@ namespace Noir.Sim
 
             var isDwelling = new bool[world.PlaceCount];
             for (int p = 0; p < world.PlaceCount; p++)
-                isDwelling[p] = world.GetPlace(new PlaceId(p)).Kind == PlaceKind.Dwelling;
+                // THE TABLE, NOT THE ENUM MEMBER - the same fault as Eyewitness.cs had, in the
+                // same shape, one file over. `apartment` declares `home yes` in kinds.txt and is
+                // not in the enum, so seven of Rossville's places and the people in them were not
+                // at home as far as this report was concerned.
+                isDwelling[p] = PlaceKindTable.Current.Row(
+                    world.GetPlace(new PlaceId(p)).Kind).IsHome;
 
             // ---- per person ----
             var streetEvents = new long[n];

@@ -78,7 +78,12 @@ namespace Noir.Unity
                 // as a shape.
                 if (massing.Chimneys)
                 {
-                    int stacks = place.Kind == PlaceKind.Dwelling ? place.Units : 1;
+                    // ONE STACK PER DWELLING UNIT, AND AN APARTMENT BLOCK HAS UNITS. This asked
+                    // the enum member, so `apartment` - which declares `home yes` in kinds.txt and
+                    // is not in the enum - got a single chimney however many households were
+                    // stacked under it. The rooms over the grocer, the meat market and the barber
+                    // are three separate homes.
+                    int stacks = PlaceKindTable.Current.Row(place.Kind).IsHome ? place.Units : 1;
                     AddChimneys(place.Bounds, stacks, massing, into, Materials3D.ChimneyIndex);
                 }
 

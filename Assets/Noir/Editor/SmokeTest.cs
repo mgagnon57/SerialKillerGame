@@ -243,7 +243,12 @@ namespace Noir.Editor
 
             foreach (var place in world.AllPlaces)
             {
-                if (place.Kind != PlaceKind.Dwelling) continue;
+                // IsHome, so the seven apartment places are in the count. Written against the
+                // enum member first, which is the exact fault this same session found in
+                // Eyewitness, EncounterReport, VocabReport, RoofBuilder and Materials3D - five
+                // places asking `Kind == PlaceKind.Dwelling` about a town whose kinds.txt declares
+                // `apartment / home yes` and whose enum has never heard of apartment.
+                if (!PlaceKindTable.Current.Row(place.Kind).IsHome) continue;
                 houses++;
 
                 var rooms = world.RoomsIn(place.Id);

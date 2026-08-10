@@ -459,7 +459,12 @@ namespace Noir.Unity
         public static int WallingFor(Place place)
         {
             if (place == null) return 0;
-            if (place.Kind != PlaceKind.Dwelling) return BrickIndex;
+            // ASKS THE TABLE, so an apartment house is clapboard like its neighbours. This tested
+            // the enum member, and `apartment` is not in it - so 102 Stewart Ave and 204 and 206
+            // Dale Ave, three 13x7 apartment houses standing in ordinary residential streets, were
+            // built of Main Street brick. (The four sets of rooms OVER a shop stay brick and
+            // correctly so: the shop underneath is what they are built of.)
+            if (!PlaceKindTable.Current.Row(place.Kind).IsHome) return BrickIndex;
             return (int)(Rolls.Avalanche(place.Key ^ 7717UL) % 4UL);
         }
 

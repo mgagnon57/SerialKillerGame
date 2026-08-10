@@ -393,7 +393,11 @@ namespace Noir.Sim
             foreach (var place in layout.Places)
             {
                 Bump(names, place.Name);
-                if (place.Kind == PlaceKind.Dwelling)
+                // IsHome rather than the enum member, so the seven apartment places and their
+                // units are counted. Population scales off UNITS, not buildings - a terrace is one
+                // building with four front doors - so leaving apartments out under-counts the town
+                // in a census whose whole job is to be the town's own count of itself.
+                if (PlaceKindTable.Current.Row(place.Kind).IsHome)
                 {
                     dwellings++;
                     units += Math.Max(1, place.Units);
