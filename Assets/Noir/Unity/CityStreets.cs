@@ -619,14 +619,26 @@ namespace Noir.Unity
                             + (east ? " E" : "") + (west ? " W" : "")
                             + $", {string.Join(" x ", System.Array.ConvertAll(j.Arms, a => a.Road?.Name ?? "?"))}");
 
-                if (Seat(root.transform, piece,
-                         j.X - reach, j.Y - reach, reach * 2f, reach * 2f, yaw) != null) tiles++;
+                // NO TILE IS SEATED HERE ANY MORE - see CityJunction, and the count that
+                // settled it: all 120 of Rossville's junctions have a reach under 8 m, so all 120
+                // were taking `Road_Turn_10x10_City`, a downtown block corner with a ten-metre
+                // slab of sidewalk paving inside the bend, at a yaw this file's own comment above
+                // admits is guessed. The apron is generated from the arm TANGENTS instead, so
+                // there is no yaw to get wrong. `piece` is still chosen because the classification
+                // above is what the counters and the corner log report, and losing those would
+                // lose the only record of which junctions are unusual.
+                _ = piece;
             }
 
             // 2. The carriageways, each into the root that owns its class.
             foreach (var line in world.Roads.Lines)
                 tiles += Lay(line.Class == RoadClass.Alley ? alleys.transform : root.transform,
                              line, world, untiled);
+
+            // 2b. The tarmac where they meet, generated from the arms rather than tiled.
+            //     AFTER the carriageways, so the apron's centimetre of lift lands on top of the
+            //     tile asphalt rather than under whatever is drawn next.
+            CityJunction.Build(world, root.transform, untiled);
 
             // 3. Everything that is not a carriageway, sampled off the terrain grid as before:
             //    pavement where a street has an edge, parks, and the backs of blocks.
