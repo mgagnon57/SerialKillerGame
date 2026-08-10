@@ -596,5 +596,78 @@ namespace Noir.Core.Tests
             throw new DirectoryNotFoundException(
                 "Could not find Assets/Noir/Core/Observation above " + AppContext.BaseDirectory);
         }
-    }
+    
+        /// <summary>
+        /// DELETE THE FLOOR AND THE SUITE MUST GO RED. Nothing asserted that, and it is the one
+        /// assertion that makes every other ratchet in this file mean anything.
+        ///
+        /// `Floor.Load` returned all-zero thresholds when `Content/watched.floor` was absent, so
+        /// the ratchets guarding the 2:1 rule read `x >= 0` - true of every number this project
+        /// can produce. Three of the four moving ratchets became tautologies and the fourth fell
+        /// to a 4.9x looser bar, in silence, on a green suite. A gate is strongest exactly when
+        /// the file it reads has gone missing, and this one was weakest.
+        ///
+        /// The file is moved rather than copied over, and restored in a `finally`, because the
+        /// alternative is a test that can delete the owner's recorded floor if it throws.
+        /// </summary>
+        [Test]
+        public void TheFloorFailsClosedWhenItsFileIsMissing()
+        {
+            string path = ContentPath.PathTo(Ratio.FloorFile);
+            Assert.That(File.Exists(path), Is.True,
+                $"{Ratio.FloorFile} is not at {path} to begin with, so this test cannot say "
+              + "anything about what happens when it goes missing.");
+
+            string parked = path + ".parked-by-test";
+            if (File.Exists(parked)) File.Delete(parked);
+
+            File.Move(path, parked);
+            try
+            {
+                Assert.That(() => Ratio.Floor.Load(), Throws.InstanceOf<FileNotFoundException>(),
+                    "With watched.floor absent the floor used to load as five zeros and every "
+                  + "ratchet passed. Recording a new floor into a file that fails open is "
+                  + "recording nothing.");
+            }
+            finally { File.Move(parked, path, overwrite: true); }
+
+            // And it still loads, so the restore worked and this test leaves nothing behind.
+            var floor = Ratio.Floor.Load();
+            Assert.That(floor.RatioMedian, Is.GreaterThan(0),
+                        "the floor did not come back after the test parked it");
+        }
+
+        /// <summary>
+        /// A KEY NOTHING ANSWERS TO USED TO RECORD NOTHING AND READ AS A PASS - the same shape of
+        /// fault as kinds.txt's frontage column, and the same answer: refuse it by name.
+        /// </summary>
+        [Test]
+        public void TheFloorRefusesALineItCannotUnderstand()
+        {
+            string path = ContentPath.PathTo(Ratio.FloorFile);
+            string parked = path + ".parked-by-test";
+            if (File.Exists(parked)) File.Delete(parked);
+
+            string good = File.ReadAllText(path);
+            File.Move(path, parked);
+            try
+            {
+                File.WriteAllText(path, good + Environment.NewLine + "ratio.medain 2.0");
+                Assert.That(() => Ratio.Floor.Load(), Throws.InstanceOf<InvalidDataException>(),
+                            "a misspelt key must be refused, not skipped");
+
+                File.WriteAllText(path, good + Environment.NewLine + "ratio.median not-a-number");
+                Assert.That(() => Ratio.Floor.Load(), Throws.InstanceOf<InvalidDataException>(),
+                            "a value that is not a number must be refused, not skipped");
+
+                // AND A TAB MUST WORK. The split was on a space alone, so a hand-edited line with
+                // a tab in it was dropped without a word and that threshold silently stayed zero.
+                File.WriteAllText(path, good.Replace("ratio.median      0.88",
+                                                     "ratio.median" + '\t' + "0.88"));
+                Assert.That(Ratio.Floor.Load().RatioMedian, Is.EqualTo(0.88).Within(1e-9),
+                            "a tab between the key and the number must read the same as a space");
+            }
+            finally { File.Move(parked, path, overwrite: true); }
+        }
+}
 }

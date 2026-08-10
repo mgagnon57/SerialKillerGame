@@ -744,22 +744,60 @@ namespace Noir.Sim
             public double TextureMin = 0;
             public double SightMedian = 0;
 
+            /// <summary>
+            /// THIS USED TO FAIL OPEN, AND RECORDING A NEW FLOOR INTO A FILE THAT FAILS OPEN IS
+            /// RECORDING NOTHING.
+            ///
+            /// Every one of the five thresholds defaults to ZERO, so with the file absent - a
+            /// fresh clone, a renamed Content directory, a typo in ContentPath - the ratchets
+            /// become `x >= 0`, which is true of every number this project can produce. THREE OF
+            /// THE FOUR MOVING RATCHETS BECOME TAUTOLOGIES AND THE FOURTH FALLS TO A 4.9x LOOSER
+            /// BAR, silently, on a green suite. The protection this file exists to give is
+            /// strongest exactly when it is not there.
+            ///
+            /// Three separate silences, all closed:
+            ///   - a MISSING FILE now throws rather than returning zeros
+            ///   - a line split on a SPACE only, so `ratio.median	0.88` was dropped without a word
+            ///   - an unknown key or an unparseable value was `continue`, so `ratio.medain 2.0`
+            ///     recorded nothing and read as a pass
+            ///
+            /// It throws rather than warns because there is no useful degraded mode: a floor that
+            /// is partly loaded is a floor nobody can reason about, and the caller is a test.
+            /// </summary>
             public static Floor Load()
             {
                 var floor = new Floor();
                 string path = ContentPath.PathTo(FloorFile);
-                if (!File.Exists(path)) return floor;
+                if (!File.Exists(path))
+                    throw new FileNotFoundException(
+                        $"{FloorFile} is not at {path}. Every threshold in it defaults to zero, so "
+                      + "without it the ratchets guarding the 2:1 rule read `x >= 0` and pass for "
+                      + "any town at all - which is worse than having no gate, because the suite "
+                      + "goes green and says the floor held.", path);
+
+                var seen = new List<string>();
 
                 foreach (string raw in File.ReadAllLines(path))
                 {
                     string line = raw.Trim();
                     if (line.Length == 0 || line[0] == '#') continue;
 
-                    int gap = line.IndexOf(' ');
-                    if (gap < 0) continue;
+                    // ANY WHITESPACE, not a space. The file is hand-edited and a tab between the
+                    // key and the number used to drop the whole line without a word.
+                    int gap = line.IndexOfAny(new[] { ' ', '	' });
+                    if (gap < 0)
+                        throw new InvalidDataException(
+                            $"{FloorFile}: '{line}' has no value on it. A floor line is a key, "
+                          + "whitespace, and a number.");
+
                     string key = line.Substring(0, gap).Trim();
-                    if (!double.TryParse(line.Substring(gap).Trim(), NumberStyles.Float,
-                                         CultureInfo.InvariantCulture, out double value)) continue;
+                    string rest = line.Substring(gap).Trim();
+
+                    if (!double.TryParse(rest, NumberStyles.Float,
+                                         CultureInfo.InvariantCulture, out double value))
+                        throw new InvalidDataException(
+                            $"{FloorFile}: '{key}' has the value '{rest}', which is not a number. "
+                          + "This used to be skipped in silence and the threshold stayed at zero.");
 
                     switch (key)
                     {
@@ -768,8 +806,24 @@ namespace Noir.Sim
                         case "texture.median": floor.TextureMedian = value; break;
                         case "texture.min": floor.TextureMin = value; break;
                         case "sight.median": floor.SightMedian = value; break;
+                        default:
+                            throw new InvalidDataException(
+                                $"{FloorFile}: nothing answers to the key '{key}'. There is: "
+                              + "ratio.median, ratio.p10, texture.median, texture.min, "
+                              + "sight.median. A misspelt key used to record nothing and read as "
+                              + "a pass.");
                     }
+                    seen.Add(key);
                 }
+
+                foreach (string need in new[] { "ratio.median", "ratio.p10", "texture.median",
+                                                "texture.min", "sight.median" })
+                    if (!seen.Contains(need))
+                        throw new InvalidDataException(
+                            $"{FloorFile} has no '{need}' line, so that threshold is zero and the "
+                          + "ratchet on it passes for anything. Every one of the five must be "
+                          + "present; there is no default worth having.");
+
                 return floor;
             }
         }
