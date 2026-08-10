@@ -152,10 +152,45 @@ once. No render in the repository shows that town.
 - **`SEEN-1`** — re-render the standing snapshot set and diff it against what is committed. The
   render run rewrites `docs/snapshots/**` anyway, which is why the standing rule says never
   `git add -A`.
-- **`SEEN-2`** — settle what the brown bands in the owner's screenshot actually are. Two candidates
-  and the audit cannot separate them from source: exposed ground where a flat slab cuts a slope
-  (`TILT`), or `GroundZoning` painting Agricultural/Vacant parcels with hard edges (`BLEND`).
-  **Both are real; which one dominates decides whether W2 or W4 is worth more.**
+- ✅ **`SEEN-2` — CLOSED by the owner, 2026-08-10: the brown is un-blended zoning, not floating
+  slabs.** So **`BLEND` is the visible fault and it goes first** — the waves below are re-ordered
+  for it. `TILT` and `GRADE` are real and stay, but at the town's median grade they are a nine-inch
+  lip, not what anybody is looking at.
+
+  **And half of that answer was already fixed the day before, by his own ruling.** `Vacant` does
+  **not** draw brown any more. `Materials3D.cs:570`: *"Vacant lots: A LOT MOWED ONCE A SUMMER IS
+  GRASS, NOT PLOUGHED EARTH. Owner's ruling 2026-08-09, made on `suburb-block.png`, where almost
+  every lot carried a bare red-brown rectangle."* `GroundLook.Rough` is grass at twice the tiling,
+  so it reads as rank uncut growth. That was **118 parcels** — by far the larger half.
+
+  **What is still brown, measured from `Content/parcel-county.txt`:**
+
+  | Class | Count | Zoning | Draws as |
+  |---|---|---|---|
+  | 0040 Improved Residential Lot | 517 | Residential | grass |
+  | 0030 Vac Lots-Lands | 106 | Vacant | **grass** — ruled 2026-08-09 |
+  | 0060 Commercial | 58 | Commercial | Hard, concrete |
+  | 0090 Tax Exempt | 52 | Civic | grass |
+  | **0021 Agricultural** | **16** | **Agricultural** | **ploughed earth** |
+  | 0032 Vacant | 12 | Vacant | **grass** — ruled 2026-08-09 |
+  | 0080 / 5060 Industrial, Railroad | 4 | Industrial | Hard |
+  | 0050 Commercial >6 units | 4 | Residential | grass |
+  | 0011 Homesite-Dwelling | 3 | Residential | grass |
+
+  So the brown is **16 Agricultural lots**, plus every tile the map fiction calls `Terrain.Field`
+  that stands on **no parcel at all** — which is the countryside, and correct.
+
+- **`SEEN-3` — the same question the vacant-lot ruling already answered, asked about the other 16.**
+  `ZoningLookAt` sends county class 0021 straight to ploughed earth. But a lot **inside the town**
+  assessed as agricultural is usually a tax classification, not somebody's corn — it is pasture,
+  a paddock, a long back garden. That is the identical argument the owner accepted on 2026-08-09
+  for vacant lots, and it has not been asked about this class. **Ask before changing it:** some of
+  the 16 will be real fields at the town edge, and those should stay ploughed.
+
+> **RE-ORDERED 2026-08-10 after the owner settled `SEEN-2`.** The visible fault is `BLEND`, so
+> **W4 below is now the first wave of real work** and W2/W3 follow it. The grading ruling still
+> stands and its internal order — grade, then pitch — is unchanged; it is simply not the thing
+> anybody is looking at. Read W4 first.
 
 ### W2 — Grade the corridor · the ruled approach, step 1 · large
 
@@ -188,14 +223,23 @@ with what you can see.
   the ground does; a driveway, a parking bay and a rail bed follow it. **Sort the 21 files into
   those two lists before writing anything** — half of them are already correct by doing nothing.
 
-### W4 — The ground stops looking like a diagram · medium
+### W4 — The ground stops looking like a diagram · **DO THIS FIRST** · medium
 
 `BLEND-1` `BLEND-2` `ONE-1`
 
+**The owner settled `SEEN-2` on this wave's side: the brown bands are un-blended zoning.** Every
+change of ground surface in Rossville is a hard polygon edge on a one-metre grid, and where that
+edge follows a parcel it is a hard-edged rectangle of ploughed earth in a green field. A lot line
+is a legal fiction — it is not a thing you can see from a car — and drawing one as a visible seam
+is what makes the map read as a diagram.
+
 - **`BLEND-1`** — a transition where two ground looks meet: a blend band, a broken edge, or noise on
-  the boundary. Cheapest honest version first, measured by looking at it.
-- **`BLEND-2`** — `GroundZoning`'s parcel-shaped patches want their edges softened *specifically*,
-  because a lot line is a legal fiction and not something you can see from a car.
+  the boundary. Cheapest honest version first, measured by looking at it. **The Field↔Grass boundary
+  is the one that matters most** — it is the town-edge boundary and the longest edge on the map.
+- **`BLEND-2`** — the parcel-shaped patches specifically. Note the count is now small: `Vacant` was
+  ruled to grass on 2026-08-09, so this is **16 Agricultural lots**, and `SEEN-3` may reduce it
+  further. **Do `SEEN-3` before `BLEND-2`** — softening the edge of a patch that should not be
+  brown at all is work you then undo.
 - **`ONE-1`** — collapse `GroundZoning.ZoningAt`, `VillageMesh.ZoningMask` and
   `ZoningPatch.ZoningOf` to one home, with a Core gate that fails when a fourth appears. Same shape
   as `TEST-FIXES` `KEY-1`; copy `EveryActivityHasARowInTheRealFile`.
