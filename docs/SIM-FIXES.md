@@ -75,9 +75,37 @@ Take every baseline **before** anything moves, or step three inherits a confound
 **First: commit or stash the dirty tree** — `TownGeometryPlayTests.cs` and `CityDriveways.cs` are
 modified and uncommitted, and they are `ROAD-FIXES`' files.
 
-### W1 — The seven schools · one day · no Unity · **the first commit**
+### W1 — The seven schools · ✅ **DONE 2026-08-10**
 
 `WHO-A1` `WHO-A2` `WHO-A4` `WHO-A3` `WHO-B1` `GUARD-1`
+
+Seven `place school … 13x7` → `place house`, and the measured effect is exactly what this wave
+predicted, including the number it warned about:
+
+```
+  dwellings   608 → 623        people   1385 → 1400        households  624 → 631
+  in work     181 → 153        MINUS TWENTY-EIGHT — seven schools × four teacher posts,
+                               which is this wave's own "28 job slots vanish between them"
+```
+
+Landed as ONE change, so `AwayWorkTests` never saw the gap the plan warns about.
+
+> **`GUARD-1` FOUND AN EIGHTH ON ITS FIRST RUN.** The town's one CHURCH was a 13x7 house box at
+> 920,1455 named "205 Maple Ave" — the same generated-address shape. Twenty metres away sits
+> parcel 444: 892.6 m² measured, county class 0090 "Tax Exempt", **and `parcel-1991.txt:359-360`
+> carries the owner's own `was built` / `kind church` ruling on it.** Three sources agreed with
+> each other and disagreed with `city.txt`, and nothing had ever compared them. The church is
+> seated on the surveyed polygon now. `parcel-1991.txt` was not touched — it was right.
+>
+> The guard is `AmenitiesAreNotHousesTests`: no catchment amenity may carry the EXACT default
+> house footprint (every one of the town's houses is 13x7 and nothing else is), **and** the town
+> must still HAVE the amenities its people are sent to, so nobody satisfies the first by deleting
+> schools. The rule is the default box rather than an area threshold on purpose — a "must be over
+> 200 m²" bar is a number somebody re-tunes the first time a real one-room school turns up.
+>
+> Two reds on the way, both right: moving the church's walls without its door put the door one row
+> past the footprint (`NoDoorInTheRealTownIsUnreachable` named it), and an invalid door orphans the
+> ground behind it (`TheTownIsAllOnePiece` went to 2 regions).
 
 **The highest visible value per line in any of the four plans, and it is a seven-token content diff.**
 `city.txt` lines 1524/1526/1528/1574/1596/1600/1602 are `place school … 13x7` house boxes standing
@@ -97,17 +125,47 @@ visible change in the spine that costs no re-baseline. `WHO-A1` and `WHO-A2` mus
 37 items. Everything here provably moves no draw, and it must land **before** the reshuffle so that
 when the number finally moves there is exactly one commit to point at. Two go first:
 
-- **`watched.floor` fails open.** With the file absent the ratio returns all-zero thresholds, a
-  tab-separated line is dropped silently, and five literals switch with no default. **Three of the
-  four moving ratchets become tautologies** and one falls to a 4.9× looser bar. *Recording a new
-  floor into a file that fails open is recording nothing.*
-- **`Eyewitness.cs:100` tests the enum member, not the table.** `kinds.txt` declares
-  `kind apartment / home yes`, and apartment is not in `PlaceKind` — so city.txt's 7 apartment places
-  (~33 people) would land at the very bottom of the first Rossville measurement the project ever
-  records, as a pure instrument artefact. Fix in its own commit, prove byte-identical on the fixture.
+- ✅ **`watched.floor` fails open. DONE 2026-08-10.** With the file absent the ratio returned
+  all-zero thresholds, a tab-separated line was dropped silently, and five literals switched with
+  no default. **Three of the four moving ratchets became tautologies** and one fell to a 4.9×
+  looser bar. *Recording a new floor into a file that fails open is recording nothing.* All four
+  silences now throw: missing file, no value on the line, unknown key, unparseable value — plus a
+  fifth the item did not name, **a key simply ABSENT from the file**, which left that threshold at
+  zero. All five keys are required.
+- ✅ **`Eyewitness.cs:100` tests the enum member, not the table. DONE 2026-08-10** — and it was
+  **six places, not one.** `EncounterReport`, `VocabReport`, `RoofBuilder`, `Materials3D` and
+  `SmokeTest` asked the same wrong question about the same seven buildings: one chimney for four
+  households, three apartment houses built of Main Street brick, and a town census that
+  under-counted its own units. The root guard is
+  `HomeIsAColumnNotAnEnumMemberTests` — an ALLOW-LIST WITH A REASON, because `HouseLayers` and
+  `MassingGrammars` are right to ask the enum (they choose which era of frame house to build) and
+  `PlaceKindTable` cannot ask itself.
+  > Proven byte-identical on the fixture STATICALLY, which beats a run: resolving every `place`
+  > word through its `words` line, the fixture uses `dwelling` 49 times and no other kind that
+  > declares `home yes`, so `IsHome` and `Kind == Dwelling` are the same bit for every place in it.
+  > Only Rossville moves, and only by the seven.
 
-> **Gate.** Delete `watched.floor` locally: the Core suite must go **red**. Restore it: green.
-> Nothing asserts that today.
+- ⚠ **THREE MORE FILES FAIL OPEN THE SAME WAY, found by sweeping for the class after
+  `watched.floor` paid. NOT YET FIXED — see the note below on why the fix is not `throw`.**
+
+  | File | On failure | What the town loses |
+  |---|---|---|
+  | `elevation.txt` | `catch { return; }` | **THE WHOLE TOWN GOES FLAT.** 5,754 samples, 30.00 m to 225.30 m — **195.3 m of relief**, gone, with every camera height, every building base and every slope test silently reading zero |
+  | `parcel-county.txt` | `catch { return; }` | 4,534 lines of zoning. Every parcel becomes `Unset`, so commercial, industrial and vacant ground all draw as the fiction's own answer |
+  | `roads.txt` | returns false, by design | the town keeps `city.txt`'s 37 roads instead of the surveyed 68 — **already documented in `CLAUDE.md` as a trap**, with "confirm the line appears" as the mitigation |
+
+  **THE FIX IS NOT `throw`, AND THAT IS THE DIFFERENCE FROM `watched.floor`.** A floor that fails
+  open turns a GATE into a tautology, so there is no useful degraded mode and refusing is right.
+  These three are genuinely survivable — `SurveyRoads`' own docstring says it, and it is right: *a
+  town with its old roads is a working town, and a town with none is not.* What is wrong is that
+  they are **silent**, and the answer is the one `SurfaceTextures` already demonstrates: say what
+  happened to each name, once, in a line somebody can grep. A survivable fallback that says
+  nothing is indistinguishable from a system that worked.
+
+> ✅ **Gate. DONE.** `TheFloorFailsClosedWhenItsFileIsMissing` parks the file, proves `Load` throws
+> and restores it in a `finally` — MOVED rather than deleted, because a test that can lose the
+> owner's recorded floor is worse than the bug it guards.
+> `TheFloorRefusesALineItCannotUnderstand` covers the misspelt key, the non-number and the tab.
 
 ### W3 — **The one reshuffle: the town's shape** · 5–7 days · determinism change 1 of 2
 
@@ -155,6 +213,26 @@ Order inside the wave is fixed and is **not** the item order. Corrections the sk
 **`WIT-BODY-3` is a two-line change and the highest value per line in the entire plan**, so it lands
 *second*, not third: today every witness describes the same 35-year-old, 178 cm man because
 `Recollection.cs:109-112` passes constants.
+
+> ⚠ **CORRECTION, READ BEFORE ACTING ON THAT SENTENCE — 2026-08-10, from the code.**
+> `Recollection.WhatTheySaw` takes a `PlayerTrack`, and **the subject is always the player.** `who`
+> is the WITNESS; there is exactly one subject in the whole system today. So "every witness
+> describes the same man" is true and is not yet a bug: they are all describing the same man,
+> because there is only one. What the constants actually are is **the player having no body** —
+> smaller than the sentence implies, and a different fix.
+>
+> The sentence becomes literally true in **W6**, the moment citizens become subjects. Two things
+> must land in that same wave or the fault arrives fully formed:
+>
+>  1. `Degradation.WhatRegistered` shuffles its six bands on `(seed, Purpose, witness, minute, i)`
+>     with **no subject term**. That is correct today — one subject — and the day a witness can be
+>     asked about four people at one minute, they remember the same three attributes about all
+>     four.
+>  2. The `subjectIsMale/subjectAge/heightCm/buildIndex` constants have to come from the subject,
+>     which is what `WIT-BODY-1/2` are for.
+>
+> Neither is worth doing before W6: today they would be code with no caller and a test with no
+> subject. **Do not "fix" the constants in W5 and report the witness layer as done.**
 
 The body already exists in the wrong layer keyed on the wrong thing — `AgentFigure`'s `AgentLook`
 hashes height off `who.Id.Value`, the array slot, which `Citizen.cs`'s own comment says must never be
