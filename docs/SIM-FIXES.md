@@ -176,7 +176,7 @@ when the number finally moves there is exactly one commit to point at. Two go fi
 
   | File | On failure | What the town loses |
   |---|---|---|
-  | `elevation.txt` | `catch { return; }` | **THE WHOLE TOWN GOES FLAT.** 5,754 samples, 30.00 m to 225.30 m — **195.3 m of relief**, gone, with every camera height, every building base and every slope test silently reading zero |
+  | `elevation.txt` | `catch { return; }` | **THE WHOLE TOWN GOES FLAT**, with every camera height, every building base and every slope test silently reading zero. ⚠ **The "5,754 samples, 30.00 m to 225.30 m, 195.3 m of relief" first recorded here and in commit `f191e75` is WRONG and is corrected in `CLAUDE.md`** — the measuring script ate the data header `grid 71 81 30`, so 71 × 81 = 5,751 real samples became 5,754 and the 30 m step became a 30.00 m elevation. **The relief is 24.5 m (80 ft)**, 200.8 m to 225.3 m, as the file's own header says. The game's parser was always right |
   | `parcel-county.txt` | `catch { return; }` | 4,534 lines of zoning. Every parcel becomes `Unset`, so commercial, industrial and vacant ground all draw as the fiction's own answer |
   | `roads.txt` | returns false, by design | the town keeps `city.txt`'s 37 roads instead of the surveyed 68 — **already documented in `CLAUDE.md` as a trap**, with "confirm the line appears" as the mitigation |
 

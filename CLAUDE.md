@@ -78,8 +78,17 @@ dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 > footprint; it found the town's church on its first run), `HomeIsAColumnNotAnEnumMemberTests`
 > (six places asked `Kind == PlaceKind.Dwelling` about a town whose `kinds.txt` says
 > `apartment / home yes`), `NoContentLoadFailsInSilenceTests` (six content loads swallowed a
-> failure and returned; one of them costs 195 m of relief), two on `watched.floor` failing open,
+> failure and returned; one of them cost the map its relief), two on `watched.floor` failing open,
 > and `EveryActivityHasARowInTheRealFile`.)
+>
+> **THE RELIEF IS 24.5 m (80 ft), NOT 195 m.** Commit `f191e75` and `docs/SIM-FIXES.md` both say
+> "5,754 samples, 30.00 m to 225.30 m, 195.3 m of relief". That is the measuring script eating the
+> data header: `Content/elevation.txt` opens its grid with `grid 71 81 30`, and 71 × 81 = **5,751**
+> — the three extra "samples" are the column count, the row count and the 30 m step, which is where
+> the 30.00 m minimum comes from. The file's own header states the range: **200.8 m to 225.3 m**.
+> `ElevationGrid.cs:116` parses it correctly, so the GAME was never wrong; only the number written
+> about it was. Rossville is glacial till plain — as `Content/elevation.txt` puts it, *"it is not
+> flat, but it is close, and anything that looks like a hill here is wrong."*
 > (447 on 2026-08-08, and 415 earlier that day; +8 `DrivewaysTests`, +5 `TrafficWeightTests`,
 > +3 `AnimatorContractTests`, +8 `AnimationTableTests`, +8 `AnimationRowTests`,
 > +4 `RoadPathTests` and +2 `SurveyRoadNetworkTests` — `RoadPath.ArcAt`, and the gate on two
