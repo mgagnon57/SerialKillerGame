@@ -211,7 +211,11 @@ namespace Noir.Unity
         /// spares grass, flowers, bushes and saplings and still bakes the canopy, which DID come
         /// through the combine looking like a tree - checked at street level, not inferred.
         /// </summary>
-        private const float TuftHeight = 4f;
+        /// ⚠ AND IT IS BACK TO 1 m. Owner's ruling 2026-08-10, taken with the consequence
+        /// stated in front of him: 4 m costs 14,833 un-baked renderers against 5,896, and he
+        /// chose the cheaper line knowing the bushes stay as flat splats. Do not move this back
+        /// without asking him - the trade is his, not a defect to re-fix.
+        private const float TuftHeight = 1f;
 
         /// <summary>
         /// Is this renderer part of something growing on the ground rather than over it?

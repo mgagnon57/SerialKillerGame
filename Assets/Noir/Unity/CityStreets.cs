@@ -1118,7 +1118,11 @@ namespace Noir.Unity
                     // this was once a ring is that the map used to be mostly empty, and it is
                     // not any more. Building interiors are stamped as floor rather than path, so
                     // they are already excluded.
-                    if (Seat(parent, Kit + "Sidewalk_10x10_City.prefab", vx, vy, Cell, Cell, 0f) != null)
+                    // DOWNTOWN ONLY - see NearATownBuilding, and the owner's ruling recorded
+                    // there. A path cell out in the county gets nothing, which is what removes
+                    // the paved squares standing in open grass with a lamp and a bin on them.
+                    if (NearATownBuilding(world, cx, cy)
+                        && Seat(parent, Kit + "Sidewalk_10x10_City.prefab", vx, vy, Cell, Cell, 0f) != null)
                         n++;
 
                     bool besideAStreet = Is(cx - 1, cy, Noir.Core.World.Terrain.Road)
@@ -1292,6 +1296,59 @@ namespace Noir.Unity
             if (!id.IsValid) return "";
             var place = world.GetPlace(id);
             return place == null ? "" : PlaceKindTable.Current.Row(place.Kind).Name;
+        }
+
+        /// <summary>
+        /// Is there a TOWN building near this cell - a store, the bank, the church, the school -
+        /// as opposed to a house, a barn, or nothing at all?
+        ///
+        /// WHAT THIS IS FOR. `Dress` used to lay a 10 m flagstone tile on every `Terrain.Path`
+        /// cell in the county, so a paved square appeared wherever the map happened to carry a
+        /// path - out in open grass, with a street lamp and a bin standing on it and no building
+        /// within sight. And because the tile is seated per CELL, the outline of any paved area
+        /// was the staircase of whichever cells got painted, never a kerb line. Owner, pointing
+        /// at a screenshot of exactly that: "possible sidewalks but they are jaggy".
+        ///
+        /// Owner's ruling 2026-08-10: pave downtown and nothing else. A 1991 farm town has
+        /// sidewalks on Main Street and in front of the public buildings, and grass verges
+        /// everywhere else - which is both cheaper and more accurate than trying to make the
+        /// staircase straight.
+        ///
+        /// ⚠ HE TOOK THE STATED RISK: houses lose their front walks. That is the intended
+        /// consequence, not an oversight, and a residential street in Rossville reads correctly
+        /// without them.
+        ///
+        /// ASKED OF THE BUILDINGS, NOT OF A ZONING TABLE OR A BOUNDING BOX. `IsHome` is a COLUMN
+        /// in kinds.txt and not an enum member - the trap `HomeIsAColumnNotAnEnumMemberTests`
+        /// exists to catch - so an apartment over a shop answers correctly here without anybody
+        /// listing it.
+        /// </summary>
+        private static bool NearATownBuilding(WorldModel world, int cx, int cy)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                var kind = KindAt(world, cx + dx, cy + dy);
+                if (kind.Length == 0) continue;
+
+                switch (kind)
+                {
+                    // The country, wherever it happens to carry a path.
+                    case "farm": case "farmyard": case "barn": case "silo":
+                    case "cornfield": case "paddock": case "orchard": case "copse":
+                    case "green": case "cemetery":
+                        continue;
+                }
+
+                var id = world.Grid.PlaceAt((cx + dx) * Cell + Cell / 2,
+                                            (cy + dy) * Cell + Cell / 2);
+                if (!id.IsValid) continue;
+                var place = world.GetPlace(id);
+                if (place == null) continue;
+
+                if (!PlaceKindTable.Current.Row(place.Kind).IsHome) return true;
+            }
+            return false;
         }
 
         /// <summary>Is this cell inside somewhere authored as a green, rather than just grass?</summary>
