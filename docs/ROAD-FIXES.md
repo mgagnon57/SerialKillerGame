@@ -54,12 +54,34 @@ alleys · `GATE` tests and tooling · `RC` rendering and collision · `ADDR` add
 
 | Gate | Command | Today |
 |---|---|---|
-| Core | `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj` | **see `CLAUDE.md` — it is the one home for this number.** 458 pass, ~5 min as of 2026-08-09; this line was written when it was 428 |
+| Core | `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj` | **see `CLAUDE.md` — it is the one home for this number.** This line has said 428 and 458; do not add a third. |
 | Unity compiles | `dotnet build Noir.Unity.csproj -c Debug` **and** `Noir.Editor.csproj -c Debug` | clean |
 | PlayMode | `-runTests -testPlatform PlayMode -assemblyNames Noir.PlayTests -testCategory "!Diagnostic"` | **see `CLAUDE.md` — it is the one home for this number.** This line said 13 of 13 and was written when that was true. Budget **ten** min, and `NOIR_BUILT_TOWN=1` if you need the dressed town |
 | Smoke | `-executeMethod Noir.Editor.SmokeTest.Run` | ~3 min |
-| Map audit | `-executeMethod Noir.Editor.MapAudit.Run` | exit 0 today |
+| Map audit | `-executeMethod Noir.Editor.MapAudit.Run` | **2 kinds of fault, both real, measured 2026-08-10** — see below |
 | Player | `-executeMethod Noir.Editor.BuildPlayer.Windows64` | exit 0 |
+
+**THE MAP AUDIT WAS PERMANENTLY RED ON THE INTENDED DESIGN, AND THAT MADE IT USELESS.** Its
+fourth check asked `CityBuildings.Handles` — *is there a BOUGHT MODEL for this* — and called **658
+of the town's 776 places** a fault for not having one. The answer is no for almost everything by
+design: `CLAUDE.md` records that the pack holds two house families and both are Chicago
+brownstones, so *"until there is a kit that can build an Illinois frame house, the town draws its
+FOOTPRINTS instead"*. The generated massing builds all 672 of them and SmokeTest counts it doing
+it. A gate that is red on the intended design teaches you to skim — the exact failure `CLAUDE.md`
+records for the two permanent reds in the Core suite: *"Two permanent reds make a THIRD red easy
+to miss."*
+
+It asks whether ANYTHING can draw it now — `MassingGrammars.Knows`, the same check SmokeTest's
+kinds gate uses, so the two cannot drift — and reports the bought count as a plain number rather
+than a verdict. What is left is two faults and both are real:
+
+```
+  [audit] 14 buildings come from a bought model; the rest are drawn from their own massing
+  [audit] ok - no buildings NOTHING can draw
+  [audit] 20 x places laid over a road        'the Commercial Hotel' 2 m into alley2, and STANDS IN IT
+  [audit] 1 x roads crossing without a junction   benton and summit, 8.3 m — see ALLEY-2b
+  [audit] VERDICT: 2 kinds of fault
+```
 
 **The Editor build is not optional.** `Noir.Editor.csproj` is the one that catches the `SurveyRoads`
 signature change; the items' own verification steps build only `Noir.Unity` and would miss it.

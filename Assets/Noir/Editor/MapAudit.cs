@@ -112,16 +112,42 @@ namespace Noir.Editor
                 }
                 faults += Say("places overlapping each other", clashes);
 
-                // ---- 4. a building with no model ---------------------------------------
-                var modelless = new List<string>();
+                // ---- 4. a building NOTHING can draw, which is not the same as no bought model
+                //
+                // THIS COUNTED 658 OF THE TOWN'S 776 PLACES AS A FAULT, so the audit's verdict was
+                // permanently non-zero and the two REAL faults beside it were buried in a list
+                // nobody was ever going to read. It asked `CityBuildings.Handles`, which answers
+                // "is there a BOUGHT MODEL for this" - and the answer is no for almost everything,
+                // BY DESIGN. CLAUDE.md: the pack holds two house families and both are Chicago
+                // brownstones, so "until there is a kit that can build an Illinois frame house,
+                // the town draws its FOOTPRINTS instead". The generated massing builds all 672 of
+                // them and SmokeTest counts them doing it.
+                //
+                // A gate that is red on the intended design teaches you to skim, and that is the
+                // exact failure CLAUDE.md records for the two permanent reds in the Core suite:
+                // "Two permanent reds make a THIRD red easy to miss."
+                //
+                // The honest question is whether ANYTHING can draw it. A building is drawable if a
+                // massing grammar answers to its kind - which is what actually puts walls up - and
+                // `MassingGrammars.Knows` is the same check SmokeTest's kinds gate uses, so the
+                // two cannot drift apart.
+                var undrawable = new List<string>();
+                int bought = 0;
                 foreach (var place in world.AllPlaces)
                 {
                     var row = kinds.Row(place.Kind);
                     if (!row.IsBuilding) continue;
-                    if (!CityBuildings.Handles(place))
-                        modelless.Add($"'{place.Name}' is a {row.Name}, which no renderer places");
+
+                    if (CityBuildings.Handles(place)) { bought++; continue; }
+
+                    if (!MassingGrammars.Knows(row.Massing))
+                        undrawable.Add($"'{place.Name}' is a {row.Name} with massing "
+                                     + $"'{row.Massing}', which no grammar answers to - it will "
+                                     + "fall back to the cottage and look like a house");
                 }
-                faults += Say("buildings nothing knows how to build", modelless);
+                Say2($"{bought} buildings come from a bought model; the rest are drawn from their "
+                   + "own massing, which is the town this project builds");
+                faults += Say("buildings NOTHING can draw", undrawable);
 
                 // ---- 5. anything off the edge of the world -----------------------------
                 var outside = new List<string>();
@@ -383,6 +409,11 @@ namespace Noir.Editor
             float dy = Math.Max(0f, Math.Max(lot.Y - py, py - (lot.Y + lot.H)));
             return (float)Math.Sqrt(dx * dx + dy * dy);
         }
+
+        /// <summary>A plain count, not a verdict. For the numbers worth knowing that are not
+        /// faults - which is most of them, and putting them through Say() is how a gate ends up
+        /// permanently red on the intended design.</summary>
+        private static void Say2(string what) => Debug.Log("[audit] " + what);
 
         private static int Say(string what, List<string> found)
         {
