@@ -988,12 +988,34 @@ The wave comes after W3 and W6 for a hard reason: junction topology changes move
 from 74, the turns from 630 and the conflict pairs from 2,393 in one step, and **a p90 that moves in a
 run containing both is unattributable.**
 
-> **Gates. The missing gate is the deliverable:** CONS-2's new test and CONS-7's side check must both
-> be **seen to fail on the unfixed tree first**. Nothing today can fail on a car in the oncoming
-> carriageway. A fix whose gate has never gone red proves nothing.
+> ✅ **CONS-2 DONE 2026-08-10, AND ITS GATE WAS WATCHED FAILING FIRST**, which is what this line
+> asks for. `CarsKeepRightOnABendTests` was written against the unfixed arithmetic and reported
+> **5,438 of 13,154 lane positions in the ONCOMING carriageway — 41% of the town's lane geometry,
+> across 27 roads.** Then `Headings.SideOfPath` made it 0 of 13,154.
 >
-> The p90 gate swings **21.9 s to 37.2 s on an unchanged tree**. Run it twice before believing a
-> traffic number moved, and never in the same run as a topology change.
+> The fault is exactly as stated: a coordinate-frame sign multiplied by a path-frame normal.
+> `Headings.Side` answers "+1 is the greater x or the greater y"; `RoadPath.NormalAt` is
+> `(-t.Y, t.X)`, the right-hand side of the PATH's direction. The product counts handedness twice
+> wherever the local tangent has left the quadrant its declared heading names — which a straight
+> road never does and a bending one always does. `SideOfPath` asks the only frame-consistent
+> question: does this car travel WITH the path or against it. No compass at all.
+>
+> ⚠ **THE ITEM'S NUMBER IS WRONG FOR THIS TREE AND THE CORRECTION IS WORTH KEEPING.** It says "25
+> of the 60 bending roads, Route 1 among them". Measured on `Content/roads.txt` as it stands:
+> **7 roads by declared-heading disagreement, 27 by lane position, and Route 1 is not one of
+> them** — the figure predates the centripetal curve and the re-derived roads.
+>
+> A second test, `TheCoordinateAnswerIsMeasurablyWrongSomewhere`, fails if the two answers ever
+> agree everywhere — so "simplifying" `SideOfPath` back into `Side` names the roads it breaks
+> instead of going quietly green.
+>
+> **Gates. The missing gate is the deliverable:** CONS-7's side check must still be **seen to fail
+> on the unfixed tree first**. A fix whose gate has never gone red proves nothing.
+>
+> The p90 gate swings **21.9 s to 37.2 s on an unchanged tree** — confirmed again 2026-08-10, red
+> at 37.8 s and green at 15.5 s on consecutive runs of the same code. Run it twice before believing
+> a traffic number moved, and never in the same run as a topology change.
+
 
 ### W8 — The street layer is actually drawn · ~12 h + two windows, ~45 min
 

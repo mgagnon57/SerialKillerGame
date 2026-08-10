@@ -367,7 +367,14 @@ namespace Noir.Unity
                 // axis - which for a straight road is the same thing, and for a bend is the only
                 // thing that means anything. Side() still decides which side of the centre line
                 // the direction of travel keeps to; the normal only says which way that is here.
-                float offset = Headings.Side(segment.Way)
+                // ASKED OF THE PATH, NOT OF THE COMPASS. `Headings.Side` answers in COORDINATES -
+                // +1 is "the greater x or the greater y" - and `NormalAt` is the right-hand side of
+                // the PATH's own direction, so multiplying them counts the handedness twice
+                // wherever the local tangent has left the quadrant its declared heading names.
+                // Measured: 5,438 of 13,154 lane positions in the ONCOMING carriageway, across 27
+                // roads. See Headings.SideOfPath and CarsKeepRightOnABendTests, which was watched
+                // failing on this exact line before it was changed.
+                float offset = Headings.SideOfPath(line.Path, arc, segment.Way)
                              * CityStreets.LaneOffset(line.Class, segment.Lane);
                 float vx = at.X + normal.X * offset;
                 float vy = at.Y + normal.Y * offset;

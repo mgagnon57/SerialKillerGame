@@ -30,6 +30,53 @@ namespace Noir.Core.World
         public static int Side(Heading way) =>
             way == Heading.North || way == Heading.East ? 1 : -1;
 
+        /// <summary>The direction of travel as a vector. North is the SMALLER y - village
+        /// coordinates run x east, y south.</summary>
+        public static Vec2 Way(Heading way) => way switch
+        {
+            Heading.North => new Vec2(0f, -1f),
+            Heading.East  => new Vec2(1f, 0f),
+            Heading.South => new Vec2(0f, 1f),
+            _             => new Vec2(-1f, 0f),
+        };
+
+        /// <summary>
+        /// WHICH WAY TO STEP OFF THE CENTRE LINE, for a car travelling `way` at arc `s` on `path`.
+        /// Multiply by the lane offset and add along `path.NormalAt(s)`.
+        ///
+        /// **THIS IS CONS-2, AND IT IS A FRAME MISTAKE.** The caller used to write
+        /// `Headings.Side(way) * laneOffset` and add it along `path.NormalAt(s)`. Those two live in
+        /// different frames: `Side` answers in COORDINATES - +1 means "the greater x or the greater
+        /// y" - while `NormalAt` is `(-t.Y, t.X)`, the right-hand side of the PATH's own direction
+        /// at that point. The product is right only while the road's LOCAL tangent stays in the
+        /// quadrant its declared heading names, and a bending road leaves it.
+        ///
+        /// Measured on `Content/roads.txt`, 2026-08-10: **7 of 68 roads have segments where the two
+        /// disagree** - alley13 for 34% of its length, alley24 and watson for 31% - and there the
+        /// car is drawn in the ONCOMING carriageway. (`ROAD-FIXES` CONS-2 says "25 of the 60
+        /// bending roads, Route 1 among them"; that was measured before the centripetal curve and
+        /// the re-derived roads. It is 7, and Route 1 is not one of them.)
+        ///
+        /// The frame-consistent question is simply whether the car travels WITH the path or against
+        /// it: `NormalAt` already points right-of-path, so agreeing means keep it and disagreeing
+        /// means flip it. No compass involved.
+        /// </summary>
+        public static int SideOfPath(RoadPath path, float s, Heading way)
+        {
+            if (path == null) return Side(way);
+
+            var t = path.TangentAt(s);
+            var w = Way(way);
+            float agree = t.X * w.X + t.Y * w.Y;
+
+            // Exactly perpendicular is a tangent that says nothing about this heading - which
+            // happens at a right-angle bend sampled precisely on the corner. Fall back to the
+            // coordinate answer rather than pick a side out of floating-point noise.
+            if (agree > -1e-6f && agree < 1e-6f) return Side(way);
+
+            return agree > 0f ? 1 : -1;
+        }
+
         /// <summary>The heading you are facing after turning right. A cycle: N, E, S, W.</summary>
         public static Heading Right(Heading way) => way switch
         {
