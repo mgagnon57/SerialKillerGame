@@ -70,18 +70,30 @@ namespace Noir.PlayTests
             //
             // The layout-level test (ClearOfRoadsTests.NoAuthoredBuildingIsLeftStandingInARoad)
             // measures city.txt against roads.txt and reports ZERO. This measures the same town
-            // after the pipeline and reports 134. Both cannot be describing the same thing, and
+            // after the pipeline and reports 28. Both cannot be describing the same thing, and
             // the difference is NOT the passes - ClearOfRoads runs last and leaves 8 stuck, not
-            // 134. It is the ROAD: a layout carries RoadRun, a list of points with a declared
+            // 28. It is the ROAD: a layout carries RoadRun, a list of points with a declared
             // width; the world carries RoadLine wrapping a RoadPath that has been smoothed and
             // resampled, and RoadPath.Project is being asked for a lateral distance against that
             // smoothed curve. Until somebody establishes which of the two corridors the tarmac is
-            // actually drawn to, the honest number is "134, and it must not grow".
+            // actually drawn to, the honest number is "28, and it must not grow".
             //
             // Ratcheting rather than asserting zero because zero here would mean deleting the
             // test, and this is the only assertion in the project that can see the built town at
             // all. That blindness is why "there are houses in the road" survived for weeks.
-            Assert.That(offenders.Count, Is.LessThanOrEqualTo(134),
+            // RE-RECORDED AT 28, 2026-08-10 - this is ROAD-FIXES GATE-5, and the plan asks for it
+            // to be taken "from THAT run" because the old figure was unstable: it "reads 9 in two
+            // logs and 31 in a third".
+            //
+            // It reads 28 in FOUR independent PlayMode runs on today's tree, worst penetration
+            // 4.9 m every time. A ratchet at 134 is nearly five times the real number: 106 more
+            // buildings could drift into a carriageway before it said a word, which is a ratchet
+            // that has stopped ratcheting.
+            //
+            // The open question below is unchanged and still open - the layout-level test reports
+            // zero against this 28, and until somebody establishes which corridor the tarmac is
+            // drawn to, the honest number is "28, and it must not grow".
+            Assert.That(offenders.Count, Is.LessThanOrEqualTo(28),
                 "More buildings stand in a street in the BUILT town than before. Either a pass "
                 + "moved something into a road, or the corridor the world draws has changed "
                 + "shape. Worst offender: " + (offenders.Count > 0 ? offenders[0] : "none"));

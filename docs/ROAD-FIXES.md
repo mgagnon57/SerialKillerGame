@@ -918,8 +918,21 @@ calls them. Only **one** cluster may change `RoadPath.Smooth` — it is shared w
 
 > **Gates.** `SmokeTest` green — `WorldValidator.cs:151` makes "door is cut off from the rest of the
 > village" an **error**, and `VillageHost.cs:428` turns that into no town at all, so a moved door can
-> delete the whole town silently. Re-record the 134 from **that** run (it reads 9 in two logs and 31 in
-> a third — it is unstable).
+> delete the whole town silently.
+>
+> ✅ **GATE-5 RE-RECORDED 2026-08-10: the 134 is 28.** The item is right that the old number was
+> unstable — *"it reads 9 in two logs and 31 in a third"* — so it was taken from four independent
+> PlayMode runs on today's tree rather than one:
+>
+> ```
+>   [geometry] 28 buildings standing in a street, worst 4.9 m      x4 runs, identical
+> ```
+>
+> A ratchet at 134 is nearly five times the real number: **106 more buildings could drift into a
+> carriageway before it said a word**, which is a ratchet that has stopped ratcheting. The open
+> question it carries is unchanged and still open — the layout-level test reports ZERO against this
+> 28, and until somebody establishes which corridor the tarmac is drawn to, the honest number is
+> "28, and it must not grow".
 >
 > **LOOK AT IT.** ADDR-2 moves ~78% of survey-raised front doors to a different wall, turning the porch
 > and gable of ~300 houses. Render and actually open the PNGs. Valid only because RC-1 landed in W2.
