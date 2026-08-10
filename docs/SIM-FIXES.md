@@ -5,8 +5,11 @@
 than how it looks. A planning pass turned them into 128 items across nine waves, with the owner's
 ruled build order as the spine. The facts live in `CLAUDE.md`; this is a queue.
 
-**Sibling plans:** `docs/ANIMATION-FIXES.md`, `docs/ROAD-FIXES.md`, `docs/TEXTURE-FIXES.md`. Four
-plans now move the same two test counts. See [Cross-plan](#cross-plan).
+**Sibling plans:** `docs/ANIMATION-FIXES.md`, `docs/ROAD-FIXES.md`, `docs/TEST-FIXES.md`. They
+move the same two test counts. See [Cross-plan](#cross-plan).
+
+`docs/TEXTURE-FIXES.md` **is finished and deleted** (2026-08-09). What it left behind is one row
+in Cross-plan below, and the standing facts it measured are in `CLAUDE.md`.
 
 **Item IDs:** `HAB` habits · `WIT` the witness layer · `S3` the 2:1 rule · `NIGHT` `TRAVEL` `PRECINCT`
 `DINNER` `YEAR` `CHURCH` the day's bugs · `WHO` the population · `MOVE` pathfinding · `TEST` the gates.
@@ -224,6 +227,7 @@ road-following habit at all**.
 | File | Owner |
 |---|---|
 | `DayPlan.cs` | `DAYBUG` through W3, then `HABIT` from W4 |
+| `DayPlan.cs:21` — **handed over from `TEXTURE-FIXES`, 2026-08-09, that plan is closed** | **`Activity.OnTheAllotment` is the last English word in the witness vocabulary.** An allotment is a rented council plot; the Illinois word is a garden plot, and `Content/particulars.txt` was moved to it in the same pass that removed 193 other English clauses. This one was left because renaming it touches Core, Unity **and** Editor plus a keyed row in `Content/animations.txt:146` (`ontheallotment`), and CLAUDE.md's rule is that when those two drift the table "does not throw, it falls through to a default" — so it wants its own commit with the animation-table gates watched, not a rushed rename at the end of a long session. |
 | `CityStreets.cs` | `ROAD-FIXES` W8 |
 | `AgentBody.cs` | `ANIMATION-FIXES` |
 | `TownGeometryPlayTests.cs`, `LayerProof.cs` | three-way — add at the end, one commit, rebase |

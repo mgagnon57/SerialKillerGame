@@ -24,7 +24,7 @@ Every wave states which of these it must pass. Commands are in `CLAUDE.md`; do n
 
 | Gate | Command | Today |
 |---|---|---|
-| Core | `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj` | 428 pass, ~2 min |
+| Core | `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj` | **see `CLAUDE.md` — it is the one home for this number.** 458 pass, ~5 min as of 2026-08-09; this line was written when it was 428 |
 | Unity compiles | `dotnet build Noir.Unity.csproj -c Debug` and `Noir.Editor.csproj -c Debug` | clean |
 | PlayMode | `-runTests -testPlatform PlayMode -assemblyNames Noir.PlayTests -testCategory "!Diagnostic"` | 13 of 13, ~6 min — **budget ten** |
 | Editor-only | `python tools/check-editor-only.py` | exit 0 |
@@ -726,6 +726,7 @@ suite unfiltered — it can take four hours and has never been seen to finish.
 | `CLAUDE.md` :227-234 | PB-10, DOC-10 | **Drop DOC-10.** PB-10 is the superset and was corrected. Once, in W7. |
 | `CLAUDE.md` test table | DOT-3, GATE-1, SIM-2 | Three waves move the same number: 428 → 431 → 439 → ~449. Each wave edits the table in **its own commit**. |
 | `AgentBody.cs` | RIG-1, RIG-4, RIG-7, RIG-10, RIG-11, SIM-8, PB-7 | The five RIG edits are disjoint — one commit in W4. **PB-7 lands last, in W6**, because it deletes the chain RIG-7 and RIG-10 sit beside. |
+| `AgentBody.cs` — **handed over from `TEXTURE-FIXES`, 2026-08-09, that plan is closed** | UVX-A5, UVX-A8, UVX-A6(b) | **UVX-A5 IS A REAL BUG AND ITS COMMENTS NO LONGER HIDE IT.** The atlas was measured off the sheet: `Universal_A_Alb` is 4096px, **32 x 32 cells of 128px** — not the 64 four comments here and two documents claimed — and per row **columns 0-19 are the shade ramp, 20-29 one flat colour repeated, 30 the emission key** (the only non-black column in `Universal_A_Emit`) **and 31 an accent**. So "roles run the full width, so wrapping at 1 stays on the same row" is FALSE: `Mathf.Repeat(u + shift, 1f)` can leave the ramp. At the current `Along = 1/16` that is two columns, so a vertex starting near column 19 lands in the flat block. **The shift wants bounding inside 0..19/32, not wrapping.** The comments are corrected and the dead `const float Cell` arithmetic (it computed `row + into`, which is `uv.y` identically) is deleted; the CODE is untouched, because this file is yours and PB-7 is in flight. |
 | `AnimationCheck.cs` | GATE-9, DOC-5, DOC-9, ROW-6 | DOC-5 → DOC-9 → GATE-9 in W2; ROW-6 in W5, because it measures a fall-through W5's row changes alter. |
 | `AnimatorBuild.cs` | DOT-2, DOC-6, DOC-9 | DOT-2 in W1 first, so the rewritten header describes a guard that exists. |
 | `docs/ASSETS.md` | DOC-1, DOC-2, DOC-3, ROW-8 | All four in W2, one session. Anchor every `Edit` on exact text, never on audit line numbers — each edit shifts the ones below it. |

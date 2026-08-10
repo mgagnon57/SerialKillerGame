@@ -143,6 +143,21 @@ namespace Noir.Core.Tests
                 offenders.Add(name);
             }
 
+            // AND THE INDIRECT FORM, WHICH IS HOW IT WOULD COME BACK. `Roofing` builds
+            // `Make(name, flat ?? Color.white, ...)`, so a call that simply omits `flat:` produces
+            // a white material through a variable and the scan above cannot see it - which is
+            // exactly how five roof materials shipped white while every direct `Make` in the file
+            // was correct. A covering with no fallback colour is the defect, whatever the syntax.
+            foreach (string args in CallsTo(source, "Roofing("))
+            {
+                // The DECLARATION matches too, and its first argument is `string name` rather
+                // than a literal. A call site always names its covering.
+                var named = Regex.Match(args.TrimStart(), "^\"(\\w+)\"");
+                if (!named.Success) continue;
+                if (args.Contains("flat:")) continue;
+                offenders.Add(named.Groups[1].Value + " (Roofing, no flat:)");
+            }
+
             Assert.That(offenders, Is.Empty,
                 "Material(s) built white: " + string.Join(", ", offenders) + "\n\n" +
                 "White is not a colour here, it is the absence of one. In the editor a texture " +
@@ -154,6 +169,34 @@ namespace Noir.Core.Tests
         }
 
         // ---- helpers, the same shape TownPipelineTests uses ----
+
+        /// <summary>
+        /// The argument text of every call to `name`, by counting parentheses rather than by
+        /// regex. A regex cannot do this: the arguments here contain nested calls - `tint:
+        /// Grey(0.70f), flat: Grey(0.17f)` - so a non-greedy match to the first `)` stops inside
+        /// the first argument and reports a call as missing something it has. That was written,
+        /// run, and produced two false positives before this replaced it.
+        /// </summary>
+        private static IEnumerable<string> CallsTo(string source, string name)
+        {
+            int at = 0;
+            while (true)
+            {
+                at = source.IndexOf(name, at, StringComparison.Ordinal);
+                if (at < 0) yield break;
+
+                int open = at + name.Length;
+                int depth = 1, i = open;
+                while (i < source.Length && depth > 0)
+                {
+                    if (source[i] == '(') depth++;
+                    else if (source[i] == ')') depth--;
+                    i++;
+                }
+                yield return source.Substring(open, System.Math.Max(0, i - open - 1));
+                at = i;
+            }
+        }
 
         /// <summary>Texture names asked for on an Apply/ApplyPack/Roofing/Walling line.</summary>
         private static string[] AskedNames(out List<string> quoted)

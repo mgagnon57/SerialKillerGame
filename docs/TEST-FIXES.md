@@ -3,9 +3,9 @@
 **This is a work file. Delete it when the last item lands.** A read-only audit on 2026-08-09 walked
 all 490 test methods in both suites. The facts live in `CLAUDE.md`; this is a queue.
 
-**Sibling plans:** `docs/ANIMATION-FIXES.md`, `docs/ROAD-FIXES.md`, `docs/TEXTURE-FIXES.md`,
-`docs/SIM-FIXES.md`. **W5 of this plan is the same work as `SIM-FIXES.md` W7** — see
-[Cross-plan](#cross-plan) before starting it.
+**Sibling plans:** `docs/ANIMATION-FIXES.md`, `docs/ROAD-FIXES.md`, `docs/SIM-FIXES.md`.
+**W5 of this plan is the same work as `SIM-FIXES.md` W7** — see [Cross-plan](#cross-plan) before
+starting it. `docs/TEXTURE-FIXES.md` **is finished and deleted** (2026-08-09).
 
 **Item IDs:** `KEY` the content-key gates · `CROP` the unwired crop model · `DIAG` the PlayMode
 diagnostics · `BASE` the road baseline · `AIM` where the behaviour tests point · `COV` the uncovered
@@ -342,7 +342,7 @@ that the tests cannot see ugly. **Look at it** stays the gate for those.
 | Collision | With | Resolution |
 |---|---|---|
 | `AIM-1` moving the behaviour tests to Rossville | `SIM-FIXES.md` W7 | **W7 owns it.** This plan only points. |
-| `CROP-4` re-drawing every field | `TEXTURE-FIXES.md` | Land alone, after the texture pass, or two visual changes share one render. |
+| `CROP-4` re-drawing every field | — | **The texture pass is done and its plan is deleted** (2026-08-09), so the collision is gone: land `CROP-4` alone so one render answers one question, but nothing is waiting on it now. |
 | `BASE-1` road geometry invariant | `ROAD-FIXES.md` | `ROAD-FIXES` may move road counts; land `BASE-1` **after** it, or re-derive the bound twice. |
 | `DIAG-2` cutting timeouts | `ANIMATION-FIXES.md` | `WhyAreThePeopleNotAnimating` is 292.9 s of the gate and is that plan's instrument. Do not touch its timeout. |
 

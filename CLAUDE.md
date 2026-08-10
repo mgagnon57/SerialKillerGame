@@ -66,7 +66,11 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **458 pass, 0 fail, 458 total, ~5 min.** Measured 2026-08-09.
+> **462 pass, 0 fail, 462 total, ~4 m 40 s.** Measured 2026-08-09.
+> (+4 `SurfaceTextureTests` — the texture estate is in this gate for the first time: the declared
+> palette against the files on disk, every texture name the town asks for, the pack paths, and
+> `NoMaterialIsBuiltWhiteAndThenTextured`, which was watched firing on the real historical
+> offender before it was believed.)
 > (447 on 2026-08-08, and 415 earlier that day; +8 `DrivewaysTests`, +5 `TrafficWeightTests`,
 > +3 `AnimatorContractTests`, +8 `AnimationTableTests`, +8 `AnimationRowTests`,
 > +4 `RoadPathTests` and +2 `SurveyRoadNetworkTests` — `RoadPath.ArcAt`, and the gate on two
@@ -137,15 +141,42 @@ Do **not** pass `-nographics` — two tests render and fail spuriously without i
 
 **Run the gates, not the diagnostics.** The suite is split by category:
 
+> **`NOIR_BUILT_TOWN=1` BUILDS THE DRESSED TOWN INSTEAD OF THE SURVEY PLAN, AND IT IS NOT ON BY
+> DEFAULT.** Measured 2026-08-09, both runs on this machine within ninety minutes:
+> **`[build] 23538 ms` for the plan against `26777 ms` for the built town — +3.2 s, ONCE per run,
+> not per test.** That is a fifth of what the same comparison cost on 2026-08-06 (+10 s), because
+> `CityUnderTest` now opts out of Trees, Farm and Powerlines and those were most of it. The build
+> cost is NOT the reason to leave it off.
+>
+> **What IS the reason, measured the first time the gate ever ran against the built town:**
+> `NoCarWaitsForeverAtTheHeadOfAClearQueue` went red at **37.45 s against the 36.0 s cycle**, in a
+> run where it passed at 15.3 s ninety minutes earlier on the plan town. Streets, parking and signs
+> had never been drawn under the traffic suite before, and the fleet is still the documented
+> eight-times-too-big one. **Do not turn this on for the standing gate until the fleet curve
+> lands** — and when it does, run it twice before believing the number, per the rule below.
+>
+> The variable is read in `CityUnderTest`, beside the layer opt-out, and every run prints
+> `[gate] town=…` so a session can never again wonder which town a green tick was green for. It
+> used to live inside `LayerProof`, a `Category("Diagnostic")` file the gate excludes.
+
+
+
 ```
 Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform PlayMode ^
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-09: 16 of 16 PASS, 1 skipped, ~11 min.** (13 of 13 on 2026-08-08, 8 of 8 on
-> 2026-08-07; TownGeometryPlayTests added three that can see where a building STANDS, a fourth
-> that can see whether the car outside a house is there today, a fifth that fails if any door in
-> the town cannot be walked through, and a sixth that fails if the roofs ever go white again.)
+> **BASELINE, 2026-08-09: 18 of 18 PASS, 1 skipped, 744 s.** (17 of 17 and 16 of 16 earlier that day, 13 of 13
+> on 2026-08-08, 8 of 8 on 2026-08-07; TownGeometryPlayTests added three that can see where a
+> building STANDS, a fourth that can see whether the car outside a house is there today, a fifth
+> that fails if any door in the town cannot be walked through, a sixth that fails if the roofs ever
+> go white again, and a seventh that reads the covering off the town that is RUNNING - shader,
+> bound map and the census over all 672 roofs - instead of off the source that describes it.)
+>
+> **The one skipped is `[Explicit]` and is meant to be**: `AMovingCarCostsOneRendererAndNoMeshCollider`
+> is an aspiration, the same treatment as the 2:1 rule, for the same reason - a permanent red hides
+> the next real one. `-testCategory "!Diagnostic"` selects 18, one is that aspiration, and that is
+> exactly the "17 of 17, 1 skipped" above.
 > `[body] 1390 Animators in the scene`, and the layer preferences are the same after the run as
 > before it.
 >
@@ -380,15 +411,40 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   created it. The one line that decides whether any of it reads is `mesh.RecalculateTangents()` in
   `MeshChunks.Emit` — every pack albedo is nearly flat and all the detail is in the normal map,
   which URP builds from a tangent stream this project had never written. **The greppable gate is
-  `Surface textures: N loose`**, which counts what fell back to a flat placeholder: it was 7, and
-  **1 — water alone — is healthy**. Anything higher means a pack path failed silently.
+  the `Surface textures:` line**, and it says what happened to each NAME rather than counting a
+  cache the main path never filled — which is what it did through forty runs that read 7, seven
+  that read 1, and five that read 8 or 14. Healthy, measured 2026-08-09:
+  `15 of 15 pack names resolve; 15 bound from the pack, 1 from Content/textures/ (water),
+  0 MISSING`. **MISSING is the failure**, and a shipped player prints its own version of that line
+  because the pack path is `#if UNITY_EDITOR` and a build has no `Content/textures/` at all.
+- **THE EDITOR AND THE SHIPPED GAME DREW DIFFERENT TOWNS, AND THE COLOURS SAY SO.** Every
+  `Make(name, colour, …)` in `Materials3D` is a FALLBACK — overwritten the moment a texture binds
+  — so nobody on this machine had ever seen one, and they had been authored back when they *were*
+  the render. A player drew pale grey `0x9A9690` roads where the editor draws near-black asphalt
+  `0x313131`; the roof materials were built `Color.white` and shipped as white paper. Each is now
+  the **measured mean of the sheet it stands in for**, and `TileGenerator` takes the same numbers,
+  so the two tiers agree by construction. `NoMaterialIsBuiltWhiteAndThenTextured` in the Core gate
+  fails if that comes back. **If you change a pack set, re-measure the fallback.**
+- **`VillageHost.Seed = 1979` IS A SEED, NOT A DATE, and neither are the 1979s in the fixtures
+  and in `tools/Noir.Sim`.** The year is 1991 and this file says so six lines up, so a session
+  hunting era mistakes finds `1979` and reaches for it. Changing any of them reshuffles every
+  citizen, prop and roof in the town. The same rule covers `Materials3D.Scatter`: **do not convert
+  a position hash into an `IRng` substream** — four systems key on it, and that is what makes the
+  same land come out the same every run. What IS an era mistake is a 1979 in a *comment* reasoning
+  about the place: several said things like "in 1979 almost everything in a village is heated by
+  something that needs a flue", which is a sentence about rural England.
 - **A UTF-8 BOM stops `^\s*#` matching the first line**, so `grep -vcE '^\s*$|^\s*#'` over-counts
   a `Content/` file by one. Several of these files have one.
 - **`kinds.txt` resolves a kind through its `words` line, not its `kind` line.** Renaming the
   `kind` and leaving the `words` makes every map fail to parse. And the `frontage`/`massing`/
   `grammar` values are keys into `Frontage.cs` and `MassingGrammars.cs` — a value nothing answers
-  to does **not** throw, it falls through to a default and the building just looks wrong. When you
-  touch either side, diff the keys the content declares against the keys the code answers to.
+  to does **not** throw, it falls through to a default and the building just looks wrong.
+  **SmokeTest does that diff now** and fails the run on a word nothing draws — `kinds  N frontage
+  and M massing key(s) declared, all answered`. It was written because the rule above had been
+  stated here for months and nothing checked it: `bank` and `icecream` declared
+  `frontage shopfront`, a word no arm answered to, so the bank wore the same anonymous plank as
+  seven apartment blocks; and `waterworks` and `publicworks` declared `massing shed`, a grammar
+  that has never existed, so the pump house rendered as a cottage.
 
 ---
 

@@ -241,6 +241,42 @@ owner says otherwise.
 
 ---
 
+### What the town is built of — settled 2026-08-09
+
+Asked with a picture in hand. Two were contested by the evidence and put back to him, and he took
+the evidence both times. `docs/TEXTURE-FIXES.md` carried these while that work was in flight and
+was deleted when it finished, so they live here now.
+
+| | Ruling | |
+|---|---|---|
+| **1** | Houses get three-tab **asphalt shingle** | settled |
+| **2** | Mix: **slate grey 40 · charcoal 40 · brown 20**, with one roof in twenty a brown-black. **NO GREEN.** | settled |
+| **3** | **Course exposure ~5–6 inches** on the slope, not the ~9 it would default to | settled |
+| **4** | **Farm buildings: leave them entirely.** No override, no metal covering. | settled |
+| **5** | Downtown is **flat built-up tar and gravel** | settled |
+| **6** | **All seven building surfaces** in one pass, not roofs first | settled |
+
+**On #2 the green is out on PERIOD grounds, not taste.** Faded green is a modern architectural
+shingle and reads wrong for 1991 east-central Illinois. The pack's `Roof_Shingles_D` is exactly
+that green and is the one sheet of five this town does not touch.
+
+**On #3 the SPREAD is correct and is not a bug.** The four house types have different pitches, so
+the exposure lands anywhere from 5.1 to 6.4 inches depending on which house you are standing in
+front of. That is what a real street looks like. Do not "fix" it to a constant.
+
+**On #4 there was never a fault, and he withdrew an earlier ruling once it was measured.** Zero of
+the 652 generated roofs are farm buildings — `CityBuildings` handles `farm`, `barn` and `silo`, so
+those are bought models arriving with the pack's own roofs. His "barns had shingles" ruling was
+made on my framing that the models are *British*, which is true of the NAME (`Barn_Farm_British`)
+and of the silhouette but not of the roofs. **Do not write the material override.** The same
+reasoning killed a corrugated-metal covering: it would have had no buildings to go on.
+
+**A consequence of #5 he accepted knowingly:** a detailed wall texture makes a UV-degenerate gable
+end *more* obvious, not less. That is why the UV fixes had to land before the siding was bound,
+and they did.
+
+---
+
 ## 4. Where `city.txt` stands
 
 `Content/city.txt` is **hand-authored** and holds 37 roads, 477 places, 373 doors and 148 human

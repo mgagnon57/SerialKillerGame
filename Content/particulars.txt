@@ -16,6 +16,13 @@
 #     gas, the Schwan's truck, the fire siren at noon.
 #   - never a demographic label and never an assessment. A particular is the texture of a
 #     life, not a judgement on one.
+#   - AND DO NOT RE-HUNT THESE. They read English and are correct American, and each has been
+#     checked once already: `terrace` (a real Illinois form, off the 1913 Sanborn sheets),
+#     Green Street, `on the village board` (Rossville is an incorporated Illinois village with a
+#     Village Board of Trustees), the pack's telephone booths (a pay phone on a 1991 Illinois
+#     street is period-correct), and the cuckoo (the yellow-billed cuckoo is a real Illinois
+#     spring marker). British SPELLING is left alone on purpose - colour, favourite, neighbour,
+#     recognised is this project's house style in every comment in the tree, not a leftover.
 #   - never a checklist of who is unprotected. No keys, no unlocked doors, no empty houses,
 #     no "nobody ever calls". There is exactly one lock clause in this file and it is enough.
 #   - PRONOUN-FREE, and sex-free. The renderer prefixes a name without consulting who owns it,

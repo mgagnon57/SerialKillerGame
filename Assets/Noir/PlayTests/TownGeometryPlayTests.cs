@@ -376,10 +376,32 @@ namespace Noir.PlayTests
             var worst = new List<string>();
             int triangles = 0;
 
+            int bought = 0;
+
             foreach (var mf in filters)
             {
                 var mesh = mf.sharedMesh;
                 if (mesh == null || !mesh.isReadable) continue;
+
+                // THE MESHES THIS PROJECT BUILDS, NOT THE ONES IT BOUGHT.
+                //
+                // Every material the pack ships is named `M_...`; nothing generated here is -
+                // Grass, Road, WallBrick, RoofShingleGrey. That is the whole test: a degenerate
+                // UV on a wall THIS code mapped is a bug with a fix, and a degenerate UV on a
+                // bought road tile is the vendor's art, unfixable from here and not evidence of
+                // anything.
+                //
+                // IT MATTERED THE FIRST TIME THE GATE RAN AGAINST THE BUILT TOWN. Until then
+                // CityStreets never built headlessly, so this walked only generated meshes and
+                // found two. With NOIR_BUILT_TOWN=1 the pack's own road kit arrives and brings
+                // dozens of zero-area UVs on `M_Universal_A` and `M_Universal_Glass` - and the
+                // honest reading of that is not "the town got worse", it is "the test met a
+                // population it had never seen". Loosening the threshold to swallow them would
+                // have blinded it to the thing it exists for.
+                var renderer = mf.GetComponent<MeshRenderer>();
+                var material = renderer != null ? renderer.sharedMaterial : null;
+                if (material != null && material.name.StartsWith("M_", System.StringComparison.Ordinal))
+                { bought++; continue; }
 
                 var verts = mesh.vertices;
                 var uvs = mesh.uv;
@@ -425,24 +447,26 @@ namespace Noir.PlayTests
             }
 
             Debug.Log($"[uv] {triangles} triangles of a square metre or more checked, "
-                    + $"{worst.Count} stretched past the limit");
+                    + $"{worst.Count} stretched past the limit; {bought} bought mesh(es) skipped "
+                    + "as the pack's own art");
 
             Assert.That(triangles, Is.GreaterThan(1000),
                 "hardly any triangles were checked - the test proved nothing");
 
-            // A RATCHET AT THE TWO IT FOUND, NOT A ZERO, AND THE TWO ARE REAL.
+            // A RATCHET AT ZERO, AND IT CAME DOWN FROM TWO BY ANSWERING THE QUESTION.
             //
             // This test earned its keep on its first run: of 138,780 triangles a square metre or
             // larger, exactly two came back at 32,281 m2 per unit of UV area against a limit of
-            // 400. Eighty times over the line is not a tolerance question - something is mapped
-            // through a pinhole - but two out of 138,780 is also not the gable smear this was
-            // written for, which was hundreds of triangles across every gabled building.
+            // 400. They were left standing and NAMED rather than tuned away, with a note saying
+            // two out of 138,780 is not the gable smear this was written for and wants a fresh
+            // session rather than a loosened threshold.
             //
-            // They are left standing and NAMED rather than tuned away, and the message carries
-            // the material now so the next run says which code built them. Diagnosing two
-            // triangles is worth doing properly on a fresh session, not at the end of a long one
-            // by loosening a threshold until they disappear.
-            Assert.That(worst.Count, Is.LessThanOrEqualTo(2),
+            // THE ANSWER IS THAT THEY WERE BOUGHT ART. Once the walk learned to skip the pack's
+            // own materials - see the `M_` test above, which the built town forced - the count
+            // went to ZERO across 138,790 triangles with six bought meshes skipped. Nothing this
+            // project generates is mapped through a pinhole. The ratchet comes DOWN, which is the
+            // only direction it is ever allowed to move.
+            Assert.That(worst.Count, Is.EqualTo(0),
                 "These surfaces are textured through a pinhole:\n  " + string.Join("\n  ", worst)
               + "\n\nA triangle covering square metres out of a sliver of image is what a person "
               + "sees as a smear. The classic case is a vertical wall carrying the roof's own "

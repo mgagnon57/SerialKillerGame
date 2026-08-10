@@ -320,7 +320,7 @@ namespace Noir.Unity
         {
             if (_reported) return;
             _reported = true;
-            Report();
+            Report(partial: true);
         }
 
         /// <summary>
@@ -344,7 +344,7 @@ namespace Noir.Unity
         /// about a system that was working". The pack count below is computed directly and so is
         /// order-independent, which is why the sentence leads with it.
         /// </summary>
-        public static void Report()
+        public static void Report(bool partial = false)
         {
             var pack = new List<string>();
             var loose = new List<string>();
@@ -367,8 +367,9 @@ namespace Noir.Unity
             }
 
             Debug.Log($"Surface textures: {resolved} of {_packSets.Count} pack names resolve; "
-                    + $"so far {pack.Count} bound from the pack, {loose.Count} from "
-                    + $"Content/textures/ ({string.Join(", ", loose)}), {missing.Count} MISSING"
+                    + (partial ? "so far " : "") + $"{pack.Count} bound from the pack, "
+                    + $"{loose.Count} from Content/textures/ ({string.Join(", ", loose)}), "
+                    + $"{missing.Count} MISSING"
                     + (missing.Count > 0 ? ": " + string.Join(", ", missing) + "." : "."));
 
             if (firstUnresolved != null)

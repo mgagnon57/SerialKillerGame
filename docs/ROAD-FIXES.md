@@ -54,9 +54,9 @@ alleys · `GATE` tests and tooling · `RC` rendering and collision · `ADDR` add
 
 | Gate | Command | Today |
 |---|---|---|
-| Core | `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj` | 428 pass, ~2 min |
+| Core | `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj` | **see `CLAUDE.md` — it is the one home for this number.** 458 pass, ~5 min as of 2026-08-09; this line was written when it was 428 |
 | Unity compiles | `dotnet build Noir.Unity.csproj -c Debug` **and** `Noir.Editor.csproj -c Debug` | clean |
-| PlayMode | `-runTests -testPlatform PlayMode -assemblyNames Noir.PlayTests -testCategory "!Diagnostic"` | 13 of 13, budget **ten** min |
+| PlayMode | `-runTests -testPlatform PlayMode -assemblyNames Noir.PlayTests -testCategory "!Diagnostic"` | **see `CLAUDE.md` — it is the one home for this number.** This line said 13 of 13 and was written when that was true. Budget **ten** min, and `NOIR_BUILT_TOWN=1` if you need the dressed town |
 | Smoke | `-executeMethod Noir.Editor.SmokeTest.Run` | ~3 min |
 | Map audit | `-executeMethod Noir.Editor.MapAudit.Run` | exit 0 today |
 | Player | `-executeMethod Noir.Editor.BuildPlayer.Windows64` | exit 0 |
