@@ -504,13 +504,24 @@ namespace Noir.Unity
                     tint = new Color(0.642f, 0.654f, 0.614f);
                     break;
                 case ZonedGround.Rough:
-                    // Vacant lots: mowed once a summer, weeds through bare dirt - not lawn, and
-                    // not a farm field either. Its own sheet, Ground_Dirt_Harvested (mean
-                    // 0x6F4E30, span 87), whose stubble rows are what a lot cut with a brush hog
-                    // looks like. Almost the same COLOUR as the path it used to borrow; the whole
-                    // difference is grain, and grain is the thing that was missing.
-                    m = Make("GroundRough", new Color32(0x6F, 0x4E, 0x30, 0xFF), 0.03f);
-                    texture = "ground_rough"; tiling = 4f;
+                    // Vacant lots: A LOT MOWED ONCE A SUMMER IS GRASS, NOT PLOUGHED EARTH.
+                    //
+                    // Owner's ruling 2026-08-09, made on `suburb-block.png`, where almost every
+                    // lot carried a bare red-brown rectangle. This drew Ground_Dirt_Harvested -
+                    // and before that the path's worn dirt - because the county's 2007 tax roll
+                    // calls a parcel Vacant when it carries no improvement. That is a statement
+                    // about the tax roll, not about the ground: a lot the county called vacant in
+                    // 2007 had grass on it in 1991, and an empty lot in an Illinois town is weeds.
+                    // Bare earth is what a FIELD looks like, and Agricultural still draws it.
+                    //
+                    // The distinction is kept and made true rather than deleted: THE SAME GRASS,
+                    // at more than twice the tile so the clumps read as rank uncut growth rather
+                    // than as mown lawn, dulled a little towards olive. A tint MULTIPLIES, so the
+                    // fallback beside it is that product - 0x6A7A3A times the tint - and not a
+                    // guess.
+                    m = Make("GroundRough", new Color32(0x5D, 0x71, 0x2D, 0xFF), 0.03f);
+                    texture = "grass"; tiling = 9f;
+                    tint = new Color(0.88f, 0.92f, 0.78f);
                     break;
                 default:   // Bank
                     // Any tile too steep for turf to hold - a ditch side, a creek bank, whatever

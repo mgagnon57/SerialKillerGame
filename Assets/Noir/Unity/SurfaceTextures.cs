@@ -140,14 +140,6 @@ namespace Noir.Unity
                          "Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Nrm.png",
                          null),
 
-            // A VACANT LOT, and the only ground name that is not one of Terrain's own eight. See
-            // Materials3D.ForZoned: a lot mowed once a summer is neither the worn track "path"
-            // draws nor the standing crop "field" draws, and it used to borrow "path" outright.
-            // Harvested stubble rows at 0x6F4E30 are what a brush hog leaves.
-            ["ground_rough"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Harvested_Alb.png",
-                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Harvested_Nrm.png",
-                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Harvested_AO.png"),
-
             // ---- WHAT THE TOWN IS BUILT OF ------------------------------------------------
             //
             // Clapboard for the houses, brick for Main Street. See Materials3D.Walls: the

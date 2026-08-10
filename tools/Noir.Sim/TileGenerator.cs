@@ -101,10 +101,6 @@ namespace Noir.Sim
                 // Four levels off grass, on purpose and in the one place it is allowed: both are the
                 // same pack sheet, so with no textures at all a churchyard would vanish into a lawn.
                 new Surface("churchyard", 114, 130, 63, 22, 0.15, 1901),
-                // A vacant lot: Ground_Dirt_Harvested's mean. Almost the path's colour, because it
-                // almost is - the whole difference in the editor is the stubble grain, which a 256px
-                // placeholder cannot carry, so the fallback settles for the right colour.
-                new Surface("ground_rough", 111, 78, 48, 22, 0.35, 2701),
                 // Grain well down from 0.70. Strong directional grain on a wall is not stone, it
                 // is a smear: three metres of vertical streak on every elevation in the village.
                 //
