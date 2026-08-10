@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Noir.Core.People;
@@ -89,5 +92,64 @@ namespace Noir.Core.Tests
             Assert.That(table.ClipsFor("atwork"), Is.Null, "a lookup must be null, not a throw");
             Assert.That(table.Warnings, Is.Not.Empty);
         }
-    }
+    
+        /// <summary>
+        /// EVERY `Activity` HAS A ROW IN THE REAL FILE, ASKED OF THE ENUM RATHER THAN OF THE TABLE.
+        ///
+        /// `AgentAnimation.Resolve` falls back to `default` when a situation has no row, so an
+        /// Activity nobody wrote a row for makes everybody doing it play a generic idle FOREVER,
+        /// with nothing said - the exact "does not throw, it falls through to a default" trap
+        /// CLAUDE.md names for kinds.txt, in a second file.
+        ///
+        /// `AnimationCheck` in the Editor assembly already sweeps this, correctly and with the
+        /// reasoning written out. But it WARNS, and it only runs when somebody invokes it from
+        /// the Noir menu - which is a rule where a gate would do. Both `Activity` and
+        /// `AnimationTable.Parse` are Core and `Content/animations.txt` is copied to the test
+        /// output, so this costs nothing and runs on every commit.
+        ///
+        /// It earned its place immediately: `Activity.OnTheAllotment` was renamed to `InTheGarden`
+        /// in the same commit that added this, and the row key is derived as
+        /// `Doing.ToString().ToLowerInvariant()` - so the rename and the content row had to move
+        /// together or every gardener in Rossville would have stood still.
+        /// </summary>
+        [Test]
+        public void EveryActivityHasARowInTheRealFile()
+        {
+            var table = AnimationTable.Parse(File.ReadAllText(
+                Path.Combine(RepoRoot(), "Content", "animations.txt")));
+
+            var rowless = new List<string>();
+            foreach (Activity doing in Enum.GetValues(typeof(Activity)))
+            {
+                // AwayFromTown is deliberately not drawn - those people are off the map and
+                // AgentMeshView switches their figure off entirely, so a row would never be
+                // reached. Its absence is correct rather than a gap; same reasoning as
+                // AnimationCheck, which is where this rule was written down first.
+                if (doing == Activity.AwayFromTown) continue;
+
+                if (table.ClipsFor(doing.ToString().ToLowerInvariant()) == null)
+                    rowless.Add(doing.ToString());
+            }
+
+            Assert.That(rowless, Is.Empty,
+                "These Activity states have no row in Content/animations.txt: "
+              + string.Join(", ", rowless) + ". "
+              + "AgentAnimation.Resolve falls back to `default`, so everybody doing them plays a "
+              + "generic idle forever and nothing is logged. The row key is the Activity name "
+              + "lowercased, so renaming one means renaming the row in the same commit.");
+        }
+
+        private static string RepoRoot()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir != null)
+            {
+                if (Directory.Exists(Path.Combine(dir.FullName, "Assets", "Noir", "Core", "Observation")))
+                    return dir.FullName;
+                dir = dir.Parent;
+            }
+            throw new DirectoryNotFoundException(
+                "Could not find Assets/Noir/Core/Observation above " + AppContext.BaseDirectory);
+        }
+}
 }

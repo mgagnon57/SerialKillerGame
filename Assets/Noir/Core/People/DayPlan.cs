@@ -18,7 +18,7 @@ namespace Noir.Core.People
         Visiting,
         Walking,
         AtThePlayground,
-        OnTheAllotment,
+        InTheGarden,
 
         /// <summary>
         /// Out of Rossville altogether, at a job the map does not contain.
@@ -462,7 +462,7 @@ namespace Noir.Core.People
             {
                 case PlaceKind.Tavern: return (chosen, Activity.AtThePub);
                 case PlaceKind.Playground: return (chosen, Activity.AtThePlayground);
-                case PlaceKind.Gardens: return (chosen, Activity.OnTheAllotment);
+                case PlaceKind.Gardens: return (chosen, Activity.InTheGarden);
                 default: return (chosen, Activity.Walking);
             }
         }
@@ -589,7 +589,7 @@ namespace Noir.Core.People
                 Consider(PlaceKind.Shop, Activity.Shopping, 25, 45);
                 Consider(PlaceKind.PostOffice, Activity.Shopping, 20, 18);
                 Consider(PlaceKind.Green, Activity.Walking, 40, 20);
-                Consider(PlaceKind.Gardens, Activity.OnTheAllotment, 90,
+                Consider(PlaceKind.Gardens, Activity.InTheGarden, 90,
                          who.StageIn(year) == LifeStage.Elder ? 45 : 22);
                 Consider(PlaceKind.VillageHall, Activity.Visiting, 100, (int)(18 * social));
 

@@ -431,7 +431,7 @@ namespace Noir.Core.Tests
 
             Assert.That(Regex.IsMatch(source, @"\.Doing\b"), Is.False,
                 "tools/Noir.Sim/Eyewitness.cs reads AgentState.Doing. Doing is the simulation's "
-              + "word for what a man is REALLY doing — GoingToWork, OnTheAllotment — and a "
+              + "word for what a man is REALLY doing — GoingToWork, InTheGarden — and a "
               + "watcher across the road sees a figure come out of a door with a bag. Emission "
               + "is on a change in something perceptible and never on a change in Doing.");
         }

@@ -2300,7 +2300,7 @@ namespace Noir.Unity
                 case Activity.Visiting: return "visiting";
                 case Activity.Walking: return "walking on";
                 case Activity.AtThePlayground: return "playing at";
-                case Activity.OnTheAllotment: return "digging at";
+                case Activity.InTheGarden: return "digging at";
                 case Activity.TravellingTo: return "on the way to";
                 case Activity.Talking: return "stopped to talk on";
                 default: return "at";

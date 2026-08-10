@@ -773,7 +773,7 @@ namespace Noir.Core.Sim
             // somewhere with their hands full.
             var previous = _plans[index].At(Math.Max(0, _clock.MinuteOfDay - 1)).What;
             _agents[index].Carrying =
-                previous == Activity.Shopping || previous == Activity.OnTheAllotment
+                previous == Activity.Shopping || previous == Activity.InTheGarden
                 // Or because they always do. Somebody whose particulars say they never go out
                 // empty-handed goes out with something in their hand, and this one line is the
                 // whole of what "enacting a particular" means: the sentence in the inspector and

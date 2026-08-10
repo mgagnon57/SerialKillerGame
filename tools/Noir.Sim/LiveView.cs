@@ -169,7 +169,7 @@ namespace Noir.Sim
                 case Activity.Visiting: return "visiting";
                 case Activity.Walking: return "walking on";
                 case Activity.AtThePlayground: return "playing at";
-                case Activity.OnTheAllotment: return "digging at";
+                case Activity.InTheGarden: return "digging at";
                 default: return a.ToString();
             }
         }

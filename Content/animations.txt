@@ -143,7 +143,7 @@ atwork          Standing Idle, Typing, Writing, Using A Filing Cabinet, Using A 
 
 shopping        Looking Around, Look Around, Looking, Inspecting, Rummaging, Standing Idle 03 Examine, Standing Idle 02 Looking, Picking Up Object, Taking Item, Counting, Thinking
 
-ontheallotment  Digging, Dig And Plant Seeds, Plant A Plant, Plant Tree, Pull Plant, Pick Fruit, Watering, Kneeling Inspecting, Wiping Sweat, Neck Stretching, Arm Stretching
+inthegarden     Digging, Dig And Plant Seeds, Plant A Plant, Plant Tree, Pull Plant, Pick Fruit, Watering, Kneeling Inspecting, Wiping Sweat, Neck Stretching, Arm Stretching
 
 # Sitting is a lie told on purpose, for now: nothing here knows whether there is
 # a chair under the person, because the interior generator places furniture and
