@@ -97,7 +97,20 @@ namespace Noir.Sim
             {
                 var place = world.GetPlace(new PlaceId(p));
                 if (place == null) continue;
-                isDwelling[p] = place.Kind == PlaceKind.Dwelling;
+                // THE TABLE, NOT THE ENUM MEMBER, AND THE DIFFERENCE IS THIRTY-THREE PEOPLE.
+                //
+                // `kinds.txt` declares `kind apartment / home yes`, and `apartment` is one of the
+                // kinds only the FILE knows - numbered past the enum's members, because content
+                // may add a kind and C# may not be recompiled for it. So this test said false for
+                // every one of city.txt's 7 apartment places, and the ~33 people living over the
+                // grocer, the meat market and the barber had no home as far as the watcher was
+                // concerned.
+                //
+                // Left alone, they would have landed at the very bottom of the first Rossville
+                // measurement this project ever records - as a pure artefact of the instrument,
+                // in the one number the whole 2:1 rule is built on. `IsHome` is the column that
+                // answers the question being asked.
+                isDwelling[p] = PlaceKindTable.Current.Row(place.Kind).IsHome;
 
                 // You can see a queue in a lit shop from the street, and you can see the bar of
                 // a pub through its window. Their house, the mill floor and a barn you cannot,
