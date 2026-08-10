@@ -482,6 +482,24 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   the **measured mean of the sheet it stands in for**, and `TileGenerator` takes the same numbers,
   so the two tiers agree by construction. `NoMaterialIsBuiltWhiteAndThenTextured` in the Core gate
   fails if that comes back. **If you change a pack set, re-measure the fallback.**
+  > ⚠ **THE GROUND IS ALL GREEN GRASS NOW AND THOSE MEASURED BROWNS ARE NO LONGER REACHED.**
+  > Owner's instruction 2026-08-10: `Materials3D.GrassEverywhere` (default **true**) binds the
+  > grass sheet for Field, Wood, Path and the two hard zoned kinds, which drew
+  > `Ground_Dirt_Stubble`, `Dirt_A` and `Ground_Dirt_Flat`. Churchyard, Rough and Pasture were
+  > already grass and keep their own tiling and tint; Road, Water and Floor are untouched. The
+  > measured means are still in the switch and a player still falls back to them — **so
+  > re-measuring them when a pack set changes is still the rule**, it is just no longer something
+  > you can check by looking at the town. Set it false to see the ground the survey measured.
+- **SPEEDTREE CANNOT GO THROUGH `CityChunker`, AND FOR A LONG TIME ALL OF IT DID.** SpeedTree
+  encodes leaf orientation and wind in the extra UV channels and the vertex colours;
+  `Mesh.CombineMeshes` carries positions, normals, tangents and UV0 and drops the rest, so every
+  baked grass tuft in Rossville was a flat grey plate lying on the lawn. `Combinable` spares
+  SpeedTree renderers **whose whole prefab is under 1 m** — measured: 6,858 of them are grass,
+  flowers and leaf bunches and only those came out wrong, while the 15,000 above that line are
+  trees and bushes whose leaf clusters are 3D blobs and survive the combine looking like blobs.
+  The city runs **8,081 renderers** (2,166 baked chunks + 5,896 tufts) against 2,177 when the
+  plates were baked in and 23,408 if you spare every SpeedTree object. **The frame cost of those
+  5,896 has not been measured** — that is `PerfCensus`, and it needs the editor closed.
 - **`VillageHost.Seed = 1979` IS A SEED, NOT A DATE, and neither are the 1979s in the fixtures
   and in `tools/Noir.Sim`.** The year is 1991 and this file says so six lines up, so a session
   hunting era mistakes finds `1979` and reaches for it. Changing any of them reshuffles every
