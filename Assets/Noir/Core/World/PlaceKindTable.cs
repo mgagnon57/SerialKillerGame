@@ -234,6 +234,22 @@ namespace Noir.Core.World
         public int Count => _rows.Length;
 
         /// <summary>
+        /// The row for this kind, or null where the table has a gap.
+        ///
+        /// <see cref="Row"/> throws on a gap, deliberately - asking about a kind that has no row
+        /// is a fault at render time. This is for the callers that are WALKING the table rather
+        /// than asking about one kind, where a gap is an ordinary answer: SmokeTest diffs every
+        /// declared `frontage` and `massing` word against the keys the renderers answer to, which
+        /// is the check CLAUDE.md asks for and which nothing did until a bank spent months
+        /// wearing an anonymous plank.
+        /// </summary>
+        public PlaceKindRow RowOrNull(PlaceKind kind)
+        {
+            int i = (int)kind;
+            return i < 0 || i >= _rows.Length ? null : _rows[i];
+        }
+
+        /// <summary>
         /// The kind with this canonical name, or false if the table has never heard of it.
         ///
         /// A kind the PlaceKind enum knows can be named in C# as PlaceKind.Tavern. A kind only

@@ -30,7 +30,22 @@ namespace Noir.Unity
 
         public static Texture2D Load(string name)
         {
-            if (_cache.TryGetValue(name, out var cached)) return cached;
+            // A MISS IS NOT AN ANSWER. `_cache[name] = tex` ran on every path, including the one
+            // where the file did not exist and `tex` was never assigned - so a texture dropped
+            // into Content/textures/ after any edit-mode tool had touched Materials3D stayed
+            // invisible for the whole session, silently, because Apply just returns on null. The
+            // class header's "drop a file in, press Play, see it" was never the broken case:
+            // pressing Play reloads the domain and clears this. The broken case is the tool path
+            // - Snapshot, CityShot, RoadSheet, HouseProto, GroundShot, LayerShot, MapAudit - which
+            // never enters Play at all.
+            //
+            // `cached != null` is UnityEngine.Object's OVERLOADED ==, deliberately: it also
+            // reports a texture Unity has destroyed under us. Do not "tidy" it into `is not null`
+            // or ReferenceEquals - either silently reverts half of this.
+            //
+            // The retry costs one File.Exists per absent name per domain. The materials above are
+            // cached, so this runs about fourteen times in a session, not per frame.
+            if (_cache.TryGetValue(name, out var cached) && cached != null) return cached;
 
             string path = Path.Combine(Directory, name + ".png");
             Texture2D tex = null;
@@ -56,7 +71,7 @@ namespace Noir.Unity
                 }
             }
 
-            _cache[name] = tex;
+            if (tex != null) _cache[name] = tex; else _cache.Remove(name);
             return tex;
         }
 
@@ -72,6 +87,7 @@ namespace Noir.Unity
         public static void Apply(Material material, string name, float tilingMetres = TilingMetres)
         {
             var tex = Load(name);
+            _bound[name] = tex == null ? Missing : "loose";
             if (tex == null || material == null) return;
 
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
@@ -123,6 +139,14 @@ namespace Noir.Unity
             ["floor"] = ("Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Alb.png",
                          "Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Nrm.png",
                          null),
+
+            // A VACANT LOT, and the only ground name that is not one of Terrain's own eight. See
+            // Materials3D.ForZoned: a lot mowed once a summer is neither the worn track "path"
+            // draws nor the standing crop "field" draws, and it used to borrow "path" outright.
+            // Harvested stubble rows at 0x6F4E30 are what a brush hog leaves.
+            ["ground_rough"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Harvested_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Harvested_Nrm.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Farm/Ground_Dirt_Harvested_AO.png"),
 
             // ---- WHAT THE TOWN IS BUILT OF ------------------------------------------------
             //
@@ -190,9 +214,15 @@ namespace Noir.Unity
         private static Texture2D LoadPackTexture(string assetPath)
         {
             if (string.IsNullOrEmpty(assetPath)) return null;
-            if (_packCache.TryGetValue(assetPath, out var cached)) return cached;
+            // Same reason as Load, and one worse: AssetDatabase returns null while an asset is
+            // still IMPORTING, which is the state polyperfect is in for minutes after a reimport
+            // of 1.4 GB - and the null was then frozen for the session, so the whole ground stayed
+            // on the 256px placeholders with nothing said. A reimport ALSO destroys the old
+            // Texture2D, leaving this dictionary holding a dead reference for the next material
+            // built. Both are caught by not trusting a null hit; see the note on `!= null` above.
+            if (_packCache.TryGetValue(assetPath, out var cached) && cached != null) return cached;
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
-            _packCache[assetPath] = tex;
+            if (tex != null) _packCache[assetPath] = tex; else _packCache.Remove(assetPath);
             return tex;
         }
 #endif
@@ -252,11 +282,22 @@ namespace Noir.Unity
                     var ao = LoadPackTexture(set.Ao);
                     if (ao != null && material.HasProperty("_OcclusionMap"))
                     {
+                        // SAME RULE AS _NORMALMAP THREE LINES UP, AND THE SAME TRAP. URP's Lit
+                        // shader returns occlusion 1.0 unless the keyword is on, so every one of
+                        // these maps was bound and then ignored. Nothing at runtime sets it - only
+                        // the material Inspector does, which a material made in code never sees.
+                        //
+                        // WORTH 1-5% AND NOT A PIXEL MORE, measured over the maps actually bound
+                        // (means 0.985 / 0.946 / 0.967 / 0.994). These are 2048px TILING sheets:
+                        // they cannot know where a tree trunk or a wall foot is, so if you are
+                        // hunting missing contact shadows this is not where they went.
+                        material.EnableKeyword("_OCCLUSIONMAP");
                         material.SetTexture("_OcclusionMap", ao);
                         material.SetTextureScale("_OcclusionMap", scale);
                         if (material.HasProperty("_OcclusionStrength")) material.SetFloat("_OcclusionStrength", 1f);
                     }
 
+                    _bound[name] = "pack";
                     return;
                 }
             }
@@ -264,39 +305,92 @@ namespace Noir.Unity
             Apply(material, name, tilingMetres);
         }
 
+        private const string Missing = "MISSING";
+
+        /// <summary>
+        /// Every name that has ASKED for a texture, and what it actually got: `pack`, `loose`, or
+        /// MISSING. Keyed by name rather than counted, because a count answered four different
+        /// questions and none of them was the one anybody had.
+        /// </summary>
+        private static readonly SortedDictionary<string, string> _bound =
+            new SortedDictionary<string, string>(System.StringComparer.Ordinal);
+
+        /// <summary>Kept so the existing call site still reads once. See <see cref="Report"/>.</summary>
         public static void ReportOnce()
         {
             if (_reported) return;
             _reported = true;
+            Report();
+        }
 
-            if (!System.IO.Directory.Exists(Directory))
+        /// <summary>
+        /// WHAT EACH NAME GOT, AND IT IS THE MOST USEFUL LINE IN THE LOG.
+        ///
+        /// This used to count `_cache`, which only <see cref="Load"/> fills - and `ApplyPack`, the
+        /// editor path for every ground name, returns without ever calling it. So the one line in
+        /// the project reporting on the texture system counted a cache the main path never filled.
+        /// Measured across every log on disk it read 7 (40 runs), 1 (7), 8 (1) and 14 (4): one
+        /// instrument, four answers, and none of them said which textures the town was using.
+        ///
+        /// `loose` is not a synonym for `broken`. Water is loose on purpose - the pack has nothing
+        /// tileable for it - and on a fresh clone with no `Assets/polyperfect` EVERYTHING is loose
+        /// and the town still draws. MISSING is the failure: that name kept its material's
+        /// fallback colour and is drawing flat.
+        ///
+        /// "SO FAR" is not hedging. `Layers.RegisterLazy` builds a layer immediately when it is
+        /// switched on, so with Massing on the roof and wall materials exist before this runs and
+        /// with Massing off only water has been touched. Moving the call earlier was tried and
+        /// reverted - see VillageMesh, where it "always printed 0 loaded ... a log line that lied
+        /// about a system that was working". The pack count below is computed directly and so is
+        /// order-independent, which is why the sentence leads with it.
+        /// </summary>
+        public static void Report()
+        {
+            var pack = new List<string>();
+            var loose = new List<string>();
+            var missing = new List<string>();
+            foreach (var kv in _bound)
             {
-                Debug.Log($"No surface textures at {Directory} - everything is flat colour. "
-                        + "Run `dotnet run --project tools/Noir.Sim -- tiles` to generate a set.");
-                return;
+                if (kv.Value == "pack") pack.Add(kv.Key);
+                else if (kv.Value == Missing) missing.Add(kv.Key);
+                else loose.Add(kv.Key);
             }
 
-            int found = 0;
-            foreach (var kv in _cache) if (kv.Value != null) found++;
-            // "LOOSE", NOT "LOADED", AND IT IS THE MOST USEFUL LINE IN THE BUILD LOG.
-            //
-            // This counts what fell back to the PROCEDURAL placeholder because ApplyPack found no
-            // pack set, or found one and could not load it. It is therefore a failure count, not
-            // an inventory, and reading it as an inventory is how a silent fallback survives:
-            // before the roofs were moved onto the pack's shingle sets it read SEVEN - the four
-            // English coverings plus water, wall and brick - and looked exactly like success.
-            //
-            // ONE is the healthy number now: water, which the pack has nothing tileable for.
-            // It was SEVEN before the roofs moved onto the pack's shingle sets, then THREE, and
-            // then one once the clapboard and the brick went on too. Anything higher means a
-            // pack path silently failed and something in the town is a flat placeholder again.
-            var loose = new List<string>();
-            foreach (var kv in _cache) if (kv.Value != null) loose.Add(kv.Key);
-            loose.Sort();
+#if UNITY_EDITOR
+            // Every pack name, asked directly rather than counted from what happens to have been
+            // built - so this half of the line means the same thing whichever layers are on.
+            int resolved = 0; string firstUnresolved = null;
+            foreach (var kv in _packSets)
+            {
+                if (LoadPackTexture(kv.Value.Albedo) != null) resolved++;
+                else firstUnresolved = firstUnresolved ?? kv.Value.Albedo;
+            }
 
-            Debug.Log($"Surface textures: {found} loose ({string.Join(", ", loose)}) - "
-                    + "everything else is on a real pack set. ONE is healthy - water alone; "
-                    + "more means a pack path failed and fell back to a flat placeholder.");
+            Debug.Log($"Surface textures: {resolved} of {_packSets.Count} pack names resolve; "
+                    + $"so far {pack.Count} bound from the pack, {loose.Count} from "
+                    + $"Content/textures/ ({string.Join(", ", loose)}), {missing.Count} MISSING"
+                    + (missing.Count > 0 ? ": " + string.Join(", ", missing) + "." : "."));
+
+            if (firstUnresolved != null)
+                Debug.LogWarning($"Surface textures: {_packSets.Count - resolved} pack texture(s) "
+                    + "did not resolve, so that ground is on the 256px placeholder with no normal "
+                    + "or occlusion map. Assets/polyperfect is gitignored - re-import the pack, and "
+                    + "if you have just re-imported it, wait for the import to finish and rebuild. "
+                    + $"First one: {firstUnresolved}");
+#else
+            // THE ONLY SIGNAL THE WHITE-ROOF CLASS OF FAULT WILL EVER EMIT FROM A PLAYER. The pack
+            // path is `#if UNITY_EDITOR` by design - it reads through AssetDatabase so nothing
+            // bought is copied into a tracked folder - so a shipped build draws Content/textures/
+            // or nothing at all, and BuildPlayer copies Content's top level only.
+            Debug.Log($"Surface textures: player build, no pack path. {loose.Count} loose "
+                    + $"({string.Join(", ", loose)}), {missing.Count} MISSING"
+                    + (missing.Count > 0 ? ": " + string.Join(", ", missing) + "." : "."));
+#endif
+            if (missing.Count > 0)
+                Debug.LogWarning($"Surface textures: {missing.Count} name(s) got nothing at all - "
+                    + string.Join(", ", missing) + ". Each keeps its material's fallback colour "
+                    + "and draws flat; see Materials3D, where every fallback is the measured mean "
+                    + "of the sheet it stands in for.");
         }
     }
 }

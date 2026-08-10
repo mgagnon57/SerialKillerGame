@@ -175,6 +175,12 @@ namespace Noir.Editor
                 if (sky != null) Object.DestroyImmediate(sky);
             }
 
+            // THE SET THIS MATTERS MOST FOR. LayerProof and this assert only that the right
+            // NUMBER of image files appeared, which twelve identical frames of a field satisfy
+            // perfectly - and did, for a fortnight. Stamp names any two that came out byte for
+            // byte the same.
+            ShotLog.Stamp("layers", CityShot.OutputDir, CityShot.TakeWritten());
+
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 
@@ -189,7 +195,13 @@ namespace Noir.Editor
 
             foreach (var view in Views)
             {
-                var target = new Vector3(view.X, view.Eye, -view.Y);
+                // ON THE GROUND. `view.Eye` is a height ABOVE the ground, not a world y - and this
+                // read it as a world y, so every eye-level layer frame was shot from 1.6 m above
+                // sea level on a map with 24 m of relief. Same fault as CityShot's seven raw
+                // cameras and CityShot.At records it being fixed once already.
+                var target = new Vector3(view.X,
+                                         ElevationGrid.HeightAt(view.X, view.Y) + view.Eye,
+                                         -view.Y);
                 CityShot.Frame(cam.gameObject, target, view.Dist, view.Pitch, view.Yaw);
                 CityShot.Capture(cam, Path.Combine(CityShot.OutputDir, view.Name + "-" + suffix + ".png"));
             }

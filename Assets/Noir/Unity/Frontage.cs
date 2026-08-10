@@ -84,7 +84,9 @@ namespace Noir.Unity
                                   : openings.Count > 0 ? openings[0] : Tile.None);
                 if (!front.Valid) continue;
 
-                if (place.Kind != PlaceKind.Dwelling)
+                // UNCONDITIONAL NOW, because the `frontage` column carries the decision for both
+                // `dwelling` and `apartment` and this enum test could only ever see one of them.
+                // Seven apartment blocks wore an anonymous plank for exactly that reason.
                 {
                     int n = Sign(signsRoot, place, front);
                     if (n > 0) { signed++; pieces += n; }
@@ -351,8 +353,9 @@ namespace Noir.Unity
         private static int Sign(Transform parent, Place place, Front f)
         {
             var board = BoardPaint(place);
+            string style = PlaceKindTable.Current.Row(place.Kind).Frontage;
 
-            switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
+            switch (style)
             {
                 case "tavern":
                     return Hanging(parent, f, "sign:pub", 1.45f, 0.95f, 1.00f, 2.25f, board);
@@ -389,10 +392,49 @@ namespace Noir.Unity
                 case "farm":
                     return Fascia(parent, f, "nameboard:farm", 2.4f, 0.50f, 2.35f, board);
 
+                // A BANK IS THE ONE SHOPFRONT ON MAIN STREET THAT MUST NOT LOOK LIKE THE GENERAL
+                // STORE. Stone name band and a brass plate, the grammar `post` and `clinic`
+                // already use. Bank and icecream both declared `shopfront`, which no arm here
+                // answered to, so both fell to the plain plank below - along with the precinct
+                // and seven apartment blocks, ten of the town's thirty-seven signs.
+                case "bank":
+                    return Fascia(parent, f, "nameboard:bank", 4.0f, 0.70f, 2.40f, Materials3D.Stone)
+                         + Plate(parent, f, "plate:bank", 0.62f, 0.45f, 1.55f, Brass);
+
+                // NO SIGN, AND THAT IS AN ANSWER. The content author wrote `frontage none` or
+                // `frontage dwelling`; a silo and a block of flats do not carry a nameboard, and
+                // falling through to one was the file ignoring what it had been told. Returning 0
+                // here is what stops these reaching the default and the warning below.
+                case "none":
+                case "dwelling":
+                    return 0;
+
                 default:
+                    // WARN ONCE PER NAME, never per building - one typo in a common kind would
+                    // otherwise print three hundred lines. Same shape as MassingGrammars.For, and
+                    // for the same reason CLAUDE.md states: a frontage value nothing answers to
+                    // does not throw, it silently draws the wrong thing. `factory` did this once
+                    // already, which is what the docstring above records.
+                    if (_warnedFrontage.Add(style))
+                        Debug.LogWarning($"kinds.txt: no frontage answers to '{style}', so that "
+                            + "building takes the plain nameboard. There is: "
+                            + string.Join(", ", Styles) + ".");
                     return Fascia(parent, f, "nameboard", 2.4f, 0.45f, 2.35f, board);
             }
         }
+
+        private static readonly HashSet<string> _warnedFrontage = new HashSet<string>();
+
+        /// <summary>
+        /// Every value the `frontage` column may take, which is the closed set <see cref="Sign"/>
+        /// answers to. SmokeTest diffs `Content/kinds.txt` against this and fails on a value
+        /// nothing here can draw - the check CLAUDE.md asks for and nothing in the tree did.
+        /// </summary>
+        public static readonly string[] Styles =
+        {
+            "tavern", "shop", "post", "church", "school", "clinic", "garage", "hall",
+            "mill", "farm", "bank", "none", "dwelling",
+        };
 
         /// <summary>A board flat on the wall over the door, in the manner of a shopfront.</summary>
         private static int Fascia(Transform parent, Front f, string name, float width, float height,
@@ -470,9 +512,14 @@ namespace Noir.Unity
                 case "shop":
                     return Paint("SignShop", new Color32(0x21, 0x40, 0x2F, 0xFF), 0.22f);
 
-                // The post office wears the same red as the pillar box outside it, which is not
-                // a coincidence anywhere in England.
-                case "post": return Materials3D.Postbox;
+                // USPS BLUE, NOT PILLAR-BOX RED. This returned Materials3D.Postbox under a comment
+                // reading "the same red as the pillar box outside it, which is not a coincidence
+                // anywhere in England" - true, and the wrong country. An American post office in
+                // 1991 is blue and white, and so is the collection box outside it.
+                case "post":
+                    return Paint("SignPost", new Color32(0x1B, 0x3A, 0x6B, 0xFF), 0.25f);
+
+                case "bank": return Materials3D.Stone;
 
                 case "clinic":
                     return Paint("SignSurgery", new Color32(0xE4, 0xE2, 0xD8, 0xFF), 0.30f);

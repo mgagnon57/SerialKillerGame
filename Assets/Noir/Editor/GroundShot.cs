@@ -216,6 +216,37 @@ namespace Noir.Editor
         }, dressed: true);
 
         /// <summary>
+        /// THE COUNTRY, WHICH NOTHING IN THIS PROJECT HAS EVER PHOTOGRAPHED.
+        ///
+        /// The PlayMode gate switches Trees, Farm and Powerlines OFF before the town builds -
+        /// deliberately, see CityUnderTest, because building four thousand renderers under a
+        /// traffic suite slows every run for nothing. The consequence is that a green gate has
+        /// never once seen the hedges, the props, the field boundaries or the country ring, and
+        /// the nine existing camera sets all point at the town. So 17,849 English hedges - 44.9%
+        /// of every prop in Rossville - survived every gate this project has, and were found by
+        /// counting rather than by looking, because there was nothing to look at.
+        ///
+        /// `dressed: true` is the whole point: it forces the built town on, which is what brings
+        /// Countryside and CityGreenery into the frame at all.
+        ///
+        /// THE YAWS ARE A FIRST GUESS AND MUST BE CORRECTED BY LOOKING. Three hand-computed
+        /// bearings once photographed a wood forty metres from anything; see SnapToRail above.
+        /// </summary>
+        [MenuItem("Noir/Render The Country")]
+        public static void Country() => Run("country", new[]
+        {
+            // Standing at the west edge looking out: the last houses, the field boundary and the
+            // fields behind it in one frame. If a hedge ever comes back, it comes back here.
+            new Shot("country-edge", 40f, 1200f, 90f, 8f, 270f, 1.6f),
+
+            // From above, where the patchwork either reads as Illinois farmland or does not.
+            new Shot("country-pattern", 0f, 1200f, 420f, 34f, 250f),
+
+            // The north edge, so the answer is not one accident of one side of town.
+            new Shot("country-north", 1050f, 20f, 320f, 22f, 180f),
+        }, dressed: true);
+
+        /// <summary>
         /// THE ROOF, CLOSE ENOUGH TO SETTLE IT. Nothing in this project could judge a roof.
         ///
         /// The overview is 1,150 m up, where a shingle course is far below one pixel and every
@@ -385,6 +416,8 @@ namespace Noir.Editor
                     CityShot.Frame(camGo, target, shot.Dist, shot.Pitch, yaw);
                     CityShot.Capture(cam, Path.Combine(CityShot.OutputDir, shot.Name + ".png"));
                 }
+
+                ShotLog.Stamp(label, CityShot.OutputDir, CityShot.TakeWritten());
             }
             finally
             {

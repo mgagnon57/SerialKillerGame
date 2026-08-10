@@ -75,18 +75,38 @@ namespace Noir.Sim
             // tiled across half a kilometre of open country beyond the map, where the streaks
             // stretched into bands running to the horizon like a combed carpet. Furrows and
             // floorboards want direction; a field does not.
-            SaveSurface(outputDir, "grass", 118, 146, 86, 24, 0.12, 1201);
-            SaveSurface(outputDir, "field", 168, 150, 100, 18, 0.55, 1301);
-            SaveSurface(outputDir, "wood", 76, 104, 72, 28, 0.18, 1401);
+            //
+            // AND THE COLOURS ARE THE PACK'S OWN MEANS, MEASURED 2026-08-09 - the same rule the
+            // roof block below has followed since it was written, applied at last to the ground.
+            // These eight are what a SHIPPED PLAYER and a fresh clone draw, and they were the
+            // village's original 2D palette, never revisited: road was pale grey 120,116,110
+            // where the pack's asphalt is near-black 49,49,49, so the editor and the product were
+            // not the same town. Field and wood were pale khaki and green against dark brown
+            // dirt. If a pack set in SurfaceTextures._packSets changes, re-measure and change the
+            // line here as well - they are one decision written in two files.
+            SaveSurface(outputDir, "grass", 106, 123, 58, 24, 0.12, 1201);
+            SaveSurface(outputDir, "field", 101, 75, 47, 18, 0.55, 1301);
+            SaveSurface(outputDir, "wood", 139, 96, 58, 28, 0.18, 1401);
             SaveSurface(outputDir, "water", 62, 106, 136, 12, 0.15, 1501);
-            SaveSurface(outputDir, "road", 120, 116, 110, 22, 0.10, 1601);
-            SaveSurface(outputDir, "path", 148, 136, 116, 28, 0.20, 1701);
-            SaveSurface(outputDir, "floor", 160, 138, 112, 14, 0.60, 1801);
-            SaveSurface(outputDir, "churchyard", 128, 140, 106, 22, 0.15, 1901);
+            SaveSurface(outputDir, "road", 49, 49, 49, 22, 0.10, 1601);
+            SaveSurface(outputDir, "path", 115, 79, 49, 28, 0.20, 1701);
+            SaveSurface(outputDir, "floor", 218, 205, 189, 14, 0.60, 1801);
+            // Four levels off grass, on purpose and in the one place it is allowed: both are the
+            // same pack sheet, so with no textures at all a churchyard would vanish into a lawn.
+            SaveSurface(outputDir, "churchyard", 114, 130, 63, 22, 0.15, 1901);
+            // A vacant lot: Ground_Dirt_Harvested's mean. Almost the path's colour, because it
+            // almost is - the whole difference in the editor is the stubble grain, which a 256px
+            // placeholder cannot carry, so the fallback settles for the right colour.
+            SaveSurface(outputDir, "ground_rough", 111, 78, 48, 22, 0.35, 2701);
             // Grain well down from 0.70. Strong directional grain on a wall is not stone, it
             // is a smear: three metres of vertical streak on every elevation in the village.
+            //
+            // Wall stays PALE and does not take the pack mean. Wall_Planks_Horizontal_B is pure
+            // white with the board lines drawn into it precisely so the material tint is the
+            // paint, so its mean is 255,255,255 and copying that would give a player unpainted
+            // white siding on every house in town. 192,178,160 is a painted board.
             SaveSurface(outputDir, "wall", 192, 178, 160, 16, 0.18, 2001);
-            SaveSurface(outputDir, "brick", 146, 104, 84, 20, 0.30, 2501);
+            SaveSurface(outputDir, "brick", 167, 105, 78, 20, 0.30, 2501);
 
             // Four roof coverings, not one. A village where every roof is the same colour
             // reads as an estate put up in a single year by a single contractor - which is

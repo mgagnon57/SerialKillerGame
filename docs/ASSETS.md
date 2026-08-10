@@ -271,11 +271,18 @@ else whatever we buy.
   below. Buy this if the Slavic and Steampunk register bothers you once there are figures on
   screen and you want ordinary modern clothes: suits, overalls, shop coats.
 
-**Variety is already solved and needs no purchase.** `Universal_A_Alb` is a labelled swatch grid:
-each ROW is a role - primary, secondary, tertiary, hair, skin, hide - and each row is a ramp of
-about sixteen shades. Measured, `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 distinct atlas
-cells across 10 roles. So a person's coat colour is a UV coordinate, not a texture, and moving it
-along its own row recolours that garment and nothing else. Four roles at sixteen shades is 65,536
+**Variety is already solved and needs no purchase.** `Universal_A_Alb` is a labelled swatch grid,
+and the grid is **32 x 32 cells of 128 px on a 4,096 px sheet** — measured off the file on
+2026-08-09, because this paragraph, `docs/IDEAS.md` and four comments in `AgentBody.cs` all said
+sixteen or sixty-four and a safety argument was built on top of it. Each ROW is a role, labelled on
+the sheet: 1 skin, 2 hide, 3 hair, 9 stone, 13 tertiary, 14 secondary, 15 primary, and so on.
+**Along a row, columns 0–19 are a twenty-step ramp** from near-black to white; **columns 20–29 are
+one flat colour repeated ten times**; column 30 is the only non-black column in
+`Universal_A_Emit.png`; column 31 is an accent. Measured, `Man_Slavic_Summer_Hair` puts 2,841
+vertices on 27 distinct atlas cells across 10 roles. So a person's coat colour is a UV coordinate,
+not a texture, and moving it along its own row recolours that garment and nothing else — **but only
+inside columns 0–19.** Wrap past 19 and the garment lands on the flat block or on the emission key,
+which is why the shift has to be bounded rather than a modulo. Four roles at twenty steps is 160,000
 looks from ONE prefab, against a population of 365. Clone the mesh per citizen, seed the shades off
 the citizen id so a person looks the same every run, and no two people ever match.
 

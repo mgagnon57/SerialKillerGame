@@ -786,12 +786,16 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   TWO ALIKE. The pack has about twenty figures in register for an ordinary town against a
   population of 365, so the variety is not in the prefabs: `Universal_A_Alb` is a labelled SWATCH
   GRID - 4096 square and 428KB, which is the compression signature of flat colour blocks - where
-  each row is a role (primary, secondary, tertiary, hair, skin, hide) and each row is a ramp of
-  shades. A coat colour is a UV coordinate, not a texture. Measured: `Man_Slavic_Summer_Hair` puts
-  2,841 vertices on 27 cells across 10 roles. Each person's mesh is cloned and every vertex nudged
-  ALONG its own row, never across it - which is what makes it safe without knowing which row is
-  which, because skin stays in the skin ramp and hair in the hair ramp. Hue variation needs the
-  rows mapped first and is a later job; shade alone is plenty.
+  each row is a role (primary, secondary, tertiary, hair, skin, hide). **The grid is 32 x 32 cells
+  of 128px, measured 2026-08-09**, and a row is not a ramp all the way across: columns 0-19 are the
+  role's twenty-step ramp, 20-29 are one flat colour repeated, 30 is the emission key (the only
+  non-black column in `Universal_A_Emit.png`) and 31 is an accent. A coat colour is a UV coordinate,
+  not a texture. Measured: `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 cells across 10 roles.
+  Each person's mesh is cloned and every vertex nudged ALONG its own row, never across it - which is
+  what makes it safe without knowing which row is which, because skin stays in the skin ramp and
+  hair in the hair ramp. **What it does NOT make safe is wrapping**: a shift that runs past column 19
+  leaves the ramp for the flat block or the emission key, so the shift is bounded, not a modulo.
+  Hue variation needs the rows mapped first and is a later job; shade alone is plenty.
 
   `Citizen.Male` now exists. `PopulationGenerator` always decided it, to pick which forename list
   to draw from, and then THREW IT AWAY - so nothing downstream could tell a Margaret from a

@@ -54,6 +54,13 @@ namespace Noir.Unity
         /// Warned once per bad name rather than once per building, or a single typo in a common
         /// kind would print forty-four identical lines and bury everything else in the log.
         /// </summary>
+        /// <summary>Does anything here answer to that word? For SmokeTest's kinds.txt diff, which
+        /// fails the run rather than waiting for somebody to notice a church shaped like a
+        /// cottage. `dwelling` and the Main Street kinds are decided elsewhere in
+        /// <see cref="For"/> and never reach the registry, so they are allowed through.</summary>
+        public static bool Knows(string name) =>
+            name != null && (Registry.ContainsKey(name) || name == "dwelling" || name == "terrace");
+
         public static IMassingGrammar For(Place place)
         {
             string name = place == null ? null : PlaceKindTable.Current.Row(place.Kind).Massing;

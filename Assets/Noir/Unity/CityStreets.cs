@@ -157,7 +157,19 @@ namespace Noir.Unity
             RoadClass.Mainroad => Kit + "Mainroad_Crosswalk_City.prefab",
             RoadClass.Alley    => Straight(klass),      // nor across an alley mouth
             RoadClass.Track    => Straight(klass),      // nobody paints a zebra on a farm track
-            _                  => Kit + "Road_Crosswalk_10x10_City.prefab",
+
+            // AND NOT ON A RESIDENTIAL STREET EITHER, which leaves this arm with nothing but
+            // Street in it. `Road_Crosswalk_10x10_City` carries its zebra, its stop line and its
+            // edge line on the M_Universal_A submesh - and Verge(), eleven lines after the tile is
+            // seated, repaints exactly that submesh to plain asphalt on every Street tile. So the
+            // crossing was laid and then blanked, every time, at every side-street junction in
+            // town. Two decisions disagreeing, and the tile choice was the wrong one: Verge is
+            // stating the RULING - Rossville's side streets are unmarked, the 2007 photographs
+            // show paint only on the through route - and this line had never heard it.
+            //
+            // Route 1, Attica and every Mainroad or Freeway crossing are untouched: both Verge
+            // call sites are behind a Street guard.
+            _                  => Straight(klass),
         };
 
         /// <summary>
@@ -776,9 +788,7 @@ namespace Noir.Unity
         private static void Verge(GameObject tile)
         {
             if (tile == null) return;
-            if (_verge == null)
-                _verge = AssetDatabase.LoadAssetAtPath<Material>(
-                    "Assets/polyperfect/Poly Universal Pack/Materials/Nature/M_Ground_Grass.mat");
+            if (_verge == null) _verge = VergeGrass();
             if (_plainTop == null)
                 _plainTop = AssetDatabase.LoadAssetAtPath<Material>(
                     "Assets/polyperfect/Poly Universal Pack/Materials/City/M_Asphalt_A_City.mat");
@@ -793,7 +803,16 @@ namespace Noir.Unity
                     if (mats[i] == null) continue;
 
                     // The concrete edging becomes mown verge.
-                    if (mats[i].name.StartsWith("M_Sidewalk", System.StringComparison.Ordinal))
+                    //
+                    // THE EXACT PREFIX, NOT THE FAMILY. These were `M_Sidewalk` and `M_Universal`,
+                    // which also match M_Universal_B..F and, worse, M_Universal_Glass and
+                    // M_Universal_Glass_Night. Only M_Universal_A is on the road tiles today, so
+                    // it has never fired wrongly - but SunRig finds the pack's lamp lens by the
+                    // substring "Glass" and CityChunker refuses to bake anything whose material
+                    // name contains "Night", so the day a street tile carries a lit element this
+                    // repaint would silently kill it. Measured against SM_Road_Straight_10x10_City
+                    // and SM_Road_Crosswalk_10x10_City; StackProbe already uses the tight form.
+                    if (mats[i].name.StartsWith("M_Sidewalk_A", System.StringComparison.Ordinal))
                     { mats[i] = _verge; hit = true; }
 
                     // AND THE PAINT GOES. The kit's 10 m tile carries a white edge line on its
@@ -802,11 +821,56 @@ namespace Noir.Unity
                     // through route, and in 1940 most of these were not even hard-surfaced.
                     // Repainted as asphalt rather than deleted, so the mesh stays whole.
                     else if (_plainTop != null &&
-                             mats[i].name.StartsWith("M_Universal", System.StringComparison.Ordinal))
+                             mats[i].name.StartsWith("M_Universal_A", System.StringComparison.Ordinal))
                     { mats[i] = _plainTop; hit = true; }
                 }
                 if (hit) r.sharedMaterials = mats;
             }
+        }
+
+        /// <summary>Measured off SM_Road_Straight_10x10_City and its crosswalk sibling: both
+        /// UV their sidewalk and universal submeshes at exactly one third of a UV per world
+        /// metre. (The 0.0843 in the same file is UVMap_Lightmap, which is a different question.)
+        /// </summary>
+        private const float TileUvPerMetre = 0.3333f;
+
+        /// <summary>
+        /// A COPY OF THE PACK'S GRASS, NEVER THE PACK'S OWN ASSET, and at a tiling derived from
+        /// the mesh rather than inherited from a terrain.
+        ///
+        /// `M_Ground_Grass` is the pack's TERRAIN material: `_BaseMap` scale 0.2, sized for a
+        /// ground plane whose UVs run in metres. Assigned straight onto a road tile UV'd at 1/3
+        /// per metre, the grass repeated every FIFTEEN metres where the concrete it replaced
+        /// repeated every three - and every four on the lawn it runs into, which ForTerrain binds
+        /// at SurfaceTextures.TilingMetres. A verge five times coarser than the garden behind it
+        /// is the "weird" a wide shot shows and no test can.
+        ///
+        /// 0.75 puts the repeat at 4.00 m exactly, so the verge and the lawn are the same grass at
+        /// the same size - and they really are the same grass: M_Ground_Grass's _BaseMap resolves
+        /// to Nature/Grass_A_Alb.png, which is the sheet ForTerrain already binds. Only the tiling
+        /// ever separated them. The normal map is scaled with it, because the pack ships that
+        /// material with _BumpMap at 1 against a _BaseMap at 0.2 - its own grain five times finer
+        /// than its own colour.
+        ///
+        /// A COPY because `Assets/polyperfect` is gitignored: an edit to the .mat would exist on
+        /// this machine and on no other. The name must not contain "Night" or "Emission", or
+        /// CityChunker refuses to bake the tile.
+        /// </summary>
+        private static Material VergeGrass()
+        {
+            var src = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/polyperfect/Poly Universal Pack/Materials/Nature/M_Ground_Grass.mat");
+            if (src == null) return null;
+
+            float s = 1f / (TileUvPerMetre * SurfaceTextures.TilingMetres);   // 0.75
+            var m = new Material(src) { name = "M_Verge_Grass" };
+            m.enableInstancing = true;
+            // All four names, because the pack ships this material with the HDRP/Lit and URP/Lit
+            // property sets both filled in and which one the shader reads is not this file's
+            // business. HasProperty makes the ones it does not have free.
+            foreach (var prop in new[] { "_BaseMap", "_MainTex", "_BumpMap", "_NormalMap" })
+                if (m.HasProperty(prop)) m.SetTextureScale(prop, new Vector2(s, s));
+            return m;
         }
 
         private static Material _verge, _plainTop;

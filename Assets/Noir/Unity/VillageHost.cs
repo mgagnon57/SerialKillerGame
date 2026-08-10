@@ -209,7 +209,21 @@ namespace Noir.Unity
         /// pressed Play to look at the new rail bed and found a dark survey plan had no way to
         /// turn it on short of editing this line, which is what this key is for.
         /// </summary>
-        public static bool ShowBuildings = false;
+        /// <remarks>
+        /// A PROPERTY RATHER THAN A FIELD ONLY SO THE GROUND CAN HEAR IT CHANGE. Materials3D bakes
+        /// the plan-dimming decision when it builds a material and caches the material for the
+        /// life of the domain, so an editor tool that sets this AFTER the palette exists - which
+        /// is most of them, CityShot and GroundShot and HouseProto and LayerShot all do it - was
+        /// rendering with the previous answer. Every one of the twelve assignments in the tree is
+        /// a plain `=` and compiles unchanged; there is no `ref`, `out` or Interlocked use.
+        /// </remarks>
+        public static bool ShowBuildings
+        {
+            get => _showBuildings;
+            set { _showBuildings = value; Materials3D.RefreshPlan(); }
+        }
+
+        private static bool _showBuildings;
 
         /// <summary>Where the built-town switch is remembered between sessions. Read once in
         /// Bootstrap, before anything makes a material or a mesh - Materials3D.Plan asks
@@ -261,7 +275,19 @@ namespace Noir.Unity
         /// TURNED OFF 2026-08-08. This is a survey instrument and it was left switched on, so
         /// pressing Play showed a flat green sheet with line-art roads on it rather than the town.
         /// It is the default a demo runs on. See RoadCentrelines below - the same fault.
-        public static bool FlatGroundColour = false;
+        /// <remarks>
+        /// Same treatment as <see cref="ShowBuildings"/>, with one caveat worth stating: only the
+        /// MATERIAL half follows a live change. The MESH half is read at build time (VillageMesh
+        /// chooses which submesh a tile goes in), so flipping this after a build recolours the
+        /// ground without re-zoning it.
+        /// </remarks>
+        public static bool FlatGroundColour
+        {
+            get => _flatGroundColour;
+            set { _flatGroundColour = value; Materials3D.RefreshPlan(); }
+        }
+
+        private static bool _flatGroundColour;
 
         /// <summary>
         /// Draw each road as a thin line down its middle instead of laying real road tiles.
@@ -875,6 +901,13 @@ namespace Noir.Unity
             // sound, and until now the village made none at all.
             VillageAudio.Create(this, transform);
             profile.Done("VillageAudio");
+
+            // AFTER EVERY LAYER, NOT DURING ONE. VillageMesh calls SurfaceTextures.ReportOnce
+            // partway through its own build, before the lazily-registered Massing, Trees and Farm
+            // layers have realised, so that line can only ever say "so far". This one runs when
+            // the town is finished and is the complete census: which names came off the pack,
+            // which off Content/textures/, and which got nothing at all.
+            SurfaceTextures.Report();
 
             profile.Report();
         }

@@ -216,6 +216,59 @@ namespace Noir.Editor
                        + "browser map. That file is the owner's memory and cannot be rebuilt.");
                 bad++;
             }
+
+            bad += CheckKindsTableKeysAreAnswered();
+            return bad;
+        }
+
+        /// <summary>
+        /// THE DIFF CLAUDE.MD ASKS FOR AND NOTHING IN THE TREE DID: every `frontage` and `massing`
+        /// value `Content/kinds.txt` declares, against the keys the renderers answer to.
+        ///
+        /// "A value nothing answers to does NOT throw, it falls through to a default and the
+        /// building just looks wrong." That has now happened twice in this one column - `factory`
+        /// declaring `frontage mill` and getting a plain plank, then `bank` and `icecream`
+        /// declaring `shopfront`, which no arm had ever heard of. Both were found by eye, months
+        /// apart.
+        ///
+        /// It lives in the Editor assembly because Frontage and MassingGrammars are in Noir.Unity,
+        /// which Core cannot see - and it is deliberately NOT a load-time throw in
+        /// PlaceKindTable: one bad word should cost one wrong sign, not the whole game.
+        /// </summary>
+        private static int CheckKindsTableKeysAreAnswered()
+        {
+            int bad = 0;
+            var frontages = new System.Collections.Generic.SortedDictionary<string, string>();
+            var massings = new System.Collections.Generic.SortedDictionary<string, string>();
+
+            var table = PlaceKindTable.Current;
+            for (int i = 0; i < table.Count; i++)
+            {
+                var row = table.RowOrNull((PlaceKind)i);
+                if (row == null) continue;
+                if (!string.IsNullOrEmpty(row.Frontage)) frontages[row.Frontage] = row.Name;
+                if (!string.IsNullOrEmpty(row.Massing)) massings[row.Massing] = row.Name;
+            }
+
+            foreach (var kv in frontages)
+                if (System.Array.IndexOf(Frontage.Styles, kv.Key) < 0)
+                {
+                    LogError($"kinds.txt: frontage '{kv.Key}' (on {kv.Value}) is a word nothing "
+                           + "draws - that building silently takes the plain nameboard. There is: "
+                           + string.Join(", ", Frontage.Styles) + ".");
+                    bad++;
+                }
+
+            foreach (var kv in massings)
+                if (!MassingGrammars.Knows(kv.Key))
+                {
+                    LogError($"kinds.txt: massing '{kv.Key}' (on {kv.Value}) is a word nothing "
+                           + "builds - that building silently falls back to the cottage grammar.");
+                    bad++;
+                }
+
+            Log($"kinds      {frontages.Count} frontage and {massings.Count} massing key(s) "
+              + "declared, all answered");
             return bad;
         }
 

@@ -15,8 +15,18 @@ namespace Noir.Unity
     /// graph, which is editor work. Nine materials is nothing: the mesh is built with one
     /// submesh each, so it is still a handful of draw calls for the whole village.
     ///
-    /// Colours are chosen a little brighter than they look here, because real lighting will
-    /// darken everything - what you set is the fully-lit value, not the final one.
+    /// THE COLOURS BELOW ARE THE FALLBACK, AND NOBODY ON THIS MACHINE HAS EVER SEEN ONE. They
+    /// were authored when they WERE the render - "chosen a little brighter than they look here,
+    /// because real lighting will darken everything" - and every one of them is now overwritten
+    /// the moment <see cref="SurfaceTextures"/> binds an albedo, because a texture multiplies the
+    /// base colour and a hue left there multiplies two mid-tones into something far darker than
+    /// either. So what these govern is exactly two cases: a SHIPPED PLAYER, where `ApplyPack` is
+    /// `#if UNITY_EDITOR` and does not exist, and a fresh clone with no `Assets/polyperfect`.
+    ///
+    /// Measured 2026-08-09, they were nowhere near the textures they stand in for - a player drew
+    /// pale grey 0x9A9690 roads where the editor draws near-black asphalt 0x313131. Each is now
+    /// the MEAN OF THE TEXTURE IT REPLACES, decoded from the pack sheet itself, so a missing file
+    /// degrades to the right colour instead of to a guess. If you change a pack set, re-measure.
     /// </summary>
     public static class Materials3D
     {
@@ -97,10 +107,33 @@ namespace Noir.Unity
         public static bool ShowGroundColour
         {
             get => !Application.isBatchMode && PlayerPrefs.GetInt(GroundColourKey, 1) == 1;
-            set { PlayerPrefs.SetInt(GroundColourKey, value ? 1 : 0); PlayerPrefs.Save(); }
+            set
+            {
+                PlayerPrefs.SetInt(GroundColourKey, value ? 1 : 0); PlayerPrefs.Save();
+                RefreshPlan();
+            }
         }
 
         private const string GroundColourKey = "noir.ground.colour";
+
+        /// <summary>What a ground material looked like BEFORE the plan dimmed it.</summary>
+        private readonly struct Lit
+        {
+            public readonly Color Base; public readonly float Smoothness;
+            public Lit(Color b, float s) { Base = b; Smoothness = s; }
+        }
+
+        /// <summary>
+        /// Every ground material <see cref="Plan"/> has touched, with the colour it had before -
+        /// which is the only way back out of the dimming. Plan used to be one-way: it overwrote
+        /// _BaseColor and set _Smoothness to 0 and kept no record, so nothing could undo it even
+        /// if the question were re-asked.
+        /// </summary>
+        private static readonly Dictionary<Material, Lit> _lit = new Dictionary<Material, Lit>();
+        private static bool _dimmed, _dimKnown;
+
+        private static bool WantsPlan =>
+            !(VillageHost.ShowBuildings || ShowGroundColour || VillageHost.FlatGroundColour);
 
         private static Material Plan(Material m)
         {
@@ -109,14 +142,56 @@ namespace Noir.Unity
             // dimming that to near-black produces a handsome survey drawing that is not the thing
             // he asked for. The two settings are answering different questions and this one is
             // the more specific.
-            if (VillageHost.ShowBuildings || ShowGroundColour || VillageHost.FlatGroundColour
-                || m == null) return m;
+            if (m == null) return m;
 
-            var dim = new Color(PlanGround, PlanGround, PlanGround, 1f);
-            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", dim);
-            if (m.HasProperty("_Color")) m.SetColor("_Color", dim);
-            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            // RECORDED ON EVERY CALL, not only the first: RetintZoning re-runs Paint, which sets a
+            // new lit colour and comes straight back through here.
+            _lit[m] = new Lit(m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : Color.white,
+                              m.HasProperty("_Smoothness") ? m.GetFloat("_Smoothness") : 0f);
+            _dimmed = WantsPlan; _dimKnown = true;
+            Dim(m, _dimmed);
             return m;
+        }
+
+        private static void Dim(Material m, bool dim)
+        {
+            if (m == null) return;
+            if (dim)
+            {
+                var grey = new Color(PlanGround, PlanGround, PlanGround, 1f);
+                if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", grey);
+                if (m.HasProperty("_Color")) m.SetColor("_Color", grey);
+                if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            }
+            else if (_lit.TryGetValue(m, out var was))
+            {
+                if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", was.Base);
+                if (m.HasProperty("_Color")) m.SetColor("_Color", was.Base);
+                if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", was.Smoothness);
+            }
+        }
+
+        /// <summary>
+        /// RE-ASK THE QUESTION FOR EVERY GROUND MATERIAL ALREADY BUILT, because the answer was
+        /// being baked once per domain and never revisited.
+        ///
+        /// `Noir > Show Ground Colour` was a DEAD MENU ITEM in the one case anybody would use it:
+        /// tick it off, then run `Noir > Render Plan (top-down)` in the same editor session, and
+        /// the render still used the pre-click decision - ForTerrain, ForZoning and ForZoned all
+        /// return the cached Material before Plan is ever reached, and there is no Clear() in the
+        /// tree. Nothing was logged either way, so it looked like the render ignoring the switch.
+        ///
+        /// NOT PER FRAME AND NOT PER BUILD: called from the switches that can change the answer,
+        /// and a single bool compare when the answer has not moved. Same shape as RetintZoning.
+        /// </summary>
+        public static void RefreshPlan()
+        {
+            bool want = WantsPlan;
+            if (_dimKnown && want == _dimmed) return;
+            _dimmed = want; _dimKnown = true;
+            // `pair.Key == null` is Unity's overloaded ==, which also catches a material destroyed
+            // under us by a domain reload or a scene close.
+            foreach (var pair in _lit) if (pair.Key != null) Dim(pair.Key, want);
         }
 
         private static Material Make(string name, Color colour, float smoothness, float metallic = 0f)
@@ -141,15 +216,18 @@ namespace Noir.Unity
             string texture;
             switch (t)
             {
-                case Terrain.Grass: m = Make("Grass", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f); texture = "grass"; break;
-                case Terrain.Field: m = Make("Field", new Color32(0xB0, 0xA0, 0x76, 0xFF), 0.04f); texture = "field"; break;
-                case Terrain.Wood: m = Make("Wood", new Color32(0x6A, 0x84, 0x62, 0xFF), 0.03f); texture = "wood"; break;
-                case Terrain.Water: m = Make("Water", new Color32(0x5E, 0x8C, 0xAA, 0xFF), 0.85f); texture = "water"; break;
-                case Terrain.Road: m = Make("Road", new Color32(0x9A, 0x96, 0x90, 0xFF), 0.10f); texture = "road"; break;
-                case Terrain.Path: m = Make("Path", new Color32(0xA8, 0x9C, 0x86, 0xFF), 0.06f); texture = "path"; break;
-                case Terrain.Floor: m = Make("Floor", new Color32(0xB4, 0x9A, 0x80, 0xFF), 0.15f); texture = "floor"; break;
-                case Terrain.Churchyard: m = Make("Churchyard", new Color32(0x96, 0xA4, 0x7E, 0xFF), 0.05f); texture = "churchyard"; break;
-                default: m = Make("Ground", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f); texture = "grass"; break;
+                // Each colour is the measured mean of the pack sheet named on the same line. The
+                // one deliberate deviation is Churchyard, four levels lighter than Grass off the
+                // SAME sheet, so that with no textures at all the two do not become one field.
+                case Terrain.Grass: m = Make("Grass", new Color32(0x6A, 0x7A, 0x3A, 0xFF), 0.05f); texture = "grass"; break;
+                case Terrain.Field: m = Make("Field", new Color32(0x65, 0x4B, 0x2F, 0xFF), 0.04f); texture = "field"; break;
+                case Terrain.Wood: m = Make("Wood", new Color32(0x8B, 0x60, 0x3A, 0xFF), 0.03f); texture = "wood"; break;
+                case Terrain.Water: m = Make("Water", new Color32(0x3F, 0x6B, 0x89, 0xFF), 0.85f); texture = "water"; break;
+                case Terrain.Road: m = Make("Road", new Color32(0x31, 0x31, 0x31, 0xFF), 0.10f); texture = "road"; break;
+                case Terrain.Path: m = Make("Path", new Color32(0x73, 0x4F, 0x31, 0xFF), 0.06f); texture = "path"; break;
+                case Terrain.Floor: m = Make("Floor", new Color32(0xDA, 0xCD, 0xBD, 0xFF), 0.15f); texture = "floor"; break;
+                case Terrain.Churchyard: m = Make("Churchyard", new Color32(0x72, 0x82, 0x3F, 0xFF), 0.05f); texture = "churchyard"; break;
+                default: m = Make("Ground", new Color32(0x6A, 0x7A, 0x3A, 0xFF), 0.05f); texture = "grass"; break;
             }
 
             // A texture multiplies the base colour, so the palette above still governs the look
@@ -175,7 +253,7 @@ namespace Noir.Unity
             get
             {
                 if (_pasture != null) return _pasture;
-                _pasture = Make("Pasture", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f);
+                _pasture = Make("Pasture", new Color32(0x6A, 0x7A, 0x3A, 0xFF), 0.05f);
                 SurfaceTextures.ApplyPack(_pasture, "grass", 21f);
                 Plan(_pasture);
                 return _pasture;
@@ -400,36 +478,51 @@ namespace Noir.Unity
         {
             if (_byZoned.TryGetValue(kind, out var existing)) return existing;
 
-            Material m; string texture; float tiling;
+            // ALL THREE OF THESE COLOURS USED TO BE THROWN AWAY ON THE NEXT LINE. `ApplyPack`
+            // forces _BaseColor to white when it binds an albedo, so `Make(...)`'s tint survived
+            // for exactly one statement and the three docstrings described distinctions the
+            // renderer could not express - "a duller, more olive tint than the road itself gets"
+            // over a material that came out identical to Terrain.Road. Two of the three were the
+            // SAME texture at the same tiling as Terrain.Path, differing only in smoothness.
+            //
+            // A tint MULTIPLIES, so a target is only reachable if it is darker than the albedo it
+            // multiplies. The authored targets were all LIGHTER than asphalt (0x313131) and dirt
+            // (0x734F31) in at least two channels, so no tint over those sheets could ever have
+            // produced them. Hard moves onto concrete, where its target IS reachable and is now
+            // passed through as a tint; Rough gets a sheet of its own; Bank says what it is.
+            Material m; string texture; float tiling; Color? tint = null;
             switch (kind)
             {
                 case ZonedGround.Hard:
-                    // Commercial and industrial lots: packed earth and gravel, not turf - a feed
-                    // store's yard or a garage's apron. Reuses the road texture's grain
-                    // (hardstanding rather than lawn) at a duller, more olive tint than the road
-                    // itself gets, so a commercial yard reads as worked ground beside a street
-                    // rather than as more street.
+                    // Commercial and industrial lots: a feed store's yard or a garage's apron -
+                    // hardstanding, not turf. CONCRETE, not asphalt, because a yard that reads as
+                    // more street is the failure this material exists to avoid. The tint is
+                    // 0x8C8674 over Concrete_A_City's measured mean 0xDACDBD, per channel:
+                    // 140/218, 134/205, 116/189.
                     m = Make("GroundHard", new Color32(0x8C, 0x86, 0x74, 0xFF), 0.06f);
-                    texture = "road"; tiling = 4f;
+                    texture = "floor"; tiling = 4f;
+                    tint = new Color(0.642f, 0.654f, 0.614f);
                     break;
                 case ZonedGround.Rough:
-                    // Vacant lots: a lot mowed once a summer, weeds through bare dirt - not lawn,
-                    // and not a farm field either. The path texture's own worn-dirt grain, tinted
-                    // browner and flatter than the kept grass next door.
-                    m = Make("GroundRough", new Color32(0x9C, 0x92, 0x66, 0xFF), 0.03f);
-                    texture = "path"; tiling = 4f;
+                    // Vacant lots: mowed once a summer, weeds through bare dirt - not lawn, and
+                    // not a farm field either. Its own sheet, Ground_Dirt_Harvested (mean
+                    // 0x6F4E30, span 87), whose stubble rows are what a lot cut with a brush hog
+                    // looks like. Almost the same COLOUR as the path it used to borrow; the whole
+                    // difference is grain, and grain is the thing that was missing.
+                    m = Make("GroundRough", new Color32(0x6F, 0x4E, 0x30, 0xFF), 0.03f);
+                    texture = "ground_rough"; tiling = 4f;
                     break;
                 default:   // Bank
                     // Any tile too steep for turf to hold - a ditch side, a creek bank, whatever
-                    // the sculpt tool has cut. Bare worn ground regardless of what the parcel
-                    // standing on it is zoned for; see GroundZoning.BankGrade for why this is
-                    // rare on a map this flat and not a slope map painted over farmland.
-                    m = Make("GroundBank", new Color32(0x8A, 0x7A, 0x5C, 0xFF), 0.02f);
+                    // the sculpt tool has cut. This IS the path texture at a tighter tile and
+                    // nothing more, which is honest: a worn bank and a worn track are the same
+                    // bare dirt. See GroundZoning.BankGrade for why it is rare on a map this flat.
+                    m = Make("GroundBank", new Color32(0x73, 0x4F, 0x31, 0xFF), 0.02f);
                     texture = "path"; tiling = 3f;
                     break;
             }
 
-            SurfaceTextures.ApplyPack(m, texture, tiling);
+            SurfaceTextures.ApplyPack(m, texture, tiling, tint);
             Plan(m);
             _byZoned[kind] = m;
             return m;
@@ -474,7 +567,11 @@ namespace Noir.Unity
                             tint: Color.white, flat: new Color(0.41f, 0.27f, 0.16f)),
                     Roofing("RoofShingleBlack", "roof_shingle_black",
                             tint: Grey(0.38f), flat: new Color(0.16f, 0.11f, 0.07f)),
-                    Roofing("Brick", "brick"),      // chimneys - see ChimneyIndex
+                    // Chimneys - see ChimneyIndex. THE FIFTH WHITE MATERIAL, and it is not a roof.
+                    // It sat on Roofing's default `flat` of white for as long as the four
+                    // coverings did, so a shipped player got white chimneys beside its white
+                    // roofs. 0xA7694E is the measured mean of Wall_Brick_A_City_Alb.
+                    Roofing("Brick", "brick", flat: new Color32(0xA7, 0x69, 0x4E, 0xFF)),
                     Wall,                           // gable ends, towers - see WallIndex
 
                     // YOU DO NOT SHINGLE A FLAT ROOF, and every flat roof in Rossville was
@@ -517,7 +614,20 @@ namespace Noir.Unity
         /// </summary>
         public static int WallIndex => 5;
 
-        /// <summary>A spire is lead or slate, never brick.</summary>
+        /// <summary>
+        /// A steeple is not brick, and index 0 is no longer slate.
+        ///
+        /// This said "a spire is lead or slate, never brick" and pointed at index 0 when index 0
+        /// WAS RoofSlate. It is the weathered grey shingle now, and the sentence quietly became a
+        /// claim about a material that had changed underneath it - the exact shape of fault
+        /// CLAUDE.md records for the traffic cycle constant.
+        ///
+        /// Grey shingle is right anyway, and that is why this is a comment edit rather than an
+        /// eighth array entry: Rossville has ONE church, a frame building, and a small-town
+        /// Illinois steeple in 1991 is shingled or metal-clad. If he ever wants it metal, the
+        /// pack's Roof_Aluminium_A set is the one place it would earn its keep - one more entry
+        /// plus smoothness ~0.5 and metallic ~0.6, for exactly one building.
+        /// </summary>
         public static int SpireIndex => 0;
 
         /// <summary>

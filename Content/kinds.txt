@@ -484,7 +484,7 @@ kind precinct
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  none
+  frontage  hall
   massing   hall
   props     none
   counter   yes
@@ -560,7 +560,7 @@ kind bank
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  shopfront
+  frontage  bank
   massing   shopfront
   props     none
   counter   yes
@@ -614,7 +614,7 @@ kind icecream
   rooms     auto
   grammar   open
   roof      yes
-  frontage  shopfront
+  frontage  shop
   massing   shopfront
   props     none
   counter   yes
@@ -692,7 +692,7 @@ kind newsstand
   rooms     auto
   grammar   open
   roof      yes
-  frontage  shopfront
+  frontage  shop
   massing   shopfront
   props     none
   counter   yes
@@ -744,7 +744,7 @@ kind waterworks
   grammar   hall
   roof      yes
   frontage  none
-  massing   shed
+  massing   garage
   props     none
   counter   no
   hours     none
@@ -781,7 +781,7 @@ kind publicworks
   grammar   hall
   roof      yes
   frontage  none
-  massing   shed
+  massing   garage
   props     none
   counter   no
   hours     07:00-15:30
