@@ -217,7 +217,28 @@ namespace Noir.PlayTests
             // of ninety frames reached six minutes past six, which is a town where the only honest
             // answer is that everybody is asleep. Ticking the simulation directly walks the clock
             // to the hours where people are actually out.
-            for (int hour = 7; hour <= 18; hour += 2)
+            // FORWARD FROM WHEREVER THE CLOCK IS, BECAUSE THIS SWEEP CANNOT GO BACKWARDS.
+            //
+            // It read `for (int hour = 7; hour <= 18; hour += 2)` and the loop below only ever
+            // ticks FORWARD - `while (Clock.MinuteOfDay < want)`. VillageHost starts the sim at
+            // NOON, so 7, 9 and 11 were already past and the while-loop ran zero times for all
+            // three. Measured off a real run, the six censuses came out as:
+            //
+            //     12:00, 12:00, 12:00, 13:00, 15:00, 17:00
+            //
+            // and the first three were BYTE-IDENTICAL. Half the sweep was one sample printed three
+            // times, and the log looked like six.
+            //
+            // Starting at the next whole hour gives six distinct ones and reaches the EVENING,
+            // which the old range never touched - people coming home is exactly when a walk cycle
+            // is worth watching. The morning is not reachable at all from a noon start, and that
+            // is a property of the simulation rather than of this loop: say so rather than print
+            // noon three times and imply otherwise.
+            int firstHour = host.Sim.Clock.MinuteOfDay / 60 + 1;
+            Debug.Log($"[body] sweeping {firstHour:00}:00 onward in two-hour steps. The sim starts "
+                    + "at noon and this cannot rewind, so the morning is not sampled.");
+
+            for (int hour = firstHour; hour <= firstHour + 10; hour += 2)
             {
                 // 20 ticks a second of game time, so an hour is 72,000 of them.
                 int want = hour * 60;

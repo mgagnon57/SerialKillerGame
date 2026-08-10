@@ -115,11 +115,7 @@ namespace Noir.Unity
 
         private void Enter()
         {
-#if UNITY_EDITOR
             if (_body == null && !Spawn()) return;
-#else
-            if (_body == null) return;
-#endif
             Walking = true;
             _body.SetActive(true);
 
@@ -141,17 +137,57 @@ namespace Noir.Unity
             Cursor.visible = true;
         }
 
-#if UNITY_EDITOR
+        /// <summary>
+        /// The name `Resources.Load` is given at runtime. Made by
+        /// `Noir.Editor.PlayerArmatureResource`, which must be re-run after Starter Assets is
+        /// re-imported.
+        /// </summary>
+        private const string ArmatureResource = "PlayerArmature";
+
+        /// <summary>
+        /// Stand a body up, IN A SHIPPED BUILD AS WELL AS IN THE EDITOR.
+        ///
+        /// This whole method used to be `#if UNITY_EDITOR`, because it reaches the armature
+        /// through `AssetDatabase` - so **pressing P in a shipped Rossville did nothing at all.**
+        /// No body, no error, no log. The one control that lets somebody walk down the street they
+        /// have just built was editor-only from the day it was written.
+        ///
+        /// RESOURCES FIRST AND IN BOTH, rather than a `#if` with two branches. A path only a build
+        /// takes is a path nobody exercises: this way the editor walks the same load every day,
+        /// and the AssetDatabase line below is the FALLBACK - for a machine that has not run
+        /// `Noir > Make The Player Shippable` yet.
+        /// </summary>
         private bool Spawn()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Armature);
+            var prefab = Resources.Load<GameObject>(ArmatureResource);
+
+#if UNITY_EDITOR
             if (prefab == null)
             {
-                Debug.LogWarning($"[player] no {Armature} - is Starter Assets imported?");
+                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Armature);
+                if (prefab != null)
+                    Debug.LogWarning("[player] the armature came from AssetDatabase, so a SHIPPED "
+                        + "build of this tree still cannot stand a body up. Run "
+                        + "Noir > Make The Player Shippable.");
+            }
+#endif
+
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[player] no {ArmatureResource} in Resources and no {Armature} - "
+                    + "run Noir > Make The Player Shippable, or import Starter Assets first.");
                 return false;
             }
 
+            // ASSIGN THE FIELD. Instantiating into a new local leaves `_body` null and the very
+            // next line NullReferences - which compiles perfectly and takes two PlayMode tests
+            // with it. `PrefabUtility.InstantiatePrefab` keeps the prefab link in the editor and
+            // does not exist outside it; plain Instantiate is what a build has.
+#if UNITY_EDITOR
             _body = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+#else
+            _body = Object.Instantiate(prefab);
+#endif
             _body.transform.SetParent(transform, false);
             _body.transform.position = Standing(_host.World);
             _body.name = "PlayerArmature";
@@ -178,7 +214,6 @@ namespace Noir.Unity
                 if (t.name.Contains("CameraTarget") || t.name.Contains("CinemachineTarget")) return t;
             return null;
         }
-#endif
 
         /// <summary>
         /// Where a person starts.

@@ -95,8 +95,34 @@ namespace Noir.Unity
                 }
             }
 
+            // THE TOWN ALREADY KNEW IT HAD DRAWN NOBODY, AND SAID SO IN A WHISPER.
+            //
+            // `rigged` is zero in every shipped build - `AgentBody` reads the figure prefabs
+            // through `AssetDatabase`, which does not exist outside the editor - and zero on a
+            // fresh clone, where `Assets/polyperfect` is gitignored and simply is not there. Both
+            // came out as a `Debug.Log` reading "0 of them bought and animated", which is a
+            // sentence somebody has to already suspect something to notice.
+            //
+            // SPLIT ON `Application.isEditor`, and the split is not tidiness. Told flatly that
+            // "outside the editor this is expected", the fresh-clone case would be actively
+            // misinformed: it IS in the editor, and its cause is the missing pack. A warning that
+            // confidently misattributes is worse than the quiet log it replaces.
             Debug.Log($"People: {n} figures, {rigged} of them bought and animated, "
                     + $"{(n - rigged) * AgentFigure.PartCount} primitive parts.");
+
+            if (rigged == 0 && n > 0)
+            {
+                if (Application.isEditor)
+                    Debug.LogWarning($"[people] all {n} of Rossville is PRIMITIVE CAPSULES - not "
+                        + "one bought figure was found. In the editor that means the pack is "
+                        + "missing: Assets/polyperfect is gitignored, so a fresh clone has none of "
+                        + "it. Re-import it, then run Noir > Make City Meshes Readable.");
+                else
+                    Debug.LogWarning($"[people] all {n} of Rossville is PRIMITIVE CAPSULES, which "
+                        + "is what a shipped build gets today: AgentBody reads the figure prefabs "
+                        + "through AssetDatabase, and there is no AssetDatabase outside the "
+                        + "editor. See docs/ANIMATION-FIXES.md PB-6/PB-7 - the cast manifest.");
+            }
         }
 
         /// <summary>

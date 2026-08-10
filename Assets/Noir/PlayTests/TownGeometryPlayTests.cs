@@ -528,5 +528,44 @@ namespace Noir.PlayTests
                   + "to Standard, which is the whole town's covering silently wrong.");
             }
         }
+
+        /// <summary>
+        /// THE PLAYER'S BODY IS REACHABLE THE WAY A SHIPPED BUILD REACHES IT.
+        ///
+        /// `Player.Spawn` used to be `#if UNITY_EDITOR` end to end, because it loads the armature
+        /// through `AssetDatabase` - so PRESSING P IN A SHIPPED ROSSVILLE DID NOTHING AT ALL. No
+        /// body, no error, no log, from the day it was written.
+        ///
+        /// It loads from `Resources` first now, in the editor as well as in a build, so the path a
+        /// build takes is the path this suite walks every run rather than one nobody exercises.
+        /// The asset is a prefab VARIANT of Starter Assets' armature, made by
+        /// `Noir.Editor.PlayerArmatureResource` - **which has to be re-run after Starter Assets is
+        /// re-imported**, and this test is how you find that out in ten minutes instead of after
+        /// shipping.
+        ///
+        /// Asserted here rather than by pressing P, deliberately: a synthetic keypress into a
+        /// built window proves nothing when it fails - it may be the key, the focus or the input
+        /// system - whereas a missing asset is unambiguous.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePlayersBodyIsWhereAShippedBuildWouldLookForIt()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+
+            var armature = Resources.Load<GameObject>("PlayerArmature");
+
+            Assert.That(armature, Is.Not.Null,
+                "Resources/PlayerArmature is missing, so a shipped build cannot stand a body up "
+              + "and pressing P does nothing at all - silently, which is how it went unnoticed "
+              + "from the day Player.Spawn was written. Run Noir > Make The Player Shippable. If "
+              + "Starter Assets was just re-imported, that is why.");
+
+            // A body, not an empty GameObject: the whole point is a rig with an animator on it.
+            Assert.That(armature.GetComponentInChildren<Animator>(), Is.Not.Null,
+                "Resources/PlayerArmature has no Animator anywhere under it, so it is not the "
+              + "armature - somebody saved the wrong object into the variant.");
+
+            Debug.Log($"[player] the shipped body is at Resources/PlayerArmature: {armature.name}");
+        }
     }
 }

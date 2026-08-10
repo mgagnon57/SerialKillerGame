@@ -61,6 +61,7 @@ namespace Noir.Unity
             // grouping loop and then deleted anyway by the removal loop. The elevated railway
             // vanished that way - placed, logged, and quietly thrown away a moment later.
             var consumed = new HashSet<GameObject>();
+            int unreadable = 0; string unreadableFirst = null;
 
             foreach (var r in before)
             {
@@ -70,8 +71,14 @@ namespace Noir.Unity
                 if (f == null || f.sharedMesh == null) continue;
                 if (!f.sharedMesh.isReadable)
                 {
-                    Debug.LogWarning($"[chunker] '{r.name}' is not Read/Write enabled, so it is "
-                                   + "left alone. Run Noir/Make City Meshes Readable.");
+                    // ONCE, NAMED, AND AT THE END - not one line per renderer. This warned inside
+                    // the loop, and the loop runs over every renderer in the town: measured, that
+                    // was 3,503 identical lines in a single PlayMode log before MeshReadable was
+                    // run, plus 1,390 more once the people were built. Four thousand nine hundred
+                    // warnings is not a warning, it is a wall to scroll past, and the one line
+                    // that mattered was somewhere inside it.
+                    unreadable++;
+                    if (unreadableFirst == null) unreadableFirst = r.name;
                     continue;
                 }
                 consumed.Add(r.gameObject);
@@ -169,6 +176,15 @@ namespace Noir.Unity
                     + $"({meshes} baked meshes, {removed} originals removed, "
                     + $"{materials.Count} materials, {chunk} m grid) "
                     + $"combine {combineMs} ms, destroy {destroyMs} ms.");
+
+            // AN ERROR, NOT A WARNING, because the consequence is a town that quietly does not
+            // bake: every one of these keeps its own draw call, and the whole point of this pass
+            // is bringing a city of bought models down near the village's 1,835 renderers.
+            if (unreadable > 0)
+                Debug.LogError($"[chunker] {unreadable} renderer(s) are NOT Read/Write enabled and "
+                    + $"were left unbaked - first: '{unreadableFirst}'. Mesh.CombineMeshes cannot "
+                    + "read them. Run Noir/Make City Meshes Readable; Assets/polyperfect is "
+                    + "gitignored, so this is the normal state of a fresh clone.");
         }
 
         /// <summary>
