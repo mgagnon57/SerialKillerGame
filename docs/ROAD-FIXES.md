@@ -64,15 +64,28 @@ counts as two roads touching, and the IDOT counts. Checked directly rather than 
 | **DOOR-1** | ✅ fixed, gated at zero |
 | **SPLINE-1** | ✅ fixed — **and see ALLEY-2b: it fixed 39 m of it and left 16.7 m** |
 | **ALLEY-2b** | **half done, and the other half is not this item.** Two of four carried out; the other two are the smoothing, not a missing junction. Measured, gated, and now a question for the owner |
+| **W4** | ✅ `RealRossville` is GATE-2/ADDR-6's shared helper. **GATE-3(a) settled: the instrument was the fault** — the sampler took exactly fifteen samples per road whatever its length, so attica sat on the list at 5/15 = 33.3%. Stepped at a flat 4 m it is 125/394 = 31.7% and the list shrank to three |
+| **W5** | ✅ **unblocked** — decision 3 is answered (a), not (c), so `RC-17` is overruled. **GATE-5 re-recorded: the 134 is 28**, from five identical runs |
+| **W6** | ✅ its alley items are in — 33 alley names with **zero** shipping as multiple runs (ALLEY-1), 58 mouths opened (ALLEY-2). `JUNC-4/8/9`, `CONS-4`, `RC-7/8`, `ADDR-11/15` not verified |
+| **W7** | **CONS-2 done, and its gate was watched failing first: 5,438 of 13,154 lane positions in the oncoming carriageway, 41%.** The rest of `CONS-*` not started |
+| **W8** | not started |
+| **W9** | **his** — decision 1 defers it: *"do not treat 408 Holmes as settled, and do not quietly fix it in either direction — it is an edit he will make on purpose"* |
 | **map audit** | ✅ no longer permanently red on the intended design — 3 kinds of fault → 2, both real |
 
 **Measured after all of it:**
 
 ```
-  Core       470 of 470
+  Core       473 of 473
+  PlayMode   19 of 19, 1 Explicit aspiration skipped, ~690 s
   map audit  20 places over a road, 1 road pair without a junction, and nothing else
   the curve  16.71 m worst (summit), 5 roads over five metres, 16 over one — ratcheted
+  the 134    28, from five identical runs — ratcheted
+  the lanes  0 of 13,154 in the oncoming carriageway, from 5,438
+  the alleys alley1 78.4% of its length on a lot — ratcheted, and nothing moves until he says so
 ```
+
+**Two things wait on him and neither is a defect to chase:** whether the alleys get re-derived to
+obey the back-lot-line rule now that it is enforced again, and the addresses in W9.
 
 ---
 
