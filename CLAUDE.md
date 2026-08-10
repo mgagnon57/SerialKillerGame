@@ -30,6 +30,7 @@ runtime for a noisier answer. Facts here get ONE home. Everywhere else points at
 | **Building the town** | `TownPipeline.Build()` and nothing else. See below |
 | **Randomness** | Everything routes through `IRng`, one substream per system: `Xoshiro256ss.Substream(seed, "name")`. No `System.Random`, no `DateTime.Now`. That is what makes a seed reproduce a village |
 | **Which source outranks which** | `docs/SOURCES-OF-TRUTH.md` |
+| **The people, and what animates them** | `Content/animations.txt` maps a SITUATION to clips; the key is `Activity.ToString().ToLowerInvariant()`, optionally `@place` and `:person`. Rename an `Activity` and the row must move in the same commit or `Resolve` falls through to `default` and those people play a generic idle forever — `EveryActivityHasARowInTheRealFile` fails the Core gate if you forget. The clips live in `Townsfolk.controller`, rebuilt by `Noir > Build The Townsfolk Animator` |
 
 ### There is exactly one way to build the town
 
@@ -292,11 +293,35 @@ Play. It now boots the town and starts the clock:
 > **What it boots is not what you see in the editor, and this is not yet fixed.**
 > `AssetDatabase` and `PrefabUtility` are `UnityEditor` APIs that do not exist in a player, so
 > `CityBuildings`, `CityStreets`, `CityGreenery`, `CityTraffic`, `CityParking`, `CitySigns` and
-> `SunRig` all sit behind `#if UNITY_EDITOR`. Only `CityStreets` has an `#else` that does anything
-> — it covers one *measurement*; `SunRig`'s returns `null`. A standalone build today gives you the
-> procedural survey plan, primitive capsule people, and **none of the bought props**. `CityChunker` has no editor guard at all, so it runs in
-> a player and combines an empty scene. `tools/check-editor-only.py` catches the half of this trap
-> that fails to compile; nothing catches the half that silently draws nothing.
+> `SunRig` all sit behind `#if UNITY_EDITOR`. A standalone build gives you the procedural survey
+> plan, **primitive capsule people, and none of the bought props.**
+>
+> **WHAT CHANGED 2026-08-10, AND WHAT DID NOT.** Three of the silences are closed and the rest are
+> now audible rather than invisible:
+>
+> - **`Content/` SHIPS WHOLE.** `ShipTheContent` walked the top level only, so `Content/textures/`
+>   and `Content/audio/` had never once shipped and a launched build reported
+>   `Surface textures: 0 loose (), 16 MISSING` — every surface in the product a flat colour. It is
+>   `15 loose, 0 MISSING` now. ⚠ **That recursion made `NeverShip`'s `private` entry load-bearing
+>   for the first time** — it is a DIRECTORY, and `Directory.GetFiles` returns none, so it had been
+>   matching nothing at all. It is matched against every path SEGMENT, and every build prints
+>   `[build] privacy: …` so nobody has to remember to check.
+> - **PRESSING P WORKS IN A BUILD.** `Player.Spawn` was editor-only end to end. It loads the
+>   armature from `Resources` first, in the editor too, so the shipped path is the one exercised
+>   daily; run `Noir > Make The Player Shippable` after re-importing Starter Assets, and
+>   `ThePlayersBodyIsWhereAShippedBuildWouldLookForIt` fails the gate if you forget.
+> - **THE CAPSULE CROWD SAYS SO.** `[people] all 1400 of Rossville is PRIMITIVE CAPSULES` — split
+>   on `Application.isEditor`, because in the editor the cause is the gitignored pack and in a
+>   build it is `AgentBody` reading through `AssetDatabase`. The fix is the cast manifest,
+>   `docs/ANIMATION-FIXES.md` PB-6/PB-7, and it is the largest thing left in that plan.
+>
+> Still true, and still the trap: only `CityStreets` has an `#else` that does anything — it covers
+> one *measurement* — and `SunRig`'s returns `null`. `PolyPackCottageBuilder` warns from its own
+> `#else` as well, which is the second voice in this paragraph and the first version of it missed.
+> `CityChunker` has no editor guard at all, so it runs in a player and combines an empty scene.
+> `tools/check-editor-only.py` catches the half of this trap that fails to compile; **the half that
+> silently draws nothing is caught by launching the exe and reading its own log**, which now says
+> what it got and what it did not.
 
 **6. Smoke test — the cheapest thing that builds the real town.** `Noir → Smoke Test`, or:
 

@@ -451,6 +451,51 @@ having pushed the bug fix a day earlier.
 > term), RIG-10 (silent Read/Write early-return), RIG-11 (`MeshReadable` walking 79 rather than
 > the 25 cast), GATE-6 (three dead hourly censuses), GATE-7 (`LayerProof` teardown), SIM-8 (the
 > bag on the hand bone). Fifteen of the twenty landed.
+>
+> **UPDATE 2026-08-10 — GATE-6 and RIG-10 are done, and GATE-6 is not what the item says.**
+>
+> "Three of the six hourly censuses are dead" — measured off a real run, the six print
+> **12:00, 12:00, 12:00, 13:00, 15:00, 17:00 and the first three are BYTE-IDENTICAL.** The loop
+> asks for hours 7, 9 and 11, only ever ticks FORWARD (`while (Clock.MinuteOfDay < want)`), and
+> `VillageHost` starts the sim at NOON — so the while-loop ran zero times, three times over, and
+> the log looked like six samples. It sweeps forward from the next whole hour now: six distinct
+> hours, reaching the EVENING, which the old range never touched. The morning is unreachable from
+> a noon start and the run SAYS so rather than printing noon three times.
+>
+> **RIG-10**: the chunker's Read/Write skip warned inside the loop, once per renderer — measured,
+> 3,503 identical lines in one PlayMode log, plus 1,390 more once the people were built. One error
+> at the end now, with the count and the first name; an error rather than a warning because the
+> consequence is a town that quietly does not bake.
+>
+> ⚠ **AND GATE-6 WENT RED ON THE NEXT RUN, TWICE, AND BOTH WERE RIGHT.** Sweeping forward from
+> the next whole hour to `firstHour + 10` reaches 23:00, and **the city is built once and shared by
+> every test in the run** — so the clock this sweep winds forward is the clock the tests after it
+> read. `TheCarsOfPeopleAtWorkAreNotOnTheirDrives` came back *"nobody in this town works out of it
+> at midday … Expected: greater than 0, But was: 0"*, because by the time it ran the whole town was
+> home; and `WhyAreThePeopleNotAnimating` timed out at 900 s on eleven simulated hours instead of
+> five.
+>
+> **That test's own docstring predicted it in advance** — *"DayPlan sends the out-of-town workers
+> off at 06:20 and brings them back at 17:10 … winding the clock forward to prove the evening would
+> work once and then break everything after it"* — and I did it anyway. The sweep stops at
+> **17:00**, which is not a round number, it is a deadline. Three distinct hours (13, 15, 17) where
+> the old range gave three identical noons plus three real ones. **Do not widen it without moving
+> the driveways test's premise first**, and that sentence is now in the code beside the constant.
+>
+> **RIG-11 done**: `MeshReadable` walked all 79 prefabs under `Folk` to decide which meshes needed
+> Read/Write, for a town that places **25**. It asks `AgentBody.EveryCastPrefabPath` now, derived
+> from the four cast lists rather than maintained beside them, so a figure added to the cast is
+> covered on the day it is added.
+>
+> **GATE-7 done**: `LayerProof` walks every layer combination and restored NOTHING, so whatever
+> the last frame ended on stuck — the exact mechanism behind the 2026-08-07 incident, where a run
+> ended with People off and `WhyAreThePeopleNotAnimating` was written down as a FLAKY TEST for
+> weeks. `Layers.Snapshot()` at the top and a `[TearDown]` that restores, so a run that throws
+> halfway still puts the panel back.
+>
+> **RIG-2 and SIM-8 remain** — the per-figure stride term and the bag on the hand bone. Both are
+> behaviour rather than instrument, and both want the single-run discipline this wave was built
+> around.
 
 ### W4 — Both hub files, rewritten once, one PlayMode run
 
@@ -633,6 +678,38 @@ are `cinema`, `diner`, `casino` — take the names from `Content/kinds.txt`, do 
 
 ---
 
+### W6 — The player build — **DONE 2026-08-10 for tier 1; PB-6/PB-7 remain**
+
+> **PB-3 IS PROVEN IN THE PRODUCT, not argued for.** A launched build said
+> `Surface textures: player build, no pack path. 0 loose (), 16 MISSING` before, and
+> `15 loose (…), 0 MISSING` after. `Content/textures/` and `Content/audio/` had never once
+> shipped; 47 files ship now, 18 held back.
+>
+> ⚠ **AND THE PRIVACY ENTRY WAS INERT UNTIL THE RECURSION LANDED.** `private` is a DIRECTORY and
+> `Directory.GetFiles` returns none, so `NeverShip`'s most important line had been matching
+> nothing at all for as long as it existed. Matched against every path SEGMENT now, and
+> `[build] privacy: …` prints on every build so nobody has to remember to check. Verified on the
+> artifact: `Test-Path Build\Windows64\Content\private` → False.
+>
+> **PB-2 done, and the field is assigned** — the throw this plan predicted. `Player.Spawn` loads
+> from `Resources` FIRST, in the editor as well as in a build, so the shipped path is the one
+> walked daily; `AssetDatabase` is the fallback and warns that the tree is not yet shippable. The
+> asset is a prefab VARIANT made by `Noir > Make The Player Shippable` rather than a move of the
+> vendored folder, which a re-import would undo.
+> ⚠ **Gated by `ThePlayersBodyIsWhereAShippedBuildWouldLookForIt`, not by a keypress.** A
+> synthetic keypress into a built window proves nothing when it FAILS - it may be the key, the
+> focus or the input system - and I could not confirm P interactively. A missing asset is
+> unambiguous; that is what the test asserts.
+>
+> **PB-1 done**, split on `Application.isEditor` as the correction demands. The build says
+> `[people] all 1400 of Rossville is PRIMITIVE CAPSULES`.
+>
+> **PB-4, PB-6 and PB-7 remain**, and PB-6/PB-7 are the whole of decision 8's (C). They are a
+> week of Unity round-trips with a determinism trap in them - `AgentBody` picks a figure by
+> `Mix(seed) % set.Count`, so ARRAY ORDER decides who looks like whom, and the generated manifest
+> must preserve `Cast()`'s Ordinal-by-path sort exactly or the same seed draws a different-looking
+> Rossville in a build than in the editor, silently, with no test able to see it.
+
 ### W6 — The player build
 
 Last of the code waves, because it is the only one needing the editor **open** for two steps (PB-2's
@@ -690,6 +767,24 @@ in the editor — silently, with no test able to see it.
 > nonzero rigged count, or says why in a sentence true on the machine that printed it.
 
 ---
+
+### W7 — The documents that are then true — **PB-10 and DOC-11 DONE 2026-08-10**
+
+> **PB-10 landed once, with the correction applied.** `CLAUDE.md`'s editor-only paragraph now says
+> what W6 changed - Content ships whole, P works in a build, and the capsule crowd says so - and
+> keeps the three things that are still true. **The correction was real**: `PolyPackCottageBuilder`
+> does speak from its own `#else`, so "only `CityStreets` says out loud what is missing" would have
+> been a fourth wrong sentence in the paragraph whose whole purpose is deleting three.
+>
+> **DOC-11 landed** as a row in the load-bearing facts: the situation key is
+> `Activity.ToString().ToLowerInvariant()`, rename one and the content row must move in the same
+> commit, and `EveryActivityHasARowInTheRealFile` fails the Core gate if you forget. That gate did
+> not exist when this item was written - it was added by `SIM-FIXES` the same night, when
+> `Activity.OnTheAllotment` became `InTheGarden`.
+>
+> **RIG-9 is still gated on RIG-8's measurement** (Loop Pose, 87 re-imports) and **GATE-7's
+> verification still wants its targeted `-testFilter Noir.PlayTests.LayerProof` run** - which must
+> NOT be a full unfiltered suite: that can take four hours and has never been seen to finish.
 
 ### W7 — The documents that are then true, and the long run
 

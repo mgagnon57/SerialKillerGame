@@ -91,10 +91,20 @@ namespace Noir.Editor
                 //
                 // SkinnedMeshRenderer, not MeshFilter. A skinned mesh has no MeshFilter at all,
                 // which is the same omission this tool started with - see the note above.
+                // THE CAST, NOT THE FOLDER. This swept every prefab under `Folk` - 79 of them -
+                // and flipped Read/Write on every mesh they reference. The town places TWENTY-FIVE:
+                // the Slavic set, the two in wellies, a handful of the film crew and the
+                // Steampunk townspeople. The rest are Fantasy knights, a Primeval tribe and
+                // Seasons costumes, deliberately out of register and never drawn, and each one
+                // costs a re-import and a second copy of its mesh in system memory for the
+                // lifetime of the process.
+                //
+                // Asked of `AgentBody.EveryCastPrefabPath`, which is derived from the four cast
+                // lists rather than maintained beside them - so a figure added to the cast is
+                // covered on the day it is added, and one taken out stops being paid for.
                 int folk = 0;
-                foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { AgentBody.Folk }))
+                foreach (string prefabPath in AgentBody.EveryCastPrefabPath())
                 {
-                    string prefabPath = AssetDatabase.GUIDToAssetPath(guid);
                     var figure = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
                     if (figure == null) continue;
                     folk++;

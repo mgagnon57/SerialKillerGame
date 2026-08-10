@@ -78,6 +78,22 @@ namespace Noir.PlayTests
         // governing every run in this assembly lived in the one file most likely to be deleted or
         // skipped. See CityUnderTest, which already owns the other half of the same decision.
         //
+        /// <summary>What the layer switches were before this walked all over them.</summary>
+        private System.Collections.Generic.Dictionary<Layers.Kind, bool> _wasLayers;
+
+        /// <summary>
+        /// PUT THE SWITCHES BACK, whatever happened. A `[TearDown]` and not a line at the end of
+        /// the test, because the interesting failures here are the ones that throw halfway - and
+        /// those are exactly the runs that would otherwise leave the panel in whatever state the
+        /// twelfth frame wanted.
+        /// </summary>
+        [TearDown]
+        public void PutTheLayersBack()
+        {
+            if (_wasLayers != null) Layers.Restore(_wasLayers);
+            _wasLayers = null;
+        }
+
         [UnityTest, Category("Diagnostic"), Timeout(1800000)]
         public IEnumerator PhotographEveryLayerCombination()
         {
@@ -97,6 +113,19 @@ namespace Noir.PlayTests
             for (int settle = 0; settle < 10; settle++) yield return null;
 
             // ---- what has anything behind it at all ----
+            // SNAPSHOT FIRST, RESTORE IN THE TEARDOWN. This walks every layer combination in the
+            // sheet and puts nothing back, so whatever combination the last frame happened to end
+            // on used to stick - and `Layers.Set` writes PlayerPrefs whenever there is a person at
+            // the keyboard. That is verbatim the mechanism behind the 2026-08-07 incident, where a
+            // run ended with People off, `VillageHost` never built `AgentMeshView`, and
+            // `WhyAreThePeopleNotAnimating` was written down in this project's own notes as a
+            // FLAKY TEST for weeks.
+            //
+            // `Layers.IsOn` gives batch mode the compiled default now, so this cannot bite a
+            // headless run - but the whole point of a proof sheet is that somebody runs it from
+            // the editor to LOOK at it, and that is the case with a person in it.
+            _wasLayers = Layers.Snapshot();
+
             var wired = new StringBuilder("[layerproof] wiring:\n");
             foreach (var kind in Layers.All)
                 wired.Append("    ").Append(Layers.IsWired(kind) ? "LIVE " : "DEAD ")

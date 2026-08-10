@@ -234,11 +234,31 @@ namespace Noir.PlayTests
             // is worth watching. The morning is not reachable at all from a noon start, and that
             // is a property of the simulation rather than of this loop: say so rather than print
             // noon three times and imply otherwise.
+            // AND IT STOPS AT 17:00, WHICH IS NOT A ROUND NUMBER - IT IS A DEADLINE.
+            //
+            // THE CITY IS BUILT ONCE AND SHARED BY EVERY TEST IN THE RUN, so the clock this sweep
+            // winds forward is the clock the tests after it read.
+            // `TheCarsOfPeopleAtWorkAreNotOnTheirDrives` asserts that the commuters are OUT, and
+            // its own docstring says why: DayPlan sends them at 06:20 and brings them back at
+            // 17:10, so at the moment every test sees, their drives are empty.
+            //
+            // Sweeping to 23:00 was tried, in the commit that fixed the duplicate noons, and it
+            // did exactly what that docstring predicted: the driveways test came back "nobody in
+            // this town works out of it at midday ... Expected: greater than 0, But was: 0",
+            // because by the time it ran the whole town was home. `WhyAreThePeopleNotAnimating`
+            // timed out at 900 s in the same run - eleven simulated hours instead of five.
+            //
+            // 13:00, 15:00, 17:00 from a noon start: three DISTINCT hours where the old range gave
+            // three identical noons plus three real ones. Do not widen it without moving the
+            // driveways test's premise first.
+            const int LastHour = 17;
             int firstHour = host.Sim.Clock.MinuteOfDay / 60 + 1;
-            Debug.Log($"[body] sweeping {firstHour:00}:00 onward in two-hour steps. The sim starts "
-                    + "at noon and this cannot rewind, so the morning is not sampled.");
+            Debug.Log($"[body] sweeping {firstHour:00}:00 to {LastHour:00}:00 in two-hour steps. "
+                    + "The sim starts at noon and this cannot rewind, so the morning is not "
+                    + "sampled; it stops before 17:10 because the commuters come home then and "
+                    + "the clock is shared with every test after this one.");
 
-            for (int hour = firstHour; hour <= firstHour + 10; hour += 2)
+            for (int hour = firstHour; hour <= LastHour; hour += 2)
             {
                 // 20 ticks a second of game time, so an hour is 72,000 of them.
                 int want = hour * 60;

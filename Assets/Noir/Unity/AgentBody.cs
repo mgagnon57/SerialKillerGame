@@ -322,6 +322,26 @@ namespace Noir.Unity
         private static List<string> Girls() => _girls ??= Cast(
             "Girl_Slavic_Summer", "Girl_Slavic_Winter", "Girl_Poor_Steampunk", "Girl_Rich_Steampunk");
 
+        /// <summary>
+        /// EVERY FIGURE THE TOWN CAN PLACE, and nothing else.
+        ///
+        /// `MeshReadable` walked all 79 prefabs under `Folk` to decide which meshes needed
+        /// Read/Write - which is 79 model imports and 79 meshes held in memory for the lifetime of
+        /// the process, for a town that places 25 of them. The rest are the Fantasy knights, the
+        /// Primeval tribe and the Seasons costumes, deliberately out of register and never drawn.
+        ///
+        /// Derived from the four lists rather than maintained beside them, so a figure added to
+        /// the cast is covered on the day it is added - the same argument `AnimationCheck` makes
+        /// for enumerating the `Activity` enum instead of sweeping the rows.
+        /// </summary>
+        public static IEnumerable<string> EveryCastPrefabPath()
+        {
+            foreach (var path in Men()) yield return path;
+            foreach (var path in Women()) yield return path;
+            foreach (var path in Boys()) yield return path;
+            foreach (var path in Girls()) yield return path;
+        }
+
         private static List<string> Cast(params string[] wanted)
         {
             var found = new List<string>();
