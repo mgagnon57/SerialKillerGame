@@ -1521,11 +1521,11 @@ place house 566,993 13x7 "304 W Green Ave"
   door 572,993
 place house 592,993 13x7 "302 W Green Ave"
   door 598,993
-place school 540,1076 13x7 "305 W Benton Ave"
+place house 540,1076 13x7 "305 W Benton Ave"
   door 546,1082
-place school 566,1076 13x7 "303 W Benton Ave"
+place house 566,1076 13x7 "303 W Benton Ave"
   door 572,1082
-place school 592,1076 13x7 "301 W Benton Ave"
+place house 592,1076 13x7 "301 W Benton Ave"
   door 598,1082
 place house 540,1320 13x7 "305 W Attica Ave"
   door 546,1326
@@ -1571,7 +1571,7 @@ place house 700,865 13x7 "102 W Henderson Ave"
   door 706,865
 place house 700,954 13x7 "101 W Green Ave"
   door 706,960
-place school 700,1076 13x7 "101 W Benton Ave"
+place house 700,1076 13x7 "101 W Benton Ave"
   door 706,1082
 place house 700,2009 13x7 "101 Greenwood Ave"
   door 706,2015
@@ -1593,13 +1593,13 @@ place house 800,954 13x7 "103 E Green Ave"
   door 806,960
 place house 826,954 13x7 "105 E Green Ave"
   door 832,960
-place school 774,993 13x7 "102 E Green Ave"
+place house 774,993 13x7 "102 E Green Ave"
   door 780,993
 place house 826,993 13x7 "106 E Green Ave"
   door 832,993
-place school 774,1076 13x7 "101 E Benton Ave"
+place house 774,1076 13x7 "101 E Benton Ave"
   door 780,1082
-place school 800,1076 13x7 "103 E Benton Ave"
+place house 800,1076 13x7 "103 E Benton Ave"
   door 806,1082
 place house 826,1076 13x7 "105 E Benton Ave"
   door 832,1082
@@ -1691,8 +1691,24 @@ place house 920,1379 13x7 "206 E Attica Ave"
   door 926,1379
 place house 868,1455 13x7 "201 Maple Ave"
   door 874,1461
-place church 920,1455 13x7 "205 Maple Ave"
-  door 926,1461
+# THE CHURCH IS NOT A 13x7 HOUSE BOX, AND THE SURVEY HAS ALWAYS KNOWN WHERE IT IS.
+#
+# This was `place church 920,1455 13x7 "205 Maple Ave"` - the SAME default footprint every one of
+# the town's 315 houses has, with a generated street address for a name, exactly like the seven
+# `place school` boxes taken off the roll in the same commit.
+#
+# Twenty metres away sits parcel 444: an 892.6 m2 footprint measured at 32.5 x 35.6 m, county
+# class 0090 "Tax Exempt", address "116 East Maple Street" - and `Content/parcel-1991.txt` lines
+# 359-360 carry the OWNER'S OWN RULING on it, `was built` and `kind church`. Three sources agreed
+# with each other and disagreed with city.txt, and nothing compared them.
+#
+# Position and size are the bounding box of the surveyed polygon; the name is the county's.
+place church 925,1425 33x36 "116 E Maple Ave"
+  # ON the south wall, because Maple Avenue runs along y=1478 - south of the building - so the
+  # front door faces the street it is named for. The footprint spans y 1425..1460 inclusive, and
+  # 1461 is one row past it: the Core suite caught that on the next run, which is what
+  # DoorsThatOpen is for.
+  door 940,1460
 place house 868,1494 13x7 "202 Maple Ave"
   door 874,1494
 place house 894,1494 13x7 "204 Maple Ave"
