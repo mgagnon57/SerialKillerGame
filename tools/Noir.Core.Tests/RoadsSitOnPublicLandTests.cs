@@ -57,9 +57,18 @@ namespace Noir.Core.Tests
         // theirs; they need looking at one at a time rather than by the batch rule.
         //
         // Per-road offsets: docs/research/road-refit-deltas.txt.
+        //
+        // ⚠ ATTICA CAME OFF THIS LIST 2026-08-10 AND IT WAS NEVER REALLY ON IT. The sampler
+        // stepped by `Math.Max(4f, Length * 0.05f)`, which SCALES WITH THE ROAD, so every road got
+        // exactly FIFTEEN samples whatever its length. Attica measured 5 of 15 = 33.3%, one sample
+        // over a 33% bar. Stepped at a flat 4 m it is 125 of 394 = 31.7%, and below it.
+        //
+        // ROAD-FIXES GATE-3(a) called this: "if it does not come out empty, investigate the
+        // instrument - do not re-add names." The instrument was the fault. The list SHRANK, which
+        // is the only direction this file's own rule allows.
         private static readonly string[] KnownOffTheirRightOfWay =
         {
-            "alley1", "alley12", "attica", "railroad",
+            "alley1", "alley12", "railroad",
         };
 
         /// <summary>
@@ -123,6 +132,7 @@ namespace Noir.Core.Tests
             var world = City();
 
             var off = new List<string>();
+            var shares = new List<(float Share, string Name, int Inside, int Total)>();
             foreach (var line in world.Roads.Lines)
             {
                 // TRACKS ARE EXCLUDED, AND NOT AS A FUDGE. The section roads and crossroads run
@@ -133,8 +143,20 @@ namespace Noir.Core.Tests
                 if (line.Class == RoadClass.Track) continue;
 
                 int inside = 0, total = 0;
-                for (float d = line.Path.Length * 0.15f; d < line.Path.Length * 0.9f;
-                     d += Math.Max(4f, line.Path.Length * 0.05f))
+                // A FIXED STEP, NOT A FIXED COUNT, and this was the instrument fault
+                // ROAD-FIXES GATE-3(a) points at when it says the known-bad list "should go green
+                // EMPTY ... investigate the instrument".
+                //
+                // The step was `Math.Max(4f, Length * 0.05f)`, which SCALES WITH THE ROAD - so
+                // every road got exactly fifteen samples whatever its length, a 384 m street and a
+                // 45 m alley alike. A share quantised to one fifteenth is 6.7% a sample, and the
+                // 33% bar was really "five of fifteen": attica sat at exactly 5/15 = 33.3%, one
+                // sample from either verdict. A list of names asserted exactly, decided by a coin.
+                //
+                // Four metres flat. The 15%-90% window stays and is not arbitrary either: it keeps
+                // the ends out, where two rights of way merge at a junction and every road looks
+                // like it wanders.
+                for (float d = line.Path.Length * 0.15f; d < line.Path.Length * 0.9f; d += 4f)
                 {
                     var c = line.Path.PointAt(d);
                     total++;
@@ -142,8 +164,21 @@ namespace Noir.Core.Tests
                 }
                 // A third of the run inside private lots is not a rounding error or a corner cut
                 // at a junction - it is a road in the wrong place.
+                if (total > 0) shares.Add((inside / (float)total, line.Name, inside, total));
                 if (total > 0 && inside / (float)total > 0.33f) off.Add(line.Name);
             }
+
+
+            // THE NUMBERS, NOT JUST THE SET. This asserted an exact list of names and printed
+            // nothing at all, so a road on the list could be at 34% or at 99% and nobody could
+            // tell which - and ROAD-FIXES GATE-3(a) says this list "should go green EMPTY ... if
+            // it does not come out empty, investigate the instrument". You cannot investigate an
+            // instrument that reports a set. Worst first, every run.
+            shares.Sort((x, y) => y.Share.CompareTo(x.Share));
+            TestContext.Out.WriteLine("road length on private land, worst first (33% is the bar):");
+            foreach (var s in shares.Take(10))
+                TestContext.Out.WriteLine(
+                    $"  {s.Share * 100,6:0.0}%  {s.Name,-12} ({s.Inside}/{s.Total} samples)");
 
             off.Sort(StringComparer.Ordinal);
             var expected = KnownOffTheirRightOfWay.OrderBy(n => n, StringComparer.Ordinal).ToArray();

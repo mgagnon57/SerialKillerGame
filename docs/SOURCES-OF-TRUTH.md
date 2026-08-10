@@ -152,6 +152,17 @@ owner says otherwise.
    >   alley1  78.4%   alley12 42.2%   alley8 15.7%   alley9 12.9%   alley5 11.4%
    >   16 alleys; 7 with more than a tenth of their length on a lot.   0% is right.
    > ```
+   >
+   > ⚠ **AND ATTICA CAME OFF THE OFF-RIGHT-OF-WAY LIST, 2026-08-10, BECAUSE THE INSTRUMENT WAS
+   > WRONG.** That sampler stepped by `Math.Max(4, Length × 0.05)` — a step that SCALES WITH THE
+   > ROAD, so every road got exactly **fifteen samples** whatever its length. A share quantised to
+   > one fifteenth is 6.7% a sample, and the 33% bar was really "five of fifteen". Attica measured
+   > 5/15 = 33.3% and was on the list by one sample. Stepped at a flat 4 m it is
+   > **125/394 = 31.7%**, below the bar.
+   >
+   > The list is `alley1, alley12, railroad` — **three, down from four.** `ROAD-FIXES` GATE-3(a)
+   > said *"if it does not come out empty, investigate the instrument — do not re-add names"*, and
+   > that is what this was.
 
 3. **Harrison Street turns at the Benton junction. Green and Benton stop at Route 1.** Owner,
    2026-08-04, both called before either was measured:
