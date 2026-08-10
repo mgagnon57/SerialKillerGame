@@ -271,6 +271,20 @@ content, then drew nothing — each failure invisible to the editor, to the whol
 Play. It now boots the town and starts the clock:
 **`[boot] ready after 5.4s — 12 straight frames under 25 ms. Clock running.`**
 
+> **MEASURED IN THE PRODUCT, 2026-08-09, and it is the only place these can be measured.** A
+> launched `Rossville.exe` prints its own texture line now, and it reads
+> **`Surface textures: player build, no pack path. 0 loose (), 16 MISSING: brick, churchyard,
+> field, floor, grass, ground_rough, path, road, roof_builtup, roof_shingle_black,
+> roof_shingle_brown, roof_shingle_charcoal, roof_shingle_grey, wall, water, wood.`** Sixteen of
+> sixteen, because `ShipTheContent` copies Content's TOP LEVEL only — `Content/textures/` has
+> never once shipped. So every surface in the product is a flat `Materials3D` fallback colour, and
+> that is why those colours had to be the measured means: the screenshot shows dark grey, charcoal
+> and brown roofs on near-black asphalt, where the same build a day earlier drew white roofs on
+> pale grey roads. **`docs/ANIMATION-FIXES.md` PB-3 is the item that makes the textures ship**;
+> until it lands, the fallback IS the game. The launch also reports
+> `[boot] gave up waiting after 188.7s - the frames never settled` and then runs at 104 fps with
+> 22,310 renderers — the settle check is measuring the build, not the frame rate.
+>
 > **What it boots is not what you see in the editor, and this is not yet fixed.**
 > `AssetDatabase` and `PrefabUtility` are `UnityEditor` APIs that do not exist in a player, so
 > `CityBuildings`, `CityStreets`, `CityGreenery`, `CityTraffic`, `CityParking`, `CitySigns` and
