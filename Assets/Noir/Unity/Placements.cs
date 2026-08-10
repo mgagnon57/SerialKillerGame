@@ -69,9 +69,22 @@ namespace Noir.Unity
             _byBuilding = new Dictionary<long, Nudge>();
             Revision++;
 
+            // NOTHING ADJUSTED YET IS GENUINELY THE USUAL CASE - the file only exists once
+            // somebody has moved a house in the browser map - so an ABSENT file stays quiet. It
+            // cannot stay quiet on the UNREADABLE one: thirty-seven hand-made adjustments
+            // disappearing looks identical to nobody having ever made one.
+            string path = System.IO.Path.Combine(ContentLoader.Root, FileName);
+            if (!System.IO.File.Exists(path)) return;
+
             string text;
             try { text = ContentLoader.Read(FileName); }
-            catch { return; }                       // nothing adjusted yet is the usual case
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"[placements] {FileName} is there but did not read, "
+                    + "so every house the owner moved is back where the generator put it. "
+                    + ex.Message);
+                return;
+            }
 
             foreach (var raw in text.Split('\n'))
             {

@@ -156,9 +156,18 @@ namespace Noir.Unity
             _stamp = written;
             _byParcel = new Dictionary<int, List<Entry>>();
 
+            // THE 824 MEASURED FOOTPRINTS. Unread, every building falls back to a generated box
+            // and the whole survey layer quietly stops existing - the town still builds, and looks
+            // like the town before anybody measured it.
             string text;
             try { text = ContentLoader.Read(FileName); }
-            catch { return; }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"[parcels] {FileName} did not load, so NO BUILDING "
+                    + "IS ON ITS MEASURED FOOTPRINT - every one falls back to a generated box. "
+                    + ex.Message);
+                return;
+            }
 
             var pending = new Dictionary<(int, int), Entry>();
             foreach (var raw in text.Split('\n'))

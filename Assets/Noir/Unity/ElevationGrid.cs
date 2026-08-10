@@ -86,9 +86,22 @@ namespace Noir.Unity
             if (_loaded) return;
             _loaded = true;
 
+            // A SURVIVABLE FALLBACK THAT SAYS NOTHING IS INDISTINGUISHABLE FROM ONE THAT WORKED,
+            // and this is the most expensive silence in the project: with elevation.txt unread,
+            // every height in Rossville is zero. 5,754 samples spanning 30.00 m to 225.30 m -
+            // 195.3 METRES OF RELIEF - vanish, taking every camera height, every building base and
+            // every slope test with them, and the town is simply flat. Nothing was logged.
+            //
+            // It does not throw, because a flat town is a town and a crashed one is not. It says
+            // so instead, which is the lesson SurfaceTextures already had to learn.
             string text;
             try { text = ContentLoader.Read("elevation.txt"); }
-            catch { return; }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[elevation] elevation.txt did not load, so THE WHOLE TOWN IS "
+                    + "FLAT - every height reads zero, cameras included. " + ex.Message);
+                return;
+            }
 
             int row = 0;
             bool haveHeader = false;
@@ -138,8 +151,12 @@ namespace Noir.Unity
             _delta = new float[_rows, _cols];
 
             string text;
+            // NO DELTA FILE IS THE ORDINARY STATE - the correction is optional and absent by
+            // default - so this one stays quiet on purpose. Said out loud because the two silences
+            // a few lines apart are NOT the same silence, and a reader tidying one must not tidy
+            // the other: that one loses 195 m of relief, this one loses nothing.
             try { text = ContentLoader.Read(DeltaFileName); }
-            catch { return; }   // no delta file yet - flat correction, same fallback as the base grid
+            catch { return; }
 
             int row = 0;
             bool haveHeader = false;

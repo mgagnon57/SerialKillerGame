@@ -112,9 +112,18 @@ namespace Noir.Unity
             if (_byId != null) return;
             _byId = new Dictionary<int, Entry>();
 
+            // Same class as elevation.txt, one file over: 4,534 lines of the county's own zoning.
+            // Unread, every parcel is `Unset`, so commercial, industrial and vacant ground all
+            // draw as the fiction's own answer and GroundZoning's whole decision disappears
+            // without a word. Survivable - the town builds - and worth a sentence.
             string text;
             try { text = ContentLoader.Read("parcel-county.txt"); }
-            catch { return; }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning("[county] parcel-county.txt did not load, so NO PARCEL HAS A "
+                    + "ZONING - every lot draws as whatever the map fiction says. " + ex.Message);
+                return;
+            }
 
             foreach (var raw in text.Split('\n'))
             {
