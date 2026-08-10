@@ -211,8 +211,11 @@ namespace Noir.Editor
             // street level, where ground texture is actually resolvable.
             new Shot("town-street", 750f, 1335f, 40f, 4f, 0f, 1.6f),
 
-            // 408 Holmes Ave, the first fixed story anchor.
-            new Shot("town-holmes", 1175f, 1218f, 26f, 4f, 0f, 1.6f),
+            // 408 Holmes Ave, the first fixed story anchor - the CENTRE of the lot city.txt gives
+            // it (1163,1242, 13x7), looking SOUTH from Holmes Avenue at its front door. It was
+            // aimed at (1175,1218), 27 m off the lot with the house behind the camera, and had
+            // been since the address was reset to the county. See CityShot's twin.
+            new Shot("town-holmes", 1169.5f, 1245.5f, 26f, 4f, 180f, 1.6f),
         }, dressed: true);
 
         /// <summary>

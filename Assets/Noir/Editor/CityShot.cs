@@ -363,11 +363,21 @@ namespace Noir.Editor
                 // 408 HOLMES AVE. The killer's house, from the middle of Holmes Avenue looking
                 // at its front door. If this view is wrong nothing else matters.
                 //
-                // Moved with the address: the 400 block of Holmes ran almost onto the real CSX
-                // line once the town was checked against it (see relay-rossville.py), so the
-                // house itself moved to the block's one safe lot. Same relative framing - door
-                // plus 6m east, 7m north - just off the corrected door position.
-                Frame(camGo, AtMap(1175f, 1218f, 1.6f), 26f, 4f, 0f);
+                // AIMED AT THE HOUSE, WHICH IT WAS NOT. This said "moved with the address ...
+                // same relative framing, just off the corrected door position" and pointed at
+                // (1175, 1218). `Content/city.txt` puts `408 Holmes Ave` at 1163,1242, 13x7 - so
+                // the target was 27 m off the lot, and with a 26 m pull-back on yaw 0 the house
+                // was behind the camera. The frame came out as a street with houses in the middle
+                // distance, which is what it had always been; putting the camera above ground
+                // (see AtMap) fixed the burial and left the aim wrong, and the comment claiming
+                // otherwise is why nobody looked.
+                //
+                // The centre of the lot, and yaw 180 because Holmes Avenue runs along y=1226,
+                // NORTH of the house - so the front door faces north and the camera stands in the
+                // road looking south at it. Derived from the map rather than computed on paper,
+                // which is the rule GroundShot records after three hand-computed bearings
+                // photographed a wood forty metres from anything.
+                Frame(camGo, AtMap(1169.5f, 1245.5f, 1.6f), 26f, 4f, 180f);
                 Capture(cam, Path.Combine(OutputDir, "city-corner.png"));
 
                 // Straight down on the one signal, to read lanes, stop lines and heads.

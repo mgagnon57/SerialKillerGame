@@ -1,0 +1,8 @@
+# country
+taken   2026-08-10 03:52:33 UTC
+unity   6000.3.20f1
+town    ShowBuildings=True  batch=True
+02f6aa331784845b    1199621  country-edge.png
+24c44103eab327e1    1788394  country-pattern.png
+63956f2f8a089b5f    1656275  country-north.png
+3 frame(s), 3 distinct
