@@ -208,9 +208,56 @@ namespace Noir.Unity
             return m;
         }
 
+        /// <summary>
+        /// EVERY OUTDOOR GROUND SURFACE IS GREEN GRASS. Owner's instruction, 2026-08-10.
+        ///
+        /// Field, Wood, Path and the two hard zoned kinds all drew bare earth: `field` binds the
+        /// pack's `Ground_Dirt_Stubble`, `path` binds `Ground_Dirt_Flat`, `wood` binds `Dirt_A`,
+        /// and Bank is the path sheet again. On a summer day in an Illinois farm town the ground
+        /// between the houses is green, and the town was reading as mud.
+        ///
+        /// WHAT THIS DOES NOT TOUCH, because none of it is ground you walk on: Road (asphalt),
+        /// Water (the creek), Floor (a building's interior), and Wall. Churchyard, Rough and
+        /// Pasture are ALREADY grass and keep their own tiling and tint — flattening those three
+        /// into one material would delete deliberate distinctions (a mown churchyard, a vacant
+        /// lot's rank uncut growth, and open country tiled coarse enough not to show the repeat)
+        /// and would not make anything greener.
+        ///
+        /// THE MEASURED PALETTE IS KEPT RATHER THAN OVERWRITTEN. Each colour in the switch below
+        /// is the measured mean of the pack sheet on its line, and a shipped player still falls
+        /// back to them if the pack is missing. Set this false and the town goes back to bare
+        /// earth exactly as it was measured. It is read when the ground materials are first
+        /// built, so flipping it after a build needs a rebuild, not just a repaint.
+        /// </summary>
+        public static bool GrassEverywhere = true;
+
+        /// <summary>The grass green, which is the measured mean of the pack's Grass_A sheet.</summary>
+        private static readonly Color32 GrassGreen = new Color32(0x6A, 0x7A, 0x3A, 0xFF);
+
+        /// <summary>
+        /// Ground somebody walks on, as opposed to a road, the creek, or a floor indoors. Wall is
+        /// not ground at all and Water is not walked on, so neither is here.
+        /// </summary>
+        private static bool IsOutdoorGround(Terrain t) =>
+            t == Terrain.Grass || t == Terrain.Field || t == Terrain.Wood
+         || t == Terrain.Path || t == Terrain.Churchyard;
+
         public static Material ForTerrain(Terrain t)
         {
             if (_byTerrain.TryGetValue(t, out var existing)) return existing;
+
+            // Churchyard keeps its own green - see GrassEverywhere. It is already grass, four
+            // levels lighter off the same sheet, and that distinction costs nothing to keep.
+            if (GrassEverywhere && IsOutdoorGround(t) && t != Terrain.Churchyard)
+            {
+                // Field takes the coarser tile for the reason Pasture does: it is laid over whole
+                // parcels, and grass at the garden tiling shows its repeat as corduroy across
+                // anything that big.
+                var green = Make(t.ToString(), GrassGreen, 0.05f);
+                SurfaceTextures.ApplyPack(green, "grass", t == Terrain.Field ? 9f : 4f);
+                Plan(green);
+                return _byTerrain[t] = green;
+            }
 
             Material m;
             string texture;
@@ -495,6 +542,18 @@ namespace Noir.Unity
             // (0x734F31) in at least two channels, so no tint over those sheets could ever have
             // produced them. Hard moves onto concrete, where its target IS reachable and is now
             // passed through as a tint; Rough gets a sheet of its own; Bank says what it is.
+            // GREEN GRASS HERE TOO - see GrassEverywhere. Hard is a feed store's concrete apron
+            // and Bank is a bare creek side; both are ground, and both drew as something other
+            // than turf. Rough is left alone because it is ALREADY grass, at more than twice the
+            // tile so it reads as rank uncut growth, which is a distinction worth keeping.
+            if (GrassEverywhere && kind != ZonedGround.Rough)
+            {
+                var green = Make("Ground" + kind, GrassGreen, 0.04f);
+                SurfaceTextures.ApplyPack(green, "grass", 4f);
+                Plan(green);
+                return _byZoned[kind] = green;
+            }
+
             Material m; string texture; float tiling; Color? tint = null;
             switch (kind)
             {
