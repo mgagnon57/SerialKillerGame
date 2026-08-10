@@ -33,6 +33,10 @@ namespace Noir.Unity
         {
             if (root == null) return;
 
+            // Instance ids are reused across a domain reload, so a cache that outlives one bake
+            // would answer for an object that no longer exists.
+            _prefabHeight.Clear();
+
             var before = root.GetComponentsInChildren<MeshRenderer>();
             if (before.Length == 0) return;
 
@@ -65,7 +69,7 @@ namespace Noir.Unity
 
             foreach (var r in before)
             {
-                if (!Combinable(r)) continue;
+                if (!Combinable(r, root)) continue;
 
                 var f = r.GetComponent<MeshFilter>();
                 if (f == null || f.sharedMesh == null) continue;
@@ -187,11 +191,57 @@ namespace Noir.Unity
                     + "gitignored, so this is the normal state of a fresh clone.");
         }
 
+        /// <summary>How tall the prefab a renderer belongs to is, cached per prefab instance so
+        /// a tree with forty leaf clusters is measured once and not forty times.</summary>
+        private static readonly Dictionary<int, float> _prefabHeight = new Dictionary<int, float>();
+
+        /// <summary>The line between a tuft and a tree, in metres. See <see cref="Combinable"/>.</summary>
+        private const float TuftHeight = 1f;
+
+        /// <summary>
+        /// Is this renderer part of something growing on the ground rather than over it?
+        ///
+        /// Asked of the whole PREFAB and not of the renderer, because a tree's leaf cluster is
+        /// the same size as a grass tuft and only the thing it belongs to tells them apart.
+        ///
+        /// THE PREFAB IS THE DIRECT CHILD OF THE BAKE ROOT, which is why `root` is threaded down
+        /// here rather than the walk stopping on some property of the transform. The first
+        /// version stopped at "a parent with no renderer and no MonoBehaviour", and the layer
+        /// containers are bare `new GameObject("CityGreenery")` nodes with neither - so the walk
+        /// ran all the way to `Rossville`, measured the height of the entire town, and concluded
+        /// that nothing anywhere was ground foliage. It baked exactly as before and the count
+        /// said so: 1,348 "spared" renderers, every one of them named `Chunk_*`.
+        /// </summary>
+        private static bool IsGroundFoliage(MeshRenderer r, GameObject root)
+        {
+            Transform stop = root.transform;
+            Transform top = r.transform;
+            while (top.parent != null && top.parent != stop
+                   && top.parent.GetComponent<MeshRenderer>() == null)
+                top = top.parent;
+
+            int key = top.GetInstanceID();
+            if (!_prefabHeight.TryGetValue(key, out float height))
+            {
+                var parts = top.GetComponentsInChildren<MeshRenderer>(true);
+                if (parts.Length == 0) height = 0f;
+                else
+                {
+                    var b = parts[0].bounds;
+                    for (int i = 1; i < parts.Length; i++) b.Encapsulate(parts[i].bounds);
+                    height = b.size.y;
+                }
+                _prefabHeight[key] = height;
+            }
+
+            return height < TuftHeight;
+        }
+
         /// <summary>
         /// A renderer that can be merged away without breaking something that needs to move,
         /// light up, or be switched off.
         /// </summary>
-        private static bool Combinable(MeshRenderer r)
+        private static bool Combinable(MeshRenderer r, GameObject root)
         {
             if (r == null || !r.enabled) return false;
             if (r.GetComponentInParent<Light>() != null) return false;
@@ -211,6 +261,46 @@ namespace Noir.Unity
                 if (m == null) continue;
                 if (m.name.IndexOf("Night", System.StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (m.name.IndexOf("Emission", System.StringComparison.OrdinalIgnoreCase) >= 0) return false;
+
+                // SPEEDTREE CANNOT BE COMBINED, AND THE TOWN HAD THOUSANDS OF DEAD SHARDS TO
+                // PROVE IT.
+                //
+                // `Nature/Grass`, `Nature/Flowers` and `Nature/Bushes` are SpeedTree assets -
+                // shader `Universal Render Pipeline/Nature/SpeedTree7` - and SpeedTree does its
+                // work in the VERTEX shader off data that lives in the extra UV channels and the
+                // vertex colours: which way a leaf card faces, how it bends, how the wind moves
+                // it. `Mesh.CombineMeshes` carries positions, normals, tangents and UV0. It does
+                // not carry the rest, so every tuft in Rossville came out of the bake as a flat
+                // grey plate lying on the lawn, and there were 3,092 chunks' worth of them.
+                //
+                // PROVED RATHER THAN REASONED: six of the same prefabs instantiated un-baked ten
+                // feet from the baked ones render as proper grass clumps. Same prefab, same
+                // material, same light - the only difference is the combine.
+                //
+                // The cost is real and is printed by the [chunker] line below: these keep their
+                // own renderers. They are all instances of a handful of meshes and materials, so
+                // GPU instancing is the thing to reach for if it hurts, NOT the combiner.
+                //
+                // GROUND FOLIAGE ONLY, AND THE HEIGHT IS WHERE THE LINE FALLS.
+                //
+                // Sparing every SpeedTree renderer costs 21,180 of them, because a tree is made
+                // of SpeedTree parts too and the town has thousands of trees. Measured on the
+                // live town, by the height of the PREFAB each renderer belongs to:
+                //
+                //     under 1 m   6,858   Grass_*, Flower_*, Leaves_Bunch_*, the cabbage bushes
+                //     1-2 m       4,108   Bush_Yew_*, Bush_Knee_Timber_*
+                //     2-4 m       3,867   Bush_Round_*, Bush_Shrub_*, Tree_*_Sapling
+                //     over 4 m    6,347   Tree_Oak_*, Tree_Poplar_*, Tree_Willow_*
+                //
+                // Only the first band came out of the bake wrong. A tree's leaf cluster is a 3D
+                // blob and survives being combined looking like a 3D blob; a grass tuft and a
+                // leaf bunch are crossed flat cards whose whole shape is the SpeedTree vertex
+                // data, so combined they land as plates on the lawn. Owner's ruling 2026-08-10,
+                // taken on these numbers: spare the ground, keep baking the canopy. 6,858 rather
+                // than 21,180, and the trees do not move.
+                if (m.shader != null &&
+                    m.shader.name.IndexOf("SpeedTree", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    return !IsGroundFoliage(r, root);
             }
             return true;
         }
