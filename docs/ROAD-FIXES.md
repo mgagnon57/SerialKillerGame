@@ -125,7 +125,7 @@ have nothing behind them."* A green default gate run has seen nothing of the str
 |---|---|---|
 | **1** | 408 Holmes Ave | **(a)** THE COUNTY WINS EVERYWHERE — owner's call, against the recommendation |
 | **2** | the other addresses | **(a)** delete the Earl Court nineteen, re-address the rest |
-| **3** | the drawn road vs the county's points | **(c)** straight between points, corners only where ruled |
+| **3** | the drawn road vs the county's points | ~~**(c)**~~ → **(a) KEEP THE SMOOTHING**, re-ruled 2026-08-09 and again 2026-08-10 with the measurement in hand. Summit is 16.71 m = 54.8 ft, which is this file's own predicted figure for centripetal, and he ruled it IS enough. **RC-17 is overruled; W5 and W6 are not blocked on this.** |
 | **4** | Holmes Avenue's hole | **(a)** join the ends — a digitising gap |
 | **5** | where Rossville parked | **(c)** MOSTLY FRONT DRIVEWAYS — owner's call, against the recommendation |
 | **6** | speed limits | **(a)** 30 town / 55 approaches / 20 school |
@@ -192,7 +192,25 @@ another 47–56 stand past the end of the street they are addressed on.
 own ruling rather than losing content. The other 47–56 are a numbering error, not a survey error.
 (c) invents street the county does not have.
 
-### 3. The drawn road does not follow the road — **blocks W6**
+### 3. The drawn road does not follow the road — **ANSWERED (a), 2026-08-09 and again 2026-08-10**
+
+> ⚠ **THE OWNER RULED AGAINST THIS SECTION'S RECOMMENDATION, TWICE, AND THE SECOND TIME WITH THE
+> MEASUREMENT IN FRONT OF HIM.** *"Leave it, corners stay rounded — a real street corner has a
+> turning radius and a car cannot pivot on a point."*
+>
+> **The middle option was taken and it is enough.** This section says centripetal Catmull-Rom
+> "halves the worst divergence to 55 ft. Not enough on its own." Measured on the tree as it
+> stands, Summit is **16.71 m = 54.8 ft** — the predicted number exactly — and asked again with
+> that figure in hand, he ruled to keep it.
+>
+> **So RC-17 is overruled and W5/W6 are NOT blocked on this.** A session that follows the
+> recommendation below will straighten the streets against a standing ruling. The recommendation
+> is left in place because the reasoning is worth reading and because deleting a superseded
+> argument hides that it was ever made — but it is superseded.
+>
+> `DrawnRoadFollowsItsSurveyLineTests` ratchets the divergence so it cannot grow, and
+> `docs/SOURCES-OF-TRUTH.md` carries the ruling with the numbers.
+
 
 Every centreline is smoothed with a uniform Catmull-Rom, which throws **Summit Street's tarmac up to
 129 ft off its own right of way** — into the back gardens — Grove 46 ft and Benton 44 ft. It also
@@ -885,9 +903,12 @@ does not come out empty, **investigate the instrument — do not re-add names.**
 
 `RC-17` `MODEL-6` `MODEL-7` `GATE-5` `ADDR-2,3,4,8,18`
 
-Blocked on **decision #3**. Tuning the alley extensions or the junction snapping before this is tuning
-against an artefact. **RC-17 reverses the audit's direction** — the chord is faithful, the smoothing is
-the invention — so this is an owner decision executed, not a bug fixed.
+~~Blocked on **decision #3**.~~ ⚠ **UNBLOCKED 2026-08-10, AND `RC-17` IS OVERRULED.** Decision 3 is
+answered **(a) keep the smoothing** — twice, the second time with the divergence measured at 16.71 m
+(54.8 ft), which is this file's own predicted figure for centripetal Catmull-Rom. `RC-17` reverses
+the smoothing and must not be done. Everything else in this wave stands; **do not tune the alley
+extensions or the junction snapping to close benton × summit**, because that gap is the arc he ruled
+for and closing it means inventing tarmac.
 
 `MODEL-6` (the dead "past the end of the run" guard, so every corridor is effectively infinite) and
 `MODEL-7` (corridors offset half a metre from the game's own centre lines) both move the 134 ratchet,
