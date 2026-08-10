@@ -50,6 +50,32 @@ alleys · `GATE` tests and tooling · `RC` rendering and collision · `ADDR` add
 
 ---
 
+## Where this stands, 2026-08-10
+
+The wave headers below are **stale relative to what landed on 2026-08-09**, which was the largest
+day the road network has ever had — the alley mouths, the axis filter, the smoothing curve, what
+counts as two roads touching, and the IDOT counts. Checked directly rather than trusted:
+
+| | |
+|---|---|
+| **W0** | ✅ done |
+| **W1** | ✅ its own gates pass: `grep -c '^  aadt'` returns **12**, `tools/rossville-aadt.txt` and `tools/rossville-alley-names.txt` both exist and are read by the generator |
+| **ALLEY-2** | ✅ landed — 58 alley mouths |
+| **DOOR-1** | ✅ fixed, gated at zero |
+| **SPLINE-1** | ✅ fixed — **and see ALLEY-2b: it fixed 39 m of it and left 16.7 m** |
+| **ALLEY-2b** | **half done, and the other half is not this item.** Two of four carried out; the other two are the smoothing, not a missing junction. Measured, gated, and now a question for the owner |
+| **map audit** | ✅ no longer permanently red on the intended design — 3 kinds of fault → 2, both real |
+
+**Measured after all of it:**
+
+```
+  Core       470 of 470
+  map audit  20 places over a road, 1 road pair without a junction, and nothing else
+  the curve  16.71 m worst (summit), 5 roads over five metres, 16 over one — ratcheted
+```
+
+---
+
 ## The standing gates
 
 | Gate | Command | Today |
