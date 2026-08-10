@@ -530,8 +530,15 @@ namespace Noir.Unity
                 else
                 {
                     Layers.Register(Layers.Kind.Streets,
-                                    CityStreets.Build(World, city.transform, out alleyRoot));
+                                    CityStreets.Build(World, city.transform,
+                                                      out alleyRoot, out var streetPlanting));
                     Layers.Register(Layers.Kind.Alleys, alleyRoot);
+
+                    // THE STREET KIT'S PLANTING GOES ON THE TREES SWITCH, not on Streets. A kind
+                    // can hold more than one root, so this sits beside CityGreenery's lazy
+                    // registration below and both come and go together - which is what somebody
+                    // clicking "Trees" means.
+                    Layers.Register(Layers.Kind.Trees, streetPlanting);
                     profile.Done("CityStreets");
                 }
 

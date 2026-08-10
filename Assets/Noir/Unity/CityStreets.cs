@@ -422,7 +422,10 @@ namespace Noir.Unity
         // ---- building ------------------------------------------------------------------
 
         public static GameObject Build(WorldModel world, Transform parent) =>
-            Build(world, parent, out _);
+            Build(world, parent, out _, out _);
+
+        public static GameObject Build(WorldModel world, Transform parent, out GameObject alleys) =>
+            Build(world, parent, out alleys, out _);
 
         /// <summary>
         /// Streets and alleys, built into TWO roots so they can be switched independently.
@@ -435,13 +438,27 @@ namespace Noir.Unity
         /// Junctions stay with the streets. An alley-only junction is a few tiles and splitting
         /// them would mean reading the arms of every junction to decide.
         /// </summary>
-        public static GameObject Build(WorldModel world, Transform parent, out GameObject alleys)
+        public static GameObject Build(WorldModel world, Transform parent,
+                                       out GameObject alleys, out GameObject planting)
         {
             var root = new GameObject("CityStreets");
             root.transform.SetParent(parent, false);
 
             alleys = new GameObject("CityAlleys");
             alleys.transform.SetParent(parent, false);
+
+            // A THIRD SIBLING, FOR THE SAME REASON THE ALLEYS ARE ONE, and for a fault the owner
+            // found by using the switch it was supposed to have: "when I turn on street layer it
+            // adds some trees and shrubs". It did. Every tuft, fern, bush and street tree this
+            // builder sows was a child of the street root, so the Streets switch owned 7,869
+            // renderers of which 1,960 were street chunks - four fifths of the layer was foliage,
+            // and the Trees switch beside it could not touch any of it.
+            //
+            // Sibling rather than child, or it would go off with the streets and be exactly the
+            // bug again in the other direction. VillageHost registers it under Layers.Kind.Trees
+            // alongside CityGreenery, which is where a tree belongs.
+            planting = new GameObject("CityStreetPlanting");
+            planting.transform.SetParent(parent, false);
 
             // Clear of Rossville's ground, which is still drawn underneath the whole city at y=0.
             //
@@ -457,6 +474,7 @@ namespace Noir.Unity
             // and leaves the kerb reading as a kerb.
             root.transform.localPosition = new Vector3(0f, 0.12f, 0f);
             alleys.transform.localPosition = root.transform.localPosition;   // same lift, or they sink
+            planting.transform.localPosition = root.transform.localPosition; // and so must this
 
 #if UNITY_EDITOR
             int tiles = 0, dressing = 0;
@@ -612,7 +630,7 @@ namespace Noir.Unity
 
             // 3. Everything that is not a carriageway, sampled off the terrain grid as before:
             //    pavement where a street has an edge, parks, and the backs of blocks.
-            dressing += Dress(root.transform, world);
+            dressing += Dress(root.transform, planting.transform, world);
 
             // BROKEN OUT BY SHAPE, because "111 junctions" hid the fact that seven of them were
             // being laid as crossroads with two arms painted into open ground.
@@ -977,7 +995,16 @@ namespace Noir.Unity
         /// what piles up behind a building. Walks the terrain grid, because those ARE properties
         /// of the ground rather than of a road.
         /// </summary>
-        private static int Dress(Transform parent, WorldModel world)
+        /// <summary>
+        /// PLANTING GOES SOMEWHERE ELSE, and it is `planting` rather than `parent` that says so.
+        ///
+        /// Every green thing this method sows used to land under the street root, so the Streets
+        /// switch carried them: measured on the live town, `Layers.RootsOf(Streets)` held 7,869
+        /// renderers of which only 1,960 were street chunks and 5,909 were grass tufts, ferns and
+        /// leaf bunches. Turning the streets on planted a meadow, and the Trees switch - which is
+        /// wired to CityGreenery - could not take any of it away.
+        /// </summary>
+        private static int Dress(Transform parent, Transform planting, WorldModel world)
         {
             int cols = world.Width / Cell, rows = world.Height / Cell;
 
@@ -1088,7 +1115,7 @@ namespace Noir.Unity
                                       || Is(cx, cy + 1, Noir.Core.World.Terrain.Road);
 
                     if (besideAStreet)
-                        n += Kerb(parent, cx, cy, vx, vy, lamps, kerbside, streetTrees);
+                        n += Kerb(parent, planting, cx, cy, vx, vy, lamps, kerbside, streetTrees);
                     // Behind the buildings. Bins, crates, pallets, tyres, and the pipework that
                     // runs up an alley wall.
                     else if (alley.Count > 0 && Materials3D.Scatter(cx, cy, 653) % 3 == 0)
@@ -1131,7 +1158,7 @@ namespace Noir.Unity
                         var role = green[(int)(Materials3D.Scatter(cx + k, cy, 691) % (uint)green.Count)];
                         float ox = 1f + Materials3D.Scatter(cx * 11 + k, cy, 701) % 8;
                         float oz = 1f + Materials3D.Scatter(cx, cy * 11 + k, 709) % 8;
-                        if (Put(parent, Pick(role, cx + k, cy + k, 719), vx + ox, vy + oz,
+                        if (Put(planting, Pick(role, cx + k, cy + k, 719), vx + ox, vy + oz,
                                 Materials3D.Scatter(cx + k, cy, 727) % 4 * 90f) != null) n++;
                     }
                 }
@@ -1149,7 +1176,8 @@ namespace Noir.Unity
         /// everything else is rolled, so no two blocks carry the same run of hydrant, meter,
         /// phone booth and planter.
         /// </summary>
-        private static int Kerb(Transform parent, int cx, int cy, float vx, float vy,
+        private static int Kerb(Transform parent, Transform planting, int cx, int cy,
+                                float vx, float vy,
                                 List<string> lamps, List<List<string>> kerbside,
                                 List<string> trees)
         {
@@ -1189,8 +1217,11 @@ namespace Noir.Unity
             // Street trees. Nature/Trees City is the nine authored to stand in a pavement rather
             // than in a wood, and they do more for a street than any other single prop - they
             // break the roofline and cast something on it.
+            // ...but they are TREES, so they go on the Trees switch with everything else that
+            // grows. A street tree standing over bare asphalt is the wrong picture, and so is a
+            // street you cannot look at without one.
             if (trees.Count > 0 && Materials3D.Scatter(cx, cy, 641) % 2 == 0)
-                if (Put(parent, Pick(trees, cx, cy, 643), vx + 5f, vy + 5f,
+                if (Put(planting, Pick(trees, cx, cy, 643), vx + 5f, vy + 5f,
                         Materials3D.Scatter(cx, cy, 647) % 4 * 90f) != null) n++;
 
             return n;
