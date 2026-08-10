@@ -13,6 +13,44 @@ Unity layer.
 
 ---
 
+## Where this stands, 2026-08-10
+
+Every premise below was re-checked against the working tree rather than trusted from the audit.
+
+| Wave | |
+|---|---|
+| **W1** The content-key gates | **half done, and not by this plan.** The *leak* is closed; the *gates* are not built. See below |
+| **W2** The crop model | **not started, and unchanged.** `Fields` and `FieldCondition` are still referenced by **zero** files in `Assets/Noir/Unity` and `Assets/Noir/Editor`; `VillageHost.cs:1090` still calls `AskInEnglish` with no `blocked` argument; `CityFarm` still hashes position with no date in it |
+| **W3** The diagnostics | **not started.** `Assert.Pass` is still in `PerfCensus` once and `TrafficDiagnostics` three times |
+| **W4** The road baseline | **not started here — but overtaken.** `ROAD-FIXES` landed `DrawnRoadFollowsItsSurveyLineTests`, which measures and ratchets road-to-survey-line distance on every run. **Re-scope `BASE-1` against it before writing anything**; it may be done |
+| **W5** The behaviour tests | deferred to `SIM-FIXES` W7 by design. `PeopleTests` and `WorldTests` still load the fixture |
+| **W6** The 43 unnamed classes | not started |
+
+### ⚠ W1's defect was fixed on 2026-08-09 by a session doing something else
+
+Commit **`3de6810`** — titled about road colour — closed the whole frontage gap three hours after
+this plan landed. Verified directly, both columns:
+
+```
+  frontage   13 declared in kinds.txt, 13 answered in Frontage.cs   EXACT MATCH
+  massing     9 declared,  all 9 present in the registry (+5 spare, deliberate)
+  Frontage.cs:86  the `place.Kind != PlaceKind.Dwelling` enum guard is GONE
+```
+
+It added `case "bank"`, `case "none"` and `case "dwelling"`, retired `frontage shopfront` from the
+content, and deleted the enum guard. **So `KEY-3`, `KEY-4` and `KEY-5` are done and `KEY-0` is moot.**
+
+**`KEY-1`, `KEY-2` and `KEY-6` — the gates — are worth MORE now, not less.** The two columns drifted
+apart silently once already and were repaired by hand, with nothing to stop it happening again. The
+gates now land **green**, which is a cheaper and safer commit than the red one this plan was written
+for: no fix has to be argued in the same breath.
+
+**And the pattern is no longer hypothetical.** `SIM-FIXES` W2 has since built four Core gates of
+exactly this shape — `EveryActivityHasARowInTheRealFile` is the closest sibling, and it caught a real
+fault on its first run. Copy that, not the sketch in `KEY-1` below.
+
+---
+
 ## ⚠ Read this before you delete a single test
 
 **"Bad tests" is the wrong model of this suite and acting on it will make things worse.** The audit
@@ -59,7 +97,12 @@ lines. W6 is a backlog, not a sprint.
 
 ### W1 — The content-key gates · half a day · Core only, plus one look
 
-`KEY-0` `KEY-1` `KEY-2` `KEY-3` `KEY-4` `KEY-5` `KEY-6`
+> ✅ **`KEY-3` `KEY-4` `KEY-5` DONE 2026-08-09 by commit `3de6810`, and `KEY-0` is moot.** The
+> measured gap below is CLOSED — read it as the record of what went wrong, not as a live defect.
+> **`KEY-1`, `KEY-2` and `KEY-6` are still open and are now the whole of this wave.** See
+> *Where this stands* at the top.
+
+`KEY-1` `KEY-2` `KEY-6` · ~~`KEY-0`~~ ~~`KEY-3`~~ ~~`KEY-4`~~ ~~`KEY-5`~~
 
 **`kinds.txt` declares three key columns and each one has a different policy for a name nothing
 answers to. Two of the three are right. The third is silent, and it is leaking now.**
@@ -250,7 +293,15 @@ when somebody actually looks. Cheaper than any tooling and it makes an unread in
 
 ### W4 — The road baseline gets a property · 1 day · no Unity
 
-`BASE-1` `BASE-2`
+> ⚠ **`BASE-1` HAS PROBABLY BEEN BUILT ALREADY — by `ROAD-FIXES`, not by this plan.**
+> `tools/Noir.Core.Tests/DrawnRoadFollowsItsSurveyLineTests.cs:56` is
+> `NoRoadIsDrawnFurtherFromItsSurveyLineThanTheWorstOneToday`, and a ratchet on the worst road is
+> exactly the property `BASE-1` specifies — including the hard part, which is catching a road that
+> leaves its own end backwards **without** fighting the rounded corners the owner ruled on.
+> **Read that test before writing anything here.** If it does what `BASE-1` asks, strike `BASE-1`
+> and keep only `BASE-2`. Two plans writing the same road test is how two baselines drift apart.
+
+`BASE-2` · `BASE-1` **— verify against the above first**
 
 `RoadGeometryBaselineTests` pins segment counts, turn counts and a checksum for the real town. Its
 header is an unusually honest changelog of every time the pin moved: the Phase B curve, the side
