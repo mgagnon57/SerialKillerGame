@@ -124,6 +124,20 @@ namespace Noir.Unity
                          "Assets/polyperfect/Poly Universal Pack/Textures/City/Concrete_A_City_Nrm.png",
                          null),
 
+            // ---- WHAT THE TOWN IS BUILT OF ------------------------------------------------
+            //
+            // Clapboard for the houses, brick for Main Street. See Materials3D.Walls: the
+            // clapboard albedo is pure white with the board lines drawn into it, so the material
+            // tint IS the paint and it needs no normal map (it ships without one). The brick
+            // carries its colour and its coursing lives in a normal map - which is exactly why
+            // the plan refused to bind it, "inert without tangents", and exactly what ROOF-0
+            // fixed.
+            ["wall"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Buildings/Walls/Wall_Planks_Horizontal_B_Farm_Alb.png",
+                         null, null),
+            ["brick"] = ("Assets/polyperfect/Poly Universal Pack/Textures/City/Wall_Brick_A_City_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/City/Wall_Brick_A_City_Nrm.png",
+                         null),
+
             // ---- THE ROOFS ----------------------------------------------------------------
             //
             // THREE ALBEDOS AND FOUR COVERINGS, and the arithmetic is why. The plan for this work
@@ -272,16 +286,17 @@ namespace Noir.Unity
             // before the roofs were moved onto the pack's shingle sets it read SEVEN - the four
             // English coverings plus water, wall and brick - and looked exactly like success.
             //
-            // THREE is the healthy number: water, which the pack has nothing tileable for, and
-            // wall and brick, which have no pack set yet. Anything higher means a pack path
-            // silently failed and something in the town is still a flat placeholder.
+            // ONE is the healthy number now: water, which the pack has nothing tileable for.
+            // It was SEVEN before the roofs moved onto the pack's shingle sets, then THREE, and
+            // then one once the clapboard and the brick went on too. Anything higher means a
+            // pack path silently failed and something in the town is a flat placeholder again.
             var loose = new List<string>();
             foreach (var kv in _cache) if (kv.Value != null) loose.Add(kv.Key);
             loose.Sort();
 
             Debug.Log($"Surface textures: {found} loose ({string.Join(", ", loose)}) - "
-                    + "everything else is on a real pack set. Three is healthy; more means a "
-                    + "pack path failed and fell back to a flat placeholder.");
+                    + "everything else is on a real pack set. ONE is healthy - water alone; "
+                    + "more means a pack path failed and fell back to a flat placeholder.");
         }
     }
 }

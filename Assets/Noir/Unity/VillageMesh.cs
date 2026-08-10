@@ -1234,7 +1234,10 @@ namespace Noir.Unity
             var walls = new GameObject("Walls");
             walls.transform.SetParent(parent, false);
 
-            var chunks = new MeshChunks(1, MeshChunks.Size, 0, 0, world.Width, world.Height);
+            // ONE SUBMESH PER WALL MATERIAL. The town was emitted with a single one, so every
+            // wall in Rossville - house, store, church and garage - was the same pale render.
+            var chunks = new MeshChunks(Materials3D.Walls.Length, MeshChunks.Size,
+                                        0, 0, world.Width, world.Height);
             var used = new bool[world.Width * world.Height];
             int count = 0;
 
@@ -1317,6 +1320,14 @@ namespace Noir.Unity
 
             int OwnerAt(int gx, int gy) => owner[gy * world.Width + gx];
 
+            // What the building this run belongs to is built of. A run never crosses an owner
+            // boundary - the walkers below stop at one - so a run has exactly one material.
+            int WallingAt(int gx, int gy)
+            {
+                int id = owner[gy * world.Width + gx];
+                return id < 0 ? 0 : Materials3D.WallingFor(world.GetPlace(new PlaceId(id)));
+            }
+
             // Every test below goes through this rather than IsWall, so a bought building's
             // perimeter is invisible to the run-walker and no run can start on or cross it.
             bool Walled(int gx, int gy) =>
@@ -1341,7 +1352,8 @@ namespace Noir.Unity
                     int length = gx - start;
                     if (length >= 2)
                     {
-                        AddWall(chunks.At(start, gy), start, gy, length, 1, BaseAt(start, gy), HeightAt(start, gy));
+                        AddWall(chunks.At(start, gy), start, gy, length, 1, BaseAt(start, gy),
+                                HeightAt(start, gy), WallingAt(start, gy));
                         count++;
                     }
                     else { used[gy * world.Width + start] = false; }   // leave singles for the vertical pass
@@ -1363,12 +1375,13 @@ namespace Noir.Unity
                         used[gy * world.Width + gx] = true;
                         gy++;
                     }
-                    AddWall(chunks.At(gx, start), gx, start, 1, gy - start, BaseAt(gx, start), HeightAt(gx, start));
+                    AddWall(chunks.At(gx, start), gx, start, 1, gy - start, BaseAt(gx, start),
+                            HeightAt(gx, start), WallingAt(gx, start));
                     count++;
                 }
             }
 
-            var renderers = chunks.Emit(walls.transform, "Walls", new[] { Materials3D.Wall },
+            var renderers = chunks.Emit(walls.transform, "Walls", Materials3D.Walls,
                                         ShadowCastingMode.On, true);
 
             Debug.Log($"Walls: {count} runs, {chunks.VertexCount:N0} vertices, "
@@ -1393,11 +1406,11 @@ namespace Noir.Unity
         /// single shaded pixel.
         /// </summary>
         private static void AddWall(MeshChunk into, int gx, int gy, int w, int h,
-                                    float bottom, float top)
+                                    float bottom, float top, int submesh)
         {
             var verts = into.Verts;
             var uvs = into.Uvs;
-            var tris = into.Tris[0];
+            var tris = into.Tris[submesh];
 
             float x0 = gx, x1 = gx + w;
             float z0 = -gy, z1 = -(gy + h);

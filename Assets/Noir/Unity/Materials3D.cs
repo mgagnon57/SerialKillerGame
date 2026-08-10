@@ -307,15 +307,82 @@ namespace Noir.Unity
             foreach (var pair in _byZoning) Paint(pair.Value, pair.Key);
         }
 
-        public static Material Wall
+        public static Material Wall => Walls[0];
+
+        private static Material[] _walls;
+
+        /// <summary>
+        /// WHAT THE TOWN IS BUILT OF. One material used to cover every wall in Rossville - house,
+        /// store, church and garage alike - and it was `0xC6B8A6` over a procedural placeholder:
+        /// pale render. That is an English village wall. It is also why Main Street photographed
+        /// as a row of grey boxes.
+        ///
+        /// A 1991 east-central Illinois town is CLAPBOARD HOUSES AND A BRICK MAIN STREET, and the
+        /// pack has both:
+        ///
+        ///     Wall_Planks_Horizontal_B_Farm   mean (255,255,255) span 168, board lines in the
+        ///                                     ALBEDO, so it reads without a normal map (it ships
+        ///                                     without one)
+        ///     Wall_Brick_A_City               mean (167,105, 78) span  91, coursing in a NORMAL
+        ///                                     map, which is why this could not be used before
+        ///
+        /// THE PLAN SAYS DO NOT BIND THE BRICK, AND ITS REASON EXPIRED. `ROOF-14` is refused on
+        /// the grounds that the brick's "coursing is in a normal map that is inert without
+        /// tangents". `MeshChunks.Emit` writes a tangent stream now - that was ROOF-0, the first
+        /// line of this whole wave - so the objection is answered rather than overruled.
+        ///
+        /// Four clapboards because a street of identical white houses reads as an estate put up
+        /// in one year by one contractor, which is the same argument the four roof coverings won.
+        /// The albedo is pure white, so a tint IS the paint.
+        /// </summary>
+        public static Material[] Walls
         {
             get
             {
-                if (_wall != null) return _wall;
-                _wall = Make("Wall", new Color32(0xC6, 0xB8, 0xA6, 0xFF), 0.05f);
-                SurfaceTextures.Apply(_wall, "wall", 3f);
-                return _wall;
+                if (_walls != null) return _walls;
+                _walls = new[]
+                {
+                    Walling("WallClapboardWhite", new Color(0.92f, 0.92f, 0.90f)),
+                    Walling("WallClapboardCream", new Color(0.90f, 0.86f, 0.72f)),
+                    Walling("WallClapboardGreen", new Color(0.78f, 0.84f, 0.74f)),
+                    Walling("WallClapboardGrey",  new Color(0.74f, 0.76f, 0.76f)),
+                    Brickwork(),
+                };
+                return _walls;
             }
+        }
+
+        /// <summary>A painted clapboard elevation. The tint is the paint.</summary>
+        private static Material Walling(string name, Color paint)
+        {
+            var m = Make(name, paint, 0.05f);
+            SurfaceTextures.ApplyPack(m, "wall", 3f, paint);
+            return m;
+        }
+
+        /// <summary>The commercial block. Brick carries its own colour, so no tint.</summary>
+        private static Material Brickwork()
+        {
+            var m = Make("WallBrick", new Color(0.55f, 0.36f, 0.28f), 0.04f);
+            SurfaceTextures.ApplyPack(m, "brick", 2f);
+            return m;
+        }
+
+        /// <summary>Main Street's brick, for anything that is not somebody's house.</summary>
+        public static int BrickIndex => 4;
+
+        /// <summary>
+        /// What this building is built of. A house is clapboard, painted one of four ways and
+        /// keyed on the BUILDING so it survives being moved - the same argument as
+        /// <see cref="RoofingFor"/>. Everything else that is a building is brick: the stores, the
+        /// church, the school, the hall. A wall that belongs to no building at all - a garden or
+        /// churchyard boundary - takes the plain white, which is what a painted board fence is.
+        /// </summary>
+        public static int WallingFor(Place place)
+        {
+            if (place == null) return 0;
+            if (place.Kind != PlaceKind.Dwelling) return BrickIndex;
+            return (int)(Rolls.Avalanche(place.Key ^ 7717UL) % 4UL);
         }
 
         /// <summary>
