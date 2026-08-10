@@ -259,6 +259,28 @@ owner says otherwise.
 
 ---
 
+### The drawn road and its survey line — re-affirmed 2026-08-10
+
+**Ruled 2026-08-09 and asked again with numbers on 2026-08-10: leave it, corners stay rounded.**
+A real street corner has a turning radius and a car cannot pivot on a point, so a junction drawn
+as an arc is CORRECT and the divergence at a corner IS the arc.
+
+Measured, so nobody has to ask a third time:
+
+```
+  16.71 m  summit    (3 declared points)      9.18 m  grove
+   9.31 m  watson                             8.85 m  benton
+   5.09 m  green
+  44 roads with 3+ points; 16 over a metre, 5 over five
+```
+
+`DrawnRoadFollowsItsSurveyLineTests` ratchets the worst road and the count over five metres, and
+both may only fall. **It is not a demand that the roads be straightened.** It exists because the
+divergence decides whether two roads MEET: benton and summit are declared **0.20 m** apart and
+drawn **8.3 m** apart, which is the whole of `ROAD-FIXES` ALLEY-2b's remaining half — the junction
+is not missing, the two curves are.
+
+
 ### What the town is built of — settled 2026-08-09
 
 Asked with a picture in hand. Two were contested by the evidence and put back to him, and he took
