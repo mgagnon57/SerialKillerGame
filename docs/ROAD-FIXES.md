@@ -390,9 +390,48 @@ at 20%, so the whole network could degrade from 1.6% to far worse and stay green
 > **The fix already exists and is simply not pointed at the streets.** `extend_to_streets` in
 > `tools/build-roads.py` carries an alley's end out to the street it stops short of, refuses where
 > the new stretch would cross somebody's lot, and counts what it did — that is what opened the 58
-> alley mouths. Run it over street-class ends too, with the same refusal. It rewrites
-> `Content/roads.txt`, so it wants its own change and its own PlayMode run, and **W3 must be
-> finished first**: that ordering is the one this file has already been burned by twice.
+> alley mouths. Run it over street-class ends too, with the same refusal.
+>
+> ✅ **DONE for two of the four**, by `extend_streets_to_streets`: dale and thompson both reach
+> Route 1 now.
+>
+> ⚠ **AND THE OTHER TWO ARE NOT THIS ITEM AT ALL. MEASURED 2026-08-10.** The declared gaps are:
+>
+> ```
+>   benton x summit    declared  0.20 m      drawn  8.3 m apart
+>   dale   x grove     declared  0.65 m      drawn  6.1 m apart
+> ```
+>
+> **The county says those roads touch — twenty centimetres apart.** There is nothing for
+> `extend_streets_to_streets` to extend, and it is right to say "already meeting". They are drawn
+> apart because the SMOOTHED CURVE LEAVES THE SURVEY LINE, and by a lot:
+>
+> ```
+>   16.71 m  summit    (3 declared points)      9.18 m  grove
+>    9.31 m  watson                             8.85 m  benton
+>    5.09 m  green
+>   44 roads with 3+ points; 16 over a metre, 5 over five
+> ```
+>
+> That is the same fault `CLAUDE.md` records at **39 m** under the uniform curve — *"Summit Street
+> was drawn 39 m (128 ft) off its own survey line. Nothing could see it: it moves no count and
+> fails no test."* Moving the roads onto `SmoothCentripetal` took it 39 → 16.7. It did not take it
+> to nothing, and **there was still nothing that could see the rest.**
+>
+> **THE JUNCTION IS NOT MISSING; THE TWO CURVES ARE.** So ALLEY-2b's remaining half cannot be
+> closed by extending a road, and widening the generator's tolerance to force a junction there
+> would be inventing tarmac to paper over the drawing. **Do not do it.**
+>
+> ✅ **`DrawnRoadFollowsItsSurveyLineTests` now measures this on every run and ratchets it** — the
+> worst road and the count over five metres, both may only fall. It uses `RoadPath` itself rather
+> than a second implementation, so it cannot drift from what the game draws.
+>
+> ⚠ **IT IS NOT A DEMAND THAT THE ROADS BE STRAIGHTENED, and the test says so in its own header.**
+> The owner ruled 2026-08-09: *leave it, corners stay rounded — a real street corner has a turning
+> radius and a car cannot pivot on a point.* **What is open is a question for him, with numbers
+> now attached:** is 16.7 m at Summit the turning radius he ruled for, or is it the overshoot the
+> centripetal curve was supposed to have removed? Three declared points and a 16.7 m bow is a very
+> large corner. That is his call and nobody should take it by adjusting a constant.
 
 ## The waves
 
