@@ -66,9 +66,10 @@ counts as two roads touching, and the IDOT counts. Checked directly rather than 
 | **ALLEY-2b** | **half done, and the other half is not this item.** Two of four carried out; the other two are the smoothing, not a missing junction. Measured, gated, and now a question for the owner |
 | **W4** | ✅ `RealRossville` is GATE-2/ADDR-6's shared helper. **GATE-3(a) settled: the instrument was the fault** — the sampler took exactly fifteen samples per road whatever its length, so attica sat on the list at 5/15 = 33.3%. Stepped at a flat 4 m it is 125/394 = 31.7% and the list shrank to three |
 | **W5** | ✅ **unblocked** — decision 3 is answered (a), not (c), so `RC-17` is overruled. **GATE-5 re-recorded: the 134 is 28**, from five identical runs |
-| **W6** | ✅ its alley items are in — 33 alley names with **zero** shipping as multiple runs (ALLEY-1), 58 mouths opened (ALLEY-2). `JUNC-4/8/9`, `CONS-4`, `RC-7/8`, `ADDR-11/15` not verified |
-| **W7** | **CONS-2 and CONS-3 done.** CONS-2's gate was watched failing first: 5,438 of 13,154 lane positions in the oncoming carriageway, 41%. CONS-3: 51 of the town's 122 two-armed junctions were handed to a compass direction; the county's counts settle 32 and road length the other 19. **CONS-1 needs no work — give-way is already on.** The rest of `CONS-*` not started |
+| **W6** | ✅ its alley items are in — 33 alley names with **zero** shipping as multiple runs (ALLEY-1), 58 mouths opened (ALLEY-2), and **CONS-4**: the alleys were reported as 7.1 m of asphalt in a 4 m corridor, which also exempted a third of the network from `NoVehicleEverLeavesTheRoad`. `JUNC-4/8/9`, `RC-7/8`, `ADDR-11/15` — **no item text exists, see below** |
+| **W7** | **CONS-2, CONS-3 and CONS-4 done.** CONS-2's gate was watched failing first: 5,438 of 13,154 lane positions in the oncoming carriageway, 41%. CONS-3: 51 of the town's 122 two-armed junctions were handed to a compass direction; the county's counts settle 32 and road length the other 19. **CONS-1 needs no work — give-way is already on.** The rest of `CONS-*` not started |
 | **W8** | not started |
+| **the rest** | **THE ITEM TEXT NO LONGER EXISTS ANYWHERE IN THE TREE.** `CONS-5,6,7,9..15`, `GATE-18`, `SALVAGE-8`, `JUNC-4,8,9`, `RC-7,8`, `ADDR-11,15` are named in the wave lists and NOWHERE else — grepped across the whole repo, not just `docs/`. Everything known about them is the sentence the wave narrative spends on them. **Do not tick them off as done and do not invent them:** what CAN be recovered is in those narratives, and CONS-1, CONS-2, CONS-3 and CONS-4 were all recoverable that way |
 | **W9** | **his** — decision 1 defers it: *"do not treat 408 Holmes as settled, and do not quietly fix it in either direction — it is an edit he will make on purpose"* |
 | **map audit** | ✅ no longer permanently red on the intended design — 3 kinds of fault → 2, both real |
 
@@ -82,6 +83,8 @@ counts as two roads touching, and the IDOT counts. Checked directly rather than 
   the 134    28, from five identical runs — ratcheted
   the lanes  0 of 13,154 in the oncoming carriageway, from 5,438
   the signs  44 north-south / 78 east-west, from 69/53 — no compass decides any of them now
+  the alley  4.0 m of asphalt in a 4 m corridor, from an impossible 7.1 m
+  the lights 55 samples of a car stopped at a signal, 55 of them on a red, 0 on green
   the alleys alley1 78.4% of its length on a lot — ratcheted, and nothing moves until he says so
 ```
 
