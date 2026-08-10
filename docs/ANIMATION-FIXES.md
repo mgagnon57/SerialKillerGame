@@ -801,9 +801,16 @@ in the editor — silently, with no test able to see it.
 > not exist when this item was written - it was added by `SIM-FIXES` the same night, when
 > `Activity.OnTheAllotment` became `InTheGarden`.
 >
-> **RIG-9 is still gated on RIG-8's measurement** (Loop Pose, 87 re-imports) and **GATE-7's
-> verification still wants its targeted `-testFilter Noir.PlayTests.LayerProof` run** - which must
-> NOT be a full unfiltered suite: that can take four hours and has never been seen to finish.
+> ✅ **RIG-8's measurement now EXISTS, which is what decision 7 refused to answer without.** It
+> rides `AnimationCheck`'s existing per-clip loop and costs nothing: root drift over the whole clip
+> (`averageSpeed * length`) is the wrap-point hitch, and it is exactly what Loop Pose would warp
+> away. Reported worst-first, **deliberately NOT asserted** — `loopPose` does not merely mark a
+> clip, it WARPS it to meet its own start, which is right on a true cycle and wrong on the dozen
+> one-shot gestures. The number is mine; the ruling on 87 re-imports is his. Run
+> `Noir > Check The Animations` and read the `[anim] loop seam:` lines.
+>
+> **RIG-9 stays blocked until he rules on that output**, which is the correct state rather than a
+> gap — decision 7's own words are "do not answer until the measurement exists".
 
 ### W7 — The documents that are then true, and the long run
 

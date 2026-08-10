@@ -126,6 +126,29 @@ namespace Noir.PlayTests
             // the editor to LOOK at it, and that is the case with a person in it.
             _wasLayers = Layers.Snapshot();
 
+            // THE SHEET CANNOT PROVE A LAYER THE RUN DID NOT BUILD, and for three of its twelve
+            // combinations it never could.
+            //
+            // `VillageHost.ShowBuildings` is false in batch mode unless `NOIR_BUILT_TOWN=1` says
+            // otherwise, and CityStreets, CityParking, CitySigns and CityGreenery all sit behind
+            // it - so `07-streets-and-massing` came out BYTE-IDENTICAL to `04-massing-alone`,
+            // `08-road-widths` to `01-parcel-lines`, and `09-road-widths-and-houses` to
+            // `02-parcel-lines-and-houses`. Three pairs, every one of them a street frame.
+            //
+            // It passed anyway, every time, because the assertion at the bottom counted FILES.
+            // `ShotLog.Stamp` hashes them now and that is how this was found - on the first
+            // targeted run after the hashing landed.
+            //
+            // Refusing rather than skipping: a proof sheet that quietly photographs three-quarters
+            // of itself is the failure this whole file exists to prevent.
+            Assert.That(VillageHost.ShowBuildings, Is.True,
+                "LayerProof needs the BUILT town: CityStreets, CityParking, CitySigns and "
+              + "CityGreenery are all behind VillageHost.ShowBuildings, which is false in batch "
+              + "mode unless NOIR_BUILT_TOWN=1. Without it three of the twelve frames come out "
+              + "byte-identical to another - every one of them a street frame - and the sheet "
+              + "proves nothing about the layers it was made for. Set NOIR_BUILT_TOWN=1 and run "
+              + "it again.");
+
             var wired = new StringBuilder("[layerproof] wiring:\n");
             foreach (var kind in Layers.All)
                 wired.Append("    ").Append(Layers.IsWired(kind) ? "LIVE " : "DEAD ")
