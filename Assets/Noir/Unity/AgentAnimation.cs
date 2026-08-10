@@ -255,8 +255,20 @@ namespace Noir.Unity
         /// controller with no such state. The city has to keep running while the animation set is
         /// half imported, or nobody will ever import it a few clips at a time.
         /// </summary>
+        /// <summary>
+        /// THE STRIDE A CLIP WAS ANIMATED FOR, in metres. `AgentLook.Stride` is `Height * 0.82`,
+        /// and the adult baseline height is 1.71 m - so this is the stride of the average adult
+        /// the walk cycles were authored against.
+        ///
+        /// Pinned deliberately: an ordinary adult divides by itself, gets exactly 1, and NOTHING
+        /// about the town's walk changes. The term only bites where it should - on the short and
+        /// the tall, and hardest on children, whose legs are a metre and who were covering the
+        /// simulation's ground with an adult's stride length.
+        /// </summary>
+        private const float AdultStride = 1.71f * 0.82f;
+
         public static void Drive(Animator animator, Situation what,
-                                 ulong who = 0, float pace = -1f)
+                                 ulong who = 0, float pace = -1f, float stride = 0f)
         {
             if (animator == null || animator.runtimeAnimatorController == null) return;
 
@@ -276,6 +288,23 @@ namespace Noir.Unity
             // kept their walk speed forever, and it was the clamped one at that.
             float made = PaceOf(row);
             float wanted = made > 0f && pace >= 0f ? Mathf.Min(pace / made, Fastest) : 1f;
+
+            // AND A TERM FOR THE LEGS THAT ARE ACTUALLY DOING IT. `pace / made` closes the gap
+            // between the speed the clip was animated at and the speed the simulation is moving
+            // somebody - which is right for the body the clip was animated FOR, and wrong for
+            // every other body in town.
+            //
+            // A short person covers the same ground with more steps: their stride is shorter, so
+            // to walk at the sim's speed without skating their cycle has to run FASTER. Linear in
+            // height, because stride is - `AgentLook.Stride` is `Height * 0.82`. An average adult
+            // divides by itself and gets 1, so the town's walk is unchanged for the majority;
+            // a ten-year-old at 1.35 m gets 1.27x and stops gliding.
+            //
+            // Clamped by the same `Fastest` ceiling as the pace ratio, and only where a stride was
+            // actually passed - `stride <= 0` is the caller saying "I do not know", and inventing
+            // a body for it would be worse than leaving the clip alone.
+            if (stride > 0.01f)
+                wanted = Mathf.Min(wanted * (AdultStride / stride), Fastest);
 
             if (string.IsNullOrEmpty(clip)) { animator.speed = wanted; return; }
 

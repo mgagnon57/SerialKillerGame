@@ -82,6 +82,15 @@ namespace Noir.Unity
         public Animator Animator { get; private set; }
 
         private SkinnedMeshRenderer _skin;
+
+        /// <summary>
+        /// The thing in their hand, parented to the right-hand BONE so the animation carries it.
+        ///
+        /// Built on first use rather than for all 1,385 people up front: most of the town is not
+        /// carrying anything at any moment, and a shopping bag per citizen is 1,385 renderers for
+        /// scenery. Kept once made, because somebody who has shopped once will shop again.
+        /// </summary>
+        private GameObject _bag;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         /// <summary>
@@ -111,6 +120,49 @@ namespace Noir.Unity
             // the only part of a walk cycle an in-place clip deliberately does not have.
             Root.position = ground;
             Root.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // SIM-8. THE BAG NEVER REACHED A BOUGHT BODY. `carrying` arrived here and was
+            // ignored: the primitive figure hangs a box off its arm transform and the rigged one
+            // did nothing at all, so the moment the town got real people, every shopper walked
+            // home from the shop empty-handed - and `PersonDescription.CarriedThing` is a WITNESS
+            // property. A watcher is supposed to be able to say "he had something in his hand".
+            //
+            // A PROP ON THE HAND BONE, NOT A CLIP. Parenting to `HumanBodyBones.RightHand` means
+            // the existing animation carries it for free and it needs no bespoke carry cycle -
+            // which is the difference between one object and re-animating eighty-seven clips.
+            if (!carrying) { if (_bag != null && _bag.activeSelf) _bag.SetActive(false); return; }
+
+            if (_bag == null && !MakeBag()) return;
+            if (!_bag.activeSelf) _bag.SetActive(true);
+        }
+
+        /// <summary>
+        /// Hang a bag off the right hand, once. False if this rig has no mapped right hand - the
+        /// pack's figures are humanoid, but a figure that is not must not take the whole frame
+        /// down for a shopping bag.
+        /// </summary>
+        private bool MakeBag()
+        {
+            var hand = Animator != null && Animator.isHuman
+                ? Animator.GetBoneTransform(HumanBodyBones.RightHand)
+                : null;
+            if (hand == null) return false;
+
+            _bag = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _bag.name = "Bag";
+            Object.DestroyImmediate(_bag.GetComponent<Collider>());
+
+            var r = _bag.GetComponent<MeshRenderer>();
+            r.sharedMaterial = Materials3D.Bag;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+
+            _bag.transform.SetParent(hand, false);
+            // A carrier bag, held at the side: small, a little below the grip, hanging clear of
+            // the leg. In the hand's own space, so it swings with the arm the animator is moving.
+            _bag.transform.localScale = new Vector3(0.16f, 0.22f, 0.10f);
+            _bag.transform.localPosition = new Vector3(0.02f, -0.14f, 0.02f);
+            _bag.transform.localRotation = Quaternion.identity;
+            return true;
         }
 
 #if UNITY_EDITOR

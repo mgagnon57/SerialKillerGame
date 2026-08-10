@@ -493,9 +493,28 @@ having pushed the bug fix a day earlier.
 > weeks. `Layers.Snapshot()` at the top and a `[TearDown]` that restores, so a run that throws
 > halfway still puts the panel back.
 >
-> **RIG-2 and SIM-8 remain** — the per-figure stride term and the bag on the hand bone. Both are
-> behaviour rather than instrument, and both want the single-run discipline this wave was built
-> around.
+> **RIG-2 done.** `pace / made` closes the gap between the speed a clip was animated at and the
+> speed the simulation moves somebody — which is right for the body the clip was animated FOR and
+> wrong for every other body in town. A short person covers the same ground with more steps, so
+> their cycle has to run faster or they glide. Linear in height, because `AgentLook.Stride` is
+> `Height * 0.82`, and **pinned on the adult baseline so an ordinary adult divides by itself, gets
+> exactly 1, and nothing about the town's walk changes.** It bites where it should: a ten-year-old
+> at 1.35 m gets 1.27x. Clamped by the same `Fastest` ceiling, and skipped entirely when the caller
+> passes no stride — inventing a body would be worse than leaving the clip alone.
+>
+> **SIM-8 done, and the bag had never once reached a bought body.** `carrying` arrived at
+> `AgentBody.Pose` and was ignored outright: the primitive figure hangs a box off its arm
+> transform, the rigged one did nothing, so the day the town got real people every shopper walked
+> home empty-handed. That is not cosmetic — `PersonDescription.CarriedThing` is a WITNESS property,
+> and a watcher is meant to be able to say *he had something in his hand*.
+>
+> A PROP ON `HumanBodyBones.RightHand`, NOT A CLIP: the existing animation carries it for free,
+> which is the difference between one object and re-animating eighty-seven clips. Built on first
+> use — most of the town is not carrying anything at any moment, and a bag per citizen would be
+> 1,385 renderers of scenery — and it returns false rather than throwing on a rig with no mapped
+> right hand.
+>
+> **That is every W4 leftover. Twenty of twenty.**
 
 ### W4 — Both hub files, rewritten once, one PlayMode run
 

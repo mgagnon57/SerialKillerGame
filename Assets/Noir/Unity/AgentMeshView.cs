@@ -362,7 +362,12 @@ namespace Noir.Unity
                 AgentAnimation.Drive(_figures[i].Animator, SituationOf(i, agent, walking),
                                      who: _host.People.Get(new CitizenId(i)).Key.Value,
                                      pace: Mathf.Sqrt((agent.Position - agent.PreviousPosition)
-                                                          .LengthSquared) * perSecond);
+                                                          .LengthSquared) * perSecond,
+                                     // RIG-2. The legs doing the walking, so a child's cycle runs
+                                     // faster than an adult's over the same ground instead of
+                                     // gliding. Already to hand - the primitive figures have used
+                                     // this same number for their leg swing all along.
+                                     stride: _looks[i].Stride);
             }
 
             Animating = animating;

@@ -171,6 +171,7 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-10: 19 of 19 PASS, 1 skipped, 700 s.** (18 of 18 the day before.)
 > **BASELINE, 2026-08-09: 18 of 18 PASS, 1 skipped, 744 s.** (17 of 17 and 16 of 16 earlier that day, 13 of 13
 > on 2026-08-08, 8 of 8 on 2026-08-07; TownGeometryPlayTests added three that can see where a
 > building STANDS, a fourth that can see whether the car outside a house is there today, a fifth
