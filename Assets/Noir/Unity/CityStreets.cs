@@ -331,9 +331,26 @@ namespace Noir.Unity
                 }
             }
 
+            // AS DRAWN, NOT AS SHIPPED - `ROAD-FIXES` CONS-4, and it was a whole road class wide.
+            //
+            // `Seat` narrows a tile whose width does not match its corridor (see `Narrow`), and
+            // the two dirt tiles are exactly that case: the alley tile is 7.1 m across and its
+            // corridor is 4 m. Measuring the PREFAB and not applying the same scale reported
+            // `[streets] Alley: 7.1m of asphalt in a 4m corridor` - which is not merely wrong, it
+            // is impossible, and the pavement figure beside it came out at MINUS 1.6 m each side.
+            //
+            // Everything that stands beside or drives on a street derives from this number:
+            // `LaneOffset` put alley traffic 1.8 m off the centre line of a 2 m half-width lane,
+            // and `CityUnderTest`'s "is this vehicle on the road" check passed every point inside
+            // an alley UNCONDITIONALLY, because the asphalt it was told about was wider than the
+            // corridor containing it. That exemption is gone with this line.
+            float drawn = Narrow(klass, Straight(klass));
+            if (drawn != 1f) half *= drawn;
+
             Debug.Log($"[streets] {klass}: {half * 2f:0.0}m of asphalt in a {corridor}m corridor "
                     + $"({corridor / 2f - half:0.0}m of pavement each side), "
-                    + $"{LanesEachWay(klass)} lane(s) each way.");
+                    + $"{LanesEachWay(klass)} lane(s) each way"
+                    + (drawn != 1f ? $" - tile narrowed x{drawn:0.00} to fit." : "."));
             return _asphalt[klass] = half;
 #else
             // MEASURED, NOT GUESSED - and the guess was badly wrong.
@@ -345,8 +362,13 @@ namespace Noir.Unity
             //
             //     class      corridor   guessed half   MEASURED half
             //     Street         10 m        3.0 m         3.0 m     ok
-            //     Alley           4 m        0.0 m         3.55 m    zero asphalt
+            //     Alley           4 m        0.0 m         2.0 m     zero asphalt
             //     Mainroad       30 m       13.0 m         6.0 m     more than double
+            //
+            // THE ALLEY FIGURE IS 2.0 AND NOT 3.55 - see CONS-4 above. 3.55 is half the alley
+            // tile's own width; `Seat` narrows that tile by 4/7.1 to fit its corridor, so 2.0 is
+            // what a player actually draws. The old number here made a player and the editor
+            // disagree about a whole road class.
             //
             // Zero is the bad one: LaneOffset multiplies by it, so every lane on an alley collapses
             // onto the centre line and VergeOffset puts the pavement in the middle of the road.
@@ -359,7 +381,7 @@ namespace Noir.Unity
             switch (klass)
             {
                 case RoadClass.Street: return 3.0f;
-                case RoadClass.Alley:  return 3.55f;
+                case RoadClass.Alley:  return 2.0f;
                 default:
                     // Not measured on this map - Rossville has no freeway, main road or track in
                     // Content/roads.txt, so no [streets] line has ever been logged for them. The

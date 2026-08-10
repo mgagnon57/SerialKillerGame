@@ -975,6 +975,23 @@ regeneration is one revert.
   back lane, and fixing the width first exposes that population to `NoVehicleEverLeavesTheRoad`.
 - Three duplicate pairs — write each once: **ALLEY-5 = RC-7**, **ALLEY-9 = RC-8**, **CONS-4 = ALLEY-12**.
 
+> ✅ **CONS-4 / ALLEY-12 DONE 2026-08-10, and it was a whole road class wide.**
+> `[streets] Alley: 7.1m of asphalt in a 4m corridor (-1.6m of pavement each side)` — not merely
+> wrong but impossible, and it had been in every log this project has ever produced. `Seat`
+> narrows a tile whose width does not match its corridor, and the alley tile is 7.1 m across in a
+> 4 m corridor; `Asphalt` measured the PREFAB and never applied that scale. It reads
+> **`4.0m of asphalt in a 4m corridor … tile narrowed x0.56 to fit`** now.
+>
+> **The alley exemption this wave predicted is gone with it.** `CityUnderTest`'s "is this vehicle
+> on the road" check passed every point inside an alley corridor UNCONDITIONALLY, because the
+> asphalt it was told about (3.55 m) was wider than the corridor containing it (2.0 m) — so a
+> third of the town's network was exempt from `NoVehicleEverLeavesTheRoad` and nobody had chosen
+> that. With the number fixed, the test still passes: **the population the wave warned would be
+> exposed is not there.**
+>
+> And the player constant went 3.55 → 2.0. It was the editor's unscaled measurement copied into
+> the `#else` branch, so a shipped build and the editor disagreed about a whole road class.
+
 > **Gates.** ALLEY-6's committed checker **gates the write** — the mouth count is proved before the
 > file is written, not predicted after. 12 `aadt` and 31 alley names still present.
 > `SurveyRoadNetworkTests.cs:165`'s `InRange(40, 90)` widens to the **measured** value (expect

@@ -184,11 +184,13 @@ namespace Noir.PlayTests
             // rule, including its straight/bent end guard, so the only thing that changes is which
             // containing road gets measured against - which is the whole fix and nothing more.
             //
-            // NOTE ON ALLEYS: Asphalt(Alley) measures 3.55 m off the dirt tile while an alley's
-            // HalfWidth is 2.0 m, so any point inside an alley corridor passes unconditionally.
-            // That is the alley tile being wider than the corridor it is declared to fill, not
-            // this test being loose, and it is recorded here so the next person does not re-derive
-            // it from a surprising pass.
+            // NOTE ON ALLEYS: this used to read "Asphalt(Alley) measures 3.55 m off the dirt tile
+            // while an alley's HalfWidth is 2.0 m, so any point inside an alley corridor passes
+            // unconditionally" - and it did, which meant a third of the town's road network was
+            // exempt from this check without anybody choosing that. ROAD-FIXES CONS-4 fixed the
+            // number rather than the note: `Asphalt` now applies the same narrowing `Seat` does,
+            // so an alley reports the 2.0 m it is drawn at and a car in a back lane is measured
+            // like a car anywhere else.
             bool anyCorridor = false;
             float least = float.MaxValue;
 
