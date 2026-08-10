@@ -201,11 +201,32 @@ namespace Noir.Unity
                 uvs.Add(new Vector2(p.x / TextureMetres, p.y / TextureMetres));
             }
 
+            // WHICH WAY ROUND IS MEASURED, NOT REASONED. The first version of this fan reasoned
+            // it out - hull is counter-clockwise, village y maps to Unity -z, a reflection
+            // reverses orientation, therefore emit the fan backwards - and got it wrong: every
+            // apron in the town came out facing DOWNWARDS and read as a black glob in the middle
+            // of the intersection. Which is the failure this file's own docstring warns about,
+            // two paragraphs up, citing CityCollision's ground doing exactly the same thing.
+            //
+            // So ask the geometry instead. Twice the signed area of the ring in the XZ plane is
+            // positive for one winding and negative for the other; the sign that yields an
+            // upward normal is fixed by Unity's left-handed frame and is verifiable here rather
+            // than in a render twelve minutes away. No reflection to keep track of, and it stays
+            // right if anybody ever changes the hull's direction.
+            float twiceArea = 0f;
+            for (int i = 0; i < ring.Count; i++)
+            {
+                var a = verts[first + i];
+                var b = verts[first + (i + 1) % ring.Count];
+                twiceArea += a.x * b.z - b.x * a.z;
+            }
+            bool facesUp = twiceArea < 0f;
+
             for (int i = 1; i + 1 < ring.Count; i++)
             {
                 tris.Add(first);
-                tris.Add(first + i + 1);
-                tris.Add(first + i);
+                tris.Add(first + (facesUp ? i : i + 1));
+                tris.Add(first + (facesUp ? i + 1 : i));
             }
         }
 

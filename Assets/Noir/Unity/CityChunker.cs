@@ -195,8 +195,23 @@ namespace Noir.Unity
         /// a tree with forty leaf clusters is measured once and not forty times.</summary>
         private static readonly Dictionary<int, float> _prefabHeight = new Dictionary<int, float>();
 
-        /// <summary>The line between a tuft and a tree, in metres. See <see cref="Combinable"/>.</summary>
-        private const float TuftHeight = 1f;
+        /// <summary>
+        /// The line between something that survives being combined and something that does not,
+        /// in metres.
+        ///
+        /// IT WAS 1 m AND THAT WAS TOO LOW. The height census below is a census of PREFABS, and
+        /// it was read as if it were a census of failures: only the under-1 m band had been
+        /// LOOKED at, and "a tree's leaf cluster survives the combine" was generalised from a
+        /// single capture of a single `Leaves_Bunch`. The owner's screenshot settled it - flat
+        /// bright-green splats lying across the pavement where the bushes should be, with 861
+        /// baked chunks still carrying a SpeedTree material.
+        ///
+        /// A bush is a ball of crossed cards. It is structurally the same object as a grass tuft
+        /// and nothing like a poplar, so it fails the combine for exactly the same reason. 4 m
+        /// spares grass, flowers, bushes and saplings and still bakes the canopy, which DID come
+        /// through the combine looking like a tree - checked at street level, not inferred.
+        /// </summary>
+        private const float TuftHeight = 4f;
 
         /// <summary>
         /// Is this renderer part of something growing on the ground rather than over it?
@@ -292,12 +307,12 @@ namespace Noir.Unity
                 //     2-4 m       3,867   Bush_Round_*, Bush_Shrub_*, Tree_*_Sapling
                 //     over 4 m    6,347   Tree_Oak_*, Tree_Poplar_*, Tree_Willow_*
                 //
-                // Only the first band came out of the bake wrong. A tree's leaf cluster is a 3D
-                // blob and survives being combined looking like a 3D blob; a grass tuft and a
-                // leaf bunch are crossed flat cards whose whole shape is the SpeedTree vertex
-                // data, so combined they land as plates on the lawn. Owner's ruling 2026-08-10,
-                // taken on these numbers: spare the ground, keep baking the canopy. 6,858 rather
-                // than 21,180, and the trees do not move.
+                // ⚠ THE LINE WAS 1 m FOR ONE DAY AND IT WAS WRONG. Everything under 4 m is a
+                // ball of crossed cards - a bush is the same object as a grass tuft, only bigger
+                // - and all of it comes out of the combine flat. Only the canopy survives, and
+                // that one WAS looked at rather than assumed. Owner's ruling 2026-08-10: spare
+                // the ground, keep baking the canopy; the line moved when his screenshot showed
+                // the bushes lying flat across the pavement. 14,833 rather than 21,180.
                 if (m.shader != null &&
                     m.shader.name.IndexOf("SpeedTree", System.StringComparison.OrdinalIgnoreCase) >= 0)
                     return !IsGroundFoliage(r, root);
