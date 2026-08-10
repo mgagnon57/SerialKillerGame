@@ -249,6 +249,12 @@ namespace Noir.Editor
 
             // A second block, so a run of grey roofs cannot pass as the whole mix.
             new Shot("roof-mix", 900f, 1560f, 40f, 26f, 20f, 11f),
+
+            // THE DOWNTOWN FROM ABOVE, which is the only place a FLAT roof can be judged. Every
+            // other frame in this project looks at Main Street from the street, where a flat roof
+            // is a parapet edge and nothing else - which is how the whole block came to be
+            // covered in three-tab shingle without anybody seeing it.
+            new Shot("roof-downtown", 750f, 1335f, 55f, 42f, 20f, 14f),
         }, dressed: true);
 
         private static void Run(string label, Shot[] shots, bool dressed = false)

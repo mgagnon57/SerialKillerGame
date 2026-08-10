@@ -115,6 +115,11 @@ namespace Noir.Sim
             SaveSurface(outputDir, "roof_shingle_brown", 105, 70, 42, 20, 0.50, 2301);
             SaveSurface(outputDir, "roof_shingle_black", 40, 27, 16, 12, 0.50, 2401);
 
+            // The flat roofs: built-up tar and gravel, which is what the whole downtown block
+            // and every garage has. Heavy noise and NO grain - gravel is scattered, not laid in
+            // courses - which is the one surface in this file that genuinely wants speckle.
+            SaveSurface(outputDir, "roof_builtup", 84, 84, 87, 26, 0.05, 2601);
+
             Console.WriteLine();
             Console.WriteLine("Done. Unity picks these up on Play.");
         }

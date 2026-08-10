@@ -157,6 +157,14 @@ namespace Noir.Unity
             ["roof_shingle_black"] = (Roofs + "Roof_Shingles_C_Farm_Alb.png",
                          Roofs + "Roof_Shingles_C_Farm_Nrm.png",
                          Roofs + "Roof_Shingles_C_Farm_AO.png"),
+
+            // BUILT-UP TAR AND GRAVEL, off the SAND set, because the pack ships no gravel map at
+            // all - the plan for this work assumed one. Sand is the only genuinely granular sheet
+            // in it: span 141 levels against Rock's 29, and a real normal map. It is warm, so
+            // Materials3D neutralises it with a per-channel tint rather than a grey one.
+            ["roof_builtup"] = ("Assets/polyperfect/Poly Universal Pack/Textures/Nature/Sand_Alb.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Sand_Nrm.png",
+                         "Assets/polyperfect/Poly Universal Pack/Textures/Nature/Sand_AO.png"),
         };
 
         private const string Roofs =

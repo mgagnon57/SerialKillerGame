@@ -409,6 +409,24 @@ namespace Noir.Unity
                             tint: Grey(0.38f), flat: new Color(0.16f, 0.11f, 0.07f)),
                     Roofing("Brick", "brick"),      // chimneys - see ChimneyIndex
                     Wall,                           // gable ends, towers - see WallIndex
+
+                    // YOU DO NOT SHINGLE A FLAT ROOF, and every flat roof in Rossville was
+                    // shingled - the whole downtown block and every garage - because AddRoof
+                    // handed the same covering to all four roof forms. A three-tab shingle needs
+                    // a slope to shed water down; on the flat it is not a material, it is a
+                    // mistake anybody who has looked at a Main Street would see.
+                    //
+                    // Owner's ruling 5: BUILT-UP TAR AND GRAVEL. That is what a 1991 commercial
+                    // block has - layers of felt and bitumen with pea gravel scattered over it to
+                    // hold the top coat down and keep the sun off - and from above it reads as a
+                    // grey aggregate speckle, which is exactly what the parapet hides on every
+                    // Main Street in the Midwest.
+                    //
+                    // Appended at index 6 rather than inserted, so ChimneyIndex 4, WallIndex 5
+                    // and SpireIndex 0 do not move. Those are submesh indices as well as palette
+                    // indices, and shifting one silently redraws the town.
+                    Roofing("RoofBuiltUp", "roof_builtup",
+                            tint: BuiltUpTint, flat: new Color(0.31f, 0.31f, 0.32f)),
                 };
                 return _roofs;
             }
@@ -434,6 +452,20 @@ namespace Noir.Unity
 
         /// <summary>A spire is lead or slate, never brick.</summary>
         public static int SpireIndex => 0;
+
+        /// <summary>
+        /// A flat roof, whatever covering the building would otherwise have drawn.
+        ///
+        /// The pack ships no gravel map — the plan for this work assumed one, and it is not
+        /// there. `Nature/Sand` is the nearest thing that is actually granular: mean (175,140,90)
+        /// with a span of 141 levels and a real normal map, against `Nature/Rock` at a span of 29,
+        /// which is a flat blue-grey with nothing in it. Sand is warm, so the tint is taken PER
+        /// CHANNEL to neutralise it — target over source, (85/175, 85/140, 88/90) — which keeps
+        /// every bit of the grain and takes out the beach.
+        /// </summary>
+        public static int FlatIndex => 6;
+
+        private static readonly Color BuiltUpTint = new Color(0.49f, 0.61f, 0.98f);
 
         /// <summary>A neutral at a given value, so the tints below read as what they are.</summary>
         private static Color Grey(float v) => new Color(v, v, v);

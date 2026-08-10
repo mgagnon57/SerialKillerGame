@@ -435,7 +435,11 @@ namespace Noir.Unity
         {
             switch (m.Roof)
             {
-                case RoofForm.Flat:   AddFlatRoof(bounds, m, into, submesh); break;
+                // ITS OWN COVERING, NOT THE BUILDING'S. A flat roof is built-up tar and gravel
+                // whatever the house next door has on its slopes - see Materials3D.FlatIndex.
+                // This drew the downtown block and every garage in three-tab asphalt shingle,
+                // which needs a slope to shed water down and on the flat is simply wrong.
+                case RoofForm.Flat:   AddFlatRoof(bounds, m, into, Materials3D.FlatIndex); break;
                 case RoofForm.LeanTo: AddLeanToRoof(bounds, m, into, submesh); break;
                 case RoofForm.Gable:  AddPitchedRoof(bounds, m, into, submesh, gable: true); break;
                 default:              AddPitchedRoof(bounds, m, into, submesh, gable: false); break;
