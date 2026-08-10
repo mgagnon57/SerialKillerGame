@@ -1,0 +1,31 @@
+{
+    "asset": "7a430cd72cd4493458f23a210b239d24",
+    "fileName": "019fda4b-f591-7c70-9474-3d869bb7f06e.png",
+    "prompt": "A 1991 amateur photograph at the edge of a small farming town in east-central Illinois, where the last street of houses stops abruptly and open cropland begins immediately with no suburbs or transition. On the left, the final two frame houses with mature trees and a gravel drive. On the right and stretching to the horizon, dead flat farmland: a field of soybeans turned uniform gold set directly against an adjacent field of still-standing green-brown corn about eight feet tall, an early September contrast. A ragged low thorny Osage orange hedgerow marks the field boundary as an untidy broken line of scrubby trees, not a neat conifer windbreak. A tall weathered grain elevator with corrugated steel bins and a headhouse stands beyond the last houses, the tallest thing for miles. A single-track railway line runs past it on a low gravel embankment with a wooden crossbuck crossing sign and a gravel crossing. Utility poles marching away along the road. Completely flat horizon, big sky, warm hazy late-afternoon light. Shot on Kodak Gold 200 35mm colour negative film, fine grain, warm cast, slightly soft, casual snapshot framing. No modern farm machinery, no wind turbines, no modern housing.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

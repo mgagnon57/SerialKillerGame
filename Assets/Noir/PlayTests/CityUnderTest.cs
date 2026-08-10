@@ -45,9 +45,31 @@ namespace Noir.PlayTests
         {
             if (!Application.isBatchMode) return;
 
+            // WHICH TOWN, AND IT USED TO BE DECIDED IN A DIAGNOSTIC TEST FILE. `LayerProof` read
+            // this variable and raised the built town - from inside a `Category("Diagnostic")`
+            // class the standing gate excludes with `-testCategory "!Diagnostic"`. The switch
+            // governing what EVERY test in this assembly looks at lived in the one file most
+            // likely to be skipped, and it sat five lines from the other half of the same
+            // decision, which is here.
+            //
+            // Still opt-in, and the reason is unchanged and good: this assembly holds the traffic
+            // suite, and building four thousand renderers under it slows every one of those runs
+            // for nothing. What has changed is that the run now SAYS which town it built.
+            if (System.Environment.GetEnvironmentVariable("NOIR_BUILT_TOWN") == "1")
+                VillageHost.ShowBuildings = true;
+
             Layers.Set(Layers.Kind.Trees, false);
             Layers.Set(Layers.Kind.Farm, false);
             Layers.Set(Layers.Kind.Powerlines, false);
+
+            // ONE GREPPABLE LINE, IN EVERY RUN. Seven of the twenty layers are off here and
+            // ShowBuildings is off by default, so a green gate has never seen the greenery, the
+            // farm, the power lines, the streets, the parking or the signs - and nothing said so.
+            // A session reading "13 of 13 pass" had no way to know which town passed.
+            Debug.Log($"[gate] town={(VillageHost.ShowBuildings ? "BUILT" : "survey plan")} "
+                    + "(NOIR_BUILT_TOWN=1 for the built one); "
+                    + "Trees/Farm/Powerlines OFF for this suite. Anything this run does not "
+                    + "build, it has not tested.");
         }
 
         /// <summary>Long enough to build the whole city, short enough to fail rather than hang.</summary>

@@ -32,14 +32,25 @@ namespace Noir.PlayTests
         private readonly struct Stop
         {
             public readonly string Name;
-            public readonly Vector3 At;                 // village x, eye height, village y
-            public readonly float Distance, Pitch, Yaw;
+            public readonly Vector2 Map;                // map coordinates, straight off city.txt
+            public readonly float Eye, Distance, Pitch, Yaw;
+
+            /// <summary>
+            /// ON THE GROUND, NOT AT NOUGHT. This built `new Vector3(vx, eye, -vy)` - an ABSOLUTE
+            /// world y - so an eye-level stop stood 1.6 m above sea level on a map with 24 m of
+            /// relief, which is underground everywhere in town. Exactly the fault CityShot.At
+            /// records fixing for eleven cameras and LayerShot had as well. Asked per stop rather
+            /// than baked in, because the grid is not loaded when this array is constructed.
+            /// </summary>
+            public Vector3 Target => new Vector3(
+                Map.x, ElevationGrid.HeightAt(Map.x, Map.y) + Eye, -Map.y);
 
             public Stop(string name, float vx, float vy, float eye,
                         float distance, float pitch, float yaw)
             {
                 Name = name;
-                At = new Vector3(vx, eye, -vy);
+                Map = new Vector2(vx, vy);
+                Eye = eye;
                 Distance = distance;
                 Pitch = pitch;
                 Yaw = yaw;
@@ -50,27 +61,42 @@ namespace Noir.PlayTests
         // it is aimed at, so a stop chosen by where you want to look rather than where that
         // leaves you ends up inside a building photographing wallpaper. Each of these has had
         // its resting position worked out and checked against the map.
+        //
+        // AND THE WHOLE ROUTE WAS IN ANOTHER TOWN. Measured 2026-08-09 against Content/city.txt:
+        // every one of the nineteen stops sat inside 255..690 east by 255..700 south, a box that
+        // holds TWENTY-ONE of Rossville's 477 places. The town's median place is at y=1494; the
+        // route's median stop was at y=480. The names said so out loud and nobody read them -
+        // "Fourth Street", "Franklin Park", "Home Farm", "Wicker End", "the old orchard" are
+        // Ashcombe's, and Ashcombe was retired. So the longest diagnostic in the project, thirty
+        // minutes of timeout, has been driving through empty farmland south-west of town and
+        // asserting that nineteen JPEGs appeared. They did.
+        //
+        // Every coordinate below is now a real place out of city.txt, named for what stands
+        // there. THE YAWS ARE A FIRST GUESS and must be corrected by looking at the first render
+        // - GroundShot records three hand-computed bearings once photographing a wood forty
+        // metres from anything, and ShotLog now goes red if two stops come out identical, which
+        // is what "both of these are looking at a field" looks like from outside.
         private static readonly Stop[] Route =
         {
-            new Stop("Fourth Street, looking east",       430f, 435f, 1.6f,  36f,  3f,  90f),
-            new Stop("Rossville meets First Street",         435f, 435f, 0f,    55f, 45f,  90f),
-            new Stop("Under the Elevated, at Second Street", 525f, 435f, 0f,    70f, 10f,  90f),
-            new Stop("The terrace on Rossville",             480f, 422f, 1.5f,  30f,  8f,  20f),
-            new Stop("Downtown, the Meridian",               478f, 479f, 0f,   120f, 25f,  40f),
-            new Stop("The whole town",                       480f, 480f, 0f,   265f, 38f,  30f),
-            new Stop("Franklin Park",                        390f, 570f, 0f,    60f, 20f, 300f),
-            new Stop("First Street, leaving town",           435f, 610f, 1.6f,  45f,  5f, 180f),
-            new Stop("Where the track meets the road",       435f, 660f, 0f,    70f, 25f, 200f),
-            new Stop("Home Farm",                            390f, 640f, 0f,    60f, 20f, 300f),
-            new Stop("The big barn and the silos",           385f, 685f, 0f,    55f, 18f, 250f),
-            new Stop("The bottom field",                     570f, 660f, 0f,    90f, 30f,  30f),
-            new Stop("The east belt",                        690f, 480f, 0f,    80f, 20f,  90f),
-            new Stop("Wicker End, the back place",           660f, 638f, 0f,    55f, 18f, 210f),
-            new Stop("The old orchard, gone to scrub",       660f, 700f, 0f,    55f, 15f, 340f),
-            new Stop("Out on the ring",                      255f, 255f, 0f,   150f, 25f,  40f),
-            new Stop("A rural arterial",                     255f, 500f, 1.8f,  60f,  4f, 180f),
-            new Stop("The town from the ring road",          390f, 300f, 0f,   300f, 26f, 150f),
-            new Stop("The whole map",                        480f, 480f, 0f,  1150f, 50f,  30f),
+            new Stop("Chicago and Attica, the crossing",   750f, 1335f, 1.6f,  40f,  4f,   0f),
+            new Stop("The Chicago Street diner",           726f, 1371f, 1.6f,  30f,  6f,  90f),
+            new Stop("Main Street, looking north",         700f, 1250f, 1.6f,  55f,  5f,   0f),
+            new Stop("The bank and the Opera House",       685f, 1255f, 0f,    70f, 20f,  45f),
+            new Stop("The Commercial Hotel",               720f, 1179f, 1.6f,  35f,  8f, 270f),
+            new Stop("The village office and the hall",    656f, 1152f, 0f,    60f, 22f,  60f),
+            new Stop("The whole downtown block",           700f, 1280f, 0f,   180f, 35f,  20f),
+            new Stop("The Rossville elevator",            1171f, 1353f, 0f,   110f, 18f, 270f),
+            new Stop("205 Maple Ave, the church",          920f, 1455f, 0f,    60f, 15f, 300f),
+            new Stop("408 Holmes Ave",                    1175f, 1218f, 1.6f,  26f,  4f,   0f),
+            new Stop("The rooms over the grocer",          820f, 1490f, 1.6f,  40f,  8f, 180f),
+            new Stop("Rossville Grade School",             533f, 1121f, 0f,    75f, 20f,  90f),
+            new Stop("The high school on the north edge",  700f, 1020f, 0f,    90f, 22f, 160f),
+            new Stop("The water tower",                    840f,  854f, 0f,   120f, 12f, 200f),
+            new Stop("The depot yard",                     537f, 1730f, 0f,    80f, 20f,  30f),
+            new Stop("Rossville Cemetery",                 271f, 1959f, 0f,    90f, 18f,  60f),
+            new Stop("The Bishop road swings",            1171f, 1979f, 0f,    70f, 15f, 300f),
+            new Stop("The town from the south",            750f, 1900f, 0f,   400f, 26f,   0f),
+            new Stop("The whole map",                      750f, 1335f, 0f,  1400f, 50f,  30f),
         };
 
         [UnityTest, Category("Diagnostic"), Timeout(1800000)]
@@ -107,7 +133,7 @@ namespace Noir.PlayTests
                 var stop = Route[i];
                 var rotation = Quaternion.Euler(stop.Pitch, stop.Yaw, 0f);
                 camGo.transform.rotation = rotation;
-                camGo.transform.position = stop.At + Vector3.up * 2f
+                camGo.transform.position = stop.Target + Vector3.up * 2f
                                          - rotation * Vector3.forward * stop.Distance;
 
                 // A beat at each stop so the traffic is somewhere different from the last one.
@@ -131,7 +157,7 @@ namespace Noir.PlayTests
             var far = Route[Route.Length - 1];
             var farRotation = Quaternion.Euler(far.Pitch, far.Yaw, 0f);
             camGo.transform.rotation = farRotation;
-            camGo.transform.position = far.At + Vector3.up * 2f
+            camGo.transform.position = far.Target + Vector3.up * 2f
                                      - farRotation * Vector3.forward * far.Distance;
             yield return null;
             Capture(cam, rt, shot, frame - 1, far.Name + " (clear air)");
@@ -160,6 +186,13 @@ namespace Noir.PlayTests
             Time.timeScale = 1f;
 
             Assert.That(Directory.GetFiles(Dir, "*.jpg").Length, Is.EqualTo(frame));
+
+            // NINETEEN STOPS, AND UNTIL NOW NOTHING COULD SAY WHICH OF THEM PHOTOGRAPHED
+            // ANYTHING. The file count is not evidence - a camera aimed at open country writes a
+            // perfectly good JPEG - so Stamp hashes them and goes red when two frames are the
+            // same bytes, which is what "this stop and that stop are both looking at a field"
+            // looks like from the outside.
+            ShotLog.Stamp("tour", Dir, Directory.GetFiles(Dir, "*.jpg"));
             Debug.Log($"[tour] {frame} frames in {Dir}");
         }
 

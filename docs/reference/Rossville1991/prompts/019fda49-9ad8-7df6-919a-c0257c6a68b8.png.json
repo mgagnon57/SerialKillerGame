@@ -1,0 +1,31 @@
+{
+    "asset": "a96b81a7144eb2348a5bba1f64e61659",
+    "fileName": "019fda49-9ad8-7df6-919a-c0257c6a68b8.png",
+    "prompt": "A 1991 amateur photograph looking south down the wide main street of a small farming town in east-central Illinois, population about 1200. Both sides of the street are lined with an unbroken continuous row of joined two-storey brick commercial buildings from around 1900: corbelled brick cornices along the roofline, stone lintels over the upper-floor windows, plate-glass storefronts at ground level, several with mid-century metal awnings added later. The row has no gaps and no empty lots. Hand-painted and plastic-letter signs for antique galleries and gift shops; one storefront sign reads MARKET PLACE SHOPPES. Period vehicles parked at an angle to the curb: a faded pickup truck, a wood-panel station wagon, a boxy sedan. Concrete sidewalks, wooden utility poles with overhead wires, a few mature shade trees. Dead flat prairie horizon visible at the far end of the street. Warm late-afternoon September light. Shot on Kodak Gold 200 35mm colour negative film, fine grain, slightly soft, warm colour cast, casual snapshot framing. Strictly no modern cars, no LED or backlit signage, no modern corporate branding, no cell towers.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

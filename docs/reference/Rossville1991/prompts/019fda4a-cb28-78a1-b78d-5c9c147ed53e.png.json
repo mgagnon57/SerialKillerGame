@@ -1,0 +1,31 @@
+{
+    "asset": "d32fbf39429417746a9db30a5d176a01",
+    "fileName": "019fda4a-cb28-78a1-b78d-5c9c147ed53e.png",
+    "prompt": "A 1991 amateur photograph looking down a residential street in a small farming town in east-central Illinois. Modest one- and two-storey frame houses from the 1890s to the 1950s on both sides: white and pale-coloured clapboard and aluminium siding, gabled roofs, deep covered front porches with turned posts, brick chimneys. Generous open front lawns with no front fences, running straight to a narrow concrete sidewalk. Very large mature shade trees, silver maple and green ash, arching over the street from both sides to form a dense closed canopy with dappled sunlight on the tarmac. Detached single garages set well back beside the houses. A period sedan and a pickup parked at the kerb. Wooden utility poles and overhead wires. Early September, late afternoon, warm dappled light through heavy green foliage. Shot on Kodak Gold 200 35mm colour negative film, fine grain, warm colour cast, slightly soft focus, casual snapshot framing. No modern cars, no modern windows or vinyl fencing.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

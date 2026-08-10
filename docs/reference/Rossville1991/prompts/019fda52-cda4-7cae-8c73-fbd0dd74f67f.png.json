@@ -1,0 +1,31 @@
+{
+    "asset": "7f13d634caf856d4bba74b8df925ef5f",
+    "fileName": "019fda52-cda4-7cae-8c73-fbd0dd74f67f.png",
+    "prompt": "A photograph taken in 1991 of a small independent filling station on the edge of a farm town in east-central Illinois. A flat canopy on square steel posts over two islands of late-1980s fuel pumps with mechanical rolling number dials and small digital price displays. A small brick and painted-block station building with a service bay, its plate-glass window covered in advertisements: red and white Marlboro and Winston cigarette signs, a Coca-Cola sign in the 1991 red-and-white livery, hand-lettered price cards, an ICE chest and a stack of windscreen-wash outside the door. A 1989 Ford F-150 pickup with flush headlights at the near pump and a 1990 Chevrolet Lumina sedan at the far one. A payphone on the wall, a newspaper vending box, a rubbish bin, a rack of propane cylinders. Utility poles, flat cropland beginning immediately behind the lot. Late afternoon, clear sky. Shot on Kodak Gold 400 35mm colour negative and printed at a one-hour photo lab: crisp, neutral to slightly cool colour, good contrast, fine grain. IMPORTANT: this is 1991, not the 1970s. No sun-bleached vintage warm cast, no muted earth tones, no 1950s or 1970s Americana styling, no round-topped vintage petrol pumps, no boxy 1970s cars. Nothing later than 1991: no modern cars, no card readers, no LED signage.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

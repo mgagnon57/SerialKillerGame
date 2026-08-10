@@ -72,27 +72,12 @@ namespace Noir.PlayTests
                      Layers.Kind.Streets, Layers.Kind.Alleys, Layers.Kind.Plan),
         };
 
-        /// <summary>
-        /// Raise the built town for a headless run, when asked to.
-        ///
-        /// VillageHost deliberately does not read the built-town preference in batch mode - see
-        /// the guard on Application.isBatchMode - so a headless run always gets the static
-        /// default, which is the survey plan. That is right for the render tools and useless
-        /// here: the whole subject of these photographs is the built town, and a run without it
-        /// has no roads, no traffic and ten layers with nothing behind them, which looks exactly
-        /// like a broken panel and is not one.
-        ///
-        /// Behind an environment variable rather than on by default, because this assembly also
-        /// holds the traffic suite, and quietly building four thousand renderers under it would
-        /// slow every one of those runs down for nothing.
-        /// </summary>
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void RaiseTheTownIfAsked()
-        {
-            if (System.Environment.GetEnvironmentVariable("NOIR_BUILT_TOWN") == "1")
-                VillageHost.ShowBuildings = true;
-        }
-
+        // THE SWITCH THAT DECIDES WHICH TOWN A HEADLESS RUN BUILDS HAS MOVED, and it was never
+        // this file's to own. It read NOIR_BUILT_TOWN and raised the built town, from inside a
+        // `Category("Diagnostic")` test file that the standing gate excludes - so the decision
+        // governing every run in this assembly lived in the one file most likely to be deleted or
+        // skipped. See CityUnderTest, which already owns the other half of the same decision.
+        //
         [UnityTest, Category("Diagnostic"), Timeout(1800000)]
         public IEnumerator PhotographEveryLayerCombination()
         {
@@ -168,6 +153,13 @@ namespace Noir.PlayTests
 
             Assert.That(Directory.GetFiles(Dir, "*.png").Length, Is.GreaterThanOrEqualTo(Sheet.Length),
                         "every combination should have left a picture behind");
+
+            // "A PICTURE" IS NOT "A DIFFERENT PICTURE". This walks every layer combination and
+            // then checked only that the files existed, so a combination that changes nothing
+            // visible - or a camera looking somewhere none of the layers reach - passes exactly
+            // like one that works. Two identical frames in a LAYER proof mean the layer did not
+            // draw, which is the entire subject of the test.
+            ShotLog.Stamp("layers-proof", Dir, Directory.GetFiles(Dir, "*.png"));
             Debug.Log($"[layerproof] {Sheet.Length} frames in {Dir}");
         }
 

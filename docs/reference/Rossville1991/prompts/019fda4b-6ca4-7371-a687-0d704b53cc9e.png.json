@@ -1,0 +1,31 @@
+{
+    "asset": "7eebba2a463454f4daf1ce3666b13bdb",
+    "fileName": "019fda4b-6ca4-7371-a687-0d704b53cc9e.png",
+    "prompt": "A 1991 amateur photograph looking straight down a narrow service alley running behind the back gardens of houses in a small farming town in east-central Illinois. The alley is unpaved: two worn dirt and gravel wheel tracks with a strip of grass growing up the middle, not a proper road. On both sides, the deep back ends of long residential lots: weathered detached wooden single garages with peeling paint, tin sheds, sagging chain-link and wire fences, vegetable patches, a washing line, metal dustbins, a woodpile. Wooden utility poles carrying power and telephone wires run down the length of the alley, with service drops going to each house. Backs of frame houses visible beyond the gardens through heavy trees. No cars moving, perhaps one old pickup parked beside a garage. Overgrown weeds along the fence lines. Early September, warm low evening light down the length of the alley, long shadows. Shot on Kodak Gold 200 35mm colour negative film, fine grain, warm cast, slightly soft, casual snapshot framing. No modern vehicles or modern fencing.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

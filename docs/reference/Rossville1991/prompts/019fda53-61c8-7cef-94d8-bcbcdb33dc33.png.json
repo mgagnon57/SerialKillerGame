@@ -1,0 +1,31 @@
+{
+    "asset": "80895b6ea4d27b347b369daf2302e0a8",
+    "fileName": "019fda53-61c8-7cef-94d8-bcbcdb33dc33.png",
+    "prompt": "A photograph taken in 1991 at dusk on the main street of a small farming town in east-central Illinois. A row of joined two-storey brick commercial buildings, ground-floor shopfronts lit from inside. One unit is a video rental shop with a backlit white plastic sign box reading VIDEO in bold red letters, its window full of VHS cassette cases and a cardboard film standee. Beside it a small-town bank with an illuminated sign, and an antique shop with warm window lighting. Vinyl awnings over two of the storefronts, vinyl lettering on the glass. Sodium-vapour streetlights just coming on, casting warm orange pools on the road. Cars angle-parked at the kerb: a 1990 Ford Taurus, a 1991 Chevrolet Caprice with the new rounded body, and a 1988 Plymouth Voyager minivan. A newspaper vending box and a bench on the concrete sidewalk. Deep blue evening sky with the last light low behind the rooftops, overhead wires against it. Shot on Kodak Gold 400 35mm colour negative and printed at a one-hour photo lab: crisp, good contrast, fine grain, warm shop light against cool blue dusk. IMPORTANT: this is 1991, not the 1970s. No neon signs, no vintage sun-bleached cast, no 1970s cars, no 1950s Americana. Nothing later than 1991: no modern cars, no LED signage, no flat screens.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

@@ -1,0 +1,31 @@
+{
+    "asset": "0d23a64acac34f4468b6bfeb2059849f",
+    "fileName": "019fda4c-85c1-7e01-9a18-b1ee20f3f0e2.png",
+    "prompt": "A 1991 low oblique aerial photograph of a very small farming town on the dead flat prairie of east-central Illinois, population about 1200, taken from a light aircraft a few hundred feet up. The town is a compact rectangular street grid completely surrounded by open cropland on every side, with a hard edge and no suburban sprawl. The residential streets are almost entirely hidden beneath a dense mature tree canopy, so mostly treetops with roofs showing through in gaps. At the centre a short dense block of flat-roofed two-storey brick commercial buildings marks the small downtown crossroads. A single-track railway line runs diagonally through the town on a low embankment, with a tall grain elevator beside it, clearly the tallest structure. A church spire and two flat-roofed school buildings with playing fields. Around the town, a checkerboard of huge rectangular fields divided by dead-straight section-line roads: alternating gold harvest-ready soybean fields and still-green corn, early September. Isolated farmsteads sit in tight clumps of sheltering trees out among the fields. Thin ragged hedgerow lines between some fields. Utterly flat terrain, no hills. Hazy warm afternoon light, slight atmospheric haze at the horizon. Shot on Kodak Gold 200 35mm colour negative film, fine grain, warm cast, slightly soft. No modern development, no wind turbines, no solar farms, no modern warehouses.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

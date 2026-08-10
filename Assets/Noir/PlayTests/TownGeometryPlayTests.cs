@@ -449,5 +449,60 @@ namespace Noir.PlayTests
               + "top-down (x, -z) mapping, where height never enters the UV - see "
               + "RoofBuilder.WallsInTheirOwnPlane.");
         }
+
+        /// <summary>
+        /// THE ROOFS OF THE TOWN THAT IS RUNNING, not the roofs the source file describes.
+        ///
+        /// The Core suite can read Materials3D.cs as text and prove what it SAYS. Nothing proved
+        /// what the built town HAS: that the shader resolved rather than falling back to magenta,
+        /// that a texture actually bound, and that the roll over the real six hundred buildings
+        /// produces the mix the owner ruled. All three are free here - Materials3D.Roofs is a
+        /// public static array and this assembly already references Noir.Unity.
+        ///
+        /// It PRINTS the census and ASSERTS only the rulings. A palette the owner changes his mind
+        /// about should cost one number in Materials3D, not a rewritten test; a roof called thatch
+        /// in Vermilion County in 1991 should cost a red.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheRoofsOfRossvilleAreShingle()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+
+            var roofs = Materials3D.Roofs;
+            foreach (var m in roofs)
+            {
+                var map = m.GetTexture("_BaseMap");
+                Debug.Log($"[surfaces] {m.name}  shader={m.shader.name}  "
+                        + $"map={(map == null ? "(none)" : map.name)}  "
+                        + $"base=#{ColorUtility.ToHtmlStringRGB(m.GetColor("_BaseColor"))}");
+            }
+
+            // THE CENSUS OVER THE REAL TOWN. RoofingFor is integer hashing on the building's own
+            // key - no IRng, no reshuffle - so reading it here cannot move a single roof.
+            var tally = new int[roofs.Length];
+            int roofed = 0;
+            foreach (var place in CityUnderTest.World.AllPlaces)
+            {
+                if (!PlaceKindTable.Current.Row(place.Kind).Roofed) continue;
+                tally[Materials3D.RoofingFor(place)]++;
+                roofed++;
+            }
+            for (int i = 0; i < tally.Length; i++)
+                if (tally[i] > 0)
+                    Debug.Log($"[surfaces] {roofs[i].name,-22} {tally[i],4}  "
+                            + $"{(roofed == 0 ? 0f : 100f * tally[i] / roofed):F1}% of {roofed}");
+
+            foreach (var m in roofs)
+            {
+                Assert.That(m.name.ToLowerInvariant(), Does.Not.Contain("thatch"),
+                    "1991, Vermilion County, Illinois. The coverings are asphalt shingle and "
+                  + "built-up tar and gravel. " + m.name + " is Ashcombe coming back.");
+                Assert.That(m.name.ToLowerInvariant(), Does.Not.Contain("terracotta"),
+                    m.name + " is a clay tile roof in east-central Illinois.");
+                Assert.That(m.shader.name, Is.EqualTo("Universal Render Pipeline/Lit"),
+                    m.name + " is on " + m.shader.name + " - it fell back to the error shader or "
+                  + "to Standard, which is the whole town's covering silently wrong.");
+            }
+        }
     }
 }

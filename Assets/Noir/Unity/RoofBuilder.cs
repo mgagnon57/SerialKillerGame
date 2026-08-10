@@ -394,7 +394,22 @@ namespace Noir.Unity
             verts.Add(centre + new Vector3(-h.x, h.y, h.z));     // 7
 
             // A chimney is small enough that planar XZ mapping on all six faces is fine; the
-            // sides get a vertical smear of about a metre, which nothing will ever notice.
+            // stack is 0.85 x 1.5 x 0.85 m, so the sides get a vertical smear of about a metre
+            // and a half. (The 0.9 x 1.4 x 0.5 quoted elsewhere is the BELL-COTE, in
+            // MassingExtras.)
+            //
+            // "WHICH NOTHING WILL EVER NOTICE" IS TRUE OF THE BRICK THIS PROJECT SHIPS AND OF NO
+            // OTHER. Content/textures/brick.png is flat brown noise with a faint VERTICAL grain
+            // and no courses at all, so smearing one horizontal line of it vertically produces
+            // vertical stripes - which is what it already looks like. The pack brick has its
+            // coursing in a normal map, and it is bound in the editor.
+            //
+            // THE TRIGGER: this becomes visible the moment the brick gains courses anywhere the
+            // chimney can see them. Fix it then, and fix it by giving AddBox six independent
+            // faces the way MassingExtras.Box has them - which also disposes of the index-based
+            // Quad local below. Do not fix it speculatively: the winding here was already got
+            // wrong once and cost the chimneys their tops and their shadows, and no automated
+            // test in this project can see either.
             for (int i = b; i < verts.Count; i++)
                 uvs.Add(new Vector2(verts[i].x, -verts[i].z));
 

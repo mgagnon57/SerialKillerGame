@@ -47,6 +47,7 @@ namespace Noir.Editor
                 var world = built.World;
                 Log($"world      {world.Width}x{world.Height}, {world.PlaceCount} places, "
                   + $"{world.RoomCount} rooms, {world.FurnitureCount} furniture, {world.PropCount} props");
+                ReportHouseRooms(world);
 
                 // The errors are already on the log from the pipeline; what is added here is the
                 // count, because a smoke test that does not fail on them is not a test.
@@ -219,6 +220,47 @@ namespace Noir.Editor
 
             bad += CheckKindsTableKeysAreAnswered();
             return bad;
+        }
+
+        /// <summary>
+        /// HOW MANY OF ROSSVILLE'S HOUSES HAVE A BATHROOM IN THEM, printed rather than assumed.
+        ///
+        /// `DomesticBsp` gave a house a bathroom only at four rooms or more, reasoning in the code
+        /// that "a three-room cottage in 1979 has the privy outside, which is a fact rather than an
+        /// oversight". It is a fact about rural England in 1979. Rossville has run its own water
+        /// and sewer continuously since 1898 - kinds.txt says so, citing ROSSVILLE-HISTORY.md - so
+        /// an occupied house here in 1991 has a bathroom in it, and the three-room bar was carrying
+        /// a retired village's plumbing into an Illinois town.
+        ///
+        /// The number is printed on every run because rooms are what the whole simulation walks
+        /// around in: DayPlan and the pathfinder both read them, so a change in this count is a
+        /// change in what the people do, and it should never be discovered by surprise.
+        /// </summary>
+        private static void ReportHouseRooms(WorldModel world)
+        {
+            int houses = 0, withBath = 0;
+            var byRooms = new System.Collections.Generic.SortedDictionary<int, int>();
+
+            foreach (var place in world.AllPlaces)
+            {
+                if (place.Kind != PlaceKind.Dwelling) continue;
+                houses++;
+
+                var rooms = world.RoomsIn(place.Id);
+                int n = rooms.Count;
+                byRooms.TryGetValue(n, out int had);
+                byRooms[n] = had + 1;
+
+                foreach (var id in rooms)
+                    if (world.GetRoom(id).Kind == RoomKind.Bathroom) { withBath++; break; }
+            }
+
+            var shape = new System.Collections.Generic.List<string>();
+            foreach (var kv in byRooms) shape.Add($"{kv.Key}:{kv.Value}");
+
+            Log($"houses     {houses} dwellings, {withBath} with a bathroom "
+              + $"({(houses == 0 ? 0 : 100 * withBath / houses)}%); rooms per house  "
+              + string.Join(" ", shape));
         }
 
         /// <summary>

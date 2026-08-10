@@ -1,0 +1,31 @@
+{
+    "asset": "bfdd9b5fa6a7ebe4da5819e9a3218b2c",
+    "fileName": "019fda4a-49f4-73c8-942b-158abb2ce619.png",
+    "prompt": "A 1991 amateur photograph of a street corner in the small downtown of a farming town in east-central Illinois. Two rows of joined two-storey brick commercial buildings from around 1900 meet at a right angle at the intersection. The corner building has a canted corner entrance with a recessed door and a stone sill course, corbelled brick cornice above. Both rows continue away from the camera down each street, unbroken, every unit occupied. Storefronts with painted signs for antiques, gifts and a small restaurant. Green enamel street-name signs on a pole, a stop sign, wooden utility poles and overhead wires crossing the intersection. A pickup truck waiting at the stop line. Concrete sidewalks with a kerb ramp. Bright hazy September afternoon, warm low sun raking along one facade. Shot on Kodak Gold 200 35mm colour negative film, fine grain, warm cast, slightly soft, casual snapshot framing. No modern vehicles, no LED signage, no modern branding.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

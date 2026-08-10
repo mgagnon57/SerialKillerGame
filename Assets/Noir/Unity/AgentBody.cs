@@ -44,16 +44,34 @@ namespace Noir.Unity
     /// twenty in register for an ordinary town, against a population of hundreds. It is done with
     /// the atlas. `Universal_A_Alb` is 4096 square and 428KB, which is the compression signature
     /// of flat colour blocks rather than a texture, and it IS one: a labelled swatch grid where
-    /// each ROW is a role - primary, secondary, tertiary, hair, skin, hide - and each row is a
-    /// ramp of shades across its columns. A character's coat colour is therefore a UV coordinate,
-    /// not a texture, and moving a vertex along its own row recolours that garment and nothing
-    /// else. Measured: `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 cells across 10 roles.
+    /// each ROW is a role. A character's coat colour is therefore a UV coordinate, not a texture,
+    /// and moving a vertex along its own row recolours that garment and nothing else. Measured:
+    /// `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 cells across 10 roles.
+    ///
+    /// THE GRID IS 32 x 32 CELLS OF 128px, MEASURED OFF THE SHEET 2026-08-09. Four comments in
+    /// this file and two documents said sixteen or sixty-four, and a safety argument was built on
+    /// top of the wrong number. What is actually there, per row:
+    ///
+    ///     columns  0-19   the role's twenty-step shade ramp, near-black to white
+    ///     columns 20-29   ONE flat colour, repeated ten times
+    ///     column     30   the emission key - the only non-black column in Universal_A_Emit
+    ///     column     31   an accent
+    ///
+    /// The rows are labelled on the sheet: 1 skin, 2 hide, 3 hair, 9 stone, 13 tertiary,
+    /// 14 secondary, 15 primary, and so on.
     ///
     /// SHIFTED ALONG THE ROW, NEVER ACROSS IT. Staying on the row is what makes this safe without
     /// knowing which row is which: skin stays somewhere in the skin ramp, hair in the hair ramp,
     /// a coat in its own. Moving DOWN a row would need the atlas mapped first and would otherwise
     /// give somebody a green face. So this varies shade rather than hue, which is plenty to make
     /// a street of people who are all different, and the hue is a later job.
+    ///
+    /// WHAT STAYING ON THE ROW DOES NOT MAKE SAFE IS WRAPPING, and that is UVX-A5, which belongs
+    /// to `docs/ANIMATION-FIXES` because this file does. A shift that runs past column 19 leaves
+    /// the ramp for the flat block or the emission key; at the current `Along` it can reach column
+    /// 21 from the far end of a ramp, which is the flat block rather than a shade. The shift wants
+    /// bounding rather than wrapping. It is named here so the next session does not re-derive the
+    /// same bug from the same wrong comment, which is exactly what happened last time.
     ///
     /// The mesh is cloned per person because the UVs differ per person. They are small - about
     /// 2,800 vertices - and there is one per citizen rather than one per frame.
@@ -109,10 +127,11 @@ namespace Noir.Unity
         /// <summary>
         /// How far along its row a vertex may be moved, as a fraction of the atlas width.
         ///
-        /// The grid is 64 cells across, so a sixteenth of the sheet is four swatches - enough for
-        /// a coat to be visibly a different coat, and not so much that a row's whole ramp is
-        /// crossed and a pale shirt comes out black. It is added, then wrapped inside the row, so
-        /// nothing ever lands on a neighbouring role.
+        /// The grid is 32 cells across - measured, see the class docstring - so a sixteenth of
+        /// the sheet is TWO swatches, not the four this said. Enough for a coat to be visibly a
+        /// different coat, and nowhere near enough to cross a row's whole twenty-step ramp. It is
+        /// added and then wrapped inside the sheet, so it never lands on a neighbouring ROLE -
+        /// but see the class docstring: wrapping can still leave the ramp for the flat block.
         /// </summary>
         private const float Along = 1f / 16f;
 
@@ -263,22 +282,18 @@ namespace Noir.Unity
             var uv = copy.uv;
             if (uv == null || uv.Length == 0) { _dressed[key] = copy; return copy; }
 
-            // The grid is 64 x 64 across the sheet. A vertex keeps its ROW - which is its role -
-            // and moves within it, wrapping at the row's edges so it can never step onto the
-            // role above or below.
-            const float Cell = 1f / 64f;
+            // A VERTEX KEEPS ITS ROW - which is its role - and moves along it.
+            //
+            // The row arithmetic that used to be here was dead: it computed `row` and `into` from
+            // a cell size and then wrote back `row + into`, which is `uv[i].y` identically. It
+            // also declared the grid 64 x 64, which it is not. Both are gone rather than
+            // corrected, because arithmetic that cannot change its input is not documentation of
+            // an invariant - it is something for the next reader to verify and then discard.
+            // V IS SIMPLY NOT TOUCHED, which is the invariant, stated once.
             float shift = (Mix(key.Value, 0x51ED) % 1000UL) / 1000f * Along;
 
             for (int i = 0; i < uv.Length; i++)
-            {
-                float row = Mathf.Floor(uv[i].y / Cell) * Cell;   // the role, untouched
-                float into = uv[i].y - row;
-
-                // Along the row and wrapped inside the sheet. Roles run the full width, so
-                // wrapping at 1 stays on the same row.
-                float u = Mathf.Repeat(uv[i].x + shift, 1f);
-                uv[i] = new Vector2(u, row + into);
-            }
+                uv[i] = new Vector2(Mathf.Repeat(uv[i].x + shift, 1f), uv[i].y);
 
             copy.uv = uv;
             copy.UploadMeshData(false);
