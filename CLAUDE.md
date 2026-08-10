@@ -67,8 +67,12 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **469 pass, 0 fail, 469 total, ~4 m 36 s.** Measured 2026-08-10.
-> (462 the day before; +4 `SurfaceTextureTests` — the texture estate reached this gate for the
+> **477 pass, 0 fail, 477 total, 7 skipped, 3 m 05 s.** Measured 2026-08-10 17:14, at the end of
+> the road pass. **Two other documents were stale within the same afternoon** — this file said 469
+> and `docs/ROAD-FIXES.md` had measured 473 — which is the failure THIS FILE WINS exists to stop.
+> The 7 skipped are the four Core `[Explicit]` printers, `PrintWalkableRegions`, and the two
+> `Aspiration` tests; a run reporting 0 skipped means somebody un-quarantined a diagnostic.
+> (469 earlier that day, 462 the day before; +4 `SurfaceTextureTests` — the texture estate reached this gate for the
 > first time — then +7 more, and every one of them is a GATE ON A SILENT FAULT rather than a new
 > feature's test: `AmenitiesAreNotHousesTests` (an amenity may not have the default house
 > footprint; it found the town's church on its first run), `HomeIsAColumnNotAnEnumMemberTests`
