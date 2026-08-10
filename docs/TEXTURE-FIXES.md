@@ -205,7 +205,7 @@ has **pure white roofs** — the editor gets better and the product does not cha
 > frame. Reading those three, I reported the new roofs as flat with no shingle. They are not.
 > `Noir/Render The Roofs` was added for this and `roof-close.png` is the frame that settles it.
 
-### W2 — The rest of the UVs · ~5 h + one window ~20 min
+### W2 — The rest of the UVs · **UVX-A2/A3 and TEX-11 done with W1** · ~5 h + one window ~20 min
 `ROOF-10` `TEX-11` `UVX-A2,A3,A4,A7,A9,A10` `TEX-10,12` `MS-1,2,5,9,10` · roof-AO experiment
 
 `UVX-A2`/`A3` are the same 0..1-into-metres fix as A1, for the church tower, bell-cote and spire.
@@ -291,8 +291,13 @@ falsifiable**.
   > "does not throw, it falls through to a default" if the two drift — so it wants its own commit
   > and the animation-table gates watched, not a rushed rename at the end of a long session.
 
-### W6 — The documents, last and once
+### W6 — The documents, last and once · ✅ **DONE 2026-08-09**
 `ROOF-9` `MS-8` `TEX-18,19` `CW-7` · the **one** `CLAUDE.md` edit
+
+`CLAUDE.md` carries the one paragraph: what the town is built of, that `RecalculateTangents` is the
+line the whole estate rests on, and that **`Surface textures: N loose` is the greppable gate — 7
+before this, 1 (water) now.** The Core and PlayMode counts were measured from runs and written
+once, per this file's own rule.
 
 Docs last, because three plans are each moving the PlayMode count and the Core count. Whichever lands
 last writes the measured number **once** — which is exactly what `CLAUDE.md`'s preamble exists to
@@ -351,6 +356,22 @@ enforce — and edits `docs/ROAD-FIXES.md:59` and `:558` in the same commit so t
   `Materials3D.Scatter` position hash into an `IRng` substream — four systems key on it so the same
   land appears every run. Do not rename a `kinds.txt` `kind` name — kinds resolve through the `words`
   line, so a rename parses fine and silently breaks every comparison.
+- **CW — the waste, measured 2026-08-09.** Every one of the 15 loose textures in
+  `Content/textures/` is referenced, so there is none there. What WAS dead: `Content/tiles/`, the
+  eleven 64x32 isometric DIAMONDS from before this project had a 3D renderer. Nothing has loaded
+  one since — a repo-wide search finds "tiles" only in bench column headings and in comments about
+  grid squares — and `dotnet run --project tools/Noir.Sim -- tiles` rewrote all eleven on every
+  run. The directory is gone and the command now writes only the 256x256 surfaces; `TileGenerator.
+  GenerateAll` is KEPT, because it is the only record of how that art was made and it is one line
+  to bring back.
+- **TEX-14 — the layer switches, and the hazard is real but not where the item says.** `Layers.Set`
+  already refuses to write `PlayerPrefs` in batch mode; that was the 2026-08-07 fix. What it cannot
+  guard is a tool run from the **`Noir` menu**, where there IS a person and the write is correct —
+  and two of them left the switches somewhere the owner never put them. `LayerShot` finished with
+  `SetAll(true)` under a comment reading *"left as it was found"*; all-on is a third state, and if
+  he had his trees off they came back on for good. `SmokeTest` turned every layer on and restored
+  nothing. `Layers.Snapshot()`/`Restore()` exist now and both call sites put them back in a
+  `finally`.
 - **Process.** Never `git add -A` — every render rewrites tracked `docs/snapshots/**`. Never run
   `-- tiles` twice. Never run Core in Debug. Never pipe `dotnet test` into `tail`. Mute the mixer
   before any batch run.

@@ -21,7 +21,7 @@ namespace Noir.Unity
     public static class Materials3D
     {
         private static readonly Dictionary<Terrain, Material> _byTerrain = new Dictionary<Terrain, Material>();
-        private static Material _wall, _agent;
+        private static Material _agent;
 
         /// <summary>The order submeshes are built in. Index here == submesh index.</summary>
         public static readonly Terrain[] GroundOrder =

@@ -391,6 +391,37 @@ namespace Noir.Unity
         }
 
         /// <summary>
+        /// Every switch as it stands, so a tool can put them back exactly.
+        ///
+        /// `Set` already refuses to write PlayerPrefs in batch mode, which is what stopped the
+        /// 2026-08-07 incident above from ever happening again headlessly. It does NOT stop a
+        /// tool run from the `Noir` menu, where there IS a person and the write is correct - and
+        /// two of them walked the layers and left them somewhere the owner never put them:
+        ///
+        ///   - `LayerShot` finished with `SetAll(true)` under a comment reading "left as it was
+        ///     found, so a person opening the editor next is not handed a village with half of it
+        ///     switched off". All-on is not as-it-was-found. If he had the trees off, they came
+        ///     back on and stayed on.
+        ///   - `SmokeTest` turned every layer on and restored nothing at all.
+        ///
+        /// Neither is a bug in `Set`. A tool that changes a person's preferences to do its job
+        /// has to change them back, and this is the pair that lets it.
+        /// </summary>
+        public static Dictionary<Kind, bool> Snapshot()
+        {
+            var was = new Dictionary<Kind, bool>();
+            foreach (var k in All) was[k] = IsOn(k);
+            return was;
+        }
+
+        /// <summary>Put back what <see cref="Snapshot"/> took. Safe to call in a `finally`.</summary>
+        public static void Restore(Dictionary<Kind, bool> was)
+        {
+            if (was == null) return;
+            foreach (var pair in was) Set(pair.Key, pair.Value);
+        }
+
+        /// <summary>
         /// The land and what was surveyed onto it, and nothing that was built or planted.
         ///
         /// This is the view the town is actually judged on while the ground work is being done:

@@ -374,6 +374,14 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
 
   Still true: Unity only rescans scripts on focus **gain**, so already-focused plus an edit means
   nothing happens, forever. Marker file + focus-loss-then-gain, and verify the marker was consumed.
+- **THE TOWN IS BUILT OF CLAPBOARD AND BRICK, AND ITS ROOFS ARE ASPHALT SHINGLE.** All of it was
+  Ashcombe's until 2026-08-09: pale English render on every wall, and slate, clay tile and THATCH
+  on six hundred Illinois roofs. `Content/textures/` had not been touched since the commit that
+  created it. The one line that decides whether any of it reads is `mesh.RecalculateTangents()` in
+  `MeshChunks.Emit` — every pack albedo is nearly flat and all the detail is in the normal map,
+  which URP builds from a tangent stream this project had never written. **The greppable gate is
+  `Surface textures: N loose`**, which counts what fell back to a flat placeholder: it was 7, and
+  **1 — water alone — is healthy**. Anything higher means a pack path failed silently.
 - **A UTF-8 BOM stops `^\s*#` matching the first line**, so `grep -vcE '^\s*$|^\s*#'` over-counts
   a `Content/` file by one. Several of these files have one.
 - **`kinds.txt` resolves a kind through its `words` line, not its `kind` line.** Renaming the

@@ -55,6 +55,7 @@ namespace Noir.Editor
             Material sky = null;
 
             bool wasShowBuildings = VillageHost.ShowBuildings;
+            var wasLayers = Layers.Snapshot();
             var wasSky = RenderSettings.skybox;
             var wasSun = RenderSettings.sun;
             bool wasFog = RenderSettings.fog;
@@ -145,12 +146,20 @@ namespace Noir.Editor
                     Layers.Set(Layers.Kind.Districts, false);
                 });
 
-                // Left as it was found, so a person opening the editor next is not handed a
-                // town with three layers missing and no idea why.
-                Layers.SetAll(true);
             }
             finally
             {
+                // AS THEY WERE FOUND, WHICH IS NOT THE SAME AS ALL ON. This ended with
+                // `Layers.SetAll(true)` under a comment claiming it left them as it found them.
+                // All-on is a THIRD state: if the owner had his trees switched off, this tool
+                // turned them back on and - because `Layers.Set` writes PlayerPrefs whenever
+                // there is a person, and running this from the Noir menu means there is - left
+                // them on for good. It is the same mechanism as the 2026-08-07 incident, from
+                // the other side of the batch-mode guard.
+                //
+                // In the finally, so an exception mid-render does not keep his preferences.
+                Layers.Restore(wasLayers);
+
                 VillageHost.ShowBuildings = wasShowBuildings;
                 RenderSettings.skybox = wasSky;
                 RenderSettings.sun = wasSun;

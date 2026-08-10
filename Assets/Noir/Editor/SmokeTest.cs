@@ -28,6 +28,8 @@ namespace Noir.Editor
             int failures = 0;
             GameObject root = null;
 
+            System.Collections.Generic.Dictionary<Layers.Kind, bool> wasLayers = null;
+
             try
             {
                 Log("--- smoke test ---");
@@ -78,6 +80,13 @@ namespace Noir.Editor
                 // was worried about. The massing is built lazily now - see Layers.RegisterLazy -
                 // so with it off VillageMesh puts up the ground and nothing else, and the x-ray
                 // check below then finds nothing to hide and fails saying so.
+                //
+                // AND PUT BACK IN THE `finally`, because `Layers.Set` writes PlayerPrefs whenever
+                // there is a person - and `Noir > Smoke Test` is a menu item, so there is. This
+                // turned every layer on and restored nothing, so running the smoke test once cost
+                // the owner whatever he had switched off. Same mechanism as the 2026-08-07
+                // incident, on the editor side of the batch-mode guard.
+                wasLayers = Layers.Snapshot();
                 foreach (var kind in Layers.All) Layers.Set(kind, true);
 
                 // The part that only breaks at runtime: meshes, materials, shaders, primitives.
@@ -126,6 +135,8 @@ namespace Noir.Editor
             }
             finally
             {
+                Layers.Restore(wasLayers);
+
                 if (root != null) UnityEngine.Object.DestroyImmediate(root);
             }
 
