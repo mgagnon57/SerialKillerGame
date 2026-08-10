@@ -18,6 +18,36 @@ cost · `DOC` documentation drift.
 
 ---
 
+## Where this stands, 2026-08-10
+
+| Wave | |
+|---|---|
+| **W1–W3** | ✅ done 2026-08-08 |
+| **W4** | ✅ **TWENTY OF TWENTY.** The six left open on 2026-08-08 — RIG-2, RIG-10, RIG-11, GATE-6, GATE-7, SIM-8 — all landed 2026-08-10 |
+| **W5** | ✅ done 2026-08-08 |
+| **W6** | ✅ tier 1: PB-1, PB-2, PB-3. **PB-4, PB-6 and PB-7 remain** — they are the whole of decision 8's (C), a week of Unity round-trips with a determinism trap in them |
+| **W7** | ✅ PB-10, DOC-11, GATE-7's verification, and RIG-8's measurement. **RIG-9 is blocked on the owner's ruling on that measurement**, which is the correct state |
+
+**Measured:**
+
+```
+  PlayMode   19 of 19, 1 Explicit aspiration skipped, 700 s
+  Core       469 of 469
+  LayerProof 10 frames, 10 DISTINCT, with NOIR_BUILT_TOWN=1
+  layer prefs 23 noir.* keys byte-identical before and after the targeted run
+  the walk   0.58x -> 0.76x in the same hour, range top 0.77 -> 1.11 (RIG-2)
+  the build  Surface textures: 0 loose (), 16 MISSING  ->  15 loose, 0 MISSING (PB-3)
+```
+
+**WHAT IS LEFT IS TWO THINGS AND BOTH ARE HIS, NOT MINE.** `PB-6/PB-7` is decision 8's (C), which
+this plan's own preamble says "is not a thing to land unattended in one sitting" — and its
+determinism trap is real: `AgentBody` picks a figure by `Mix(seed) % set.Count`, so ARRAY ORDER
+decides who looks like whom, and a manifest that does not preserve `Cast()`'s Ordinal-by-path sort
+draws a different-looking Rossville in a build than in the editor, silently, with no test able to
+see it. `RIG-9` waits on his reading of the seam numbers.
+
+---
+
 ## The standing gates
 
 Every wave states which of these it must pass. Commands are in `CLAUDE.md`; do not re-derive them.
