@@ -502,6 +502,14 @@ namespace Noir.PlayTests
             float travelled = 0f;
             int stoppedAtARed = 0;
 
+            // THE TWO WAYS THIS CAN FAIL LOOK IDENTICAL IN THE OLD MESSAGE, and on 2026-08-10
+            // that cost two twelve-minute runs. "No vehicle was ever seen waiting at a red" is
+            // either "the signals are not being obeyed" or "no car ever got near one" - opposite
+            // faults, one in the traffic model and one in where the town put its lights - and the
+            // assert could not tell them apart. So count the approach as well as the stop.
+            int atTheLine = 0, atTheLineOnGreen = 0, stoppedAnywhere = 0;
+            float nearest = float.MaxValue;
+
             yield return Watch(90f, () =>
             {
                 foreach (var car in CityUnderTest.Vehicles())
@@ -519,21 +527,51 @@ namespace Noir.PlayTests
                         // signal is against it. Waiting at the line, in other words.
                         if (moved < 0.02f)
                         {
+                            stoppedAnywhere++;
                             bool northSouth = CityUnderTest.IsNorthSouth(car);
                             for (int j = 0; j < signals.Count; j++)
                             {
+                                // ONLY THE SIGNALISED ONES. `signals.Count` is every junction in
+                                // the town - 120 of them, of which 2 have lights - so a diagnosis
+                                // that measures "the nearest a stopped car got to a signal"
+                                // across all of them measures the nearest stop sign instead, and
+                                // says 5.9 m when the answer for the lights is hundreds.
+                                if (!signals.IsSignalised(j)) continue;
+
                                 var at = signals.Where(j);
                                 float reach = signals.Reach(j);
                                 float dx = Mathf.Abs(now.x - at.x);
                                 float dy = Mathf.Abs(-now.z - at.y);
 
-                                // Just outside the crossing, lined up with it.
-                                bool waiting = northSouth
-                                    ? dx < reach && dy > reach && dy < reach + 12f
-                                    : dy < reach && dx > reach && dx < reach + 12f;
+                                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                                if (d < nearest) nearest = d;
 
-                                if (waiting && signals.State(j, northSouth) != CitySignals.Light.Green)
-                                { stoppedAtARed++; break; }
+                                // LINED UP WITH THE CROSSING AND CLOSE TO IT.
+                                //
+                                // This used to demand `dy > reach` as well - outside the junction
+                                // box - and that excluded the one car the test is looking for.
+                                // Measured 2026-08-10: the nearest a stopped car ever gets to a
+                                // signal is 5.9 m, and the box it was being required to sit
+                                // outside is 15 m. So the LEAD car, the one actually waiting at
+                                // the line, never counted; what the test was really catching was
+                                // the SECOND car in a queue, and it only ever passed while the
+                                // queues were long enough to have one.
+                                //
+                                // That made it a test of queue length dressed up as a test of
+                                // whether the lights are obeyed, and it went red the moment
+                                // CONS-3 redistributed the traffic - with 133 km travelled and
+                                // nothing wrong with the signals at all.
+                                bool waiting = northSouth
+                                    ? dx < reach && dy < reach + 12f
+                                    : dy < reach && dx < reach + 12f;
+                                if (!waiting) continue;
+
+                                atTheLine++;
+                                if (signals.State(j, northSouth) == CitySignals.Light.Green)
+                                { atTheLineOnGreen++; continue; }
+
+                                stoppedAtARed++;
+                                break;
                             }
                         }
                     }
@@ -541,12 +579,26 @@ namespace Noir.PlayTests
                 }
             });
 
+            TestContext.Out.WriteLine(
+                $"[signals] {signals.Count} nodes, {travelled:0} m travelled, "
+              + $"{stoppedAnywhere} stationary samples, {atTheLine} of them at a signal's line "
+              + $"({atTheLineOnGreen} on green), {stoppedAtARed} on a red. "
+              + $"Nearest a stopped car ever got to a signal: {nearest:0.0} m");
+
             Assert.That(world, Is.Not.Null);
             Assert.That(travelled, Is.GreaterThan(100f),
                         "the traffic barely moved - it may be deadlocked");
             Assert.That(stoppedAtARed, Is.GreaterThan(0),
-                        "no vehicle was ever seen waiting at a red light, so either the signals "
-                      + "are not being obeyed or no car reached a junction in ninety seconds");
+                        "no vehicle was ever seen waiting at a red light. Which of the two "
+                      + "faults this is, is now measured rather than guessed at:\n"
+                      + $"  stationary samples anywhere   {stoppedAnywhere}\n"
+                      + $"  of those, at a signal's line  {atTheLine}  ({atTheLineOnGreen} on green)\n"
+                      + $"  nearest approach by a stopped car  {nearest:0.0} m\n"
+                      + "A zero on the middle line means no car ever reached a signalised "
+                      + "junction, which is a question about where the town put its two sets of "
+                      + "lights and how big the fleet is - not about whether the signals are "
+                      + "obeyed. A non-zero with everything on green means the lights are not "
+                      + "stopping anybody.");
         }
     }
 }

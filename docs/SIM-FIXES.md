@@ -171,14 +171,26 @@ when the number finally moves there is exactly one commit to point at. Two go fi
   > declares `home yes`, so `IsHome` and `Kind == Dwelling` are the same bit for every place in it.
   > Only Rossville moves, and only by the seven.
 
-- ⚠ **THREE MORE FILES FAIL OPEN THE SAME WAY, found by sweeping for the class after
-  `watched.floor` paid. NOT YET FIXED — see the note below on why the fix is not `throw`.**
+- ✅ **THREE MORE FILES FAILED OPEN THE SAME WAY, found by sweeping for the class after
+  `watched.floor` paid. DONE 2026-08-10, and the fix is not `throw` — see below.**
 
   | File | On failure | What the town loses |
   |---|---|---|
   | `elevation.txt` | `catch { return; }` | **THE WHOLE TOWN GOES FLAT.** 5,754 samples, 30.00 m to 225.30 m — **195.3 m of relief**, gone, with every camera height, every building base and every slope test silently reading zero |
   | `parcel-county.txt` | `catch { return; }` | 4,534 lines of zoning. Every parcel becomes `Unset`, so commercial, industrial and vacant ground all draw as the fiction's own answer |
   | `roads.txt` | returns false, by design | the town keeps `city.txt`'s 37 roads instead of the surveyed 68 — **already documented in `CLAUDE.md` as a trap**, with "confirm the line appears" as the mitigation |
+
+  > ✅ **Every one of them says so now, and a Core test keeps it that way.**
+  > `NoContentLoadFailsInSilenceTests` is a TEXT test, for the reason `TownPipelineTests` is: the
+  > property is about which code paths exist, not about a value any run produces, and Core cannot
+  > execute the Unity layer these live in. It sweeps every `catch` around a content read and
+  > demands the handler either say something or appear on an **allow-list with the sentence
+  > explaining why that absence is ordinary** — three entries, each argued: `ElevationGrid`'s
+  > optional DELTA file, `AgentAnimation`'s missing table (which `AnimationCheck` already reports
+  > on), and `SurveyRoads`' `File.Exists` probe, which is a question rather than a load.
+  >
+  > The elevation warning names the cost in the log line rather than making the reader look it up:
+  > `[elevation] elevation.txt did not load, so THE WHOLE TOWN IS FLAT`.
 
   **THE FIX IS NOT `throw`, AND THAT IS THE DIFFERENCE FROM `watched.floor`.** A floor that fails
   open turns a GATE into a tautology, so there is no useful degraded mode and refusing is right.

@@ -241,21 +241,31 @@ namespace Noir.Unity
         /// is a comparison rather than a table, and it gets the case that actually matters right
         /// on its own: the dirt track to the big barn gives way to the road it joins.
         ///
-        /// Where the two are the same class there is no honest answer, so the tie goes to the
-        /// east-west road and the north-south arms carry the stop signs. It is arbitrary, but it
-        /// is arbitrary ON THE MAP as well as in here - CitySigns reads this same answer, so
-        /// what the junction does and what the junction says can never drift apart.
+        /// THE RULE ITSELF IS IN CORE NOW - `JunctionPriority.GiveWayIsNorthSouth` - because it
+        /// is a statement about the map rather than about Unity, and `dotnet test` structurally
+        /// cannot compile this file. `CitySigns` reads this same answer, so what the junction
+        /// does and what the junction says can never drift apart.
         /// </summary>
         /// <remarks>
-        /// CARRIES, NOT CLASS. Which road runs through is about what the roads DO, and on the
-        /// surveyed network no road is paved to a main road's corridor - Attica is a county
-        /// highway on a village street's right of way. Comparing the corridor made every road in
-        /// town equal, so the tie below fired at all 64 junctions at once and every north-south
-        /// arm in Rossville gave way permanently to an east-west stream that never yielded back.
-        /// Measured: nine tenths of stopped vehicles waited 119.9 s with clear road ahead.
+        /// CARRIES, NOT CLASS, and then the county's counts. Which road runs through is about
+        /// what the roads DO, and on the surveyed network no road is paved to a main road's
+        /// corridor - Attica is a county highway on a village street's right of way. Comparing
+        /// the corridor made every road in town equal, so the tie fired at all 64 junctions at
+        /// once and every north-south arm in Rossville gave way permanently to an east-west
+        /// stream that never yielded back. Measured: nine tenths of stopped vehicles waited
+        /// 119.9 s with clear road ahead.
+        ///
+        /// ROAD-FIXES CONS-3 finished the job. `Carries` alone still left 51 of the 122 junctions
+        /// with two named arms handed to the east-west road by nothing but a compass direction.
+        /// The county counts twelve of Rossville's streets by name and settles 32 of those 51;
+        /// the last 19 go to the LONGER road, which is a property of the road rather than of the
+        /// junction, so a through street keeps priority for its whole length instead of picking
+        /// up a stop sign at every other corner. 69/53 became 44/78, and no road the county
+        /// counts as busier gives way to one it counts as quieter - gated by
+        /// `StopSignsLandOnBothAxesTests`.
         /// </remarks>
         public static bool GiveWayAxisOf(Junction j) =>
-            j.NorthSouth.Carries <= j.EastWest.Carries;  // true: north-south gives way
+            JunctionPriority.GiveWayIsNorthSouth(j);       // true: north-south gives way
 
 #if UNITY_EDITOR
         private void Erect(WorldModel world)

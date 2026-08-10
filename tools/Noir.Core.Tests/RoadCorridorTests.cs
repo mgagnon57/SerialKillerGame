@@ -58,6 +58,23 @@ namespace Noir.Core.Tests
         }
 
         /// <summary>
+        /// The surveyed network with everything the survey says ABOUT each road — its class, what
+        /// it carries, its easement and the county's traffic count — which <see cref="Layout"/>'s
+        /// hand regex throws away. Built the way `WorldBuilder` builds it, so the junctions,
+        /// arms and reaches here are the ones the game drives on.
+        /// </summary>
+        public static RoadNetwork Network()
+        {
+            var parsed = VillageParser.Parse(TestContent.Read("roads.txt"));
+            var lines = new List<RoadLine>();
+            foreach (var run in parsed.Roads)
+                if (run.Kind == Terrain.Road)
+                    lines.Add(new RoadLine(run.Name, run.EffectiveClass, run.Width, run.Points,
+                                           run.EffectiveCarries, run.Easement, run.Aadt));
+            return new RoadNetwork(lines);
+        }
+
+        /// <summary>
         /// Rossville as the game builds it, as far as Core can go: city.txt's authored places
         /// with the SURVEYED road network in place of the ruled one.
         ///

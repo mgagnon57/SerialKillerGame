@@ -67,7 +67,7 @@ counts as two roads touching, and the IDOT counts. Checked directly rather than 
 | **W4** | ✅ `RealRossville` is GATE-2/ADDR-6's shared helper. **GATE-3(a) settled: the instrument was the fault** — the sampler took exactly fifteen samples per road whatever its length, so attica sat on the list at 5/15 = 33.3%. Stepped at a flat 4 m it is 125/394 = 31.7% and the list shrank to three |
 | **W5** | ✅ **unblocked** — decision 3 is answered (a), not (c), so `RC-17` is overruled. **GATE-5 re-recorded: the 134 is 28**, from five identical runs |
 | **W6** | ✅ its alley items are in — 33 alley names with **zero** shipping as multiple runs (ALLEY-1), 58 mouths opened (ALLEY-2). `JUNC-4/8/9`, `CONS-4`, `RC-7/8`, `ADDR-11/15` not verified |
-| **W7** | **CONS-2 done, and its gate was watched failing first: 5,438 of 13,154 lane positions in the oncoming carriageway, 41%.** The rest of `CONS-*` not started |
+| **W7** | **CONS-2 and CONS-3 done.** CONS-2's gate was watched failing first: 5,438 of 13,154 lane positions in the oncoming carriageway, 41%. CONS-3: 51 of the town's 122 two-armed junctions were handed to a compass direction; the county's counts settle 32 and road length the other 19. **CONS-1 needs no work — give-way is already on.** The rest of `CONS-*` not started |
 | **W8** | not started |
 | **W9** | **his** — decision 1 defers it: *"do not treat 408 Holmes as settled, and do not quietly fix it in either direction — it is an edit he will make on purpose"* |
 | **map audit** | ✅ no longer permanently red on the intended design — 3 kinds of fault → 2, both real |
@@ -81,6 +81,7 @@ counts as two roads touching, and the IDOT counts. Checked directly rather than 
   the curve  16.71 m worst (summit), 5 roads over five metres, 16 over one — ratcheted
   the 134    28, from five identical runs — ratcheted
   the lanes  0 of 13,154 in the oncoming carriageway, from 5,438
+  the signs  44 north-south / 78 east-west, from 69/53 — no compass decides any of them now
   the alleys alley1 78.4% of its length on a lot — ratcheted, and nothing moves until he says so
 ```
 
@@ -997,6 +998,13 @@ roads, Route 1 among them) — hoist the flip into Core where the 428-test suite
 what makes the arbitrary axis tie-break free; turning give-way on alone recreates the starving-junction
 shape that `CitySignals.cs:249-256` records as producing 119.9 s waits.
 
+> ✅ **STALE, AND HARMLESSLY SO — CONS-1 LANDED WITHOUT THIS ITEM.** Give-way is on: `MayCross`
+> asks `_signals.GivesWay(node, northSouth)`, holds with `Hold.GiveWay`, and `NothingCrossing`
+> asks the time question rather than a fixed-distance one. It went on with the traffic-counts
+> work, which is also what stopped it starving anything: `Carries` differentiates because the
+> county's counts differentiate. So CONS-3 landed alone, and the pairing this line demands was
+> satisfied by the order things actually happened rather than by one commit.
+
 The wave comes after W3 and W6 for a hard reason: junction topology changes move the junction count
 from 74, the turns from 630 and the conflict pairs from 2,393 in one step, and **a p90 that moves in a
 run containing both is unattributable.**
@@ -1024,6 +1032,70 @@ run containing both is unattributable.**
 >
 > **Gates. The missing gate is the deliverable:** CONS-7's side check must still be **seen to fail
 > on the unfixed tree first**. A fix whose gate has never gone red proves nothing.
+>
+> ✅ **CONS-3 DONE 2026-08-10 — and the compass has stopped deciding anything.**
+>
+> `CitySignals.GiveWayAxisOf` was `NorthSouth.Carries <= EastWest.Carries`, so every tie in the
+> town went to the east-west road. Measured on the surveyed network: **122 junctions have two
+> named arms, and `Carries` settles only 71 of them.** The other **51 — 42% of the town — were
+> handed to a compass direction.** That is not "a tie broken arbitrarily": it is arbitrary in a
+> DIRECTION, so it accumulates into a systematic bias instead of averaging out, which is the exact
+> shape `CitySignals.cs:249-256` records as producing 119.9 s waits.
+>
+> The rule is `JunctionPriority.GiveWayIsNorthSouth` in **Core** now, where the suite can reach it
+> — the same hoist CONS-2 got, for the same reason: it is a statement about the map, not about
+> Unity. `CitySignals` and `CitySigns` both still read the one answer, so what a junction DOES and
+> what it SAYS cannot drift apart.
+>
+> ```
+>   class settles          71 junctions      unchanged, and the barn track still gives way
+>   the county's counts    32 of the 51      IDOT counts twelve of Rossville's streets by name
+>   the longer road        19 of the 51      a property of the ROAD, not of the junction
+>   stop signs             69/53  ->  44/78
+> ```
+>
+> **THE LAST TIE-BREAK IS LENGTH, NOT A HASH, AND THAT IS THE WHOLE POINT.** A per-junction
+> tie-break — a compass direction, a coordinate hash — can put the stop sign on Maple at one
+> corner and on the street crossing it at the next, and no real town is signed that way: a driver
+> on the through street expects to keep priority for its whole length. Comparing lengths gives
+> every junction along one street the same answer for free. It reads no RNG and no clock.
+>
+> Gated by `StopSignsLandOnBothAxesTests`: the split may not collapse onto one axis, the answer
+> may not move between two builds of the same network, the class comparison is unchanged, and
+> **no road the county counts as busier gives way to one it counts as quieter** — 18 junctions
+> where both arms are counted differently, 0 offenders.
+>
+> ⚠ **CONS-3 TOOK `TrafficMovesAndStopsAtRedLights` RED, TWICE ON THE SAME TREE, AND THE TEST
+> WAS THE THING THAT WAS WRONG.** Worth reading in full, because "my change broke a gate, so I
+> will look at the gate" is exactly the reasoning this project forbids — and here the measurement
+> is what settled it, not the reasoning.
+>
+> The old message could not tell two opposite faults apart: *"either the signals are not being
+> obeyed or no car reached a junction in ninety seconds."* So the first thing that landed was the
+> count that separates them — stationary samples, how many of those were at a signal's line, how
+> many of THOSE were on green, and the nearest a stopped car ever got. It said:
+>
+> ```
+>   stationary samples anywhere        281
+>   of those, at a signal's line         0   (0 on green)
+>   nearest approach by a stopped car  5.9 m
+>   travelled                        133 km
+> ```
+>
+> **5.9 m, against a band that started at 15 m.** The test demanded `dy > reach` — outside the
+> junction box — so the LEAD car, the one actually waiting at the line, never counted. What it had
+> been catching all along was the SECOND car in a queue, which means it only ever passed while the
+> queues were long enough to have one. It was a test of queue length wearing a test of signal
+> obedience's clothes, and CONS-3 shortened the queues.
+>
+> With the inner cut removed: **55 samples at the line, 55 of them on a red, 0 on green.** The
+> lights were being obeyed the whole time and nothing could see it.
+>
+> **AND THE CHEAP WAY TO REPRODUCE IT IS `-testFilter "Noir.PlayTests.TrafficPlayTests"`** — four
+> minutes against twelve, because it skips the 598 s `WhyAreThePeopleNotAnimating`. It reproduces
+> the failure, which running the one test alone does NOT: alone it passes, because the city is
+> shared and a fresh even spread puts cars everywhere. Three full-suite runs were spent learning
+> that.
 >
 > The p90 gate swings **21.9 s to 37.2 s on an unchanged tree** — confirmed again 2026-08-10, red
 > at 37.8 s and green at 15.5 s on consecutive runs of the same code. Run it twice before believing
