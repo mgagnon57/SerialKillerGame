@@ -6,6 +6,31 @@ Captured with `/idea <thing>` — optionally prefixed with a category, e.g.
 `/idea road: the freeway should have on-ramps rather than crossings`. Tick a box when it is
 done or delete the line when it turns out to be a bad idea.
 
+> ## ⚠ SWEPT 2026-08-11 — a THIRD of this file was describing a game that no longer exists
+>
+> **33 open items went to 21.** Twelve were closed, and not one of them by doing any work: they had
+> already been done and nobody came back to tick the box. Five said *"superseded, kept for the
+> reasoning"* in their own text while still carrying an open checkbox. The other seven were checked
+> against the code and the measurement is written into each:
+>
+> | | was claimed | is true |
+> |---|---|---|
+> | ribbons float 6 cm | `CityOutlines.Lift = 0.06f` | **`0.25f`** |
+> | roads that end on roads make no junction | ~21 of them | `JUNC-2` + `GATE-8`; 74 → **120** junctions |
+> | `AmbientTrafficWeight` is 4:1 | ladder only | reads the county's **AADT**, called at `CityTraffic:607` |
+> | nobody's car is in their driveway | drawn: none | **620 cars at 612 houses** |
+> | two Core tests are failing | permanently red | `[Explicit]`, suite is **477/0** |
+> | the PlayMode command hangs | hangs | `-assemblyNames Noir.PlayTests`, **19 of 19** |
+> | no layered visibility system | none | `Layers.Kind`, **21** kinds |
+>
+> **This is the failure mode to watch for, not a one-off tidy.** A backlog is what decides what gets
+> built next, so a stale item does not sit harmlessly — it spends a session. Two of the twelve were
+> actively *blocking*: the `AmbientTrafficWeight` entry was cited in `CityTraffic`'s own docstring as
+> the reason not to fix the fleet size, and it had been fixed for days.
+>
+> **Tick the box in the same commit as the fix.** Every one of these twelve was somebody finishing
+> the work and not coming back.
+
 ## Decisions needed — read this section first
 
 Two things asked for overnight on 2026-08-02 that were NOT done, on purpose, because they run
@@ -153,7 +178,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   world coordinates to the Ground chunk cache and had to move to `GroundSize` with it).
   — *2026-08-02*
 
-- [ ] **The plan view's feature ribbons float 6cm and that is not enough clearance.**
+- [x] **The plan view's feature ribbons float 6cm and that is not enough clearance.**
   `CityOutlines.Lift = 0.06f`, and a ribbon vertex is `ElevationGrid.HeightAt(x,y) + Lift` - the
   TRUE bilinear height - while the ground under it is now a coarser triangulation of that same
   surface. The two are within a hair of each other, so the depth test flips on edge pixels. Found
@@ -221,7 +246,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   parapet; the water simply stops square at the carriageway. And the shoreline is quantised to
   1m tiles, which at eye level on the bank reads as a staircase. — *2026-08-02*
 
-- [ ] ~~**There is no real river or ponds, superseded note kept for the reasoning.**~~ `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one
+- [x] ~~**There is no real river or ponds, superseded note kept for the reasoning.**~~ `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one
   long real polyline) and the real school ponds (`water ...` closed polygons), pulled from
   OpenStreetMap - and `CityOutlines.Features()` is the ONLY thing that ever reads that file. It
   draws them as a flat painted line/fill in the survey-plan view (`CityOutlines.Build`, gated
@@ -256,7 +281,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Roads
 
-- [ ] **A road that ENDS on another road makes no junction, and there are ~21 of them.**
+- [x] **A road that ENDS on another road makes no junction, and there are ~21 of them.**
   `RoadNetwork.Crossings` finds a junction by the projected lateral FLIPPING SIGN as one centre
   line passes THROUGH the other. A road that stops dead on another leaves on the side it arrived
   on, so it never flips, so no junction is recorded. With no junction, `LaneGraph` makes both
@@ -313,7 +338,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   if they are walking. Invisible at overview range, potentially not at street level with a big
   crowd - worth a look before the budget is raised or lowered.
 
-- [ ] ~~**THE PEOPLE ARE HALF THE FRAME. THE CARS ARE NOT THE PROBLEM AND NEVER WERE.**~~
+- [x] ~~**THE PEOPLE ARE HALF THE FRAME. THE CARS ARE NOT THE PROBLEM AND NEVER WERE.**~~
   Measured 2026-08-08 by `PerfCensus.WhatIsEatingTheFrame`, which switches one layer off and
   straight back on inside a SINGLE run, so drift cancels:
 
@@ -417,7 +442,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   An uncounted road keeps its class weight, because IDOT not counting a road is weak evidence that
   it is quiet and not a measurement. Alleys stay at 0. Original entry follows.
 
-- [ ] ~~**`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**~~
+- [x] ~~**`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**~~
   `RoadNetwork.AmbientTrafficWeight` is `Mainroad 8 : Street 2`. IDOT's counts give **Route 1 5,200
   AADT, Attica 1,100, a side street ~200-250** - so 21:1 arterial-to-local, and Route 1 carries
   **4.7x what Attica does** while the table hands them the identical weight of 8.
@@ -434,7 +459,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   beside `easement`, read by the spawn pitch and the turn scoring, replaces a guessed class ladder
   with the county's own measurement. The 21 uncounted roads take a floor.
 
-- [ ] **Nobody's car is in their driveway.** `CityParking` fills only authored `carpark` places. Its
+- [x] **Nobody's car is in their driveway.** `CityParking` fills only authored `carpark` places. Its
   own docstring makes the argument and then stops short of the houses: *"A PARKED CAR IS CONTENT IN
   THIS GAME... a city where every car is driving past is a city where nothing is ever anywhere."*
 
@@ -447,6 +472,12 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   to be absent because its owner is at work in Hoopeston.
 
 - [ ] **`church x maple` is two county roads crossing on give-way, and a car starves there.**
+  > ⚠ **EVERY NUMBER BELOW IS AGAINST A FLEET THAT NO LONGER EXISTS.** The 159-car constant became
+  > `CityTraffic.CarsOutByHour` on 2026-08-10: the town now opens at **25** cars at noon and peaks
+  > at 47. A wait time measured on 159 cars says nothing about this junction under 25, and the
+  > give-way fault may not even reproduce. **Re-measure before working this item**, and per
+  > `CLAUDE.md` run it twice before believing a traffic number moved.
+
   Measured 2026-08-08 on the 159-car fleet: `NoCarWaitsForeverAtTheHeadOfAClearQueue` now
   attributes every wait longer than one signal cycle to its junction, and the whole tail is **two
   junctions, not the fleet** - 2 cars up to **53.7 s** at `church x maple`, 1 car at 36.3 s at
@@ -516,7 +547,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   houses over 28 cells), not liked. PlayMode 11/11, Core 163/165, MapAudit clean on all eight.
   Three new stills: `suburb-street`, `suburb-block`, `suburb-edge`. — *2026-07-31*
 
-- [ ] ~~The outer city, superseded note kept for the reasoning.~~ The fork was settled at
+- [x] ~~The outer city, superseded note kept for the reasoning.~~ The fork was settled at
   `docs/superpowers/specs/2026-07-31-the-outer-city-design.md` and was QUEUED BEHIND THE JAMS ITEM: 28 suburb cells is ~450 households against the 945 declared
   now, which grows the fleet 236 -> ~350, and holding the fleet flat is the entire reason
   `CarsOutPerHousehold` is 0.25. Building it on an unfixed give-way fault makes a reproduced defect
@@ -582,7 +613,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   it. Whether it should carry real freight is the separate, smaller decision the old note called
   out, and the bed exists for it now. — *2026-08-02*
 
-- [ ] ~~**The real CSX line, superseded note kept for the reasoning.**~~ `Content/features.txt`'s `rail` polyline is the actual surveyed CSX
+- [x] ~~**The real CSX line, superseded note kept for the reasoning.**~~ `Content/features.txt`'s `rail` polyline is the actual surveyed CSX
   right-of-way (converted from OpenStreetMap - see the note in `city.txt` itself at the "NO
   SIMULATED RAILROAD AVENUE" comment: getting this alignment right already fixed a quarter of the
   town's houses being on the wrong side of the real track). `CityOutlines.Features()` draws it
@@ -619,7 +650,12 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 - [x] ~~**A car crossing a junction ignores every other vehicle.**~~ FIXED: CrossJunction now calls Blocked(), and inside a junction the same-heading filter is dropped because a turning car crosses the others rather than following them. `Blocked()` is only called from `RunSegment`; `CrossJunction` has no check at all, so a turning car drives through anything on the lane it is entering. This is what `NoTwoVehiclesOccupyTheSameSpace` catches at 0.00m, and the look-ahead fix does not touch it. — *2026-07-30*
 - [x] ~~`NoJunctionEverShowsGreenBothWays` tests an invariant that no longer holds.~~ FIXED: the test now skips unsignalised junctions in both assertions. `MayEnter` returns true on BOTH axes at a priority junction by design - the separation moved into `NothingCrossing`. The test should assert the new rule: signalised junctions never both green, priority junctions have exactly one axis with priority. — *2026-07-30*
 - [x] ~~Vehicle look-ahead is a constant 8m~~ — done in 4724abf: it is now both vehicles' measured half-lengths plus a headway. Did NOT fix the failing test; see the junction item above. — *2026-07-30*
-- [ ] **The eastbound ring road at x=1008 is the one junction that starves.** Every run of
+- [ ] **The eastbound ring road at x=1008 is the one junction that starves.**
+  > ⚠ **SAME INVALIDATION AS `church x maple` ABOVE**: the 83.9 s and 86.5 s below were measured on
+  > the 159-car fleet, and the fleet is a curve now — 25 at noon, 47 at peak. "A property of that
+  > junction and not of the load" was a fair reading at 159 and is untested at 25. Re-measure.
+
+  Every run of
   `NoCarWaitsForeverAtTheHeadOfAClearQueue` puts its worst wait at the same place - 83.9s and
   86.5s on consecutive runs, against a fleet p90 of 22-25s - so it is a property of that junction
   and not of the load. It is a left turn across two lanes of through traffic on the busiest road
@@ -682,7 +718,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   `TrafficDiagnostics` reports the numbers above and gates nothing; `NoCarWaitsForeverAtTheHead
   OfAClearQueue` gates the distribution - p90 under one signal cycle, worst under two. — *2026-07-31*
 
-- [ ] ~~Jams~~ SUPERSEDED, kept for the reasoning: the original entry follows.
+- [x] ~~Jams~~ SUPERSEDED, kept for the reasoning: the original entry follows.
 
   ROOT CAUSE: `NothingCrossing` (give-way) and `NothingComing` (left turn) both wait for zero
   traffic within a fixed distance (`Crossing`=35m, `Oncoming`=22m), and a busy two-lane road can
@@ -868,7 +904,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [x] ~~`-quit` and `-runTests` MUST NOT be combined~~ FIXED: `Assets/Noir/Editor/TestInvocationGuard.cs` now catches the combination in batchmode and exits 1 with a clear error instead of letting Unity exit 0 silently. CONFIRMED by direct reproduction: the raw combo logs "Batchmode quit successfully invoked" before any test callback fires and writes no results file (exit 0); with the guard it now exits 1 before that race even starts; the correct invocation (no `-quit`) is untouched — reran the PlayMode suite and got 7/7 passing. Root cause: `-quit` and the test runner's start-up both hang off `EditorApplication.update`, and `-quit` wins the race. — *2026-07-30*
 
-- [ ] **Two Core tests are failing and were already failing.** `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` (wants a ratio >= 2.0) and `TheTenthPercentileIsNotALock` (wants >= 1.0). Found while running the gate for the district work; CONFIRMED pre-existing by stashing that work and running them at HEAD, where they fail identically, so nothing above caused them. 163 of 165 pass. Not investigated - they are about the 2:1 texture-to-use instrument, which is a different subsystem from anything being touched here. Note also that a full Debug `dotnet test` takes 7m41s against 30s in Release, and there is a crashdump under `tools/Noir.Core.Tests/TestResults/` from an earlier run - see the CPU-instability note before blaming code for anything intermittent. — *2026-07-31*
+- [x] **Two Core tests are failing and were already failing.** `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` (wants a ratio >= 2.0) and `TheTenthPercentileIsNotALock` (wants >= 1.0). Found while running the gate for the district work; CONFIRMED pre-existing by stashing that work and running them at HEAD, where they fail identically, so nothing above caused them. 163 of 165 pass. Not investigated - they are about the 2:1 texture-to-use instrument, which is a different subsystem from anything being touched here. Note also that a full Debug `dotnet test` takes 7m41s against 30s in Release, and there is a crashdump under `tools/Noir.Core.Tests/TestResults/` from an earlier run - see the CPU-instability note before blaming code for anything intermittent. — *2026-07-31*
 
 - [x] ~~`MapAudit` reports faults with `Debug.LogError` and then exits 0 REGARDLESS~~ ALREADY
   FIXED by the time Stream 4 (performance) checked it on 2026-08-02 - nobody had come back to
@@ -878,7 +914,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   the current file rather than assuming the note was still true - it wasn't. — *2026-07-31,
   closed 2026-08-02*
 
-- [ ] **The documented PlayMode command now hangs, and it is LLMUnity's tests, not ours.**
+- [x] **The documented PlayMode command now hangs, and it is LLMUnity's tests, not ours.**
   `-runTests -testPlatform PlayMode` with no filter discovers `LLMUnityTests.TestLLM`, whose
   constructor calls `LLMManager.DownloadModel` - so the run sits there trying to pull a language
   model off the network instead of testing the town, and never reaches a result file. It came in
@@ -890,7 +926,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [ ] Lift the Crafting System's UGUI inventory UI — drag-drop slots, transfer, tabs — rather than writing one. Tedious to build, and presentation belongs in Unity anyway. — *2026-07-30*
 - [ ] Evidence catalogue as `Content/items.txt` in the shape of `kinds.txt`, read by Core. NOT the Crafting System's ScriptableObjects: content authored in an editor window is content `MapAudit` and the PlayMode tests cannot see. — *2026-07-30*
-- [ ] A layered visibility toggle system for the town view: independently switch off/on trees, buildings, and other dressing layers, graduating all the way down to the bare black survey-plan layout (roads + lot boundaries only), and a single control to restore everything back to full detail at once. — *2026-08-02*
+- [x] A layered visibility toggle system for the town view: independently switch off/on trees, buildings, and other dressing layers, graduating all the way down to the bare black survey-plan layout (roads + lot boundaries only), and a single control to restore everything back to full detail at once. — *2026-08-02*
 
 ## Ad hoc
 
