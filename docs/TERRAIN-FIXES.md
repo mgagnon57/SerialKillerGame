@@ -299,12 +299,25 @@ map read as a diagram.
   > on a fixture. 25,200 tiles against Rossville's map; 624 against 19,280. **The two are not the
   > same town and never were**, which is `SEEN` again, one directory over.
   >
-  > **The renderer that builds the real town is `CityShot.cs` — `TownPipeline.Build()` at line 92 —
-  > menu `Noir → Render City Block (noon)`.** It writes `city-block`, `farm-country`,
-  > `country-*` and `suburb-*`. `Snapshot.cs` writes the other twelve: `back-lane-night`,
-  > `close-terrace`, `dusk`, `first-light`, `mill-gate`, `morning-long`, `night`, `noon-overview`,
-  > `school-run`, `street-night`, `street-noon`, `the-crowd`. **Those twelve are the fixture
-  > village. Do not read a Rossville verdict off any of them.**
+  > **The renderer that builds the real town is `CityShot.cs` — `TownPipeline.Build()` at line 160.**
+  > It writes `city-*`, `farm-*`, `country-*`, `suburb-*` and `block-yard`. `Snapshot.cs` writes the
+  > other twelve: `back-lane-night`, `close-terrace`, `dusk`, `first-light`, `mill-gate`,
+  > `morning-long`, `night`, `noon-overview`, `school-run`, `street-night`, `street-noon`,
+  > `the-crowd`. **Those twelve are the fixture village. Do not read a Rossville verdict off any of
+  > them.** The scale gap is the tell: Rossville meshes **5,040,000 tiles**, the fixture 25,200.
+  >
+  > ⚠ **AND FROM BATCH MODE IT MUST BE `CityShot.RenderBuiltNoon`, NOT `RenderNoon`.**
+  > `VillageHost.ShowBuildings` defaults OFF, and `CityShot` builds `CityStreets`, `CityBuildings`,
+  > `CityFarm` and **`CityGreenery` only when it is true** — so `RenderNoon` headless photographs
+  > the survey PLAN: outlines on grey, no ground, no props, no reeds. `RenderBuiltNoon` exists for
+  > this and its own comment names it *"exactly the trap that hid the porch"*. It was walked into
+  > again on 2026-08-10, one render after the `Snapshot`/`CityShot` mix-up — **the same fault twice
+  > in an hour**, and the shape is always: the render succeeded, wrote its files, logged no error,
+  > and could not show the thing being verified.
+  >
+  > One thing the plan render IS good for, and it is where `BANK` was confirmed: `CityOutlines`
+  > draws the ponds from `features.txt` as **visibly curved, organic polygons**. Put that frame next
+  > to the ground's axis-aligned staircase and the disagreement is the whole finding in one picture.
 
   > ⚠ **STILL NOT VERIFIED BY EYE ON ROSSVILLE.** No render of the real town has been taken since
   > `6008587` landed. The view that would settle it is an eye-level shot at the **Field↔Grass
