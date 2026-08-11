@@ -930,6 +930,32 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Ad hoc
 
+- [ ] **`CityCollision` IS BUILT ONCE AND THE WALLS IT NEEDS ARE BUILT LAZILY, SO THE TOWN CAN END
+  UP WITH NO SURFACE AT ALL.** Caught in a live editor 2026-08-11, in the log, in this order:
+
+  ```
+  line 2265: [collision] 1 ground mesh, 24 bought-building boxes and 0 generated wall chunk(s)
+  line 2758: Walls: 10699 runs, 213,980 vertices, 342 chunk meshes.
+  ```
+
+  `VillageHost:626` calls `CityCollision.Build` once. `VillageMesh:83` registers `BuildMassing` —
+  which is `BuildWalls` + `RoofBuilder` + `Frontage` — as `Layers.RegisterLazy(Kind.Massing, …)`.
+  So with `Massing` off at build time, `SolidifyGeneratedWalls` searches for a `"Walls"` node that
+  does not exist yet, adds nothing, and **nothing re-runs it when the walls do appear.** The houses
+  are drawn and you walk through every one of them for the rest of the session.
+
+  It is audible — `[collision] no generated Walls node - the houses have no surface and the player
+  will walk through them` — and that is exactly the line `CityCollision`'s own docstring says
+  nobody read the first time.
+
+  **Two fixes, and the second is the one that would have prevented this.**
+  1. Re-run `SolidifyGeneratedWalls` from the lazy `Massing` build, or make collision lazy on the
+     same switch. A surface that depends on a layer being on is a surface that is sometimes absent.
+  2. **RENAME `Layers.Kind.Massing`.** It reads as a survey overlay next to `Plan`, `Footprints`
+     and `Labels`, and it is the opposite: it is the walls, roofs, doors and shopfronts — the built
+     town. It was switched off on 2026-08-10 by somebody who read the four names together and took
+     it for a diagram, which is how this was found. `Buildings` or `TheBuiltTown` says what it is.
+
 ## Roads
 
 - [x] ✅ **CLOSED 2026-08-11 BY RE-MEASUREMENT — the corridor is 10 m now, and it hits ONE building.**
