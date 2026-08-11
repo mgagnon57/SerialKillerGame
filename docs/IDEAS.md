@@ -932,7 +932,19 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Roads
 
-- [ ] **Chicago Street's 30 m corridor runs through 47 buildings** — measured against building
+- [x] ✅ **CLOSED 2026-08-11 BY RE-MEASUREMENT — the corridor is 10 m now, and it hits ONE building.**
+  `Content/roads.txt` declares `road chicago 10` with `easement 13.4`, not the 30 m this item was
+  written against. Sampled every 4 m along the authored centreline, across the full corridor width
+  at 1 m lateral steps, against all 824 footprints in `parcel-buildings.txt`:
+  | corridor | carriageway points on a building | distinct buildings |
+  |---|---|---|
+  | **10 m, as declared today** | **1 of 6,908** | **1** |
+  | 30 m, as this item assumed | 273 of 19,468 | 6 |
+  ⚠ **The old 47 does not reproduce even at 30 m** — I get 6. So the centreline moved as well as the
+  width, and the original figure cannot be checked against today's file. The number that matters is
+  the first row. *Original entry follows for its reasoning.*
+
+  **Chicago Street's 30 m corridor runs through 47 buildings** — measured against building
   footprints (not the county parcels, which include the right of way and tile through every
   street, so they judge nothing). 415 samples of carriageway sit on a building: the Opera House,
   the Rossville bank, the village office, the G.A.R. and I.O.O.F. halls, the grain office,
@@ -943,7 +955,28 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   in the 30 m width (lane counts, corridor coverage, `EvenWidthCentresOnTheDeclaredCoordinate`),
   not just their fixtures. Attempted 2026-08-03 and reverted rather than leave the suite red;
   it is a scoped job of its own. — *2026-08-03*
-- [ ] **The CSX line is drawn ~32 m off its own right-of-way, in town.** The owner confirmed the
+- [ ] **The CSX line is drawn ~32 m off its own right-of-way, in town.**
+  > ✅ **RE-MEASURED AND CONFIRMED 2026-08-11, HARDER THAN THE ORIGINAL.** Sampled every 8 m through
+  > the platted town (y 600–1500) against all 794 polygons in `parcels.txt`:
+  > **163 of 163 in-town rail samples — 100% — sit inside somebody's parcel.**
+  >
+  > **With the control that makes that number mean something.** `IDEAS` warns elsewhere that county
+  > parcels "include the right of way and tile through every street, so they judge nothing" — which
+  > would make 100% meaningless. It is not true of this file. The same measurement on road
+  > centrelines:
+  >
+  > | centreline | in-town samples inside a parcel |
+  > |---|---|
+  > | chicago | **0.0%** |
+  > | henderson | 4.2% |
+  > | attica | 12.6% |
+  > | **the rail** | **100.0%** |
+  >
+  > Parcels leave rights of way free, so a correctly-placed line sits in the gap and the rail never
+  > does. **This is the single largest unfixed geometry fault in the town** and it is worse than
+  > "32 m off": there is no in-town stretch where the rail is on public ground at all.
+
+  The owner confirmed the
   lots stop short of the track, and the parcel data shows it: through the platted town there is a
   consistent 18.5–25.5 m corridor (61–84 ft, a standard railroad ROW) lying about 32 m to one side
   of where `features.txt` puts the rail. Measured at (1294,1340) −35.3 m, (1277,1315) −34.6,
