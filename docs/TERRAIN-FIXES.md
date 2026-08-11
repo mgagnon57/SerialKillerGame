@@ -354,9 +354,9 @@ map read as a diagram.
   > `Species("Freshwater", "Cattail", "Water_Grass_Long")` picked the second one **by name, out of
   > the folder that looked right, without opening one.** `Water_Grass_Long` is SUBMERGED weed —
   > filed beside the waterlilies because that is what it grows among — and at native scale standing
-  > on a dry bank it is a three-metre black frond. Fixed to `Cattail` only in `6713fdf`. **A pack
-  > path that sounds right is not evidence**, and `docs/ASSETS.md` cannot tell you what a prefab
-  > looks like standing up.
+  > on a dry bank it is a three-metre black frond. Fixed to `Cattail` only in `6713fdf` **and
+  > re-rendered: the kelp is gone and the bank is clean cattail.** **A pack path that sounds right
+  > is not evidence**, and `docs/ASSETS.md` cannot tell you what a prefab looks like standing up.
   >
   > Still true: `Reed` inherits the `#if UNITY_EDITOR` gap every tree and bush has, so no shipped
   > player draws one until the cast manifest lands; and the reed COUNT is still unknown, because
