@@ -358,9 +358,13 @@ map read as a diagram.
   > re-rendered: the kelp is gone and the bank is clean cattail.** **A pack path that sounds right
   > is not evidence**, and `docs/ASSETS.md` cannot tell you what a prefab looks like standing up.
   >
+  > **ROSSVILLE GROWS 3,252 CATTAILS**, counted in the running game on 2026-08-10 — and **0
+  > `Water_Grass`**, so the kelp fix holds in play as well as in the still. The count had to be
+  > taken by walking the scene graph because **`CityGreenery`'s log buckets anything that is not a
+  > `Bush` as a tree**, so all 3,252 are hidden inside its `10585 trees` — worth one line to split.
+  >
   > Still true: `Reed` inherits the `#if UNITY_EDITOR` gap every tree and bush has, so no shipped
-  > player draws one until the cast manifest lands; and the reed COUNT is still unknown, because
-  > `CityGreenery`'s log buckets anything that is not a `Bush` as a tree — worth one line to split.
+  > player draws one until the cast manifest lands.
   > **Open ruling for the owner:** `Reed.BlocksSight` is **false**. Head-high cattail arguably
   > should block a witness's line of sight; that is a sim decision, not a rendering one.
 
