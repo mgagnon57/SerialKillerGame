@@ -67,11 +67,17 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **477 pass, 0 fail, 477 total, 7 skipped, 3 m 05 s.** Measured 2026-08-10 17:14, at the end of
-> the road pass. **Two other documents were stale within the same afternoon** — this file said 469
-> and `docs/ROAD-FIXES.md` had measured 473 — which is the failure THIS FILE WINS exists to stop.
-> The 7 skipped are the four Core `[Explicit]` printers, `PrintWalkableRegions`, and the two
-> `Aspiration` tests; a run reporting 0 skipped means somebody un-quarantined a diagnostic.
+> **486 pass, 0 fail, 486 total, 8 skipped, 2 m 01 s.** Measured 2026-08-11 15:05, at the end of
+> the walking pass. (477 on 2026-08-10 at the end of the road pass; **two other documents were
+> stale within the same afternoon** — this file said 469 and `docs/ROAD-FIXES.md` had measured 473
+> — which is the failure THIS FILE WINS exists to stop.)
+> The 8 skipped are the four Core `[Explicit]` printers, `PrintWalkableRegions`, the two
+> `Aspiration` tests, and `TrespassSearchCostDiagnostic`; a run reporting 0 skipped means somebody
+> un-quarantined a diagnostic.
+> (+9 for where people walk, and every one is a gate on a route that was legal and wrong rather
+> than on a crash: `NobodyWalksThroughYourYardTests` — a road cost 1.00 against a footpath's 1.05,
+> so the whole town walked down the middle of the carriageway, and no tile knew whose yard it was,
+> so cutting the corner won whenever going round was a third further.)
 > (469 earlier that day, 462 the day before; +4 `SurfaceTextureTests` — the texture estate reached this gate for the
 > first time — then +7 more, and every one of them is a GATE ON A SILENT FAULT rather than a new
 > feature's test: `AmenitiesAreNotHousesTests` (an amenity may not have the default house
@@ -184,7 +190,15 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> **BASELINE, 2026-08-10: 19 of 19 PASS, 1 skipped, 700 s.** (18 of 18 the day before.)
+> **BASELINE, 2026-08-11: 19 of 19 PASS, 0 fail, 1 skipped, 165 s.** The suite is FOUR TIMES
+> faster than the 700 s below and nothing was removed to do it: `Pathfinder.HardNodeCeiling` was
+> stale, one journey in five was refused at the node cap, and every refusal spent the whole
+> 100,000-node allowance before it could say so. `WhyAreThePeopleNotAnimating` busy-loops on
+> `Sim.Tick()`, so it was paying for all of it — **94.3 s now, against 292.9 s at this suite's
+> healthiest and a 900 s TIMEOUT the run before the fix.** See `HardNodeCeiling`'s own header.
+> **If this suite ever creeps back towards ten minutes, suspect the node cap before anything
+> else** — the walkable grid moving is what makes it stale, and it has happened twice.
+> (19 of 19 in 700 s on 2026-08-10; 18 of 18 the day before.)
 > **BASELINE, 2026-08-09: 18 of 18 PASS, 1 skipped, 744 s.** (17 of 17 and 16 of 16 earlier that day, 13 of 13
 > on 2026-08-08, 8 of 8 on 2026-08-07; TownGeometryPlayTests added three that can see where a
 > building STANDS, a fourth that can see whether the car outside a house is there today, a fifth
@@ -207,8 +221,11 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > and "the junction graph has not been rebuilt" — are both answered there with the measurements;
 > item by item it is `docs/ROAD-FIXES.md`.
 >
-> **THE RUN IS NOT ~4 MINUTES AND NEVER WAS.** Measured 371.6 s wall clock, of which
-> `WhyAreThePeopleNotAnimating` alone is **292.9 s** — 79% of the suite. Budget ten minutes.
+> **THE RUN IS 165 s AS OF 2026-08-11, and the ten minutes it used to take was a BUG.** It was
+> 371.6 s wall clock with `WhyAreThePeopleNotAnimating` alone at 292.9 s — 79% of the suite — and
+> that test is 94.3 s now with nothing changed in it. What it had been paying for was the stale
+> node cap above. Budget five minutes, and treat a return to ten as a regression to investigate
+> rather than a cost to plan around.
 >
 > **THE STARVING JUNCTION WAS FIXED BY THE COUNTY'S TRAFFIC COUNTS, NOT BY MOVING A GATE.**
 > `NoCarWaitsForeverAtTheHeadOfAClearQueue` swings **37.2 s to 21.9 s on an unchanged tree** with

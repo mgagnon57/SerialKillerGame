@@ -28,6 +28,15 @@ namespace Noir.Core.World
             // 2. roads and footpaths. Kept as well as painted: rasterising a road into terrain
             //    loses which corridor a tile belonged to and how wide it was, and streets,
             //    traffic and signals all need that back. See RoadNetwork.
+            // 2a. THE VERGES, ALL OF THEM, BEFORE ANY CARRIAGEWAY IS LAID.
+            //     Two passes and not one, because a verge is as wide as the easement and streets
+            //     cross: done in a single loop, Chicago's verge would be painted over Attica's
+            //     asphalt at the junction and people would path across the middle of a crossroads
+            //     as though it were a lawn. Every verge first, then every road on top, and the
+            //     carriageway always wins where they meet.
+            foreach (var run in layout.Roads)
+                if (run.Kind == Terrain.Road) StrokeVerge(grid, run);
+
             var lines = new List<RoadLine>();
             foreach (var run in layout.Roads)
             {
@@ -507,6 +516,53 @@ namespace Noir.Core.World
         /// Rasterise a polyline with thickness. Uses a simple stepped walk rather than Bresenham
         /// so that a road of even width lands symmetrically and corners fill in without gaps.
         /// </summary>
+        /// <summary>
+        /// The public ground either side of the carriageway, marked so people will walk on it.
+        ///
+        /// ONLY OVER PLAIN GRASS. The easement is a legal width, not a survey of what is standing
+        /// in it: it runs through ponds, yards, the churchyard and the rail bed alike, and a verge
+        /// that overwrote those would move water and re-terrain the town to make pedestrians
+        /// tidier. Anything already deliberate keeps what it has, and the tile is only claimed
+        /// where the map has nothing to say — which is exactly the mown strip beside the kerb.
+        ///
+        /// The carriageway is laid over this afterwards, so the middle comes back to road; what
+        /// survives is the ring around it. Roads with no easement recorded get no verge at all
+        /// rather than a guessed one.
+        /// </summary>
+        private static void StrokeVerge(TileGrid grid, RoadRun run)
+        {
+            if (run.Easement <= run.Width) return;
+
+            int half = (int)(run.Easement / 2f);
+            int extra = ((int)run.Easement) % 2 == 0 ? 0 : 1;
+
+            for (int seg = 0; seg + 1 < run.Points.Count; seg++)
+            {
+                Tile a = run.Points[seg];
+                Tile b = run.Points[seg + 1];
+
+                int dx = b.X - a.X, dy = b.Y - a.Y;
+                int steps = Math.Max(Math.Abs(dx), Math.Abs(dy));
+                if (steps == 0) steps = 1;
+
+                for (int s = 0; s <= steps; s++)
+                {
+                    int px = a.X + (dx * s + (dx >= 0 ? steps / 2 : -steps / 2)) / steps;
+                    int py = a.Y + (dy * s + (dy >= 0 ? steps / 2 : -steps / 2)) / steps;
+
+                    for (int oy = -half; oy < half + extra; oy++)
+                    for (int ox = -half; ox < half + extra; ox++)
+                    {
+                        int vx = px + ox, vy = py + oy;
+                        if (!grid.InBounds(vx, vy)) continue;
+                        if (grid.TerrainAt(vx, vy) != Terrain.Grass) continue;
+                        if (grid.FlagsAt(vx, vy) != TileFlags.Walkable) continue;
+                        grid.Set(vx, vy, Terrain.Grass, TileFlags.Walkable | TileFlags.Verge);
+                    }
+                }
+            }
+        }
+
         private static void StrokePolyline(TileGrid grid, RoadRun run)
         {
             var flags = TileGrid.FlagsFor(run.Kind);

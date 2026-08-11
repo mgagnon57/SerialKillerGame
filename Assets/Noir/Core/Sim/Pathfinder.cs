@@ -84,8 +84,41 @@ namespace Noir.Core.Sim
         /// successful journey was 19,418 nodes; at 1.15 it was 99,267 and a fifth of the town
         /// could not travel. Quoting a headroom figure from one weight while shipping another is
         /// how the 40,000 above came to be wrong.
+        ///
+        /// ---- RAISED 100,000 -> 300,000 ON 2026-08-11, AND THE GUARD WAS COSTING SIXTEEN TIMES
+        ///      WHAT IT SAVED ----
+        ///
+        /// Everything above was measured on 2026-08-04, when `Content/roads.txt` DID NOT EXIST.
+        /// That is the pre-survey town of city.txt's 37 ruled roads; 44 commits then rebuilt the
+        /// walkable grid under it - the surveyed 68-road network, the alleys reaching town, every
+        /// building reseated on its measured footprint, the doors recut. Nothing re-measured this
+        /// number against the town that came out, and the header's own rule says it must be.
+        ///
+        /// What the stale ceiling was doing, measured over two sim hours from 06:00:
+        ///
+        ///                        searches asked   found   gave up   sim cost
+        ///     ceiling 100,000              781     389       171    13,970 ms
+        ///     no ceiling at all            616     395         0     8,355 ms
+        ///
+        /// ONLY SEVEN JOURNEYS IN THE TOWN GENUINELY NEED MORE THAN 100,000 NODES, and the worst
+        /// of them needs 184,986. But a refused journey is retried on a backoff, and a capped
+        /// search spends the WHOLE allowance before it can report failure - so seven honest walks
+        /// became 171 refusals at 100,000 nodes each. Seventeen million nodes burnt to avoid
+        /// paying about one million. Lifting the guard made the simulation 40% FASTER, which is
+        /// the exact opposite of what a cost guard is for.
+        ///
+        /// Every one of the refused journeys was long - nearest 750 tiles, mean 1,194, and NOT
+        /// ONE under 200. The search was never unhealthy; short journeys all succeeded. What
+        /// they were mostly trying to reach is the old burial ground at 69,609, hard against the
+        /// west edge, which is the SAME place named four paragraphs above as the thing a mean
+        /// ceiling strands people from. It is half a mile from the town centre.
+        ///
+        /// 300,000 is 1.62x the observed worst of 184,986, near the 1.79x this number carried
+        /// when it was 100,000 against 56,015. Re-measure it the next time the walkable grid
+        /// moves - `[smoke] paths` prints the whole table now, and `NoJourneyIsRefusedThatCanBe
+        /// Walked` in SmokeTest fails the run if this drifts again.
         /// </summary>
-        public const int HardNodeCeiling = 100_000;
+        public const int HardNodeCeiling = 300_000;
 
         /// <summary>
         /// Deliberate overweighting of the heuristic, which trades route quality for search cost.
@@ -167,6 +200,31 @@ namespace Noir.Core.Sim
         private const float Diagonal = 1.41421356f;
 
         /// <summary>
+        /// What a step across a lot you have no business on is multiplied by. See the use site.
+        ///
+        /// 4.0 rather than a bar, and it is a DETOUR RATIO rather than a feeling: at 4x a walker
+        /// accepts the short-cut only when the lawful way round is more than four times the
+        /// distance. It stays a cost so that the pathfinder can never fail to find a route
+        /// because of it, which matters more here than the number does — a person who cannot
+        /// path stands still for ever and nothing in the log says why.
+        ///
+        /// MAKING THIS SMALLER MAKES THE SEARCH SLOWER, WHICH IS THE OPPOSITE OF THE GUESS.
+        /// Measured 2026-08-11 by TrespassSearchCostDiagnostic, 200 journeys over a gridded
+        /// synthetic town, against the same journeys with no lots stamped at all:
+        ///
+        ///     Trespass 2.0   3.26x nodes   1.86x time
+        ///     Trespass 4.0   2.35x nodes   1.39x time
+        ///     Trespass 8.0   2.24x nodes   1.36x time
+        ///
+        /// At 2.0 a yard is still cheap enough to be worth considering, so A* expands the yards
+        /// AND the roads before it settles; at 4.0 it writes the yards off on sight and follows
+        /// the road corridor, which is a far narrower search. The curve is flat past 4.0, so this
+        /// is the cheap end of it and lowering it to be "gentler" would cost speed and buy
+        /// nothing. Do not tune this number downwards without re-running that diagnostic.
+        /// </summary>
+        private const float Trespass = 4.0f;
+
+        /// <summary>
         /// Find a walkable path. On success `result` holds the tiles from just after `from`
         /// through `to` inclusive.
         /// </summary>
@@ -190,6 +248,18 @@ namespace Noir.Core.Sim
 
             int startIdx = _grid.Index(from);
             int goalIdx = _grid.Index(to);
+
+            // THE TWO LOTS THIS JOURNEY IS ENTITLED TO CROSS: the one it starts on and the one it
+            // ends on. Everything else somebody owns costs Trespass.
+            //
+            // Read off the ENDPOINTS rather than off the walker, and that is the whole reason
+            // this needs no new argument, no per-person plumbing and no change to Simulation. A
+            // person leaving home starts on their own lot; a person calling at a house ends on
+            // that one; a caller at the door of a house they do not live in is entitled to walk
+            // up the path, and is entitled to exactly that lot and no other. The rule falls out
+            // of the geometry instead of having to be maintained against it.
+            int freeLotA = _grid.LotAt(from);
+            int freeLotB = _grid.LotAt(to);
 
             Touch(startIdx);
             _gScore[startIdx] = 0f;
@@ -226,6 +296,17 @@ namespace Noir.Core.Sim
                     if (_closed[nIdx] && _stamp[nIdx] == _currentStamp) continue;
 
                     float step = (diagonal ? Diagonal : Straight) * _grid.MoveCost(nx, ny);
+
+                    // SOMEBODY ELSE'S YARD. Priced, not barred: a short-cut across a corner is a
+                    // thing people really do, and a hard block would strand anyone whose lot is
+                    // enclosed and send the rest on absurd detours. At Trespass a walker goes
+                    // round unless going round is more than about four times further, which is
+                    // rare on a gridded town and common in the one place it should be — the gap
+                    // between a back door and the alley behind it.
+                    int lot = _grid.LotAt(nx, ny);
+                    if (lot != TileGrid.NoLot && lot != freeLotA && lot != freeLotB)
+                        step *= Trespass;
+
                     float tentative = _gScore[current] + step;
 
                     if (_stamp[nIdx] != _currentStamp)

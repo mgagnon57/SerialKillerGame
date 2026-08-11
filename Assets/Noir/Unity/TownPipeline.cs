@@ -129,7 +129,23 @@ namespace Noir.Unity
 
             SurveyReport.Write();
 
-            return Finish(layout, seed, mapFile);
+            var built = Finish(layout, seed, mapFile);
+
+            // AND THEN PEOPLE HAVE SOMEWHERE TO WALK, AND EVERY YARD BELONGS TO SOMEBODY.
+            //
+            // After Finish and not inside it, because both write to the GRID - which does not
+            // exist until the world is built - and because BuildUnsurveyed must never get either:
+            // the parcel ids and the walk rulings are both the real town's.
+            //
+            // WALKS BEFORE LOTS, and the order is load-bearing the same way the passes above are.
+            // A sidewalk is laid Path|Verge and LotsFromSurvey leaves Verge alone, so running it
+            // first means the footway is already public when the parcels come to claim ground.
+            // The other way round, any lot whose polygon overhangs its own frontage would charge
+            // a walker trespass for using the pavement outside it.
+            WalksFromSurvey.Apply(built.World);
+            LotsFromSurvey.Apply(built.World);
+
+            return built;
         }
 
         /// <summary>

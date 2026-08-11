@@ -829,6 +829,34 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## People
 
+- [x] ~~One journey in five in Rossville failed at the node cap.~~ **DONE 2026-08-11 — the guard
+  was costing sixteen times what it saved, and lifting it made the simulation 40% FASTER.**
+  `Pathfinder.HardNodeCeiling` 100,000 → 300,000.
+
+  The ceiling was measured on 2026-08-04, when **`Content/roads.txt` did not exist** — the
+  pre-survey town of city.txt's 37 ruled roads, where the worst successful journey was 56,015
+  nodes and nothing ever reached the ceiling. Forty-four commits then rebuilt the walkable grid
+  under it (the surveyed 68-road network, alleys reaching town, every building reseated, doors
+  recut) and nothing re-measured the number, though the header's own rule says it must be.
+
+  |                    | asked | found | gave up | sim cost |
+  |---|---|---|---|---|
+  | ceiling 100,000    |   781 |   389 |     171 | 13,970 ms |
+  | no ceiling         |   616 |   395 |       0 |  8,355 ms |
+  | ceiling 300,000    |     — |     — |       — | see below |
+
+  **Only seven journeys in the town genuinely need more than 100,000 nodes**, worst 184,986. But
+  a refused journey retries on a backoff and a capped search spends the *whole* allowance before
+  it can report failure, so seven honest walks became 171 refusals at 100,000 nodes each — the
+  extra 165 searches in that table are the same handful of people asking again. Every refusal was
+  long: nearest 750 tiles, mean 1,194, **not one under 200**. Mostly they were walking to the old
+  burial ground at 69,609, half a mile west — the same place `Pathfinder`'s header already names
+  as what a mean ceiling strands people from. It has now happened twice.
+
+  **The lesson is the one this repo keeps relearning: the number was right for a town that no
+  longer existed.** `[smoke] paths` prints the whole table every run now, and the check is a hard
+  failure at 1%, so the third time will be caught by a machine.
+
 - [x] ~~The people are capsules.~~ DONE - `AgentBody`, 365 of them, bought and animated, and NO
   TWO ALIKE. The pack has about twenty figures in register for an ordinary town against a
   population of 365, so the variety is not in the prefabs: `Universal_A_Alb` is a labelled SWATCH

@@ -63,8 +63,55 @@ namespace Noir.Editor
                   + $"{people.WorkingCount} in work");
 
                 var sim = new Simulation(world, people, VillageHost.Seed, 6 * 60);
+                var ticked = System.Diagnostics.Stopwatch.StartNew();
                 sim.Tick(Noir.Core.Contracts.GameClock.TicksPerMinute * 120);
+                ticked.Stop();
                 Log($"sim        ran two hours, clock at {sim.Clock}");
+
+                // HOW THE SEARCH IS COPING, WITH ITS DENOMINATOR. Added 2026-08-11: pricing
+                // private ground made every journey dearer, and the one PlayMode test that
+                // busy-loops on Sim.Tick went from 293 s to a 900 s timeout. A gave-up count is
+                // unreadable alone - see Simulation.GaveUpTotal's own header - so it is printed
+                // beside what it succeeded at and beside the wall clock of the two hours, which
+                // is the number that actually moved.
+                long asked = sim.PathsFoundTotal + sim.GaveUpTotal + sim.NoRouteTotal;
+                Log($"paths      {sim.PathsFoundTotal:N0} found, {sim.GaveUpTotal:N0} gave up at the "
+                  + $"node cap, {sim.NoRouteTotal:N0} refused outright, of {asked:N0} asked "
+                  + $"— two sim hours in {ticked.ElapsedMilliseconds:N0} ms");
+
+                // WHICH journeys were abandoned, not just how many. A ceiling below what honest
+                // long walks need is arithmetic; a SHORT walk being abandoned is a broken search,
+                // and raising the ceiling would bury it. The two look identical in a count.
+                if (sim.GaveUpTotal > 0)
+                    Log($"gave up    nearest {sim.GaveUpNearest:N0} tiles, mean "
+                      + $"{sim.GaveUpMeanDistance:N0}, farthest {sim.GaveUpFarthest:N0}; "
+                      + $"{sim.GaveUpUnder200:N0} of them under 200 tiles. "
+                      + $"Shortest was ({sim.GaveUpShortestFrom.X},{sim.GaveUpShortestFrom.Y}) -> "
+                      + $"({sim.GaveUpShortestTo.X},{sim.GaveUpShortestTo.Y}). "
+                      + $"Worst SUCCESSFUL search {sim.WorstNodesFound:N0} nodes against a "
+                      + $"ceiling of {Noir.Core.Sim.Pathfinder.HardNodeCeiling:N0}.");
+                // NoJourneyIsRefusedThatCanBeWalked.
+                //
+                // A GIVE-UP IS A REACHABLE DESTINATION THE SEARCH REFUSED, so the honest target
+                // is zero and it measured zero the moment the ceiling was sized correctly. It is
+                // a hard failure and not a warning because it is now a real regression signal
+                // rather than a standing fault: on 2026-08-11 this read 171 of 781 against a
+                // stale 100,000 ceiling measured on the pre-survey town, and raising the ceiling
+                // to 300,000 took it to nothing.
+                //
+                // 1% and not 0, only because a search is allowed to be refused for being
+                // genuinely pathological - that is what the guard is for. Anything approaching
+                // this bar means the walkable grid has moved again and the ceiling needs
+                // re-measuring against it. See Pathfinder.HardNodeCeiling for how.
+                if (asked > 0 && sim.GaveUpTotal * 100 > asked)
+                {
+                    LogError($"paths: {sim.GaveUpTotal:N0} of {asked:N0} searches hit the node "
+                           + $"cap - over 1%. These are REACHABLE places people could not set off "
+                           + $"for. The worst search that DID succeed took {sim.WorstNodesFound:N0} "
+                           + $"nodes against a ceiling of {Noir.Core.Sim.Pathfinder.HardNodeCeiling:N0}"
+                           + " - if those are close, the ceiling is stale again.");
+                    failures++;
+                }
 
                 // EVERYTHING THE BROWSER MAP CAN SAY, THE GAME CAN HEAR.
                 //
