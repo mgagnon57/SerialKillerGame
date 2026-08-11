@@ -124,18 +124,43 @@ for w in (width, 30.0):
           % (w, n, len(pl), len(which)))
 
 # ---- 910: the CSX line against the parcels ---------------------------------
+#
+# ⚠ "IS THE RAIL INSIDE A PARCEL" IS THE WRONG QUESTION, AND ASKING IT COST A WRONG
+# FINDING ON 2026-08-11. features.txt's own header says why:
+#
+#   "A STREET right of way is a GAP in the parcels because nobody owns it; a RAILROAD
+#    right of way is a PARCEL, because the railroad bought it."
+#
+# So a correctly-placed railroad is inside a parcel 100% of the time, and comparing it
+# against ROAD centrelines - which should be inside 0% of the time - compares two things
+# with opposite correct answers. The real question is WHICH parcel: the county records
+# the railroad's own land as 779, 781 and 785.
+#
+# PARCEL IDS ARE 0-BASED. parcel-county.txt opens at `parcel 0`. Printing pi+1 is what
+# turned "779, 781, 785 - exactly right" into "780, 782, 786 - not the railroad's land".
+RAILROAD_OWNS = (779, 781, 785)
+
 print("\n=== IDEAS 910 - the CSX line ===")
-tot = 0; onlot = 0
+from collections import Counter
+c = Counter(); tot = 0; nowhere = 0
 for r in rails():
-    pl = [pt for pt, nrm in samples(r, 8.0)]
-    # in-town band only, as the item measured
-    pl = [p for p in pl if 600.0 <= p[1] <= 1500.0]
-    if not pl: continue
-    n, which = hits(pl, parcels, pidx)
-    tot += len(pl); onlot += n
-print("  in-town rail centreline samples (y 600-1500): %d" % tot)
-print("  samples sitting inside somebody's parcel:     %d (%.1f%%)"
-      % (onlot, 100.0 * onlot / max(tot, 1)))
+    for pt, nrm in samples(r, 8.0):
+        if not (600.0 <= pt[1] <= 1500.0): continue      # the platted town
+        tot += 1
+        got = []
+        for pi, b in pidx.items():
+            if pt[0] < b[0] or pt[0] > b[2] or pt[1] < b[1] or pt[1] > b[3]: continue
+            if inside(pt, parcels[pi]): got.append(pi)   # 0-based, as the county numbers them
+        if not got: nowhere += 1
+        for g in got: c[g] += 1
+
+own = sum(n for pid, n in c.items() if pid in RAILROAD_OWNS)
+print("  in-town rail samples: %d   (on no parcel at all: %d)" % (tot, nowhere))
+print("  on the railroad's OWN land (779/781/785): %d of %d (%.1f%%)  <- this is the number"
+      % (own, tot, 100.0 * own / max(tot, 1)))
+for pid, n in c.most_common(6):
+    print("     parcel %4d : %4d samples%s"
+          % (pid, n, "   (railroad)" if pid in RAILROAD_OWNS else "   <-- SOMEBODY ELSE'S"))
 
 # ---- CONTROL: do parcels tile through rights of way, or leave them free? ----
 # If they tile through everything, the rail figure above is meaningless. Measure a

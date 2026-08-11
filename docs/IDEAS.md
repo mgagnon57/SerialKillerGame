@@ -955,28 +955,33 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   in the 30 m width (lane counts, corridor coverage, `EvenWidthCentresOnTheDeclaredCoordinate`),
   not just their fixtures. Attempted 2026-08-03 and reverted rather than leave the suite red;
   it is a scoped job of its own. — *2026-08-03*
-- [ ] **The CSX line is drawn ~32 m off its own right-of-way, in town.**
-  > ✅ **RE-MEASURED AND CONFIRMED 2026-08-11, HARDER THAN THE ORIGINAL.** Sampled every 8 m through
-  > the platted town (y 600–1500) against all 794 polygons in `parcels.txt`:
-  > **163 of 163 in-town rail samples — 100% — sit inside somebody's parcel.**
-  >
-  > **With the control that makes that number mean something.** `IDEAS` warns elsewhere that county
-  > parcels "include the right of way and tile through every street, so they judge nothing" — which
-  > would make 100% meaningless. It is not true of this file. The same measurement on road
-  > centrelines:
-  >
-  > | centreline | in-town samples inside a parcel |
-  > |---|---|
-  > | chicago | **0.0%** |
-  > | henderson | 4.2% |
-  > | attica | 12.6% |
-  > | **the rail** | **100.0%** |
-  >
-  > Parcels leave rights of way free, so a correctly-placed line sits in the gap and the rail never
-  > does. **This is the single largest unfixed geometry fault in the town** and it is worse than
-  > "32 m off": there is no in-town stretch where the rail is on public ground at all.
+- [x] ✅ **CLOSED 2026-08-11 — THE RAIL WAS ALREADY FIXED, ON 2026-08-04.** `features.txt`'s own
+  header records it: *"CENTRED IN THE RIGHT OF WAY"*, as a resampled centreline rather than nudged
+  vertices, with the offset averaged over 150 m and smoothstepped over 350 m at each end so the
+  shape stayed right as well as the position — worst turn 4.7° against 17° before.
 
-  The owner confirmed the
+  Re-measured 2026-08-11, sampling every 8 m through the platted town (y 600–1500):
+  **157 of 163 in-town samples — 96.3% — sit on the railroad's OWN land, parcels 779, 781 and 785.**
+  Six clip parcel 40, which is ~48 m of a 2 km run and the only residual.
+
+  > ⚠ **THIS ITEM WAS FIRST "CONFIRMED, WORSE THAN WRITTEN" ON THE SAME DAY, AND THAT WAS WRONG.**
+  > The measurement asked *"is the rail inside somebody's parcel"*, got 100%, and was checked
+  > against road centrelines that came back 0–12.6% — which looked like a damning control and was
+  > not a control at all. `features.txt` says why, four lines above the coordinates:
+  >
+  > *"A STREET right of way is a GAP in the parcels because nobody owns it; a RAILROAD right of way
+  > is a PARCEL, because the railroad bought it."*
+  >
+  > Roads and railroads have **opposite correct answers**, so comparing them measures nothing. A
+  > correctly-placed railroad is inside a parcel 100% of the time. The real question is *which*
+  > parcel — and the answer had been right for a week.
+  >
+  > A second error hid the first: parcel ids are **0-based** (`parcel-county.txt` opens at
+  > `parcel 0`), and printing them 1-based turned "779, 781, 785 — exactly the railroad's land"
+  > into "780, 782, 786 — not the railroad's land". Both are fixed in
+  > `tools/measure-corridors.py`, which now asks the right question and says so in its own comment.
+
+  *Original entry follows.* The owner confirmed the
   lots stop short of the track, and the parcel data shows it: through the platted town there is a
   consistent 18.5–25.5 m corridor (61–84 ft, a standard railroad ROW) lying about 32 m to one side
   of where `features.txt` puts the rail. Measured at (1294,1340) −35.3 m, (1277,1315) −34.6,
