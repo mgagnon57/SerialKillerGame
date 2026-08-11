@@ -332,6 +332,11 @@ namespace Noir.Unity
         /// CityTraffic.CarsOutByHour.
         /// </summary>
         private CityTraffic _traffic;
+
+        /// <summary>The town's front doors, and the one thing that swings them.</summary>
+        private CityDoors _doors;
+
+        public CityDoors Doors => _doors;
         private AgentMeshView _agentView;
         private OrbitCamera _rig;
         private SunRig _lighting;
@@ -507,6 +512,13 @@ namespace Noir.Unity
             // tying it to the same flag meant the Generated massing switch had nothing behind it
             // and could never light a single house however many times it was clicked. What gets
             // built is the layer's decision now, and it is made lazily.
+            // BEFORE the massing, because the frontage registers its hinges as it draws them and
+            // the massing is built LAZILY - the first time the layer comes on, which may be now or
+            // may be twenty minutes into a session. A registry that arrived afterwards would take
+            // the doors of whichever build happened to be second.
+            _doors = CityDoors.Create(transform);
+            Frontage.Doors = _doors;
+
             _village = VillageMesh.Build(World, transform, showDressing: true);
             profile.Done("VillageMesh (ground, walls, roofs, frontage, furniture)");
 

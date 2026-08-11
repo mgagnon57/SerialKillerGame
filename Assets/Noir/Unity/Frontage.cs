@@ -45,6 +45,17 @@ namespace Noir.Unity
         /// <summary>Shutters clear the window panes, which SunRig stands 0.06 out from the wall.</summary>
         private const float ShutterProud = 0.09f;
 
+        /// <summary>
+        /// Where a door hangs its hinge, or null to build the town's doors shut and static.
+        ///
+        /// A static hand-off rather than a parameter, for the same reason `_shutters` above is
+        /// one: `Frontage.Build` is called from `VillageMesh.BuildMassing`, which is a lazy layer
+        /// callback with a fixed signature, and threading a registry through it would change the
+        /// shape of every builder on that switch. Null is the honest default - the offline
+        /// renderers build a frontage with nothing to swing it and should get shut doors.
+        /// </summary>
+        public static CityDoors Doors;
+
         public static void Build(WorldModel world, Transform parent)
         {
             if (world == null) return;
@@ -99,8 +110,15 @@ namespace Noir.Unity
                 }
             }
 
+            // GREPPABLE, because "the doors do not open" is invisible in every other count: the
+            // piece total is the same whether a leaf is hung on a hinge or nailed in the hole.
             Debug.Log($"Frontage: {doors} front doors, {signed} signs, "
                     + $"{shuttered} shuttered frontages, {pieces:N0} pieces.");
+            Debug.Log(Doors == null
+                ? $"[doors] no registry - all {doors} leaves are hung SHUT and static. Expected in "
+                + "the offline renderers, which have nothing to swing them."
+                : $"[doors] {Doors.Count} of {doors} leaves hung on a hinge. Houses swing in, "
+                + "shops swing out.");
         }
 
         // ---------- shutter state ----------
@@ -290,8 +308,48 @@ namespace Noir.Unity
             Piece(parent, "doorcase", f.On(DoorHeight * 0.5f + 0.03f, -0.05f),
                   f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone);
 
-            Piece(parent, "door", f.On((DoorHeight - 0.06f) * 0.5f, Proud - 0.06f),
-                  f.Size(DoorWidth, DoorHeight - 0.06f, 0.12f), DoorPaint(place, door));
+            // THE LEAF HANGS ON A HINGE NOW. It was a box in a hole for as long as this file has
+            // existed - see CityDoors, which swings it.
+            //
+            // The pivot is at one JAMB, not at the middle of the opening, because that is where a
+            // hinge is: the leaf is parented off to one side and turns about the post. Hung on the
+            // side nearer the low end of the frontage, so a row of storefronts all open the same
+            // way, which is what a built row looks like.
+            //
+            // A HOUSE SWINGS IN, A SHOP SWINGS OUT. American residential exterior doors open
+            // inward; commercial ones open outward because an exit may not be pushed against by a
+            // crowd. Both are on the same street in a village with a downtown row, and getting it
+            // backwards is the kind of thing that reads as wrong without being nameable.
+            float hingeAlong = f.FaceAlong - DoorWidth * 0.5f;
+            var hinge = new GameObject("hinge");
+            hinge.transform.SetParent(parent, false);
+            hinge.transform.position = f.At(hingeAlong, 0f, Proud - 0.06f);
+
+            var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leaf.name = "door";
+            leaf.transform.SetParent(hinge.transform, false);
+            Discard(leaf.GetComponent<Collider>());
+            var leafRenderer = leaf.GetComponent<MeshRenderer>();
+            leafRenderer.sharedMaterial = DoorPaint(place, door);
+            leafRenderer.shadowCastingMode = ShadowCastingMode.On;
+            leafRenderer.receiveShadows = true;
+
+            // Local, because the hinge is what turns: half a leaf along the wall from the post,
+            // and half a leaf up from the threshold.
+            bool alongX = Mathf.Abs(f.Along.x) > 0.5f;
+            float half = DoorWidth * 0.5f;
+            leaf.transform.localPosition = new Vector3(alongX ? half : 0f,
+                                                       (DoorHeight - 0.06f) * 0.5f,
+                                                       alongX ? 0f : half);
+            leaf.transform.localScale = f.Size(DoorWidth, DoorHeight - 0.06f, 0.12f);
+
+            // Which way is "in"? `Out` points away from the building, so a shop turns the leaf
+            // towards Out and a house away from it. The sign of the yaw follows the wall's own
+            // heading so both walls of a corner shop still open outward.
+            float shutYaw = hinge.transform.localEulerAngles.y;
+            float side = alongX ? Mathf.Sign(f.Out.z) : -Mathf.Sign(f.Out.x);
+            float swing = Commercial(place) ? 85f : -85f;
+            Doors?.Add(hinge.transform, shutYaw, shutYaw + swing * side);
 
             // Sunk a little below zero, because a road is worn 4cm down and a step that started
             // exactly at ground level floated over it.
@@ -350,6 +408,40 @@ namespace Noir.Unity
         /// are a closed set this file defines, kinds are an open set content can extend. Same
         /// distinction as RoofForm against PlaceKind in RoofBuilder.
         /// </summary>
+        /// <summary>
+        /// Does this building's front door swing OUT?
+        ///
+        /// The fire code is the whole of it: a door serving a place the public gathers in must
+        /// open in the direction of travel, because a crowd pressed against an inward door cannot
+        /// open it. A dwelling has no such rule and American houses hang their exterior doors to
+        /// open inward, which is the opposite of the British ones this project's first town was
+        /// built from.
+        ///
+        /// KEYED ON THE AUTHORED `frontage` COLUMN, for the reason <see cref="Sign"/> gives at
+        /// length: styles are a closed set this file defines, kinds are an open set content can
+        /// extend, and a kind authored purely in content would fall through a PlaceKind switch
+        /// without anybody noticing. `garage` is deliberately absent - a garage door is not a
+        /// leaf on a hinge and this file does not draw one.
+        /// </summary>
+        private static bool Commercial(Place place)
+        {
+            switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
+            {
+                case "tavern":
+                case "shop":
+                case "post":
+                case "church":
+                case "school":
+                case "clinic":
+                case "hall":
+                case "mill":
+                case "bank":
+                    return true;
+                default:
+                    return false;      // dwelling, apartment, farm, garage and anything new
+            }
+        }
+
         private static int Sign(Transform parent, Place place, Front f)
         {
             var board = BoardPaint(place);
