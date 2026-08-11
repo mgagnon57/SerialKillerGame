@@ -153,24 +153,73 @@ namespace Noir.Unity
         /// were never a car-owning household to begin with. That is why it is well under one, and
         /// why it no longer has to move when the city grows: the household count moves instead.
         ///
-        /// AND THE VALUE IS MEASURABLY WRONG - 0.25 WAS REASONED, NOT MEASURED. Everything above
-        /// is right about what this number MEANS and wrong about what it IS. IDOT counts Rossville's
-        /// streets by name: Route 1 at 5,200 AADT, Attica at 1,100, a side street at ~200. Total
-        /// vehicle-miles over average speed puts **~19 cars moving at an average instant and ~46 in
-        /// the peak hour** - against the **159** this constant produces from 624 households. One
-        /// household in thirty-three, not one in four.
+        /// IT IS A CURVE NOW, AND IT USED TO BE `CarsOutPerHousehold = 0.25f` - FLAT, ALL DAY.
+        /// That constant was reasoned rather than measured, and it produced 159 cars from 624
+        /// households: one household in four on the road at once, where IDOT's counts of
+        /// Rossville by name put **~19 moving at an average instant and ~46 in the peak hour**.
+        /// One in thirty-three. Eight times too many at the average, three and a half at the peak,
+        /// and flat when the real thing is a curve.
         ///
-        /// It is left at 0.25 pending the owner's call because dropping it is a visible change to
-        /// how the town feels, and because it should not land alone: at 19 cars the class weighting
-        /// (`AmbientTrafficWeight`, 4:1 where the county measures 21:1) would spread them evenly
-        /// over a network where 80% of the real movement is on two roads, and the town would read
-        /// as empty everywhere instead of quiet with a busy Route 1. It should also stop being a
-        /// constant - the real curve peaks when the town leaves for Hoopeston and Danville.
+        /// The docstring that held it at 0.25 gave two reasons to wait, and by 2026-08-10 only one
+        /// of them was still true:
         ///
-        /// This is also why junctions starve: see `church x maple` in docs/IDEAS.md. Full working
-        /// and the IDOT query in docs/research/TRAFFIC-COUNTS.md.
+        ///  - "the class weighting is 4:1 where the county measures 21:1, so a small fleet would
+        ///    spread evenly and the town would read as empty everywhere instead of quiet with a
+        ///    busy Route 1." **That landed.** `RoadClasses.AmbientTrafficWeight(RoadLine)` reads
+        ///    the county's own AADT, and the spawn pitch below asks it of the ROAD. So the cars
+        ///    that remain concentrate where the traffic really is, which is what makes a fleet
+        ///    this small survive being looked at.
+        ///  - "it should stop being a constant - the real curve peaks when the town leaves for
+        ///    Hoopeston and Danville." That is this.
+        ///
+        /// THE SHAPE IS THE COMMUTE. Rossville is a bedroom village on the Route 1 corridor
+        /// between Danville, fourteen miles south, and Hoopeston, eight miles north; 75% drive
+        /// alone and the mean travel time to work is 23.6 minutes. So the town empties at six and
+        /// seven, fills again at four and five, and does very little in between - which is a
+        /// different town at 07:00 from the one at 02:00, and neither of them is the flat 159.
+        ///
+        /// A TABLE, NOT A FORMULA, for the same reason `Daylight` embeds 365 entries: a curve you
+        /// can read and correct beats one you have to run to find out what it does. These are
+        /// absolute cars for the 624 households IDOT's counts were taken against, scaled linearly
+        /// off <see cref="WorldModel.DeclaredHouseholds"/> so the number still moves when the town
+        /// does. Sums to 464 over 24 hours - a mean of 19.3, against the measured 19.3.
+        ///
+        /// Full working and the IDOT query in docs/research/TRAFFIC-COUNTS.md.
         /// </summary>
-        public static float CarsOutPerHousehold = 0.25f;
+        private static readonly int[] CarsOutByHour =
+        {
+            //  00  01  02  03  04  05
+                 3,  2,  2,  3,  5, 12,
+            //  06  07  08  09  10  11     06-07: out to Hoopeston and Danville
+                32, 46, 34, 22, 19, 20,
+            //  12  13  14  15  16  17     15: school out. 16-17: the shift home
+                24, 20, 19, 26, 38, 46,
+            //  18  19  20  21  22  23
+                34, 22, 15, 10,  6,  4,
+        };
+
+        /// <summary>The household count IDOT's figures were measured against.</summary>
+        private const int MeasuredHouseholds = 624;
+
+        /// <summary>How many vehicles should be moving at this minute of the day.</summary>
+        public static int CarsOutAt(int minuteOfDay, int households)
+        {
+            int hour = Mathf.Clamp(minuteOfDay / 60, 0, 23);
+            float scale = households / (float)MeasuredHouseholds;
+            return Mathf.Max(1, Mathf.RoundToInt(CarsOutByHour[hour] * scale));
+        }
+
+        /// <summary>
+        /// The fleet actually instantiated: the busiest hour, because a car is built once and then
+        /// parked in the garage for the hours it is not wanted. Spawning and destroying on the hour
+        /// would mean `PrefabUtility.InstantiatePrefab` on the main thread twice a day per car.
+        /// </summary>
+        public static int PeakCarsOut(int households)
+        {
+            int peak = 0;
+            foreach (int n in CarsOutByHour) if (n > peak) peak = n;
+            return Mathf.Max(1, Mathf.RoundToInt(peak * (households / (float)MeasuredHouseholds)));
+        }
 
         private sealed class Mover
         {
@@ -244,6 +293,69 @@ namespace Noir.Unity
         }
 
         private readonly List<Mover> _movers = new List<Mover>();
+
+        /// <summary>
+        /// Vehicles that exist but are not out at this hour.
+        ///
+        /// A SECOND LIST RATHER THAN A FLAG ON `Mover`, and that is the whole design. Eight loops
+        /// in this file walk `_movers` to decide who is following whom, who has room to pull out
+        /// and who is about to be driven into - `RoomAt`, `Ahead`, the junction checks. A flag
+        /// would need a guard in every one of them and would be wrong the first time somebody
+        /// added a ninth. Keeping `_movers` as exactly "the cars on the road right now" means all
+        /// eight are correct without being touched.
+        /// </summary>
+        private readonly List<Mover> _garage = new List<Mover>();
+
+        private int _households;
+        private int _retimedAt = -1;
+
+        /// <summary>How many are out, and how many are put away. Instrumentation.</summary>
+        public string Fleet => $"{_movers.Count} out, {_garage.Count} garaged";
+
+        /// <summary>
+        /// Match the fleet to the hour. Cheap and idempotent within a minute, so it is safe to
+        /// call every frame; it does its work only when the clock actually moves.
+        ///
+        /// NOT called from Update. The per-frame loop indexes `_movers` by position, and both
+        /// ends of this method change that list - see the `for (int i = 0; i < _movers.Count; i++)`
+        /// walk, which would step over a car or off the end. VillageHost drives it, the same way
+        /// it already drives the driveways off `Sim.Clock.MinuteOfDay`.
+        /// </summary>
+        public void Retime(int minuteOfDay)
+        {
+            if (minuteOfDay == _retimedAt) return;
+            _retimedAt = minuteOfDay;
+
+            int want = CarsOutAt(minuteOfDay, _households);
+
+            while (_movers.Count > want && _movers.Count > 0)
+            {
+                // From the END, because the front of the list is the oldest and most likely to be
+                // mid-junction. A car vanishing out of a turn is the one removal somebody watching
+                // would actually catch.
+                var put = _movers[_movers.Count - 1];
+                _movers.RemoveAt(_movers.Count - 1);
+                if (put.What != null) put.What.gameObject.SetActive(false);
+                _garage.Add(put);
+            }
+
+            while (_movers.Count < want && _garage.Count > 0)
+            {
+                var out_ = _garage[_garage.Count - 1];
+                _garage.RemoveAt(_garage.Count - 1);
+                if (out_.What == null) continue;
+
+                // Added BEFORE Reintroduce, which is what makes RoomAt able to skip it: that guard
+                // is `other == me`, and a car not yet in the list is not `me` to anybody.
+                _movers.Add(out_);
+                out_.What.gameObject.SetActive(true);
+                out_.Turn = -1;
+                out_.Waited = 0f;
+                out_.Held = 0f;
+                Reintroduce(out_);
+                Seat(out_);
+            }
+        }
         private CitySignals _signals;
         private WorldModel _world;
 
@@ -577,7 +689,12 @@ namespace Noir.Unity
             foreach (RoadClass klass in System.Enum.GetValues(typeof(RoadClass)))
                 fleets[klass] = Everyday(klass);
 
-            int budget = Mathf.Clamp(Mathf.RoundToInt(world.DeclaredHouseholds * CarsOutPerHousehold),
+            // THE PEAK, NOT THE HOUR THE TOWN HAPPENS TO BE BUILT AT. Every vehicle the day will
+            // ever need is instantiated once here and then garaged; Retime moves them in and out
+            // as the clock passes. Building only what noon wants would mean instantiating prefabs
+            // at 06:00 on the main thread, which is the one time of day the frame is already busy.
+            _households = world.DeclaredHouseholds;
+            int budget = Mathf.Clamp(PeakCarsOut(_households),
                                      Mathf.Min(6, Graph.Segments.Count),
                                      Graph.Segments.Count);
 
@@ -676,6 +793,10 @@ namespace Noir.Unity
             var byClass = new List<string>();
             foreach (var pair in counted)
                 byClass.Add($"{pair.Value} on {pair.Key.ToString().ToLowerInvariant()}");
+
+            Debug.Log($"[traffic] fleet built at the PEAK hour: {_movers.Count} vehicles for "
+                    + $"{_households} households. IDOT measures ~19 moving at an average instant "
+                    + $"and ~46 at peak; Retime holds it to the hour from there.");
 
             Debug.Log($"[traffic] {_movers.Count} vehicles on {Graph.Segments.Count} lane segments "
                     + $"({string.Join(", ", byClass)}), drawn from fleets of "

@@ -356,7 +356,18 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   were probed: the rest were not wired or not on in that configuration, so Trees, Buildings,
   Districts, Houses, Streets, Lamps, Powerlines, Farm and Massing are UNMEASURED, not cheap.
 
-- [ ] **THE FLEET IS EIGHT TIMES TOO BIG, AND IT IS WHY THE JUNCTIONS STARVE.** Measured against
+- [x] ✅ **DONE 2026-08-10 — THE FLEET IS A CURVE.** `CityTraffic.CarsOutByHour`, a 24-entry table
+  summing to a mean of **19.3** against IDOT's measured 19.3, peaking at **46** at 07:00 and 17:00.
+  Built once at the peak and garaged; `CityTraffic.Retime` holds it to `Sim.Clock.MinuteOfDay` from
+  `VillageHost.Update`. The second half of this item — the class weighting — **had already landed**:
+  `AmbientTrafficWeight(RoadLine)` reads the county's AADT and `CityTraffic` calls that overload, so
+  the "do not cut the fleet until the weighting is fixed" caveat below was stale when it was read.
+  ⚠ **The PlayMode gate has NOT been run against this**, and the noon-start trap named below is now
+  live: the sim opens at 24 cars where it used to open at 159.
+
+  *Original entry, kept for the measurement:*
+
+  **THE FLEET IS EIGHT TIMES TOO BIG, AND IT IS WHY THE JUNCTIONS STARVE.** Measured against
   IDOT's own counts, 2026-08-08 — full working in `docs/research/TRAFFIC-COUNTS.md`.
 
   `CityTraffic.CarsOutPerHousehold = 0.25` puts **159 cars** on the street against 624 households,

@@ -325,6 +325,13 @@ namespace Noir.Unity
         /// see the difference between a car leaving at 06:20 and one leaving at 06:20:59.
         /// </summary>
         private int _drivewaysAt = -1;
+
+        /// <summary>
+        /// The moving fleet, kept so Update can hold it to the clock. `CityTraffic.Create`'s result
+        /// was a local, which was fine while the fleet was a constant and is not now - see
+        /// CityTraffic.CarsOutByHour.
+        /// </summary>
+        private CityTraffic _traffic;
         private AgentMeshView _agentView;
         private OrbitCamera _rig;
         private SunRig _lighting;
@@ -753,6 +760,7 @@ namespace Noir.Unity
             signals = CitySignals.Create(World, transform);
             profile.Done("CitySignals");
             traffic = CityTraffic.Create(World, transform, signals);
+            _traffic = traffic;
             profile.Done("CityTraffic");
 
             // THE OTHER 98% OF THE TOWN'S CARS, WHICH ARE NOT GOING ANYWHERE.
@@ -1214,6 +1222,12 @@ namespace Noir.Unity
                 _drivewaysAt = Sim.Clock.MinuteOfDay;
                 _driveways.Refresh(Sim);
             }
+
+            // And the same clock decides how many are actually MOVING. The fleet is built once at
+            // the peak hour and garaged; this is what holds it to IDOT's curve - ~19 cars at an
+            // average instant, ~46 at the commute - instead of the flat 159 it ran for months.
+            // Retime is idempotent within a minute, so calling it every frame costs a compare.
+            if (_traffic != null) _traffic.Retime(Sim.Clock.MinuteOfDay);
 
             // Drain a queued skip first, a frame's worth at a time.
             if (_skipTicksRemaining > 0)

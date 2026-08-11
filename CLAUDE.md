@@ -220,11 +220,24 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > says they are not there. See `docs/research/TRAFFIC-COUNTS.md`; the junction-by-junction tail is
 > in `docs/IDEAS.md`.
 >
-> **The fleet is still eight times too big and that is still open.** IDOT puts ~19 vehicles moving
-> at an average instant and ~46 at peak; `CarsOutPerHousehold = 0.25` runs 159, flat, all day. The
-> curve is scoped in `docs/IDEAS.md` **including the trap**: the sim starts at noon, which is
-> off-peak, so an honest curve gives every PlayMode test a town with ~19 cars in it and the signals
-> test may have nothing to watch. That is a test-design problem, not a reason to inflate the town.
+> **THE FLEET IS A CURVE NOW, 2026-08-10. It was eight times too big for months.**
+> `CarsOutPerHousehold = 0.25` ran **159 cars flat, all day**, against IDOT's ~19 moving at an
+> average instant and ~46 at peak. It is `CityTraffic.CarsOutByHour` — a 24-entry table, absolute
+> cars for the 624 households the counts were taken against, scaled off `DeclaredHouseholds`. It
+> sums to 464, a mean of **19.3** against the measured 19.3, and peaks at **46** at 07:00 and
+> 17:00, which is when Rossville leaves for Hoopeston and Danville and comes back.
+>
+> The fleet is instantiated ONCE at the peak and **garaged**: `CityTraffic.Retime`, driven from
+> `VillageHost.Update` off `Sim.Clock.MinuteOfDay` beside the driveways, moves vehicles between
+> `_movers` and `_garage`. **`_movers` is a second list rather than a flag** because eight loops in
+> that file walk it to decide who is following whom — keeping it as exactly "the cars out right
+> now" leaves all eight correct untouched.
+>
+> ⚠ **THE TRAP IS NOW LIVE AND UNMEASURED: the sim starts at NOON, which the table puts at 24
+> cars.** Every PlayMode test now gets a near-empty town where it used to get 159, and
+> `NoCarWaitsForeverAtTheHeadOfAClearQueue` may have nothing to watch. **The PlayMode gate has not
+> been run against this.** That is a test-design problem — the fix is for a test that needs traffic
+> to set the hour — and it is not a reason to inflate the town.
 >
 > **The cycle is 36.0 s, not 37.** `TrafficPlayTests` carried `const float Cycle = 37f` under a
 > comment saying it was "CitySignals' own cycle length" for months. It is 14 s green + 3 s amber +
