@@ -310,14 +310,35 @@ map read as a diagram.
   > `6008587` landed. The view that would settle it is an eye-level shot at the **Field↔Grass
   > town-edge boundary** — the longest edge on the map — from `CityShot`, ideally twice with
   > `GroundBlend.Enabled` true and false. Until then, 19,280 is a log line, not a verdict.
-- **`BANK-1`** — **shelve the bank instead of walling it.** The 35 cm step is drawn as one vertical
-  face; a real pond bank slopes. Chamfer the riser over a tile, or drop the shoreline tile's outer
-  corners toward the water. Cheapest of the three, touches only `VillageMesh`'s riser pass, and
-  changes no tile's terrain — so walkability and `BlocksSight` are untouched by construction.
-- **`BANK-2`** — **plant the edge.** Reeds, scrub and bank growth along the water boundary. This is
-  what an Illinois farm pond actually looks like, and vegetation hides a staircase better than
-  geometry does. Wants the SpeedTree-under-1 m rule in `Combinable` (see `CLAUDE.md`) so the tufts
-  are not baked flat.
+- **`BANK-1`** — **shelve the bank instead of walling it.**
+  > ⚠ **THIS WAS SCOPED AS "cheapest of the three, touches only `VillageMesh`'s riser pass" AND
+  > THAT IS WRONG.** Measured against the mesher on 2026-08-10, before building it:
+  >
+  > - **A riser is vertical by construction.** `VillageMesh.cs:936-939` emits four verts on ONE
+  >   (x,z) footprint — two at `low`, two at `high`. Sloping it means moving geometry in x/z.
+  > - **`AssertFootprint` fails when geometry leaves its chunk**, and the riser pass's own comment
+  >   warns why it must not: a riser filed one chunk out is *"a strip of river bank that goes
+  >   missing from precisely the angles the riser exists to cover."* A shore tile on a chunk
+  >   boundary would trip it.
+  > - **The other route breaks the merge.** `flatGrid` is ONE float per tile, added uniformly to
+  >   all four corners, and the greedy run-merge depends on that. Per-corner terrain offsets are an
+  >   architectural change to the ground mesher.
+  >
+  > So this is a **large** item, not a cheap one. Do `BANK-2` and look at the water before deciding
+  > whether the geometry is still worth touching.
+- ✅ **`BANK-2` — LANDED 2026-08-10, commit `b253163`.** `PropKind.Reed`, scattered in Core by
+  `PropGenerator.NextToWater` and drawn by `CityGreenery` from `Nature/Freshwater/Cattail_*` and
+  `Water_Grass_Long_*`. Two shore tiles in three. **`NextToWater` is four-neighbour and not eight
+  on purpose** — the water is a raster of axis-aligned rectangles, so a diagonal neighbour is a
+  staircase CORNER, and counting it plants a reed on the outside of every step and draws the
+  staircase in cattail instead of hiding it. No tile's terrain is touched, so walkability and
+  `BlocksSight` are untouched by construction.
+  > **NOT YET COUNTED OR LOOKED AT.** Nothing has rebuilt the town since it landed, so how many
+  > reeds Rossville actually grows is unknown, and whether a planted bank reads as a pond is the
+  > question `BANK-1` waits on. `Reed` also inherits the `#if UNITY_EDITOR` gap every tree and bush
+  > has: no shipped player draws one until the cast manifest lands.
+  > **Open ruling for the owner:** `Reed.BlocksSight` is **false**. Head-high cattail arguably
+  > should block a witness's line of sight; that is a sim decision, not a rendering one.
 - **`BANK-3`** — **draw the shoreline from `features.txt`, not from the tile boundary.** The honest
   fix: the grid stays authoritative for walkability and sight at one metre, but the visible edge
   follows the surveyed polygon the plan view already draws. Largest of the three and the only one
