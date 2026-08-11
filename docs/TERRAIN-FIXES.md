@@ -107,6 +107,33 @@ earth against turf, with a seam you could cut yourself on.
 with a slope map painted over it would be exactly the 'debug colour' look this stream exists to
 avoid."* The slope test is careful. The **edges** are what make it read as a debug overlay.
 
+### `BANK` — every shoreline in Rossville is a 35 cm wall following a staircase
+
+**Found by looking at `city-block.png` on 2026-08-10**, after `BLEND` landed. With the parcel
+patches quietened, the hard edges left in the frame are the two ponds on the west side, and they
+are the most visible straight lines on the ground now.
+
+The cause is a rasterisation, and it is three steps with nothing wrong at any one of them:
+
+1. `Content/features.txt` carries the **real** North Fork Vermilion and the real school ponds —
+   surveyed OpenStreetMap polygons, with curves.
+2. `tools/relay-rossville.py` rasterises those polygons into `city.txt` as **1,009 axis-aligned
+   `terrain water` rectangles** on the one-metre grid (44,866 tiles, 44,073 surviving into the
+   world; the difference is road crossings correctly overwriting it).
+3. `VillageMesh` seats water at **−0.35 m** and closes the bank with a **riser** at every
+   terrain-type boundary — a vertical face, in the submesh of the higher surface.
+
+So the shoreline the game draws is a 35 cm vertical wall following an axis-aligned staircase,
+while `CityOutlines` draws the true curve from the same `features.txt` into the plan view. **The
+plan and the ground disagree about the shape of the water**, and the plan is the one that is right.
+
+> ⚠ **DO NOT FIX THIS BY MOVING WATER TILES, and `GroundBlend` must not be pointed at it.** The
+> tile grid is what `BlocksSight` and walkability read, and the real-water commit `b9c1271` is
+> explicit that build order — terrain, then roads, then place ground — is what makes the four real
+> road crossings free. Wandering the water boundary the way the grass now wanders would put open
+> water under the path across the school field, which is the exact bug that commit fixed.
+> `GroundBlend.Soft` admits Grass, Field and Rough only, and that guard is load-bearing.
+
 ### `ONE` — three separate places decide what one lot's surface is
 
 `GroundZoning.cs` says so in its own comment, at the point of decision:
@@ -249,13 +276,29 @@ map read as a diagram.
 > `CityFarm` tiles `Wheat_*_Square_1x1m` prefabs across every `cornfield` place. A field of ripe
 > wheat with a straight edge is what Illinois looks like — do not "fix" it.
 
-- **`BLEND-1`** — a transition where two ground looks meet: a blend band, a broken edge, or noise on
-  the boundary. Cheapest honest version first, measured by looking at it. **The Field↔Grass boundary
-  is the one that matters most** — it is the town-edge boundary and the longest edge on the map.
-- **`BLEND-2`** — the parcel-shaped patches specifically. The count is small and now FIXED at
-  **16 Agricultural lots**: `Vacant` was ruled to grass on 2026-08-09 and `SEEN-3` was ruled the
-  other way on 2026-08-10, so all 16 stay ploughed and every one of them needs its edge dealt
-  with. There is no longer a cheaper answer available upstream.
+- ✅ **`BLEND-1` and `BLEND-2` — LANDED 2026-08-10, commit `6008587`.** `GroundBlend` asks the
+  survey's question a few metres away instead of at the tile itself, so a soft-to-soft boundary
+  wanders instead of following the ruled line. Measured on the full town: **624 tiles took a
+  neighbouring surface**, and the tile, vertex and draw-call counts are all unchanged, which is why
+  it prints its own `[blend]` line — nothing else in the ground's output moves.
+  > ⚠ **NOT YET VERIFIED BY EYE, and the two frames that exist cannot do it.** `farm-country` and
+  > `city-block` are aerial and hazy; the treatment is on a one-metre grid. The view that would
+  > settle it is an eye-level shot at the **Field↔Grass town-edge boundary** — the longest edge on
+  > the map — ideally rendered twice with `GroundBlend.Enabled` true and false. Until somebody has
+  > done that, "624 tiles moved" is a log line, not a verdict.
+- **`BANK-1`** — **shelve the bank instead of walling it.** The 35 cm step is drawn as one vertical
+  face; a real pond bank slopes. Chamfer the riser over a tile, or drop the shoreline tile's outer
+  corners toward the water. Cheapest of the three, touches only `VillageMesh`'s riser pass, and
+  changes no tile's terrain — so walkability and `BlocksSight` are untouched by construction.
+- **`BANK-2`** — **plant the edge.** Reeds, scrub and bank growth along the water boundary. This is
+  what an Illinois farm pond actually looks like, and vegetation hides a staircase better than
+  geometry does. Wants the SpeedTree-under-1 m rule in `Combinable` (see `CLAUDE.md`) so the tufts
+  are not baked flat.
+- **`BANK-3`** — **draw the shoreline from `features.txt`, not from the tile boundary.** The honest
+  fix: the grid stays authoritative for walkability and sight at one metre, but the visible edge
+  follows the surveyed polygon the plan view already draws. Largest of the three and the only one
+  that needs the mesher to know about a non-grid shape. **Do `BANK-1` and `BANK-2` first and look
+  at it** — if a shelved, planted bank reads as a pond, this is not worth building.
 - **`ONE-1`** — collapse `GroundZoning.ZoningAt`, `VillageMesh.ZoningMask` and
   `ZoningPatch.ZoningOf` to one home, with a Core gate that fails when a fourth appears. Same shape
   as `TEST-FIXES` `KEY-1`; copy `EveryActivityHasARowInTheRealFile`.
