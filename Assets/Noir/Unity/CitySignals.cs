@@ -365,6 +365,19 @@ namespace Noir.Unity
                         float hx = j.X + travel.x * beyond + kerb.x * side;
                         float hy = j.Y + travel.y * beyond + kerb.y * side;
 
+                        // AND THEN ACTUALLY ON THE KERB. `side` is j.Reach - 2.5, a guess in
+                        // metres that never knew how wide the carriageway beneath it was, so at
+                        // Chicago x Attica - the town centre, and the one junction anybody looks
+                        // at - THREE OF THE FOUR MASTS STOOD IN THE ROAD. Stepping out to the
+                        // nearest tile that is not carriageway only ever pushes the mast further
+                        // from the centre line, so the arm still reaches back over the junction
+                        // exactly as the comment above requires.
+                        // Tile indices out, and back to the tile's CENTRE - Mount places the
+                        // mast at (vx, -vy) with no half-tile of its own, so handing it a corner
+                        // would stand the post on the tile boundary.
+                        if (Kerb.TryStepOff(world, hx, hy, out int kx, out int ky))
+                        { hx = kx + 0.5f; hy = ky + 0.5f; }
+
                         var head = Mount(post, lensMaterial, hx, hy, travel, northSouth);
                         if (head != null) { node.Heads.Add(head); heads++; }
                     }
@@ -377,10 +390,28 @@ namespace Noir.Unity
             // taken of the city shows four junctions of blank white bulbs.
             Refresh();
 
+            // WHERE THE MASTS ARE ACTUALLY STANDING, counted every build.
+            //
+            // There is no test that can see this: the PlayMode gate builds the SURVEY PLAN, and
+            // CityUnderTest's own log says a green run "has never seen the streets, the parking
+            // or the signs". A test asserting on masts would find none and pass, which is worse
+            // than no test. So it is a greppable line instead, like [lots] and [walks] - and the
+            // healthy value is 0. On 2026-08-11 it was THREE OF FOUR at Chicago x Attica, the
+            // town centre, which the owner saw immediately by looking at it and no gate ever did.
+            int inRoad = 0;
+            foreach (Transform child in transform)
+            {
+                var t = Space3D.TileAt(child.position);
+                if (world.Grid.InBounds(t.X, t.Y)
+                    && (world.Grid.FlagsAt(t.X, t.Y) & TileFlags.Road) != 0) inRoad++;
+            }
+
             Debug.Log($"[signals] {_nodes.Count} junctions: {signalised} signalised in the town "
                     + $"({heads} heads), {_nodes.Count - signalised} on priority out in the "
                     + $"country. {Green:0}s green / {Amber:0}s amber / {AllRed:0.0}s all-red "
-                    + $"({Cycle:0.0}s cycle), all in step.");
+                    + $"({Cycle:0.0}s cycle), all in step. "
+                    + (inRoad == 0 ? "Every mast is on the kerb."
+                                   : $"*** {inRoad} MAST(S) STANDING IN THE CARRIAGEWAY ***"));
         }
 
         /// <summary>

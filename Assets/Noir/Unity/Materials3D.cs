@@ -248,7 +248,20 @@ namespace Noir.Unity
 
             // Churchyard keeps its own green - see GrassEverywhere. It is already grass, four
             // levels lighter off the same sheet, and that distinction costs nothing to keep.
-            if (GrassEverywhere && IsOutdoorGround(t) && t != Terrain.Churchyard)
+            //
+            // AND PATH IS NOT GROUND COVER, ADDED 2026-08-11. GrassEverywhere was asked for to
+            // stop the countryside drawing as dirt and stubble, and it swept up Terrain.Path with
+            // the rest - but a path is the one outdoor kind that is a MADE SURFACE rather than
+            // something growing. Downtown Rossville is authored as one large `terrain path` patch
+            // in city.txt, so this turfed the whole town centre: measured at the Chicago x Attica
+            // crossing, every non-carriageway tile for forty metres in each direction is Path, and
+            // all of it was drawing as lawn. The owner asked for the town centre to look half way
+            // decent and this is most of why it did not - a main street with no pavement on it.
+            //
+            // The verge either side of a country road is still grass, because a verge is grass;
+            // it is TileFlags.Verge over Terrain.Grass and never comes through here as Path.
+            if (GrassEverywhere && IsOutdoorGround(t)
+                && t != Terrain.Churchyard && t != Terrain.Path)
             {
                 // Field takes the coarser tile for the reason Pasture does: it is laid over whole
                 // parcels, and grass at the garden tiling shows its repeat as corduroy across

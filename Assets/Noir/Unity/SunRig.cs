@@ -331,7 +331,9 @@ namespace Noir.Unity
 
             Debug.Log($"[sunrig] windows {windows} ms, street lamps {lamps} ms "
                     + $"(scan {_lampScanMs} ms, instantiate {_lampMakeMs} ms, "
-                    + $"measure {_lampMeasureMs} ms)");
+                    + $"measure {_lampMeasureMs} ms). "
+                    + (_lampsInRoad == 0 ? "Every lamp is on the kerb."
+                                         : $"*** {_lampsInRoad} LAMP(S) IN THE CARRIAGEWAY ***"));
             return fixtures;
         }
 
@@ -479,7 +481,7 @@ namespace Noir.Unity
         {
             const float spacing = 13f;
             var placed = new List<Vector2>();
-            _lampScanMs = _lampMakeMs = _lampMeasureMs = 0;
+            _lampScanMs = _lampMakeMs = _lampMeasureMs = _lampsInRoad = 0;
             var stage = System.Diagnostics.Stopwatch.StartNew();
 
             for (int y = 0; y < world.Height; y++)
@@ -521,7 +523,15 @@ namespace Noir.Unity
 
                 _lampScanMs += stage.ElapsedMilliseconds; stage.Restart();
 
-                var ground = Space3D.ToWorld(new Tile(x, y));
+                // AND THEN OFF THE ASPHALT. The scan above deliberately walks ROAD tiles - that
+                // is how spacing along a street is measured, and it must stay that way - so the
+                // tile it settles on is the outermost lane of the carriageway, not the kerb
+                // beside it. NextToVerge only ever asked whether the kerb was ADJACENT. Measured
+                // at Chicago x Attica before this line existed: eleven of eighteen lamp posts
+                // were standing in the road. Spacing and facing are still taken from (x,y).
+                Kerb.TryStepOff(world, x, y, out int lx, out int ly);
+                if ((world.Grid.FlagsAt(lx, ly) & TileFlags.Road) != 0) _lampsInRoad++;
+                var ground = Space3D.ToWorld(new Tile(lx, ly));
 
                 // A BOUGHT LAMP POST, not a cylinder with a box on top.
                 //
@@ -627,6 +637,17 @@ namespace Noir.Unity
         private static List<string> _lamps;
         private static List<GameObject> _lampPrefabs;
         private static long _lampScanMs, _lampMakeMs, _lampMeasureMs;
+
+        /// <summary>
+        /// Lamp posts that ended up standing on the carriageway, which is 0 when this is working.
+        ///
+        /// The scan walks ROAD tiles by design - that is how spacing along a street is measured -
+        /// so the last step off the asphalt is easy to lose and invisible in a count of lamps.
+        /// Measured before Kerb.TryStepOff existed: eleven of the eighteen at Chicago x Attica
+        /// stood in the road. Reported on the [sunrig] line beside the timings, because the
+        /// PlayMode gate builds the survey plan and can never see a lamp at all.
+        /// </summary>
+        private static int _lampsInRoad;
 
         /// <summary>
         /// Which way a lamp faces: across its own carriageway, so the arm reaches over the road
