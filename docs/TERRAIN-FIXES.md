@@ -180,12 +180,15 @@ once. No render in the repository shows that town.
   So the brown is **16 Agricultural lots**, plus every tile the map fiction calls `Terrain.Field`
   that stands on **no parcel at all** — which is the countryside, and correct.
 
-- **`SEEN-3` — the same question the vacant-lot ruling already answered, asked about the other 16.**
-  `ZoningLookAt` sends county class 0021 straight to ploughed earth. But a lot **inside the town**
-  assessed as agricultural is usually a tax classification, not somebody's corn — it is pasture,
-  a paddock, a long back garden. That is the identical argument the owner accepted on 2026-08-09
-  for vacant lots, and it has not been asked about this class. **Ask before changing it:** some of
-  the 16 will be real fields at the town edge, and those should stay ploughed.
+- ✅ **`SEEN-3` — CLOSED by the owner, 2026-08-10: all 16 stay ploughed.** Asked with the render in
+  front of him, on the frames where the orange rectangles are plainly visible (`farm-country`,
+  `city-block`), and answered the opposite way to the vacant-lot ruling: county class 0021 draws
+  ploughed earth, inside the town as well as at its edge. **So the argument that carried the 106
+  vacant lots does not carry these**, and nobody should re-run it — the county says agricultural
+  and the ground says agricultural.
+
+  ⚠ **This makes `BLEND-2` load-bearing rather than optional.** The 16 patches are staying brown,
+  so the only thing that can stop them reading as a zoning diagram is their EDGE.
 
 > **RE-ORDERED 2026-08-10 after the owner settled `SEEN-2`.** The visible fault is `BLEND`, so
 > **W4 below is now the first wave of real work** and W2/W3 follow it. The grading ruling still
@@ -229,17 +232,30 @@ with what you can see.
 
 **The owner settled `SEEN-2` on this wave's side: the brown bands are un-blended zoning.** Every
 change of ground surface in Rossville is a hard polygon edge on a one-metre grid, and where that
-edge follows a parcel it is a hard-edged rectangle of ploughed earth in a green field. A lot line
-is a legal fiction — it is not a thing you can see from a car — and drawing one as a visible seam
-is what makes the map read as a diagram.
+edge follows a parcel it is a hard-edged rectangle in a green field. A lot line is a legal fiction
+— it is not a thing you can see from a car — and drawing one as a visible seam is what makes the
+map read as a diagram.
+
+> ⚠ **THE SEAM IS A CHANGE OF TILING, NOT A CHANGE OF COLOUR, AND THIS PARAGRAPH USED TO SAY
+> "PLOUGHED EARTH IN A GREEN FIELD".** Measured in `Materials3D` on 2026-08-10:
+> `GrassEverywhere` (default **true**) binds the SAME grass sheet to Grass, Field, Wood, Path,
+> Hard and Bank, at different tilings — Field at 9f, everything else at 4f, `Rough` at more than
+> twice the tile so it reads as rank growth, Churchyard four levels lighter off the same sheet.
+> **So there is no brown ground anywhere in Rossville today**, and a lot patch shows as a
+> rectangle of differently-scaled grass rather than as a different surface. It is quieter than the
+> plan describes and it is still a rectangle with corners.
+>
+> **The orange rectangles in `farm-country` and `city-block` are NOT ground.** They are wheat:
+> `CityFarm` tiles `Wheat_*_Square_1x1m` prefabs across every `cornfield` place. A field of ripe
+> wheat with a straight edge is what Illinois looks like — do not "fix" it.
 
 - **`BLEND-1`** — a transition where two ground looks meet: a blend band, a broken edge, or noise on
   the boundary. Cheapest honest version first, measured by looking at it. **The Field↔Grass boundary
   is the one that matters most** — it is the town-edge boundary and the longest edge on the map.
-- **`BLEND-2`** — the parcel-shaped patches specifically. Note the count is now small: `Vacant` was
-  ruled to grass on 2026-08-09, so this is **16 Agricultural lots**, and `SEEN-3` may reduce it
-  further. **Do `SEEN-3` before `BLEND-2`** — softening the edge of a patch that should not be
-  brown at all is work you then undo.
+- **`BLEND-2`** — the parcel-shaped patches specifically. The count is small and now FIXED at
+  **16 Agricultural lots**: `Vacant` was ruled to grass on 2026-08-09 and `SEEN-3` was ruled the
+  other way on 2026-08-10, so all 16 stay ploughed and every one of them needs its edge dealt
+  with. There is no longer a cheaper answer available upstream.
 - **`ONE-1`** — collapse `GroundZoning.ZoningAt`, `VillageMesh.ZoningMask` and
   `ZoningPatch.ZoningOf` to one home, with a Core gate that fails when a fourth appears. Same shape
   as `TEST-FIXES` `KEY-1`; copy `EveryActivityHasARowInTheRealFile`.

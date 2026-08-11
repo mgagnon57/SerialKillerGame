@@ -589,6 +589,10 @@ namespace Noir.Unity
             var submeshGrid = new int[world.Height, world.Width];
             var flatGrid = new float[world.Height, world.Width];
 
+            // The offset field the boundary wander is read out of, built once for this map size.
+            GroundBlend.Prepare(world.Width, world.Height);
+            int blended = 0;
+
             for (int gy = 0; gy < world.Height; gy++)
             for (int gx = 0; gx < world.Width; gx++)
             {
@@ -631,14 +635,34 @@ namespace Noir.Unity
                                         : SubmeshFor(Terrain.Grass);
                     flatGrid[gy, gx] = HeightOf(wet ? Terrain.Water : Terrain.Grass);
                 }
+                else if (terrain == Terrain.Grass || terrain == Terrain.Field)
+                {
+                    // The survey's answer for this tile, then the same question asked a few
+                    // metres away so the boundary between two living surfaces wanders instead of
+                    // following the county's ruled line. See GroundBlend for why it moves the
+                    // question rather than blending two materials. Its HEIGHT is untouched: the
+                    // tile keeps its own terrain's offset, so no swap here can open a riser.
+                    var look = GroundZoning.LookAt(world, gx, gy, terrain, h00, h10, h01, h11);
+                    var softened = Softened(world, gx, gy, terrain, look);
+                    if (softened != look) blended++;
+
+                    submeshGrid[gy, gx] = SubmeshForLook(softened);
+                    flatGrid[gy, gx] = HeightOf(terrain);
+                }
                 else
                 {
-                    submeshGrid[gy, gx] = (terrain == Terrain.Grass || terrain == Terrain.Field)
-                        ? SubmeshForLook(GroundZoning.LookAt(world, gx, gy, terrain, h00, h10, h01, h11))
-                        : SubmeshFor(terrain);
+                    submeshGrid[gy, gx] = SubmeshFor(terrain);
                     flatGrid[gy, gx] = HeightOf(terrain);
                 }
             }
+
+            // GREPPABLE, because this is invisible in every count the ground already prints: the
+            // tile total, the vertex total and the draw calls are all the same whether the
+            // boundaries wander or are ruled. Only the quad count moves, and only a little.
+            Debug.Log(GroundBlend.Enabled
+                ? $"[blend] ground boundaries wander: {blended:N0} tile(s) took a neighbouring "
+                + "surface, so no lot line is drawn as a straight edge in the grass."
+                : "[blend] OFF - every ground boundary follows the survey line exactly.");
 
             // ---- merge into runs, greedily, bounded two ways ----
             //
@@ -1135,6 +1159,36 @@ namespace Noir.Unity
                 case GroundLook.Bank: return Materials3D.GroundOrder.Length + (int)Materials3D.ZonedGround.Bank;
                 default: return SubmeshFor(Terrain.Grass);
             }
+        }
+
+        /// <summary>
+        /// The same verdict, asked a few metres away, so that where two living surfaces meet the
+        /// join wanders instead of following the county's straight line. See GroundBlend.
+        ///
+        /// Three guards, and each of them is a thing that must NOT be softened:
+        ///
+        ///  - a look that is not Grass, Field or Rough keeps what it was. Hard is a poured apron
+        ///    with a real edge, and Bank is a verdict about THIS tile's own slope - blending
+        ///    either would be a worse lie than the ruled line.
+        ///  - the terrain read at the far end is used only when it is itself Grass or Field.
+        ///    A lawn that asked its question across a street must not come back as tarmac; the
+        ///    terrain layer's placements are deliberate and this path never touches them.
+        ///  - if the far answer is not soft either, the tile keeps its own. A garden does not
+        ///    become concrete because the feed store is nine feet away.
+        /// </summary>
+        private static GroundLook Softened(WorldModel world, int gx, int gy,
+                                           Terrain terrain, GroundLook own)
+        {
+            if (!GroundBlend.Enabled || !GroundBlend.Soft(own)) return own;
+
+            GroundBlend.AskAt(gx, gy, world.Width, world.Height, out int ax, out int ay);
+            if (ax == gx && ay == gy) return own;
+
+            var there = world.Grid.TerrainAt(ax, ay);
+            if (there != Terrain.Grass && there != Terrain.Field) there = terrain;
+
+            var asked = GroundZoning.ZoningLookAt(world, ax, ay, there);
+            return GroundBlend.Soft(asked) ? asked : own;
         }
 
         /// <summary>
