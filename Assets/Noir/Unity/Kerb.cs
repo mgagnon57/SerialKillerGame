@@ -54,6 +54,76 @@ namespace Noir.Unity
         /// a mast on a bridge, or a road with no easement recorded - because standing in the road
         /// is bad and standing in a wall is worse.
         /// </summary>
+        /// <summary>
+        /// The same, but stepping OUT ALONG A GIVEN DIRECTION rather than to whatever lawful tile
+        /// happens to be nearest.
+        ///
+        /// A SIGNAL MAST MUST NOT CHANGE KERBS, and the plain nearest-tile form moved one that
+        /// did. Mount's own header says the arm and the head are rigid in the model: turn the
+        /// head and the arm turns with it, so the mast has to be on the kerb its facing belongs
+        /// to or "the arm reaches out over the pavement instead of the road". The mast starts
+        /// only 2.5 m off the centre line, so the nearest ground off the carriageway is as likely
+        /// to be the FAR kerb as the near one - and at Chicago x Attica one of the four ended up
+        /// there on 2026-08-11, lenses pointing away from the traffic they govern. Measured: the
+        /// three correct heads face the junction at dot 0.82, 0.69 and 0.44, that one at -0.27.
+        ///
+        /// So the caller says which way "away from the road" is, and this only ever goes that
+        /// way. Falls back to the undirected search when the whole ray is blocked, because a mast
+        /// somewhere lawful beats a mast in the carriageway.
+        /// </summary>
+        public static bool TryStepOff(WorldModel world, float x, float y, Vector2 outward,
+                                      out int tileX, out int tileY)
+        {
+            var grid = world.Grid;
+            int tx = Mathf.FloorToInt(x), ty = Mathf.FloorToInt(y);
+            tileX = tx; tileY = ty;
+            if (!grid.InBounds(tx, ty)) return false;
+            if ((grid.FlagsAt(tx, ty) & TileFlags.Road) == 0) return false;
+
+            if (outward.sqrMagnitude < 1e-6f) return TryStepOff(world, x, y, out tileX, out tileY);
+            outward.Normalize();
+
+            // A HALF-PLANE, NOT A RAY, AND NEVER A FALLBACK ACROSS THE ROAD.
+            //
+            // The first version walked a single ray along `outward` and, when that ray was
+            // blocked, fell back to the undirected search - which is how a mast at Chicago x
+            // Attica ended up on the FAR kerb with its arm over the wrong lane. Chicago is wide
+            // enough there that eight tiles of the ray were all carriageway, so the fallback ran
+            // and found ground on the other side. It was measured facing AWAY from the traffic it
+            // governs at dot -0.27 against 0.77, 0.69 and 0.44 for the three that were right.
+            //
+            // Any tile on the correct side will do, so this is the ordinary nearest-ring search
+            // with everything behind the mast rejected. If nothing on that side is reachable it
+            // returns false and the caller keeps the position it chose: a mast standing in the
+            // carriageway is a blemish, and one showing its lenses to nobody is a fault.
+            for (int r = 1; r <= MaxRings; r++)
+            {
+                int bestX = 0, bestY = 0; float bestDist = float.MaxValue;
+
+                for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    if (Mathf.Abs(dx) != r && Mathf.Abs(dy) != r) continue;
+                    if (dx * outward.x + dy * outward.y <= 0f) continue;   // behind, or level
+
+                    int nx = tx + dx, ny = ty + dy;
+                    if (!grid.InBounds(nx, ny)) continue;
+
+                    var f = grid.FlagsAt(nx, ny);
+                    if ((f & TileFlags.Road) != 0) continue;
+                    if ((f & TileFlags.Walkable) == 0) continue;
+                    if ((f & TileFlags.Indoor) != 0) continue;
+
+                    float dist = dx * dx + dy * dy;
+                    if (dist < bestDist) { bestDist = dist; bestX = nx; bestY = ny; }
+                }
+
+                if (bestDist < float.MaxValue) { tileX = bestX; tileY = bestY; return true; }
+            }
+
+            return false;
+        }
+
         public static bool TryStepOff(WorldModel world, float x, float y, out int tileX, out int tileY)
         {
             var grid = world.Grid;

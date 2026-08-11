@@ -1019,7 +1019,18 @@ namespace Noir.Unity
                 bool clear = MayCross(me, segment);
                 if (!clear)
                 {
-                    float allowed = Mathf.Max(0f, toEnd - 0.4f);
+                    // THE NOSE STOPS AT THE LINE, NOT THE MIDDLE OF THE CAR.
+                    //
+                    // `me.S` is the car's CENTRE - that is what me.Reach is half a car long for,
+                    // and what every following-distance test in this file assumes. Easing the
+                    // CENTRE to 0.4 m short of the segment end therefore left the front
+                    // `Reach - 0.4` metres PAST it, about 1.8 m for a 4.4 m car. The segment end
+                    // is the edge of the crossing carriageway (LaneGraph cuts at `s - reach`,
+                    // and reach is the widest arm's half width - 5.0 m here), so that is a car
+                    // sitting a third of its length inside the junction box. Reported by the
+                    // owner watching Chicago x Attica: traffic stopping "under the light, half
+                    // in the road, instead of behind the light".
+                    float allowed = Mathf.Max(0f, toEnd - me.Reach - 0.4f);
                     step = Mathf.Min(step, allowed, Mathf.Max(step * (toEnd / Braking), 0f));
 
                     // Safe to do here and nowhere else: being held means the step above has

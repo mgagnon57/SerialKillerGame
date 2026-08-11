@@ -375,7 +375,14 @@ namespace Noir.Unity
                         // Tile indices out, and back to the tile's CENTRE - Mount places the
                         // mast at (vx, -vy) with no half-tile of its own, so handing it a corner
                         // would stand the post on the tile boundary.
-                        if (Kerb.TryStepOff(world, hx, hy, out int kx, out int ky))
+                        //
+                        // OUT ALONG ITS OWN KERB, never to whatever is nearest. The mast sits
+                        // only `side` metres off the centre line, so the closest ground clear of
+                        // the carriageway is as often the OPPOSITE kerb - and the arm is rigid
+                        // with the head, so a mast that changes kerbs reaches its arm over the
+                        // wrong lane and shows its lenses to nobody. That is exactly what the
+                        // undirected form did to one of these four on 2026-08-11.
+                        if (Kerb.TryStepOff(world, hx, hy, kerb, out int kx, out int ky))
                         { hx = kx + 0.5f; hy = ky + 0.5f; }
 
                         var head = Mount(post, lensMaterial, hx, hy, travel, northSouth);
