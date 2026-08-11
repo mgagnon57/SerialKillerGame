@@ -1315,107 +1315,107 @@ road alley15 4 1149,1791 1351,1791   # EW, +54m off y=1722
 #  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET
 # ==========================================================================
 
-place casino 694,1282 22x35 "the Opera House"
+place casino 694,1282 22x35 "Rossville unit 35"
   door 715,1299
-  human Open all night, and the carpet is loud enough that nobody notices the hour.
-place shop 684,1258 22x22 "vacant - was the Motion Picture house"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Opera House", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "casino", which is what drives jobs, hours and what people do here.
+place shop 684,1258 22x22 "Rossville unit 36"
   door 705,1269
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. A picture house this size did not survive to 1991 in a town of 1,300 - most of them shut in the sixties - but the building is a real 22 by 22 on the plan and something was in it.
-place bank 675,1227 22x29 "the Rossville bank"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant - was the Motion Picture house", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place bank 675,1227 22x29 "Rossville unit 1"
   door 696,1241
-  human Marble that was meant to look permanent.
-place precinct 660,1166 18x35 "the village office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Rossville bank", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "bank", which is what drives jobs, hours and what people do here.
+place precinct 660,1166 18x35 "Rossville unit 2"
   door 677,1183
-  human The light in the front office never goes off, which is not the same as somebody being awake.
-place villagehall 652,1138 16x26 "the I.O.O.F. hall"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the village office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "precinct", which is what drives jobs, hours and what people do here.
+place villagehall 652,1138 16x26 "Rossville unit 3"
   door 667,1151
-  human Bingo, inquests, and the annual meeting about the verge.
-place villagehall 757,1291 16x26 "the G.A.R. hall"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the I.O.O.F. hall", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "villagehall", which is what drives jobs, hours and what people do here.
+place villagehall 757,1291 16x26 "Rossville unit 4"
   door 757,1304
-  human Scout hut, polling station, and where the inquest was held.
-place shop 749,1271 20x18 "Henderson's"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the G.A.R. hall", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "villagehall", which is what drives jobs, hours and what people do here.
+place shop 749,1271 20x18 "Rossville unit 5"
   door 749,1280
-  human Open at five, which is either a service or an accusation.
-place shop 742,1245 14x24 "the Attica Street market"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "Henderson's", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 742,1245 14x24 "Rossville unit 6"
   door 742,1257
-  human Fruit stacked to a geometry that survives being sold from.
-place tavern 734,1221 14x22 "the Livingood House"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Attica Street market", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place tavern 734,1221 14x22 "Rossville unit 7"
   door 734,1232
-  human The parking lot is bigger than the tavern and on Fridays it is not big enough.
-place tavern 720,1179 14x22 "the Commercial Hotel"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Livingood House", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "tavern", which is what drives jobs, hours and what people do here.
+place tavern 720,1179 14x22 "Rossville unit 8"
   door 720,1190
-  human Older than the road, and it shows in the floor.
-place tavern 712,1155 12x22 "the grain office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Commercial Hotel", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "tavern", which is what drives jobs, hours and what people do here.
+place tavern 712,1155 12x22 "Rossville unit 9"
   door 712,1166
-  human Four o'clock and the same men are in it who were in it at noon.
-place postoffice 706,1137 14x16 "Rossville Post Office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the grain office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "tavern", which is what drives jobs, hours and what people do here.
+place postoffice 706,1137 14x16 "Rossville unit 10"
   door 706,1145
-  human A queue that moves at the speed of one conversation at a time.
-place diner 726,1371 11x20 "the Chicago Street diner"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "Rossville Post Office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "postoffice", which is what drives jobs, hours and what people do here.
+place diner 726,1371 11x20 "Rossville unit 11"
   door 736,1381
-  human Open before anyone needs it to be, and the same four faces are in it at six.
-place gasstation 714,1370 11x20 "the pumps"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Chicago Street diner", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "diner", which is what drives jobs, hours and what people do here.
+place gasstation 714,1370 11x20 "Rossville unit 12"
   door 724,1380
-  human Somebody is always sitting in a car here not buying anything.
-place shop 737,1397 12x16 "the drug store"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the pumps", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "gasstation", which is what drives jobs, hours and what people do here.
+place shop 737,1397 12x16 "Rossville unit 13"
   door 748,1405
-  human A general store, which out here means it stocks what the last person asked for.
-place shop 743,1415 12x16 "the bakery"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the drug store", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 743,1415 12x16 "Rossville unit 14"
   door 754,1423
-  human Sells out by ten and does not bake more, on principle.
-place shop 750,1433 12x16 "vacant storefront - was the printing office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the bakery", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 750,1433 12x16 "Rossville unit 15"
   door 761,1441
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has a printing office here; nobody has said what traded here in 1991.
-place shop 755,1451 12x16 "the hardware"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the printing office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 755,1451 12x16 "Rossville unit 16"
   door 766,1459
-  human A hardware shop that also does keys, shoes, and advice.
-place shop 767,1486 12x16 "the grocer"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the hardware", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 767,1486 12x16 "Rossville unit 17"
   door 778,1494
-  human Run by a family who have never agreed on the opening hours.
-place shop 773,1504 12x16 "vacant storefront - was the millinery"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the grocer", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 773,1504 12x16 "Rossville unit 18"
   door 784,1512
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has a millinery here; nobody has said what traded here in 1991.
-place shop 779,1522 12x16 "vacant storefront - was the confectionery"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the millinery", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 779,1522 12x16 "Rossville unit 19"
   door 790,1530
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has a confectionery here; nobody has said what traded here in 1991.
-place shop 786,1540 12x16 "vacant storefront - was the general merchandise"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the confectionery", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 786,1540 12x16 "Rossville unit 20"
   door 797,1548
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has general merchandise here; nobody has said what traded here in 1991.
-place postoffice 792,1558 12x16 "the north sub-office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the general merchandise", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place postoffice 792,1558 12x16 "Rossville unit 21"
   door 803,1566
-  human One window, one clerk, and a scale that has been condemned twice.
-place icecream 804,1371 11x16 "the ice cream parlour"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the north sub-office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "postoffice", which is what drives jobs, hours and what people do here.
+place icecream 804,1371 11x16 "Rossville unit 22"
   door 804,1379
-  human Shut half the year, and the queue at Easter goes round the corner.
-place shop 781,1371 10x13 "the jeweller"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the ice cream parlour", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "icecream", which is what drives jobs, hours and what people do here.
+place shop 781,1371 10x13 "Rossville unit 23"
   door 781,1377
-  human Ironmongery, and a man who can find the one screw you need in a minute.
-place shop 785,1386 10x13 "the meat market"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the jeweller", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 785,1386 10x13 "Rossville unit 24"
   door 785,1392
-  human Everything two weeks past its date and nobody has ever complained.
-place shop 790,1401 10x13 "the barber"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the meat market", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 790,1401 10x13 "Rossville unit 25"
   door 790,1407
-  human A tailor who has outlived three fashions and expects to outlive a fourth.
-place laundry 794,1416 13x10 "the laundromat"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the barber", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place laundry 794,1416 13x10 "Rossville unit 26"
   door 794,1421
-  human Washers along one wall, dryers along the other, and whoever is waiting on them. Open when nothing else on the street is.
-place restroom 799,1428 8x14 "the rest room"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the laundromat", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "laundry", which is what drives jobs, hours and what people do here.
+place restroom 799,1428 8x14 "Rossville unit 27"
   door 799,1435
-  human Council-green tile and a door that does not lock.
-place shop 804,1444 10x11 "vacant storefront - was the second drug store"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the rest room", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "restroom", which is what drives jobs, hours and what people do here.
+place shop 804,1444 10x11 "Rossville unit 28"
   door 804,1449
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. There was one drug store in this town and it is a block north; nobody has said what traded here in 1991.
-place apartment 818,1486 8x6 "the rooms over the grocer"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the second drug store", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place apartment 818,1486 8x6 "the rooms over Rossville unit 17"
   door 818,1489
   units 3
-  human Over the shops, and the stairs go up from the street.
-place apartment 821,1494 8x6 "the rooms over the meat market"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the rooms over the grocer", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "apartment", which is what drives jobs, hours and what people do here.
+place apartment 821,1494 8x6 "the rooms over Rossville unit 24"
   door 821,1497
   units 3
-place apartment 823,1502 8x6 "the rooms over the barber"
+place apartment 823,1502 8x6 "the rooms over Rossville unit 25"
   door 823,1505
   units 3
-place apartment 826,1510 8x6 "the rooms over the laundry"
+place apartment 826,1510 8x6 "the rooms over Rossville unit 26"
   door 826,1513
   units 3
 
@@ -1425,12 +1425,12 @@ place apartment 826,1510 8x6 "the rooms over the laundry"
 # tracks any more, see RAILROAD above, only the siting constant and the decorative
 # `rail` feature in features.txt.
 
-place firestation 694,734 28x27 "the Rossville fire house"
+place firestation 694,734 28x27 "Rossville unit 37"
   door 708,760
-  human The doors are open in all weather and the crew watch the street from inside them.
-place school 533,1121 47x18 "Rossville Grade School"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Rossville fire house", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "firestation", which is what drives jobs, hours and what people do here.
+place school 533,1121 47x18 "Rossville unit 29"
   door 556,1138
-  human Painted every summer and scuffed back to the undercoat by October.
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "Rossville Grade School", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "school", which is what drives jobs, hours and what people do here.
 
 # THE TWO SCHOOLS FACE EACH OTHER ACROSS CHICAGO STREET, which is how the village is
 # actually laid out and what the two OSM school polygons in features.txt have always
@@ -1443,17 +1443,17 @@ place school 533,1121 47x18 "Rossville Grade School"
 # Kind `school` for both, deliberately. kinds.txt records what splitting it cost the
 # last time somebody tried: a second kind meant PlaceKind.School matched only one of
 # them and Rossville's 165 children had nowhere to go.
-place school 700,1020 60x38 "Rossville-Alvin High School"
+place school 700,1020 60x38 "Rossville unit 30"
   door 700,1039
-  human The gym doors are propped open on match nights and you can hear it from Benton.
-place watertower 840,854 18x18 "the water tower"
-  human The name is painted on it and reads from the section road.
-place elevator 1171,1353 24x34 "the Rossville elevator"
-  human Concrete, and it throws a shadow over the tracks all morning.
-place green 537,1730 24x37 "the depot yard"
-  human Grass that grew because nobody got round to paving it.
-place playground 1171,1979 30x28 "the Bishop road swings"
-  human One swing has been chained up since April and nobody remembers why.
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "Rossville-Alvin High School", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "school", which is what drives jobs, hours and what people do here.
+place watertower 840,854 18x18 "Rossville unit 31"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the water tower", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "watertower", which is what drives jobs, hours and what people do here.
+place elevator 1171,1353 24x34 "Rossville unit 32"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Rossville elevator", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "elevator", which is what drives jobs, hours and what people do here.
+place green 537,1730 24x37 "Rossville unit 33"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the depot yard", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "green", which is what drives jobs, hours and what people do here.
+place playground 1171,1979 30x28 "Rossville unit 34"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Bishop road swings", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "playground", which is what drives jobs, hours and what people do here.
 
 # ==========================================================================
 #  THE HOUSES
