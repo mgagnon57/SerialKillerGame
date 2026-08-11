@@ -442,6 +442,23 @@ namespace Noir.Editor
                 // every side. This is the shot the map-size decision was taken for.
                 Frame(camGo, AtMap(645f, 645f), 950f, 42f, 30f);
                 Capture(cam, Path.Combine(OutputDir, "farm-country.png"));
+
+                // THE SCHOOL PONDS, AND UNTIL 2026-08-10 NOTHING IN THIS SET HAD EVER LOOKED AT
+                // WATER. Rossville has 1,009 water rectangles and eighteen cameras, and not one of
+                // them pointed at any of it - which is why nobody had ever seen that every
+                // shoreline in the town is a 35 cm vertical riser following an axis-aligned
+                // staircase. The fault is BANK in docs/TERRAIN-FIXES.md; it was found by reading
+                // the mesher, because no frame existed that could show it.
+                //
+                // Low pitch on purpose. The bank is a 35 cm step, and from the aerials that shot
+                // this set is made of it is sub-pixel: the whole-town frames are why the reeds
+                // could not be verified from a render that had otherwise succeeded.
+                Frame(camGo, AtMap(93f, 699f), 42f, 11f, 0f);
+                Capture(cam, Path.Combine(OutputDir, "pond-bank.png"));
+
+                // Down in the cattail, at the distance a person walking the bank would see it.
+                Frame(camGo, AtMap(93f, 699f), 15f, 9f, 0f);
+                Capture(cam, Path.Combine(OutputDir, "pond-close.png"));
             }
             catch (Exception ex)
             {

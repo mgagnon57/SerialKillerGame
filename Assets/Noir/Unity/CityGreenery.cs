@@ -83,9 +83,15 @@ namespace Noir.Unity
             // CATTAIL, AND FOR ONCE THE PACK HAS THE RIGHT PLANT. Typha latifolia is what actually
             // rings a Vermilion County farm pond and a county drainage ditch, and Nature/Freshwater
             // ships it - unlike the elm, ash and hackberry this file has to apologise for above.
-            // Water_Grass_Long comes with it for the shallower stretches; Species() already drops
-            // anything named Dead, so the winter-kill variants stay out of a summer bank.
-            var reeds = Species("Freshwater", "Cattail", "Water_Grass_Long");
+            //
+            // CATTAIL ONLY, and the exclusion is the load-bearing half. This first read
+            // Species("Freshwater", "Cattail", "Water_Grass_Long") - picked by NAME, out of the
+            // folder that looked right, without opening one. Water_Grass_Long is SUBMERGED weed;
+            // it sits in Freshwater beside the waterlilies because that is what it grows among,
+            // and at native scale standing on a dry bank it is a three-metre black frond. The
+            // first render of the banks was a pond ringed with kelp. Whatever goes in this list
+            // must be a plant that stands ABOVE the waterline on land.
+            var reeds = Species("Freshwater", "Cattail");
 
             if (broadleaf.Count == 0 && conifer.Count == 0)
             {
