@@ -2238,13 +2238,13 @@ place memorial 103,609 3x3 "the cross on the Bishop road"
   human Somebody replaces the flowers. Nobody has ever been seen doing it.
 place memorial 265,88 3x3 "the cross at the county line"
   human It has been there longer than the road surface it stands on.
-place standing 284,92 4x4 "the high seat"
+place standing 284,92 4x4 "the tree stand over the long field"
   human A platform over the long field. Whoever built it did not build it for deer.
-place standing 294,92 4x4 "the seat above Wicker End"
+place standing 294,92 4x4 "the tree stand above the orchard"
   human It looks at the orchard and at the back of the house, which is a choice.
-place camp 310,91 5x5 "the pitch in the east wood"
+place camp 310,91 5x5 "the camp in the east timber"
   human The fire is out. How long it has been out is the question.
-place camp 322,91 5x5 "the far pitch"
+place camp 322,91 5x5 "the far camp"
   human A bedroll, a case left open, and no track in or out that anybody has found.
 place farm 339,86 15x16 "the quarter on 3300 North"
   door 346,101

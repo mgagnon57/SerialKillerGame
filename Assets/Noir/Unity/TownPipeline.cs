@@ -127,6 +127,14 @@ namespace Noir.Unity
                         + (stuck > 0 ? $", {stuck} could not be cleared and are STILL IN A ROAD" : "")
                         + ".");
 
+            // AND THEN THE TOWN TRADES UNDER THE NAMES THE OWNER GAVE IT.
+            //
+            // LAST OF THE LAYOUT PASSES AND BEFORE Finish, because it can change a place's KIND
+            // and everything a kind decides - the interior, the rooms, the counters, the job
+            // slots, the opening hours, the households - is generated as the world is built. A
+            // kind changed after that would be a tavern with a shop's rooms in it.
+            BusinessFromRulings.Apply(layout);
+
             SurveyReport.Write();
 
             var built = Finish(layout, seed, mapFile);

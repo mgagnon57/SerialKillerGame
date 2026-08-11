@@ -762,6 +762,8 @@ namespace Noir.Unity
             if (place.JobSlots > 0)
                 GUILayout.Label($"<color=#8a8a86>{place.JobSlots} job slots</color>", _small);
 
+            DrawBusinessEditor(place);
+
             int parcelId = ParcelIndex.FindFor(place)?.Id ?? -1;
             // NO FlexibleSpace BEFORE THE BUTTON when there is a note editor above it: the
             // editor's scroll view expands too, and two expanding siblings split the leftover
@@ -773,6 +775,71 @@ namespace Noir.Unity
                 _host.SelectedPlace = PlaceId.None;
 
             GUILayout.EndArea();
+        }
+
+        // ---- what traded in THIS UNIT in 1991 -----------------------------------------------
+
+        private string _bizUnit;                 // the handle the drafts below were loaded for
+        private PlaceKind _bizKind;
+        private string _bizName = "", _bizTrade = "";
+
+        /// <summary>
+        /// WHAT TRADED IN THIS UNIT IN 1991, filed against the unit rather than the lot.
+        ///
+        /// The household editor below already asks the same question of a PARCEL, and for a house
+        /// that is the right place for it. It is the wrong place for the commercial row: several
+        /// units stand on one lot, so a business filed by parcel would make a whole terrace into
+        /// one tavern. This writes Content/business-1991.txt, keyed by the unit handle in city.txt.
+        ///
+        /// KIND IS A LIST AND NOT A TEXT BOX, deliberately. It decides the interior, the job
+        /// slots, the opening hours and what animations.txt gives the people inside - and a kind
+        /// nothing answers to does not throw, it falls through to a default and the building
+        /// merely looks wrong. A list cannot be misspelt.
+        /// </summary>
+        private void DrawBusinessEditor(Place place)
+        {
+            string handle = BusinessFromRulings.HandleOf(place.Name);
+
+            // Reload the drafts when the selection moves, so the panel can never show one unit's
+            // ruling over another unit's name.
+            if (_bizUnit != handle)
+            {
+                _bizUnit = handle;
+                var saved = BusinessRulings.For(handle);
+                _bizKind = place.Kind;
+                if (saved != null && saved.Kind.Length > 0
+                    && PlaceKindTable.Current.TryKindOf(saved.Kind, out var k)) _bizKind = k;
+                _bizName = saved?.Business ?? "";
+                _bizTrade = saved?.Trade ?? "";
+            }
+
+            GUILayout.Space(S(10f));
+            GUILayout.Label("<b>what traded here in 1991</b>", _label);
+            GUILayout.Label($"<color=#8a8a86>filed against {handle}</color>", _small);
+            GUILayout.Space(S(4f));
+
+            _bizKind = EnumField("bizkind", "kind - drives jobs, hours and what people do here",
+                                 _bizKind, k => PlaceKindTable.Current.Row(k).Name);
+
+            GUILayout.Space(S(4f));
+            GUILayout.Label("<color=#8a8a86>business - the sign over the door</color>", _small);
+            _bizName = GUILayout.TextField(_bizName, GUILayout.Height(S(22f)));
+
+            GUILayout.Space(S(4f));
+            GUILayout.Label("<color=#8a8a86>trade - what it actually was</color>", _small);
+            _bizTrade = GUILayout.TextField(_bizTrade, GUILayout.Height(S(22f)));
+
+            GUILayout.Space(S(6f));
+            using (new GUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("save", _button, GUILayout.Width(S(70f)),
+                                     GUILayout.Height(S(24f))))
+                    BusinessFromRulings.Save(handle, _bizKind.ToString().ToLowerInvariant(),
+                                             _bizName, _bizTrade);
+
+                GUILayout.Label("<color=#8a8a86>lands on the next build</color>", _small);
+            }
+            GUILayout.Space(S(10f));
         }
 
         /// <summary>

@@ -1,0 +1,24 @@
+# ============================================================================
+#  WHAT TRADED HERE IN 1991 - THE OWNER'S OWN RULING
+#
+#  Authored, not derived. Nothing in this project records what was open in
+#  Rossville in 1991: the tax roll starts in 2007 and the imagery is 2016. The
+#  downtown used to carry the 1913 Sanborn sheet's trades - a jeweller, a meat
+#  market, a G.A.R. hall - which is seventy-eight years out and is why they were
+#  cleared to numbered handles for this file to fill.
+#
+#  Keyed by the unit handle in city.txt, NOT by the business name: the build
+#  replaces the name with whatever is ruled here, so keying on the display name
+#  would break the ruling the moment it took effect.
+#
+#    unit "Rossville unit 12" kind tavern
+#    unit "Rossville unit 12" business "Shorty's"
+#    unit "Rossville unit 12" trade "beer and a grill"
+#
+#  `kind` must be a word kinds.txt answers to - it drives the interior, the jobs,
+#  the hours and the animations. `business` and `trade` are prose and are shown.
+#
+#  Written by the game itself (the place panel). Hand-editing is fine; the next
+#  save from the game rewrites the whole file.
+# ============================================================================
+

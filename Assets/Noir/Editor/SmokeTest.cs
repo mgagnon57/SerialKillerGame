@@ -220,6 +220,14 @@ namespace Noir.Editor
                 return p.Length > 0 ? p[0] : null;
             });
 
+            // unit "Rossville unit 12" kind tavern - the first token is the only verb, and the
+            // handle is quoted because it has spaces in it, so the split has to survive that.
+            bad += Vet(BusinessRulings.FileName, BusinessRulings.KnownVerbs, line =>
+            {
+                var p = line.Split(' ');
+                return p.Length > 0 ? p[0] : null;
+            });
+
             bad += Vet(Placements.FileName, Placements.KnownVerbs, line =>
             {
                 // building <parcel> <index> move <dx> <dy> turn <deg>
