@@ -49,7 +49,7 @@ namespace Noir.Unity
         /// fields read as boundaries instead of as a line of shrubs.
         /// </summary>
         public static bool Handles(PropKind kind) =>
-            kind == PropKind.Tree || kind == PropKind.Bush;
+            kind == PropKind.Tree || kind == PropKind.Bush || kind == PropKind.Reed;
 
         public static GameObject Build(WorldModel world, Transform parent)
         {
@@ -79,6 +79,13 @@ namespace Noir.Unity
             var deadwood = Fallen();
             var topiary = All(Nature + "Hedges");
             var bushes = All(Nature + "Bushes");
+
+            // CATTAIL, AND FOR ONCE THE PACK HAS THE RIGHT PLANT. Typha latifolia is what actually
+            // rings a Vermilion County farm pond and a county drainage ditch, and Nature/Freshwater
+            // ships it - unlike the elm, ash and hackberry this file has to apologise for above.
+            // Water_Grass_Long comes with it for the shallower stretches; Species() already drops
+            // anything named Dead, so the winter-kill variants stay out of a summer bank.
+            var reeds = Species("Freshwater", "Cattail", "Water_Grass_Long");
 
             if (broadleaf.Count == 0 && conifer.Count == 0)
             {
@@ -110,7 +117,14 @@ namespace Noir.Unity
                 var at = Space3D.ToWorld(tile) + new Vector3(jx, 0f, jz);
 
                 List<string> from;
-                if (prop.Kind == PropKind.Bush)
+                if (prop.Kind == PropKind.Reed)
+                {
+                    // Falls back to bushes rather than to nothing. A bank with scrub on it still
+                    // breaks the line; a bank with an empty list on it is the straight edge this
+                    // whole prop kind exists to hide, and it would fail silently.
+                    from = reeds.Count > 0 ? reeds : bushes;
+                }
+                else if (prop.Kind == PropKind.Bush)
                 {
                     from = bushes;
                 }

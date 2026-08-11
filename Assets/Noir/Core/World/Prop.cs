@@ -15,6 +15,13 @@ namespace Noir.Core.World
         Lamppost,
         Headstone,
         WaterTrough,
+
+        /// <summary>
+        /// Bank growth: cattail, rush and the long wet grass that rings standing water. Appended
+        /// rather than filed next to Bush because this enum is a byte and its VALUES are what a
+        /// prop is stored as - inserting in the middle renumbers every kind after it.
+        /// </summary>
+        Reed,
     }
 
     /// <summary>
@@ -124,6 +131,31 @@ namespace Noir.Core.World
             var terrain = grid.TerrainAt(x, y);
             if (!grid.IsWalkable(x, y)) return;
             if (grid.PlaceAt(x, y).IsValid && terrain == Terrain.Floor) return;
+
+            // THE BANK, BEFORE ANYTHING ELSE GETS THIS TILE.
+            //
+            // Rossville's water is a rasterisation: features.txt carries the real North Fork and
+            // the real school ponds as surveyed polygons with curves, and relay-rossville.py lays
+            // them into city.txt as axis-aligned one-metre rectangles. The mesher then closes each
+            // shore with a 35 cm vertical riser. So every shoreline in the town is a low wall
+            // following a staircase, and it is the most visible straight line left on the ground -
+            // see BANK in docs/TERRAIN-FIXES.md.
+            //
+            // Growing the edge is the honest answer as well as the cheap one: a farm pond in
+            // Vermilion County IS ringed with cattail, and a bare mown edge would be the wrong
+            // picture even if the geometry were perfect. It also costs the tile grid nothing,
+            // which matters - the grid is what BlocksSight and walkability read, and moving water
+            // tiles to soften the line would put open water back under the path across the school
+            // field. That was b9c1271's bug and it is not coming back for a prettier bank.
+            //
+            // Not every shore tile: at 1.0 this is a kerb of reeds, which is the same mistake as
+            // the hedge along every Illinois front yard below. Two in three leaves gaps to see the
+            // water through, which is what a real bank has.
+            if (NextToWater(grid, x, y) && rng.Chance(0.66f))
+            {
+                props.Add(new Prop(PropKind.Reed, new Tile(x, y), Roll(rng)));
+                return;
+            }
 
             switch (terrain)
             {
@@ -269,6 +301,21 @@ namespace Noir.Core.World
                     return new Tile(x, y);
             }
             return t;
+        }
+
+        /// <summary>
+        /// Whether this tile is on the water's edge.
+        ///
+        /// Four-neighbour and not eight, deliberately. The water is a raster of axis-aligned
+        /// rectangles, so a diagonal neighbour is a staircase CORNER - counting it plants a reed
+        /// on the outside of every step and draws the staircase in cattail instead of hiding it.
+        /// </summary>
+        private static bool NextToWater(TileGrid grid, int x, int y)
+        {
+            return grid.TerrainAt(x - 1, y) == Terrain.Water
+                || grid.TerrainAt(x + 1, y) == Terrain.Water
+                || grid.TerrainAt(x, y - 1) == Terrain.Water
+                || grid.TerrainAt(x, y + 1) == Terrain.Water;
         }
 
         private static bool NextToRoad(TileGrid grid, int x, int y)
