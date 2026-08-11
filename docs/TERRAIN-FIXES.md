@@ -346,12 +346,29 @@ map read as a diagram.
   staircase CORNER, and counting it plants a reed on the outside of every step and draws the
   staircase in cattail instead of hiding it. No tile's terrain is touched, so walkability and
   `BlocksSight` are untouched by construction.
-  > **NOT YET COUNTED OR LOOKED AT.** Nothing has rebuilt the town since it landed, so how many
-  > reeds Rossville actually grows is unknown, and whether a planted bank reads as a pond is the
-  > question `BANK-1` waits on. `Reed` also inherits the `#if UNITY_EDITOR` gap every tree and bush
-  > has: no shipped player draws one until the cast manifest lands.
+  > ✅ **LOOKED AT, 2026-08-10 — `docs/snapshots/pond-bank.png` and `pond-close.png`**, the first
+  > two frames in this project ever pointed at water. The cattail reads: a broken, gappy fringe on
+  > both banks, brown seed heads on green stems, and it does break the shoreline.
+  >
+  > ⚠ **The first render of it was a pond ringed with KELP**, and the lesson is not about reeds.
+  > `Species("Freshwater", "Cattail", "Water_Grass_Long")` picked the second one **by name, out of
+  > the folder that looked right, without opening one.** `Water_Grass_Long` is SUBMERGED weed —
+  > filed beside the waterlilies because that is what it grows among — and at native scale standing
+  > on a dry bank it is a three-metre black frond. Fixed to `Cattail` only in `6713fdf`. **A pack
+  > path that sounds right is not evidence**, and `docs/ASSETS.md` cannot tell you what a prefab
+  > looks like standing up.
+  >
+  > Still true: `Reed` inherits the `#if UNITY_EDITOR` gap every tree and bush has, so no shipped
+  > player draws one until the cast manifest lands; and the reed COUNT is still unknown, because
+  > `CityGreenery`'s log buckets anything that is not a `Bush` as a tree — worth one line to split.
   > **Open ruling for the owner:** `Reed.BlocksSight` is **false**. Head-high cattail arguably
   > should block a witness's line of sight; that is a sim decision, not a rendering one.
+
+- ⚠ **`BANK-1` IS CONFIRMED NEEDED, BY EYE, FOR THE FIRST TIME.** `pond-close.png` shows the 35 cm
+  riser as a continuous dark band at the waterline with the staircase visible in it — the steps
+  where the raster turns a corner are plainly countable. Planting the edge softened it and did not
+  hide it. So the large item above is real work that wants doing, not a nice-to-have; **and there
+  is now a frame that can judge whether any attempt at it worked.**
 - **`BANK-3`** — **draw the shoreline from `features.txt`, not from the tile boundary.** The honest
   fix: the grid stays authoritative for walkability and sight at one metre, but the visible edge
   follows the surveyed polygon the plan view already draws. Largest of the three and the only one
