@@ -109,9 +109,15 @@ avoid."* The slope test is careful. The **edges** are what make it read as a deb
 
 ### `BANK` — every shoreline in Rossville is a 35 cm wall following a staircase
 
-**Found by looking at `city-block.png` on 2026-08-10**, after `BLEND` landed. With the parcel
-patches quietened, the hard edges left in the frame are the two ponds on the west side, and they
-are the most visible straight lines on the ground now.
+**Found by looking at `city-block.png` on 2026-08-10.** The two ponds on the west side are the most
+visible straight lines on the ground.
+
+> ⚠ **That frame PREDATES `6008587` — it was rendered at 21:37, before `GroundBlend` existed, and
+> nothing has re-rendered Rossville since.** So "with the parcel patches quietened" is not
+> something anybody has seen; it was inferred. **The finding below does not rest on the image**,
+> which only pointed at the ponds: the cause is read out of `features.txt`, `relay-rossville.py`
+> and `VillageMesh`'s riser pass, and `GroundBlend` excludes Water by design, so the blend could
+> not have changed these edges either way. Re-render before quoting the frame for anything else.
 
 The cause is a rasterisation, and it is three steps with nothing wrong at any one of them:
 
@@ -278,14 +284,32 @@ map read as a diagram.
 
 - ✅ **`BLEND-1` and `BLEND-2` — LANDED 2026-08-10, commit `6008587`.** `GroundBlend` asks the
   survey's question a few metres away instead of at the tile itself, so a soft-to-soft boundary
-  wanders instead of following the ruled line. Measured on the full town: **624 tiles took a
-  neighbouring surface**, and the tile, vertex and draw-call counts are all unchanged, which is why
-  it prints its own `[blend]` line — nothing else in the ground's output moves.
-  > ⚠ **NOT YET VERIFIED BY EYE, and the two frames that exist cannot do it.** `farm-country` and
-  > `city-block` are aerial and hazy; the treatment is on a one-metre grid. The view that would
-  > settle it is an eye-level shot at the **Field↔Grass town-edge boundary** — the longest edge on
-  > the map — ideally rendered twice with `GroundBlend.Enabled` true and false. Until somebody has
-  > done that, "624 tiles moved" is a log line, not a verdict.
+  wanders instead of following the ruled line. The tile, vertex and draw-call counts are all
+  unchanged, which is why it prints its own `[blend]` line — nothing else in the ground's output
+  moves.
+
+  **Rossville: `[blend] 19,280 tile(s) took a neighbouring surface`**, read out of the running
+  editor in play mode on 2026-08-10.
+
+  > ⚠ **`Noir → Render Snapshots` DOES NOT RENDER ROSSVILLE, AND THE FIRST NUMBER WRITTEN HERE WAS
+  > THE FIXTURE VILLAGE'S.** This item first recorded **624 tiles**, measured off a
+  > `Noir/Render Snapshots` run. `Snapshot.cs:122` reads **`fixture-village.txt`** and builds it
+  > with **`TownPipeline.BuildUnsurveyed`** — its own comment says so and says not to "fix" it,
+  > because the survey passes are keyed to the real town's parcel ids and would silently do nothing
+  > on a fixture. 25,200 tiles against Rossville's map; 624 against 19,280. **The two are not the
+  > same town and never were**, which is `SEEN` again, one directory over.
+  >
+  > **The renderer that builds the real town is `CityShot.cs` — `TownPipeline.Build()` at line 92 —
+  > menu `Noir → Render City Block (noon)`.** It writes `city-block`, `farm-country`,
+  > `country-*` and `suburb-*`. `Snapshot.cs` writes the other twelve: `back-lane-night`,
+  > `close-terrace`, `dusk`, `first-light`, `mill-gate`, `morning-long`, `night`, `noon-overview`,
+  > `school-run`, `street-night`, `street-noon`, `the-crowd`. **Those twelve are the fixture
+  > village. Do not read a Rossville verdict off any of them.**
+
+  > ⚠ **STILL NOT VERIFIED BY EYE ON ROSSVILLE.** No render of the real town has been taken since
+  > `6008587` landed. The view that would settle it is an eye-level shot at the **Field↔Grass
+  > town-edge boundary** — the longest edge on the map — from `CityShot`, ideally twice with
+  > `GroundBlend.Enabled` true and false. Until then, 19,280 is a log line, not a verdict.
 - **`BANK-1`** — **shelve the bank instead of walling it.** The 35 cm step is drawn as one vertical
   face; a real pond bank slopes. Chamfer the riser over a tile, or drop the shoreline tile's outer
   corners toward the water. Cheapest of the three, touches only `VillageMesh`'s riser pass, and
