@@ -31,8 +31,11 @@ namespace Noir.Unity
     ///
     /// ONE BUILDING, SEVERAL NARROW SHOPS. The owner, on 112 South Chicago: "they were several
     /// narrow shops... but in the same building". That is what a terrace is and what this lays -
-    /// a single continuous structure along the frontage, subdivided by party walls, every unit
-    /// square to the pavement. Not a row of detached boxes with gaps between them.
+    /// a continuous run along the frontage, subdivided by party walls, every unit square to the
+    /// pavement. Not a row of detached boxes with gaps between them - each storefront is its own
+    /// Place so it can carry its own business, but they are laid edge to edge with zero gap and
+    /// left to the massing grammars to render as one row, the same way the 41 hand-placed
+    /// downtown units already do.
     /// </summary>
     public static class DowntownFromSanborn
     {
@@ -93,39 +96,52 @@ namespace Noir.Unity
                     if (on != null && on.Value.Id == lot.Id) drop.Add(p);
                 }
 
-                // ONE building, its outline running the whole terrace. The units are its rooms and
-                // WorldBuilder divides them; what this decides is the fabric - where the wall is,
-                // how far back it runs, and where the party walls fall.
-                var corners = new List<Tile>();
-                var a0 = front.Start;
-                var a1 = front.Start + alongDir * front.Length;
-                var b1 = a1 + backDir * DepthMetres;
-                var b0 = a0 + backDir * DepthMetres;
-                corners.Add(ToTile(a0));
-                corners.Add(ToTile(a1));
-                corners.Add(ToTile(b1));
-                corners.Add(ToTile(b0));
-                corners.Add(ToTile(a0));               // closed
+                // EACH STOREFRONT ITS OWN PLACE, laid edge to edge along the frontage with zero
+                // gap - the fabric is exactly what it was when this was one merged box, just cut
+                // at the same seams CommercialRow already computed. Splitting it is what lets each
+                // one carry its own business, kind, jobs and hours instead of all of them sharing
+                // whatever the single ruling on the row said.
+                string address = CountyRecord.For(lot.Id)?.Address;
+                int index = 0;
+                int laidHere = 0;
 
-                int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
-                foreach (var t in corners)
+                foreach (var unit in laid)
                 {
-                    if (t.X < minX) minX = t.X; if (t.X > maxX) maxX = t.X;
-                    if (t.Y < minY) minY = t.Y; if (t.Y > maxY) maxY = t.Y;
+                    index++;
+                    var corners = new List<Tile>();
+                    var a0 = front.Start + alongDir * unit.Offset;
+                    var a1 = front.Start + alongDir * unit.End;
+                    var b1 = a1 + backDir * DepthMetres;
+                    var b0 = a0 + backDir * DepthMetres;
+                    corners.Add(ToTile(a0));
+                    corners.Add(ToTile(a1));
+                    corners.Add(ToTile(b1));
+                    corners.Add(ToTile(b0));
+                    corners.Add(ToTile(a0));           // closed
+
+                    int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+                    foreach (var t in corners)
+                    {
+                        if (t.X < minX) minX = t.X; if (t.X > maxX) maxX = t.X;
+                        if (t.Y < minY) minY = t.Y; if (t.Y > maxY) maxY = t.Y;
+                    }
+                    int w = maxX - minX, h = maxY - minY;
+                    if (w < 3 || h < 3) continue;
+
+                    var spec = new PlaceSpec
+                    {
+                        Kind = PlaceKind.Shop,
+                        Bounds = new TileRect(minX, minY, w, h),
+                        Outline = corners.ToArray(),
+                        Name = CommercialRow.HandleFor(address, lot.Id, index),
+                    };
+                    add.Add(spec);
+                    laidHere++;
                 }
-                int w = maxX - minX, h = maxY - minY;
-                if (w < 3 || h < 3) continue;
 
-                var spec = new PlaceSpec
-                {
-                    Kind = PlaceKind.Shop,
-                    Bounds = new TileRect(minX, minY, w, h),
-                    Outline = corners.ToArray(),
-                    Name = $"the {front.Street} terrace",
-                };
-                add.Add(spec);
+                if (laidHere == 0) continue;
                 rows++;
-                units += laid.Length;
+                units += laidHere;
             }
 
             foreach (var p in drop) layout.Places.Remove(p);
@@ -133,7 +149,7 @@ namespace Noir.Unity
 
             if (rows > 0)
                 Debug.Log($"[survey] {rows} downtown terrace(s) laid from the 1913 survey - "
-                        + $"{units} shop units in {rows} building(s), replacing "
+                        + $"{units} independently-rulable shop units across them, replacing "
                         + $"{drop.Count} raised from post-2000 sources.");
             return rows;
         }
