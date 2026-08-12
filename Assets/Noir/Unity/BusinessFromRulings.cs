@@ -86,10 +86,19 @@ namespace Noir.Unity
             var table = PlaceKindTable.Current;
             int named = 0, retyped = 0, unknown = 0;
 
+            // A SNAPSHOT, TAKEN BEFORE ANY RENAMING. A ruled place's Name is about to become its
+            // business name - "Rossville unit 12" becomes "Shorty's" a few lines down - so asking
+            // BusinessRulings.Unmatched afterwards would see every ruled handle as if it had
+            // matched nothing. Captured once, up front, so it always reflects the handles this
+            // build actually produced.
+            var originalNames = new List<string>(layout.Places.Count);
+            for (int i = 0; i < layout.Places.Count; i++)
+                originalNames.Add(layout.Places[i].Name);
+
             for (int i = 0; i < layout.Places.Count; i++)
             {
                 var spec = layout.Places[i];
-                var ruling = BusinessRulings.For(spec.Name);
+                var ruling = BusinessRulings.For(originalNames[i]);
                 if (ruling == null) continue;
 
                 string handle = spec.Name;
@@ -133,12 +142,18 @@ namespace Noir.Unity
                     spec.Human = ruling.Trade;
             }
 
+            var unmatched = BusinessRulings.Unmatched(originalNames);
+
             // Greppable, and it prints even at zero - the whole point of this file is that the
             // owner can write a ruling the game never reads, and a silent pass is how that
             // happens. Same reasoning as [lots], [walks] and [roads].
             Debug.Log($"[business] {BusinessRulings.Count} unit(s) ruled in "
                     + $"{BusinessRulings.FileName}: {named} named, {retyped} re-typed"
                     + (unknown > 0 ? $", {unknown} WITH A KIND NOTHING ANSWERS TO" : "")
+                    + (unmatched.Count > 0
+                        ? $", {unmatched.Count} MATCHED NOTHING THIS BUILD "
+                          + $"({string.Join(", ", unmatched)})"
+                        : "")
                     + ".");
 
             return named + retyped;
