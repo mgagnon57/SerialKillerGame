@@ -953,6 +953,16 @@ calls them. Only **one** cluster may change `RoadPath.Smooth` — it is shared w
 >
 > **LOOK AT IT.** ADDR-2 moves ~78% of survey-raised front doors to a different wall, turning the porch
 > and gable of ~300 houses. Render and actually open the PNGs. Valid only because RC-1 landed in W2.
+>
+> ✅ **GATE-5 RE-RECORDED AGAIN, 2026-08-12: the 28 is 40 — same violation, more Places counting it.**
+> The terrace-business-units feature splits `112 S Chicago` from one Place into 13 independently-named
+> storefronts sharing the same footprint. That footprint was already one of the 28, one Place at
+> ~4.9 m into Smith Street; splitting it prints that same known violation 13 times instead of once.
+> Proof it is nothing else: 40 offenders − 13 Chicago storefronts = 27, and 27 + 1 (the old single
+> terrace entry) = 28, the prior baseline exactly — every other offender on the list is unchanged, and
+> worst penetration is still ~5.0 m against the old ~4.9 m. See `NoBuildingStandsInAStreet`'s own
+> header in `TownGeometryPlayTests.cs` for the same account. If this number moves again, suspect a
+> real building drifting before assuming another Place-count reshuffle.
 
 ### W6 — The alleys reach the town, and the streets reach Route 1 · ~12 h + one 40-min window
 

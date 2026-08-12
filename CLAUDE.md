@@ -67,10 +67,12 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **486 pass, 0 fail, 486 total, 8 skipped, 2 m 01 s.** Measured 2026-08-11 15:05, at the end of
-> the walking pass. (477 on 2026-08-10 at the end of the road pass; **two other documents were
-> stale within the same afternoon** — this file said 469 and `docs/ROAD-FIXES.md` had measured 473
-> — which is the failure THIS FILE WINS exists to stop.)
+> **493 pass, 0 fail, 493 total, 8 skipped, 2 m 01 s.** Measured 2026-08-12 17:18, after the
+> driveway door-clearance fix (`Driveways.Edge`/`OffDoor`, +2 tests) and the terrace-business-units
+> split (`CommercialRow.HandleFor`, `BusinessRulings.Unmatched`, +5 tests) landed. (486 on
+> 2026-08-11 15:05, at the end of the walking pass; 477 on 2026-08-10 at the end of the road pass;
+> **two other documents were stale within the same afternoon** — this file said 469 and
+> `docs/ROAD-FIXES.md` had measured 473 — which is the failure THIS FILE WINS exists to stop.)
 > The 8 skipped are the four Core `[Explicit]` printers, `PrintWalkableRegions`, the two
 > `Aspiration` tests, and `TrespassSearchCostDiagnostic`; a run reporting 0 skipped means somebody
 > un-quarantined a diagnostic.
@@ -190,6 +192,11 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-12 17:18: 20 of 20 PASS, 0 fail, 1 skipped, 158 s.** The new one is
+> `ATerraceLotProducesMoreThanOneIndependentlyNamedStorefront`, proving 112 S Chicago builds as
+> several named shops instead of one. It moved `NoBuildingStandsInAStreet`'s ratchet from 28 to
+> 40 — not a new building drifting into a road, see that test's own header and GATE-5's account in
+> `docs/ROAD-FIXES.md`.
 > **BASELINE, 2026-08-11: 19 of 19 PASS, 0 fail, 1 skipped, 165 s.** The suite is FOUR TIMES
 > faster than the 700 s below and nothing was removed to do it: `Pathfinder.HardNodeCeiling` was
 > stale, one journey in five was refused at the node cap, and every refusal spent the whole
