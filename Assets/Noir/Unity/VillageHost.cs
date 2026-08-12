@@ -483,12 +483,19 @@ namespace Noir.Unity
                 // the zoning textures were all there and all unlit, and the honest report was "I
                 // clicked Play and saw black".
                 //
-                // Noon while the world is being built. Nothing about the simulation depends on
-                // the opening hour - the digit keys already skip to 06:00, 08:00, 12:00, 17:00,
-                // 20:00 and 23:00, so arriving at dawn is one keypress away and arriving at a lit
-                // world is the default. Put it back to 6 * 60 when the game is being played
-                // rather than inspected.
-                Sim = new Simulation(World, People, Seed, startMinuteOfDay: 12 * 60);
+                // 20:00 - THE HOUR THE STREET LAMPS ARE ON, asked for by the owner so the
+                // lighting is what he lands in rather than something he has to go looking for.
+                //
+                // Not a guess: SunRig.NightLevel is InverseLerp(0.35, 0, sunIntensity), so the
+                // lamps begin to glow as the sun drops past 0.35, and SkyAt's curve crosses that
+                // at about 19:25 - 0.45 at 19:00 falling to 0.08 by 20:30. By 20:00 they are
+                // well lit and the sky still has colour in it, which is the only hour you can see
+                // BOTH the lamps and the town they are standing in. Full dark at 23:00 shows the
+                // lamps and nothing else.
+                //
+                // Nothing in the simulation depends on the opening hour, and the digit keys skip
+                // to 06:00, 08:00, 12:00, 17:00, 20:00 and 23:00, so noon is one keypress away.
+                Sim = new Simulation(World, People, Seed, startMinuteOfDay: 20 * 60);
 
                 Debug.Log($"Rossville: {World.Width}×{World.Height}, {World.PlaceCount} places, "
                         + $"{People.Count} people in {People.HouseholdCount} households.");
