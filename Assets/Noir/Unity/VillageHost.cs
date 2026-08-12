@@ -223,6 +223,28 @@ namespace Noir.Unity
             set { _showBuildings = value; Materials3D.RefreshPlan(); }
         }
 
+        /// <summary>
+        /// The minute of the day the town wakes up at when Play begins. 20:00 - THE HOUR THE
+        /// STREET LAMPS ARE ON, asked for by the owner so the lighting is what he lands in
+        /// rather than something he has to go looking for. Not a guess: SunRig.NightLevel is
+        /// InverseLerp(0.35, 0, sunIntensity) and SkyAt's curve crosses 0.35 at about 19:25, so
+        /// at eight the lamps are lit and the sky still has colour in it - the only hour that
+        /// shows BOTH the lamps and the town they stand in. The digit keys skip to 06:00, 08:00,
+        /// 12:00, 17:00, 20:00 and 23:00, so noon is one keypress away.
+        ///
+        /// A FIELD AND NOT A LITERAL, BECAUSE THE OPENING HOUR BROKE THE GATE THE NIGHT IT
+        /// MOVED. The commit that set 20:00 said "nothing in the simulation depends on the
+        /// opening hour" - and nothing does, but four TESTS did, and the first PlayMode run
+        /// afterwards went 4 red with every one tracing back to the clock. The animation sweep
+        /// starts at the next whole hour and cannot rewind, so from a 20:00 start its range came
+        /// out "21:00 to 17:00" and the loop body never ran once - "nobody walked all day". The
+        /// driveways test wants the commuters still OUT, and DayPlan brought them home at 17:10.
+        /// The two traffic gates ran against an evening fleet the suite had never once been
+        /// measured on. CityUnderTest sets this back to noon for the batch suite - the town the
+        /// 19-of-19 baseline was measured on - and the [gate] line says which hour it opened at.
+        /// </summary>
+        public static int OpeningMinuteOfDay = 20 * 60;
+
         private static bool _showBuildings;
 
         /// <summary>Where the built-town switch is remembered between sessions. Read once in
@@ -483,19 +505,10 @@ namespace Noir.Unity
                 // the zoning textures were all there and all unlit, and the honest report was "I
                 // clicked Play and saw black".
                 //
-                // 20:00 - THE HOUR THE STREET LAMPS ARE ON, asked for by the owner so the
-                // lighting is what he lands in rather than something he has to go looking for.
-                //
-                // Not a guess: SunRig.NightLevel is InverseLerp(0.35, 0, sunIntensity), so the
-                // lamps begin to glow as the sun drops past 0.35, and SkyAt's curve crosses that
-                // at about 19:25 - 0.45 at 19:00 falling to 0.08 by 20:30. By 20:00 they are
-                // well lit and the sky still has colour in it, which is the only hour you can see
-                // BOTH the lamps and the town they are standing in. Full dark at 23:00 shows the
-                // lamps and nothing else.
-                //
-                // Nothing in the simulation depends on the opening hour, and the digit keys skip
-                // to 06:00, 08:00, 12:00, 17:00, 20:00 and 23:00, so noon is one keypress away.
-                Sim = new Simulation(World, People, Seed, startMinuteOfDay: 20 * 60);
+                // The hour itself lives on OpeningMinuteOfDay, beside ShowBuildings: 20:00 for
+                // the owner, noon for the batch gate. The story of why - and of the night the
+                // literal that used to sit here turned four tests red - is written on the field.
+                Sim = new Simulation(World, People, Seed, startMinuteOfDay: OpeningMinuteOfDay);
 
                 Debug.Log($"Rossville: {World.Width}×{World.Height}, {World.PlaceCount} places, "
                         + $"{People.Count} people in {People.HouseholdCount} households.");

@@ -58,6 +58,18 @@ namespace Noir.PlayTests
             if (System.Environment.GetEnvironmentVariable("NOIR_BUILT_TOWN") == "1")
                 VillageHost.ShowBuildings = true;
 
+            // NOON, NOT THE GAME'S 20:00. The opening hour belongs to the owner - he lands in
+            // the lamplight he asked for - but this suite's premise is the MIDDAY town, and its
+            // own tests say so in their text: the animation sweep starts at the next whole hour
+            // and CANNOT REWIND, so from a 20:00 start its range is "21:00 to 17:00" and the
+            // loop body never runs; the driveways test wants the commuters still out, and
+            // DayPlan brings them home at 17:10; the fleet table the traffic gates were tuned
+            // against reads 24 cars at noon and a trickle in the evening. The night the game's
+            // opening hour moved to 20:00, all four went red in one run. The 19-of-19 baseline
+            // is a noon measurement; a batch run opening at 20:00 is a different, unmeasured
+            // town wearing the same green ticks.
+            VillageHost.OpeningMinuteOfDay = 12 * 60;
+
             Layers.Set(Layers.Kind.Trees, false);
             Layers.Set(Layers.Kind.Farm, false);
             Layers.Set(Layers.Kind.Powerlines, false);
@@ -68,6 +80,8 @@ namespace Noir.PlayTests
             // A session reading "13 of 13 pass" had no way to know which town passed.
             Debug.Log($"[gate] town={(VillageHost.ShowBuildings ? "BUILT" : "survey plan")} "
                     + "(NOIR_BUILT_TOWN=1 for the built one); "
+                    + $"opens {VillageHost.OpeningMinuteOfDay / 60:00}:00 for the suite, where "
+                    + "the game itself opens 20:00; "
                     + "Trees/Farm/Powerlines OFF for this suite. Anything this run does not "
                     + "build, it has not tested.");
         }
