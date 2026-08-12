@@ -60,6 +60,23 @@ namespace Noir.Core.Survey
 
         public static IReadOnlyDictionary<string, Ruling> All { get { Load(); return _byUnit; } }
 
+        /// <summary>
+        /// Ruled units that matched none of the Places actually built this run — the handle
+        /// drifted, or the lot's layout changed underneath it. A terrace's storefronts are
+        /// numbered in order (see DowntownFromSanborn), so a shifted frontage or a changed RNG
+        /// sequence silently points an old ruling at the wrong door, or at nothing at all.
+        /// </summary>
+        public static IReadOnlyList<string> Unmatched(IEnumerable<string> placeNames)
+        {
+            Load();
+            var present = new HashSet<string>(placeNames);
+            var missing = new List<string>();
+            foreach (var unit in _byUnit.Keys)
+                if (!present.Contains(unit)) missing.Add(unit);
+            missing.Sort(System.StringComparer.Ordinal);
+            return missing;
+        }
+
         /// <summary>The ruling for a unit, or null where nobody has said. Absent is not the same
         /// as "there was nothing there".</summary>
         public static Ruling For(string unit)
