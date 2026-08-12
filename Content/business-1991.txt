@@ -22,3 +22,6 @@
 #  save from the game rewrites the whole file.
 # ============================================================================
 
+unit "Rossville unit 27" kind tavern
+unit "Rossville unit 27" business "The Village Pub"
+unit "Rossville unit 27" trade "Bar and Grill"
