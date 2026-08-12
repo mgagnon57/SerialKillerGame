@@ -80,7 +80,26 @@ namespace Noir.Unity
                 // implementation detail: CityGreenery takes the prop kinds it handles, and every
                 // kind it does not fell through to the massing.
                 var under = root.transform;
-                Layers.RegisterLazy(Layers.Kind.Massing, () => BuildMassing(world, under));
+
+                // SURFACED HERE WHEN THE WALLS ARE BUILT LATE, and only then.
+                //
+                // `RegisterLazy` runs this immediately when the layer is already on, and minutes
+                // later - off a tick in the panel - when it is not. Those two need opposite
+                // treatment and telling them apart is what `CityCollision.Ready` is for:
+                //
+                //   built at startup   the bake has not run yet, and it would destroy any
+                //                      collider added now. VillageHost surfaces these AFTER it.
+                //   built on demand    the bake and the collision pass are both long finished.
+                //                      Nobody is coming back. Surface them here or never.
+                //
+                // Getting this wrong is not visible: the houses are drawn either way and you find
+                // out by walking into one. It cost the owner a session.
+                Layers.RegisterLazy(Layers.Kind.Massing, () =>
+                {
+                    var dressing = BuildMassing(world, under);
+                    if (CityCollision.Ready) CityCollision.SolidifyWalls(dressing.transform);
+                    return dressing;
+                });
                 Layers.RegisterLazy(Layers.Kind.Trees, () => BuildPlanting(world, under));
                 Layers.RegisterLazy(Layers.Kind.Farm, () => BuildCountryside(world, under));
             }

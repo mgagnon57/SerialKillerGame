@@ -29,6 +29,22 @@ namespace Noir.Unity
     public static class CityCollision
     {
         /// <summary>
+        /// True once the town's collision has been built AND the post-bake wall pass has run.
+        ///
+        /// It exists so the generated walls can tell the difference between the two ways they get
+        /// built. When `Massing` is on at startup the walls are made during `VillageHost.Build`,
+        /// long before this file runs, and the pass after the bake picks them up. When it is off
+        /// they are made ON DEMAND, minutes later, by somebody ticking a switch - and by then this
+        /// pass has been and gone and nothing will ever come back for them. `VillageMesh` reads
+        /// this to know which of the two it is in, and surfaces its own walls in the second case.
+        ///
+        /// Reset at the top of Build, because a static survives a domain reload when the editor is
+        /// configured not to do one, and a stale `true` here means the walls surface themselves
+        /// during startup and are then thrown away by the bake.
+        /// </summary>
+        public static bool Ready { get; private set; }
+
+        /// <summary>
         /// Where the ground is, near enough, ABOVE the real terrain.
         ///
         /// The walking surfaces of this map are three, and MEASURED rather than assumed: village
@@ -55,6 +71,8 @@ namespace Noir.Unity
 
         public static GameObject Build(WorldModel world, Transform parent, params GameObject[] built)
         {
+            Ready = false;
+
             var root = new GameObject("CityCollision");
             root.transform.SetParent(parent, false);
 
@@ -116,11 +134,11 @@ namespace Noir.Unity
                 }
             }
 
-            int generated = SolidifyGeneratedWalls(parent);
-
-            Debug.Log($"[collision] 1 ground mesh, {walls} bought-building boxes and "
-                    + $"{generated} generated wall chunk(s), "
-                    + $"floor {Floor:0.00}m above local terrain.");
+            // THE GENERATED WALLS ARE NOT DONE HERE ANY MORE. They used to be, and they were
+            // wrong twice over - see SolidifyWalls. VillageHost calls it after the bake.
+            Debug.Log($"[collision] 1 ground mesh and {walls} bought-building boxes, "
+                    + $"floor {Floor:0.00}m above local terrain. "
+                    + "The generated houses are surfaced after the bake.");
             return root;
         }
 
@@ -210,43 +228,72 @@ namespace Noir.Unity
         /// so this costs one component each, needs no bounds arithmetic, and cannot disagree with
         /// what the eye sees. Boxes would fill every doorway and every yard between an L.
         ///
-        /// Found by walking for "Walls" rather than by being handed it, because VillageMesh owns
-        /// its own hierarchy and a signature that named the path would go stale the first time it
-        /// moved. Costs one recursive search once per build.
+        /// ⚠ AND THE FIRST VERSION OF THAT DID NOT WORK, FOR TWO SEPARATE REASONS, AND THE TOWN
+        /// WAS WALK-THROUGH FOR DAYS WITH THE FIX ALREADY IN THE FILE. Both were found on
+        /// 2026-08-11 in a live editor, in the log and in the scene graph:
+        ///
+        ///     [collision] no generated Walls node - the houses have no surface
+        ///     Walls node: 342 MeshFilters, 0 MeshColliders
+        ///
+        ///  1. IT RAN TOO EARLY. `VillageMesh` registers the massing with `Layers.RegisterLazy`,
+        ///     so with the layer off at startup there is no `Walls` node when `Build` runs, this
+        ///     found nothing, and NOTHING RE-RAN IT when the walls appeared. Ticking the switch
+        ///     drew 342 chunks of house that you walked straight through for the rest of the
+        ///     session. That is the state the owner reported from.
+        ///  2. AND WHEN IT RAN ON TIME, THE BAKE ATE IT. `CityChunker.Bake` ends in
+        ///     `DestroyImmediate(r.gameObject)` on every renderer it consumed - and a MeshCollider
+        ///     added by this pass is a component ON one of those GameObjects. So with the layer ON
+        ///     at startup the colliders were built, cooked, and destroyed thirty lines later. The
+        ///     old code could not win either way round.
+        ///
+        /// SO IT IS CALLED AFTER THE BAKE, AND AGAIN WHEN THE WALLS TURN UP LATE, and it FINDS THE
+        /// WALLS BY THEIR MATERIAL RATHER THAN BY THEIR NODE. That last part is what makes one
+        /// method serve both: before the bake the geometry is 342 chunk meshes under `Walls`, and
+        /// after it the same triangles are Chunk_* meshes under `Baked` with the node gone - but
+        /// `CityChunker` groups by material and re-uses the same `Materials3D.Walls` instances, so
+        /// the paint is the one thing that survives the move. Searching for a node name could only
+        /// ever have found one of the two.
+        ///
+        /// Idempotent, because it is called from two places and either may be the one that fires.
         /// </summary>
-        private static int SolidifyGeneratedWalls(Transform parent)
+        public static int SolidifyWalls(Transform under)
         {
-            var walls = FindByName(parent, "Walls");
-            if (walls == null)
-            {
-                Debug.LogWarning("[collision] no generated Walls node - the houses have no "
-                               + "surface and the player will walk through them.");
-                return 0;
-            }
+            Ready = true;
+            if (under == null) return 0;
 
-            int made = 0;
-            foreach (var mf in walls.GetComponentsInChildren<MeshFilter>(true))
+            var paint = new System.Collections.Generic.HashSet<Material>(Materials3D.Walls);
+
+            int made = 0, already = 0;
+            foreach (var mf in under.GetComponentsInChildren<MeshFilter>(true))
             {
                 if (mf.sharedMesh == null) continue;
-                if (mf.GetComponent<MeshCollider>() != null) continue;
-                var mc = mf.gameObject.AddComponent<MeshCollider>();
-                mc.sharedMesh = mf.sharedMesh;
+
+                var r = mf.GetComponent<MeshRenderer>();
+                if (r == null) continue;
+
+                bool wall = false;
+                foreach (var m in r.sharedMaterials)
+                    if (m != null && paint.Contains(m)) { wall = true; break; }
+                if (!wall) continue;
+
+                if (mf.GetComponent<MeshCollider>() != null) { already++; continue; }
+
+                mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
                 made++;
             }
+
+            // LOUD WHEN IT FINDS NOTHING, because finding nothing is indistinguishable from
+            // working right up until somebody walks into a house. The startup pass legitimately
+            // finds nothing when the massing is switched off - there are no walls to be stopped
+            // by - so it says which of the two it was rather than crying wolf.
+            if (made == 0 && already == 0)
+                Debug.Log("[collision] no generated wall geometry to surface - the massing layer "
+                        + "is off. It will be surfaced when the switch is ticked.");
+            else
+                Debug.Log($"[collision] {made} generated wall chunk(s) given a surface"
+                        + (already > 0 ? $", {already} already had one." : "."));
+
             return made;
         }
-
-        private static Transform FindByName(Transform where, string name)
-        {
-            if (where == null) return null;
-            if (where.name == name) return where;
-            foreach (Transform child in where)
-            {
-                var hit = FindByName(child, name);
-                if (hit != null) return hit;
-            }
-            return null;
-        }
-
     }
 }

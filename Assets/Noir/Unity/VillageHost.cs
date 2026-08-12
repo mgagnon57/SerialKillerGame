@@ -685,6 +685,14 @@ namespace Noir.Unity
                 }
             profile.Done("CityChunker.Bake (all layers)");
 
+            // THE HOUSES GET THEIR SURFACE HERE, AFTER THE BAKE, AND NOT IN CityCollision.Build.
+            // The bake destroys the GameObjects it consumed, so a collider added before it is a
+            // collider thrown away by it - which is half of why the town was walk-through. The
+            // other half is the massing being a lazy layer, and CityCollision.Ready is how the
+            // late build knows to surface itself. Both are argued out in SolidifyWalls.
+            CityCollision.SolidifyWalls(transform);
+            profile.Done("CityCollision.SolidifyWalls");
+
             // Anything parented to `city` that no layer claimed is left unbaked on purpose - it
             // would be invisible to the switches, and a renderer nobody can turn off is worth
             // knowing about rather than quietly merging away.
