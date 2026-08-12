@@ -90,10 +90,21 @@ namespace Noir.PlayTests
             // buildings could drift into a carriageway before it said a word, which is a ratchet
             // that has stopped ratcheting.
             //
-            // The open question below is unchanged and still open - the layout-level test reports
-            // zero against this 28, and until somebody establishes which corridor the tarmac is
-            // drawn to, the honest number is "28, and it must not grow".
-            Assert.That(offenders.Count, Is.LessThanOrEqualTo(28),
+            // The open question above is unchanged and still open - the layout-level test reports
+            // zero against this number, and until somebody establishes which corridor the tarmac
+            // is drawn to, that gap stays unexplained.
+            //
+            // RE-RECORDED AT 40, 2026-08-12 - not a new building drifting into a road. 112 S
+            // Chicago (parcel 237) was already one of the 28: one Place, "the Chicago Street
+            // terrace", already measured at ~4.9 m into Smith Street. The terrace-business-units
+            // feature splits that single Place into 13 independently-named storefronts sharing
+            // the same footprint, so the one known violation now prints 13 times. Proof it is
+            // nothing else: 40 offenders - 13 Chicago storefronts = 27, and 27 + 1 (the old single
+            // terrace entry) = 28, the exact prior baseline - every other offender on the list is
+            // unchanged. Worst penetration is still ~5.0 m, in the same range as the old 4.9 m,
+            // because it is the same intrusion. If this number moves again, suspect a real building
+            // before assuming another Place-count reshuffle.
+            Assert.That(offenders.Count, Is.LessThanOrEqualTo(40),
                 "More buildings stand in a street in the BUILT town than before. Either a pass "
                 + "moved something into a road, or the corridor the world draws has changed "
                 + "shape. Worst offender: " + (offenders.Count > 0 ? offenders[0] : "none"));
@@ -120,6 +131,44 @@ namespace Noir.PlayTests
             }
 
             Debug.Log($"[geometry] {world.Roads.Lines.Count} roads, all drawable");
+        }
+
+        /// <summary>
+        /// 112 S Chicago (parcel 237) is ruled `footprint later` with a note naming several
+        /// narrow shops and a restaurant. Before this feature it built as exactly one Place named
+        /// "the Chicago Street terrace" - one name, one business, no matter how many trades the
+        /// note said stood there. This asserts the row is now several independently-named Places.
+        ///
+        /// Reads through BusinessFromRulings.HandleOf rather than Place.Name directly: once the
+        /// owner rules a storefront through the panel its Name becomes the business name, and a
+        /// test matching on the handle text would start under-counting the moment that happens -
+        /// which is the normal, intended outcome of ruling it, not a regression.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ATerraceLotProducesMoreThanOneIndependentlyNamedStorefront()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var world = CityUnderTest.World;
+            Assert.That(world, Is.Not.Null, "the town did not build");
+
+            var units = new List<Place>();
+            foreach (var place in world.AllPlaces)
+            {
+                var handle = BusinessFromRulings.HandleOf(place.Name);
+                if (handle.StartsWith("112 S Chicago #")) units.Add(place);
+            }
+
+            Debug.Log($"[geometry] 112 S Chicago: {units.Count} independently-named storefront(s)");
+
+            Assert.That(units.Count, Is.GreaterThan(1),
+                "112 S Chicago is ruled footprint later with several narrow shops named in its "
+              + "own note - it should not still be one Place wearing one name.");
+
+            foreach (var u in units)
+            {
+                Assert.That(u.Bounds.W, Is.GreaterThan(0), $"{u.Name} has zero width");
+                Assert.That(u.Bounds.H, Is.GreaterThan(0), $"{u.Name} has zero depth");
+            }
         }
 
         /// <summary>
