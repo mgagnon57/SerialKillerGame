@@ -143,6 +143,22 @@ namespace Noir.Core.Tests
         }
 
         [Test]
+        public void HandleUsesTheAddressWhenThereIsOne()
+        {
+            Assert.That(CommercialRow.HandleFor("112 S Chicago", 237, 1),
+                        Is.EqualTo("112 S Chicago #1"));
+            Assert.That(CommercialRow.HandleFor("112 S Chicago", 237, 3),
+                        Is.EqualTo("112 S Chicago #3"));
+        }
+
+        [Test]
+        public void HandleFallsBackToTheParcelIdWithNoAddress()
+        {
+            Assert.That(CommercialRow.HandleFor(null, 501, 2), Is.EqualTo("parcel 501 unit 2"));
+            Assert.That(CommercialRow.HandleFor("", 501, 2), Is.EqualTo("parcel 501 unit 2"));
+        }
+
+        [Test]
         public void TheSameSeedLaysTheSameRow()
         {
             var a = CommercialRow.Lay(FullBlock, Rng(12345));
