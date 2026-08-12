@@ -53,6 +53,21 @@ namespace Noir.Core.Tests
             WorldBuilder.Build(layout, seed);
 
         [Test]
+        public void ACarDoesNotStandDirectlyInFrontOfTheDoor_OffCentreDoorToo()
+        {
+            // Door NOT centred - nearer the left corner of a 13-wide frontage. The car still has
+            // to clear the door's own line, not just the middle of the wall it happens to share.
+            var world = Build(OneHouse(new Tile(51, 108)));
+
+            var plan = Driveways.Plan(world, 1991UL);
+            Assert.That(plan.Length, Is.EqualTo(1));
+
+            var spot = plan[0].Spot;
+            Assert.That(System.Math.Abs(spot.X - 51), Is.GreaterThanOrEqualTo(2),
+                        $"spot {spot} stands on the door's own line out of the house");
+        }
+
+        [Test]
         public void AHouseGetsItsCarOnTheSideItsDoorIsOn()
         {
             // Door on the TOP edge, which is the side the street is on.
@@ -76,6 +91,22 @@ namespace Noir.Core.Tests
             foreach (var d in Driveways.Plan(world, 1991UL))
                 Assert.That(world.Grid.TerrainAt(d.Spot), Is.Not.EqualTo(Terrain.Road),
                             $"{d.Spot} is in the road");
+        }
+
+        [Test]
+        public void ACarDoesNotStandDirectlyInFrontOfTheDoor()
+        {
+            // Door dead centre of the frontage - the shape most Rossville houses actually are.
+            // Standing() must not simply walk straight out from the middle of the wall, or the
+            // one car this house owns is parked on the only path out of its own front door.
+            var world = Build(OneHouse(new Tile(56, 108)));
+
+            var plan = Driveways.Plan(world, 1991UL);
+            Assert.That(plan.Length, Is.EqualTo(1));
+
+            var spot = plan[0].Spot;
+            Assert.That(System.Math.Abs(spot.X - 56), Is.GreaterThanOrEqualTo(2),
+                        $"spot {spot} stands on the door's own line out of the house");
         }
 
         [Test]

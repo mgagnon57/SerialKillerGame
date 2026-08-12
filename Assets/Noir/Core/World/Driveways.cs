@@ -157,7 +157,7 @@ namespace Noir.Core.World
         /// <summary>How many metres from this face to the first road tile, or int.MaxValue.</summary>
         private static int ToRoad(WorldModel world, TileRect b, int dx, int dy)
         {
-            var from = Edge(b, dx, dy, 0, 1);
+            var from = Edge(b, Tile.None, dx, dy, 0, 1);
             for (int step = 1; step <= Reach * 2; step++)
             {
                 int x = from.X + dx * step, y = from.Y + dy * step;
@@ -171,9 +171,29 @@ namespace Noir.Core.World
         /// The point on the given face where household <paramref name="unit"/> of
         /// <paramref name="units"/> sits, spread along the frontage so a terrace's cars stand
         /// side by side rather than on top of each other.
+        ///
+        /// A ONE-CAR HOUSE USED TO BE CENTRED ON THE WHOLE FACE, and an ordinary frame house's
+        /// door is itself roughly in the middle of its own frontage - so the search line this
+        /// starts from ran straight out of the doorway, and 555 of 599 single-unit homes in
+        /// Rossville ended up with their one car parked 2-4 tiles dead ahead of their own front
+        /// door. A single household is walked off the DOOR's own line by half a terrace gap
+        /// instead, toward whichever end of the face leaves more room - the multi-unit case is
+        /// untouched, because a terrace's own doors are already spread along the face and Apart
+        /// already keeps their cars apart.
         /// </summary>
-        private static Tile Edge(TileRect b, int nx, int ny, int unit, int units)
+        private static Tile Edge(TileRect b, Tile door, int nx, int ny, int unit, int units)
         {
+            if (units == 1 && door.IsValid)
+            {
+                if (ny != 0)
+                {
+                    int y = ny < 0 ? b.Top : b.Bottom;
+                    return new Tile(OffDoor(door.X, b.Left, b.Right), y);
+                }
+                int atX = nx < 0 ? b.Left : b.Right;
+                return new Tile(atX, OffDoor(door.Y, b.Top, b.Bottom));
+            }
+
             // Along the face, centred: unit 0 of 1 is the middle of the frontage.
             float middle = (units - 1) / 2f;
             int slide = (int)Math.Round((unit - middle) * Apart);
@@ -188,6 +208,16 @@ namespace Noir.Core.World
             return new Tile(x, b.Y + b.H / 2 + slide);
         }
 
+        /// <summary>Along the face, half a terrace gap clear of the door - toward whichever end
+        /// of the face (<paramref name="lo"/>..<paramref name="hi"/>) leaves the most room,
+        /// clamped so a narrow frontage never pushes the spot past its own wall.</summary>
+        private static int OffDoor(int door, int lo, int hi)
+        {
+            int shift = (hi - door) >= (door - lo) ? Apart : -Apart;
+            int at = door + shift;
+            return Math.Max(lo, Math.Min(hi, at));
+        }
+
         /// <summary>
         /// The first tile out from the front wall a car could actually stand on.
         ///
@@ -199,7 +229,7 @@ namespace Noir.Core.World
         private static Tile Standing(WorldModel world, Place place, int nx, int ny,
                                      int unit, int units, HashSet<Tile> taken, IRng rng)
         {
-            var from = Edge(place.Bounds, nx, ny, unit, units);
+            var from = Edge(place.Bounds, place.Door, nx, ny, unit, units);
 
             // A little jitter along the frontage so a street of identical lots does not read as a
             // car showroom. One metre either way, which is inside the gap Apart already leaves.
