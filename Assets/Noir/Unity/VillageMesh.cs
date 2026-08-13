@@ -1587,10 +1587,14 @@ namespace Noir.Unity
                 }
 
                 if (run.Horizontal)
-                    AddWall(chunks.At(run.X, run.Y), aLo, aHi, run.Lo, run.Hi,
+                    AddWall(chunks.At(run.X, run.Y),
+                            new Vector2(aLo, run.Lo), new Vector2(aHi, run.Lo),
+                            new Vector2(aHi, run.Hi), new Vector2(aLo, run.Hi),
                             BaseAt(run.X, run.Y), HeightAt(run.X, run.Y), WallingAt(run.X, run.Y));
                 else
-                    AddWall(chunks.At(run.X, run.Y), run.Lo, run.Hi, aLo, aHi,
+                    AddWall(chunks.At(run.X, run.Y),
+                            new Vector2(run.Lo, aLo), new Vector2(run.Hi, aLo),
+                            new Vector2(run.Hi, aHi), new Vector2(run.Lo, aHi),
                             BaseAt(run.X, run.Y), HeightAt(run.X, run.Y), WallingAt(run.X, run.Y));
                 count++;
             }
@@ -1644,28 +1648,38 @@ namespace Noir.Unity
         /// whichever mesh it ends up in, and splitting the runs across meshes cannot change a
         /// single shaded pixel.
         /// </summary>
-        private static void AddWall(MeshChunk into, float wx0, float wx1, float wy0, float wy1,
+        /// <summary>
+        /// One slab, given as four grid-space (X,Y) corners walked in order around its
+        /// footprint - <c>a</c>&#8594;<c>b</c>&#8594;<c>c</c>&#8594;<c>d</c>&#8594;back to
+        /// <c>a</c>. An axis-aligned caller passes the same four corners a rectangle always
+        /// had; <see cref="DrawShapedPerimeters"/> passes a true outline edge and its
+        /// depth-inset partner, which need not be axis-aligned at all - nothing below this
+        /// line ever assumed they were.
+        /// </summary>
+        private static void AddWall(MeshChunk into, Vector2 a, Vector2 b, Vector2 c, Vector2 d,
                                     float bottom, float top, int submesh)
         {
             var verts = into.Verts;
             var uvs = into.Uvs;
             var tris = into.Tris[submesh];
 
-            // Float extents in tile space, because a wall is a slab seated within its tiles now
-            // rather than a box filling them - the caller has already decided where its faces
-            // sit and how far its ends reach.
-            float x0 = wx0, x1 = wx1;
-            float z0 = -wy0, z1 = -wy1;
-
-            // (corner a, corner b) walked so that a->b->up is wound outward.
             // Sunk half a metre below the ground it stands on, so a wall meets a contour that
             // dips slightly across the footprint without daylight under its foot.
             float y0 = bottom - 0.5f;
 
-            Face(new Vector3(x1, y0, z0), new Vector3(x0, y0, z0));   // north
-            Face(new Vector3(x0, y0, z1), new Vector3(x1, y0, z1));   // south
-            Face(new Vector3(x1, y0, z1), new Vector3(x1, y0, z0));   // east
-            Face(new Vector3(x0, y0, z0), new Vector3(x0, y0, z1));   // west
+            Vector3 A = new Vector3(a.x, y0, -a.y);
+            Vector3 B = new Vector3(b.x, y0, -b.y);
+            Vector3 C = new Vector3(c.x, y0, -c.y);
+            Vector3 D = new Vector3(d.x, y0, -d.y);
+
+            // (corner p, corner q) walked so that p->q->up is wound outward. Each face is the
+            // REVERSE of one edge of the a-b-c-d loop, which is what a rectangle's four old
+            // north/south/east/west faces always were - see Task 1's plan notes for the
+            // corner-by-corner check against the box this replaces.
+            Face(B, A);
+            Face(D, C);
+            Face(C, B);
+            Face(A, D);
 
             Cap();
 
@@ -1673,10 +1687,10 @@ namespace Noir.Unity
             {
                 int i = verts.Count;
 
-                verts.Add(new Vector3(x0, top, z0));
-                verts.Add(new Vector3(x1, top, z0));
-                verts.Add(new Vector3(x1, top, z1));
-                verts.Add(new Vector3(x0, top, z1));
+                verts.Add(new Vector3(A.x, top, A.z));
+                verts.Add(new Vector3(B.x, top, B.z));
+                verts.Add(new Vector3(C.x, top, C.z));
+                verts.Add(new Vector3(D.x, top, D.z));
 
                 for (int v = i; v < verts.Count; v++)
                     uvs.Add(new Vector2(verts[v].x, -verts[v].z));
