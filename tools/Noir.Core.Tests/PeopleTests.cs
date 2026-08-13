@@ -56,7 +56,7 @@ namespace Noir.Core.Tests
         [Test]
         public void VillageSizedPopulation()
         {
-            // Widened from (85,125) when the east quarter was authored and Ashcombe went
+            // Widened from (85,125) when the east quarter was authored and the fixture village went
             // from 112 people to 158. The bound is a sanity check on the generator - that
             // dwellings turn into a plausible number of residents - not a pin on one village,
             // and the plan of record takes this town to 600.
@@ -815,7 +815,7 @@ namespace Noir.Core.Tests
     public class StrandingTests
     {
         [Test]
-        public void NobodyIsStrandedOrMisfiledOverAWholeDayInAshcombe()
+        public void NobodyIsStrandedOrMisfiledOverAWholeDayInTheFixtureVillage()
         {
             var sim = new Simulation(Village.World, Village.People, Village.Seed, 0);
 
@@ -843,7 +843,7 @@ namespace Noir.Core.Tests
             }
 
             Assert.That(sim.GaveUpTotal, Is.EqualTo(0),
-                "no journey in Ashcombe should come anywhere near the node cap");
+                "no journey in the fixture village should come anywhere near the node cap");
         }
 
         private static string WhoIsStranded(Simulation sim)
@@ -871,9 +871,9 @@ namespace Noir.Core.Tests
         // how deep it may go, so a long walk does not strand anybody. Tuning the fixture until
         // it cooperated would have produced a test that passes for reasons nobody could state.
         //
-        // The gap is accepted rather than hidden. Ashcombe strands nobody, and since the
+        // The gap is accepted rather than hidden. The fixture village strands nobody, and since the
         // pathfinder was given a map-scaled cap and a weighted heuristic, neither does a tripled
-        // Ashcombe - `strand --days 3 --tile 3` reports zero. The bug class that made a
+        // the fixture village - `strand --days 3 --tile 3` reports zero. The bug class that made a
         // strand-specific test valuable is the one that was fixed. If stranding ever returns,
         // `Noir.Sim strand` reports it and this is the place to put the regression.
 
@@ -916,7 +916,7 @@ namespace Noir.Core.Tests
             var pf = new Pathfinder(Village.World.Grid);
             var path = new List<Tile>();
 
-            var pub = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Pub)[0]);
+            var pub = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Tavern)[0]);
             var shop = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Shop)[0]);
 
             Assert.That(pf.TryFindPath(pub.Door, shop.Door, path), Is.True);
@@ -1000,7 +1000,7 @@ namespace Noir.Core.Tests
         {
             var pf = new Pathfinder(Village.World.Grid);
             var path = new List<Tile>();
-            var door = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Pub)[0]).Door;
+            var door = Village.World.GetPlace(Village.World.PlacesOfKind(PlaceKind.Tavern)[0]).Door;
 
             Assert.That(pf.TryFindPath(door, door, path), Is.True);
             Assert.That(path, Is.Empty, "a path to where you already are should have no steps");

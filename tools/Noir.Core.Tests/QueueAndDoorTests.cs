@@ -9,7 +9,7 @@ using Noir.Core.World;
 namespace Noir.Core.Tests
 {
     /// <summary>
-    /// A village built to make the thing under test happen, rather than hoping Ashcombe throws
+    /// A village built to make the thing under test happen, rather than hoping the fixture village throws
     /// one up.
     ///
     /// The shop is the ONLY errand in it — no green, no pub, no allotments — so every adult's
@@ -19,7 +19,7 @@ namespace Noir.Core.Tests
     ///
     /// It is also entirely self-contained: the layout is written here and the people are built
     /// by hand rather than generated, so editing Content/ cannot silently stop these tests from
-    /// testing anything. Ashcombe's shop holds about one and a half people at a time, which
+    /// testing anything. The fixture village's shop holds about one and a half people at a time, which
     /// makes a queue of four there a matter of luck rather than a matter of test.
     /// </summary>
     internal static class Queueham
@@ -151,7 +151,7 @@ namespace Noir.Core.Tests
         }
 
         [Test]
-        public void EveryCounterInAshcombeHasAUsableLine()
+        public void EveryCounterInTheFixtureVillageHasAUsableLine()
         {
             foreach (var place in Village.World.AllPlaces)
             {

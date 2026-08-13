@@ -1,0 +1,31 @@
+{
+    "asset": "747ae7a1002b12349bea4cf75d4a2296",
+    "fileName": "019fda54-068b-7ce2-9761-14da62705855.png",
+    "prompt": "A photograph taken in 1991 of the back yard and driveway of an ordinary house in a small farming town in east-central Illinois. A modest one-and-a-half storey frame house with pale vinyl siding, an aluminium screen storm door and a small wooden deck. In the back garden a large grey mesh C-band satellite television dish about ten feet across on a concrete pad, angled at the sky. A round above-ground swimming pool with a corrugated metal wall and a small deck ladder. A basketball hoop with a white backboard mounted over the detached garage door. A 1988 Dodge Caravan minivan parked on the concrete drive and a 1989 Chevrolet C1500 pickup beside it. Two BMX bicycles dropped on the grass, a plastic paddling pool, a Weber kettle barbecue, a rotary washing line, Rubbermaid bins. Chain-link fence, mown lawn, tall mature trees behind. A television aerial on the roof. Bright clear late-summer afternoon. Shot on Kodak Gold 400 35mm colour negative and printed at a one-hour photo lab: crisp, neutral to slightly cool colour, good contrast, fine grain. IMPORTANT: this is 1991, not the 1970s. No sun-bleached vintage warm cast, no muted earth tones, no 1970s cars. Nothing later than 1991: no modern cars, no small modern satellite dishes, no plastic modern play equipment, no mobile phones.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

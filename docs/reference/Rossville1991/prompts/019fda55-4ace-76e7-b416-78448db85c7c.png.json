@@ -1,0 +1,31 @@
+{
+    "asset": "f8b828469216d0b42ae37d22d846ec52",
+    "fileName": "019fda55-4ace-76e7-b416-78448db85c7c.png",
+    "prompt": "A photograph taken in 1991 at night, looking down a residential street in a small farming town in east-central Illinois. A single sodium-vapour streetlight on a wooden pole throws a warm orange cone onto the tarmac and the kerb; the rest of the street falls away into darkness. Modest frame houses on both sides with pale vinyl and clapboard siding: two have yellow porch lights on over the front steps, one has a warm lit front window with the blue-grey flicker of a television inside, the others are dark. The heavy mature tree canopy overhead is almost black, catching only a rim of orange light from below. A 1990 Ford Taurus parked at the kerb half in the light, a 1988 Dodge Caravan minivan further along in shadow. A concrete sidewalk, a chain-link fence, a bicycle left on a lawn. Deep blue-black sky. Long exposure hand-held snapshot, slightly grainy, deep shadows with detail lost in them, strong orange-to-blue colour separation between the sodium light and the night. Shot on Kodak Gold 400 35mm colour negative pushed, printed at a one-hour photo lab. IMPORTANT: this is 1991, not the 1970s. No 1970s cars, no vintage faded cast. Nothing later than 1991: no modern cars, no white LED streetlights, no modern house lighting.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

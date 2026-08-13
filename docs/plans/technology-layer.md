@@ -246,8 +246,8 @@ dotnet test -c Release tools/Noir.Core.Tests --filter "Name=PrintTheTechnologyYe
 **2. `particulars.txt` is still English, 1979.** 914 clauses, 2.4 per citizen, so *every person in
 Rossville* gets the shipping forecast, the pools, **Button B in the phone box**, the immersion, the
 *Radio Times*, the **Home Service**, the mobile shop, cricket on the radio, and **Marlbury** —
-Ashcombe's neighbouring town. Its own header still says *"1979, rural England."* `names.txt` was
-retuned twice and says the Ashcombe pool was wrong on both counts; particulars never got that pass.
+Rossville's neighbouring town. Its own header still says *"1979, rural England."* `names.txt` was
+retuned twice and says the Rossville pool was wrong on both counts; particulars never got that pass.
 
 About nineteen clauses reference technology directly, so it is era-coupled as well as
 country-wrong — **which is why `Era` is built general.** When particulars are rewritten for Illinois

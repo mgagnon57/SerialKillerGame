@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.World;
 
@@ -26,7 +26,7 @@ namespace Noir.Unity
     /// hand every time the town was re-laid; this asks the road network instead, so moving the
     /// town moves the age-rings with it.
     ///
-    /// A village with no such crossing (Ashcombe) falls back to the centroid of its own dwellings,
+    /// A village with no such crossing (the fixture village) falls back to the centroid of its own dwellings,
     /// so this is safe to leave installed for both towns.
     /// </summary>
     public static class HouseLayers
@@ -87,7 +87,7 @@ namespace Noir.Unity
 
         /// <summary>
         /// Where the town's two founding roads cross. Falls back to the centroid of the dwellings
-        /// when there is no such pair, which is what makes this safe for Ashcombe.
+        /// when there is no such pair, which is what makes this safe for the fixture village.
         /// </summary>
         private static Vector2 CrossingOf(WorldModel world)
         {

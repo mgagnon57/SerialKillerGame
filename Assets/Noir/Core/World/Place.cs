@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Noir.Core.Contracts;
 
@@ -7,22 +7,22 @@ namespace Noir.Core.World
     public enum PlaceKind : byte
     {
         Dwelling = 0,
-        Pub,
+        Tavern,
         Shop,
         PostOffice,
         Church,
         School,
-        Surgery,
+        Clinic,
         Garage,
         Mill,
         Farm,
         VillageHall,
         Playground,
         BusStop,
-        PhoneBox,
+        PhoneBooth,
         Green,
         Churchyard,
-        Allotments,
+        Gardens,
     }
 
     public readonly struct TileRect

@@ -46,7 +46,7 @@ size 20 12
 terrain field 0,0 20x3
 road main 3 1,6 18,6
 
-place pub 4,2 6x4 ""The Anchor""
+place tavern 4,2 6x4 ""The Anchor""
   door 6,5
   hours 11:00-14:30
   hours 17:30-23:00 mon-sat
@@ -80,7 +80,7 @@ place green 12,8 5x3 ""the Green""
         public void ParsesPlaceAttributes()
         {
             var pub = VillageParser.Parse(Sample).Places[0];
-            Assert.That(pub.Kind, Is.EqualTo(PlaceKind.Pub));
+            Assert.That(pub.Kind, Is.EqualTo(PlaceKind.Tavern));
             Assert.That(pub.Name, Is.EqualTo("The Anchor"));
             Assert.That(pub.Door, Is.EqualTo(new Tile(6, 5)));
             Assert.That(pub.JobSlots, Is.EqualTo(2));
@@ -124,14 +124,14 @@ place green 12,8 5x3 ""the Green""
         public void BuildingWithoutADoorIsRejected()
         {
             Assert.Throws<VillageParseException>(() =>
-                VillageParser.Parse("village X\nsize 20 20\nplace pub 2,2 5x5 \"P\"\n"));
+                VillageParser.Parse("village X\nsize 20 20\nplace tavern 2,2 5x5 \"P\"\n"));
         }
 
         [Test]
         public void PlaceOutsideTheMapIsRejected()
         {
             Assert.Throws<VillageParseException>(() =>
-                VillageParser.Parse("village X\nsize 10 10\nplace pub 8,8 5x5 \"P\"\n  door 9,9\n"));
+                VillageParser.Parse("village X\nsize 10 10\nplace tavern 8,8 5x5 \"P\"\n  door 9,9\n"));
         }
     }
 
@@ -144,7 +144,7 @@ place green 12,8 5x3 ""the Green""
 village B
 size 30 20
 road main 3 1,15 28,15
-place pub 4,4 7x6 ""P""
+place tavern 4,4 7x6 ""P""
   door 7,9
   human somewhere
 "));
@@ -329,7 +329,19 @@ place pub 4,4 7x6 ""P""
             Tally(before, was);
             Tally(after, now);
 
-            Assert.That(was.Count, Is.GreaterThan(500),
+            // 300, DOWN FROM 500 ON 2026-08-09, AND NOT BECAUSE THE TEST GOT WEAKER.
+            //
+            // This is the test refusing to prove nothing, which is the right instinct and is why
+            // it went red the moment the roadside hedges came out. It was calibrated when 17,849
+            // hedges - FORTY-FIVE PER CENT of every prop in the town - were being planted along
+            // the verges, so the number it was really measuring was how English the map was.
+            // With them gone this fixture yields 356 undisturbed props, which is still hundreds
+            // of independent positions and variants compared across two builds.
+            //
+            // Re-record it downward if the prop estimate falls again; do NOT delete the check.
+            // Its whole job is to notice when the sample has quietly become too small to mean
+            // anything, and 356 is comfortably not that.
+            Assert.That(was.Count, Is.GreaterThan(300),
                 "hardly any props were compared — the test proved nothing");
 
             var differences = new List<string>();
@@ -392,7 +404,7 @@ place pub 4,4 7x6 ""P""
         }
 
         [Test]
-        public void EveryPlaceInAshcombeHasItsOwnKey()
+        public void EveryPlaceInTheFixtureVillageHasItsOwnKey()
         {
             var world = WorldBuilder.Build(VillageParser.Parse(TestContent.Read("fixture-village.txt")));
             var seen = new Dictionary<ulong, string>();
@@ -409,12 +421,12 @@ place pub 4,4 7x6 ""P""
     [TestFixture]
     public class PlaceHoursTests
     {
-        private static Place Pub()
+        private static Place Tavern()
         {
             var layout = VillageParser.Parse(@"
 village H
 size 20 20
-place pub 2,2 6x5 ""P""
+place tavern 2,2 6x5 ""P""
   door 4,6
   hours 11:00-14:30
   hours 17:30-23:00
@@ -426,7 +438,7 @@ place pub 2,2 6x5 ""P""
         [Test]
         public void ClosedBetweenSittings()
         {
-            var p = Pub();
+            var p = Tavern();
             Assert.That(p.IsOpenAt(12 * 60, 0), Is.True);
             Assert.That(p.IsOpenAt(16 * 60, 0), Is.False, "closed in the afternoon");
             Assert.That(p.IsOpenAt(20 * 60, 0), Is.True);
@@ -436,7 +448,7 @@ place pub 2,2 6x5 ""P""
         [Test]
         public void MinutesUntilOpenCountsForward()
         {
-            var p = Pub();
+            var p = Tavern();
             Assert.That(p.MinutesUntilOpen(12 * 60, 0), Is.EqualTo(0), "already open");
             Assert.That(p.MinutesUntilOpen(16 * 60, 0), Is.EqualTo(90), "90 minutes to evening opening");
         }
@@ -456,7 +468,7 @@ place pub 2,2 6x5 ""P""
     /// This is what stops a careless edit to village.txt from quietly stranding a cottage.
     /// </summary>
     [TestFixture]
-    public class AshcombeTests
+    public class FixtureVillageTests
     {
         private static WorldModel _world;
 
@@ -467,7 +479,7 @@ place pub 2,2 6x5 ""P""
         [Test]
         public void LoadsWithTheExpectedShape()
         {
-            Assert.That(_world.Name, Is.EqualTo("Ashcombe"));
+            Assert.That(_world.Name, Is.EqualTo("Fixture"));
             // Deliberately a range rather than exact numbers: the map is authored content and
             // will keep being edited. What matters is that it stays a village rather than
             // silently becoming a city or collapsing to a hamlet.
@@ -607,8 +619,8 @@ place pub 2,2 6x5 ""P""
         {
             foreach (var kind in new[]
             {
-                PlaceKind.Pub, PlaceKind.Shop, PlaceKind.Church, PlaceKind.School,
-                PlaceKind.Surgery, PlaceKind.PostOffice, PlaceKind.Mill,
+                PlaceKind.Tavern, PlaceKind.Shop, PlaceKind.Church, PlaceKind.School,
+                PlaceKind.Clinic, PlaceKind.PostOffice, PlaceKind.Mill,
                 PlaceKind.Farm, PlaceKind.Garage, PlaceKind.VillageHall, PlaceKind.Playground
             })
                 Assert.That(_world.PlacesOfKind(kind).Count, Is.GreaterThan(0), $"no {kind} in the village");
@@ -620,7 +632,7 @@ place pub 2,2 6x5 ""P""
             // Tied to the number of HOMES rather than to an absolute count of jobs.
             //
             // It was InRange(35, 70), pinned to a hundred-person village, and it fired the
-            // moment Ashcombe grew - which is exactly when a test about PROPORTION should not.
+            // moment the fixture village grew - which is exactly when a test about PROPORTION should not.
             // The village had gained an estate and then a factory to employ it; the ratio was
             // fine and the constant was stale.
             //

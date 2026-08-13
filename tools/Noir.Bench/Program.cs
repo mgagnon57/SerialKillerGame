@@ -176,8 +176,8 @@ namespace Noir.Bench
 
                 if (real && RealVillage.Available)
                 {
-                    Progress("build stages, Ashcombe");
-                    BuildBench.Stages(r, RealVillage.Layout(), "Ashcombe (authored)", seed, 61);
+                    Progress("build stages, the fixture village");
+                    BuildBench.Stages(r, RealVillage.Layout(), "the fixture village (authored)", seed, 61);
                 }
 
                 Progress("build stages, town");
@@ -260,7 +260,7 @@ namespace Noir.Bench
 
         private static void RealComparison(Report r, List<Settlement> settlements, ulong seed)
         {
-            Progress("Ashcombe against a synthetic village of the same size");
+            Progress("the fixture village against a synthetic one of the same size");
 
             var ashcombe = RealVillage.Load(seed);
             var synthetic = Nearest(settlements, ashcombe.People.Count);
@@ -286,7 +286,7 @@ namespace Noir.Bench
 
             table.Note("If these two disagree by much, the synthetic generator is not a stand-in for the");
             table.Note("real thing and every projection built on it needs re-reading. Read the gap against");
-            table.Note("tiles/head: the lattice is looser than Ashcombe, journeys are correspondingly");
+            table.Note("tiles/head: the lattice is looser than the fixture village, journeys are correspondingly");
             table.Note("longer, and pathfinding is the dominant cost — so the synthetic numbers are the");
             table.Note("pessimistic end of the range, not the optimistic one.");
             r.Add(table);

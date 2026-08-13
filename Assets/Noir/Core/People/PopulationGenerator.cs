@@ -334,6 +334,51 @@ namespace Noir.Core.People
                 filled[pick]++;
                 vacancies--;
             }
+
+            SendTheRestOutOfTown(citizens, candidates, rng);
+        }
+
+        /// <summary>
+        /// How many of the working-age adults Rossville cannot employ are employed somewhere else.
+        ///
+        /// THE HOLE THIS FILLS. The town's authored amenities carry about 168 job slots between
+        /// them against roughly 450 adults of working age. Everybody left over had no workplace,
+        /// and DayPlanner reads a person with no workplace as a person with a free day: five
+        /// errands, in town, at ten on a Tuesday morning. That is the exact opposite of a farm
+        /// town, whose men were gone by six - Hoopeston's canneries five miles north, Danville
+        /// twenty south, the elevators, the railroad, and the ground itself.
+        ///
+        /// THE SPLIT IS THE PERIOD. A married woman in a Vermilion County village in 1991 was far
+        /// likelier to be at home, or to hold one of the part-time jobs the village itself
+        /// provides - which she already has, because those are handed out above and this only
+        /// ever asks about the people left over.
+        ///
+        /// TUNED AGAINST THE INSTRUMENTS, not guessed at. At 88/34 the town emptied hard enough
+        /// that Content/watched.floor's sight line fell through its floor and the shop queue
+        /// stopped forming at all - the streets are supposed to be quiet on a weekday morning,
+        /// not deserted. 60/15 holds every ratchet.
+        /// </summary>
+        private const int MenAwayPercent = 60;
+        private const int WomenAwayPercent = 15;
+
+        private static void SendTheRestOutOfTown(List<Citizen> citizens, List<int> candidates,
+                                                 IRng rng)
+        {
+            foreach (int c in candidates)
+            {
+                var old = citizens[c];
+
+                // The draw happens for everybody left over, whichever way it falls, so that
+                // tuning the shares above does not reshuffle the whole village - the same
+                // discipline the commute draw above keeps, and for the same reason.
+                bool away = rng.NextInt(100) < (old.Male ? MenAwayPercent : WomenAwayPercent);
+                if (old.Work.IsValid || !away) continue;
+
+                citizens[c] = new Citizen(
+                    old.Id, old.Key, old.BirthOrder, old.Forename, old.Surname, old.BirthYear,
+                    Occupation.AwayWork, old.Household, old.Home, PlaceId.None, old.Shift,
+                    old.Punctuality, old.Pace, old.Sociability, old.Particulars, old.Beats);
+            }
         }
 
         /// <summary>Ties go to the earlier workplace, so the result never depends on anything
@@ -507,7 +552,7 @@ namespace Noir.Core.People
         /// Worth knowing before anyone tunes <see cref="HalfDistance"/>: this weighting falls
         /// off like 1/d, so once every candidate is well beyond fifty tiles the odds between
         /// two of them settle at the ratio of their distances and the constant stops mattering.
-        /// Measured on a town four times Ashcombe's area, dropping it from 50 to 12 moved the
+        /// Measured on a town four times Rossville's area, dropping it from 50 to 12 moved the
         /// mean errand by four tiles. If errands ever need to be genuinely local at town scale
         /// the answer is a shorter shortlist or a steeper curve, not a smaller number here.
         /// </summary>

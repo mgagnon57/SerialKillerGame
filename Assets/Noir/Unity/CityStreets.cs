@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 #if UNITY_EDITOR
@@ -157,7 +157,19 @@ namespace Noir.Unity
             RoadClass.Mainroad => Kit + "Mainroad_Crosswalk_City.prefab",
             RoadClass.Alley    => Straight(klass),      // nor across an alley mouth
             RoadClass.Track    => Straight(klass),      // nobody paints a zebra on a farm track
-            _                  => Kit + "Road_Crosswalk_10x10_City.prefab",
+
+            // AND NOT ON A RESIDENTIAL STREET EITHER, which leaves this arm with nothing but
+            // Street in it. `Road_Crosswalk_10x10_City` carries its zebra, its stop line and its
+            // edge line on the M_Universal_A submesh - and Verge(), eleven lines after the tile is
+            // seated, repaints exactly that submesh to plain asphalt on every Street tile. So the
+            // crossing was laid and then blanked, every time, at every side-street junction in
+            // town. Two decisions disagreeing, and the tile choice was the wrong one: Verge is
+            // stating the RULING - Rossville's side streets are unmarked, the 2007 photographs
+            // show paint only on the through route - and this line had never heard it.
+            //
+            // Route 1, Attica and every Mainroad or Freeway crossing are untouched: both Verge
+            // call sites are behind a Street guard.
+            _                  => Straight(klass),
         };
 
         /// <summary>
@@ -202,6 +214,62 @@ namespace Noir.Unity
             return inTown
                 ? Kit + "Mainroad_T_Crosswalk_30x30_City.prefab"
                 : Kit + "Mainroad_T_30x30_City.prefab";
+        }
+
+        /// <summary>
+        /// The piece for a junction with TWO arms at a right angle: a street that turns a corner.
+        ///
+        /// Rossville has these because the county records a street as chained segments and the
+        /// chain gets a new name where it bends - Maple becomes Park, 3550north becomes Attica.
+        /// Before JUNC-2 no junction was recorded at all where two same-axis roads met, so this
+        /// case could not arise and there was nothing to lay. Now there is, and laying a
+        /// four-way crossing at a corner paints two arms into whatever is behind the bend.
+        ///
+        /// THE PIECE WAS ALREADY IN THE KIT. It was never opened because nothing ever asked for
+        /// a corner.
+        /// </summary>
+        /// <summary>
+        /// The class of the widest road at this junction running along the given axis - what the
+        /// tee piece has to fit, since the through road is most of the tile. Falls back to the
+        /// widest road of any axis where nothing matches.
+        /// </summary>
+        private static RoadClass ClassAlong(Junction j, bool northSouth, RoadClass fallback)
+        {
+            var best = fallback;
+            float widest = -1f;
+
+            foreach (var arm in j.Arms)
+            {
+                if (arm.Road == null) continue;
+
+                // Asked of the TANGENT, not of the road's IsNorthSouth: a road is on the axis it
+                // is pointing along here, not the one its two end points imply over its whole run.
+                bool armIsNorthSouth = Mathf.Abs(arm.Tangent.Y) > Mathf.Abs(arm.Tangent.X);
+                if (armIsNorthSouth != northSouth) continue;
+                if (arm.Road.HalfWidth > widest) { widest = arm.Road.HalfWidth; best = arm.Road.Class; }
+            }
+
+            return best;
+        }
+
+        private static string Turn(RoadClass widest, float reach)
+        {
+            if (reach < 8f) return Kit + "Road_Turn_10x10_City.prefab";
+            if (widest == RoadClass.Freeway) return Kit + "Freeway_Turn_30x30_City.prefab";
+            return Kit + "Mainroad_Turn_30x30_City.prefab";
+        }
+
+        /// <summary>
+        /// The piece for a junction with ONE arm: a road that stops here and goes no further.
+        ///
+        /// A dead end is a junction in the model - `Touches` records a road ending on another -
+        /// and one of the two may have nothing beyond it. Ten of these on Content/roads.txt are
+        /// alleys stopping at a lot line.
+        /// </summary>
+        private static string End(RoadClass widest, float reach)
+        {
+            if (reach < 8f) return Kit + "Road_End_10x10_City.prefab";
+            return Kit + "Mainroad_End_30x30_City.prefab";
         }
 
         /// <summary>
@@ -263,9 +331,26 @@ namespace Noir.Unity
                 }
             }
 
+            // AS DRAWN, NOT AS SHIPPED - `ROAD-FIXES` CONS-4, and it was a whole road class wide.
+            //
+            // `Seat` narrows a tile whose width does not match its corridor (see `Narrow`), and
+            // the two dirt tiles are exactly that case: the alley tile is 7.1 m across and its
+            // corridor is 4 m. Measuring the PREFAB and not applying the same scale reported
+            // `[streets] Alley: 7.1m of asphalt in a 4m corridor` - which is not merely wrong, it
+            // is impossible, and the pavement figure beside it came out at MINUS 1.6 m each side.
+            //
+            // Everything that stands beside or drives on a street derives from this number:
+            // `LaneOffset` put alley traffic 1.8 m off the centre line of a 2 m half-width lane,
+            // and `CityUnderTest`'s "is this vehicle on the road" check passed every point inside
+            // an alley UNCONDITIONALLY, because the asphalt it was told about was wider than the
+            // corridor containing it. That exemption is gone with this line.
+            float drawn = Narrow(klass, Straight(klass));
+            if (drawn != 1f) half *= drawn;
+
             Debug.Log($"[streets] {klass}: {half * 2f:0.0}m of asphalt in a {corridor}m corridor "
                     + $"({corridor / 2f - half:0.0}m of pavement each side), "
-                    + $"{LanesEachWay(klass)} lane(s) each way.");
+                    + $"{LanesEachWay(klass)} lane(s) each way"
+                    + (drawn != 1f ? $" - tile narrowed x{drawn:0.00} to fit." : "."));
             return _asphalt[klass] = half;
 #else
             // MEASURED, NOT GUESSED - and the guess was badly wrong.
@@ -277,8 +362,13 @@ namespace Noir.Unity
             //
             //     class      corridor   guessed half   MEASURED half
             //     Street         10 m        3.0 m         3.0 m     ok
-            //     Alley           4 m        0.0 m         3.55 m    zero asphalt
+            //     Alley           4 m        0.0 m         2.0 m     zero asphalt
             //     Mainroad       30 m       13.0 m         6.0 m     more than double
+            //
+            // THE ALLEY FIGURE IS 2.0 AND NOT 3.55 - see CONS-4 above. 3.55 is half the alley
+            // tile's own width; `Seat` narrows that tile by 4/7.1 to fit its corridor, so 2.0 is
+            // what a player actually draws. The old number here made a player and the editor
+            // disagree about a whole road class.
             //
             // Zero is the bad one: LaneOffset multiplies by it, so every lane on an alley collapses
             // onto the centre line and VergeOffset puts the pavement in the middle of the road.
@@ -291,7 +381,7 @@ namespace Noir.Unity
             switch (klass)
             {
                 case RoadClass.Street: return 3.0f;
-                case RoadClass.Alley:  return 3.55f;
+                case RoadClass.Alley:  return 2.0f;
                 default:
                     // Not measured on this map - Rossville has no freeway, main road or track in
                     // Content/roads.txt, so no [streets] line has ever been logged for them. The
@@ -332,7 +422,10 @@ namespace Noir.Unity
         // ---- building ------------------------------------------------------------------
 
         public static GameObject Build(WorldModel world, Transform parent) =>
-            Build(world, parent, out _);
+            Build(world, parent, out _, out _);
+
+        public static GameObject Build(WorldModel world, Transform parent, out GameObject alleys) =>
+            Build(world, parent, out alleys, out _);
 
         /// <summary>
         /// Streets and alleys, built into TWO roots so they can be switched independently.
@@ -345,7 +438,8 @@ namespace Noir.Unity
         /// Junctions stay with the streets. An alley-only junction is a few tiles and splitting
         /// them would mean reading the arms of every junction to decide.
         /// </summary>
-        public static GameObject Build(WorldModel world, Transform parent, out GameObject alleys)
+        public static GameObject Build(WorldModel world, Transform parent,
+                                       out GameObject alleys, out GameObject planting)
         {
             var root = new GameObject("CityStreets");
             root.transform.SetParent(parent, false);
@@ -353,7 +447,20 @@ namespace Noir.Unity
             alleys = new GameObject("CityAlleys");
             alleys.transform.SetParent(parent, false);
 
-            // Clear of Ashcombe's ground, which is still drawn underneath the whole city at y=0.
+            // A THIRD SIBLING, FOR THE SAME REASON THE ALLEYS ARE ONE, and for a fault the owner
+            // found by using the switch it was supposed to have: "when I turn on street layer it
+            // adds some trees and shrubs". It did. Every tuft, fern, bush and street tree this
+            // builder sows was a child of the street root, so the Streets switch owned 7,869
+            // renderers of which 1,960 were street chunks - four fifths of the layer was foliage,
+            // and the Trees switch beside it could not touch any of it.
+            //
+            // Sibling rather than child, or it would go off with the streets and be exactly the
+            // bug again in the other direction. VillageHost registers it under Layers.Kind.Trees
+            // alongside CityGreenery, which is where a tree belongs.
+            planting = new GameObject("CityStreetPlanting");
+            planting.transform.SetParent(parent, false);
+
+            // Clear of Rossville's ground, which is still drawn underneath the whole city at y=0.
             //
             // A road tile is TWO levels: its pavement is a plane at y=0 and its asphalt is a
             // plane at y=-0.1, ten centimetres lower, which is the kerb. The old lift of 0.04
@@ -367,36 +474,98 @@ namespace Noir.Unity
             // and leaves the kerb reading as a kerb.
             root.transform.localPosition = new Vector3(0f, 0.12f, 0f);
             alleys.transform.localPosition = root.transform.localPosition;   // same lift, or they sink
+            planting.transform.localPosition = root.transform.localPosition; // and so must this
 
 #if UNITY_EDITOR
             int tiles = 0, dressing = 0;
 
             // 1. The junctions first, so the straights know which ground is already spoken for.
-            int tees = 0;
-            foreach (var j in world.Roads.Junctions)
+            //
+            // AND WHICH GROUND IS NOT. The carriageway walk below skips any tile within reach of a
+            // junction, on the understanding that a junction tile has already covered it. Where
+            // this loop lays nothing - a straight-through node, or one with no arms at all - that
+            // understanding is false and the road would have a hole in it. So the ones that got
+            // no tile are collected and the walk is told to lay straight across them.
+            var untiled = new HashSet<int>();
+
+            int tees = 0, corners = 0, deadEnds = 0, straightThrough = 0;
+            for (int ji = 0; ji < world.Roads.Junctions.Count; ji++)
             {
+                var j = world.Roads.Junctions[ji];
                 float reach = j.Reach;
                 bool inTown = CitySignals.InTheTown(world, j);
 
-                // WHICH ARMS ACTUALLY EXIST. A road only reaches out of the junction on a side
-                // where its own declared run continues past it - so a track that dead-ends here
-                // contributes one arm, not two, and this is a three-way junction.
-                bool north = j.NorthSouth.From < j.Y - reach;
-                bool south = j.NorthSouth.To   > j.Y + reach;
-                bool west  = j.EastWest.From   < j.X - reach;
-                bool east  = j.EastWest.To     > j.X + reach;
+                // WHICH ARMS ACTUALLY EXIST, ASKED OF THE ARMS.
+                //
+                // This read `j.NorthSouth.From < j.Y - reach` and three more like it: a road's
+                // declared extent on ITS OWN axis, compared against the junction's coordinate on
+                // the OTHER one. That only means anything while the NorthSouth slot holds a
+                // north-south road, and since JUNC-2 it does not - seven junctions on
+                // Content/roads.txt are two SAME-AXIS roads meeting, and every one of them has an
+                // east-west road in that slot. It could not see past the pair either, so at the
+                // eighteen merged nodes the third and fourth roads contributed no arms at all.
+                //
+                // An arm leaves backwards along its own path when there is road behind the stop
+                // line, and forwards when there is road beyond it. The tangent says which compass
+                // direction that is, and village y runs SOUTH - so north is the smaller y, which
+                // is the same convention the four lines above were using.
+                bool north = false, south = false, east = false, west = false;
+
+                foreach (var arm in j.Arms)
+                {
+                    var road = arm.Road;
+                    if (road?.Path == null) continue;
+
+                    if (arm.S > reach) Leaves(-arm.Tangent.X, -arm.Tangent.Y);
+                    if (arm.S < road.Path.Length - reach) Leaves(arm.Tangent.X, arm.Tangent.Y);
+                }
+
+                void Leaves(float dx, float dy)
+                {
+                    if (Mathf.Abs(dx) >= Mathf.Abs(dy)) { if (dx >= 0f) east = true; else west = true; }
+                    else { if (dy >= 0f) south = true; else north = true; }
+                }
 
                 int arms = (north ? 1 : 0) + (south ? 1 : 0) + (west ? 1 : 0) + (east ? 1 : 0);
+
+                // The widest road at the node, which is what the piece has to fit. Not the wider
+                // of the pair: a merged node may have four roads and the widest may be neither.
+                var widest = RoadClass.Track;
+                float widestHalf = -1f;
+                bool anyFreeway = false;
+                foreach (var arm in j.Arms)
+                {
+                    if (arm.Road == null) continue;
+                    if (arm.Road.Class == RoadClass.Freeway) anyFreeway = true;
+                    if (arm.Road.HalfWidth > widestHalf) { widestHalf = arm.Road.HalfWidth; widest = arm.Road.Class; }
+                }
 
                 string piece;
                 float yaw = 0f;
 
-                if (arms == 3)
+                if (arms == 2 && ((north && south) || (east && west)))
+                {
+                    // STRAIGHT THROUGH IS NOT A JUNCTION TO LOOK AT. Two arms facing opposite
+                    // ways is one continuous piece of road - either a crossing whose other road
+                    // stops short of it, or, and this is the case JUNC-2 created, two roads of
+                    // the same axis meeting head-on where the county's chain changed its name.
+                    // Maple becomes Park; there is nothing there but tarmac. Lay no tile, and put
+                    // this node on the untiled list so the carriageway walk paves straight over it
+                    // instead of leaving the hole it would otherwise leave.
+                    straightThrough++;
+                    untiled.Add(ji);
+                    continue;
+                }
+
+                if (arms == 4)
+                {
+                    piece = Cross(anyFreeway ? RoadClass.Freeway : RoadClass.Mainroad, reach, inTown);
+                }
+                else if (arms == 3)
                 {
                     // The through road is the one with both of its arms; the stem is the odd one.
                     bool throughIsNorthSouth = north && south;
-                    var through = throughIsNorthSouth ? j.NorthSouth : j.EastWest;
-                    piece = Tee(through.Class, reach, inTown);
+                    piece = Tee(ClassAlong(j, throughIsNorthSouth, widest), reach, inTown);
 
                     // The tile is drawn with its through road along x and its stem toward +z,
                     // which is village NORTH because village y runs into Unity -z. Yaw turns +z
@@ -406,33 +575,81 @@ namespace Noir.Unity
                         : (north ? 0f : 180f);
                     tees++;
                 }
+                else if (arms == 2)
+                {
+                    // A CORNER. The kit's turn piece joins its +z arm to its +x arm at yaw 0 -
+                    // north and east in village terms - so the yaw is how far round from there
+                    // this corner's own pair sits. VERIFY THIS AGAINST A RENDER before trusting
+                    // it: the prefab's built-in orientation is not written down anywhere and
+                    // guessing it wrong turns every corner in the town inside out.
+                    piece = Turn(widest, reach);
+                    yaw = north && east ? 0f
+                        : east && south ? 90f
+                        : south && west ? 180f
+                        : 270f;
+                    corners++;
+                }
+                else if (arms == 1)
+                {
+                    // A DEAD END. Same warning as the corner: the end piece's own facing is read
+                    // off a render, not assumed. Taken here as the road arriving from +z at yaw 0.
+                    piece = End(widest, reach);
+                    yaw = north ? 0f : east ? 90f : south ? 180f : 270f;
+                    deadEnds++;
+                }
                 else
                 {
-                    var klass = j.NorthSouth.Class == RoadClass.Freeway
-                             || j.EastWest.Class == RoadClass.Freeway
-                        ? RoadClass.Freeway : RoadClass.Mainroad;
-                    piece = Cross(klass, reach, inTown);
-
-                    if (arms < 3)
-                        Debug.LogWarning($"[streets] the junction at {j.X},{j.Y} has {arms} arms "
-                                       + "and is being laid as a crossing anyway.");
+                    // No arms at all. A junction where both roads stop exactly at it and neither
+                    // continues - which should be impossible, since something has to have brought
+                    // the crossing into being. Say so rather than laying tarmac over it.
+                    Debug.LogWarning($"[streets] the junction at {j.X},{j.Y} has no arms at all "
+                                   + $"({j.Arms?.Length ?? 0} roads meet there). Nothing laid.");
+                    untiled.Add(ji);
+                    continue;
                 }
 
-                if (Seat(root.transform, piece,
-                         j.X - reach, j.Y - reach, reach * 2f, reach * 2f, yaw) != null) tiles++;
+                // WHERE THE UNUSUAL ONES ARE, so they can be photographed rather than counted.
+                // The turn and end pieces each have a built-in orientation that is not written
+                // down anywhere in the pack, and a corner laid at the wrong yaw is invisible in
+                // any total - it is only ever wrong to look at.
+                if (arms <= 2)
+                    Debug.Log($"[streets] {(arms == 1 ? "dead end" : "corner")} at {j.X:0},{j.Y:0} "
+                            + $"yaw {yaw:0} - arms"
+                            + (north ? " N" : "") + (south ? " S" : "")
+                            + (east ? " E" : "") + (west ? " W" : "")
+                            + $", {string.Join(" x ", System.Array.ConvertAll(j.Arms, a => a.Road?.Name ?? "?"))}");
+
+                // NO TILE IS SEATED HERE ANY MORE - see CityJunction, and the count that
+                // settled it: all 120 of Rossville's junctions have a reach under 8 m, so all 120
+                // were taking `Road_Turn_10x10_City`, a downtown block corner with a ten-metre
+                // slab of sidewalk paving inside the bend, at a yaw this file's own comment above
+                // admits is guessed. The apron is generated from the arm TANGENTS instead, so
+                // there is no yaw to get wrong. `piece` is still chosen because the classification
+                // above is what the counters and the corner log report, and losing those would
+                // lose the only record of which junctions are unusual.
+                _ = piece;
             }
 
             // 2. The carriageways, each into the root that owns its class.
             foreach (var line in world.Roads.Lines)
                 tiles += Lay(line.Class == RoadClass.Alley ? alleys.transform : root.transform,
-                             line, world);
+                             line, world, untiled);
+
+            // 2b. The tarmac where they meet, generated from the arms rather than tiled.
+            //     AFTER the carriageways, so the apron's centimetre of lift lands on top of the
+            //     tile asphalt rather than under whatever is drawn next.
+            CityJunction.Build(world, root.transform, untiled);
 
             // 3. Everything that is not a carriageway, sampled off the terrain grid as before:
             //    pavement where a street has an edge, parks, and the backs of blocks.
-            dressing += Dress(root.transform, world);
+            dressing += Dress(root.transform, planting.transform, world);
 
+            // BROKEN OUT BY SHAPE, because "111 junctions" hid the fact that seven of them were
+            // being laid as crossroads with two arms painted into open ground.
             Debug.Log($"[streets] {tiles} road tiles on {world.Roads.Lines.Count} roads and "
-                    + $"{world.Roads.Junctions.Count} junctions ({tees} of them three-way), "
+                    + $"{world.Roads.Junctions.Count} junctions "
+                    + $"({tees} three-way, {corners} corners, {deadEnds} dead ends, "
+                    + $"{straightThrough} straight through and laid as plain road), "
                     + $"{dressing} pieces of furniture, "
                     + $"{root.GetComponentsInChildren<Renderer>().Length} renderers.");
 #endif
@@ -447,9 +664,10 @@ namespace Noir.Unity
         /// is where a pedestrian crossing goes and because it puts a painted stop line exactly
         /// where the traffic has to stop.
         /// </summary>
-        private static int Lay(Transform parent, RoadLine line, WorldModel world)
+        private static int Lay(Transform parent, RoadLine line, WorldModel world,
+                               HashSet<int> untiled)
         {
-            if (!line.IsStraight) return LayCurved(parent, line, world);
+            if (!line.IsStraight) return LayCurved(parent, line, world, untiled);
 
             int module = RoadClasses.CorridorWidth(line.Class);
             float half = module / 2f;
@@ -469,10 +687,17 @@ namespace Noir.Unity
                 // Inside a crossing? Tested by REACH rather than by an exact cell, because a
                 // thirty-metre junction swallows three ten-metre tiles of the track that meets
                 // it, and only the middle one shares its centre.
+                // A JUNCTION THAT WAS NOT TILED HAS NOT SPOKEN FOR ITS GROUND. Skipping every
+                // tile near every junction assumed one had been laid there; at a straight-through
+                // node none is, and the road would simply stop for the width of the crossing.
                 bool inJunction = false;
-                foreach (var j in world.Roads.Junctions)
+                for (int ji = 0; ji < world.Roads.Junctions.Count; ji++)
+                {
+                    if (untiled.Contains(ji)) continue;
+                    var j = world.Roads.Junctions[ji];
                     if (Mathf.Abs(cx - j.X) < j.Reach && Mathf.Abs(cy - j.Y) < j.Reach)
                     { inJunction = true; break; }
+                }
                 if (inJunction) continue;
 
                 // Next to a crossing? Then this is where the zebra and the stop line go - but
@@ -518,7 +743,8 @@ namespace Noir.Unity
         /// A sharper road would show them, and that is a real limit of laying a straight prefab
         /// along a curve rather than a defect to chase.
         /// </summary>
-        private static int LayCurved(Transform parent, RoadLine line, WorldModel world)
+        private static int LayCurved(Transform parent, RoadLine line, WorldModel world,
+                                     HashSet<int> untiled)
         {
             int module = RoadClasses.CorridorWidth(line.Class);
             float half = module / 2f;
@@ -539,10 +765,15 @@ namespace Noir.Unity
                 // which is the same derivation GroundShot uses to aim a camera down the rail.
                 float yaw = Mathf.Atan2(tangent.X, -tangent.Y) * Mathf.Rad2Deg;
 
+                // See Lay(): an untiled junction has not covered its own ground.
                 bool inJunction = false;
-                foreach (var j in world.Roads.Junctions)
+                for (int ji = 0; ji < world.Roads.Junctions.Count; ji++)
+                {
+                    if (untiled.Contains(ji)) continue;
+                    var j = world.Roads.Junctions[ji];
                     if (Mathf.Abs(at.X - j.X) < j.Reach && Mathf.Abs(at.Y - j.Y) < j.Reach)
                     { inJunction = true; break; }
+                }
                 if (inJunction) continue;
 
                 // Near a crossing, and in the town: the crosswalk tile, which carries the zebra
@@ -551,8 +782,14 @@ namespace Noir.Unity
                 bool atCrossing = false;
                 foreach (var j in world.Roads.Junctions)
                 {
-                    if (!ReferenceEquals(j.NorthSouth, line) && !ReferenceEquals(j.EastWest, line))
-                        continue;
+                    // ANY ARM, not the pair. `NorthSouth` and `EastWest` report the first arm of
+                    // each axis, so at the eighteen merged nodes on Content/roads.txt the third
+                    // and fourth roads were never recognised as being at their own junction and
+                    // got no stop line and no zebra approaching it.
+                    bool mine = false;
+                    foreach (var arm in j.Arms)
+                        if (ReferenceEquals(arm.Road, line)) { mine = true; break; }
+                    if (!mine) continue;
 
                     float dx = at.X - j.X, dy = at.Y - j.Y;
                     if (dx * dx + dy * dy >= module * 1.5f * (module * 1.5f)) continue;
@@ -603,9 +840,7 @@ namespace Noir.Unity
         private static void Verge(GameObject tile)
         {
             if (tile == null) return;
-            if (_verge == null)
-                _verge = AssetDatabase.LoadAssetAtPath<Material>(
-                    "Assets/polyperfect/Poly Universal Pack/Materials/Nature/M_Ground_Grass.mat");
+            if (_verge == null) _verge = VergeGrass();
             if (_plainTop == null)
                 _plainTop = AssetDatabase.LoadAssetAtPath<Material>(
                     "Assets/polyperfect/Poly Universal Pack/Materials/City/M_Asphalt_A_City.mat");
@@ -620,7 +855,16 @@ namespace Noir.Unity
                     if (mats[i] == null) continue;
 
                     // The concrete edging becomes mown verge.
-                    if (mats[i].name.StartsWith("M_Sidewalk", System.StringComparison.Ordinal))
+                    //
+                    // THE EXACT PREFIX, NOT THE FAMILY. These were `M_Sidewalk` and `M_Universal`,
+                    // which also match M_Universal_B..F and, worse, M_Universal_Glass and
+                    // M_Universal_Glass_Night. Only M_Universal_A is on the road tiles today, so
+                    // it has never fired wrongly - but SunRig finds the pack's lamp lens by the
+                    // substring "Glass" and CityChunker refuses to bake anything whose material
+                    // name contains "Night", so the day a street tile carries a lit element this
+                    // repaint would silently kill it. Measured against SM_Road_Straight_10x10_City
+                    // and SM_Road_Crosswalk_10x10_City; StackProbe already uses the tight form.
+                    if (mats[i].name.StartsWith("M_Sidewalk_A", System.StringComparison.Ordinal))
                     { mats[i] = _verge; hit = true; }
 
                     // AND THE PAINT GOES. The kit's 10 m tile carries a white edge line on its
@@ -629,11 +873,56 @@ namespace Noir.Unity
                     // through route, and in 1940 most of these were not even hard-surfaced.
                     // Repainted as asphalt rather than deleted, so the mesh stays whole.
                     else if (_plainTop != null &&
-                             mats[i].name.StartsWith("M_Universal", System.StringComparison.Ordinal))
+                             mats[i].name.StartsWith("M_Universal_A", System.StringComparison.Ordinal))
                     { mats[i] = _plainTop; hit = true; }
                 }
                 if (hit) r.sharedMaterials = mats;
             }
+        }
+
+        /// <summary>Measured off SM_Road_Straight_10x10_City and its crosswalk sibling: both
+        /// UV their sidewalk and universal submeshes at exactly one third of a UV per world
+        /// metre. (The 0.0843 in the same file is UVMap_Lightmap, which is a different question.)
+        /// </summary>
+        private const float TileUvPerMetre = 0.3333f;
+
+        /// <summary>
+        /// A COPY OF THE PACK'S GRASS, NEVER THE PACK'S OWN ASSET, and at a tiling derived from
+        /// the mesh rather than inherited from a terrain.
+        ///
+        /// `M_Ground_Grass` is the pack's TERRAIN material: `_BaseMap` scale 0.2, sized for a
+        /// ground plane whose UVs run in metres. Assigned straight onto a road tile UV'd at 1/3
+        /// per metre, the grass repeated every FIFTEEN metres where the concrete it replaced
+        /// repeated every three - and every four on the lawn it runs into, which ForTerrain binds
+        /// at SurfaceTextures.TilingMetres. A verge five times coarser than the garden behind it
+        /// is the "weird" a wide shot shows and no test can.
+        ///
+        /// 0.75 puts the repeat at 4.00 m exactly, so the verge and the lawn are the same grass at
+        /// the same size - and they really are the same grass: M_Ground_Grass's _BaseMap resolves
+        /// to Nature/Grass_A_Alb.png, which is the sheet ForTerrain already binds. Only the tiling
+        /// ever separated them. The normal map is scaled with it, because the pack ships that
+        /// material with _BumpMap at 1 against a _BaseMap at 0.2 - its own grain five times finer
+        /// than its own colour.
+        ///
+        /// A COPY because `Assets/polyperfect` is gitignored: an edit to the .mat would exist on
+        /// this machine and on no other. The name must not contain "Night" or "Emission", or
+        /// CityChunker refuses to bake the tile.
+        /// </summary>
+        private static Material VergeGrass()
+        {
+            var src = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/polyperfect/Poly Universal Pack/Materials/Nature/M_Ground_Grass.mat");
+            if (src == null) return null;
+
+            float s = 1f / (TileUvPerMetre * SurfaceTextures.TilingMetres);   // 0.75
+            var m = new Material(src) { name = "M_Verge_Grass" };
+            m.enableInstancing = true;
+            // All four names, because the pack ships this material with the HDRP/Lit and URP/Lit
+            // property sets both filled in and which one the shader reads is not this file's
+            // business. HasProperty makes the ones it does not have free.
+            foreach (var prop in new[] { "_BaseMap", "_MainTex", "_BumpMap", "_NormalMap" })
+                if (m.HasProperty(prop)) m.SetTextureScale(prop, new Vector2(s, s));
+            return m;
         }
 
         private static Material _verge, _plainTop;
@@ -718,7 +1007,16 @@ namespace Noir.Unity
         /// what piles up behind a building. Walks the terrain grid, because those ARE properties
         /// of the ground rather than of a road.
         /// </summary>
-        private static int Dress(Transform parent, WorldModel world)
+        /// <summary>
+        /// PLANTING GOES SOMEWHERE ELSE, and it is `planting` rather than `parent` that says so.
+        ///
+        /// Every green thing this method sows used to land under the street root, so the Streets
+        /// switch carried them: measured on the live town, `Layers.RootsOf(Streets)` held 7,869
+        /// renderers of which only 1,960 were street chunks and 5,909 were grass tufts, ferns and
+        /// leaf bunches. Turning the streets on planted a meadow, and the Trees switch - which is
+        /// wired to CityGreenery - could not take any of it away.
+        /// </summary>
+        private static int Dress(Transform parent, Transform planting, WorldModel world)
         {
             int cols = world.Width / Cell, rows = world.Height / Cell;
 
@@ -739,7 +1037,7 @@ namespace Noir.Unity
 
             // What actually stands on a pavement, as against one bin every seventh cell. Each of
             // these is a role rather than a prefab, so the pack's own variants get used: there
-            // are five bins, four bollards and two phone boxes in here and a hand-written list
+            // are five bins, four bollards and two phone boothes in here and a hand-written list
             // would have picked one of each.
             var kerbside = new List<List<string>>
             {
@@ -803,7 +1101,7 @@ namespace Noir.Unity
                 // THE COUNTRY BELONGS TO CityFarm. A farmyard is authored with path for its
                 // ground because it is bare and hard-standing, and this used to read that as
                 // "pavement" - so it laid city flagstones over the yard, then walked its kerb
-                // and hung street lamps, a phone box and a litter bin round a working farm.
+                // and hung street lamps, a phone booth and a litter bin round a working farm.
                 // Whoever owns a place dresses it; this one does not own these.
                 if (Owned(world, cx, cy)) continue;
 
@@ -820,7 +1118,11 @@ namespace Noir.Unity
                     // this was once a ring is that the map used to be mostly empty, and it is
                     // not any more. Building interiors are stamped as floor rather than path, so
                     // they are already excluded.
-                    if (Seat(parent, Kit + "Sidewalk_10x10_City.prefab", vx, vy, Cell, Cell, 0f) != null)
+                    // DOWNTOWN ONLY - see NearATownBuilding, and the owner's ruling recorded
+                    // there. A path cell out in the county gets nothing, which is what removes
+                    // the paved squares standing in open grass with a lamp and a bin on them.
+                    if (NearATownBuilding(world, cx, cy)
+                        && Seat(parent, Kit + "Sidewalk_10x10_City.prefab", vx, vy, Cell, Cell, 0f) != null)
                         n++;
 
                     bool besideAStreet = Is(cx - 1, cy, Noir.Core.World.Terrain.Road)
@@ -829,7 +1131,7 @@ namespace Noir.Unity
                                       || Is(cx, cy + 1, Noir.Core.World.Terrain.Road);
 
                     if (besideAStreet)
-                        n += Kerb(parent, cx, cy, vx, vy, lamps, kerbside, streetTrees);
+                        n += Kerb(parent, planting, cx, cy, vx, vy, lamps, kerbside, streetTrees);
                     // Behind the buildings. Bins, crates, pallets, tyres, and the pipework that
                     // runs up an alley wall.
                     else if (alley.Count > 0 && Materials3D.Scatter(cx, cy, 653) % 3 == 0)
@@ -872,7 +1174,7 @@ namespace Noir.Unity
                         var role = green[(int)(Materials3D.Scatter(cx + k, cy, 691) % (uint)green.Count)];
                         float ox = 1f + Materials3D.Scatter(cx * 11 + k, cy, 701) % 8;
                         float oz = 1f + Materials3D.Scatter(cx, cy * 11 + k, 709) % 8;
-                        if (Put(parent, Pick(role, cx + k, cy + k, 719), vx + ox, vy + oz,
+                        if (Put(planting, Pick(role, cx + k, cy + k, 719), vx + ox, vy + oz,
                                 Materials3D.Scatter(cx + k, cy, 727) % 4 * 90f) != null) n++;
                     }
                 }
@@ -888,9 +1190,10 @@ namespace Noir.Unity
         /// intervals of a few metres, and at ten it reads as a road with an ornament on it. Lamps
         /// keep a fixed rhythm because street lighting is laid out by a highways department;
         /// everything else is rolled, so no two blocks carry the same run of hydrant, meter,
-        /// phone box and planter.
+        /// phone booth and planter.
         /// </summary>
-        private static int Kerb(Transform parent, int cx, int cy, float vx, float vy,
+        private static int Kerb(Transform parent, Transform planting, int cx, int cy,
+                                float vx, float vy,
                                 List<string> lamps, List<List<string>> kerbside,
                                 List<string> trees)
         {
@@ -930,8 +1233,11 @@ namespace Noir.Unity
             // Street trees. Nature/Trees City is the nine authored to stand in a pavement rather
             // than in a wood, and they do more for a street than any other single prop - they
             // break the roofline and cast something on it.
+            // ...but they are TREES, so they go on the Trees switch with everything else that
+            // grows. A street tree standing over bare asphalt is the wrong picture, and so is a
+            // street you cannot look at without one.
             if (trees.Count > 0 && Materials3D.Scatter(cx, cy, 641) % 2 == 0)
-                if (Put(parent, Pick(trees, cx, cy, 643), vx + 5f, vy + 5f,
+                if (Put(planting, Pick(trees, cx, cy, 643), vx + 5f, vy + 5f,
                         Materials3D.Scatter(cx, cy, 647) % 4 * 90f) != null) n++;
 
             return n;
@@ -953,7 +1259,7 @@ namespace Noir.Unity
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (path.IndexOf("Collider", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
 
-                // Nature ships the whole world in one folder. A palm or a cactus on Northgate
+                // Nature ships the whole world in one folder. A palm or a cactus on Rossville
                 // Avenue is not a bug in the pack, it is a bug in asking the pack for "a tree"
                 // and taking whatever comes back.
                 if (path.IndexOf("Palm", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
@@ -992,6 +1298,59 @@ namespace Noir.Unity
             return place == null ? "" : PlaceKindTable.Current.Row(place.Kind).Name;
         }
 
+        /// <summary>
+        /// Is there a TOWN building near this cell - a store, the bank, the church, the school -
+        /// as opposed to a house, a barn, or nothing at all?
+        ///
+        /// WHAT THIS IS FOR. `Dress` used to lay a 10 m flagstone tile on every `Terrain.Path`
+        /// cell in the county, so a paved square appeared wherever the map happened to carry a
+        /// path - out in open grass, with a street lamp and a bin standing on it and no building
+        /// within sight. And because the tile is seated per CELL, the outline of any paved area
+        /// was the staircase of whichever cells got painted, never a kerb line. Owner, pointing
+        /// at a screenshot of exactly that: "possible sidewalks but they are jaggy".
+        ///
+        /// Owner's ruling 2026-08-10: pave downtown and nothing else. A 1991 farm town has
+        /// sidewalks on Main Street and in front of the public buildings, and grass verges
+        /// everywhere else - which is both cheaper and more accurate than trying to make the
+        /// staircase straight.
+        ///
+        /// ⚠ HE TOOK THE STATED RISK: houses lose their front walks. That is the intended
+        /// consequence, not an oversight, and a residential street in Rossville reads correctly
+        /// without them.
+        ///
+        /// ASKED OF THE BUILDINGS, NOT OF A ZONING TABLE OR A BOUNDING BOX. `IsHome` is a COLUMN
+        /// in kinds.txt and not an enum member - the trap `HomeIsAColumnNotAnEnumMemberTests`
+        /// exists to catch - so an apartment over a shop answers correctly here without anybody
+        /// listing it.
+        /// </summary>
+        private static bool NearATownBuilding(WorldModel world, int cx, int cy)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                var kind = KindAt(world, cx + dx, cy + dy);
+                if (kind.Length == 0) continue;
+
+                switch (kind)
+                {
+                    // The country, wherever it happens to carry a path.
+                    case "farm": case "farmyard": case "barn": case "silo":
+                    case "cornfield": case "paddock": case "orchard": case "copse":
+                    case "green": case "cemetery":
+                        continue;
+                }
+
+                var id = world.Grid.PlaceAt((cx + dx) * Cell + Cell / 2,
+                                            (cy + dy) * Cell + Cell / 2);
+                if (!id.IsValid) continue;
+                var place = world.GetPlace(id);
+                if (place == null) continue;
+
+                if (!PlaceKindTable.Current.Row(place.Kind).IsHome) return true;
+            }
+            return false;
+        }
+
         /// <summary>Is this cell inside somewhere authored as a green, rather than just grass?</summary>
         private static bool IsPark(WorldModel world, int cx, int cy) =>
             KindAt(world, cx, cy) == "green";
@@ -1006,7 +1365,7 @@ namespace Noir.Unity
 
                 // A car park is hard-standing, and its ground is authored as path for exactly
                 // the same reason the farmyard's is. Without this the lots would be paved with
-                // city flagstones and then have street lamps, hydrants and a phone box hung
+                // city flagstones and then have street lamps, hydrants and a phone booth hung
                 // round their kerbs. See CityParking.
                 case "carpark":
                     return true;

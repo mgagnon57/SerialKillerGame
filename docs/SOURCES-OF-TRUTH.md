@@ -134,6 +134,35 @@ owner says otherwise.
    > `RoadsSitOnPublicLandTests` now compares against an exact list of five alleys that may cross a
    > building. **That list may shrink and must never grow.** When the houses are re-seated against
    > the corrected streets it goes back to empty and the assertion goes back to `Is.Empty`.
+   >
+   > ⚠ **THE SUSPENSION IS LIFTED, 2026-08-10.** The condition it named has been met: the houses
+   > have been re-derived against the corrected streets by `SeatOnSurvey`, `ClearOfRoads` and the
+   > school and church corrections. **A ratchet, not a target, and that is the ruling as given —
+   > "a ratchet only, no alley moves until you say so."** Going to zero means MOVING alleys, which
+   > is what the suspension existed to prevent while the houses were wrong, and it is a separate
+   > decision he has deliberately not taken.
+   >
+   > **AND THE RULE IS ABOUT A LOT, WHICH NOTHING HAD EVER ASSERTED.** The existing test measures
+   > BUILDINGS — a house is a house, and that is the unambiguous half. But an alley can miss every
+   > house on a block and still run up the middle of seven back gardens, which is what the sentence
+   > above actually describes. `tools/check-roads.py` has printed it all along and no gate read it.
+   > `NoAlleyRunsFurtherAcrossLotsThanTheWorstOneToday` measures it now, on the DRAWN path:
+   >
+   > ```
+   >   alley1  78.4%   alley12 42.2%   alley8 15.7%   alley9 12.9%   alley5 11.4%
+   >   16 alleys; 7 with more than a tenth of their length on a lot.   0% is right.
+   > ```
+   >
+   > ⚠ **AND ATTICA CAME OFF THE OFF-RIGHT-OF-WAY LIST, 2026-08-10, BECAUSE THE INSTRUMENT WAS
+   > WRONG.** That sampler stepped by `Math.Max(4, Length × 0.05)` — a step that SCALES WITH THE
+   > ROAD, so every road got exactly **fifteen samples** whatever its length. A share quantised to
+   > one fifteenth is 6.7% a sample, and the 33% bar was really "five of fifteen". Attica measured
+   > 5/15 = 33.3% and was on the list by one sample. Stepped at a flat 4 m it is
+   > **125/394 = 31.7%**, below the bar.
+   >
+   > The list is `alley1, alley12, railroad` — **three, down from four.** `ROAD-FIXES` GATE-3(a)
+   > said *"if it does not come out empty, investigate the instrument — do not re-add names"*, and
+   > that is what this was.
 
 3. **Harrison Street turns at the Benton junction. Green and Benton stop at Route 1.** Owner,
    2026-08-04, both called before either was measured:
@@ -241,10 +270,70 @@ owner says otherwise.
 
 ---
 
+### The drawn road and its survey line — re-affirmed 2026-08-10
+
+**Ruled 2026-08-09 and asked again with numbers on 2026-08-10: leave it, corners stay rounded.**
+A real street corner has a turning radius and a car cannot pivot on a point, so a junction drawn
+as an arc is CORRECT and the divergence at a corner IS the arc.
+
+Measured, so nobody has to ask a third time:
+
+```
+  16.71 m  summit    (3 declared points)      9.18 m  grove
+   9.31 m  watson                             8.85 m  benton
+   5.09 m  green
+  44 roads with 3+ points; 16 over a metre, 5 over five
+```
+
+`DrawnRoadFollowsItsSurveyLineTests` ratchets the worst road and the count over five metres, and
+both may only fall. **It is not a demand that the roads be straightened.** It exists because the
+divergence decides whether two roads MEET: benton and summit are declared **0.20 m** apart and
+drawn **8.3 m** apart, which is the whole of `ROAD-FIXES` ALLEY-2b's remaining half — the junction
+is not missing, the two curves are.
+
+
+### What the town is built of — settled 2026-08-09
+
+Asked with a picture in hand. Two were contested by the evidence and put back to him, and he took
+the evidence both times. `docs/TEXTURE-FIXES.md` carried these while that work was in flight and
+was deleted when it finished, so they live here now.
+
+| | Ruling | |
+|---|---|---|
+| **1** | Houses get three-tab **asphalt shingle** | settled |
+| **2** | Mix: **slate grey 40 · charcoal 40 · brown 20**, with one roof in twenty a brown-black. **NO GREEN.** | settled |
+| **3** | **Course exposure ~5–6 inches** on the slope, not the ~9 it would default to | settled |
+| **4** | **Farm buildings: leave them entirely.** No override, no metal covering. | settled |
+| **5** | Downtown is **flat built-up tar and gravel** | settled |
+| **6** | **All seven building surfaces** in one pass, not roofs first | settled |
+
+**On #2 the green is out on PERIOD grounds, not taste.** Faded green is a modern architectural
+shingle and reads wrong for 1991 east-central Illinois. The pack's `Roof_Shingles_D` is exactly
+that green and is the one sheet of five this town does not touch.
+
+**On #3 the SPREAD is correct and is not a bug.** The four house types have different pitches, so
+the exposure lands anywhere from 5.1 to 6.4 inches depending on which house you are standing in
+front of. That is what a real street looks like. Do not "fix" it to a constant.
+
+**On #4 there was never a fault, and he withdrew an earlier ruling once it was measured.** Zero of
+the 652 generated roofs are farm buildings — `CityBuildings` handles `farm`, `barn` and `silo`, so
+those are bought models arriving with the pack's own roofs. His "barns had shingles" ruling was
+made on my framing that the models are *British*, which is true of the NAME (`Barn_Farm_British`)
+and of the silhouette but not of the roofs. **Do not write the material override.** The same
+reasoning killed a corrugated-metal covering: it would have had no buildings to go on.
+
+**A consequence of #5 he accepted knowingly:** a detailed wall texture makes a UV-degenerate gable
+end *more* obvious, not less. That is why the UV fixes had to land before the siding was bound,
+and they did.
+
+---
+
 ## 4. Where `city.txt` stands
 
-`Content/city.txt` is **hand-authored** and holds 41 roads, 477 places, 373 doors and 148 human
-lines. Two different kinds of thing are in there and they have different authority:
+`Content/city.txt` is **hand-authored** and holds 37 roads, 477 places, 373 doors and 148 human
+lines. (Measured 2026-08-08. The roads it declares are not what the game drives on: `SurveyRoads`
+replaces them at build time with the 66 in `Content/roads.txt`, which are surveyed rather than
+ruled.) Two different kinds of thing are in there and they have different authority:
 
 | in `city.txt` | authority |
 |---|---|

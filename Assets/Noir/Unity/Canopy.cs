@@ -51,7 +51,7 @@ namespace Noir.Unity
         /// sphere's own vertex count, and a canopy that needs that many is one you are close
         /// enough to walk into, where the honest answer is the sphere it always was.
         ///
-        /// Ashcombe's countryside uses only 92 and 162 today - the ends of the ladder are there
+        /// Rossville's countryside uses only 92 and 162 today - the ends of the ladder are there
         /// because this is a rule and not a two-value table, and the map is about to become a
         /// town three times the size, at which point both ends will start being asked for.
         /// </summary>

@@ -25,6 +25,67 @@ namespace Noir.PlayTests
     /// </summary>
     public static class CityUnderTest
     {
+        /// <summary>
+        /// The three layers this suite does not need, said out loud in its own file.
+        ///
+        /// `Layers.IsOn` gives batch mode the compiled default now - everything on - instead of
+        /// whatever the owner last toggled, which used to decide silently what a headless test
+        /// measured. Everything on means 12,804 trees and 17,405 farm pieces built for every run,
+        /// and nothing in this assembly looks at any of them. So the suite opts out HERE, where
+        /// the opt-out is readable, rather than by depending on a preference nobody can see.
+        ///
+        /// THE BATCH GUARD IS LOAD-BEARING, NOT A TIDINESS. `Noir.PlayTests.asmdef` carries
+        /// `defineConstraints ['UNITY_INCLUDE_TESTS']` and NO `excludePlatforms`, so this fires on
+        /// every entry into Play - not only under the test runner. Without the first line the
+        /// owner presses Play one afternoon and permanently loses his trees, his farm and his
+        /// power lines, because `Layers.Set` writes PlayerPrefs when a person is present.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void DrawWhatTheSuiteActuallyLooksAt()
+        {
+            if (!Application.isBatchMode) return;
+
+            // WHICH TOWN, AND IT USED TO BE DECIDED IN A DIAGNOSTIC TEST FILE. `LayerProof` read
+            // this variable and raised the built town - from inside a `Category("Diagnostic")`
+            // class the standing gate excludes with `-testCategory "!Diagnostic"`. The switch
+            // governing what EVERY test in this assembly looks at lived in the one file most
+            // likely to be skipped, and it sat five lines from the other half of the same
+            // decision, which is here.
+            //
+            // Still opt-in, and the reason is unchanged and good: this assembly holds the traffic
+            // suite, and building four thousand renderers under it slows every one of those runs
+            // for nothing. What has changed is that the run now SAYS which town it built.
+            if (System.Environment.GetEnvironmentVariable("NOIR_BUILT_TOWN") == "1")
+                VillageHost.ShowBuildings = true;
+
+            // NOON, NOT THE GAME'S 20:00. The opening hour belongs to the owner - he lands in
+            // the lamplight he asked for - but this suite's premise is the MIDDAY town, and its
+            // own tests say so in their text: the animation sweep starts at the next whole hour
+            // and CANNOT REWIND, so from a 20:00 start its range is "21:00 to 17:00" and the
+            // loop body never runs; the driveways test wants the commuters still out, and
+            // DayPlan brings them home at 17:10; the fleet table the traffic gates were tuned
+            // against reads 24 cars at noon and a trickle in the evening. The night the game's
+            // opening hour moved to 20:00, all four went red in one run. The 19-of-19 baseline
+            // is a noon measurement; a batch run opening at 20:00 is a different, unmeasured
+            // town wearing the same green ticks.
+            VillageHost.OpeningMinuteOfDay = 12 * 60;
+
+            Layers.Set(Layers.Kind.Trees, false);
+            Layers.Set(Layers.Kind.Farm, false);
+            Layers.Set(Layers.Kind.Powerlines, false);
+
+            // ONE GREPPABLE LINE, IN EVERY RUN. Seven of the twenty layers are off here and
+            // ShowBuildings is off by default, so a green gate has never seen the greenery, the
+            // farm, the power lines, the streets, the parking or the signs - and nothing said so.
+            // A session reading "13 of 13 pass" had no way to know which town passed.
+            Debug.Log($"[gate] town={(VillageHost.ShowBuildings ? "BUILT" : "survey plan")} "
+                    + "(NOIR_BUILT_TOWN=1 for the built one); "
+                    + $"opens {VillageHost.OpeningMinuteOfDay / 60:00}:00 for the suite, where "
+                    + "the game itself opens 20:00; "
+                    + "Trees/Farm/Powerlines OFF for this suite. Anything this run does not "
+                    + "build, it has not tested.");
+        }
+
         /// <summary>Long enough to build the whole city, short enough to fail rather than hang.</summary>
         private const int BuildFrames = 4000;
 
@@ -137,11 +198,13 @@ namespace Noir.PlayTests
             // rule, including its straight/bent end guard, so the only thing that changes is which
             // containing road gets measured against - which is the whole fix and nothing more.
             //
-            // NOTE ON ALLEYS: Asphalt(Alley) measures 3.55 m off the dirt tile while an alley's
-            // HalfWidth is 2.0 m, so any point inside an alley corridor passes unconditionally.
-            // That is the alley tile being wider than the corridor it is declared to fill, not
-            // this test being loose, and it is recorded here so the next person does not re-derive
-            // it from a surprising pass.
+            // NOTE ON ALLEYS: this used to read "Asphalt(Alley) measures 3.55 m off the dirt tile
+            // while an alley's HalfWidth is 2.0 m, so any point inside an alley corridor passes
+            // unconditionally" - and it did, which meant a third of the town's road network was
+            // exempt from this check without anybody choosing that. ROAD-FIXES CONS-4 fixed the
+            // number rather than the note: `Asphalt` now applies the same narrowing `Seat` does,
+            // so an alley reports the 2.0 m it is drawn at and a car in a back lane is measured
+            // like a car anywhere else.
             bool anyCorridor = false;
             float least = float.MaxValue;
 

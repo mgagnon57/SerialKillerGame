@@ -59,9 +59,9 @@ namespace Noir.Bench
             switch (kind)
             {
                 case PlaceKind.Dwelling:
-                case PlaceKind.Pub:
+                case PlaceKind.Tavern:
                 case PlaceKind.Shop:
-                case PlaceKind.Surgery:
+                case PlaceKind.Clinic:
                 case PlaceKind.School:
                 case PlaceKind.PostOffice:
                 case PlaceKind.VillageHall:

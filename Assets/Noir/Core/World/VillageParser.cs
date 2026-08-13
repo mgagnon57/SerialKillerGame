@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Noir.Core.Contracts;
 
@@ -32,11 +32,11 @@ namespace Noir.Core.World
     /// Unity's netstandard2.1 profile (so JSON would mean taking a dependency), and this format
     /// is simply nicer to hand-edit - a village is mostly coordinates and one-line prose.
     ///
-    ///   village Ashcombe
+    ///   village Rossville
     ///   size 120 90
     ///   terrain field 0,0 120x28
     ///   road main 5 4,46 116,46
-    ///   place pub 52,38 9x7 "The Wheatsheaf"
+    ///   place tavern 52,38 9x7 "the Commercial Hotel"
     ///     door 56,44
     ///     hours 11:00-14:30
     ///     hours 17:00-23:00
@@ -235,6 +235,27 @@ namespace Noir.Core.World
                                   + "after `carries` - expected street, mainroad or freeway");
 
                     road.Carries = carries;
+                    break;
+                }
+
+                case "aadt":
+                {
+                    // WHAT THE COUNTY COUNTED, rather than what the class implies.
+                    //
+                    // IDOT's count program does village streets by name, and it does eleven of
+                    // Rossville's: Route 1 at 5,200 a day, Attica at 1,100, Church Street at 200.
+                    // Ambient traffic used to be read off the road CLASS, which is a four-step
+                    // ladder - mainroad 8, street 2 - against a measured spread of twenty-one to
+                    // one, and which gave Route 1 and Attica the identical weight when the first
+                    // carries nearly five times the second.
+                    //
+                    // Optional, and 0 means NOT COUNTED rather than empty: IDOT does not count
+                    // twenty-one of this map's named roads, and a road nobody counted still has
+                    // cars on it. Anything reading this falls back to the class.
+                    Require(tokens, 2, lineNo, "aadt <vehicles per day>");
+                    road.Aadt = (int)ContentText.Number(tokens[1], File, lineNo);
+                    if (road.Aadt < 0)
+                        throw new VillageParseException(lineNo, "a traffic count cannot be negative");
                     break;
                 }
 

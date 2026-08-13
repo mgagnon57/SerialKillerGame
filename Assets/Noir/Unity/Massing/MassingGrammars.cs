@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Noir.Core.World;
 
 namespace Noir.Unity
@@ -15,7 +15,7 @@ namespace Noir.Unity
             {
                 { "cottage",   Fallback },
                 // "shopfront" IS a Main Street block now. It used to be ShopfrontMassing, a
-                // 3.6 m hip-roofed English village shop, which was right while Ashcombe was a
+                // 3.6 m hip-roofed village shop, which was right while the old village was a
                 // live map and is simply wrong on an Illinois main street. Every kind whose
                 // content row says `massing shopfront` - the shops, the bank, the diner, the
                 // motion picture house, the ice cream parlour - is part of the same terrace on
@@ -23,7 +23,7 @@ namespace Noir.Unity
                 // simulation does with them.
                 { "shopfront", new MainStreetMassing() },
                 { "mainstreet", new MainStreetMassing() },
-                { "pub",       new PubMassing() },
+                { "tavern",       new TavernMassing() },
                 { "hall",      new HallMassing() },
                 { "school",    new SchoolMassing() },
                 { "church",    new ChurchMassing() },
@@ -54,6 +54,13 @@ namespace Noir.Unity
         /// Warned once per bad name rather than once per building, or a single typo in a common
         /// kind would print forty-four identical lines and bury everything else in the log.
         /// </summary>
+        /// <summary>Does anything here answer to that word? For SmokeTest's kinds.txt diff, which
+        /// fails the run rather than waiting for somebody to notice a church shaped like a
+        /// cottage. `dwelling` and the Main Street kinds are decided elsewhere in
+        /// <see cref="For"/> and never reach the registry, so they are allowed through.</summary>
+        public static bool Knows(string name) =>
+            name != null && (Registry.ContainsKey(name) || name == "dwelling" || name == "terrace");
+
         public static IMassingGrammar For(Place place)
         {
             string name = place == null ? null : PlaceKindTable.Current.Row(place.Kind).Massing;
@@ -100,7 +107,7 @@ namespace Noir.Unity
         /// difference to live.
         /// </summary>
         private static bool OnMainStreet(PlaceKind kind) =>
-            kind == PlaceKind.Shop || kind == PlaceKind.Pub
+            kind == PlaceKind.Shop || kind == PlaceKind.Tavern
          || kind == PlaceKind.PostOffice || kind == PlaceKind.VillageHall;
 
         private static readonly HashSet<string> _warned = new HashSet<string>();

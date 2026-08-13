@@ -218,7 +218,7 @@ namespace Noir.Core.Tests
         /// greater-than-zero.
         ///
         /// Scoped to <see cref="ObservedAct.CameOut"/> specifically, not to any entry bearing
-        /// Manner.Carrying: leaving Shopping or OnTheAllotment also sets
+        /// Manner.Carrying: leaving Shopping or InTheGarden also sets
         /// <c>AgentState.Carrying</c> (Simulation.cs:677), so a citizen could be seen carrying on
         /// the way home from an errand whether or not `Beat.Carries` wired anything at all. Coming
         /// out of your OWN front door cannot follow either of those activities, so "carrying" on

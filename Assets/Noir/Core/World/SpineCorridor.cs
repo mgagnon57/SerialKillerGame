@@ -249,7 +249,6 @@ namespace Noir.Core.World
                         return new Brief(RoomKind.Foyer, RoomKind.Classroom, RoomKind.StaffRoom,
                             new[] { RoomKind.Washroom, RoomKind.StockRoom, RoomKind.Office }, 8, 4);
 
-                    case "surgery":
                     case "clinic":
                     case "dentist":
                         return new Brief(RoomKind.Waiting, RoomKind.Consulting, RoomKind.Office,

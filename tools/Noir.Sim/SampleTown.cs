@@ -9,7 +9,7 @@ namespace Noir.Sim
     /// A settlement of a stated size, built to be filled with people and nothing else.
     ///
     /// This exists so that `vocab --pop 600` can be answered before the town of six hundred is
-    /// authored. Ashcombe holds a hundred and nine and no argument will make it hold more, and
+    /// authored. The fixture village holds a hundred and nine and no argument will make it hold more, and
     /// tiling it — which is what `strand --tile` does — only reaches 109, 436, 981: it cannot
     /// stop at a number somebody asked for.
     ///

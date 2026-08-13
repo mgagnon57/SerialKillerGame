@@ -73,8 +73,10 @@ namespace Noir.Core.Tests
     /// laundry and left the west shop row 94 m behind. The buildings moved, not the road. See
     /// docs/research/ROADS-AND-BLOCKS.md.
     ///
-    /// These figures were READ OFF THE BUILD, not off any document. docs/STATE.md quotes
-    /// counts from a 960x960 map that no longer exists.
+    /// These figures were READ OFF THE BUILD, not off any document. That distinction is why they
+    /// are still right: the documents that quoted road and junction counts were all quoting a
+    /// 960x960 map that has been 2100x2400 for months, and every one of them has since been
+    /// archived to docs/history/ for exactly that reason.
     /// </summary>
     [TestFixture]
     public class RoadGeometryBaselineTests
@@ -312,16 +314,82 @@ namespace Noir.Core.Tests
         //   segments  494 -> 442
         //   turns    1218 -> 1088
         //   entries    44 -> 38
-        private const int BaselineJunctions = 111;
+        //
+        // RE-RECORDED 2026-08-09, AND THIS ONE IS A BUG FIX RATHER THAN A CONTENT CHANGE. Nothing
+        // in Content/city.txt moved. Two things in the model did, and both were wrong before:
+        //
+        //   junctions 111 -> 109. `Cluster` folds crossings closer together than their own reach
+        //   into one node, and then checked whether the merged centre sat on every arm - using
+        //   each arm's PRE-MERGE S, which is the crossing the merge just moved away from. It asked
+        //   the wrong question and refused every real multi-road corner. Two of them are here:
+        //   Route 1 x Maple x alley1 at (797,1478), and alley4 x Maple x alley5 at (1068,1478)
+        //   where two alleys meet Maple from opposite sides five metres apart. Each is one piece
+        //   of tarmac and is now one node. Every arm is re-projected onto the merged centre.
+        //
+        //   segments 442 -> 440, turns 1088 -> 1100, entries 38 -> 37, and the checksum. THE SAME
+        //   FALSE ASSUMPTION, WRITTEN OUT THREE TIMES: that arc length grows the same way the
+        //   declared axis does. RoadPath measures s from Points[0], so a road declared
+        //   right-to-left runs the other way, and each of the three read the wrong end of it -
+        //   LaneGraph cut the lane there (`line.From + s`), LaneGraph took the tangent it
+        //   classifies turns from there (`AlongOf(way, S) - line.From`), and CityTraffic DREW THE
+        //   CARS there (`along - line.From`). On this map that is railroad, mis-cut by 104 m, and
+        //   chicago by 86 m; on Content/roads.txt it reached 608 m. Even a well-behaved curve was
+        //   half a tile out, because a declared curve's path runs through tile CENTRES.
+        //
+        //   A FOURTH COPY set where a lane STOPS: `line.From + line.Path.Length`, an arc length
+        //   added to an axis minimum, so a bend got a lane as long as its ARC laid out along its
+        //   CHORD. alley13 runs x=296 to x=452 and was given lanes to x=489. That one is why the
+        //   counts here hold at 440/1100/37 while the checksum moved again: the segments are the
+        //   same segments, they just stop where the road does.
+        //
+        //   The cut and the tangent now ask the junction, which already recorded both; the extent
+        //   asks the path's own bounding box. The one remaining coordinate-to-arc-length
+        //   conversion is RoadPath.ArcAt and it is written down once. A straight axis-aligned road
+        //   still answers `From + s` exactly and its box is exactly From..To, so the 32 straight
+        //   roads here have not moved a millimetre - only the five that bend.
+        //   `EveryBentRoadFindsItsWayBackToACoordinateOnItsOwnAxis` walks both maps and holds it.
+        //
+        //   The turns rose rather than fell because LaneGraph asked NorthSouth/EastWest which
+        //   junctions were on a road, and those report the first arm of each AXIS - so at the two
+        //   merged nodes above, the third road got no cut at all and no turns with it. It walks
+        //   the arms now.
+        private const int BaselineJunctions = 110;
         private const int BaselineSegments = 442;
-        private const int BaselineTurns = 1088;
-        private const int BaselineEntries = 38;
+        private const int BaselineTurns = 1106;
+        private const int BaselineEntries = 36;
 
         // Same rule as the counts above: re-record deliberately, by reading the new digest off
         // TestContext.Out and pasting it in, never by loosening this to a prefix or a tolerance.
-        // Re-recorded for the road refit described above, and again for the removal of the four
-        // placeholder country roads.
+        // Re-recorded for the road refit described above, again for the removal of the four
+        // placeholder country roads, again for the two model bugs described above, and again for
+        // CENTRIPETAL smoothing.
+        //
+        // THE COUNTS DID NOT MOVE FOR THAT LAST ONE - 109/440/1100/37 either side of it - and
+        // that is the point: the same roads, the same junctions and the same lanes, drawn where
+        // the survey put them. Uniform Catmull-Rom parameterises every span between declared
+        // points as one unit however long it is on the ground, and overshoots where consecutive
+        // spans differ wildly. Content/roads.txt is chained county segments with a short mouth
+        // stub on the end, so NINE of its sixty-eight roads left one of their own ends BACKWARDS
+        // - Summit Street drawn 39 m from where the county says it runs, alley8 leaving its own
+        // mouth pointing the wrong way. Zero on both maps now, and Summit's worst stray from its
+        // own polyline is 16.7 m, which is the curve rounding a real corner rather than
+        // overshooting one - the same thing harrison does here at 6.3 m by design.
+        //
+        // The railway is untouched: it still draws through the uniform `Smooth`, and
+        // SmoothReproducesTheRailwaysOwnCatmullRomToTheBit still holds it to the bit.
+        //
+        // AND RE-RECORDED AGAIN, 109 -> 110 / 440 -> 442 / 1100 -> 1106 / 37 -> 36, for
+        // `Touches` accepting an end inside the other road's CARRIAGEWAY instead of within a
+        // metre of its centre line. The metre was tightened from exactly this rule because a
+        // junction could then land metres off one of its own roads - a real fault, but in where
+        // the NODE went rather than in whether the roads met. The node is re-projected onto every
+        // arm now and must land inside its own reach, so the reason for the metre is gone; the
+        // cost of it was not. `NoTwoStreetsTouchWithoutAJunctionBetweenThem` measured the cost at
+        // EIGHT pairs of streets and SIX of alleys whose carriageways overlapped with no junction
+        // between them - car traps of the same shape as benton x alley21, which put two vehicles
+        // in the same place. Alleys to zero, streets to four, and those four are roads whose
+        // county segment stops short rather than a rule that is still too tight.
         private const string BaselineSegmentChecksum =
-            "8FCD6CD7D6878747EE26A2B262F7097FF752C4AE7809A66584C939D6B69F35EC";
+            "58A6C5611312E758816B9F94A03F24C144E2059B522C5B2FC91775CDA113EB37";
     }
 }

@@ -1,12 +1,12 @@
-﻿# ============================================================================
-#  ASHCOMBE
+# ============================================================================
+#  THE FIXTURE VILLAGE
 #
 #  170 x 120 tiles, one tile = one metre.
 #
 #  Houses are sized so people can actually live in them. A 6x7 cottage is 6m by
 #  7m, which after one-metre walls leaves 20 m2 of floor - too small for a
 #  bedroom AND a bathroom, so families of four were living in two rooms. These
-#  are 8x8 to 12x10: a real 1970s village house, 50-90 m2, three or four rooms.
+#  are 8x8 to 12x10: a real small-town house, 50-90 m2, three or four rooms.
 #
 #  Interiors are generated per building (see InteriorGenerator) so no two
 #  layouts are identical. Only the footprint and the front door are authored.
@@ -17,7 +17,7 @@
 #  The `human` line is the ONLY text the UI may ever show about a place.
 # ============================================================================
 
-village Ashcombe
+village Fixture
 size 210 120
 
 # ---- terrain -------------------------------------------------------------
@@ -25,21 +25,21 @@ terrain field      0,0    210x26      # farmland, north
 terrain wood       0,74    22x40      # the spinney, west
 terrain field    150,72    20x34      # east field
 terrain water      0,112  210x8       # the Ash, along the south
-terrain field     26,100   60x11      # water meadow
+terrain field     26,100   60x11      # river bottom
 
 # ---- roads ---------------------------------------------------------------
-# Ashcombe Street reaches both edges on purpose. VillageMesh carries the lane on
+# Main Street reaches both edges on purpose. VillageMesh carries the street on
 # out past the map from wherever it leaves, so the village reads as being on the
 # way to somewhere instead of as an island in a field.
-road  main    5   0,58  209,58        # Ashcombe Street, edge to edge
-road  church  3   24,58  24,22        # Church Lane
-road  school  3   90,58  90,32        # School Lane
-road  mill    3  148,58 148,100       # Mill Lane
-road  back    3   30,84 140,84        # Back Lane
+road  main    5   0,58  209,58        # Main Street, edge to edge
+road  church  3   24,58  24,22        # Church Street
+road  school  3   90,58  90,32        # School Street
+road  mill    3  148,58 148,100       # Mill Street
+road  back    3   30,84 140,84        # Second Street
 path  greenwalk 2  66,60  66,72
 path  millpath  2 148,100 158,106
 
-# ---- the church, at the top of Church Lane -------------------------------
+# ---- the church, at the top of Church Street -------------------------------
 place church 6,24 14x16 "St Anne's"
   door 19,32
   hours 08:00-18:00
@@ -50,8 +50,9 @@ place church 6,24 14x16 "St Anne's"
 place churchyard 6,42 17x10 "the churchyard"
   human The oldest stones are unreadable and the newest are kept clear of grass.
 
-# ---- school, up School Lane ----------------------------------------------
-place school 70,32 18x12 "Ashcombe Primary"
+# ---- school, up School Street ----------------------------------------------
+place school 70,32 18x12 "the grade school"
+  key fixture-school-70-32
   door 80,43
   hours 08:30-15:30 mon-fri
   jobs 4
@@ -61,7 +62,7 @@ place playground 96,34 12x10 "the playground"
   human The swings are the meeting point for anyone under eleven and their mothers.
 
 # ---- the centre ----------------------------------------------------------
-place pub 52,44 14x11 "The Wheatsheaf"
+place tavern 52,44 14x11 "the Commercial Hotel"
   door 58,54
   hours 11:00-14:30
   hours 17:30-23:00
@@ -75,30 +76,33 @@ place shop 96,62 12x10 "Pethick's"
   jobs 2
   human You cannot buy anything here without being asked after.
 
-place post 110,62 11x9 "the Post Office"
+place post 110,62 11x9 "the post office"
+  key fixture-post-110-62
   door 115,62
   hours 09:00-13:00 mon-fri
   hours 09:00-12:00 sat
   jobs 1
   human Pensions on Thursday, and a queue that is mostly conversation.
 
-place hall 110,44 16x11 "the Village Hall"
+place hall 110,44 16x11 "the village hall"
+  key fixture-hall-110-44
   door 117,54
   hours 09:00-22:00
   jobs 1
   human Whist on Tuesdays, the Women's Institute on the first Monday, jumble in spring.
 
-place green 30,62 20x10 "the Green"
+place green 30,62 20x10 "the park"
+  key fixture-green-30-62
   human Cricket in summer, and in winter a flat wet square nobody crosses.
 
 place busstop 64,62 2x2 "the bus stop"
-  human Two buses a day to Marlbury, and everyone knows both times.
+  human Two buses a day to Hoopeston, and everyone knows both times.
 
-place phonebox 70,62 1x1 "the telephone box"
+place phonebooth 70,62 1x1 "the telephone booth"
   human The only telephone for some people, so there is often somebody waiting.
 
 # ---- east end ------------------------------------------------------------
-place surgery 128,62 12x10 "the Surgery"
+place clinic 128,62 12x10 "the clinic"
   door 133,62
   hours 08:30-11:30 mon-fri
   hours 16:00-18:00 mon,tue,thu,fri
@@ -113,7 +117,8 @@ place garage 152,44 15x12 "Ivey's Garage"
   human Two pumps and a pit, and the only man for eleven miles who can weld.
 
 # ---- the mill, on the river ----------------------------------------------
-place mill 118,98 24x14 "Ashcombe Mill"
+place mill 118,98 24x14 "the mill"
+  key fixture-mill-118-98
   door 130,98
   hours 06:00-14:00 mon-fri
   hours 14:00-22:00 mon-fri
@@ -133,173 +138,222 @@ place farm 120,4 19x13 "Long Barrow Farm"
   jobs 4
   human Arable, so the yard is empty for weeks and then full of everyone at harvest.
 
-place allotments 30,88 26x10 "the allotments"
+place gardens 30,88 26x10 "the garden plots"
   human Twenty-two plots, a waiting list, and a shed nobody admits to sleeping in.
 
 # ============================================================================
 #  DWELLINGS - 44 households
-#  Sizes vary deliberately: a labourer's cottage and the doctor's house should
+#  Sizes vary deliberately: a hired man's house and the doctor's house should
 #  not have the same floor plan.
 # ============================================================================
 
-# ---- Church Row, north side of Ashcombe Street, west ----------------------
-place cottage 28,45 10x10 "1 Church Row"
+# ---- north side of Church Street of Main Street, west ----------------------
+place cottage 28,45 10x10 "102 Church Street"
+  key fixture-cottage-28-45
   door 32,54
-place cottage 40,46 9x9 "2 Church Row"
+place cottage 40,46 9x9 "104 Church Street"
+  key fixture-cottage-40-46
   door 44,54
-place cottage 52,30 11x10 "Glebe House"
+place cottage 52,30 11x10 "110 Church Street"
+  key fixture-cottage-52-30
   door 57,39
-place cottage 28,30 10x9 "3 Church Row"
+place cottage 28,30 10x9 "106 Church Street"
+  key fixture-cottage-28-30
   door 32,38
-place cottage 40,30 9x9 "4 Church Row"
+place cottage 40,30 9x9 "108 Church Street"
+  key fixture-cottage-40-30
   door 44,38
 
 # ---- north side, centre and east -----------------------------------------
-place cottage 68,46 9x9 "The Laurels"
+place cottage 68,46 9x9 "204 Main Street"
+  key fixture-cottage-68-46
   door 72,54
-place cottage 94,44 12x11 "Fern House"
+place cottage 94,44 12x11 "208 Main Street"
+  key fixture-cottage-94-44
   door 100,54
-place cottage 130,44 11x11 "Ashcombe House"
+place cottage 130,44 11x11 "212 Main Street"
+  key fixture-cottage-130-44
   door 135,54
-place cottage 142,46 8x9 "Yew Cottage"
+place cottage 142,46 8x9 "214 Main Street"
+  key fixture-cottage-142-46
   door 145,54
 
-# ---- south side of Ashcombe Street, west ---------------------------------
+# ---- south side of Main Street, west ---------------------------------
 # A terrace: one building, one roof, four front doors. The people in it are
 # neighbours through a shared wall, which is a different thing from living
 # nearby - they hear each other come in.
-place cottage 6,62 24x11 "Ash Terrace"
+place cottage 6,62 24x11 "201 Main Street"
+  key fixture-cottage-6-62
   door 10,62
   units 4
-place cottage 52,62 12x10 "3 Ash Terrace"
+place cottage 52,62 12x10 "205 Main Street"
+  key fixture-cottage-52-62
   door 57,62
-place cottage 72,62 10x10 "4 Ash Terrace"
+place cottage 72,62 10x10 "207 Main Street"
+  key fixture-cottage-72-62
   door 76,62
-place cottage 84,62 10x10 "5 Ash Terrace"
+place cottage 84,62 10x10 "209 Main Street"
+  key fixture-cottage-84-62
   door 88,62
 
 # ---- south side, east ----------------------------------------------------
-place cottage 142,62 9x10 "1 Mill View"
+place cottage 142,62 9x10 "215 Main Street"
+  key fixture-cottage-142-62
   door 146,62
-place cottage 154,62 11x10 "2 Mill View"
+place cottage 154,62 11x10 "217 Main Street"
+  key fixture-cottage-154-62
   door 159,62
-place cottage 154,74 11x9 "3 Mill View"
+place cottage 154,74 11x9 "219 Main Street"
+  key fixture-cottage-154-74
   door 159,74
 
-# ---- Back Lane, north side -----------------------------------------------
-place cottage 32,74 9x9 "1 Back Lane"
+# ---- Second Street, north side -----------------------------------------------
+place cottage 32,74 9x9 "101 Second Street"
+  key fixture-cottage-32-74
   door 36,82
-place cottage 43,74 9x9 "2 Back Lane"
+place cottage 43,74 9x9 "103 Second Street"
+  key fixture-cottage-43-74
   door 47,82
-place cottage 54,74 9x9 "3 Back Lane"
+place cottage 54,74 9x9 "105 Second Street"
+  key fixture-cottage-54-74
   door 58,82
-place cottage 65,74 9x9 "4 Back Lane"
+place cottage 65,74 9x9 "107 Second Street"
+  key fixture-cottage-65-74
   door 69,82
-place cottage 76,74 10x9 "5 Back Lane"
+place cottage 76,74 10x9 "109 Second Street"
+  key fixture-cottage-76-74
   door 80,82
-place cottage 88,74 9x9 "6 Back Lane"
+place cottage 88,74 9x9 "111 Second Street"
+  key fixture-cottage-88-74
   door 92,82
-place cottage 99,74 10x9 "7 Back Lane"
+place cottage 99,74 10x9 "113 Second Street"
+  key fixture-cottage-99-74
   door 103,82
-place cottage 111,74 9x9 "8 Back Lane"
+place cottage 111,74 9x9 "115 Second Street"
+  key fixture-cottage-111-74
   door 115,82
-place cottage 122,74 10x9 "9 Back Lane"
+place cottage 122,74 10x9 "117 Second Street"
+  key fixture-cottage-122-74
   door 126,82
 
-# ---- Back Lane, south side -----------------------------------------------
-place cottage 60,88 9x9 "10 Back Lane"
+# ---- Second Street, south side -----------------------------------------------
+place cottage 60,88 9x9 "102 Second Street"
+  key fixture-cottage-60-88
   door 64,88
-place cottage 71,88 10x9 "11 Back Lane"
+place cottage 71,88 10x9 "104 Second Street"
+  key fixture-cottage-71-88
   door 75,88
-place cottage 83,88 9x9 "12 Back Lane"
+place cottage 83,88 9x9 "106 Second Street"
+  key fixture-cottage-83-88
   door 87,88
-place cottage 94,88 10x9 "13 Back Lane"
+place cottage 94,88 10x9 "108 Second Street"
+  key fixture-cottage-94-88
   door 98,88
-place cottage 106,88 9x9 "14 Back Lane"
+place cottage 106,88 9x9 "110 Second Street"
+  key fixture-cottage-106-88
   door 110,88
 
-# ---- Mill Lane -----------------------------------------------------------
-place cottage 132,88 8x8 "1 Mill Cottages"
+# ---- Mill Street -----------------------------------------------------------
+place cottage 132,88 8x8 "120 Second Street"
+  key fixture-cottage-132-88
   door 135,88
-place cottage 152,88 9x8 "2 Mill Cottages"
+place cottage 152,88 9x8 "122 Second Street"
+  key fixture-cottage-152-88
   door 156,88
-place cottage 152,98 9x8 "3 Mill Cottages"
+place cottage 152,98 9x8 "124 Second Street"
+  key fixture-cottage-152-98
   door 156,98
-place cottage 152,108 9x7 "Riverside"
+place cottage 152,108 9x7 "126 Second Street"
+  key fixture-cottage-152-108
   door 156,108
 
 # ---- outlying -------------------------------------------------------------
-place cottage 44,8 11x10 "Wick Lodge"
+place cottage 44,8 11x10 "302 North Street"
+  key fixture-cottage-44-8
   door 49,17
-place cottage 60,10 10x9 "Barrow Cottage"
+place cottage 60,10 10x9 "304 North Street"
+  key fixture-cottage-60-10
   door 64,18
-place cottage 92,8 11x10 "The Firs"
+place cottage 92,8 11x10 "306 North Street"
+  key fixture-cottage-92-8
   door 97,17
-place cottage 152,24 12x10 "Hillside"
+place cottage 152,24 12x10 "310 North Street"
+  key fixture-cottage-152-24
   door 157,33
-place cottage 76,8 11x10 "Spinney End"
+place cottage 76,8 11x10 "308 North Street"
+  key fixture-cottage-76-8
   door 81,17
-place cottage 4,78 11x10 "Woodside"
+place cottage 4,78 11x10 "401 West Street"
+  key fixture-cottage-4-78
   door 9,87
-place cottage 4,92 11x10 "Meadow Cottage"
+place cottage 4,92 11x10 "403 West Street"
+  key fixture-cottage-4-92
   door 9,101
-place cottage 62,102 11x9 "Ford Cottage"
+place cottage 62,102 11x9 "405 West Street"
+  key fixture-cottage-62-102
   door 67,102
 # Flats put up for the mill hands. Four homes off one frontage, and the only
 # building in the village where you can hear the people upstairs.
-place cottage 88,98 24x12 "Mill Buildings"
+place cottage 88,98 24x12 "the mill houses"
+  key fixture-cottage-88-98
   door 92,98
   units 4
-place cottage 118,30 12x11 "The Old Rectory"
+place cottage 118,30 12x11 "the parsonage"
+  key fixture-cottage-118-30
   door 123,40
 
 # ============================================================================
 #  THE NEW BUILDING, 1972-4
 #
-#  Ashcombe grew east when the mill took on a second shift. The old parish
-#  stops at Mill Lane; everything past it went up in three years and looks it -
-#  straight lanes, repeated terraces, no building older than the people in it.
+#  The village grew east when the mill took on a second shift. The old township
+#  stops at Mill Street; everything past it went up in three years and looks it -
+#  straight streets, repeated rows, no building older than the people in it.
 #
 #  This is also where the map had to get bigger. The old 170x120 was FULL. Four
 #  terraces were tried inside it first and the layout checker refused every one:
-#  the only gaps left were the green, the playground and the allotments, and a
+#  the only gaps left were the park, the playground and the garden plots, and a
 #  village that concretes its own open ground to house people has not grown, it
 #  has got worse. So the map went 170 -> 210 wide and the new quarter went on
-#  clean ground east of Mill Lane.
+#  clean ground east of Mill Street.
 # ============================================================================
 
 terrain field    172,26   38x30
 terrain field    172,96   38x16
 
-road  east     4  170,6   170,100        # the estate spine, off Ashcombe Street
+road  east     4  170,6   170,100        # the new-addition spine, off Main Street
 road  newmid   3  170,42  206,42
 road  newback  3  170,89  206,89
 
 # All five match Mill Buildings - 24x12, four homes off one frontage. That
 # shape is the one the interior generator is known to handle: the first pass
 # here tried 24x10 and 24x9 with five and six homes, and the layout tests
-# refused Jubilee Terrace outright because a house that shallow has nowhere to
+# refused 305 East Street outright because a house that shallow has nowhere to
 # sleep. Six metres of frontage is a terraced house; four and a half is a
 # caravan.
-place cottage 174,30 24x12 "Glebe Terrace"
+place cottage 174,30 24x12 "301 East Street"
+  key fixture-cottage-174-30
   door 186,41
   units 4
-place cottage 174,44 24x12 "Coronation Row"
+place cottage 174,44 24x12 "303 East Street"
+  key fixture-cottage-174-44
   door 186,44
   units 4
-place cottage 174,62 24x12 "Jubilee Terrace"
+place cottage 174,62 24x12 "305 East Street"
+  key fixture-cottage-174-62
   door 186,62
   units 4
-place cottage 174,76 24x12 "Mill View Terrace"
+place cottage 174,76 24x12 "307 East Street"
+  key fixture-cottage-174-76
   door 186,87
   units 4
-place cottage 174,92 24x12 "Meadow Row"
+place cottage 174,92 24x12 "309 East Street"
+  key fixture-cottage-174-92
   door 186,92
   units 4
 
 # The works. Put up in 1971 on the field behind the farm, and the reason the
-# estate below it exists at all - the mill could not take on a hundred people
-# and the parish had nothing else to offer anybody who did not want to milk.
+# addition below it exists at all - the mill could not take on a hundred people
+# and the township had nothing else to offer anybody who did not want to milk.
 place factory 174,6 32x14 "Calloway & Sons"
   door 174,12
-  human You can set your watch by the hooter, and half the estate does.
+  human You can set your watch by the hooter, and half the addition does.

@@ -229,6 +229,17 @@ namespace Noir.Unity
         /// which way round it goes.
         ///
         /// No normals are written; the roof mesh takes RecalculateNormals, as the walls do.
+        ///
+        /// AND THE COPY MUST NOW BE KEPT IN STEP ON UVs AS WELL AS ON WINDING. The same
+        /// axis-aligned box is written three times in this project - here, MassingExtras.Box, and
+        /// RoofBuilder.AddBox - which is why a single UV fault needed fixing in two places and why
+        /// the chimney needs a third fix of its own. Consolidating all three into one
+        /// `RoofMesh.Box` would make it one edit; it is deliberately NOT done, because it means
+        /// rewriting winding-critical code in three files with no automated cover, and both
+        /// MassingExtras and RoofBuilder record the winding being got wrong once with symptoms -
+        /// towers invisible from most angles, chimneys with no top and no shadow - that a compile
+        /// and the Core suite cannot see. Revisit it when something else is already opening all
+        /// three files.
         /// </summary>
         private static void Quad(MeshChunk into, int submesh, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
         {

@@ -1,0 +1,15 @@
+# layers-proof
+taken   2026-08-10 15:16:05 UTC
+unity   6000.3.20f1
+town    ShowBuildings=True  batch=True
+d7c02749f56f8163    1528866  01-parcel-lines.png
+244052c9df911b82    1549404  02-parcel-lines-and-houses.png
+f6661655e13db44f    1520329  03-house-outlines-alone.png
+6f9f5bcedc84c084    1530405  04-massing-alone.png
+894251039c5b48de    1547298  05-massing-and-outlines.png
+713507170d9ed2d9    1568725  06-massing-plan-outlines.png
+2bb72e7029e7e7a6    1595322  07-streets-and-massing.png
+5cbca91430550b0e    1662819  08-road-widths.png
+2f2385b2be6c9a32    1683870  09-road-widths-and-houses.png
+a3c81d4586cbfeef    1695320  10-downtown-sidewalks.png
+10 frame(s), 10 distinct

@@ -229,6 +229,18 @@ namespace Noir.Core.World
             return best;
         }
 
+        /// <summary>
+        /// The handle a generated storefront is known by before anyone has ruled a business onto
+        /// it — what `BusinessRulings`/`business-1991.txt` and the in-game panel key on.
+        /// Address-based so it reads the way the owner already writes rulings by hand
+        /// ("112 S Chicago #1"), falling back to the parcel id for a footprint-later lot with no
+        /// resolvable street address. 1-based index, left to right from the crossing.
+        /// </summary>
+        public static string HandleFor(string address, int parcelId, int index) =>
+            string.IsNullOrEmpty(address)
+                ? $"parcel {parcelId} unit {index}"
+                : $"{address} #{index}";
+
         private static float Abs(float v) => v < 0f ? -v : v;
     }
 }

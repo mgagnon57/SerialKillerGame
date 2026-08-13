@@ -10,7 +10,7 @@ namespace Noir.Unity
     /// <summary>
     /// The surface car parks, and the cars standing still in them.
     ///
-    /// Northgate had a hospital, a casino, a cinema, a police station, a school and a bank, and
+    /// Rossville had a hospital, a casino, a cinema, a police station, a school and a bank, and
     /// nowhere at all for a car to stop. Every vehicle on the map was in motion. The road kit
     /// ships five parking tiles - Road_Parking and its corner, entrance, side and half variants -
     /// plus a main road with a parking entrance cut into it, and not one of them had ever been

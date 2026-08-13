@@ -96,9 +96,20 @@ def sample(pts, step=4.0):
     return out
 
 
-def city_roads():
+def city_roads(fname="city.txt"):
+    """Read road runs out of a file written in city.txt's road syntax.
+
+    THE PARAMETER IS WHY THIS CHECKER WAS MEASURING THE WRONG FILE. It only ever read city.txt,
+    which the survey network REPLACED - `SurveyRoads` swaps in Content/roads.txt at build time -
+    so the "9.0% of centreline runs across private land" figure it reported was the share for a
+    file the game no longer draws. The number that matters is roads.txt's, and it is 1.6%.
+
+    NOT RENAMED to village_roads, deliberately: derive-alleys.py:305 and build-roads.py:48 import
+    this symbol BY NAME, and a rename raises AttributeError inside the alley generator that three
+    later waves depend on. A default argument costs those callers nothing.
+    """
     roads = {}
-    with open(os.path.join(CONTENT, "city.txt"), encoding="utf-8") as fh:
+    with open(os.path.join(CONTENT, fname), encoding="utf-8") as fh:
         for line in fh:
             line = line.split("#")[0].strip()
             if not line.startswith("road "):
@@ -157,6 +168,7 @@ def main():
 
     P = Parcels(village)
     cur = city_roads()
+    srv = city_roads("roads.txt")          # the network the game actually draws
     cty = county_roads(to_village)
 
     def total_of(roads):
@@ -171,11 +183,14 @@ def main():
         return ins, tot, rows
 
     ci, ct, crows = total_of(cur)
+    si, st, srows = total_of(srv)
     yi, yt, yrows = total_of(cty)
 
     print("SHARE OF EACH CENTRELINE THAT RUNS ACROSS PRIVATE LAND")
     print("(sampled every 4 m, platted town only - lower is better, 0% is right)\n")
     print(f"  Content/city.txt   {100*ci/max(1,ct):5.1f}%   ({ci} of {ct} samples on a lot)")
+    print(f"  Content/roads.txt  {100*si/max(1,st):5.1f}%   ({si} of {st} samples on a lot)"
+          "   <- THE ONE THE GAME DRAWS")
     print(f"  county centrelines {100*yi/max(1,yt):5.1f}%   ({yi} of {yt} samples on a lot)")
     print()
 

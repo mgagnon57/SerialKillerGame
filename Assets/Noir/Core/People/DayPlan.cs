@@ -18,7 +18,18 @@ namespace Noir.Core.People
         Visiting,
         Walking,
         AtThePlayground,
-        OnTheAllotment,
+        InTheGarden,
+
+        /// <summary>
+        /// Out of Rossville altogether, at a job the map does not contain.
+        ///
+        /// Anchored at the person's HOME rather than at nowhere, because every consumer of
+        /// Block.Where - Simulation's agent destinations, the counter queues, the companion
+        /// search - assumes a real place, and a PlaceId.None would be a null with extra steps.
+        /// AgentMeshView reads the activity and simply does not draw them, which is what being
+        /// out of town looks like from the street: an empty house and an empty pavement.
+        /// </summary>
+        AwayFromTown,
 
         // There was a WaitingForTheBus here. Nothing ever assigned it: village.txt places a bus
         // stop and says "two buses a day to Marlbury, and everyone knows both times", but no
@@ -233,6 +244,29 @@ namespace Noir.Core.People
                     }
                 }
             }
+            else if (!weekend && who.WorksAwayIn(year))
+            {
+                // GONE BY SIX. Rossville employs about 168 people and holds roughly 450 of
+                // working age; the rest worked out of town - Hoopeston's canneries five miles
+                // north, Danville twenty south, the elevators, the railroad, the ground. Until
+                // this branch existed every one of them was planned as a person with a free
+                // weekday and sent out to do five errands at ten in the morning, which is why the
+                // streets read as a retirement village rather than a farm town.
+                //
+                // Anchored at home and drawn nowhere - see Activity.AwayFromTown. The commute
+                // itself is not simulated: there is no road off this map yet, and inventing one
+                // to drive down would be a worse lie than simply not being here.
+                int out_ = 6 * 60 + 20 + jitter;          // on the road before half past six
+                int back = 17 * 60 + 10 + jitter;
+
+                if (out_ > cursor) blocks.Add(new Block(cursor, out_, who.Home, Activity.AtHome));
+                int from = Math.Max(cursor, out_);
+                if (back > from)
+                {
+                    blocks.Add(new Block(from, back, who.Home, Activity.AwayFromTown));
+                    cursor = back;
+                }
+            }
 
             // ---- church, on a Sunday morning ----
             if (sunday)
@@ -396,7 +430,7 @@ namespace Noir.Core.People
             var door = Locality.AnchorOf(world.GetPlace(workplace));
             var candidates = new List<PlaceId>();
 
-            // Never the building they are trying to get out of. The Wheatsheaf is the obvious
+            // Never the building they are trying to get out of. The tavern is the obvious
             // candidate for a dinner hour and it is also where three publicans work, so without
             // this a publican's break is a shift.
             void Offer(PlaceKind kind)
@@ -416,8 +450,8 @@ namespace Noir.Core.People
             else
             {
                 Offer(PlaceKind.Playground);
-                Offer(PlaceKind.Allotments);
-                Offer(PlaceKind.Pub);
+                Offer(PlaceKind.Gardens);
+                Offer(PlaceKind.Tavern);
             }
 
             var chosen = Locality.ChooseNearby(world, door, candidates, dayOfWeek, from,
@@ -426,9 +460,9 @@ namespace Noir.Core.People
 
             switch (world.GetPlace(chosen).Kind)
             {
-                case PlaceKind.Pub: return (chosen, Activity.AtThePub);
+                case PlaceKind.Tavern: return (chosen, Activity.AtThePub);
                 case PlaceKind.Playground: return (chosen, Activity.AtThePlayground);
-                case PlaceKind.Allotments: return (chosen, Activity.OnTheAllotment);
+                case PlaceKind.Gardens: return (chosen, Activity.InTheGarden);
                 default: return (chosen, Activity.Walking);
             }
         }
@@ -465,7 +499,7 @@ namespace Noir.Core.People
         /// <paramref name="free"/> is the discretionary window in minutes - what is left after
         /// work, school and church. IT HAS TO COUNT, and it did not: the answer was one or two
         /// whether the person had two hours to fill or fourteen, so the retired and the
-        /// unemployed - the large majority of Northgate, and the only people about during the
+        /// unemployed - the large majority of Rossville, and the only people about during the
         /// working day - did their shopping before eleven and then sat at home until bed. A town
         /// whose streets are empty every afternoon is not a quiet town, it is an unfinished one.
         ///
@@ -513,7 +547,7 @@ namespace Noir.Core.People
 
             // The same thing for a kind only kinds.txt knows. A city kind is numbered past the
             // enum's members, so it has no C# name to pass to the line above, and every one of
-            // Northgate's own amenities was therefore unreachable from here.
+            // Rossville's own amenities was therefore unreachable from here.
             void ConsiderNamed(string name, Activity act, int minutes, int weight)
             {
                 if (!PlaceKindTable.Current.TryNamed(name, out var kind)) return;
@@ -555,12 +589,12 @@ namespace Noir.Core.People
                 Consider(PlaceKind.Shop, Activity.Shopping, 25, 45);
                 Consider(PlaceKind.PostOffice, Activity.Shopping, 20, 18);
                 Consider(PlaceKind.Green, Activity.Walking, 40, 20);
-                Consider(PlaceKind.Allotments, Activity.OnTheAllotment, 90,
+                Consider(PlaceKind.Gardens, Activity.InTheGarden, 90,
                          who.StageIn(year) == LifeStage.Elder ? 45 : 22);
                 Consider(PlaceKind.VillageHall, Activity.Visiting, 100, (int)(18 * social));
 
                 if (from >= evening - 120)
-                    Consider(PlaceKind.Pub, Activity.AtThePub, 90 + rng.NextInt(60),
+                    Consider(PlaceKind.Tavern, Activity.AtThePub, 90 + rng.NextInt(60),
                              (int)(20 + 70 * social));
 
                 if (who.StageIn(year) == LifeStage.Elder)
@@ -575,7 +609,7 @@ namespace Noir.Core.People
             //
             // This was missing entirely, and it was the largest single hole in the village. The
             // 2:1 instrument watched a hundred and twelve people for a fortnight and recorded
-            // ZERO visits in 1,568 household-days: nobody in Ashcombe had ever once knocked on
+            // ZERO visits in 1,568 household-days: nobody in Rossville had ever once knocked on
             // anybody's door, because the errand list was a list of AMENITIES and a neighbour is
             // not an amenity. It matters past the ratio, too - "who would notice her gone, and
             // how fast" is the question the whole eventual game turns on, and it has no answer
@@ -593,7 +627,7 @@ namespace Noir.Core.People
                           who.IsChildIn(year) ? (int)(3 + 9 * social)
                                       : (int)(3 + 12 * social) + (who.StageIn(year) == LifeStage.Elder ? 6 : 0));
 
-            // ---- what Northgate has that Ashcombe never did ----
+            // ---- what the town has that the old village never did ----
             //
             // A cinema, a casino, a diner and a newspaper shop, all standing open, all lit, and
             // before this NOBODY HAD EVER WALKED INTO ONE. They are kinds the enum has never

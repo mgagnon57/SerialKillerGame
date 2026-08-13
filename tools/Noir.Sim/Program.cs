@@ -183,10 +183,22 @@ namespace Noir.Sim
             return 0;
         }
 
+        /// <summary>
+        /// The tiling surfaces the 3D materials read, and nothing else any more.
+        ///
+        /// This also called `TileGenerator.GenerateAll`, which wrote eleven 64x32 isometric
+        /// DIAMONDS into Content/tiles/. Those are from before this project had a renderer that
+        /// works in three dimensions, and nothing has loaded one since: a repo-wide search for
+        /// anything reading that directory returns the word "tiles" in bench column headings and
+        /// in comments about grid squares, and no loader at all. So every run of this command
+        /// rewrote eleven files that no build, test, render or player has ever opened.
+        ///
+        /// The generator is kept - it is the only record of how that art was made, it is
+        /// deterministic, and re-adding one line brings it back. What is removed is writing them
+        /// out on a command whose whole job now is the 256x256 surfaces.
+        /// </summary>
         private static int CmdTiles()
         {
-            TileGenerator.GenerateAll(System.IO.Path.Combine(ContentPath.Root, "tiles"));
-            Console.WriteLine();
             TileGenerator.GenerateSurfaces(System.IO.Path.Combine(ContentPath.Root, "textures"));
             return 0;
         }

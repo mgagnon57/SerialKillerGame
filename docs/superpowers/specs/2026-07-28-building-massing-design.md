@@ -18,7 +18,7 @@ RoofBuilder.cs:39     Pitch = 2.2f         the same on all of them
 Space3D.cs:18         WallHeight = 3.0f    the same on all of them
 ```
 
-St Anne's, Ashcombe Mill, the school and a two-up-two-down are **the same box with the same roof**,
+St Anne's, the mill, the school and a two-up-two-down are **the same box with the same roof**,
 differing only in footprint and a sign by the door. From the overview camera — the default view —
 there is nothing to tell them apart. A church reads as a church at two hundred metres because of a
 tower. Ours has the roofline of a bungalow.

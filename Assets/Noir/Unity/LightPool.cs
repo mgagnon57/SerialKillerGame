@@ -9,7 +9,7 @@ namespace Noir.Unity
     /// spending them on.
     ///
     /// URP stops adding lights at MAX_VISIBLE_LIGHT_COUNT_DESKTOP - 256 - and when it does it
-    /// simply drops the rest. No error, no warning, nothing in the log. Ashcombe runs 84 point
+    /// simply drops the rest. No error, no warning, nothing in the log. Rossville runs 84 point
     /// lights at 109 people, one per roofed building and one per lamp post, which crosses 256
     /// at somewhere around 330 people - well inside the six hundred this village is being built
     /// towards. It would have looked like a tuning problem rather than a ceiling, and the thing
@@ -30,7 +30,7 @@ namespace Noir.Unity
     {
         /// <summary>
         /// How many real lights exist. Thirty-two covers a radius of sixty-odd metres at
-        /// Ashcombe's density, which is most of what fog leaves visible at street level, and it
+        /// Rossville's density, which is most of what fog leaves visible at street level, and it
         /// is an eighth of URP's ceiling - so the headroom is there if the spill radius turns
         /// out to read short once there is a six hundred person town to walk around in.
         /// </summary>

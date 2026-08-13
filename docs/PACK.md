@@ -75,10 +75,10 @@ Ordered by what I think is worth most to this game.
 
 ## The "wrong genre" folders, re-audited 2026-08-03 — and most of them are not
 
-**This section used to read "Wrong genre for Northgate" and write off 2,416 prefabs in three
+**This section used to read "Wrong genre for Rossville" and write off 2,416 prefabs in three
 sentences. It was wrong, and it was the most misleading page in these docs.**
 
-It was written against an English village called Northgate, in a simulation that had no calendar.
+It was written against an English village called Rossville, in a simulation that had no calendar.
 The town is now Rossville, Illinois, and `GameClock` has `Year`, `Month` and `DayOfYear`. **Both
 premises expired.** Opening the folders shows the genre labels describe *which tab of the store the
 content shipped in*, not what the models are.

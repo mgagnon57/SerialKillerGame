@@ -128,3 +128,47 @@ tools/game-verdict.json
 tools/.verified/
 
 tools/__pycache__/
+
+# ---- AI REFERENCE ART: A WORKING-COPY ASSET, AND A LOUD ONE ----
+#
+# 24 MB of AI impressions of Rossville in 1991, generated 2026-08-06, sitting inside Assets/
+# where Unity imports them. Their own README is unambiguous about what they are:
+#
+#     "Mood, not measurement ... Do not measure anything off these. Do not cite them.
+#      Do not let them settle a question."
+#
+# Against docs/SOURCES-OF-TRUTH.md they sit BELOW authored: parcel-1991.txt is authored by
+# somebody who was there and outranks the sources; these are authored by a model that has
+# never been there and outrank nothing. They are a target to build toward and to argue with,
+# which is worth keeping on disk and is not worth 24 MB of repository.
+#
+# Same treatment as the pack and the llama binaries above: kept in the working copy, not
+# vendored. If they should ship, remove this deliberately.
+#
+# MOVED OUT OF Assets/ ON 2026-08-09, which is the other half of the same argument. Inside
+# Assets/ Unity imported every one as a Sprite asset with mipmaps - build time, Library space and
+# a GUID apiece - for pictures whose own README forbids them settling anything. They live in
+# docs/reference/Rossville1991/ now, beside the prompts that made them, where they can be opened
+# and argued with and cannot end up in a build.
+#
+# THE PATTERN MUST STAY SPECIFIC. `docs/**/*.png` would untrack docs/snapshots, which is 129
+# committed frames and a deliberate regression baseline.
+docs/reference/**/*.png
+
+# ---- THE UNITY AI GENERATORS OUTPUT CACHE ----
+#
+# com.unity.ai.assistant writes it, Unity reads it, and NOTHING in this project names it - a
+# search for the literal string over the whole tree with ignores disabled returns zero hits.
+# 24 MB in 24 files across twelve GUID-named folders, and 99.9% of those bytes are a SECOND COPY
+# of the twelve PNGs in Assets/Noir/Reference/Rossville1991/ - confirmed file by file. The unique
+# content is 23 KB of sidecar JSON carrying the prompts, the model and customSeed -1, which is
+# kept beside the pictures as Reference/Rossville1991/prompts/.
+#
+# Ignored rather than merely untracked because a generation run recreates it, and until now the
+# only thing between it and a public remote was the rule in CLAUDE.md saying never `git add -A`.
+# The pack, the llama binaries and the reference art each got a mechanism; this had a rule.
+#
+# TRAP FOR ANYONE RE-CHECKING: `git check-ignore -v` on a directory WITH a trailing slash returns
+# rc=0 citing a BLANK line and echoes the queried path back as though it were the pattern. It does
+# that for every untracked directory in this tree. Query a real FILE path.
+GeneratedAssets/

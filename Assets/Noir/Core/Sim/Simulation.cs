@@ -240,13 +240,24 @@ namespace Noir.Core.Sim
         /// </summary>
         public int PathNodeBudgetPerTick = 60_000;
 
-        public Simulation(WorldModel world, Population people, ulong seed, int startMinuteOfDay = 0)
+        /// <param name="pathNodeCap">
+        /// Zero, the normal case, lets <see cref="Pathfinder"/> size its own guard. A value above
+        /// zero overrides it, INCLUDING past <see cref="Pathfinder.HardNodeCeiling"/>.
+        ///
+        /// It exists so the ceiling can be re-measured rather than argued about. That number has
+        /// to be sized from what honest journeys really cost, and there is no way to learn that
+        /// from a run in which the ceiling is already refusing them - the measurement needs a
+        /// town whose searches are allowed to finish. This is the seam that lets a diagnostic do
+        /// that without editing a const and recompiling. Do not use it to make the game generous.
+        /// </param>
+        public Simulation(WorldModel world, Population people, ulong seed, int startMinuteOfDay = 0,
+                          int pathNodeCap = 0)
         {
             World = world;
             People = people;
             Seed = seed;
 
-            _pathfinder = new Pathfinder(world.Grid);
+            _pathfinder = new Pathfinder(world.Grid, pathNodeCap);
 
             _counters = new CounterQueue[world.PlaceCount];
             for (int i = 0; i < _counters.Length; i++)
@@ -517,10 +528,64 @@ namespace Noir.Core.Sim
         private long _noRouteTotal;
         private int _worstNodesFound;
 
+        /// <summary>
+        /// HOW FAR THE ABANDONED JOURNEYS WERE TRYING TO GO, in tiles of Chebyshev distance -
+        /// max(|dx|,|dy|), which is the number of steps an 8-way walker needs on open ground and
+        /// therefore the honest floor on a journey's length. Integer, so it stays inside Core's
+        /// ban on transcendentals.
+        ///
+        /// Added 2026-08-11 to tell two very different faults apart, because the give-up COUNT
+        /// cannot. If the abandoned journeys are all enormous, the ceiling is simply below what
+        /// this map's honest walks need and the fix is arithmetic. If short journeys are being
+        /// abandoned, the search is going wrong somewhere and raising the ceiling would bury it.
+        /// </summary>
+        private int _gaveUpNearest = int.MaxValue;
+        private int _gaveUpFarthest;
+        private long _gaveUpDistanceTotal;
+        private int _gaveUpUnder200;
+        private Tile _gaveUpShortestFrom, _gaveUpShortestTo;
+
+        /// <summary>
+        /// How the cost of a SUCCESSFUL search is distributed, in buckets, because the worst case
+        /// alone cannot size a ceiling. One freak cross-country walk costing 1.7 million nodes
+        /// says nothing about where a cut-off should go; what matters is how many honest journeys
+        /// sit under each candidate. Measured 2026-08-11 — see docs/IDEAS.md.
+        /// </summary>
+        private int _foundOver100k, _foundOver200k, _foundOver400k, _foundOver800k;
+
+        public int FoundOver100k => _foundOver100k;
+        public int FoundOver200k => _foundOver200k;
+        public int FoundOver400k => _foundOver400k;
+        public int FoundOver800k => _foundOver800k;
+
+        public int GaveUpNearest => _gaveUpNearest == int.MaxValue ? 0 : _gaveUpNearest;
+        public int GaveUpFarthest => _gaveUpFarthest;
+        public int GaveUpMeanDistance => _gaveUpTotal > 0 ? (int)(_gaveUpDistanceTotal / _gaveUpTotal) : 0;
+        public int GaveUpUnder200 => _gaveUpUnder200;
+        public Tile GaveUpShortestFrom => _gaveUpShortestFrom;
+        public Tile GaveUpShortestTo => _gaveUpShortestTo;
+
         /// <summary>Book-keeping for every search, so the give-up count has a denominator.</summary>
-        private void Record(PathOutcome outcome)
+        private void Record(PathOutcome outcome, Tile from, Tile to)
         {
-            if (outcome == PathOutcome.GaveUp) _gaveUpTotal++;
+            if (outcome == PathOutcome.GaveUp)
+            {
+                _gaveUpTotal++;
+
+                int dx = from.X > to.X ? from.X - to.X : to.X - from.X;
+                int dy = from.Y > to.Y ? from.Y - to.Y : to.Y - from.Y;
+                int far = dx > dy ? dx : dy;
+
+                _gaveUpDistanceTotal += far;
+                if (far > _gaveUpFarthest) _gaveUpFarthest = far;
+                if (far < 200) _gaveUpUnder200++;
+                if (far < _gaveUpNearest)
+                {
+                    _gaveUpNearest = far;
+                    _gaveUpShortestFrom = from;
+                    _gaveUpShortestTo = to;
+                }
+            }
             else if (outcome == PathOutcome.Found)
             {
                 _pathsFoundTotal++;
@@ -533,6 +598,11 @@ namespace Noir.Core.Sim
                 // west and nothing was measuring how far.
                 int nodes = _pathfinder.LastNodesExamined;
                 if (nodes > _worstNodesFound) _worstNodesFound = nodes;
+
+                if (nodes > 100_000) _foundOver100k++;
+                if (nodes > 200_000) _foundOver200k++;
+                if (nodes > 400_000) _foundOver400k++;
+                if (nodes > 800_000) _foundOver800k++;
             }
             else _noRouteTotal++;
         }
@@ -773,7 +843,7 @@ namespace Noir.Core.Sim
             // somewhere with their hands full.
             var previous = _plans[index].At(Math.Max(0, _clock.MinuteOfDay - 1)).What;
             _agents[index].Carrying =
-                previous == Activity.Shopping || previous == Activity.OnTheAllotment
+                previous == Activity.Shopping || previous == Activity.InTheGarden
                 // Or because they always do. Somebody whose particulars say they never go out
                 // empty-handed goes out with something in their hand, and this one line is the
                 // whole of what "enacting a particular" means: the sentence in the inspector and
@@ -813,7 +883,7 @@ namespace Noir.Core.Sim
             _scratchPath.Clear();
             var outcome = _pathfinder.FindPath(from, to, _scratchPath);
             _pathNodesThisTick += _pathfinder.LastNodesExamined;
-            Record(outcome);
+            Record(outcome, from, to);
 
             if (outcome != PathOutcome.Found)
             {
@@ -1273,7 +1343,7 @@ namespace Noir.Core.Sim
             _scratchPath.Clear();
             var outcome = _pathfinder.FindPath(from, to, _scratchPath);
             _pathNodesThisTick += _pathfinder.LastNodesExamined;
-            Record(outcome);
+            Record(outcome, from, to);
 
             if (outcome != PathOutcome.Found || _scratchPath.Count == 0) return false;
             _pathsThisTick++;

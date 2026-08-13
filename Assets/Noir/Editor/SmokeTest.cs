@@ -28,6 +28,8 @@ namespace Noir.Editor
             int failures = 0;
             GameObject root = null;
 
+            System.Collections.Generic.Dictionary<Layers.Kind, bool> wasLayers = null;
+
             try
             {
                 Log("--- smoke test ---");
@@ -45,6 +47,7 @@ namespace Noir.Editor
                 var world = built.World;
                 Log($"world      {world.Width}x{world.Height}, {world.PlaceCount} places, "
                   + $"{world.RoomCount} rooms, {world.FurnitureCount} furniture, {world.PropCount} props");
+                ReportHouseRooms(world);
 
                 // The errors are already on the log from the pipeline; what is added here is the
                 // count, because a smoke test that does not fail on them is not a test.
@@ -60,8 +63,55 @@ namespace Noir.Editor
                   + $"{people.WorkingCount} in work");
 
                 var sim = new Simulation(world, people, VillageHost.Seed, 6 * 60);
+                var ticked = System.Diagnostics.Stopwatch.StartNew();
                 sim.Tick(Noir.Core.Contracts.GameClock.TicksPerMinute * 120);
+                ticked.Stop();
                 Log($"sim        ran two hours, clock at {sim.Clock}");
+
+                // HOW THE SEARCH IS COPING, WITH ITS DENOMINATOR. Added 2026-08-11: pricing
+                // private ground made every journey dearer, and the one PlayMode test that
+                // busy-loops on Sim.Tick went from 293 s to a 900 s timeout. A gave-up count is
+                // unreadable alone - see Simulation.GaveUpTotal's own header - so it is printed
+                // beside what it succeeded at and beside the wall clock of the two hours, which
+                // is the number that actually moved.
+                long asked = sim.PathsFoundTotal + sim.GaveUpTotal + sim.NoRouteTotal;
+                Log($"paths      {sim.PathsFoundTotal:N0} found, {sim.GaveUpTotal:N0} gave up at the "
+                  + $"node cap, {sim.NoRouteTotal:N0} refused outright, of {asked:N0} asked "
+                  + $"— two sim hours in {ticked.ElapsedMilliseconds:N0} ms");
+
+                // WHICH journeys were abandoned, not just how many. A ceiling below what honest
+                // long walks need is arithmetic; a SHORT walk being abandoned is a broken search,
+                // and raising the ceiling would bury it. The two look identical in a count.
+                if (sim.GaveUpTotal > 0)
+                    Log($"gave up    nearest {sim.GaveUpNearest:N0} tiles, mean "
+                      + $"{sim.GaveUpMeanDistance:N0}, farthest {sim.GaveUpFarthest:N0}; "
+                      + $"{sim.GaveUpUnder200:N0} of them under 200 tiles. "
+                      + $"Shortest was ({sim.GaveUpShortestFrom.X},{sim.GaveUpShortestFrom.Y}) -> "
+                      + $"({sim.GaveUpShortestTo.X},{sim.GaveUpShortestTo.Y}). "
+                      + $"Worst SUCCESSFUL search {sim.WorstNodesFound:N0} nodes against a "
+                      + $"ceiling of {Noir.Core.Sim.Pathfinder.HardNodeCeiling:N0}.");
+                // NoJourneyIsRefusedThatCanBeWalked.
+                //
+                // A GIVE-UP IS A REACHABLE DESTINATION THE SEARCH REFUSED, so the honest target
+                // is zero and it measured zero the moment the ceiling was sized correctly. It is
+                // a hard failure and not a warning because it is now a real regression signal
+                // rather than a standing fault: on 2026-08-11 this read 171 of 781 against a
+                // stale 100,000 ceiling measured on the pre-survey town, and raising the ceiling
+                // to 300,000 took it to nothing.
+                //
+                // 1% and not 0, only because a search is allowed to be refused for being
+                // genuinely pathological - that is what the guard is for. Anything approaching
+                // this bar means the walkable grid has moved again and the ceiling needs
+                // re-measuring against it. See Pathfinder.HardNodeCeiling for how.
+                if (asked > 0 && sim.GaveUpTotal * 100 > asked)
+                {
+                    LogError($"paths: {sim.GaveUpTotal:N0} of {asked:N0} searches hit the node "
+                           + $"cap - over 1%. These are REACHABLE places people could not set off "
+                           + $"for. The worst search that DID succeed took {sim.WorstNodesFound:N0} "
+                           + $"nodes against a ceiling of {Noir.Core.Sim.Pathfinder.HardNodeCeiling:N0}"
+                           + " - if those are close, the ceiling is stale again.");
+                    failures++;
+                }
 
                 // EVERYTHING THE BROWSER MAP CAN SAY, THE GAME CAN HEAR.
                 //
@@ -78,6 +128,13 @@ namespace Noir.Editor
                 // was worried about. The massing is built lazily now - see Layers.RegisterLazy -
                 // so with it off VillageMesh puts up the ground and nothing else, and the x-ray
                 // check below then finds nothing to hide and fails saying so.
+                //
+                // AND PUT BACK IN THE `finally`, because `Layers.Set` writes PlayerPrefs whenever
+                // there is a person - and `Noir > Smoke Test` is a menu item, so there is. This
+                // turned every layer on and restored nothing, so running the smoke test once cost
+                // the owner whatever he had switched off. Same mechanism as the 2026-08-07
+                // incident, on the editor side of the batch-mode guard.
+                wasLayers = Layers.Snapshot();
                 foreach (var kind in Layers.All) Layers.Set(kind, true);
 
                 // The part that only breaks at runtime: meshes, materials, shaders, primitives.
@@ -126,6 +183,8 @@ namespace Noir.Editor
             }
             finally
             {
+                Layers.Restore(wasLayers);
+
                 if (root != null) UnityEngine.Object.DestroyImmediate(root);
             }
 
@@ -158,6 +217,14 @@ namespace Noir.Editor
                 var p = line.Split(' ');
                 if (p.Length == 4 && p[2] == "walk") return p[0];
                 if (p.Length == 6 && p[4] == "walk") return p[0];
+                return p.Length > 0 ? p[0] : null;
+            });
+
+            // unit "Rossville unit 12" kind tavern - the first token is the only verb, and the
+            // handle is quoted because it has spaces in it, so the split has to survive that.
+            bad += Vet(BusinessRulings.FileName, BusinessRulings.KnownVerbs, line =>
+            {
+                var p = line.Split(' ');
                 return p.Length > 0 ? p[0] : null;
             });
 
@@ -205,6 +272,105 @@ namespace Noir.Editor
                        + "browser map. That file is the owner's memory and cannot be rebuilt.");
                 bad++;
             }
+
+            bad += CheckKindsTableKeysAreAnswered();
+            return bad;
+        }
+
+        /// <summary>
+        /// HOW MANY OF ROSSVILLE'S HOUSES HAVE A BATHROOM IN THEM, printed rather than assumed.
+        ///
+        /// `DomesticBsp` gave a house a bathroom only at four rooms or more, reasoning in the code
+        /// that "a three-room cottage in 1979 has the privy outside, which is a fact rather than an
+        /// oversight". It is a fact about rural England in 1979. Rossville has run its own water
+        /// and sewer continuously since 1898 - kinds.txt says so, citing ROSSVILLE-HISTORY.md - so
+        /// an occupied house here in 1991 has a bathroom in it, and the three-room bar was carrying
+        /// a retired village's plumbing into an Illinois town.
+        ///
+        /// The number is printed on every run because rooms are what the whole simulation walks
+        /// around in: DayPlan and the pathfinder both read them, so a change in this count is a
+        /// change in what the people do, and it should never be discovered by surprise.
+        /// </summary>
+        private static void ReportHouseRooms(WorldModel world)
+        {
+            int houses = 0, withBath = 0;
+            var byRooms = new System.Collections.Generic.SortedDictionary<int, int>();
+
+            foreach (var place in world.AllPlaces)
+            {
+                // IsHome, so the seven apartment places are in the count. Written against the
+                // enum member first, which is the exact fault this same session found in
+                // Eyewitness, EncounterReport, VocabReport, RoofBuilder and Materials3D - five
+                // places asking `Kind == PlaceKind.Dwelling` about a town whose kinds.txt declares
+                // `apartment / home yes` and whose enum has never heard of apartment.
+                if (!PlaceKindTable.Current.Row(place.Kind).IsHome) continue;
+                houses++;
+
+                var rooms = world.RoomsIn(place.Id);
+                int n = rooms.Count;
+                byRooms.TryGetValue(n, out int had);
+                byRooms[n] = had + 1;
+
+                foreach (var id in rooms)
+                    if (world.GetRoom(id).Kind == RoomKind.Bathroom) { withBath++; break; }
+            }
+
+            var shape = new System.Collections.Generic.List<string>();
+            foreach (var kv in byRooms) shape.Add($"{kv.Key}:{kv.Value}");
+
+            Log($"houses     {houses} dwellings, {withBath} with a bathroom "
+              + $"({(houses == 0 ? 0 : 100 * withBath / houses)}%); rooms per house  "
+              + string.Join(" ", shape));
+        }
+
+        /// <summary>
+        /// THE DIFF CLAUDE.MD ASKS FOR AND NOTHING IN THE TREE DID: every `frontage` and `massing`
+        /// value `Content/kinds.txt` declares, against the keys the renderers answer to.
+        ///
+        /// "A value nothing answers to does NOT throw, it falls through to a default and the
+        /// building just looks wrong." That has now happened twice in this one column - `factory`
+        /// declaring `frontage mill` and getting a plain plank, then `bank` and `icecream`
+        /// declaring `shopfront`, which no arm had ever heard of. Both were found by eye, months
+        /// apart.
+        ///
+        /// It lives in the Editor assembly because Frontage and MassingGrammars are in Noir.Unity,
+        /// which Core cannot see - and it is deliberately NOT a load-time throw in
+        /// PlaceKindTable: one bad word should cost one wrong sign, not the whole game.
+        /// </summary>
+        private static int CheckKindsTableKeysAreAnswered()
+        {
+            int bad = 0;
+            var frontages = new System.Collections.Generic.SortedDictionary<string, string>();
+            var massings = new System.Collections.Generic.SortedDictionary<string, string>();
+
+            var table = PlaceKindTable.Current;
+            for (int i = 0; i < table.Count; i++)
+            {
+                var row = table.RowOrNull((PlaceKind)i);
+                if (row == null) continue;
+                if (!string.IsNullOrEmpty(row.Frontage)) frontages[row.Frontage] = row.Name;
+                if (!string.IsNullOrEmpty(row.Massing)) massings[row.Massing] = row.Name;
+            }
+
+            foreach (var kv in frontages)
+                if (System.Array.IndexOf(Frontage.Styles, kv.Key) < 0)
+                {
+                    LogError($"kinds.txt: frontage '{kv.Key}' (on {kv.Value}) is a word nothing "
+                           + "draws - that building silently takes the plain nameboard. There is: "
+                           + string.Join(", ", Frontage.Styles) + ".");
+                    bad++;
+                }
+
+            foreach (var kv in massings)
+                if (!MassingGrammars.Knows(kv.Key))
+                {
+                    LogError($"kinds.txt: massing '{kv.Key}' (on {kv.Value}) is a word nothing "
+                           + "builds - that building silently falls back to the cottage grammar.");
+                    bad++;
+                }
+
+            Log($"kinds      {frontages.Count} frontage and {massings.Count} massing key(s) "
+              + "declared, all answered");
             return bad;
         }
 

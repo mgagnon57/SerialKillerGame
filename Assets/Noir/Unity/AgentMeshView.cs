@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.People;
+using Noir.Core.World;
 
 namespace Noir.Unity
 {
@@ -75,7 +76,7 @@ namespace Noir.Unity
                 // A BOUGHT PERSON IF THERE IS ONE, and the primitives if there is not. The pack
                 // has about twenty figures in register for an ordinary town, so the fallback is
                 // not dead code - it is what a map whose people the pack cannot cast still looks
-                // like, and it is what Ashcombe has always looked like.
+                // like, and it is what Rossville has always looked like.
                 IAgentBody body = null;
 #if UNITY_EDITOR
                 body = AgentBody.Build(transform, citizen, look);
@@ -94,9 +95,68 @@ namespace Noir.Unity
                 }
             }
 
+            // THE TOWN ALREADY KNEW IT HAD DRAWN NOBODY, AND SAID SO IN A WHISPER.
+            //
+            // `rigged` is zero in every shipped build - `AgentBody` reads the figure prefabs
+            // through `AssetDatabase`, which does not exist outside the editor - and zero on a
+            // fresh clone, where `Assets/polyperfect` is gitignored and simply is not there. Both
+            // came out as a `Debug.Log` reading "0 of them bought and animated", which is a
+            // sentence somebody has to already suspect something to notice.
+            //
+            // SPLIT ON `Application.isEditor`, and the split is not tidiness. Told flatly that
+            // "outside the editor this is expected", the fresh-clone case would be actively
+            // misinformed: it IS in the editor, and its cause is the missing pack. A warning that
+            // confidently misattributes is worse than the quiet log it replaces.
             Debug.Log($"People: {n} figures, {rigged} of them bought and animated, "
                     + $"{(n - rigged) * AgentFigure.PartCount} primitive parts.");
+
+            if (rigged == 0 && n > 0)
+            {
+                if (Application.isEditor)
+                    Debug.LogWarning($"[people] all {n} of Rossville is PRIMITIVE CAPSULES - not "
+                        + "one bought figure was found. In the editor that means the pack is "
+                        + "missing: Assets/polyperfect is gitignored, so a fresh clone has none of "
+                        + "it. Re-import it, then run Noir > Make City Meshes Readable.");
+                else
+                    Debug.LogWarning($"[people] all {n} of Rossville is PRIMITIVE CAPSULES, which "
+                        + "is what a shipped build gets today: AgentBody reads the figure prefabs "
+                        + "through AssetDatabase, and there is no AssetDatabase outside the "
+                        + "editor. See docs/ANIMATION-FIXES.md PB-6/PB-7 - the cast manifest.");
+            }
         }
+
+        /// <summary>
+        /// How many people are animating at once, whatever the camera is doing.
+        ///
+        /// A FIXED RADIUS WAS TRIED FIRST AND IT SWITCHED THE TOWN OFF. `OrbitCamera` opens in
+        /// Overview at 330 m and goes to 1600 m, so an eighty-metre cull left **0 of 1,385**
+        /// animating - which measures beautifully (12.0 ms to 1.4 ms) and is not an optimisation,
+        /// it is a static town. It also took `WhyAreThePeopleNotAnimating` red, correctly: with
+        /// nobody animating, the walk rate is 0.00x and the test that guards against skating feet
+        /// has nothing left to measure.
+        ///
+        /// So the budget is a HEAD COUNT and the radius chases it. Cost is bounded and predictable
+        /// whatever the view, the nearest people are always the ones moving, and the town is never
+        /// completely still. At the measured ~4.5 us per animator, 150 is about 0.7 ms against the
+        /// 6.2 ms all 1,385 were costing.
+        /// </summary>
+        public const int AnimatingBudget = 150;
+
+        /// <summary>Where the radius starts, and the ends it may not pass. Metres.</summary>
+        private const float NearestFloor = 15f, NearestCeiling = 2500f;
+
+        /// <summary>
+        /// The radius that currently delivers <see cref="AnimatingBudget"/>, chased frame by frame.
+        ///
+        /// A feedback loop rather than a sort: ordering 1,385 people by distance every frame to
+        /// take the nearest 150 costs more than it saves, and this converges in well under a
+        /// second and then sits still. Overshoot does not matter - being 20 short or 20 over for a
+        /// few frames is invisible and costs microseconds.
+        /// </summary>
+        private float _nearest = 80f;
+
+        /// <summary>How many figures had a running animator on the last <see cref="Refresh"/>.</summary>
+        public int Animating { get; private set; }
 
         public void Refresh()
         {
@@ -119,9 +179,32 @@ namespace Noir.Unity
 
             Reselect(_host.Selected.Value);
 
+            // Where the eye is, fetched once rather than 1,385 times. Null when there is no camera
+            // at all - an offline render between shots - and then nobody is culled, because a still
+            // that quietly froze half the town would be a worse lie than a slow one.
+            var camera = Camera.main;
+            Vector3? eye = camera != null ? camera.transform.position : (Vector3?)null;
+            int animating = 0;
+
             for (int i = 0; i < _figures.Length; i++)
             {
                 var agent = sim.GetAgent(i);
+
+                // OUT OF TOWN, SO NOT DRAWN. The men who work in Hoopeston or Danville are
+                // anchored at their own front door in the simulation - every consumer of a
+                // block's place assumes a real one - and simply not rendered between half six
+                // and ten past five. An empty pavement on a Tuesday morning is the point.
+                //
+                // Toggling the root is safe here where it would not be elsewhere: AgentFigure is
+                // a plain class, not a MonoBehaviour, and is posed from this loop every frame, so
+                // there is no Update to lose. That distinction is exactly what the frozen-traffic
+                // bug turned on.
+                bool away = agent.Doing == Activity.AwayFromTown;
+                var root = _figures[i].Root;
+                if (root != null && root.gameObject.activeSelf == away)
+                    root.gameObject.SetActive(!away);
+                if (away) continue;
+
                 bool walking = agent.Heading.X != 0f || agent.Heading.Y != 0f;
 
                 // ---- which way they are facing ----
@@ -216,6 +299,41 @@ namespace Noir.Unity
 
                 _figures[i].Pose(ground, _yaw[i], _phase[i], _swing[i], agent.Carrying);
 
+                // ---- THE ANIMATOR LOD, WHICH IS HALF THE FRAME ----
+                //
+                // Measured by PerfCensus.WhatIsEatingTheFrame: switching the People layer off took
+                // the frame from 12.0 ms to 5.9 ms. The 1,385 animators cost MORE THAN EVERYTHING
+                // ELSE IN THE TOWN PUT TOGETHER - the traffic is 1.0 ms and the 611 parked cars
+                // measure zero.
+                //
+                // NOT AnimatorCullingMode.CullCompletely, which was tried and reverted and whose
+                // failure is written up at AgentBody.cs:204: a disabled animator stops updating the
+                // bounds that decide visibility, and the cull keys on that visibility, so anybody
+                // who leaves the view never comes back. Forty of forty froze.
+                //
+                // THAT FAILURE IS CIRCULAR, AND THIS IS NOT. A camera position and a simulated
+                // position are both known whatever the animator is doing, so a DISTANCE cull has no
+                // state to get stuck in. Nothing here can wedge: the test that decides re-enabling
+                // does not depend on the thing being disabled.
+                //
+                // THE FIGURE IS STILL DRAWN. Only `enabled` goes, not the renderer and not the
+                // root - a distant person keeps standing there in the pose they were caught in,
+                // which at eighty metres is not something an eye can pick out. Switching the root
+                // off instead would pop people out of a view they are plainly inside.
+                var animator = _figures[i].Animator;
+                if (animator != null && eye.HasValue)
+                {
+                    // Hysteresis: a person walking the boundary must not flicker on and off every
+                    // few frames, so it costs a tenth of the radius to change your mind.
+                    float far = (ground - eye.Value).sqrMagnitude;
+                    float edge = animator.enabled ? _nearest * 1.1f : _nearest;
+                    bool animate = far < edge * edge;
+
+                    if (animator.enabled != animate) animator.enabled = animate;
+                    if (!animate) continue;      // and skip Drive, which is not free either
+                    animating++;
+                }
+
                 // WHERE THE BOUGHT ANIMATION WILL LAND. The primitive figure above swings its own
                 // legs off `_phase` and needs none of this; a rigged character does, and the
                 // simulation state it needs - what this person is doing, and whether they are on
@@ -226,7 +344,7 @@ namespace Noir.Unity
                 // a refactor. See docs/ASSETS.md.
                 //
                 // Running is the child at play and nothing else: an adult jogging across
-                // Northgate reads as fleeing, which is a story event rather than a commute.
+                // Rossville reads as fleeing, which is a story event rather than a commute.
                 //
                 // The pace handed over is metres per REAL second, which is the speed the eye sees
                 // the person travel at and the only speed a stride can honestly be matched to. At
@@ -241,11 +359,26 @@ namespace Noir.Unity
                 // frames in ten and would peg the playback rate to its floor while the person is
                 // visibly walking. Per tick times ticks a second times the clock's multiplier is
                 // the same number, and it is the same on every machine.
-                AgentAnimation.Drive(_figures[i].Animator, agent.Doing, walking,
-                                     hurrying: agent.Doing == Activity.AtThePlayground,
+                AgentAnimation.Drive(_figures[i].Animator, SituationOf(i, agent, walking),
                                      who: _host.People.Get(new CitizenId(i)).Key.Value,
                                      pace: Mathf.Sqrt((agent.Position - agent.PreviousPosition)
-                                                          .LengthSquared) * perSecond);
+                                                          .LengthSquared) * perSecond,
+                                     // RIG-2. The legs doing the walking, so a child's cycle runs
+                                     // faster than an adult's over the same ground instead of
+                                     // gliding. Already to hand - the primitive figures have used
+                                     // this same number for their leg swing all along.
+                                     stride: _looks[i].Stride);
+            }
+
+            Animating = animating;
+
+            // Chase the budget. Only when there is a camera to measure from - with none, nothing
+            // was culled this frame and moving the radius on that would be reacting to nothing.
+            if (eye.HasValue)
+            {
+                if (animating < AnimatingBudget * 9 / 10) _nearest *= 1.08f;
+                else if (animating > AnimatingBudget * 11 / 10) _nearest *= 0.94f;
+                _nearest = Mathf.Clamp(_nearest, NearestFloor, NearestCeiling);
             }
         }
 
@@ -278,6 +411,17 @@ namespace Noir.Unity
             public int People, Animated, Moving, Wrong;
 
             /// <summary>
+            /// How many animators are actually RUNNING, after the distance LOD in
+            /// <see cref="Refresh"/> has switched off everybody past
+            /// <see cref="AnimatingBudget"/> has kept only the nearest people running.
+            ///
+            /// Reported because without it the saving cannot be read. "Switching the People layer
+            /// off now costs 0.0 ms" means the LOD is working if a few dozen are still running,
+            /// and means the town has quietly been turned off if the answer is none.
+            /// </summary>
+            public int Running;
+
+            /// <summary>
             /// The rate the walk is playing at, averaged over everybody on the move.
             ///
             /// The AVERAGE and not the extremes, because a person whose last simulation step
@@ -289,12 +433,54 @@ namespace Noir.Unity
             public float Slowest, Fastest;
             public string Wanted;
 
+            /// <summary>Out of town and not drawn. See Report - they are skipped, not counted.</summary>
+            public int Away;
+
+            /// <summary>
+            /// People whose wanted clip has NO state in the controller, so Drive freezes them.
+            ///
+            /// A counter and not yet an assert: animations.txt is allowed to name a clip nobody
+            /// has downloaded, which is the whole "import a few at a time" workflow.
+            /// </summary>
+            public int Stateless;
+
             public override string ToString() =>
-                $"{People} people, {Animated} with an animator, {Moving} on the move, "
+                $"{People} people, {Animated} with an animator, {Running} animating "
+              + $"(nearest {AnimatingBudget}, the rest hold a pose), "
+              + $"{Moving} on the move, "
               + $"{Wrong} of those NOT in the state they should be. "
+              + $"{Away} out of town and not drawn. "
+              + (Stateless > 0 ? $"{Stateless} WANT A CLIP THE CONTROLLER HAS NO STATE FOR. " : "")
               + (Moving > 0 ? $"Walk playing at {Rate:0.00}x "
                             + $"({Slowest:0.00}-{Fastest:0.00}). " : "")
               + $"Wanted: {Wanted}";
+        }
+
+
+        /// <summary>
+        /// What the animation table is allowed to know about this person, right now.
+        ///
+        /// WHERE and WHO, which `Drive` used to throw away before the lookup - see
+        /// AgentAnimation.Situation for the eight faults that came out of that. The place is the
+        /// KIND's name from kinds.txt (`diner`, `tavern`, `farm`), not the building's own name, so
+        /// a row applies to every diner in the town rather than to Dot's in particular.
+        /// </summary>
+        private AgentAnimation.Situation SituationOf(int i, in Noir.Core.Sim.AgentState agent, bool moving)
+        {
+            var citizen = _host.People.Get(new CitizenId(i));
+
+            string place = null;
+            if (agent.At.IsValid)
+            {
+                var at = _host.World.GetPlace(agent.At);
+                if (at != null) place = PlaceKindTable.Current.Row(at.Kind).Name;
+            }
+
+            return new AgentAnimation.Situation(
+                agent.Doing, moving,
+                place: place,
+                stage: citizen.StageIn(VillageHost.Year).ToString().ToLowerInvariant(),
+                sex: citizen.Male ? "male" : "female");
         }
 
         public Census Report()
@@ -303,25 +489,56 @@ namespace Noir.Unity
             if (sim == null) return new Census { Wanted = "no simulation" };
 
             int walking = 0, walkingAndIdle = 0, animated = 0, rated = 0;
+            int away = 0, stateless = 0;
             float slowest = float.MaxValue, fastest = 0f, rates = 0f;
             var states = new Dictionary<string, int>();
 
             for (int i = 0; i < _figures.Length; i++)
             {
                 var agent = sim.GetAgent(i);
+
+                // OUT OF TOWN, SO NOT COUNTED - `Refresh` already refuses to draw these.
+                //
+                // About two hundred people are in Hoopeston or Danville at any weekday hour, with
+                // their figure switched off entirely. They were being counted here as ordinary
+                // townsfolk: they inflated `People`, they were asked what clip they wanted, and
+                // their answers went into the state census - so a fifth of the town's "Wanted"
+                // histogram described people nobody can see. Skipping them is not hiding a fault,
+                // it is the census agreeing with the renderer about who is here.
+                if (agent.Doing == Activity.AwayFromTown) { away++; continue; }
+
                 bool moves = agent.Heading.X != 0f || agent.Heading.Y != 0f;
                 if (moves) walking++;
 
                 var animator = _figures[i].Animator;
                 if (animator == null || animator.runtimeAnimatorController == null) continue;
+
+                // A FROZEN DISTANT FIGURE IS NOT THE GLIDING BUG THIS CENSUS HUNTS. The animator
+                // LOD in Refresh keeps only the nearest AnimatingBudget people running, so a walker out
+                // there really is holding a pose - deliberately, and invisibly at that range.
+                // Counting them as "walking but idle" would report the optimisation as the very
+                // fault it was measured to be safe against, and hide a real one behind the noise.
+                if (!animator.enabled) continue;
                 animated++;
 
                 string want = AgentAnimation.ClipFor(
-                    agent.Doing, moves,
-                    hurrying: agent.Doing == Activity.AtThePlayground,
+                    SituationOf(i, agent, moves),
                     who: _host.People.Get(new CitizenId(i)).Key.Value) ?? "(nothing)";
 
                 states[want] = states.TryGetValue(want, out int n) ? n + 1 : 1;
+
+                // WANTED A CLIP THE CONTROLLER HAS NO STATE FOR - counted for EVERYBODY, above the
+                // moving check on purpose. Below it, only walkers could ever be seen, and the
+                // dotted-clip fault's victims were people standing at doors: non-moving by
+                // definition, and therefore invisible to a counter placed one line lower.
+                //
+                // A COUNTER AND NOT AN ASSERT IN THIS WAVE. `animations.txt` is explicitly allowed
+                // to name a clip that has not been downloaded yet - that is the "import a few at a
+                // time" workflow the whole system is built for - so asserting on this today would
+                // turn the six-minute gate red on a case the format promises is legal. Read the
+                // number first.
+                if (want != "(nothing)" && !animator.HasState(0, Animator.StringToHash(want)))
+                    stateless++;
 
                 if (!moves) continue;
 
@@ -351,7 +568,8 @@ namespace Noir.Unity
 
             return new Census
             {
-                People = _figures.Length, Animated = animated,
+                People = _figures.Length, Animated = animated, Running = Animating,
+                Away = away, Stateless = stateless,
                 Moving = walking, Wrong = walkingAndIdle,
                 Rate = rated > 0 ? rates / rated : 0f,
                 Slowest = slowest == float.MaxValue ? 0f : slowest, Fastest = fastest,

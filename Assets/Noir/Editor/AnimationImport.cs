@@ -18,10 +18,25 @@ namespace Noir.Editor
     /// VillageHost rather than out of a scene: the number of steps that must be done by hand in
     /// the editor is kept at zero, because those are the ones I cannot do for you.
     ///
-    /// LOOPING EVERYTHING IS DELIBERATE. Every clip on the list in docs/ASSETS.md is a cycle -
-    /// walking, running, idling, talking, drinking, digging - and a cycle that does not loop is
-    /// always wrong. A one-shot that loops merely repeats, which is the cheaper mistake, and there
-    /// are none on the list anyway.
+    /// LOOPING EVERYTHING IS DELIBERATE. A cycle that does not loop is always wrong - it stops
+    /// dead after one stride - and a one-shot that loops merely repeats, which is the cheaper
+    /// mistake. When the choice has to be made blind, on a folder somebody has just emptied a bulk
+    /// download into, that is the right way round.
+    ///
+    /// "AND THERE ARE NONE ON THE LIST ANYWAY" IS WHAT THIS USED TO ADD, AND IT IS FALSE. There
+    /// are about a dozen one-shot gestures among the 87 - waving, clapping, greeting, picking an
+    /// object up - and every one of them is being looped. That is not a crisis, it is the cheaper
+    /// mistake being taken knowingly, but it was being taken while claiming the situation did not
+    /// arise, which is how it went unexamined.
+    ///
+    /// Whether to fix it is open and deliberately not decided here: see decision 7 in
+    /// docs/ANIMATION-FIXES.md. `loopPose` does not merely mark a clip, it WARPS it to meet its
+    /// own start - harmless on a true cycle, wrong on a gesture - so this wants measuring on a few
+    /// clips before anybody rewrites 87 import settings.
+    ///
+    /// AND NOTHING HERE RUNS TWICE. The guard below is `importSettingsMissing`, which is true on
+    /// first import and never again, so anything set by hand afterwards is permanent and this will
+    /// not correct it. That is why docs/ASSETS.md no longer teaches a manual procedure.
     /// </summary>
     public sealed class AnimationImport : AssetPostprocessor
     {

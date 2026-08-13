@@ -49,7 +49,7 @@ namespace Noir.Unity
         /// fields read as boundaries instead of as a line of shrubs.
         /// </summary>
         public static bool Handles(PropKind kind) =>
-            kind == PropKind.Tree || kind == PropKind.Bush;
+            kind == PropKind.Tree || kind == PropKind.Bush || kind == PropKind.Reed;
 
         public static GameObject Build(WorldModel world, Transform parent)
         {
@@ -79,6 +79,19 @@ namespace Noir.Unity
             var deadwood = Fallen();
             var topiary = All(Nature + "Hedges");
             var bushes = All(Nature + "Bushes");
+
+            // CATTAIL, AND FOR ONCE THE PACK HAS THE RIGHT PLANT. Typha latifolia is what actually
+            // rings a Vermilion County farm pond and a county drainage ditch, and Nature/Freshwater
+            // ships it - unlike the elm, ash and hackberry this file has to apologise for above.
+            //
+            // CATTAIL ONLY, and the exclusion is the load-bearing half. This first read
+            // Species("Freshwater", "Cattail", "Water_Grass_Long") - picked by NAME, out of the
+            // folder that looked right, without opening one. Water_Grass_Long is SUBMERGED weed;
+            // it sits in Freshwater beside the waterlilies because that is what it grows among,
+            // and at native scale standing on a dry bank it is a three-metre black frond. The
+            // first render of the banks was a pond ringed with kelp. Whatever goes in this list
+            // must be a plant that stands ABOVE the waterline on land.
+            var reeds = Species("Freshwater", "Cattail");
 
             if (broadleaf.Count == 0 && conifer.Count == 0)
             {
@@ -110,7 +123,14 @@ namespace Noir.Unity
                 var at = Space3D.ToWorld(tile) + new Vector3(jx, 0f, jz);
 
                 List<string> from;
-                if (prop.Kind == PropKind.Bush)
+                if (prop.Kind == PropKind.Reed)
+                {
+                    // Falls back to bushes rather than to nothing. A bank with scrub on it still
+                    // breaks the line; a bank with an empty list on it is the straight edge this
+                    // whole prop kind exists to hide, and it would fail silently.
+                    from = reeds.Count > 0 ? reeds : bushes;
+                }
+                else if (prop.Kind == PropKind.Bush)
                 {
                     from = bushes;
                 }

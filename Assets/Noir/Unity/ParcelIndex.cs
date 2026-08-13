@@ -133,9 +133,18 @@ namespace Noir.Unity
             if (_all != null) return;
             _all = new List<Parcel>();
 
+            // THE COUNTY'S LOT LINES. Unread, no parcel exists at all - so no zoning resolves,
+            // no ruling in parcel-1991.txt can find its lot, and the plan render has nothing to
+            // draw. Downstream of this everything says "unset" rather than "missing".
             string text;
             try { text = ContentLoader.Read("parcels.txt"); }
-            catch { return; }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning("[parcels] parcels.txt did not load, so THE TOWN HAS "
+                    + "NO LOT LINES - nothing downstream can resolve a parcel, including every "
+                    + "ruling keyed on one. " + ex.Message);
+                return;
+            }
 
             foreach (var raw in text.Split('\n'))
             {

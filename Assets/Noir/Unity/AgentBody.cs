@@ -44,16 +44,34 @@ namespace Noir.Unity
     /// twenty in register for an ordinary town, against a population of hundreds. It is done with
     /// the atlas. `Universal_A_Alb` is 4096 square and 428KB, which is the compression signature
     /// of flat colour blocks rather than a texture, and it IS one: a labelled swatch grid where
-    /// each ROW is a role - primary, secondary, tertiary, hair, skin, hide - and each row is a
-    /// ramp of shades across its columns. A character's coat colour is therefore a UV coordinate,
-    /// not a texture, and moving a vertex along its own row recolours that garment and nothing
-    /// else. Measured: `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 cells across 10 roles.
+    /// each ROW is a role. A character's coat colour is therefore a UV coordinate, not a texture,
+    /// and moving a vertex along its own row recolours that garment and nothing else. Measured:
+    /// `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 cells across 10 roles.
+    ///
+    /// THE GRID IS 32 x 32 CELLS OF 128px, MEASURED OFF THE SHEET 2026-08-09. Four comments in
+    /// this file and two documents said sixteen or sixty-four, and a safety argument was built on
+    /// top of the wrong number. What is actually there, per row:
+    ///
+    ///     columns  0-19   the role's twenty-step shade ramp, near-black to white
+    ///     columns 20-29   ONE flat colour, repeated ten times
+    ///     column     30   the emission key - the only non-black column in Universal_A_Emit
+    ///     column     31   an accent
+    ///
+    /// The rows are labelled on the sheet: 1 skin, 2 hide, 3 hair, 9 stone, 13 tertiary,
+    /// 14 secondary, 15 primary, and so on.
     ///
     /// SHIFTED ALONG THE ROW, NEVER ACROSS IT. Staying on the row is what makes this safe without
     /// knowing which row is which: skin stays somewhere in the skin ramp, hair in the hair ramp,
     /// a coat in its own. Moving DOWN a row would need the atlas mapped first and would otherwise
     /// give somebody a green face. So this varies shade rather than hue, which is plenty to make
     /// a street of people who are all different, and the hue is a later job.
+    ///
+    /// WHAT STAYING ON THE ROW DOES NOT MAKE SAFE IS WRAPPING, and that is UVX-A5, which belongs
+    /// to `docs/ANIMATION-FIXES` because this file does. A shift that runs past column 19 leaves
+    /// the ramp for the flat block or the emission key; at the current `Along` it can reach column
+    /// 21 from the far end of a ramp, which is the flat block rather than a shade. The shift wants
+    /// bounding rather than wrapping. It is named here so the next session does not re-derive the
+    /// same bug from the same wrong comment, which is exactly what happened last time.
     ///
     /// The mesh is cloned per person because the UVs differ per person. They are small - about
     /// 2,800 vertices - and there is one per citizen rather than one per frame.
@@ -64,6 +82,15 @@ namespace Noir.Unity
         public Animator Animator { get; private set; }
 
         private SkinnedMeshRenderer _skin;
+
+        /// <summary>
+        /// The thing in their hand, parented to the right-hand BONE so the animation carries it.
+        ///
+        /// Built on first use rather than for all 1,385 people up front: most of the town is not
+        /// carrying anything at any moment, and a shopping bag per citizen is 1,385 renderers for
+        /// scenery. Kept once made, because somebody who has shopped once will shop again.
+        /// </summary>
+        private GameObject _bag;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         /// <summary>
@@ -93,6 +120,49 @@ namespace Noir.Unity
             // the only part of a walk cycle an in-place clip deliberately does not have.
             Root.position = ground;
             Root.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // SIM-8. THE BAG NEVER REACHED A BOUGHT BODY. `carrying` arrived here and was
+            // ignored: the primitive figure hangs a box off its arm transform and the rigged one
+            // did nothing at all, so the moment the town got real people, every shopper walked
+            // home from the shop empty-handed - and `PersonDescription.CarriedThing` is a WITNESS
+            // property. A watcher is supposed to be able to say "he had something in his hand".
+            //
+            // A PROP ON THE HAND BONE, NOT A CLIP. Parenting to `HumanBodyBones.RightHand` means
+            // the existing animation carries it for free and it needs no bespoke carry cycle -
+            // which is the difference between one object and re-animating eighty-seven clips.
+            if (!carrying) { if (_bag != null && _bag.activeSelf) _bag.SetActive(false); return; }
+
+            if (_bag == null && !MakeBag()) return;
+            if (!_bag.activeSelf) _bag.SetActive(true);
+        }
+
+        /// <summary>
+        /// Hang a bag off the right hand, once. False if this rig has no mapped right hand - the
+        /// pack's figures are humanoid, but a figure that is not must not take the whole frame
+        /// down for a shopping bag.
+        /// </summary>
+        private bool MakeBag()
+        {
+            var hand = Animator != null && Animator.isHuman
+                ? Animator.GetBoneTransform(HumanBodyBones.RightHand)
+                : null;
+            if (hand == null) return false;
+
+            _bag = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _bag.name = "Bag";
+            Object.DestroyImmediate(_bag.GetComponent<Collider>());
+
+            var r = _bag.GetComponent<MeshRenderer>();
+            r.sharedMaterial = Materials3D.Bag;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+
+            _bag.transform.SetParent(hand, false);
+            // A carrier bag, held at the side: small, a little below the grip, hanging clear of
+            // the leg. In the hand's own space, so it swings with the arm the animator is moving.
+            _bag.transform.localScale = new Vector3(0.16f, 0.22f, 0.10f);
+            _bag.transform.localPosition = new Vector3(0.02f, -0.14f, 0.02f);
+            _bag.transform.localRotation = Quaternion.identity;
+            return true;
         }
 
 #if UNITY_EDITOR
@@ -109,10 +179,11 @@ namespace Noir.Unity
         /// <summary>
         /// How far along its row a vertex may be moved, as a fraction of the atlas width.
         ///
-        /// The grid is 64 cells across, so a sixteenth of the sheet is four swatches - enough for
-        /// a coat to be visibly a different coat, and not so much that a row's whole ramp is
-        /// crossed and a pale shirt comes out black. It is added, then wrapped inside the row, so
-        /// nothing ever lands on a neighbouring role.
+        /// The grid is 32 cells across - measured, see the class docstring - so a sixteenth of
+        /// the sheet is TWO swatches, not the four this said. Enough for a coat to be visibly a
+        /// different coat, and nowhere near enough to cross a row's whole twenty-step ramp. It is
+        /// added and then wrapped inside the sheet, so it never lands on a neighbouring ROLE -
+        /// but see the class docstring: wrapping can still leave the ramp for the flat block.
         /// </summary>
         private const float Along = 1f / 16f;
 
@@ -162,9 +233,23 @@ namespace Noir.Unity
                 if (b.size.y > 0.01f)
                 {
                     float tall = look.Height / b.size.y;
-                    // Breadth is a touch of width without making anybody a cylinder.
-                    float wide = tall * Mathf.Lerp(0.94f, 1.08f, Mathf.InverseLerp(0.9f, 1.18f, look.Breadth));
-                    go.transform.localScale = new Vector3(wide, tall, wide);
+
+                    // UNIFORM, AND THE WIDTH VARIATION IS DELIBERATELY GONE.
+                    //
+                    // This was `new Vector3(wide, tall, wide)` with X and Z off Y by -6%/+8%.
+                    // Non-uniform scale above a SKINNED hierarchy shears: bones rotate inside it,
+                    // and a limb rotating under anisotropic scale changes thickness as it swings,
+                    // so a short wide person gets forearms the wrong width for their length. It
+                    // reads as a rendering fault from twenty feet; the ±7% silhouette it bought
+                    // reads as nothing at all at that distance. `AgentFigure` already refuses to
+                    // do this to the primitives and says so.
+                    //
+                    // NOT A DETERMINISM CHANGE. `look.Breadth` is still hashed per citizen and is
+                    // still used by the primitive figures, so no seed reproduces a different
+                    // village - the rigged people simply stop being sheared by it. Build variety
+                    // comes from 25 cast models and the per-citizen UV shift, which is where it
+                    // was always doing the real work. Owner's decision, 2026-08-08.
+                    go.transform.localScale = new Vector3(tall, tall, tall);
                 }
             }
 
@@ -186,7 +271,15 @@ namespace Noir.Unity
             var animator = go.GetComponentInChildren<Animator>();
             if (animator == null) animator = go.AddComponent<Animator>();
 
-            _controller ??= AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Controller);
+            // `if (== null)`, NOT `??=`. Unity's fake null is the trap: a destroyed UnityEngine
+            // .Object compares equal to null through its overloaded operator, but it is NOT a null
+            // reference, and `??=` / `?.` / `??` are compiled to a reference check that the
+            // overload never gets to see. So after a domain reload or an asset reimport this
+            // would keep a dead controller forever and every figure would silently lose its
+            // animation - while the field reads as "not null" to the null-coalescing operator and
+            // as "null" to everything else in the file.
+            if (_controller == null)
+                _controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(Controller);
             if (_controller != null) animator.runtimeAnimatorController = _controller;
 
             // NO AVATAR MEANS NO RETARGETING, AND IT FAILS SILENTLY. A humanoid clip played
@@ -209,6 +302,17 @@ namespace Noir.Unity
             // running and only skips writing the bones, which is the saving actually wanted.
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
+            // THE SIM RUNS UNSCALED AND SO MUST THE LEGS.
+            //
+            // `Simulation` steps on `Time.unscaledDeltaTime` deliberately - how fast a day passes
+            // is a property of the game, not of Unity, and CLAUDE.md says so. The animator was on
+            // the default `Normal`, which is scaled. So the moment anything touched `timeScale`
+            // the people's legs and the people's POSITIONS ran on different clocks, and the walk
+            // stopped matching the ground under it - which is the same skating fault the pace
+            // ratio exists to remove, arriving by a different door. The PlayMode suite sets
+            // timeScale to 8, so every animation measurement ever taken here was taken through it.
+            animator.updateMode = AnimatorUpdateMode.UnscaledTime;
+
             body.Animator = animator;
             return body;
         }
@@ -230,22 +334,18 @@ namespace Noir.Unity
             var uv = copy.uv;
             if (uv == null || uv.Length == 0) { _dressed[key] = copy; return copy; }
 
-            // The grid is 64 x 64 across the sheet. A vertex keeps its ROW - which is its role -
-            // and moves within it, wrapping at the row's edges so it can never step onto the
-            // role above or below.
-            const float Cell = 1f / 64f;
+            // A VERTEX KEEPS ITS ROW - which is its role - and moves along it.
+            //
+            // The row arithmetic that used to be here was dead: it computed `row` and `into` from
+            // a cell size and then wrote back `row + into`, which is `uv[i].y` identically. It
+            // also declared the grid 64 x 64, which it is not. Both are gone rather than
+            // corrected, because arithmetic that cannot change its input is not documentation of
+            // an invariant - it is something for the next reader to verify and then discard.
+            // V IS SIMPLY NOT TOUCHED, which is the invariant, stated once.
             float shift = (Mix(key.Value, 0x51ED) % 1000UL) / 1000f * Along;
 
             for (int i = 0; i < uv.Length; i++)
-            {
-                float row = Mathf.Floor(uv[i].y / Cell) * Cell;   // the role, untouched
-                float into = uv[i].y - row;
-
-                // Along the row and wrapped inside the sheet. Roles run the full width, so
-                // wrapping at 1 stays on the same row.
-                float u = Mathf.Repeat(uv[i].x + shift, 1f);
-                uv[i] = new Vector2(u, row + into);
-            }
+                uv[i] = new Vector2(Mathf.Repeat(uv[i].x + shift, 1f), uv[i].y);
 
             copy.uv = uv;
             copy.UploadMeshData(false);
@@ -273,6 +373,26 @@ namespace Noir.Unity
 
         private static List<string> Girls() => _girls ??= Cast(
             "Girl_Slavic_Summer", "Girl_Slavic_Winter", "Girl_Poor_Steampunk", "Girl_Rich_Steampunk");
+
+        /// <summary>
+        /// EVERY FIGURE THE TOWN CAN PLACE, and nothing else.
+        ///
+        /// `MeshReadable` walked all 79 prefabs under `Folk` to decide which meshes needed
+        /// Read/Write - which is 79 model imports and 79 meshes held in memory for the lifetime of
+        /// the process, for a town that places 25 of them. The rest are the Fantasy knights, the
+        /// Primeval tribe and the Seasons costumes, deliberately out of register and never drawn.
+        ///
+        /// Derived from the four lists rather than maintained beside them, so a figure added to
+        /// the cast is covered on the day it is added - the same argument `AnimationCheck` makes
+        /// for enumerating the `Activity` enum instead of sweeping the rows.
+        /// </summary>
+        public static IEnumerable<string> EveryCastPrefabPath()
+        {
+            foreach (var path in Men()) yield return path;
+            foreach (var path in Women()) yield return path;
+            foreach (var path in Boys()) yield return path;
+            foreach (var path in Girls()) yield return path;
+        }
 
         private static List<string> Cast(params string[] wanted)
         {

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -216,7 +216,7 @@ namespace Noir.Unity
             var shader = Shader.Find("Skybox/Procedural");
             if (shader != null)
             {
-                _sky = new Material(shader) { name = "AshcombeSky" };
+                _sky = new Material(shader) { name = "RossvilleSky" };
                 if (_sky.HasProperty("_SunSize")) _sky.SetFloat("_SunSize", 0.04f);
                 if (_sky.HasProperty("_AtmosphereThickness")) _sky.SetFloat("_AtmosphereThickness", 1.2f);
                 RenderSettings.skybox = _sky;
@@ -296,7 +296,7 @@ namespace Noir.Unity
             //
             // This was a hand-written list of six kinds, and the five it left out - the school,
             // the post office, the village hall, the surgery and the garage - were the only
-            // walled buildings in Ashcombe with no windows at all. Not dark windows: none. A
+            // walled buildings in Rossville with no windows at all. Not dark windows: none. A
             // front door, a sign, and thirty metres of unbroken stone, in a street where every
             // cottage has a row of them. The hall is authored open until ten at night and stood
             // next to the lit mill as a solid black box.
@@ -331,7 +331,12 @@ namespace Noir.Unity
 
             Debug.Log($"[sunrig] windows {windows} ms, street lamps {lamps} ms "
                     + $"(scan {_lampScanMs} ms, instantiate {_lampMakeMs} ms, "
-                    + $"measure {_lampMeasureMs} ms)");
+                    + $"measure {_lampMeasureMs} ms). "
+                    + $"{fixtures.Lamps.Count} posts, all at in-town crossings "
+                    + $"({_lampsAtCrossings} of them found); alleys, tracks, farm crossroads and "
+                    + "mid-block on any street are unlit. "
+                    + (_lampsInRoad == 0 ? "Every lamp is on the kerb."
+                                         : $"*** {_lampsInRoad} LAMP(S) IN THE CARRIAGEWAY ***"));
             return fixtures;
         }
 
@@ -433,6 +438,7 @@ namespace Noir.Unity
         }
 
         /// <summary>A road tile with something that is not road beside it - i.e. the edge.</summary>
+
         private static bool NextToVerge(WorldModel world, int x, int y)
         {
             for (int dy = -1; dy <= 1; dy++)
@@ -467,66 +473,118 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// Lamps along the kerb, evenly spaced.
+        /// Lamps at the crossings, and along the through routes. Nowhere else.
         ///
         /// The previous rule required a road tile whose x AND y were both multiples of 16.
         /// On this map no tile satisfies both, so the village had exactly zero street lamps
         /// and the nights were pitch dark for a reason that looked like a lighting bug.
-        /// Spacing is now measured against the lamps already placed, which works on any
-        /// street layout rather than only on ones that happen to land on a grid.
+        /// Spacing is measured against the lamps already placed, which works on any street
+        /// layout rather than only on ones that happen to land on a grid.
+        ///
+        /// ---- WHO GETS A LAMP, RULED BY THE OWNER 2026-08-11 ----
+        ///
+        /// The fix above then lit EVERY made road every thirteen metres and put 2,171 lamp posts
+        /// in a village of twelve hundred people - a city's lighting on a farm town, and the
+        /// alleys were lit like the streets. His ruling, and he grew up here:
+        ///
+        ///   - ALLEYS GET NOTHING. Nobody lit the back lane. It is for the bins and the garage
+        ///     that faces it - see TileFlags.Alley, which is the same standing fact.
+        ///   - A NORMAL STREET GETS ONE AT THE INTERSECTION and nothing mid-block. That is what a
+        ///     town this size paid for: light where the roads cross and where somebody might be
+        ///     crossing, dark in between.
+        ///   - THE THROUGH ROUTES stay lit along their length, because Route 1 and Attica are the
+        ///     state highway through the middle of town, at MainSpacing rather than every 13 m.
+        ///   - Tracks get nothing, which was already true. Nobody lights a farm track.
+        ///
+        /// IN-TOWN JUNCTIONS ONLY. 118 of the 120 junctions on this map are field crossroads out
+        /// in the country and lighting those would be worse than the fault being fixed - a lit
+        /// crossroads in the middle of a section is a thing eastern Illinois does not have.
+        /// CitySignals.InTheTown is the same test the signals use, so the two agree by
+        /// construction about where the town stops.
         /// </summary>
         public static void BuildStreetLamps(WorldModel world, Transform parent, Fixtures into)
         {
-            const float spacing = 13f;
-            var placed = new List<Vector2>();
-            _lampScanMs = _lampMakeMs = _lampMeasureMs = 0;
+            // 13 m was the old spacing and it applied to EVERY made road, which is what produced
+            // 2,171 posts. There is no spacing rule left at all: a lamp stands at a crossing or
+            // it does not stand, so nothing needs to measure how far the last one was.
+            _lampScanMs = _lampMakeMs = _lampMeasureMs = _lampsInRoad = _lampsAtCrossings = 0;
             var stage = System.Diagnostics.Stopwatch.StartNew();
 
+            // ---- ONE SEED TILE PER IN-TOWN CROSSING ----
+            //
+            // Worked out before the scan and looked up inside it, because "one at each
+            // intersection" has to mean ONE. A crossroads has four arms and a rule of "any tile
+            // near a junction" would light all four - which is how this got to 2,171 posts in
+            // the first place. The seed is the nearest tile to the junction centre that a lamp
+            // could stand beside; the scan accepts that tile and no other on a normal street.
+            var seeds = new HashSet<long>();
+            foreach (var j in world.Roads.Junctions)
+            {
+                if (!CitySignals.InTheTown(world, j)) continue;
+
+                int jx = Mathf.RoundToInt(j.X), jy = Mathf.RoundToInt(j.Y);
+                int bestX = 0, bestY = 0; float bestD = float.MaxValue;
+
+                for (int dy = -8; dy <= 8; dy++)
+                for (int dx = -8; dx <= 8; dx++)
+                {
+                    int nx = jx + dx, ny = jy + dy;
+                    if (!world.Grid.InBounds(nx, ny)) continue;
+                    var f = world.Grid.FlagsAt(nx, ny);
+                    if ((f & TileFlags.Road) == 0) continue;
+                    if ((f & TileFlags.Alley) != 0) continue;
+                    if (!NextToVerge(world, nx, ny)) continue;
+
+                    // AND SOMEWHERE TO ACTUALLY STAND. NextToVerge only asks whether a neighbour
+                    // is off-road, and that neighbour can be a building wall - which Kerb refuses,
+                    // being unwalkable. Picking such a tile leaves the post in the carriageway,
+                    // and the [sunrig] counter caught exactly one of them doing it. Ask the same
+                    // question Kerb will ask, here, while there are still other tiles to choose.
+                    if (!Kerb.TryStepOff(world, nx, ny, out _, out _)) continue;
+
+                    float d = dx * dx + dy * dy;
+                    if (d < bestD) { bestD = d; bestX = nx; bestY = ny; }
+                }
+
+                if (bestD < float.MaxValue) seeds.Add(((long)bestX << 32) | (uint)bestY);
+            }
+
+            _lampsAtCrossings = seeds.Count;
+
+            // ---- and a lamp on each of them, and nowhere else ----
+            //
+            // ONLY THE SEEDS, which is why nothing in this hot path costs more than a flag test.
+            // The first cut of this ruling kept a mid-block pass for the through routes and asked
+            // RoadNetwork.At which corridor each candidate belonged to. It produced ZERO extra
+            // lamps and cost 175 SECONDS of scan - because nothing was ever accepted, `placed`
+            // stayed empty, nothing was ever rejected for being too close, and so every candidate
+            // on the map reached the lookup. At()'s own comment below had already measured that
+            // exact trap at eighty-six seconds. A rule that adds nothing is not worth one call.
+            //
+            // So Route 1 and Attica are lit at their crossings like everything else, and not
+            // along their length. That half of the ruling is open - see the header.
             for (int y = 0; y < world.Height; y++)
             for (int x = 0; x < world.Width; x++)
             {
                 if ((world.Grid.FlagsAt(x, y) & TileFlags.Road) == 0) continue;
-
-                // On the kerb, not in the carriageway. Cheap, and local to the grid.
-                if (!NextToVerge(world, x, y)) continue;
-
-                bool tooClose = false;
-                for (int i = 0; i < placed.Count; i++)
-                {
-                    float dx = placed[i].x - x, dy = placed[i].y - y;
-                    if (dx * dx + dy * dy < spacing * spacing) { tooClose = true; break; }
-                }
-                if (tooClose) continue;
-
-                // NOBODY LIGHTS A FARM TRACK. A track rasterises to the same Terrain.Road as an
-                // arterial, so this lit the dirt road to Home Farm on a thirteen-metre spacing
-                // and stood municipal lamp posts down it across two hundred metres of field.
-                // The road network remembers which corridor a tile belongs to; ask it.
-                //
-                // ASKED LAST, because it is by far the most expensive test here: At() projects
-                // the point onto every road in the network, and since Chicago Street became a
-                // real curve that means walking a resampled path of a couple of thousand points.
-                // Running it per road tile over a 2100x2400 map cost EIGHTY-SIX SECONDS of a
-                // 120-second startup - measured, after a first guess at the prefab loader below
-                // turned out to be worth two milliseconds. The cheap tests above reject all but
-                // a few thousand candidates, so this now runs a few thousand times instead of
-                // several hundred thousand.
-                //
-                // The order is safe: a track tile was never added to `placed` before either, it
-                // was rejected earlier in the same iteration, so the set of lamps is unchanged.
-                var road = world.Roads.At(x + 0.5f, y + 0.5f);
-                if (road != null && road.Class == RoadClass.Track) continue;
-
-                placed.Add(new Vector2(x, y));
+                if (!seeds.Contains(((long)x << 32) | (uint)y)) continue;
 
                 _lampScanMs += stage.ElapsedMilliseconds; stage.Restart();
 
-                var ground = Space3D.ToWorld(new Tile(x, y));
+                // AND THEN OFF THE ASPHALT. The scan above deliberately walks ROAD tiles - that
+                // is how spacing along a street is measured, and it must stay that way - so the
+                // tile it settles on is the outermost lane of the carriageway, not the kerb
+                // beside it. NextToVerge only ever asked whether the kerb was ADJACENT. Measured
+                // at Chicago x Attica before this line existed: eleven of eighteen lamp posts
+                // were standing in the road. Spacing and facing are still taken from (x,y).
+                Kerb.TryStepOff(world, x, y, out int lx, out int ly);
+                if ((world.Grid.FlagsAt(lx, ly) & TileFlags.Road) != 0) _lampsInRoad++;
+                var ground = Space3D.ToWorld(new Tile(lx, ly));
 
                 // A BOUGHT LAMP POST, not a cylinder with a box on top.
                 //
                 // This used to be exactly that - PrimitiveType.Cylinder for the column and
-                // PrimitiveType.Cube for the lantern - which was the right answer while Ashcombe
+                // PrimitiveType.Cube for the lantern - which was the right answer while the old village
                 // had no pack behind it and the alternative was light appearing out of nothing
                 // five metres up. The pack ships sixteen lamps in `Lamps City`, four of them the
                 // tall `Lamp_Street` sort meant for a carriageway, and not one had ever been
@@ -629,6 +687,21 @@ namespace Noir.Unity
         private static long _lampScanMs, _lampMakeMs, _lampMeasureMs;
 
         /// <summary>
+        /// Lamp posts that ended up standing on the carriageway, which is 0 when this is working.
+        ///
+        /// The scan walks ROAD tiles by design - that is how spacing along a street is measured -
+        /// so the last step off the asphalt is easy to lose and invisible in a count of lamps.
+        /// Measured before Kerb.TryStepOff existed: eleven of the eighteen at Chicago x Attica
+        /// stood in the road. Reported on the [sunrig] line beside the timings, because the
+        /// PlayMode gate builds the survey plan and can never see a lamp at all.
+        /// </summary>
+        private static int _lampsInRoad;
+
+        /// <summary>Lamps standing at an in-town crossing, as opposed to along a
+        /// through route. Reported so the owner's ruling is visible in every run.</summary>
+        private static int _lampsAtCrossings;
+
+        /// <summary>
         /// Which way a lamp faces: across its own carriageway, so the arm reaches over the road
         /// rather than over the shopfronts behind it. Asked of the road network, like the class
         /// check above, so it keeps being right when a road moves.
@@ -645,7 +718,7 @@ namespace Noir.Unity
         /// <summary>
         /// A lamp's tiebreak in the pool's ordering. Negative so it can never collide with a
         /// place id, and derived from the tile so it stays the same whatever order the lamps
-        /// happen to be placed in. Ashcombe is 170 tiles across; 4096 is room to spare.
+        /// happen to be placed in. Rossville is 170 tiles across; 4096 is room to spare.
         /// </summary>
         private static int LampKey(int x, int y) => -(1 + y * 4096 + x);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -10,7 +10,7 @@ using Noir.Unity;
 namespace Noir.Editor
 {
     /// <summary>
-    /// Loads the city block from Content/city.txt and photographs it under the same sun Ashcombe
+    /// Loads the city block from Content/city.txt and photographs it under the same sun Rossville
     /// uses, so the two can be compared without a variable between them but the buildings.
     ///
     /// It also prints the renderer count, which is the number the whole approach turns on: the
@@ -279,13 +279,13 @@ namespace Noir.Editor
                 }
 
                 // THE TOWN MOVED AND THESE DID NOT. Every camera below used to be aimed at the
-                // city when it sat in the map's north-west corner, so after Northgate was
+                // city when it sat in the map's north-west corner, so after Rossville was
                 // re-centred on 360..720 the whole set quietly went on photographing empty
                 // fields - a street view of a wheatfield, a "junction" with no junction in it.
                 // The stills said nothing was wrong because there was nothing in them.
                 //
                 // The town is now the middle: paved 360..600, with First Street at x=435,
-                // Second at x=525, Northgate Avenue at y=435 and Franklin at y=525.
+                // Second at x=525, Fourth Street at y=435 and Franklin at y=525.
                 //
                 // EVERY CAMERA STANDS IN A STREET, a car park or open ground. Frame() puts the
                 // camera a long way BACK from its target, which is how an earlier set ended up
@@ -315,6 +315,23 @@ namespace Noir.Editor
                     new Vector3(cx + east,
                                 ElevationGrid.HeightAt(cx + east, cy - north),
                                 -(cy - north));
+
+                // AND THE SAME THING FOR THE SEVEN CAMERAS WRITTEN IN MAP COORDINATES, WHICH THE
+                // FIX ABOVE NEVER REACHED. At() was written, eleven cameras were converted, and
+                // seven raw `new Vector3(...)` calls kept the literal y - including BOTH cameras
+                // aimed at 408 Holmes Ave, which stand on the only rise in town.
+                //
+                // Measured off Content/elevation.txt: the ground at 408 Holmes is +8.04 m above
+                // the crossing baseline and the camera was landing at y = 5.41 m. TWO AND A HALF
+                // METRES UNDERGROUND, aiming 6.44 m into the hill. The committed frames say so
+                // without being asked - town-holmes.png and city-corner.png are the two smallest
+                // PNGs in their sets, which is what one flat slab of terrain compresses to. The
+                // comment on the Holmes camera reads "if this view is wrong nothing else matters".
+                //
+                // The other five stand BELOW the baseline and were 14-65 m up; they drop by 1.7
+                // to 2.8 m. Every framing here was chosen by eye and only the height was wrong.
+                Vector3 AtMap(float mx, float my, float eye = 0f) =>
+                    new Vector3(mx, ElevationGrid.HeightAt(mx, my) + eye, -my);
 
                 // THE CROSSROADS. Chicago and Attica, the only signalised junction in the
                 // village, from the middle of the road looking north up Route 1.
@@ -346,11 +363,21 @@ namespace Noir.Editor
                 // 408 HOLMES AVE. The killer's house, from the middle of Holmes Avenue looking
                 // at its front door. If this view is wrong nothing else matters.
                 //
-                // Moved with the address: the 400 block of Holmes ran almost onto the real CSX
-                // line once the town was checked against it (see relay-rossville.py), so the
-                // house itself moved to the block's one safe lot. Same relative framing - door
-                // plus 6m east, 7m north - just off the corrected door position.
-                Frame(camGo, new Vector3(1175f, 1.6f, -1218f), 26f, 4f, 0f);
+                // AIMED AT THE HOUSE, WHICH IT WAS NOT. This said "moved with the address ...
+                // same relative framing, just off the corrected door position" and pointed at
+                // (1175, 1218). `Content/city.txt` puts `408 Holmes Ave` at 1163,1242, 13x7 - so
+                // the target was 27 m off the lot, and with a 26 m pull-back on yaw 0 the house
+                // was behind the camera. The frame came out as a street with houses in the middle
+                // distance, which is what it had always been; putting the camera above ground
+                // (see AtMap) fixed the burial and left the aim wrong, and the comment claiming
+                // otherwise is why nobody looked.
+                //
+                // The centre of the lot, and yaw 180 because Holmes Avenue runs along y=1226,
+                // NORTH of the house - so the front door faces north and the camera stands in the
+                // road looking south at it. Derived from the map rather than computed on paper,
+                // which is the rule GroundShot records after three hand-computed bearings
+                // photographed a wood forty metres from anything.
+                Frame(camGo, AtMap(1169.5f, 1245.5f, 1.6f), 26f, 4f, 180f);
                 Capture(cam, Path.Combine(OutputDir, "city-corner.png"));
 
                 // Straight down on the one signal, to read lanes, stop lines and heads.
@@ -363,7 +390,7 @@ namespace Noir.Editor
 
                 // A RESIDENTIAL STREET - the 400 block of Holmes Ave from the kerb. The view
                 // that says whether this reads as somewhere people live.
-                Frame(camGo, new Vector3(1200f, 1.6f, -1209f), 55f, 5f, 90f);
+                Frame(camGo, AtMap(1200f, 1209f, 1.6f), 55f, 5f, 90f);
                 Capture(cam, Path.Combine(OutputDir, "suburb-street.png"));
 
                 // The houses from above, to see the lots, the gaps and the setbacks.
@@ -393,28 +420,45 @@ namespace Noir.Editor
 
                 // The precinct car park, which is the biggest of the five and the one with the
                 // cruisers in it.
-                Frame(camGo, new Vector3(587f, 0f, -700f), 75f, 32f, 45f);
+                Frame(camGo, AtMap(587f, 700f), 75f, 32f, 45f);
                 Capture(cam, Path.Combine(OutputDir, "city-carpark.png"));
 
                 // Down among the bays, which is the only distance at which two cars sharing a
                 // bay can be told from two cars merely close together.
-                Frame(camGo, new Vector3(585f, 0f, -698f), 26f, 22f, 40f);
+                Frame(camGo, AtMap(585f, 698f), 26f, 22f, 40f);
                 Capture(cam, Path.Combine(OutputDir, "city-carpark-close.png"));
 
                 // Where the farm track meets the ring road at the corner of the map. THREE arms,
                 // not four: this junction used to be laid as a full crossroads with a fourth arm,
                 // kerbs and a stop line painted straight into the paddock.
-                Frame(camGo, new Vector3(270f, 0f, -165f), 80f, 50f, 270f);
+                Frame(camGo, AtMap(270f, 165f), 80f, 50f, 270f);
                 Capture(cam, Path.Combine(OutputDir, "farm-track.png"));
 
                 // Home Farm in the north-west corner, looking west across the yard.
-                Frame(camGo, new Vector3(190f, 0f, -145f), 70f, 22f, 270f);
+                Frame(camGo, AtMap(190f, 145f), 70f, 22f, 270f);
                 Capture(cam, Path.Combine(OutputDir, "farm-yard.png"));
 
                 // The whole map: town in the middle, suburbs round it, 270 metres of country on
                 // every side. This is the shot the map-size decision was taken for.
-                Frame(camGo, new Vector3(645f, 0f, -645f), 950f, 42f, 30f);
+                Frame(camGo, AtMap(645f, 645f), 950f, 42f, 30f);
                 Capture(cam, Path.Combine(OutputDir, "farm-country.png"));
+
+                // THE SCHOOL PONDS, AND UNTIL 2026-08-10 NOTHING IN THIS SET HAD EVER LOOKED AT
+                // WATER. Rossville has 1,009 water rectangles and eighteen cameras, and not one of
+                // them pointed at any of it - which is why nobody had ever seen that every
+                // shoreline in the town is a 35 cm vertical riser following an axis-aligned
+                // staircase. The fault is BANK in docs/TERRAIN-FIXES.md; it was found by reading
+                // the mesher, because no frame existed that could show it.
+                //
+                // Low pitch on purpose. The bank is a 35 cm step, and from the aerials that shot
+                // this set is made of it is sub-pixel: the whole-town frames are why the reeds
+                // could not be verified from a render that had otherwise succeeded.
+                Frame(camGo, AtMap(93f, 699f), 42f, 11f, 0f);
+                Capture(cam, Path.Combine(OutputDir, "pond-bank.png"));
+
+                // Down in the cattail, at the distance a person walking the bank would see it.
+                Frame(camGo, AtMap(93f, 699f), 15f, 9f, 0f);
+                Capture(cam, Path.Combine(OutputDir, "pond-close.png"));
             }
             catch (Exception ex)
             {
@@ -443,6 +487,10 @@ namespace Noir.Editor
                 if (pipeline != null) pipeline.shadowDistance = wasShadowDistance;
             }
 
+            // LAST, AND OUTSIDE THE TRY, so a render that threw halfway still stamps what it did
+            // manage to write - a partial set with no receipt is the case this is for.
+            Noir.Unity.ShotLog.Stamp("city", OutputDir, TakeWritten());
+
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 
@@ -453,8 +501,24 @@ namespace Noir.Editor
             camGo.transform.rotation = rotation;
         }
 
+        /// <summary>
+        /// Every file the current render run has written, so the stamp does not have to be
+        /// threaded through eighteen call sites and three files to know what it is stamping.
+        /// Taking it clears it, which is what makes two runs in one editor session two stamps.
+        /// </summary>
+        private static readonly System.Collections.Generic.List<string> _written =
+            new System.Collections.Generic.List<string>();
+
+        internal static System.Collections.Generic.List<string> TakeWritten()
+        {
+            var copy = new System.Collections.Generic.List<string>(_written);
+            _written.Clear();
+            return copy;
+        }
+
         internal static void Capture(Camera cam, string path)
         {
+            _written.Add(path);
             var rt = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             var previousTarget = cam.targetTexture;
             var previousActive = RenderTexture.active;

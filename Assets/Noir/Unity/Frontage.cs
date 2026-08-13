@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.Contracts;
@@ -45,6 +45,17 @@ namespace Noir.Unity
         /// <summary>Shutters clear the window panes, which SunRig stands 0.06 out from the wall.</summary>
         private const float ShutterProud = 0.09f;
 
+        /// <summary>
+        /// Where a door hangs its hinge, or null to build the town's doors shut and static.
+        ///
+        /// A static hand-off rather than a parameter, for the same reason `_shutters` above is
+        /// one: `Frontage.Build` is called from `VillageMesh.BuildMassing`, which is a lazy layer
+        /// callback with a fixed signature, and threading a registry through it would change the
+        /// shape of every builder on that switch. Null is the honest default - the offline
+        /// renderers build a frontage with nothing to swing it and should get shut doors.
+        /// </summary>
+        public static CityDoors Doors;
+
         public static void Build(WorldModel world, Transform parent)
         {
             if (world == null) return;
@@ -84,7 +95,9 @@ namespace Noir.Unity
                                   : openings.Count > 0 ? openings[0] : Tile.None);
                 if (!front.Valid) continue;
 
-                if (place.Kind != PlaceKind.Dwelling)
+                // UNCONDITIONAL NOW, because the `frontage` column carries the decision for both
+                // `dwelling` and `apartment` and this enum test could only ever see one of them.
+                // Seven apartment blocks wore an anonymous plank for exactly that reason.
                 {
                     int n = Sign(signsRoot, place, front);
                     if (n > 0) { signed++; pieces += n; }
@@ -97,8 +110,15 @@ namespace Noir.Unity
                 }
             }
 
+            // GREPPABLE, because "the doors do not open" is invisible in every other count: the
+            // piece total is the same whether a leaf is hung on a hinge or nailed in the hole.
             Debug.Log($"Frontage: {doors} front doors, {signed} signs, "
                     + $"{shuttered} shuttered frontages, {pieces:N0} pieces.");
+            Debug.Log(Doors == null
+                ? $"[doors] no registry - all {doors} leaves are hung SHUT and static. Expected in "
+                + "the offline renderers, which have nothing to swing them."
+                : $"[doors] {Doors.Count} of {doors} leaves hung on a hinge. Houses swing in, "
+                + "shops swing out.");
         }
 
         // ---------- shutter state ----------
@@ -279,17 +299,65 @@ namespace Noir.Unity
             // two-and-a-half-metre gap of daylight over the door.
             float eaves = MassingGrammars.Of(place).Eaves;
 
-            // Set back into the reveal by five centimetres at each end, so the panel meets the
-            // wall in a shadow line instead of sharing a plane with it.
+            // As deep as the wall it fills - which used to mean the full metre of the tile, and
+            // means seven or thirteen inches now that walls are drawn at their real thickness
+            // (Materials3D.WallDepthFor, the same key the walling paint uses). Still set back a
+            // little at each face, so the panel meets the wall in a shadow line instead of
+            // sharing a plane with it.
+            // And in the building's OWN walling, not the generic white board: painted
+            // Materials3D.Wall it read as a grey stripe over every green or cream house's door -
+            // tolerable while it sat a metre deep in shadow, and flat wrong nearly flush.
+            float wall = Materials3D.WallDepthFor(place);
             Piece(parent, "doorhead",
-                  f.On((DoorHeight + eaves) * 0.5f, -0.5f),
-                  f.Size(1.0f, eaves - DoorHeight, 0.9f), Materials3D.Wall);
+                  f.On((DoorHeight + eaves) * 0.5f, -wall * 0.5f),
+                  f.Size(1.0f, eaves - DoorHeight, Mathf.Max(0.08f, wall - 0.04f)),
+                  Materials3D.Walls[Materials3D.WallingFor(place)]);
 
             Piece(parent, "doorcase", f.On(DoorHeight * 0.5f + 0.03f, -0.05f),
                   f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone);
 
-            Piece(parent, "door", f.On((DoorHeight - 0.06f) * 0.5f, Proud - 0.06f),
-                  f.Size(DoorWidth, DoorHeight - 0.06f, 0.12f), DoorPaint(place, door));
+            // THE LEAF HANGS ON A HINGE NOW. It was a box in a hole for as long as this file has
+            // existed - see CityDoors, which swings it.
+            //
+            // The pivot is at one JAMB, not at the middle of the opening, because that is where a
+            // hinge is: the leaf is parented off to one side and turns about the post. Hung on the
+            // side nearer the low end of the frontage, so a row of storefronts all open the same
+            // way, which is what a built row looks like.
+            //
+            // A HOUSE SWINGS IN, A SHOP SWINGS OUT. American residential exterior doors open
+            // inward; commercial ones open outward because an exit may not be pushed against by a
+            // crowd. Both are on the same street in a village with a downtown row, and getting it
+            // backwards is the kind of thing that reads as wrong without being nameable.
+            float hingeAlong = f.FaceAlong - DoorWidth * 0.5f;
+            var hinge = new GameObject("hinge");
+            hinge.transform.SetParent(parent, false);
+            hinge.transform.position = f.At(hingeAlong, 0f, Proud - 0.06f);
+
+            var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leaf.name = "door";
+            leaf.transform.SetParent(hinge.transform, false);
+            Discard(leaf.GetComponent<Collider>());
+            var leafRenderer = leaf.GetComponent<MeshRenderer>();
+            leafRenderer.sharedMaterial = DoorPaint(place, door);
+            leafRenderer.shadowCastingMode = ShadowCastingMode.On;
+            leafRenderer.receiveShadows = true;
+
+            // Local, because the hinge is what turns: half a leaf along the wall from the post,
+            // and half a leaf up from the threshold.
+            bool alongX = Mathf.Abs(f.Along.x) > 0.5f;
+            float half = DoorWidth * 0.5f;
+            leaf.transform.localPosition = new Vector3(alongX ? half : 0f,
+                                                       (DoorHeight - 0.06f) * 0.5f,
+                                                       alongX ? 0f : half);
+            leaf.transform.localScale = f.Size(DoorWidth, DoorHeight - 0.06f, 0.12f);
+
+            // Which way is "in"? `Out` points away from the building, so a shop turns the leaf
+            // towards Out and a house away from it. The sign of the yaw follows the wall's own
+            // heading so both walls of a corner shop still open outward.
+            float shutYaw = hinge.transform.localEulerAngles.y;
+            float side = alongX ? Mathf.Sign(f.Out.z) : -Mathf.Sign(f.Out.x);
+            float swing = Commercial(place) ? 85f : -85f;
+            Doors?.Add(hinge.transform, shutYaw, shutYaw + swing * side);
 
             // Sunk a little below zero, because a road is worn 4cm down and a step that started
             // exactly at ground level floated over it.
@@ -348,13 +416,48 @@ namespace Noir.Unity
         /// are a closed set this file defines, kinds are an open set content can extend. Same
         /// distinction as RoofForm against PlaceKind in RoofBuilder.
         /// </summary>
+        /// <summary>
+        /// Does this building's front door swing OUT?
+        ///
+        /// The fire code is the whole of it: a door serving a place the public gathers in must
+        /// open in the direction of travel, because a crowd pressed against an inward door cannot
+        /// open it. A dwelling has no such rule and American houses hang their exterior doors to
+        /// open inward, which is the opposite of the British ones this project's first town was
+        /// built from.
+        ///
+        /// KEYED ON THE AUTHORED `frontage` COLUMN, for the reason <see cref="Sign"/> gives at
+        /// length: styles are a closed set this file defines, kinds are an open set content can
+        /// extend, and a kind authored purely in content would fall through a PlaceKind switch
+        /// without anybody noticing. `garage` is deliberately absent - a garage door is not a
+        /// leaf on a hinge and this file does not draw one.
+        /// </summary>
+        private static bool Commercial(Place place)
+        {
+            switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
+            {
+                case "tavern":
+                case "shop":
+                case "post":
+                case "church":
+                case "school":
+                case "clinic":
+                case "hall":
+                case "mill":
+                case "bank":
+                    return true;
+                default:
+                    return false;      // dwelling, apartment, farm, garage and anything new
+            }
+        }
+
         private static int Sign(Transform parent, Place place, Front f)
         {
             var board = BoardPaint(place);
+            string style = PlaceKindTable.Current.Row(place.Kind).Frontage;
 
-            switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
+            switch (style)
             {
-                case "pub":
+                case "tavern":
                     return Hanging(parent, f, "sign:pub", 1.45f, 0.95f, 1.00f, 2.25f, board);
 
                 case "shop":
@@ -371,7 +474,7 @@ namespace Noir.Unity
                 case "school":
                     return Fascia(parent, f, "nameboard:school", 3.0f, 0.60f, 2.30f, Materials3D.Stone);
 
-                case "surgery":
+                case "clinic":
                     return Fascia(parent, f, "fascia:surgery", 2.6f, 0.42f, 2.35f, board)
                          + Plate(parent, f, "plate:surgery", 0.62f, 0.45f, 1.55f, Brass);
 
@@ -389,10 +492,49 @@ namespace Noir.Unity
                 case "farm":
                     return Fascia(parent, f, "nameboard:farm", 2.4f, 0.50f, 2.35f, board);
 
+                // A BANK IS THE ONE SHOPFRONT ON MAIN STREET THAT MUST NOT LOOK LIKE THE GENERAL
+                // STORE. Stone name band and a brass plate, the grammar `post` and `clinic`
+                // already use. Bank and icecream both declared `shopfront`, which no arm here
+                // answered to, so both fell to the plain plank below - along with the precinct
+                // and seven apartment blocks, ten of the town's thirty-seven signs.
+                case "bank":
+                    return Fascia(parent, f, "nameboard:bank", 4.0f, 0.70f, 2.40f, Materials3D.Stone)
+                         + Plate(parent, f, "plate:bank", 0.62f, 0.45f, 1.55f, Brass);
+
+                // NO SIGN, AND THAT IS AN ANSWER. The content author wrote `frontage none` or
+                // `frontage dwelling`; a silo and a block of flats do not carry a nameboard, and
+                // falling through to one was the file ignoring what it had been told. Returning 0
+                // here is what stops these reaching the default and the warning below.
+                case "none":
+                case "dwelling":
+                    return 0;
+
                 default:
+                    // WARN ONCE PER NAME, never per building - one typo in a common kind would
+                    // otherwise print three hundred lines. Same shape as MassingGrammars.For, and
+                    // for the same reason CLAUDE.md states: a frontage value nothing answers to
+                    // does not throw, it silently draws the wrong thing. `factory` did this once
+                    // already, which is what the docstring above records.
+                    if (_warnedFrontage.Add(style))
+                        Debug.LogWarning($"kinds.txt: no frontage answers to '{style}', so that "
+                            + "building takes the plain nameboard. There is: "
+                            + string.Join(", ", Styles) + ".");
                     return Fascia(parent, f, "nameboard", 2.4f, 0.45f, 2.35f, board);
             }
         }
+
+        private static readonly HashSet<string> _warnedFrontage = new HashSet<string>();
+
+        /// <summary>
+        /// Every value the `frontage` column may take, which is the closed set <see cref="Sign"/>
+        /// answers to. SmokeTest diffs `Content/kinds.txt` against this and fails on a value
+        /// nothing here can draw - the check CLAUDE.md asks for and nothing in the tree did.
+        /// </summary>
+        public static readonly string[] Styles =
+        {
+            "tavern", "shop", "post", "church", "school", "clinic", "garage", "hall",
+            "mill", "farm", "bank", "none", "dwelling",
+        };
 
         /// <summary>A board flat on the wall over the door, in the manner of a shopfront.</summary>
         private static int Fascia(Transform parent, Front f, string name, float width, float height,
@@ -414,7 +556,7 @@ namespace Noir.Unity
         {
             // The bracket's UNDERSIDE has to meet the top of the board, not its centre line. At
             // +0.10 with a 7 cm section the iron sat 6.5 cm clear of the board it was supposedly
-            // holding up, and from the pavement outside the Wheatsheaf you could see daylight
+            // holding up, and from the sidewalk outside the tavern you could see daylight
             // through the gap. Half the section plus a five-millimetre bite into the board, so
             // the two overlap rather than sharing a plane and shimmering along the join.
             Piece(parent, name + ":bracket", f.On(centreY + height * 0.5f + 0.03f, project * 0.5f),
@@ -462,7 +604,7 @@ namespace Noir.Unity
         {
             switch (PlaceKindTable.Current.Row(place.Kind).Frontage)
             {
-                case "pub":
+                case "tavern":
                     return Materials3D.Scatter(place.Bounds.X, place.Bounds.Y, 4111) % 2 == 0
                         ? Paint("SignPubGreen", new Color32(0x1F, 0x3A, 0x2A, 0xFF), 0.22f)
                         : Paint("SignPubRed", new Color32(0x5E, 0x23, 0x20, 0xFF), 0.22f);
@@ -470,11 +612,16 @@ namespace Noir.Unity
                 case "shop":
                     return Paint("SignShop", new Color32(0x21, 0x40, 0x2F, 0xFF), 0.22f);
 
-                // The post office wears the same red as the pillar box outside it, which is not
-                // a coincidence anywhere in England.
-                case "post": return Materials3D.Postbox;
+                // USPS BLUE, NOT PILLAR-BOX RED. This returned Materials3D.Postbox under a comment
+                // reading "the same red as the pillar box outside it, which is not a coincidence
+                // anywhere in England" - true, and the wrong country. An American post office in
+                // 1991 is blue and white, and so is the collection box outside it.
+                case "post":
+                    return Paint("SignPost", new Color32(0x1B, 0x3A, 0x6B, 0xFF), 0.25f);
 
-                case "surgery":
+                case "bank": return Materials3D.Stone;
+
+                case "clinic":
                     return Paint("SignSurgery", new Color32(0xE4, 0xE2, 0xD8, 0xFF), 0.30f);
 
                 case "garage":

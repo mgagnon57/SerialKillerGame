@@ -2,23 +2,28 @@ using System;
 using Noir.Core.Contracts;
 
 // ---------------------------------------------------------------------------------------------
-//  STAGED, NOT LIVE. NOTHING CONSTRUCTS A Sighting — 2026-07-29.
+//  LIVE. THIS IS IN THE GAME AND YOU CAN REACH IT BY PRESSING T — corrected 2026-08-08.
 //
-//  An audit went looking for `new Sighting(` across the whole repository and found zero hits,
-//  including in the tests. The same is true of PersonDescription. The running game does not
-//  reference this assembly at all: no file under Assets/Noir/Unity or Assets/Noir/Editor names
-//  anything in Noir.Core.Observation.
+//  This block used to open "STAGED, NOT LIVE. NOTHING CONSTRUCTS A Sighting", dated 2026-07-29,
+//  and it was true when it was written. It stopped being true and nobody came back to it, so a
+//  header at the top of the file went on confidently asserting the opposite of the facts. It has
+//  since sent at least one auditor to a wrong finding — which is the whole cost of a stale
+//  comment, and worse than no comment at all, because nobody re-derives what a file has already
+//  told them.
 //
-//  What IS live in this assembly is the OTHER half — Observed, ObservationLog, ObservedAct,
-//  ObservedManner and Salience — which tools/Noir.Sim/Eyewitness.cs fills and Ratio.cs grades.
-//  That half is load-bearing and measured daily. This half, the witness DESCRIPTION, is waiting
-//  for the investigation layer that will consume it, and until then every band below is
-//  unreachable: ApparentSex, HeightBand, BuildBand, AgeBand, ClothingTone and CarriedThing have
-//  sixteen values between them that no code path can produce.
+//  The chain, walked 2026-08-08 rather than assumed:
 //
-//  Kept rather than deleted, deliberately: the firewall below is the reason this assembly exists
-//  and it constrains everything written here later, so the shape is worth having in place before
-//  there is a consumer. But do not read the file's confidence as evidence that it runs.
+//      Witness/Degradation.cs      produces the banded values
+//      Witness/Recollection.cs     constructs the Sightings
+//      VillageHost.AskWhatTheySaw  asks for them  (VillageHost.cs)
+//      VillageUI                   presses T and prints the sentences  (VillageUI.cs)
+//
+//  So the bands below are NOT unreachable and the "sixteen values no code path can produce" claim
+//  is wrong. If you are about to delete something here for being dead, measure first.
+//
+//  What is still true is the other half of the assembly — Observed, ObservationLog, ObservedAct,
+//  ObservedManner and Salience — being filled by tools/Noir.Sim/Eyewitness.cs and graded by
+//  Ratio.cs. Both halves are load-bearing now.
 //
 // ---------------------------------------------------------------------------------------------
 //  THE FIREWALL.

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Noir.Core.World;
@@ -59,9 +59,10 @@ namespace Noir.Unity
 
                 var into = chunks.At(place.Bounds.X, place.Bounds.Y);
 
-                // The covering is still chosen from the building's own corner, so which roof a
-                // house has is a property of where it stands and not of how the map happens to
-                // be divided up. Chunking must not be visible in the picture at all.
+                // The covering is chosen from the BUILDING, not from its corner, so which roof a
+                // house has survives that house being moved - and chunking is still invisible in
+                // the picture, which is what the old per-corner key was protecting. See
+                // Materials3D.RoofingFor.
                 // ON THE GROUND IT STANDS ON. The walls already follow the terrain (VillageMesh
                 // samples ElevationGrid for every wall segment) but the roof did not, so on a map
                 // with real elevation the two came apart. Rossville's dwellings sit on ground
@@ -69,8 +70,7 @@ namespace Noir.Unity
                 // It never showed before because the only town with contour is Rossville and its
                 // houses were bought models, which are seated through Space3D.ToWorld.
                 var massing = MassingGrammars.Of(place).Lifted(Space3D.GroundUnder(place.Bounds));
-                AddRoof(place.Bounds, massing, into,
-                        Materials3D.RoofingFor(place.Bounds.X, place.Bounds.Y));
+                AddRoof(place.Bounds, massing, into, Materials3D.RoofingFor(place));
 
                 // A chimney per home. On a terrace that means one per unit, which is exactly
                 // what tells you from the street how many families live in the building -
@@ -78,7 +78,12 @@ namespace Noir.Unity
                 // as a shape.
                 if (massing.Chimneys)
                 {
-                    int stacks = place.Kind == PlaceKind.Dwelling ? place.Units : 1;
+                    // ONE STACK PER DWELLING UNIT, AND AN APARTMENT BLOCK HAS UNITS. This asked
+                    // the enum member, so `apartment` - which declares `home yes` in kinds.txt and
+                    // is not in the enum - got a single chimney however many households were
+                    // stacked under it. The rooms over the grocer, the meat market and the barber
+                    // are three separate homes.
+                    int stacks = PlaceKindTable.Current.Row(place.Kind).IsHome ? place.Units : 1;
                     AddChimneys(place.Bounds, stacks, massing, into, Materials3D.ChimneyIndex);
                 }
 
@@ -91,6 +96,13 @@ namespace Noir.Unity
             if (count == 0) return null;
 
             Unweld(chunks);
+
+            // AFTER the unweld, so a face's mapping can be rewritten without dragging the one it
+            // shares a corner with. Coverings first, then the walls the roof mesh also carries -
+            // the wall pass runs second because a gable end is in the wall submesh and must not
+            // be given a roof slope's mapping on the way past.
+            RoofFacesInTheirOwnPlane(chunks);
+            WallsInTheirOwnPlane(chunks);
 
             var renderers = chunks.Emit(go.transform, "Roofs", coverings,
                                         ShadowCastingMode.On, true);
@@ -150,7 +162,7 @@ namespace Noir.Unity
         /// This WAS a switch listing the five or six open-ground kinds by hand, with a
         /// `default: return true` underneath. Two things were wrong with that. It had already
         /// drifted out of step with VillageLayout.IsBuilding once, and left a 1.7 m pyramid with
-        /// a chimney on it hanging three metres above bare grass beside Ashcombe Street. And the
+        /// a chimney on it hanging three metres above bare grass beside Main Street. And the
         /// `default` meant any kind authored purely in content got a roof whether or not its row
         /// said `roof no` - so the open-kind property Stage 4 bought was quietly broken for
         /// anything that was not a building.
@@ -240,6 +252,133 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>
+        /// EVERY SLOPE GETS ITS COURSES ALONG ITS OWN RIDGE, INCLUDING THE HIP ENDS.
+        ///
+        /// ROOF-4 turned the whole roof's mapping a quarter turn where the ridge runs
+        /// north-south, which fixed the two main slopes and could never fix the hips: one planar
+        /// projection can serve the slopes or the ends, not both, because they fall in
+        /// perpendicular directions. On a hipped house the ends came out cross-grained - courses
+        /// running up the slope, which is a roof that would leak.
+        ///
+        /// So each face is mapped in ITS OWN plane, from its own normal. U runs horizontally
+        /// across the face, which on any pitched roof is along that face's ridge or hip; V runs
+        /// straight up the fall line. Both are measured in metres ON THE SLOPE rather than on the
+        /// ground, so the courses are the exposure a roofer would actually lay and do not stretch
+        /// with the pitch - which also retires the "the slope stretches them by about a tenth"
+        /// apology the old planar mapping carried.
+        ///
+        /// A FLAT ROOF HAS NO FALL LINE and keeps the ground projection: `cross(n, up)` vanishes
+        /// when the face points straight up, and there is no direction along it that means
+        /// anything. That is correct rather than a special case - a built-up flat roof has no
+        /// courses to line up.
+        ///
+        /// After the unweld, for the same reason the walls are: every triangle owns its three UVs
+        /// by then, so a face can be re-mapped without dragging the one it shares an eave with.
+        /// </summary>
+        private static void RoofFacesInTheirOwnPlane(MeshChunks chunks)
+        {
+            foreach (var chunk in chunks.All)
+            {
+                var verts = chunk.Verts;
+                var uvs = chunk.Uvs;
+
+                // The coverings only. The wall submesh has its own pass, and the chimney brick is
+                // a box whose faces are handled by neither - a stack is under a metre across and
+                // its smear has never been visible.
+                for (int submesh = 0; submesh < chunk.Tris.Length; submesh++)
+                {
+                    if (submesh == Materials3D.WallIndex || submesh == Materials3D.ChimneyIndex) continue;
+
+                    var tris = chunk.Tris[submesh];
+                    for (int i = 0; i + 2 < tris.Count; i += 3)
+                    {
+                        int i0 = tris[i], i1 = tris[i + 1], i2 = tris[i + 2];
+                        var p0 = verts[i0];
+
+                        var n = Vector3.Cross(verts[i1] - p0, verts[i2] - p0);
+                        if (n.sqrMagnitude < 1e-9f) continue;
+                        n.Normalize();
+
+                        // Horizontal along the face. Zero on a face that points straight up.
+                        var across = Vector3.Cross(n, Vector3.up);
+                        if (across.sqrMagnitude < 1e-6f)
+                        {
+                            foreach (int v in new[] { i0, i1, i2 })
+                                uvs[v] = new Vector2(verts[v].x, -verts[v].z);
+                            continue;
+                        }
+
+                        across.Normalize();
+                        var upSlope = Vector3.Cross(across, n);
+
+                        foreach (int v in new[] { i0, i1, i2 })
+                        {
+                            var p = verts[v];
+                            uvs[v] = new Vector2(Vector3.Dot(p, across), Vector3.Dot(p, upSlope));
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// EVERY WALL SURFACE CARRIED BY THE ROOF MESH GETS MAPPED IN ITS OWN PLANE.
+        ///
+        /// A gable end is not roofing - it is the masonry of the building carried up to the ridge
+        /// - and the wall submesh already draws it in the wall's own material. What it did NOT
+        /// get was the wall's own mapping: it inherited the roof's top-down (x, -z) projection,
+        /// and on a VERTICAL surface that is degenerate. The west gable of a house is a triangle
+        /// at constant x, so every point on it has the same U, and its height does not appear in
+        /// the mapping at all. The texture is smeared into a vertical streak from eaves to ridge.
+        ///
+        /// It is worse than it sounds and it gets worse still with a real texture on it. A flat
+        /// colour hides a degenerate UV completely; the moment the walls carry anything with a
+        /// pattern, a smeared gable is the most obvious thing on the elevation. The owner accepted
+        /// that trade knowingly, which is why this rides in the same commit as the roof rather
+        /// than a later wave.
+        ///
+        /// ONE RULE FOR ALL OF THEM, not one per shape. This walks the wall submesh and maps each
+        /// triangle by its own normal: drop the axis the triangle faces, keep the other two. That
+        /// is the gable ends, the church tower and the bell-cote in one pass - the tower and the
+        /// bell-cote are boxes with the identical fault, and writing three special cases would be
+        /// three things that have to agree about winding and mapping forever.
+        ///
+        /// AFTER THE UNWELD, and it has to be: unwelding gives every triangle its own three
+        /// vertices and its own three UVs, so a triangle's mapping can be rewritten without
+        /// dragging a neighbour's with it. Before the unweld these vertices are shared with the
+        /// roof slopes, and re-mapping one would move the other.
+        /// </summary>
+        private static void WallsInTheirOwnPlane(MeshChunks chunks)
+        {
+            foreach (var chunk in chunks.All)
+            {
+                var verts = chunk.Verts;
+                var uvs = chunk.Uvs;
+                var wall = chunk.Tris[Materials3D.WallIndex];
+
+                for (int i = 0; i + 2 < wall.Count; i += 3)
+                {
+                    int i0 = wall[i], i1 = wall[i + 1], i2 = wall[i + 2];
+                    var p0 = verts[i0];
+                    var n = Vector3.Cross(verts[i1] - p0, verts[i2] - p0);
+
+                    float ax = Mathf.Abs(n.x), ay = Mathf.Abs(n.y), az = Mathf.Abs(n.z);
+
+                    // Which way the surface faces decides which two axes are its plane. A gable
+                    // end faces along x or z and keeps HEIGHT as its second axis, which is the
+                    // whole point: a wall's texture runs up it.
+                    foreach (int v in new[] { i0, i1, i2 })
+                    {
+                        var p = verts[v];
+                        uvs[v] = ax >= ay && ax >= az ? new Vector2(-p.z, p.y)
+                               : az >= ay ? new Vector2(p.x, p.y)
+                               : new Vector2(p.x, -p.z);
+                    }
+                }
+            }
+        }
+
         /// <summary>An axis-aligned box, appended to its chunk of the roof mesh.</summary>
         private static void AddBox(MeshChunk into, int submesh, Vector3 centre, Vector3 size)
         {
@@ -260,7 +399,22 @@ namespace Noir.Unity
             verts.Add(centre + new Vector3(-h.x, h.y, h.z));     // 7
 
             // A chimney is small enough that planar XZ mapping on all six faces is fine; the
-            // sides get a vertical smear of about a metre, which nothing will ever notice.
+            // stack is 0.85 x 1.5 x 0.85 m, so the sides get a vertical smear of about a metre
+            // and a half. (The 0.9 x 1.4 x 0.5 quoted elsewhere is the BELL-COTE, in
+            // MassingExtras.)
+            //
+            // "WHICH NOTHING WILL EVER NOTICE" IS TRUE OF THE BRICK THIS PROJECT SHIPS AND OF NO
+            // OTHER. Content/textures/brick.png is flat brown noise with a faint VERTICAL grain
+            // and no courses at all, so smearing one horizontal line of it vertically produces
+            // vertical stripes - which is what it already looks like. The pack brick has its
+            // coursing in a normal map, and it is bound in the editor.
+            //
+            // THE TRIGGER: this becomes visible the moment the brick gains courses anywhere the
+            // chimney can see them. Fix it then, and fix it by giving AddBox six independent
+            // faces the way MassingExtras.Box has them - which also disposes of the index-based
+            // Quad local below. Do not fix it speculatively: the winding here was already got
+            // wrong once and cost the chimneys their tops and their shadows, and no automated
+            // test in this project can see either.
             for (int i = b; i < verts.Count; i++)
                 uvs.Add(new Vector2(verts[i].x, -verts[i].z));
 
@@ -301,7 +455,11 @@ namespace Noir.Unity
         {
             switch (m.Roof)
             {
-                case RoofForm.Flat:   AddFlatRoof(bounds, m, into, submesh); break;
+                // ITS OWN COVERING, NOT THE BUILDING'S. A flat roof is built-up tar and gravel
+                // whatever the house next door has on its slopes - see Materials3D.FlatIndex.
+                // This drew the downtown block and every garage in three-tab asphalt shingle,
+                // which needs a slope to shed water down and on the flat is simply wrong.
+                case RoofForm.Flat:   AddFlatRoof(bounds, m, into, Materials3D.FlatIndex); break;
                 case RoofForm.LeanTo: AddLeanToRoof(bounds, m, into, submesh); break;
                 case RoofForm.Gable:  AddPitchedRoof(bounds, m, into, submesh, gable: true); break;
                 default:              AddPitchedRoof(bounds, m, into, submesh, gable: false); break;
@@ -365,11 +523,25 @@ namespace Noir.Unity
             verts.Add(a); verts.Add(b); verts.Add(c); verts.Add(e);   // 0..3 eaves
             verts.Add(r0); verts.Add(r1);                             // 4,5 ridge
 
-            // UVs in metres of ground covered, so tiles run at a consistent size across every
+            // UVs in metres of ground covered, so courses run at a consistent size across every
             // roof in the village whatever the building's size. The slope stretches them by
             // about a tenth, which is less than the variation in a real roof.
+            //
+            // TURNED WITH THE RIDGE. A shingle sheet's courses run across its U axis, so a plain
+            // (x, -z) projection lays them east-west on every roof in the town - correct on the
+            // houses whose ridge runs east-west and ninety degrees wrong on the rest, where the
+            // courses run UP THE SLOPE. A course is a line of overlapping tabs shedding water
+            // downhill; running it up the slope is not a texture error, it is a roof that would
+            // leak. Rotating the mapping by a quarter turn where the ridge runs north-south puts
+            // every course along its own ridge.
+            //
+            // The whole roof turns together, including the hip ends, because they are the same
+            // covering laid by the same roofer. GABLE ends are NOT: they are wall, they are in
+            // the wall submesh, and `WallsInTheirOwnPlane` re-maps them after the unweld.
             for (int i = baseIndex; i < verts.Count; i++)
-                uvs.Add(new Vector2(verts[i].x, -verts[i].z));
+                uvs.Add(alongX
+                    ? new Vector2(verts[i].x, -verts[i].z)
+                    : new Vector2(-verts[i].z, verts[i].x));
 
             void Tri(int i, int j, int k)
             {

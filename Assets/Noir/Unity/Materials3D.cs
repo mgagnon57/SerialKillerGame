@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using Noir.Core.Contracts;
 using Noir.Core.World;
 using Terrain = Noir.Core.World.Terrain;
 using FurnitureKind = Noir.Core.World.FurnitureKind;
@@ -14,13 +15,23 @@ namespace Noir.Unity
     /// graph, which is editor work. Nine materials is nothing: the mesh is built with one
     /// submesh each, so it is still a handful of draw calls for the whole village.
     ///
-    /// Colours are chosen a little brighter than they look here, because real lighting will
-    /// darken everything - what you set is the fully-lit value, not the final one.
+    /// THE COLOURS BELOW ARE THE FALLBACK, AND NOBODY ON THIS MACHINE HAS EVER SEEN ONE. They
+    /// were authored when they WERE the render - "chosen a little brighter than they look here,
+    /// because real lighting will darken everything" - and every one of them is now overwritten
+    /// the moment <see cref="SurfaceTextures"/> binds an albedo, because a texture multiplies the
+    /// base colour and a hue left there multiplies two mid-tones into something far darker than
+    /// either. So what these govern is exactly two cases: a SHIPPED PLAYER, where `ApplyPack` is
+    /// `#if UNITY_EDITOR` and does not exist, and a fresh clone with no `Assets/polyperfect`.
+    ///
+    /// Measured 2026-08-09, they were nowhere near the textures they stand in for - a player drew
+    /// pale grey 0x9A9690 roads where the editor draws near-black asphalt 0x313131. Each is now
+    /// the MEAN OF THE TEXTURE IT REPLACES, decoded from the pack sheet itself, so a missing file
+    /// degrades to the right colour instead of to a guess. If you change a pack set, re-measure.
     /// </summary>
     public static class Materials3D
     {
         private static readonly Dictionary<Terrain, Material> _byTerrain = new Dictionary<Terrain, Material>();
-        private static Material _wall, _agent;
+        private static Material _agent;
 
         /// <summary>The order submeshes are built in. Index here == submesh index.</summary>
         public static readonly Terrain[] GroundOrder =
@@ -96,10 +107,33 @@ namespace Noir.Unity
         public static bool ShowGroundColour
         {
             get => !Application.isBatchMode && PlayerPrefs.GetInt(GroundColourKey, 1) == 1;
-            set { PlayerPrefs.SetInt(GroundColourKey, value ? 1 : 0); PlayerPrefs.Save(); }
+            set
+            {
+                PlayerPrefs.SetInt(GroundColourKey, value ? 1 : 0); PlayerPrefs.Save();
+                RefreshPlan();
+            }
         }
 
         private const string GroundColourKey = "noir.ground.colour";
+
+        /// <summary>What a ground material looked like BEFORE the plan dimmed it.</summary>
+        private readonly struct Lit
+        {
+            public readonly Color Base; public readonly float Smoothness;
+            public Lit(Color b, float s) { Base = b; Smoothness = s; }
+        }
+
+        /// <summary>
+        /// Every ground material <see cref="Plan"/> has touched, with the colour it had before -
+        /// which is the only way back out of the dimming. Plan used to be one-way: it overwrote
+        /// _BaseColor and set _Smoothness to 0 and kept no record, so nothing could undo it even
+        /// if the question were re-asked.
+        /// </summary>
+        private static readonly Dictionary<Material, Lit> _lit = new Dictionary<Material, Lit>();
+        private static bool _dimmed, _dimKnown;
+
+        private static bool WantsPlan =>
+            !(VillageHost.ShowBuildings || ShowGroundColour || VillageHost.FlatGroundColour);
 
         private static Material Plan(Material m)
         {
@@ -108,14 +142,56 @@ namespace Noir.Unity
             // dimming that to near-black produces a handsome survey drawing that is not the thing
             // he asked for. The two settings are answering different questions and this one is
             // the more specific.
-            if (VillageHost.ShowBuildings || ShowGroundColour || VillageHost.FlatGroundColour
-                || m == null) return m;
+            if (m == null) return m;
 
-            var dim = new Color(PlanGround, PlanGround, PlanGround, 1f);
-            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", dim);
-            if (m.HasProperty("_Color")) m.SetColor("_Color", dim);
-            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            // RECORDED ON EVERY CALL, not only the first: RetintZoning re-runs Paint, which sets a
+            // new lit colour and comes straight back through here.
+            _lit[m] = new Lit(m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : Color.white,
+                              m.HasProperty("_Smoothness") ? m.GetFloat("_Smoothness") : 0f);
+            _dimmed = WantsPlan; _dimKnown = true;
+            Dim(m, _dimmed);
             return m;
+        }
+
+        private static void Dim(Material m, bool dim)
+        {
+            if (m == null) return;
+            if (dim)
+            {
+                var grey = new Color(PlanGround, PlanGround, PlanGround, 1f);
+                if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", grey);
+                if (m.HasProperty("_Color")) m.SetColor("_Color", grey);
+                if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            }
+            else if (_lit.TryGetValue(m, out var was))
+            {
+                if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", was.Base);
+                if (m.HasProperty("_Color")) m.SetColor("_Color", was.Base);
+                if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", was.Smoothness);
+            }
+        }
+
+        /// <summary>
+        /// RE-ASK THE QUESTION FOR EVERY GROUND MATERIAL ALREADY BUILT, because the answer was
+        /// being baked once per domain and never revisited.
+        ///
+        /// `Noir > Show Ground Colour` was a DEAD MENU ITEM in the one case anybody would use it:
+        /// tick it off, then run `Noir > Render Plan (top-down)` in the same editor session, and
+        /// the render still used the pre-click decision - ForTerrain, ForZoning and ForZoned all
+        /// return the cached Material before Plan is ever reached, and there is no Clear() in the
+        /// tree. Nothing was logged either way, so it looked like the render ignoring the switch.
+        ///
+        /// NOT PER FRAME AND NOT PER BUILD: called from the switches that can change the answer,
+        /// and a single bool compare when the answer has not moved. Same shape as RetintZoning.
+        /// </summary>
+        public static void RefreshPlan()
+        {
+            bool want = WantsPlan;
+            if (_dimKnown && want == _dimmed) return;
+            _dimmed = want; _dimKnown = true;
+            // `pair.Key == null` is Unity's overloaded ==, which also catches a material destroyed
+            // under us by a domain reload or a scene close.
+            foreach (var pair in _lit) if (pair.Key != null) Dim(pair.Key, want);
         }
 
         private static Material Make(string name, Color colour, float smoothness, float metallic = 0f)
@@ -132,23 +208,86 @@ namespace Noir.Unity
             return m;
         }
 
+        /// <summary>
+        /// EVERY OUTDOOR GROUND SURFACE IS GREEN GRASS. Owner's instruction, 2026-08-10.
+        ///
+        /// Field, Wood, Path and the two hard zoned kinds all drew bare earth: `field` binds the
+        /// pack's `Ground_Dirt_Stubble`, `path` binds `Ground_Dirt_Flat`, `wood` binds `Dirt_A`,
+        /// and Bank is the path sheet again. On a summer day in an Illinois farm town the ground
+        /// between the houses is green, and the town was reading as mud.
+        ///
+        /// WHAT THIS DOES NOT TOUCH, because none of it is ground you walk on: Road (asphalt),
+        /// Water (the creek), Floor (a building's interior), and Wall. Churchyard, Rough and
+        /// Pasture are ALREADY grass and keep their own tiling and tint — flattening those three
+        /// into one material would delete deliberate distinctions (a mown churchyard, a vacant
+        /// lot's rank uncut growth, and open country tiled coarse enough not to show the repeat)
+        /// and would not make anything greener.
+        ///
+        /// THE MEASURED PALETTE IS KEPT RATHER THAN OVERWRITTEN. Each colour in the switch below
+        /// is the measured mean of the pack sheet on its line, and a shipped player still falls
+        /// back to them if the pack is missing. Set this false and the town goes back to bare
+        /// earth exactly as it was measured. It is read when the ground materials are first
+        /// built, so flipping it after a build needs a rebuild, not just a repaint.
+        /// </summary>
+        public static bool GrassEverywhere = true;
+
+        /// <summary>The grass green, which is the measured mean of the pack's Grass_A sheet.</summary>
+        private static readonly Color32 GrassGreen = new Color32(0x6A, 0x7A, 0x3A, 0xFF);
+
+        /// <summary>
+        /// Ground somebody walks on, as opposed to a road, the creek, or a floor indoors. Wall is
+        /// not ground at all and Water is not walked on, so neither is here.
+        /// </summary>
+        private static bool IsOutdoorGround(Terrain t) =>
+            t == Terrain.Grass || t == Terrain.Field || t == Terrain.Wood
+         || t == Terrain.Path || t == Terrain.Churchyard;
+
         public static Material ForTerrain(Terrain t)
         {
             if (_byTerrain.TryGetValue(t, out var existing)) return existing;
+
+            // Churchyard keeps its own green - see GrassEverywhere. It is already grass, four
+            // levels lighter off the same sheet, and that distinction costs nothing to keep.
+            //
+            // AND PATH IS NOT GROUND COVER, ADDED 2026-08-11. GrassEverywhere was asked for to
+            // stop the countryside drawing as dirt and stubble, and it swept up Terrain.Path with
+            // the rest - but a path is the one outdoor kind that is a MADE SURFACE rather than
+            // something growing. Downtown Rossville is authored as one large `terrain path` patch
+            // in city.txt, so this turfed the whole town centre: measured at the Chicago x Attica
+            // crossing, every non-carriageway tile for forty metres in each direction is Path, and
+            // all of it was drawing as lawn. The owner asked for the town centre to look half way
+            // decent and this is most of why it did not - a main street with no pavement on it.
+            //
+            // The verge either side of a country road is still grass, because a verge is grass;
+            // it is TileFlags.Verge over Terrain.Grass and never comes through here as Path.
+            if (GrassEverywhere && IsOutdoorGround(t)
+                && t != Terrain.Churchyard && t != Terrain.Path)
+            {
+                // Field takes the coarser tile for the reason Pasture does: it is laid over whole
+                // parcels, and grass at the garden tiling shows its repeat as corduroy across
+                // anything that big.
+                var green = Make(t.ToString(), GrassGreen, 0.05f);
+                SurfaceTextures.ApplyPack(green, "grass", t == Terrain.Field ? 9f : 4f);
+                Plan(green);
+                return _byTerrain[t] = green;
+            }
 
             Material m;
             string texture;
             switch (t)
             {
-                case Terrain.Grass: m = Make("Grass", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f); texture = "grass"; break;
-                case Terrain.Field: m = Make("Field", new Color32(0xB0, 0xA0, 0x76, 0xFF), 0.04f); texture = "field"; break;
-                case Terrain.Wood: m = Make("Wood", new Color32(0x6A, 0x84, 0x62, 0xFF), 0.03f); texture = "wood"; break;
-                case Terrain.Water: m = Make("Water", new Color32(0x5E, 0x8C, 0xAA, 0xFF), 0.85f); texture = "water"; break;
-                case Terrain.Road: m = Make("Road", new Color32(0x9A, 0x96, 0x90, 0xFF), 0.10f); texture = "road"; break;
-                case Terrain.Path: m = Make("Path", new Color32(0xA8, 0x9C, 0x86, 0xFF), 0.06f); texture = "path"; break;
-                case Terrain.Floor: m = Make("Floor", new Color32(0xB4, 0x9A, 0x80, 0xFF), 0.15f); texture = "floor"; break;
-                case Terrain.Churchyard: m = Make("Churchyard", new Color32(0x96, 0xA4, 0x7E, 0xFF), 0.05f); texture = "churchyard"; break;
-                default: m = Make("Ground", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f); texture = "grass"; break;
+                // Each colour is the measured mean of the pack sheet named on the same line. The
+                // one deliberate deviation is Churchyard, four levels lighter than Grass off the
+                // SAME sheet, so that with no textures at all the two do not become one field.
+                case Terrain.Grass: m = Make("Grass", new Color32(0x6A, 0x7A, 0x3A, 0xFF), 0.05f); texture = "grass"; break;
+                case Terrain.Field: m = Make("Field", new Color32(0x65, 0x4B, 0x2F, 0xFF), 0.04f); texture = "field"; break;
+                case Terrain.Wood: m = Make("Wood", new Color32(0x8B, 0x60, 0x3A, 0xFF), 0.03f); texture = "wood"; break;
+                case Terrain.Water: m = Make("Water", new Color32(0x3F, 0x6B, 0x89, 0xFF), 0.85f); texture = "water"; break;
+                case Terrain.Road: m = Make("Road", new Color32(0x31, 0x31, 0x31, 0xFF), 0.10f); texture = "road"; break;
+                case Terrain.Path: m = Make("Path", new Color32(0x73, 0x4F, 0x31, 0xFF), 0.06f); texture = "path"; break;
+                case Terrain.Floor: m = Make("Floor", new Color32(0xDA, 0xCD, 0xBD, 0xFF), 0.15f); texture = "floor"; break;
+                case Terrain.Churchyard: m = Make("Churchyard", new Color32(0x72, 0x82, 0x3F, 0xFF), 0.05f); texture = "churchyard"; break;
+                default: m = Make("Ground", new Color32(0x6A, 0x7A, 0x3A, 0xFF), 0.05f); texture = "grass"; break;
             }
 
             // A texture multiplies the base colour, so the palette above still governs the look
@@ -174,7 +313,7 @@ namespace Noir.Unity
             get
             {
                 if (_pasture != null) return _pasture;
-                _pasture = Make("Pasture", new Color32(0x8E, 0xA8, 0x76, 0xFF), 0.05f);
+                _pasture = Make("Pasture", new Color32(0x6A, 0x7A, 0x3A, 0xFF), 0.05f);
                 SurfaceTextures.ApplyPack(_pasture, "grass", 21f);
                 Plan(_pasture);
                 return _pasture;
@@ -306,15 +445,108 @@ namespace Noir.Unity
             foreach (var pair in _byZoning) Paint(pair.Value, pair.Key);
         }
 
-        public static Material Wall
+        public static Material Wall => Walls[0];
+
+        private static Material[] _walls;
+
+        /// <summary>
+        /// WHAT THE TOWN IS BUILT OF. One material used to cover every wall in Rossville - house,
+        /// store, church and garage alike - and it was `0xC6B8A6` over a procedural placeholder:
+        /// pale render. That is an English village wall. It is also why Main Street photographed
+        /// as a row of grey boxes.
+        ///
+        /// A 1991 east-central Illinois town is CLAPBOARD HOUSES AND A BRICK MAIN STREET, and the
+        /// pack has both:
+        ///
+        ///     Wall_Planks_Horizontal_B_Farm   mean (255,255,255) span 168, board lines in the
+        ///                                     ALBEDO, so it reads without a normal map (it ships
+        ///                                     without one)
+        ///     Wall_Brick_A_City               mean (167,105, 78) span  91, coursing in a NORMAL
+        ///                                     map, which is why this could not be used before
+        ///
+        /// THE PLAN SAYS DO NOT BIND THE BRICK, AND ITS REASON EXPIRED. `ROOF-14` is refused on
+        /// the grounds that the brick's "coursing is in a normal map that is inert without
+        /// tangents". `MeshChunks.Emit` writes a tangent stream now - that was ROOF-0, the first
+        /// line of this whole wave - so the objection is answered rather than overruled.
+        ///
+        /// Four clapboards because a street of identical white houses reads as an estate put up
+        /// in one year by one contractor, which is the same argument the four roof coverings won.
+        /// The albedo is pure white, so a tint IS the paint.
+        /// </summary>
+        public static Material[] Walls
         {
             get
             {
-                if (_wall != null) return _wall;
-                _wall = Make("Wall", new Color32(0xC6, 0xB8, 0xA6, 0xFF), 0.05f);
-                SurfaceTextures.Apply(_wall, "wall", 3f);
-                return _wall;
+                if (_walls != null) return _walls;
+                _walls = new[]
+                {
+                    Walling("WallClapboardWhite", new Color(0.92f, 0.92f, 0.90f)),
+                    Walling("WallClapboardCream", new Color(0.90f, 0.86f, 0.72f)),
+                    Walling("WallClapboardGreen", new Color(0.78f, 0.84f, 0.74f)),
+                    Walling("WallClapboardGrey",  new Color(0.74f, 0.76f, 0.76f)),
+                    Brickwork(),
+                };
+                return _walls;
             }
+        }
+
+        /// <summary>A painted clapboard elevation. The tint is the paint.</summary>
+        private static Material Walling(string name, Color paint)
+        {
+            var m = Make(name, paint, 0.05f);
+            SurfaceTextures.ApplyPack(m, "wall", 3f, paint);
+            return m;
+        }
+
+        /// <summary>The commercial block. Brick carries its own colour, so no tint.</summary>
+        private static Material Brickwork()
+        {
+            var m = Make("WallBrick", new Color(0.55f, 0.36f, 0.28f), 0.04f);
+            SurfaceTextures.ApplyPack(m, "brick", 2f);
+            return m;
+        }
+
+        /// <summary>Main Street's brick, for anything that is not somebody's house.</summary>
+        public static int BrickIndex => 4;
+
+        /// <summary>
+        /// HOW THICK A WALL IS DRAWN, in metres - and the first number this project ever held on
+        /// the subject, because until 2026-08-11 every wall in Rossville filled its whole survey
+        /// tile: 39 inches of clapboard on houses whose real walls are a 2x4, sheathing and a lap
+        /// of siding. The owner measured the consequence from the inside - "the walls eating 70%
+        /// of the square footage" - and on the smallest footprints that was arithmetic, not a
+        /// feeling. A 1991 frame exterior wall is about seven inches through; the downtown row is
+        /// commercial brick at about thirteen. The grid, the rooms, the pathfinding and the doors
+        /// still speak in whole tiles; these numbers only say what is DRAWN over them.
+        /// </summary>
+        public const float FrameDepth = 0.18f, BrickDepth = 0.33f;
+
+        /// <summary>
+        /// How thick this building's skin is drawn. Keyed exactly as <see cref="WallingFor"/> is,
+        /// so a wall and its depth cannot disagree about what the building is made of. No
+        /// building at all gets a painted board fence's few inches.
+        /// </summary>
+        public static float WallDepthFor(Place place) =>
+            place == null ? 0.15f
+                          : WallingFor(place) == BrickIndex ? BrickDepth : FrameDepth;
+
+        /// <summary>
+        /// What this building is built of. A house is clapboard, painted one of four ways and
+        /// keyed on the BUILDING so it survives being moved - the same argument as
+        /// <see cref="RoofingFor"/>. Everything else that is a building is brick: the stores, the
+        /// church, the school, the hall. A wall that belongs to no building at all - a garden or
+        /// churchyard boundary - takes the plain white, which is what a painted board fence is.
+        /// </summary>
+        public static int WallingFor(Place place)
+        {
+            if (place == null) return 0;
+            // ASKS THE TABLE, so an apartment house is clapboard like its neighbours. This tested
+            // the enum member, and `apartment` is not in it - so 102 Stewart Ave and 204 and 206
+            // Dale Ave, three 13x7 apartment houses standing in ordinary residential streets, were
+            // built of Main Street brick. (The four sets of rooms OVER a shop stay brick and
+            // correctly so: the shop underneath is what they are built of.)
+            if (!PlaceKindTable.Current.Row(place.Kind).IsHome) return BrickIndex;
+            return (int)(Rolls.Avalanche(place.Key ^ 7717UL) % 4UL);
         }
 
         /// <summary>
@@ -332,36 +564,74 @@ namespace Noir.Unity
         {
             if (_byZoned.TryGetValue(kind, out var existing)) return existing;
 
-            Material m; string texture; float tiling;
+            // ALL THREE OF THESE COLOURS USED TO BE THROWN AWAY ON THE NEXT LINE. `ApplyPack`
+            // forces _BaseColor to white when it binds an albedo, so `Make(...)`'s tint survived
+            // for exactly one statement and the three docstrings described distinctions the
+            // renderer could not express - "a duller, more olive tint than the road itself gets"
+            // over a material that came out identical to Terrain.Road. Two of the three were the
+            // SAME texture at the same tiling as Terrain.Path, differing only in smoothness.
+            //
+            // A tint MULTIPLIES, so a target is only reachable if it is darker than the albedo it
+            // multiplies. The authored targets were all LIGHTER than asphalt (0x313131) and dirt
+            // (0x734F31) in at least two channels, so no tint over those sheets could ever have
+            // produced them. Hard moves onto concrete, where its target IS reachable and is now
+            // passed through as a tint; Rough gets a sheet of its own; Bank says what it is.
+            // GREEN GRASS HERE TOO - see GrassEverywhere. Hard is a feed store's concrete apron
+            // and Bank is a bare creek side; both are ground, and both drew as something other
+            // than turf. Rough is left alone because it is ALREADY grass, at more than twice the
+            // tile so it reads as rank uncut growth, which is a distinction worth keeping.
+            if (GrassEverywhere && kind != ZonedGround.Rough)
+            {
+                var green = Make("Ground" + kind, GrassGreen, 0.04f);
+                SurfaceTextures.ApplyPack(green, "grass", 4f);
+                Plan(green);
+                return _byZoned[kind] = green;
+            }
+
+            Material m; string texture; float tiling; Color? tint = null;
             switch (kind)
             {
                 case ZonedGround.Hard:
-                    // Commercial and industrial lots: packed earth and gravel, not turf - a feed
-                    // store's yard or a garage's apron. Reuses the road texture's grain
-                    // (hardstanding rather than lawn) at a duller, more olive tint than the road
-                    // itself gets, so a commercial yard reads as worked ground beside a street
-                    // rather than as more street.
+                    // Commercial and industrial lots: a feed store's yard or a garage's apron -
+                    // hardstanding, not turf. CONCRETE, not asphalt, because a yard that reads as
+                    // more street is the failure this material exists to avoid. The tint is
+                    // 0x8C8674 over Concrete_A_City's measured mean 0xDACDBD, per channel:
+                    // 140/218, 134/205, 116/189.
                     m = Make("GroundHard", new Color32(0x8C, 0x86, 0x74, 0xFF), 0.06f);
-                    texture = "road"; tiling = 4f;
+                    texture = "floor"; tiling = 4f;
+                    tint = new Color(0.642f, 0.654f, 0.614f);
                     break;
                 case ZonedGround.Rough:
-                    // Vacant lots: a lot mowed once a summer, weeds through bare dirt - not lawn,
-                    // and not a farm field either. The path texture's own worn-dirt grain, tinted
-                    // browner and flatter than the kept grass next door.
-                    m = Make("GroundRough", new Color32(0x9C, 0x92, 0x66, 0xFF), 0.03f);
-                    texture = "path"; tiling = 4f;
+                    // Vacant lots: A LOT MOWED ONCE A SUMMER IS GRASS, NOT PLOUGHED EARTH.
+                    //
+                    // Owner's ruling 2026-08-09, made on `suburb-block.png`, where almost every
+                    // lot carried a bare red-brown rectangle. This drew Ground_Dirt_Harvested -
+                    // and before that the path's worn dirt - because the county's 2007 tax roll
+                    // calls a parcel Vacant when it carries no improvement. That is a statement
+                    // about the tax roll, not about the ground: a lot the county called vacant in
+                    // 2007 had grass on it in 1991, and an empty lot in an Illinois town is weeds.
+                    // Bare earth is what a FIELD looks like, and Agricultural still draws it.
+                    //
+                    // The distinction is kept and made true rather than deleted: THE SAME GRASS,
+                    // at more than twice the tile so the clumps read as rank uncut growth rather
+                    // than as mown lawn, dulled a little towards olive. A tint MULTIPLIES, so the
+                    // fallback beside it is that product - 0x6A7A3A times the tint - and not a
+                    // guess.
+                    m = Make("GroundRough", new Color32(0x5D, 0x71, 0x2D, 0xFF), 0.03f);
+                    texture = "grass"; tiling = 9f;
+                    tint = new Color(0.88f, 0.92f, 0.78f);
                     break;
                 default:   // Bank
                     // Any tile too steep for turf to hold - a ditch side, a creek bank, whatever
-                    // the sculpt tool has cut. Bare worn ground regardless of what the parcel
-                    // standing on it is zoned for; see GroundZoning.BankGrade for why this is
-                    // rare on a map this flat and not a slope map painted over farmland.
-                    m = Make("GroundBank", new Color32(0x8A, 0x7A, 0x5C, 0xFF), 0.02f);
+                    // the sculpt tool has cut. This IS the path texture at a tighter tile and
+                    // nothing more, which is honest: a worn bank and a worn track are the same
+                    // bare dirt. See GroundZoning.BankGrade for why it is rare on a map this flat.
+                    m = Make("GroundBank", new Color32(0x73, 0x4F, 0x31, 0xFF), 0.02f);
                     texture = "path"; tiling = 3f;
                     break;
             }
 
-            SurfaceTextures.ApplyPack(m, texture, tiling);
+            SurfaceTextures.ApplyPack(m, texture, tiling, tint);
             Plan(m);
             _byZoned[kind] = m;
             return m;
@@ -388,12 +658,48 @@ namespace Noir.Unity
                 if (_roofs != null) return _roofs;
                 _roofs = new[]
                 {
-                    Roofing("RoofSlate", "roof_slate"),
-                    Roofing("RoofTile", "roof_tile"),
-                    Roofing("RoofWorn", "roof_worn"),
-                    Roofing("RoofThatch", "roof_thatch"),
-                    Roofing("Brick", "brick"),      // chimneys - see ChimneyIndex
+                    // THREE-TAB ASPHALT SHINGLE, WHICH IS WHAT ROSSVILLE HAS. The four coverings
+                    // here were slate, clay tile, worn tile and THATCH - Ashcombe's English
+                    // village, shipped into east-central Illinois and never revisited. That is
+                    // the "weird shit ... left over textures" the owner reported.
+                    //
+                    // The tints are measured against the pack albedo they multiply; see the roof
+                    // entries in SurfaceTextures._packSets for why three albedos serve four
+                    // coverings. The FLAT colour beside each is what a shipped player falls back
+                    // to when no texture binds at all, and it is the colour of the covering
+                    // rather than white - which is what ROOF-1 is for.
+                    Roofing("RoofShingleGrey", "roof_shingle_grey",
+                            tint: Color.white, flat: Grey(0.25f)),
+                    Roofing("RoofShingleCharcoal", "roof_shingle_charcoal",
+                            tint: Grey(0.70f), flat: Grey(0.17f)),
+                    Roofing("RoofShingleBrown", "roof_shingle_brown",
+                            tint: Color.white, flat: new Color(0.41f, 0.27f, 0.16f)),
+                    Roofing("RoofShingleBlack", "roof_shingle_black",
+                            tint: Grey(0.38f), flat: new Color(0.16f, 0.11f, 0.07f)),
+                    // Chimneys - see ChimneyIndex. THE FIFTH WHITE MATERIAL, and it is not a roof.
+                    // It sat on Roofing's default `flat` of white for as long as the four
+                    // coverings did, so a shipped player got white chimneys beside its white
+                    // roofs. 0xA7694E is the measured mean of Wall_Brick_A_City_Alb.
+                    Roofing("Brick", "brick", flat: new Color32(0xA7, 0x69, 0x4E, 0xFF)),
                     Wall,                           // gable ends, towers - see WallIndex
+
+                    // YOU DO NOT SHINGLE A FLAT ROOF, and every flat roof in Rossville was
+                    // shingled - the whole downtown block and every garage - because AddRoof
+                    // handed the same covering to all four roof forms. A three-tab shingle needs
+                    // a slope to shed water down; on the flat it is not a material, it is a
+                    // mistake anybody who has looked at a Main Street would see.
+                    //
+                    // Owner's ruling 5: BUILT-UP TAR AND GRAVEL. That is what a 1991 commercial
+                    // block has - layers of felt and bitumen with pea gravel scattered over it to
+                    // hold the top coat down and keep the sun off - and from above it reads as a
+                    // grey aggregate speckle, which is exactly what the parapet hides on every
+                    // Main Street in the Midwest.
+                    //
+                    // Appended at index 6 rather than inserted, so ChimneyIndex 4, WallIndex 5
+                    // and SpireIndex 0 do not move. Those are submesh indices as well as palette
+                    // indices, and shifting one silently redraws the town.
+                    Roofing("RoofBuiltUp", "roof_builtup",
+                            tint: BuiltUpTint, flat: new Color(0.31f, 0.31f, 0.32f)),
                 };
                 return _roofs;
             }
@@ -417,27 +723,114 @@ namespace Noir.Unity
         /// </summary>
         public static int WallIndex => 5;
 
-        /// <summary>A spire is lead or slate, never brick.</summary>
+        /// <summary>
+        /// A steeple is not brick, and index 0 is no longer slate.
+        ///
+        /// This said "a spire is lead or slate, never brick" and pointed at index 0 when index 0
+        /// WAS RoofSlate. It is the weathered grey shingle now, and the sentence quietly became a
+        /// claim about a material that had changed underneath it - the exact shape of fault
+        /// CLAUDE.md records for the traffic cycle constant.
+        ///
+        /// Grey shingle is right anyway, and that is why this is a comment edit rather than an
+        /// eighth array entry: Rossville has ONE church, a frame building, and a small-town
+        /// Illinois steeple in 1991 is shingled or metal-clad. If he ever wants it metal, the
+        /// pack's Roof_Aluminium_A set is the one place it would earn its keep - one more entry
+        /// plus smoothness ~0.5 and metallic ~0.6, for exactly one building.
+        /// </summary>
         public static int SpireIndex => 0;
 
-        private static Material Roofing(string name, string texture)
+        /// <summary>
+        /// A flat roof, whatever covering the building would otherwise have drawn.
+        ///
+        /// The pack ships no gravel map — the plan for this work assumed one, and it is not
+        /// there. `Nature/Sand` is the nearest thing that is actually granular: mean (175,140,90)
+        /// with a span of 141 levels and a real normal map, against `Nature/Rock` at a span of 29,
+        /// which is a flat blue-grey with nothing in it. Sand is warm, so the tint is taken PER
+        /// CHANNEL to neutralise it — target over source, (85/175, 85/140, 88/90) — which keeps
+        /// every bit of the grain and takes out the beach.
+        /// </summary>
+        public static int FlatIndex => 6;
+
+        private static readonly Color BuiltUpTint = new Color(0.49f, 0.61f, 0.98f);
+
+        /// <summary>A neutral at a given value, so the tints below read as what they are.</summary>
+        private static Color Grey(float v) => new Color(v, v, v);
+
+        /// <summary>
+        /// One roof covering.
+        ///
+        /// THREE THINGS HAVE TO LINE UP AND THEY USED NOT TO.
+        ///
+        /// `flat` is the colour the material carries. It was `Color.white`, and white only shows
+        /// when NO texture binds - which is exactly the case a shipped player is in, because
+        /// `ApplyPack` is entirely `#if UNITY_EDITOR` and the loose PNG loader can miss too. So
+        /// the editor looked fine and the product had PURE WHITE ROOFS. `Apply` overwrites this
+        /// with white the moment a texture does bind, deliberately, so nothing is double-tinted.
+        ///
+        /// `texture` is both the loose PNG name under Content/textures/ and the key into the
+        /// pack set table. `tools/Noir.Sim -- tiles` generates the loose one in the SAME colour
+        /// this covering ends up, so the two paths agree.
+        ///
+        /// `tint` multiplies the pack albedo. White for the two coverings whose pack albedo is
+        /// already the right colour; less for the two that are the same albedo taken down.
+        ///
+        /// TILING 1.5 m, NOT 2.5. The pack shingle sheets carry four courses, so 2.5 m of roof
+        /// per repeat put a course line every 24 inches - a shingle the size of a paving slab.
+        /// At 1.5 m it lands 5.1 to 6.4 inches depending on the pitch of the house you are
+        /// standing in front of, which is the American three-tab exposure and is the spread the
+        /// owner ruled correct rather than a bug: four house types, four pitches, one street.
+        /// </summary>
+        private static Material Roofing(string name, string texture,
+                                        Color? tint = null, Color? flat = null)
         {
-            var m = Make(name, Color.white, 0.04f);
-            SurfaceTextures.Apply(m, texture, 2.5f);
+            var m = Make(name, flat ?? Color.white, 0.04f);
+            SurfaceTextures.ApplyPack(m, texture, 1.5f, tint);
             return m;
         }
 
         /// <summary>
-        /// Which covering a building has. Slate and tile are the village; worn tile is the older
-        /// end of it; thatch is rare, which is what makes it worth noticing.
+        /// Which covering a building has: the owner's own mix, settled 2026-08-09.
+        ///
+        /// SLATE GREY 40 · CHARCOAL 40 · BROWN 20, with ONE ROOF IN TWENTY a brown-black. The
+        /// three named shares are held in their 40:40:20 ratio across the 95 that are left once
+        /// the brown-blacks are taken out, which is what "one in twenty" means and why these are
+        /// 38/38/19 rather than 40/40/20.
+        ///
+        /// NO GREEN, and that is a period ruling rather than a taste one: faded green is a modern
+        /// architectural shingle and reads wrong for 1991 east-central Illinois. The pack's
+        /// Shingles_D is exactly that green, which is why it is the one sheet of five this town
+        /// does not touch.
+        ///
+        /// Was slate 34 / tile 36 / worn 22 / thatch 8.
+        ///
+        /// KEYED ON THE BUILDING, NOT ON WHERE IT STANDS, and that is the whole of ROOF-3.
+        ///
+        /// This took `place.Bounds.X, place.Bounds.Y` through `Scatter`. The hash itself is fine -
+        /// measured over the town's whole footprint it lands 37.97 / 38.03 / 19.00 / 5.00 against
+        /// a target of 38 / 38 / 19 / 5, with no correlation between neighbours at any lot spacing
+        /// from one metre to sixty-six. There is nothing wrong with the distribution.
+        ///
+        /// What is wrong is that a roof was a property of a COORDINATE. Move the building and it
+        /// gets a different roof. `ClearOfRoads` shoved 175 buildings off road corridors on
+        /// 2026-08-09 alone, so re-deriving `Content/roads.txt` re-rolled about two thirds of
+        /// those roofs - the town's appearance churning as a side effect of a road being measured
+        /// more accurately.
+        ///
+        /// `Place.Key` is the answer and this codebase had already reached it twice. Its own
+        /// doc comment: "Inserting one building at the top of a 345-place file used to reshuffle
+        /// fifty-four other buildings' interiors ... Content has to be additive or it stops being
+        /// possible to add any." And `PlaceSpec.Key`: "EVERYTHING generated from a place hangs off
+        /// this string." Everything except the roof, until now.
         /// </summary>
-        public static int RoofingFor(int x, int y)
+        public static int RoofingFor(Place place)
         {
-            int roll = (int)(Scatter(x, y, 5309) % 100);
-            if (roll < 34) return 0;   // slate
-            if (roll < 70) return 1;   // tile
-            if (roll < 92) return 2;   // worn tile
-            return 3;                  // thatch
+            // Salted, so the covering is not correlated with anything else keyed on the same
+            // building - its interior, its household, its chimney count.
+            int roll = (int)(Rolls.Avalanche(place.Key ^ 5309UL) % 100UL);
+            if (roll < 38) return 0;   // slate grey
+            if (roll < 76) return 1;   // charcoal
+            if (roll < 95) return 2;   // brown
+            return 3;                  // brown-black, one in twenty
         }
 
         /// <summary>

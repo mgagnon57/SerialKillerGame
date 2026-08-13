@@ -65,7 +65,7 @@ namespace Noir.Unity
 
             // Nothing was struck on the way down, so fall back to where the ray meets the
             // ground. This is what catches everything the city renderer never built a model
-            // for - Ashcombe's own buildings, and any place that is simply a patch of land.
+            // for - Rossville's own buildings, and any place that is simply a patch of land.
             if (!Space3D.GroundHit(ray, out Vector3 hit)) return PlaceId.None;
             var direct = At(world, hit);
             if (direct.IsValid) return direct;

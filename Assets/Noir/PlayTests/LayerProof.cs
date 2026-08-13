@@ -72,25 +72,26 @@ namespace Noir.PlayTests
                      Layers.Kind.Streets, Layers.Kind.Alleys, Layers.Kind.Plan),
         };
 
+        // THE SWITCH THAT DECIDES WHICH TOWN A HEADLESS RUN BUILDS HAS MOVED, and it was never
+        // this file's to own. It read NOIR_BUILT_TOWN and raised the built town, from inside a
+        // `Category("Diagnostic")` test file that the standing gate excludes - so the decision
+        // governing every run in this assembly lived in the one file most likely to be deleted or
+        // skipped. See CityUnderTest, which already owns the other half of the same decision.
+        //
+        /// <summary>What the layer switches were before this walked all over them.</summary>
+        private System.Collections.Generic.Dictionary<Layers.Kind, bool> _wasLayers;
+
         /// <summary>
-        /// Raise the built town for a headless run, when asked to.
-        ///
-        /// VillageHost deliberately does not read the built-town preference in batch mode - see
-        /// the guard on Application.isBatchMode - so a headless run always gets the static
-        /// default, which is the survey plan. That is right for the render tools and useless
-        /// here: the whole subject of these photographs is the built town, and a run without it
-        /// has no roads, no traffic and ten layers with nothing behind them, which looks exactly
-        /// like a broken panel and is not one.
-        ///
-        /// Behind an environment variable rather than on by default, because this assembly also
-        /// holds the traffic suite, and quietly building four thousand renderers under it would
-        /// slow every one of those runs down for nothing.
+        /// PUT THE SWITCHES BACK, whatever happened. A `[TearDown]` and not a line at the end of
+        /// the test, because the interesting failures here are the ones that throw halfway - and
+        /// those are exactly the runs that would otherwise leave the panel in whatever state the
+        /// twelfth frame wanted.
         /// </summary>
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void RaiseTheTownIfAsked()
+        [TearDown]
+        public void PutTheLayersBack()
         {
-            if (System.Environment.GetEnvironmentVariable("NOIR_BUILT_TOWN") == "1")
-                VillageHost.ShowBuildings = true;
+            if (_wasLayers != null) Layers.Restore(_wasLayers);
+            _wasLayers = null;
         }
 
         [UnityTest, Category("Diagnostic"), Timeout(1800000)]
@@ -112,6 +113,42 @@ namespace Noir.PlayTests
             for (int settle = 0; settle < 10; settle++) yield return null;
 
             // ---- what has anything behind it at all ----
+            // SNAPSHOT FIRST, RESTORE IN THE TEARDOWN. This walks every layer combination in the
+            // sheet and puts nothing back, so whatever combination the last frame happened to end
+            // on used to stick - and `Layers.Set` writes PlayerPrefs whenever there is a person at
+            // the keyboard. That is verbatim the mechanism behind the 2026-08-07 incident, where a
+            // run ended with People off, `VillageHost` never built `AgentMeshView`, and
+            // `WhyAreThePeopleNotAnimating` was written down in this project's own notes as a
+            // FLAKY TEST for weeks.
+            //
+            // `Layers.IsOn` gives batch mode the compiled default now, so this cannot bite a
+            // headless run - but the whole point of a proof sheet is that somebody runs it from
+            // the editor to LOOK at it, and that is the case with a person in it.
+            _wasLayers = Layers.Snapshot();
+
+            // THE SHEET CANNOT PROVE A LAYER THE RUN DID NOT BUILD, and for three of its twelve
+            // combinations it never could.
+            //
+            // `VillageHost.ShowBuildings` is false in batch mode unless `NOIR_BUILT_TOWN=1` says
+            // otherwise, and CityStreets, CityParking, CitySigns and CityGreenery all sit behind
+            // it - so `07-streets-and-massing` came out BYTE-IDENTICAL to `04-massing-alone`,
+            // `08-road-widths` to `01-parcel-lines`, and `09-road-widths-and-houses` to
+            // `02-parcel-lines-and-houses`. Three pairs, every one of them a street frame.
+            //
+            // It passed anyway, every time, because the assertion at the bottom counted FILES.
+            // `ShotLog.Stamp` hashes them now and that is how this was found - on the first
+            // targeted run after the hashing landed.
+            //
+            // Refusing rather than skipping: a proof sheet that quietly photographs three-quarters
+            // of itself is the failure this whole file exists to prevent.
+            Assert.That(VillageHost.ShowBuildings, Is.True,
+                "LayerProof needs the BUILT town: CityStreets, CityParking, CitySigns and "
+              + "CityGreenery are all behind VillageHost.ShowBuildings, which is false in batch "
+              + "mode unless NOIR_BUILT_TOWN=1. Without it three of the twelve frames come out "
+              + "byte-identical to another - every one of them a street frame - and the sheet "
+              + "proves nothing about the layers it was made for. Set NOIR_BUILT_TOWN=1 and run "
+              + "it again.");
+
             var wired = new StringBuilder("[layerproof] wiring:\n");
             foreach (var kind in Layers.All)
                 wired.Append("    ").Append(Layers.IsWired(kind) ? "LIVE " : "DEAD ")
@@ -168,6 +205,13 @@ namespace Noir.PlayTests
 
             Assert.That(Directory.GetFiles(Dir, "*.png").Length, Is.GreaterThanOrEqualTo(Sheet.Length),
                         "every combination should have left a picture behind");
+
+            // "A PICTURE" IS NOT "A DIFFERENT PICTURE". This walks every layer combination and
+            // then checked only that the files existed, so a combination that changes nothing
+            // visible - or a camera looking somewhere none of the layers reach - passes exactly
+            // like one that works. Two identical frames in a LAYER proof mean the layer did not
+            // draw, which is the entire subject of the test.
+            ShotLog.Stamp("layers-proof", Dir, Directory.GetFiles(Dir, "*.png"));
             Debug.Log($"[layerproof] {Sheet.Length} frames in {Dir}");
         }
 

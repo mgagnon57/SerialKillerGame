@@ -6,6 +6,31 @@ Captured with `/idea <thing>` — optionally prefixed with a category, e.g.
 `/idea road: the freeway should have on-ramps rather than crossings`. Tick a box when it is
 done or delete the line when it turns out to be a bad idea.
 
+> ## ⚠ SWEPT 2026-08-11 — a THIRD of this file was describing a game that no longer exists
+>
+> **33 open items went to 21.** Twelve were closed, and not one of them by doing any work: they had
+> already been done and nobody came back to tick the box. Five said *"superseded, kept for the
+> reasoning"* in their own text while still carrying an open checkbox. The other seven were checked
+> against the code and the measurement is written into each:
+>
+> | | was claimed | is true |
+> |---|---|---|
+> | ribbons float 6 cm | `CityOutlines.Lift = 0.06f` | **`0.25f`** |
+> | roads that end on roads make no junction | ~21 of them | `JUNC-2` + `GATE-8`; 74 → **120** junctions |
+> | `AmbientTrafficWeight` is 4:1 | ladder only | reads the county's **AADT**, called at `CityTraffic:607` |
+> | nobody's car is in their driveway | drawn: none | **620 cars at 612 houses** |
+> | two Core tests are failing | permanently red | `[Explicit]`, suite is **477/0** |
+> | the PlayMode command hangs | hangs | `-assemblyNames Noir.PlayTests`, **19 of 19** |
+> | no layered visibility system | none | `Layers.Kind`, **21** kinds |
+>
+> **This is the failure mode to watch for, not a one-off tidy.** A backlog is what decides what gets
+> built next, so a stale item does not sit harmlessly — it spends a session. Two of the twelve were
+> actively *blocking*: the `AmbientTrafficWeight` entry was cited in `CityTraffic`'s own docstring as
+> the reason not to fix the fleet size, and it had been fixed for days.
+>
+> **Tick the box in the same commit as the fix.** Every one of these twelve was somebody finishing
+> the work and not coming back.
+
 ## Decisions needed — read this section first
 
 Two things asked for overnight on 2026-08-02 that were NOT done, on purpose, because they run
@@ -153,7 +178,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   world coordinates to the Ground chunk cache and had to move to `GroundSize` with it).
   — *2026-08-02*
 
-- [ ] **The plan view's feature ribbons float 6cm and that is not enough clearance.**
+- [x] **The plan view's feature ribbons float 6cm and that is not enough clearance.**
   `CityOutlines.Lift = 0.06f`, and a ribbon vertex is `ElevationGrid.HeightAt(x,y) + Lift` - the
   TRUE bilinear height - while the ground under it is now a coarser triangulation of that same
   surface. The two are within a hair of each other, so the depth test flips on edge pixels. Found
@@ -221,7 +246,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   parapet; the water simply stops square at the carriageway. And the shoreline is quantised to
   1m tiles, which at eye level on the bank reads as a staircase. — *2026-08-02*
 
-- [ ] ~~**There is no real river or ponds, superseded note kept for the reasoning.**~~ `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one
+- [x] ~~**There is no real river or ponds, superseded note kept for the reasoning.**~~ `Content/features.txt` carries the actual North Fork Vermilion (`river ...`, one
   long real polyline) and the real school ponds (`water ...` closed polygons), pulled from
   OpenStreetMap - and `CityOutlines.Features()` is the ONLY thing that ever reads that file. It
   draws them as a flat painted line/fill in the survey-plan view (`CityOutlines.Build`, gated
@@ -256,7 +281,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Roads
 
-- [ ] **A road that ENDS on another road makes no junction, and there are ~21 of them.**
+- [x] **A road that ENDS on another road makes no junction, and there are ~21 of them.**
   `RoadNetwork.Crossings` finds a junction by the projected lateral FLIPPING SIGN as one centre
   line passes THROUGH the other. A road that stops dead on another leaves on the side it arrived
   on, so it never flips, so no junction is recorded. With no junction, `LaneGraph` makes both
@@ -288,6 +313,197 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   manufactures new instances of the same fault. The durable version is a `Touches` rule beside
   `Crossings` in Core, where an end landing on another road's centre line is a junction in its own
   right; that is untried and needs the same measurement before it is believed.
+
+- [x] ~~**THE PEOPLE ARE HALF THE FRAME.**~~ **FIXED 2026-08-08 — 88 fps to 219 fps.**
+  `AgentMeshView` now animates only the nearest `AnimatingBudget` (150) people; the rest hold a
+  pose. Measured by `PerfCensus` on the same camera, both runs with drift under 15%:
+
+  ```
+    before   baseline 11.3 / 12.8 ms   (88 fps)    1385 animating
+    after    baseline  4.6 /  4.1 ms   (219 fps)    ~150 animating
+  ```
+
+  **A FIXED RADIUS IS THE WRONG SHAPE AND THE NUMBER IT PRODUCES IS A LIE.** Eighty metres read
+  1.4 ms / 712 fps - and `0 of 1385 animating`, because `OrbitCamera` opens at 330 m. That is not
+  an optimisation, it is a static town, and it took `WhyAreThePeopleNotAnimating` red for exactly
+  the right reason: with nobody animating the walk rate is 0.00x and the test guarding against
+  skating feet has nothing to measure. **The animating count is what caught it** - the timing alone
+  looked like a triumph.
+
+  So the budget is a HEAD COUNT with the radius chasing it by feedback (no per-frame sort of 1,385
+  people). Cost is bounded at any zoom, the nearest people always move, and the town is never
+  still. Measured converging to 161 / 151 / 136 as the day moves.
+
+  Still open, smaller: a person beyond the budget holds a pose while still SLIDING along the ground
+  if they are walking. Invisible at overview range, potentially not at street level with a big
+  crowd - worth a look before the budget is raised or lowered.
+
+- [x] ~~**THE PEOPLE ARE HALF THE FRAME. THE CARS ARE NOT THE PROBLEM AND NEVER WERE.**~~
+  Measured 2026-08-08 by `PerfCensus.WhatIsEatingTheFrame`, which switches one layer off and
+  straight back on inside a SINGLE run, so drift cancels:
+
+  ```
+    baseline start   median 11.3 ms   p90 18.2 ms   (88 fps)
+    baseline end     median 12.8 ms   p90 17.7 ms
+    DRIFT +1.5 ms - under 15%, so the numbers hold
+
+    People OFF        5.9 ms   saves  6.2 ms   1385 renderers
+    Traffic OFF      11.1 ms   saves  1.0 ms
+    Driveways OFF    13.4 ms   saves -1.3 ms
+  ```
+
+  **1,385 animators cost more than everything else put together.** The 611 parked cars measure
+  NEGATIVE, i.e. indistinguishable from zero. A whole session was spent optimising car meshes
+  before anybody measured which layer was expensive.
+
+  **THE OBVIOUS FIX IS ALREADY TRIED AND REVERTED - read `AgentBody.cs:204` before repeating it.**
+  `AnimatorCullingMode.CullCompletely` stops people dead: a disabled animator does not update the
+  bounds that decide visibility, so a figure that falls out of view never comes back. Measured at
+  the time: 40 of 40 animators had not advanced a frame in a whole second. `CullUpdateTransforms`
+  is what is there now, and it still evaluates every state machine and every clip off-screen -
+  it only skips writing the bones.
+
+  **What that failure actually says is that the cull must not be keyed on RENDERER VISIBILITY**,
+  because the thing being disabled is what maintains it. That is circular. A DISTANCE cull is not:
+  the camera's position and a citizen's simulated position are both known whatever the animator is
+  doing, so there is no state to get stuck in. Wants: `animator.enabled = false` beyond some
+  radius with hysteresis so a person on the boundary does not flicker, the check sliced across
+  frames the way `CityTraffic.Update` already slices its movers rather than sweeping 1,385 every
+  frame, and `PerfCensus` re-run to prove the saving.
+
+  Worth knowing before starting: the town already has a cheap representation - `AgentMeshView`
+  draws primitives where `AgentFigure` draws rigged people - so "far away people are capsules" may
+  be a shorter path than an animator LOD, and it is measurable the same way.
+
+  **Two limits of the census as it stands.** The renderer count reads 0 for `Traffic` and
+  `Driveways` because those register through the `Action<bool>` overload rather than by root, so
+  `Layers.RootsOf` finds nothing - the timing is right, the count is not. And only three layers
+  were probed: the rest were not wired or not on in that configuration, so Trees, Buildings,
+  Districts, Houses, Streets, Lamps, Powerlines, Farm and Massing are UNMEASURED, not cheap.
+
+- [x] ✅ **DONE 2026-08-10 — THE FLEET IS A CURVE.** `CityTraffic.CarsOutByHour`, a 24-entry table
+  summing to a mean of **19.3** against IDOT's measured 19.3, peaking at **46** at 07:00 and 17:00.
+  Built once at the peak and garaged; `CityTraffic.Retime` holds it to `Sim.Clock.MinuteOfDay` from
+  `VillageHost.Update`. The second half of this item — the class weighting — **had already landed**:
+  `AmbientTrafficWeight(RoadLine)` reads the county's AADT and `CityTraffic` calls that overload, so
+  the "do not cut the fleet until the weighting is fixed" caveat below was stale when it was read.
+  ⚠ **The PlayMode gate has NOT been run against this**, and the noon-start trap named below is now
+  live: the sim opens at 24 cars where it used to open at 159.
+
+  *Original entry, kept for the measurement:*
+
+  **THE FLEET IS EIGHT TIMES TOO BIG, AND IT IS WHY THE JUNCTIONS STARVE.** Measured against
+  IDOT's own counts, 2026-08-08 — full working in `docs/research/TRAFFIC-COUNTS.md`.
+
+  `CityTraffic.CarsOutPerHousehold = 0.25` puts **159 cars** on the street against 624 households,
+  all day, flat. Rossville's real counted traffic supports **~19 moving at an average instant** and
+  **~46 in the peak hour**. That is a multiplier of **0.03 off-peak and 0.07 at peak**, not 0.25.
+
+  The constant's docstring is right about what the number MEANS - "not how many cars a household
+  OWNS, but how many are ON THE ROAD AT ONCE" - and wrong about the value, which was reasoned
+  ("roughly one household in four") rather than measured. It is one household in thirty-three.
+
+  **Two changes, not one.** The value is too high AND it is a constant: the real thing is a curve,
+  peaking when the town leaves for Hoopeston and Danville and nearly flat at midday. The sim already
+  knows when the men leave. Feeding `DayPlan`'s away-work curve into the fleet size gets the shape
+  for free, and a town whose traffic has a rush hour is worth more than one that has the right
+  average.
+
+  **Do not do this as a lone constant edit.** Dropping to 19 cars with the current class weighting
+  spreads them evenly over a network where 80% of the movement belongs on two roads, so the town
+  would read as empty everywhere rather than quiet-with-a-busy-Route-1. **That half is now done** -
+  see the entry above - so the blocker is cleared and this is the next thing to do.
+
+  **NOT ATTEMPTED 2026-08-08, ON PURPOSE, AND HERE IS THE TRAP.** The owner chose "measured, with
+  a rush hour" and this was deferred rather than half-landed unattended, because it collides with
+  the test suite in a way worth knowing before starting:
+
+  `VillageHost` starts the simulation at **noon**, which is OFF-PEAK — so a correctly implemented
+  curve puts about **19 cars** on the map for every PlayMode test in the run. `TrafficMovesAndStops
+  AtRedLights` needs a car to arrive at the town's **single** signalised junction while it is being
+  watched, and `NoTwoVehiclesOccupyTheSameSpace` needs enough traffic to be worth asserting. Both
+  are likely to fail on an honestly quiet town, and the fix is NOT to inflate the fleet back: it is
+  that a test about signals should watch the junction at rush hour, and the shared-city rule means
+  it cannot simply wind the clock (the city is built once per run and a clock will not go
+  backwards for the next test).
+
+  So the work is three things, not one: the curve; a way for a traffic test to observe a chosen
+  hour without mutating the shared clock; and re-baselining the traffic gates against a town that
+  is genuinely quiet at noon. Cheapest shape for the curve itself is to build the fleet at the
+  PEAK figure and deactivate the surplus off-peak - the same trick `CityDriveways` uses for cars
+  whose owners are at work - rather than spawning and despawning movers.
+
+- [x] ~~**`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**~~
+  **DONE 2026-08-08.** `Content/roads.txt` carries an `aadt` line beside `easement` on all twelve
+  counted road runs, parsed by the same `VillageParser` the survey pass already uses, through
+  `RoadRun.Aadt` → `RoadLine.Aadt` → `RoadClasses.AmbientTrafficWeight(RoadLine)`. Both readers -
+  the spawn pitch and the turn scoring - ask the road now instead of its class. Measured in
+  `TrafficWeightTests`: **Route 1 42 : side street 2 = 21.0 : 1**, against the class ladder's 8 : 2.
+  An uncounted road keeps its class weight, because IDOT not counting a road is weak evidence that
+  it is quiet and not a measurement. Alleys stay at 0. Original entry follows.
+
+- [x] ~~**`AmbientTrafficWeight` is 4:1 where the county measures 21:1, and Route 1 is not Attica.**~~
+  `RoadNetwork.AmbientTrafficWeight` is `Mainroad 8 : Street 2`. IDOT's counts give **Route 1 5,200
+  AADT, Attica 1,100, a side street ~200-250** - so 21:1 arterial-to-local, and Route 1 carries
+  **4.7x what Attica does** while the table hands them the identical weight of 8.
+
+  Measured share of vehicle-miles: **real 80-86% on the two main roads, game 55.5%** - the game puts
+  **2.25-3.26x too much traffic on the side streets**. That is the owner's point exactly: the side
+  roads exist to get a car from a house to Route 1 or Attica and out of town, not to be driven
+  around on.
+
+  **The durable fix is to stop proxying through the class.** `Content/roads.txt` already carries
+  measured `easement` and right-of-way per road because this project takes numbers from the survey
+  rather than from a ruler - and IDOT counts **twelve of these roads by name** (chicago, attica,
+  stewart, stufflebeam, benton, henderson, creative, summit, mckibben, church, dale). An `aadt` line
+  beside `easement`, read by the spawn pitch and the turn scoring, replaces a guessed class ladder
+  with the county's own measurement. The 21 uncounted roads take a floor.
+
+- [x] **Nobody's car is in their driveway.** `CityParking` fills only authored `carpark` places. Its
+  own docstring makes the argument and then stops short of the houses: *"A PARKED CAR IS CONTENT IN
+  THIS GAME... a city where every car is driving past is a city where nothing is ever anywhere."*
+
+  If ownership scales with households and movement does not, the difference has to be standing
+  somewhere: **roughly 600 cars owned, ~19 moving.** The overwhelming majority of Rossville's
+  vehicles are parked at a house at any moment, and the game draws none of them. For a game about
+  noticing what changed, a car that sat in a driveway on Tuesday and is gone on Wednesday is worth
+  more than any number of cars driving past. Wants: a driveway or kerb spot per dwelling from the
+  parcel geometry, a car that belongs to a household rather than to the road, and the ability for it
+  to be absent because its owner is at work in Hoopeston.
+
+- [ ] **`church x maple` is two county roads crossing on give-way, and a car starves there.**
+  > ⚠ **EVERY NUMBER BELOW IS AGAINST A FLEET THAT NO LONGER EXISTS.** The 159-car constant became
+  > `CityTraffic.CarsOutByHour` on 2026-08-10: the town now opens at **25** cars at noon and peaks
+  > at 47. A wait time measured on 159 cars says nothing about this junction under 25, and the
+  > give-way fault may not even reproduce. **Re-measure before working this item**, and per
+  > `CLAUDE.md` run it twice before believing a traffic number moved.
+
+  Measured 2026-08-08 on the 159-car fleet: `NoCarWaitsForeverAtTheHeadOfAClearQueue` now
+  attributes every wait longer than one signal cycle to its junction, and the whole tail is **two
+  junctions, not the fleet** - 2 cars up to **53.7 s** at `church x maple`, 1 car at 36.3 s at
+  `church x alley2`, 0 at the signals. So this is the give-way rules, not a town over capacity.
+
+  `church` (`970,849 1303`-ish N-S) and `maple` (`797,1481 1303,1475` E-W) are BOTH declared
+  `county, right of way 20.0 m` in `Content/roads.txt`. Two county roads meeting, and the crossing
+  is run on **priority** - the town has exactly **1 signalised junction out of 74**. A car on the
+  give-way arm waits for a gap in a continuous county-road stream and may not get one.
+
+  **`TurnPace` already documents this failure mode and saturates before it helps.** A waiting
+  driver launches harder the longer it waits - which is honest, and is why it is used by both
+  `WhenClear` and the motion itself - but `Patience = 25 s` caps the effect. Past 25 seconds the
+  car is as eager as it can get and just sits. The docstring's own example is "a car starved at
+  Ross and Attica for 111 of the 120 seconds it was watched".
+
+  **DO NOT fix this with a "go anyway after N seconds" timeout.** That was tried here and REVERTED
+  because it produced a real 0.00 m collision: "go anyway" is precisely "enter the junction in
+  front of a car that is still coming". Candidate fixes worth measuring instead: signalise (or
+  four-way-stop) major/major crossings so `InTheTown` is not the only route to a light; give the
+  priority stream platooning so gaps exist at all; or a courtesy rule where a queued major-road
+  car yields. Each is a content-or-model decision, not a threshold.
+
+  **Consequence today: the p90 arm of that test is a coin toss** - 37.2 s and 21.9 s measured on
+  an unchanged tree with the same fleet and the same test order. Do not tune the gate; it is
+  already the honest 36.0 s. See CLAUDE.md.
 
 - [ ] **Curved roads on the outer parts - the map is too square.** The pack HAS the
   pieces: `Road_Turn_20x20_City`, `Road_Turn_Shift_20x20_City` (an S-bend), and
@@ -331,7 +547,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   houses over 28 cells), not liked. PlayMode 11/11, Core 163/165, MapAudit clean on all eight.
   Three new stills: `suburb-street`, `suburb-block`, `suburb-edge`. — *2026-07-31*
 
-- [ ] ~~The outer city, superseded note kept for the reasoning.~~ The fork was settled at
+- [x] ~~The outer city, superseded note kept for the reasoning.~~ The fork was settled at
   `docs/superpowers/specs/2026-07-31-the-outer-city-design.md` and was QUEUED BEHIND THE JAMS ITEM: 28 suburb cells is ~450 households against the 945 declared
   now, which grows the fleet 236 -> ~350, and holding the fleet flat is the entire reason
   `CarsOutPerHousehold` is 0.25. Building it on an unfixed give-way fault makes a reproduced defect
@@ -397,7 +613,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   it. Whether it should carry real freight is the separate, smaller decision the old note called
   out, and the bed exists for it now. — *2026-08-02*
 
-- [ ] ~~**The real CSX line, superseded note kept for the reasoning.**~~ `Content/features.txt`'s `rail` polyline is the actual surveyed CSX
+- [x] ~~**The real CSX line, superseded note kept for the reasoning.**~~ `Content/features.txt`'s `rail` polyline is the actual surveyed CSX
   right-of-way (converted from OpenStreetMap - see the note in `city.txt` itself at the "NO
   SIMULATED RAILROAD AVENUE" comment: getting this alignment right already fixed a quarter of the
   town's houses being on the wrong side of the real track). `CityOutlines.Features()` draws it
@@ -434,7 +650,12 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 - [x] ~~**A car crossing a junction ignores every other vehicle.**~~ FIXED: CrossJunction now calls Blocked(), and inside a junction the same-heading filter is dropped because a turning car crosses the others rather than following them. `Blocked()` is only called from `RunSegment`; `CrossJunction` has no check at all, so a turning car drives through anything on the lane it is entering. This is what `NoTwoVehiclesOccupyTheSameSpace` catches at 0.00m, and the look-ahead fix does not touch it. — *2026-07-30*
 - [x] ~~`NoJunctionEverShowsGreenBothWays` tests an invariant that no longer holds.~~ FIXED: the test now skips unsignalised junctions in both assertions. `MayEnter` returns true on BOTH axes at a priority junction by design - the separation moved into `NothingCrossing`. The test should assert the new rule: signalised junctions never both green, priority junctions have exactly one axis with priority. — *2026-07-30*
 - [x] ~~Vehicle look-ahead is a constant 8m~~ — done in 4724abf: it is now both vehicles' measured half-lengths plus a headway. Did NOT fix the failing test; see the junction item above. — *2026-07-30*
-- [ ] **The eastbound ring road at x=1008 is the one junction that starves.** Every run of
+- [ ] **The eastbound ring road at x=1008 is the one junction that starves.**
+  > ⚠ **SAME INVALIDATION AS `church x maple` ABOVE**: the 83.9 s and 86.5 s below were measured on
+  > the 159-car fleet, and the fleet is a curve now — 25 at noon, 47 at peak. "A property of that
+  > junction and not of the load" was a fair reading at 159 and is untested at 25. Re-measure.
+
+  Every run of
   `NoCarWaitsForeverAtTheHeadOfAClearQueue` puts its worst wait at the same place - 83.9s and
   86.5s on consecutive runs, against a fleet p90 of 22-25s - so it is a property of that junction
   and not of the load. It is a left turn across two lanes of through traffic on the busiest road
@@ -497,7 +718,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   `TrafficDiagnostics` reports the numbers above and gates nothing; `NoCarWaitsForeverAtTheHead
   OfAClearQueue` gates the distribution - p90 under one signal cycle, worst under two. — *2026-07-31*
 
-- [ ] ~~Jams~~ SUPERSEDED, kept for the reasoning: the original entry follows.
+- [x] ~~Jams~~ SUPERSEDED, kept for the reasoning: the original entry follows.
 
   ROOT CAUSE: `NothingCrossing` (give-way) and `NothingComing` (left turn) both wait for zero
   traffic within a fixed distance (`Crossing`=35m, `Oncoming`=22m), and a busy two-lane road can
@@ -559,7 +780,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [x] ~~The street lamps are a cylinder with a box on top.~~ FIXED - `SunRig.BuildStreetLamps` now
   places the pack's own `Lamp_Street_*`. It was `PrimitiveType.Cylinder` for the column and
-  `PrimitiveType.Cube` for the lantern, which was the right answer while Ashcombe had no pack
+  `PrimitiveType.Cube` for the lantern, which was the right answer while Rossville had no pack
   behind it and the alternative was light appearing out of nothing five metres up. The pack ships
   SIXTEEN lamps in `Lamps City` and none of the four tall `Lamp_Street` ones had ever been placed -
   `CityStreets` only catalogued the short `Lamp_Sidewalk` kind as pavement dressing, so the city had
@@ -608,16 +829,48 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## People
 
+- [x] ~~One journey in five in Rossville failed at the node cap.~~ **DONE 2026-08-11 — the guard
+  was costing sixteen times what it saved, and lifting it made the simulation 40% FASTER.**
+  `Pathfinder.HardNodeCeiling` 100,000 → 300,000.
+
+  The ceiling was measured on 2026-08-04, when **`Content/roads.txt` did not exist** — the
+  pre-survey town of city.txt's 37 ruled roads, where the worst successful journey was 56,015
+  nodes and nothing ever reached the ceiling. Forty-four commits then rebuilt the walkable grid
+  under it (the surveyed 68-road network, alleys reaching town, every building reseated, doors
+  recut) and nothing re-measured the number, though the header's own rule says it must be.
+
+  |                    | asked | found | gave up | sim cost |
+  |---|---|---|---|---|
+  | ceiling 100,000    |   781 |   389 |     171 | 13,970 ms |
+  | no ceiling         |   616 |   395 |       0 |  8,355 ms |
+  | ceiling 300,000    |     — |     — |       — | see below |
+
+  **Only seven journeys in the town genuinely need more than 100,000 nodes**, worst 184,986. But
+  a refused journey retries on a backoff and a capped search spends the *whole* allowance before
+  it can report failure, so seven honest walks became 171 refusals at 100,000 nodes each — the
+  extra 165 searches in that table are the same handful of people asking again. Every refusal was
+  long: nearest 750 tiles, mean 1,194, **not one under 200**. Mostly they were walking to the old
+  burial ground at 69,609, half a mile west — the same place `Pathfinder`'s header already names
+  as what a mean ceiling strands people from. It has now happened twice.
+
+  **The lesson is the one this repo keeps relearning: the number was right for a town that no
+  longer existed.** `[smoke] paths` prints the whole table every run now, and the check is a hard
+  failure at 1%, so the third time will be caught by a machine.
+
 - [x] ~~The people are capsules.~~ DONE - `AgentBody`, 365 of them, bought and animated, and NO
   TWO ALIKE. The pack has about twenty figures in register for an ordinary town against a
   population of 365, so the variety is not in the prefabs: `Universal_A_Alb` is a labelled SWATCH
   GRID - 4096 square and 428KB, which is the compression signature of flat colour blocks - where
-  each row is a role (primary, secondary, tertiary, hair, skin, hide) and each row is a ramp of
-  shades. A coat colour is a UV coordinate, not a texture. Measured: `Man_Slavic_Summer_Hair` puts
-  2,841 vertices on 27 cells across 10 roles. Each person's mesh is cloned and every vertex nudged
-  ALONG its own row, never across it - which is what makes it safe without knowing which row is
-  which, because skin stays in the skin ramp and hair in the hair ramp. Hue variation needs the
-  rows mapped first and is a later job; shade alone is plenty.
+  each row is a role (primary, secondary, tertiary, hair, skin, hide). **The grid is 32 x 32 cells
+  of 128px, measured 2026-08-09**, and a row is not a ramp all the way across: columns 0-19 are the
+  role's twenty-step ramp, 20-29 are one flat colour repeated, 30 is the emission key (the only
+  non-black column in `Universal_A_Emit.png`) and 31 is an accent. A coat colour is a UV coordinate,
+  not a texture. Measured: `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 cells across 10 roles.
+  Each person's mesh is cloned and every vertex nudged ALONG its own row, never across it - which is
+  what makes it safe without knowing which row is which, because skin stays in the skin ramp and
+  hair in the hair ramp. **What it does NOT make safe is wrapping**: a shift that runs past column 19
+  leaves the ramp for the flat block or the emission key, so the shift is bounded, not a modulo.
+  Hue variation needs the rows mapped first and is a later job; shade alone is plenty.
 
   `Citizen.Male` now exists. `PopulationGenerator` always decided it, to pick which forename list
   to draw from, and then THREW IT AWAY - so nothing downstream could tell a Margaret from a
@@ -679,7 +932,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [x] ~~`-quit` and `-runTests` MUST NOT be combined~~ FIXED: `Assets/Noir/Editor/TestInvocationGuard.cs` now catches the combination in batchmode and exits 1 with a clear error instead of letting Unity exit 0 silently. CONFIRMED by direct reproduction: the raw combo logs "Batchmode quit successfully invoked" before any test callback fires and writes no results file (exit 0); with the guard it now exits 1 before that race even starts; the correct invocation (no `-quit`) is untouched — reran the PlayMode suite and got 7/7 passing. Root cause: `-quit` and the test runner's start-up both hang off `EditorApplication.update`, and `-quit` wins the race. — *2026-07-30*
 
-- [ ] **Two Core tests are failing and were already failing.** `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` (wants a ratio >= 2.0) and `TheTenthPercentileIsNotALock` (wants >= 1.0). Found while running the gate for the district work; CONFIRMED pre-existing by stashing that work and running them at HEAD, where they fail identically, so nothing above caused them. 163 of 165 pass. Not investigated - they are about the 2:1 texture-to-use instrument, which is a different subsystem from anything being touched here. Note also that a full Debug `dotnet test` takes 7m41s against 30s in Release, and there is a crashdump under `tools/Noir.Core.Tests/TestResults/` from an earlier run - see the CPU-instability note before blaming code for anything intermittent. — *2026-07-31*
+- [x] **Two Core tests are failing and were already failing.** `TwoToOneTests.TheMedianVillagerYieldsTwiceAsMuchTextureAsUse` (wants a ratio >= 2.0) and `TheTenthPercentileIsNotALock` (wants >= 1.0). Found while running the gate for the district work; CONFIRMED pre-existing by stashing that work and running them at HEAD, where they fail identically, so nothing above caused them. 163 of 165 pass. Not investigated - they are about the 2:1 texture-to-use instrument, which is a different subsystem from anything being touched here. Note also that a full Debug `dotnet test` takes 7m41s against 30s in Release, and there is a crashdump under `tools/Noir.Core.Tests/TestResults/` from an earlier run - see the CPU-instability note before blaming code for anything intermittent. — *2026-07-31*
 
 - [x] ~~`MapAudit` reports faults with `Debug.LogError` and then exits 0 REGARDLESS~~ ALREADY
   FIXED by the time Stream 4 (performance) checked it on 2026-08-02 - nobody had come back to
@@ -689,7 +942,7 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   the current file rather than assuming the note was still true - it wasn't. — *2026-07-31,
   closed 2026-08-02*
 
-- [ ] **The documented PlayMode command now hangs, and it is LLMUnity's tests, not ours.**
+- [x] **The documented PlayMode command now hangs, and it is LLMUnity's tests, not ours.**
   `-runTests -testPlatform PlayMode` with no filter discovers `LLMUnityTests.TestLLM`, whose
   constructor calls `LLMManager.DownloadModel` - so the run sits there trying to pull a language
   model off the network instead of testing the town, and never reaches a result file. It came in
@@ -701,13 +954,51 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [ ] Lift the Crafting System's UGUI inventory UI — drag-drop slots, transfer, tabs — rather than writing one. Tedious to build, and presentation belongs in Unity anyway. — *2026-07-30*
 - [ ] Evidence catalogue as `Content/items.txt` in the shape of `kinds.txt`, read by Core. NOT the Crafting System's ScriptableObjects: content authored in an editor window is content `MapAudit` and the PlayMode tests cannot see. — *2026-07-30*
-- [ ] A layered visibility toggle system for the town view: independently switch off/on trees, buildings, and other dressing layers, graduating all the way down to the bare black survey-plan layout (roads + lot boundaries only), and a single control to restore everything back to full detail at once. — *2026-08-02*
+- [x] A layered visibility toggle system for the town view: independently switch off/on trees, buildings, and other dressing layers, graduating all the way down to the bare black survey-plan layout (roads + lot boundaries only), and a single control to restore everything back to full detail at once. — *2026-08-02*
 
 ## Ad hoc
 
+- [ ] **`CityCollision` IS BUILT ONCE AND THE WALLS IT NEEDS ARE BUILT LAZILY, SO THE TOWN CAN END
+  UP WITH NO SURFACE AT ALL.** Caught in a live editor 2026-08-11, in the log, in this order:
+
+  ```
+  line 2265: [collision] 1 ground mesh, 24 bought-building boxes and 0 generated wall chunk(s)
+  line 2758: Walls: 10699 runs, 213,980 vertices, 342 chunk meshes.
+  ```
+
+  `VillageHost:626` calls `CityCollision.Build` once. `VillageMesh:83` registers `BuildMassing` —
+  which is `BuildWalls` + `RoofBuilder` + `Frontage` — as `Layers.RegisterLazy(Kind.Massing, …)`.
+  So with `Massing` off at build time, `SolidifyGeneratedWalls` searches for a `"Walls"` node that
+  does not exist yet, adds nothing, and **nothing re-runs it when the walls do appear.** The houses
+  are drawn and you walk through every one of them for the rest of the session.
+
+  It is audible — `[collision] no generated Walls node - the houses have no surface and the player
+  will walk through them` — and that is exactly the line `CityCollision`'s own docstring says
+  nobody read the first time.
+
+  **Two fixes, and the second is the one that would have prevented this.**
+  1. Re-run `SolidifyGeneratedWalls` from the lazy `Massing` build, or make collision lazy on the
+     same switch. A surface that depends on a layer being on is a surface that is sometimes absent.
+  2. **RENAME `Layers.Kind.Massing`.** It reads as a survey overlay next to `Plan`, `Footprints`
+     and `Labels`, and it is the opposite: it is the walls, roofs, doors and shopfronts — the built
+     town. It was switched off on 2026-08-10 by somebody who read the four names together and took
+     it for a diagram, which is how this was found. `Buildings` or `TheBuiltTown` says what it is.
+
 ## Roads
 
-- [ ] **Chicago Street's 30 m corridor runs through 47 buildings** — measured against building
+- [x] ✅ **CLOSED 2026-08-11 BY RE-MEASUREMENT — the corridor is 10 m now, and it hits ONE building.**
+  `Content/roads.txt` declares `road chicago 10` with `easement 13.4`, not the 30 m this item was
+  written against. Sampled every 4 m along the authored centreline, across the full corridor width
+  at 1 m lateral steps, against all 824 footprints in `parcel-buildings.txt`:
+  | corridor | carriageway points on a building | distinct buildings |
+  |---|---|---|
+  | **10 m, as declared today** | **1 of 6,908** | **1** |
+  | 30 m, as this item assumed | 273 of 19,468 | 6 |
+  ⚠ **The old 47 does not reproduce even at 30 m** — I get 6. So the centreline moved as well as the
+  width, and the original figure cannot be checked against today's file. The number that matters is
+  the first row. *Original entry follows for its reasoning.*
+
+  **Chicago Street's 30 m corridor runs through 47 buildings** — measured against building
   footprints (not the county parcels, which include the right of way and tile through every
   street, so they judge nothing). 415 samples of carriageway sit on a building: the Opera House,
   the Rossville bank, the village office, the G.A.R. and I.O.O.F. halls, the grain office,
@@ -718,7 +1009,33 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   in the 30 m width (lane counts, corridor coverage, `EvenWidthCentresOnTheDeclaredCoordinate`),
   not just their fixtures. Attempted 2026-08-03 and reverted rather than leave the suite red;
   it is a scoped job of its own. — *2026-08-03*
-- [ ] **The CSX line is drawn ~32 m off its own right-of-way, in town.** The owner confirmed the
+- [x] ✅ **CLOSED 2026-08-11 — THE RAIL WAS ALREADY FIXED, ON 2026-08-04.** `features.txt`'s own
+  header records it: *"CENTRED IN THE RIGHT OF WAY"*, as a resampled centreline rather than nudged
+  vertices, with the offset averaged over 150 m and smoothstepped over 350 m at each end so the
+  shape stayed right as well as the position — worst turn 4.7° against 17° before.
+
+  Re-measured 2026-08-11, sampling every 8 m through the platted town (y 600–1500):
+  **157 of 163 in-town samples — 96.3% — sit on the railroad's OWN land, parcels 779, 781 and 785.**
+  Six clip parcel 40, which is ~48 m of a 2 km run and the only residual.
+
+  > ⚠ **THIS ITEM WAS FIRST "CONFIRMED, WORSE THAN WRITTEN" ON THE SAME DAY, AND THAT WAS WRONG.**
+  > The measurement asked *"is the rail inside somebody's parcel"*, got 100%, and was checked
+  > against road centrelines that came back 0–12.6% — which looked like a damning control and was
+  > not a control at all. `features.txt` says why, four lines above the coordinates:
+  >
+  > *"A STREET right of way is a GAP in the parcels because nobody owns it; a RAILROAD right of way
+  > is a PARCEL, because the railroad bought it."*
+  >
+  > Roads and railroads have **opposite correct answers**, so comparing them measures nothing. A
+  > correctly-placed railroad is inside a parcel 100% of the time. The real question is *which*
+  > parcel — and the answer had been right for a week.
+  >
+  > A second error hid the first: parcel ids are **0-based** (`parcel-county.txt` opens at
+  > `parcel 0`), and printing them 1-based turned "779, 781, 785 — exactly the railroad's land"
+  > into "780, 782, 786 — not the railroad's land". Both are fixed in
+  > `tools/measure-corridors.py`, which now asks the right question and says so in its own comment.
+
+  *Original entry follows.* The owner confirmed the
   lots stop short of the track, and the parcel data shows it: through the platted town there is a
   consistent 18.5–25.5 m corridor (61–84 ft, a standard railroad ROW) lying about 32 m to one side
   of where `features.txt` puts the rail. Measured at (1294,1340) −35.3 m, (1277,1315) −34.6,
@@ -727,3 +1044,55 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   spurs exist and those run through parcelled ground as they should. Fixing it means shifting the
   `rail` polyline in `features.txt`, which also moves the ballast, the four level crossings and
   anything referencing them — so it goes with the road refit, not before it. — *2026-08-04*
+
+- **The doorhead stops a hand's width shy of the roof, and head-on that is a slit of sky.** Over
+  every front door the panel filling the storey (`Frontage.Doorway`'s `doorhead`) tops out just
+  under the eaves line its flanking wall runs reach — likely the threshold-vs-`GroundUnder` base
+  mismatch in its `f.On` height. A metre of wall reveal used to swallow the gap in shadow; at the
+  real seven inches (2026-08-11) it reads as a small sky notch when you stand square to the door,
+  in `docs/snapshots/interior-street-front.png`. Cosmetic, close-range only. — *2026-08-11*
+
+- **Unit 30's campus grounds are bare grass and should not stay that way.** The four seeded
+  houses came off the school block on the owner's ruling (2026-08-11, in `city.txt` beside the
+  removal) and the block is mown campus for now. What a 1991 Rossville-Alvin High School block
+  actually carries - ball diamond, track, parking apron off Chicago, bike racks, backstop - is
+  his memory to draw from, in daylight, with the browser map open. The `playground` kind and
+  `CityParking` both exist to build from. — *2026-08-11*
+
+- **The survey seating pass does not obey parcel rulings, and Unit 30 proved it.** Lot 590 -
+  the high school's whole super-parcel, ruled `kind school` - happily took seeded dwellings,
+  and deleting one slid the next declaration westward into its slot (105 E Benton, declared
+  at 826, re-seated to 805 the moment 103's ground freed). The fix is refusal at the source:
+  no dwelling may seat on a parcel whose ruling kind is not a home, refusals print loudly by
+  name, and SmokeTest fails on any dwelling standing on non-dwelling-ruled ground. — *2026-08-11*
+
+- **The school bus left with the prefab.** The kind-vehicle table (school bus, fire truck,
+  ambulance) spawns inside the bought-building flow, so a landmark that GENERATES gets no
+  vehicle. Unit 30 generates now and its bus is gone. Spawn kind-vehicles for every landmark
+  place, bought or generated. — *2026-08-11*
+
+- **SchoolMassing: two storeys behind a flat parapet, ruled - and the wings are SeatOnSurvey's
+  own step two.** The owner confirmed the 1991 silhouette the night the school swapped west
+  (2026-08-12): tall brick, built-up flat roof, parapet line. Raise the eaves to a second
+  storey (~7.3 m) and swap the hip for RoofForm.Flat in SchoolMassing. The L-complex outline
+  CANNOT be three places - SeatOnSurvey deals places onto measured structures biggest-first,
+  and it flung the declared south wing onto a 342 m2 outbuilding a hundred metres off - it is
+  the outline work SeatOnSurvey.cs names in its own header: walls from the real polygon in
+  parcel-buildings.txt, a VillageMesh change. Also on parcel 641 for a later session:
+  "206 North Chicago Street", a real commercial address standing on school ground. — *2026-08-12*
+
+- **A shaped place's wall-tile skip decision samples one tile per run, not truly per tile.**
+  `VillageMesh.BuildWalls` now draws a shaped place's exterior from its own `Outline` polygon
+  (`DrawShapedPerimeters`) and tells the old tile-run walker to leave those tiles alone, keyed off
+  `world.Grid.PlaceAt` sampled at each run's start tile (`Assets/Noir/Unity/VillageMesh.cs`, the
+  classification block in `BuildWalls`) — accurate for the run's start tile, but a run's own extent
+  is still decided by the OLD `owner[]` bounding-box array, which can be uniform across tiles that
+  cross a true outline boundary. If a freestanding wall (a churchyard or garden fence owned by no
+  place) ever runs collinear and tile-adjacent to a shaped building close enough that both fall in
+  that building's bounding box, the whole run could be misattributed one way or the other - either
+  dropping the fence's segment or double-drawing the shaped place's own wall over a stale tile box.
+  Not live today: this session measured Rossville's current built town has ZERO wall tiles with no
+  owning place at all, which is the scenario's precondition. Revisit if a future ruling in the
+  browser map ever puts a freestanding fence hard against a shaped building's real footprint - the
+  fix is genuine per-tile `PlaceAt` sampling (or re-splitting a run wherever `PlaceAt` changes)
+  instead of one sample standing in for the whole run. — *2026-08-13*

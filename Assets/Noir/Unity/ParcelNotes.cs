@@ -456,9 +456,21 @@ namespace Noir.Unity
             _people = new Dictionary<int, Person>();
             _nextPersonId = 1;
 
+            // THE AUTHOR'S OWN NOTES, and this is the class of silence that has already cost this
+            // project a day: CLAUDE.md records parcel-1991.txt carrying 359 rulings with NO READER
+            // AT ALL, which looked exactly like a run where the file was read and said nothing. An
+            // absent notes file is ordinary on a fresh clone; a notes file that EXISTS and fails
+            // to read is data loss, and both used to return here identically.
             string text;
             try { text = ContentLoader.Read("parcel-notes.txt"); }
-            catch { return; }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning("[notes] parcel-notes.txt did not load, so NONE OF "
+                    + "THE AUTHOR'S NOTES ARE IN THIS TOWN. If the file is simply absent this is "
+                    + "the ordinary fresh-clone state; if it is there, this is data loss. "
+                    + ex.Message);
+                return;
+            }
 
             foreach (var raw in text.Split('\n'))
             {

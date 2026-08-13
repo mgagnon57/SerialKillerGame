@@ -38,7 +38,7 @@ namespace Noir.Unity
     /// So the state is shown by lighting the pack's own lamps - one lit, two dark, which is what
     /// a signal is and is something a single sphere could never show. The earlier conclusion
     /// that the glass could not be driven came from tinting the SHARED material, which is the
-    /// same glass every window in Northgate uses; the fix is a material of our own in the three
+    /// same glass every window in Rossville uses; the fix is a material of our own in the three
     /// lens slots, not a different prefab.
     ///
     /// Built OUTSIDE the node CityChunker bakes: a combined mesh cannot change colour.
@@ -48,7 +48,13 @@ namespace Noir.Unity
         /// <summary>Seconds. A green long enough to clear a queue, an amber long enough to see.</summary>
         private const float Green = 14f, Amber = 3f, AllRed = 1f;
 
-        private static float Cycle => (Green + Amber + AllRed) * 2f;
+        /// <summary>
+        /// Seconds for both arms to have their turn. PUBLIC BECAUSE A TEST WAS HARDCODING IT AND
+        /// GOT IT WRONG: TrafficPlayTests carried `const float Cycle = 37f` with the comment
+        /// "CitySignals' own cycle length", and it has been 36.0s since the day these numbers were
+        /// chosen. A gate one second looser than the thing it claims to measure is not a gate.
+        /// </summary>
+        public static float Cycle => (Green + Amber + AllRed) * 2f;
 
         /// <summary>
         /// How the traffic on the two arms of a junction is separated.
@@ -235,21 +241,31 @@ namespace Noir.Unity
         /// is a comparison rather than a table, and it gets the case that actually matters right
         /// on its own: the dirt track to the big barn gives way to the road it joins.
         ///
-        /// Where the two are the same class there is no honest answer, so the tie goes to the
-        /// east-west road and the north-south arms carry the stop signs. It is arbitrary, but it
-        /// is arbitrary ON THE MAP as well as in here - CitySigns reads this same answer, so
-        /// what the junction does and what the junction says can never drift apart.
+        /// THE RULE ITSELF IS IN CORE NOW - `JunctionPriority.GiveWayIsNorthSouth` - because it
+        /// is a statement about the map rather than about Unity, and `dotnet test` structurally
+        /// cannot compile this file. `CitySigns` reads this same answer, so what the junction
+        /// does and what the junction says can never drift apart.
         /// </summary>
         /// <remarks>
-        /// CARRIES, NOT CLASS. Which road runs through is about what the roads DO, and on the
-        /// surveyed network no road is paved to a main road's corridor - Attica is a county
-        /// highway on a village street's right of way. Comparing the corridor made every road in
-        /// town equal, so the tie below fired at all 64 junctions at once and every north-south
-        /// arm in Rossville gave way permanently to an east-west stream that never yielded back.
-        /// Measured: nine tenths of stopped vehicles waited 119.9 s with clear road ahead.
+        /// CARRIES, NOT CLASS, and then the county's counts. Which road runs through is about
+        /// what the roads DO, and on the surveyed network no road is paved to a main road's
+        /// corridor - Attica is a county highway on a village street's right of way. Comparing
+        /// the corridor made every road in town equal, so the tie fired at all 64 junctions at
+        /// once and every north-south arm in Rossville gave way permanently to an east-west
+        /// stream that never yielded back. Measured: nine tenths of stopped vehicles waited
+        /// 119.9 s with clear road ahead.
+        ///
+        /// ROAD-FIXES CONS-3 finished the job. `Carries` alone still left 51 of the 122 junctions
+        /// with two named arms handed to the east-west road by nothing but a compass direction.
+        /// The county counts twelve of Rossville's streets by name and settles 32 of those 51;
+        /// the last 19 go to the LONGER road, which is a property of the road rather than of the
+        /// junction, so a through street keeps priority for its whole length instead of picking
+        /// up a stop sign at every other corner. 69/53 became 44/78, and no road the county
+        /// counts as busier gives way to one it counts as quieter - gated by
+        /// `StopSignsLandOnBothAxesTests`.
         /// </remarks>
         public static bool GiveWayAxisOf(Junction j) =>
-            j.NorthSouth.Carries <= j.EastWest.Carries;  // true: north-south gives way
+            JunctionPriority.GiveWayIsNorthSouth(j);       // true: north-south gives way
 
 #if UNITY_EDITOR
         private void Erect(WorldModel world)
@@ -349,6 +365,26 @@ namespace Noir.Unity
                         float hx = j.X + travel.x * beyond + kerb.x * side;
                         float hy = j.Y + travel.y * beyond + kerb.y * side;
 
+                        // AND THEN ACTUALLY ON THE KERB. `side` is j.Reach - 2.5, a guess in
+                        // metres that never knew how wide the carriageway beneath it was, so at
+                        // Chicago x Attica - the town centre, and the one junction anybody looks
+                        // at - THREE OF THE FOUR MASTS STOOD IN THE ROAD. Stepping out to the
+                        // nearest tile that is not carriageway only ever pushes the mast further
+                        // from the centre line, so the arm still reaches back over the junction
+                        // exactly as the comment above requires.
+                        // Tile indices out, and back to the tile's CENTRE - Mount places the
+                        // mast at (vx, -vy) with no half-tile of its own, so handing it a corner
+                        // would stand the post on the tile boundary.
+                        //
+                        // OUT ALONG ITS OWN KERB, never to whatever is nearest. The mast sits
+                        // only `side` metres off the centre line, so the closest ground clear of
+                        // the carriageway is as often the OPPOSITE kerb - and the arm is rigid
+                        // with the head, so a mast that changes kerbs reaches its arm over the
+                        // wrong lane and shows its lenses to nobody. That is exactly what the
+                        // undirected form did to one of these four on 2026-08-11.
+                        if (Kerb.TryStepOff(world, hx, hy, kerb, out int kx, out int ky))
+                        { hx = kx + 0.5f; hy = ky + 0.5f; }
+
                         var head = Mount(post, lensMaterial, hx, hy, travel, northSouth);
                         if (head != null) { node.Heads.Add(head); heads++; }
                     }
@@ -361,10 +397,28 @@ namespace Noir.Unity
             // taken of the city shows four junctions of blank white bulbs.
             Refresh();
 
+            // WHERE THE MASTS ARE ACTUALLY STANDING, counted every build.
+            //
+            // There is no test that can see this: the PlayMode gate builds the SURVEY PLAN, and
+            // CityUnderTest's own log says a green run "has never seen the streets, the parking
+            // or the signs". A test asserting on masts would find none and pass, which is worse
+            // than no test. So it is a greppable line instead, like [lots] and [walks] - and the
+            // healthy value is 0. On 2026-08-11 it was THREE OF FOUR at Chicago x Attica, the
+            // town centre, which the owner saw immediately by looking at it and no gate ever did.
+            int inRoad = 0;
+            foreach (Transform child in transform)
+            {
+                var t = Space3D.TileAt(child.position);
+                if (world.Grid.InBounds(t.X, t.Y)
+                    && (world.Grid.FlagsAt(t.X, t.Y) & TileFlags.Road) != 0) inRoad++;
+            }
+
             Debug.Log($"[signals] {_nodes.Count} junctions: {signalised} signalised in the town "
                     + $"({heads} heads), {_nodes.Count - signalised} on priority out in the "
                     + $"country. {Green:0}s green / {Amber:0}s amber / {AllRed:0.0}s all-red "
-                    + $"({Cycle:0.0}s cycle), all in step.");
+                    + $"({Cycle:0.0}s cycle), all in step. "
+                    + (inRoad == 0 ? "Every mast is on the kerb."
+                                   : $"*** {inRoad} MAST(S) STANDING IN THE CARRIAGEWAY ***"));
         }
 
         /// <summary>
@@ -444,7 +498,7 @@ namespace Noir.Unity
 
             // Our own unlit material in the three lens slots. The pack's glass is a shared
             // material used by every window in the city, so tinting it in place would turn every
-            // pane in Northgate red - which is how the first attempt at this concluded, wrongly,
+            // pane in Rossville red - which is how the first attempt at this concluded, wrongly,
             // that the lenses could not be driven at all.
             for (int i = 0; i < 3; i++)
                 slots[i == 0 ? head.Red : i == 1 ? head.Amber : head.Green] = lensMaterial;

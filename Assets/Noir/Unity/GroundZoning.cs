@@ -108,6 +108,44 @@ namespace Noir.Unity
             return CountyRecord.For(id)?.Zoning ?? ParcelNotes.Zoning.Unset;
         }
 
+        /// <summary>
+        /// WHICH PROPERTY A TILE STANDS ON, or -1 for public ground. Exposed for LotsFromSurvey,
+        /// which stamps it into the grid so the pathfinder can tell a yard from a field.
+        ///
+        /// The PROPERTY and not the parcel, through the same <c>Rulings.SpokesmanFor</c> redirect
+        /// ZoningAt uses one screen up: the grade school stands on three lots, and a walker who
+        /// paid to cross the school field would pay again at every internal lot line. One
+        /// property, one piece of ground somebody is or is not entitled to be on.
+        ///
+        /// Reuses the index EnsureGrid already builds rather than rasterising the parcels a
+        /// second time - the naive order here is 5,040,000 tiles against 776 polygons, which is
+        /// the billions of tests that comment was written about.
+        /// </summary>
+        public static int PropertyAt(WorldModel world, int gx, int gy)
+        {
+            EnsureGrid(world);
+            if (gx < 0 || gy < 0 || gx >= _gridW || gy >= _gridH) return -1;
+            short pid = _parcelAt[gy * _gridW + gx];
+            return pid < 0 ? -1 : Rulings.SpokesmanFor(pid);
+        }
+
+        /// <summary>
+        /// Is this property the county's farmland? Asked by LotsFromSurvey, which exempts it from
+        /// trespass - see that file's header for the measurement behind the decision.
+        ///
+        /// Takes a property id already resolved through <c>Rulings.SpokesmanFor</c>, which is what
+        /// <see cref="PropertyAt"/> hands back, and applies the same author-overrules-the-county
+        /// rule as ZoningAt above.
+        /// </summary>
+        public static bool IsFarmland(int propertyId)
+        {
+            var note = ParcelNotes.For(propertyId);
+            if (note != null && note.Zoning != ParcelNotes.Zoning.Unset)
+                return note.Zoning == ParcelNotes.Zoning.Agricultural;
+
+            return CountyRecord.For(propertyId)?.Zoning == ParcelNotes.Zoning.Agricultural;
+        }
+
         /// <summary>Zoning only, no slope test - what a riser's higher side should match, since
         /// SubmeshAt never has that tile's own corner heights to hand. See LookAt for the full
         /// version the flat ground itself uses.</summary>

@@ -572,7 +572,7 @@ namespace Noir.Unity
         {
             switch (kind)
             {
-                case "shop": case "pub": case "postoffice": case "diner": case "bank":
+                case "shop": case "tavern": case "postoffice": case "diner": case "bank":
                 case "casino": case "cinema": case "newsstand": case "icecream":
                 case "gasstation": case "carwash":
                     return new Color(1.00f, 0.72f, 0.20f);      // trade - amber
@@ -582,7 +582,7 @@ namespace Noir.Unity
                     return new Color(0.76f, 0.55f, 1.00f);      // civic - violet, so roads keep cyan
 
                 case "cornfield": case "paddock": case "orchard": case "copse":
-                case "green": case "playground": case "allotments": case "churchyard":
+                case "green": case "playground": case "gardens": case "churchyard":
                     return new Color(0.45f, 0.85f, 0.45f);      // land - green
             }
 

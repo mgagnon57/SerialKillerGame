@@ -449,7 +449,7 @@ namespace Noir.Unity
                 sb.AppendLine("   none. Nothing stalled for a tenth of a second in the whole run.");
             else
             {
-                sb.AppendLine("   frame       ms   ticks   sim.ms  refresh.ms   rig.ms   "
+                sb.AppendLine("   frame       ms   ticks   sim.ms  refresh.ms  camera.ms   "
                               + "A*nodes  paths   ns/node  clock  phase");
                 int gcSpikes = 0, unfocused = 0, editorBusy = 0;
                 foreach (var s in _spikes)

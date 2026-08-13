@@ -85,7 +85,8 @@ namespace Noir.Editor
 
                     foreach (var line in world.Roads.Lines)
                     {
-                        if (!line.IsStraight) continue;
+                        // NO IsStraight GUARD. See Gap/Overlaps - they walk the centre line now,
+                        // so a road that bends is judged instead of skipped.
                         if (!Overlaps(place.Bounds, line, out float bite)) continue;
                         over.Add($"'{place.Name}' ({row.Name}) at {place.Bounds} "
                                + $"lies {bite:0}m into {line.Name}"
@@ -111,16 +112,42 @@ namespace Noir.Editor
                 }
                 faults += Say("places overlapping each other", clashes);
 
-                // ---- 4. a building with no model ---------------------------------------
-                var modelless = new List<string>();
+                // ---- 4. a building NOTHING can draw, which is not the same as no bought model
+                //
+                // THIS COUNTED 658 OF THE TOWN'S 776 PLACES AS A FAULT, so the audit's verdict was
+                // permanently non-zero and the two REAL faults beside it were buried in a list
+                // nobody was ever going to read. It asked `CityBuildings.Handles`, which answers
+                // "is there a BOUGHT MODEL for this" - and the answer is no for almost everything,
+                // BY DESIGN. CLAUDE.md: the pack holds two house families and both are Chicago
+                // brownstones, so "until there is a kit that can build an Illinois frame house,
+                // the town draws its FOOTPRINTS instead". The generated massing builds all 672 of
+                // them and SmokeTest counts them doing it.
+                //
+                // A gate that is red on the intended design teaches you to skim, and that is the
+                // exact failure CLAUDE.md records for the two permanent reds in the Core suite:
+                // "Two permanent reds make a THIRD red easy to miss."
+                //
+                // The honest question is whether ANYTHING can draw it. A building is drawable if a
+                // massing grammar answers to its kind - which is what actually puts walls up - and
+                // `MassingGrammars.Knows` is the same check SmokeTest's kinds gate uses, so the
+                // two cannot drift apart.
+                var undrawable = new List<string>();
+                int bought = 0;
                 foreach (var place in world.AllPlaces)
                 {
                     var row = kinds.Row(place.Kind);
                     if (!row.IsBuilding) continue;
-                    if (!CityBuildings.Handles(place))
-                        modelless.Add($"'{place.Name}' is a {row.Name}, which no renderer places");
+
+                    if (CityBuildings.Handles(place)) { bought++; continue; }
+
+                    if (!MassingGrammars.Knows(row.Massing))
+                        undrawable.Add($"'{place.Name}' is a {row.Name} with massing "
+                                     + $"'{row.Massing}', which no grammar answers to - it will "
+                                     + "fall back to the cottage and look like a house");
                 }
-                faults += Say("buildings nothing knows how to build", modelless);
+                Say2($"{bought} buildings come from a bought model; the rest are drawn from their "
+                   + "own massing, which is the town this project builds");
+                faults += Say("buildings NOTHING can draw", undrawable);
 
                 // ---- 5. anything off the edge of the world -----------------------------
                 var outside = new List<string>();
@@ -145,10 +172,7 @@ namespace Noir.Editor
 
                     float nearest = float.MaxValue;
                     foreach (var line in world.Roads.Lines)
-                    {
-                        if (!line.IsStraight) continue;
                         nearest = Math.Min(nearest, Gap(place.Bounds, line));
-                    }
 
                     if (nearest > 4f)
                         landlocked.Add($"'{place.Name}' at {place.Bounds} is {nearest:0}m from "
@@ -161,29 +185,64 @@ namespace Noir.Editor
                 // A junction forms only where one road's centre falls INSIDE the other's declared
                 // run. A road stopping one metre short crosses the other with no crossing between
                 // them - which has happened once already, and is invisible until traffic runs.
+                // NEITHER STRAIGHT NOR AXIS-CROSSED ANY MORE. This asked its question entirely in
+                // scalars - `ns.Centre` against `ew.From`/`ew.To` - which needs both roads to be
+                // axis-aligned bars, and then took only north-south against east-west pairs. Both
+                // conditions describe the model as it was before the survey. The axis one in
+                // particular is the exact filter JUNC-2 removed from RoadNetwork, and it was the
+                // filter that let an alley run into Benton with no junction and cars drive out
+                // through the traffic: the check that should have caught it could not see it
+                // either, because it was written from the same assumption as the bug.
+                //
+                // Walked instead: where two centre lines come within their own half-widths of
+                // each other, there has to be a junction near that spot.
                 var missed = new List<string>();
-                foreach (var ns in world.Roads.Lines)
-                foreach (var ew in world.Roads.Lines)
+                for (int a = 0; a < world.Roads.Lines.Count; a++)
+                for (int b = a + 1; b < world.Roads.Lines.Count; b++)
                 {
-                    if (!ns.IsStraight || !ew.IsStraight) continue;
-                    if (!ns.IsNorthSouth || ew.IsNorthSouth) continue;
+                    var one = world.Roads.Lines[a];
+                    var two = world.Roads.Lines[b];
+                    if (one?.Path == null || two?.Path == null) continue;
 
-                    // Their corridors physically overlap...
-                    bool touches = Math.Abs(ns.Centre - ew.From) < ns.HalfWidth + ew.HalfWidth
-                                || Math.Abs(ns.Centre - ew.To) < ns.HalfWidth + ew.HalfWidth
-                                || (ns.Centre > ew.From && ns.Centre < ew.To);
-                    if (!touches) continue;
-                    if (ew.Centre < ns.From - ns.HalfWidth || ew.Centre > ns.To + ns.HalfWidth) continue;
+                    float touching = one.HalfWidth + two.HalfWidth;
 
-                    // ...but no junction was made.
+                    // Cheap reject first: this is O(roads squared) over 68 roads and each pair
+                    // would otherwise walk two centre lines a metre at a time.
+                    if (one.Path.MinX - touching > two.Path.MaxX || two.Path.MinX - touching > one.Path.MaxX
+                     || one.Path.MinY - touching > two.Path.MaxY || two.Path.MinY - touching > one.Path.MaxY)
+                        continue;
+
+                    float closest = float.MaxValue;
+                    float atX = 0f, atY = 0f;
+                    foreach (var p in Walk(one))
+                    {
+                        var (s, lateral) = two.Path.Project(p);
+                        float d = lateral < 0f ? -lateral : lateral;
+
+                        // Project clamps, so a point beyond the end of `two` reports the lateral
+                        // at its end rather than the real distance. Measure to the point itself.
+                        var q = two.Path.PointAt(s);
+                        float dx = q.X - p.X, dy = q.Y - p.Y;
+                        d = (float)Math.Sqrt(dx * dx + dy * dy);
+
+                        if (d < closest) { closest = d; atX = p.X; atY = p.Y; }
+                    }
+                    if (closest > touching) continue;
+
+                    // ...but no junction near where they meet. Judged against the reach of the
+                    // junction rather than half a metre: a merged node sits between its arms by
+                    // construction and is not on any one of their centre lines exactly.
                     bool made = false;
                     foreach (var j in world.Roads.Junctions)
-                        if (Math.Abs(j.X - ns.Centre) < 0.5f && Math.Abs(j.Y - ew.Centre) < 0.5f)
+                    {
+                        float dx = j.X - atX, dy = j.Y - atY;
+                        if (dx * dx + dy * dy <= (j.Reach + touching) * (j.Reach + touching))
                         { made = true; break; }
+                    }
 
                     if (!made)
-                        missed.Add($"{ns.Name} and {ew.Name} meet near "
-                                 + $"{ns.Centre},{ew.Centre} with no junction");
+                        missed.Add($"{one.Name} and {two.Name} come within {closest:0.0}m at "
+                                 + $"{atX:0},{atY:0} with no junction");
                 }
                 faults += Say("roads crossing without a junction", missed);
 
@@ -288,39 +347,73 @@ namespace Noir.Editor
         /// Both axes matter: a lot beside the road but two hundred metres past the end of it is
         /// not beside that road at all.
         /// </summary>
+        /// <summary>
+        /// How close a lot comes to a road's corridor, walking the road's own centre line.
+        ///
+        /// THIS FOLLOWED Centre/From/To, AND EVERY CALLER GUARDED `if (!line.IsStraight) continue`.
+        /// A scalar centre and a pair of extents describe an axis-aligned bar and nothing else, so
+        /// the audit could only speak about roads shaped like that - and it dealt with the rest by
+        /// not looking at them. On Content/city.txt that is five roads. On Content/roads.txt,
+        /// which is what the game actually drives on, it is most of them: the audit was reporting
+        /// a clean town while saying nothing at all about the town.
+        ///
+        /// Same idiom as RoadCentrelines and PlanLabels, and for the same stated reason - an
+        /// axis-aligned reading quietly straightens exactly the roads whose shape is in question.
+        /// A straight axis-aligned road's Path IS Centre from From to To, so those answers do not
+        /// move by more than the sample pitch.
+        /// </summary>
         private static float Gap(TileRect lot, RoadLine line)
         {
-            float lo = line.Centre - line.HalfWidth, hi = line.Centre + line.HalfWidth;
-
-            float a = line.IsNorthSouth ? lot.X : lot.Y;
-            float b = a + (line.IsNorthSouth ? lot.W : lot.H);
-            float across = Math.Max(0f, Math.Max(lo - b, a - hi));
-
-            float c = line.IsNorthSouth ? lot.Y : lot.X;
-            float d = c + (line.IsNorthSouth ? lot.H : lot.W);
-            float along = Math.Max(0f, Math.Max(line.From - d, c - line.To));
-
-            return (float)Math.Sqrt(across * across + along * along);
+            float nearest = float.MaxValue;
+            foreach (var p in Walk(line))
+            {
+                float d = ToRect(lot, p.X, p.Y) - line.HalfWidth;
+                if (d < nearest) nearest = d;
+            }
+            return nearest < 0f ? 0f : nearest;
         }
 
         /// <summary>How far a lot reaches into a road's corridor, if at all.</summary>
         private static bool Overlaps(TileRect lot, RoadLine line, out float bite)
         {
             bite = 0f;
-            float lo = line.Centre - line.HalfWidth, hi = line.Centre + line.HalfWidth;
 
-            float a = line.IsNorthSouth ? lot.X : lot.Y;
-            float b = a + (line.IsNorthSouth ? lot.W : lot.H);
-            if (b <= lo || a >= hi) return false;
+            float deepest = 0f;
+            foreach (var p in Walk(line))
+            {
+                float reach = line.HalfWidth - ToRect(lot, p.X, p.Y);
+                if (reach > deepest) deepest = reach;
+            }
 
-            // And it has to be alongside the road, not merely on its line extended.
-            float c = line.IsNorthSouth ? lot.Y : lot.X;
-            float d = c + (line.IsNorthSouth ? lot.H : lot.W);
-            if (d <= line.From || c >= line.To) return false;
-
-            bite = Math.Min(hi, b) - Math.Max(lo, a);
+            bite = deepest;
             return bite > 0.5f;
         }
+
+        /// <summary>
+        /// The road's centre line at one-metre steps, ends included. One metre is RoadPath's own
+        /// resample pitch, so a curve is not being read at a resolution it was not built at.
+        /// </summary>
+        private static IEnumerable<Noir.Core.Contracts.Vec2> Walk(RoadLine line)
+        {
+            if (line?.Path == null) yield break;
+
+            float length = line.Path.Length;
+            for (float s = 0f; s < length; s += 1f) yield return line.Path.PointAt(s);
+            yield return line.Path.PointAt(length);
+        }
+
+        /// <summary>Distance from a point to a lot, 0 inside it.</summary>
+        private static float ToRect(TileRect lot, float px, float py)
+        {
+            float dx = Math.Max(0f, Math.Max(lot.X - px, px - (lot.X + lot.W)));
+            float dy = Math.Max(0f, Math.Max(lot.Y - py, py - (lot.Y + lot.H)));
+            return (float)Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        /// <summary>A plain count, not a verdict. For the numbers worth knowing that are not
+        /// faults - which is most of them, and putting them through Say() is how a gate ends up
+        /// permanently red on the intended design.</summary>
+        private static void Say2(string what) => Debug.Log("[audit] " + what);
 
         private static int Say(string what, List<string> found)
         {

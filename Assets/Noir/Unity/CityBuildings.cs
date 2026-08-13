@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
 using Noir.Core.World;
@@ -11,7 +11,7 @@ namespace Noir.Unity
     /// <summary>
     /// Places bought models on authored lots, instead of generating geometry to fill them.
     ///
-    /// This is the inversion the city is built on. Ashcombe's renderer is given a footprint and
+    /// This is the inversion the city is built on. Rossville's renderer is given a footprint and
     /// invents walls and a roof to match it; here the MODEL came first and the lot in city.txt
     /// was sized from it. A terrace lot is 6 metres because the townhouse module is 6.1 metres,
     /// not the other way round.
@@ -139,7 +139,7 @@ namespace Noir.Unity
                 // WHAT A TOWN OF TWELVE HUNDRED ACTUALLY HAS ITS OWN BUILDING FOR.
                 //
                 // The pack ships a casino, a cinema, a hospital, a police station, a car wash, a
-                // public convenience and a skyscraper, and Northgate used all of them. Rossville
+                // public convenience and a skyscraper, and the retired village used all of them. Rossville
                 // has none: what the 1913 sheet shows at the crossing is a continuous terrace of
                 // one- and two-storey brick shopfronts, and the bank, the drug store and the
                 // motion picture house are UNITS IN THAT TERRACE, not standalone landmarks.
@@ -147,21 +147,22 @@ namespace Noir.Unity
                 // grammars, where `massing shopfront` now means a Main Street block.
                 //
                 // What is left here is the handful of things that really do stand alone on their
-                // own ground in a farm town: the fire house, the school, the water tower, the
-                // grain elevator, the filling station, and the farm buildings.
+                // own ground in a farm town: the fire house, the water tower, the grain
+                // elevator, the filling station, and the farm buildings.
                 string prefab = KindOf(place) switch
                 {
-                    // THIS USED TO KEY ON `school2`, A SECOND KIND that existed so Ashcombe's
-                    // village school would not get the pack's American elementary. The price was
-                    // hidden and much larger than the benefit: a kind the PlaceKind enum has
-                    // never heard of is numbered past it, DayPlanner asks for PlaceKind.School by
-                    // its ENUM MEMBER, and so Rossville's 165 children had no school to be sent
-                    // to. Not one of them ever went, at any hour of any day, and the town read as
-                    // normal because the building was still standing there.
+                    // THE SCHOOL LEFT THIS SWITCH ON 2026-08-11, ruled by the owner off the
+                    // wireframe of its own generated plan: "build your own like the houses."
+                    // School_City is a three-mass city brick and it stood on Unit 30's campus
+                    // like a postcard from the wrong town - while SchoolMassing, the `spine`
+                    // corridor grammar and the `school` frontage sat fully wired beneath it,
+                    // and the classroom run he approved was already carved into the grid of
+                    // every build. Both campuses generate now, the same kind on both sides of
+                    // Chicago Street, for the same reason school2 died: the enum, the day plans
+                    // and the drawing must agree about what a school is.
                     //
-                    // Ashcombe is retired and there is one map, so the two kinds are one kind
-                    // again and this is simply the school.
-                    "school"      => Whole + "School_City.prefab",
+                    // (school2's own lesson stays on kinds.txt line 154: a second kind cost
+                    // Rossville's 165 children their school, and not one of them ever went.)
                     "firestation" => Whole + "Fire_Station_City.prefab",
                     "gasstation"  => Whole + "Gas_Station_City.prefab",
 
@@ -176,7 +177,7 @@ namespace Noir.Unity
                     "elevator"    => BestFit(Land, new[]
                                      { "Silo_Grain_New", "Silo_Grain_Old" }, place.Bounds),
 
-                    // The country. `farm` is the kind Ashcombe already had, so the farmhouse
+                    // The country. `farm` is the kind the old village already had, so the farmhouse
                     // needs no new row in the table - only a model.
                     "farm"        => Land + "House_Farm_British.prefab",
                     "barn"        => BestFit(Land, new[]
@@ -236,7 +237,8 @@ namespace Noir.Unity
         {
             switch (KindOf(place))
             {
-                case "school": case "firestation": case "gasstation":
+                // the school generates with the town's own massing - see the prefab switch
+                case "firestation": case "gasstation":
                 case "watertower": case "elevator":
                 case "farm": case "barn": case "silo":
                     return true;
@@ -335,7 +337,7 @@ namespace Noir.Unity
         /// Market_A..G are seven ground-floor pieces, measured at 6.1 x 6.15 and exactly three
         /// metres tall - the same footprint and the same height as Squarehouse_Bottom - so they
         /// drop straight in underneath an ordinary stack. All seven had been sitting unused,
-        /// which is why every block in Northgate had housing at street level and the downtown
+        /// which is why every block in Rossville had housing at street level and the downtown
         /// read as tall flats rather than as a downtown.
         ///
         /// Only Squarehouse has them, so a market lot is a Squarehouse whatever the lot rolled:
@@ -859,7 +861,7 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// Swap the pack's glazing for Ashcombe's, which is the one thing about these buildings
+        /// Swap the pack's glazing for Rossville's, which is the one thing about these buildings
         /// that does not survive the move.
         ///
         /// M_Universal_Glass comes through as a flat, saturated blue - the same atlas fault the
@@ -872,7 +874,7 @@ namespace Noir.Unity
             // NOTHING. Left as a named no-op because deleting the calls would hide what was
             // learned here.
             //
-            // This used to swap every material named Glass for Ashcombe's WindowGlass, to fix
+            // This used to swap every material named Glass for Rossville's WindowGlass, to fix
             // facades coming through saturated blue. That diagnosis was wrong: the blue was the
             // _F front-only variant UV-ing its hidden flanks onto a marker cell in the atlas,
             // fixed by using _AS everywhere. So the swap was solving nothing and costing a great

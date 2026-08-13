@@ -207,7 +207,7 @@ namespace Noir.Bench
             if (includeReal && RealVillage.Available)
             {
                 var real = RealVillage.Load(seed);
-                grids.Add(("Ashcombe", real.World.Grid));
+                grids.Add(("fixture", real.World.Grid));
             }
 
             foreach (var (w, h) in sizes)

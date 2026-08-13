@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Noir.Core.Contracts;
@@ -68,7 +68,7 @@ namespace Noir.Sim
             {
                 if (place.Name == null) continue;
                 if (place.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) < 0) continue;
-                // Prefer the shortest match, so "mill" finds Ashcombe Mill and not Mill Buildings.
+                // Prefer the shortest match, so "mill" finds the mill and not the mill houses.
                 if (best == null || place.Name.Length < best.Name.Length) best = place;
             }
 
@@ -303,7 +303,7 @@ namespace Noir.Sim
                 case Activity.Visiting: return "visiting";
                 case Activity.Walking: return "out walking";
                 case Activity.AtThePlayground: return "playing out";
-                case Activity.OnTheAllotment: return "on the allotment";
+                case Activity.InTheGarden: return "in the garden";
                 case Activity.Talking: return "stopped to talk";
                 default: return a.ToString();
             }

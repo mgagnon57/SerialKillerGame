@@ -48,18 +48,25 @@ namespace Noir.Core.World
 
     public static class WorldValidator
     {
-        public static ValidationReport Validate(WorldModel world)
-        {
-            var report = new ValidationReport();
-            var grid = world.Grid;
 
-            // --- connectivity: label every walkable region ---
+        /// <summary>
+        /// Every walkable area of the grid, labelled. Eight-way, and DELIBERATELY REFUSING TO CUT
+        /// A DIAGONAL between two blocked corners - a person cannot squeeze between the corners of
+        /// two buildings, so a region joined only that way is not really joined.
+        ///
+        /// Public because <see cref="DoorsThatOpen"/> has to decide whether a door is reachable by
+        /// exactly the rule this validator will judge it by. Two separate implementations of
+        /// "reachable" is how a pass comes to fix something a gate still fails.
+        /// </summary>
+        public static int[] Regions(TileGrid grid, out int regionCount, out int largest,
+                                    out int walkable)
+        {
             var region = new int[grid.Count];
             for (int i = 0; i < region.Length; i++) region[i] = -1;
 
-            int regionCount = 0;
-            int largest = 0;
-            int walkable = 0;
+            regionCount = 0;
+            largest = 0;
+            walkable = 0;
             var queue = new Queue<int>();
 
             for (int start = 0; start < grid.Count; start++)
@@ -101,6 +108,38 @@ namespace Noir.Core.World
                 walkable += size;
                 regionCount++;
             }
+
+            return region;
+        }
+
+        /// <summary>The region everybody shares: the streets. The biggest one, by definition.</summary>
+        public static int MainRegion(TileGrid grid, int[] region)
+        {
+            var sizes = new Dictionary<int, int>();
+            for (int i = 0; i < region.Length; i++)
+            {
+                if (region[i] < 0) continue;
+                sizes.TryGetValue(region[i], out int c);
+                sizes[region[i]] = c + 1;
+            }
+
+            int best = -1, biggest = -1;
+            foreach (var kv in sizes)
+                if (kv.Value > biggest) { biggest = kv.Value; best = kv.Key; }
+            return best;
+        }
+
+        public static ValidationReport Validate(WorldModel world)
+        {
+            var report = new ValidationReport();
+            var grid = world.Grid;
+
+            // --- connectivity: label every walkable region ---
+            //
+            // EXTRACTED so that DoorsThatOpen can ask the same question this asks. A pass that
+            // fixes doors and a gate that fails them have to agree on what "reachable" means, and
+            // the only way to guarantee that is one piece of code.
+            var region = Regions(grid, out int regionCount, out int largest, out int walkable);
 
             report.WalkableTiles = walkable;
             report.LargestRegion = largest;
@@ -158,8 +197,19 @@ namespace Noir.Core.World
 
                 for (int j = i + 1; j < places.Count; j++)
                 {
-                    if (p.Bounds.Overlaps(places[j].Bounds))
-                        report.Errors.Add($"'{p.Name}' {p.Bounds} overlaps '{places[j].Name}' {places[j].Bounds}");
+                    if (!p.Bounds.Overlaps(places[j].Bounds)) continue;
+
+                    // A Place with an Outline may be ROTATED, and a rotated rectangle's own
+                    // bounding box always covers more ground than the rectangle itself - two
+                    // such buildings standing edge to edge on an angled street get boxes that
+                    // overlap even though neither building does. Fall through to Bounds only
+                    // when either side has no Outline to check against - the axis-aligned
+                    // majority of the town, where Bounds already IS the true footprint.
+                    if (p.Outline != null && places[j].Outline != null
+                        && !Polygon.Overlaps(p.Outline, places[j].Outline))
+                        continue;
+
+                    report.Errors.Add($"'{p.Name}' {p.Bounds} overlaps '{places[j].Name}' {places[j].Bounds}");
                 }
 
                 // Dwellings get their character from the household living in them, not from the

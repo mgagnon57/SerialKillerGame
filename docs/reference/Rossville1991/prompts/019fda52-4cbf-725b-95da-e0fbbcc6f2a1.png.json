@@ -1,0 +1,31 @@
+{
+    "asset": "6417ef7ff70822849a24a01ffd3fc87e",
+    "fileName": "019fda52-4cbf-725b-95da-e0fbbcc6f2a1.png",
+    "prompt": "A photograph taken in 1991 of two schools facing each other across a small-town street in east-central Illinois, on a warm September afternoon as school lets out. On the left a two-storey 1920s red brick grade school with tall windows and a stone-framed entrance; opposite it a long low flat-roofed 1960s brick high school with an aluminium-framed glass entrance, a flagpole and a chain-link fence around a playing field. Two yellow school buses at the kerb with engines running, black lettering and stop-arms. Children and teenagers dressed in 1991: acid-wash denim jackets, bright teal and purple windbreakers, high-top trainers, nylon backpacks, big plastic-framed glasses, a couple of mullets. Parents waiting in a 1988 Dodge Caravan minivan and a 1990 Ford Taurus sedan with the smooth aerodynamic rounded body, plus a 1989 Ford F-150 pickup with flush composite headlights. Mature green shade trees, concrete sidewalk, utility poles. Bright clear afternoon light. Shot on Kodak Gold 400 35mm colour negative and printed at a one-hour photo lab: crisp, neutral to slightly cool colour, good contrast, fine grain. IMPORTANT: this is 1991, not the 1970s. No sun-bleached warm vintage cast, no muted earth tones, no boxy 1970s land-yacht cars, no 1960s or 1970s vehicles. Nothing later than 1991: no modern cars, no mobile phones, no flat screens, no LED lighting.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

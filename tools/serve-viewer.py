@@ -292,7 +292,12 @@ def read_places():
                             "dx": float(p[4]), "dy": float(p[5]), "turn": float(p[7])}
                     except ValueError:
                         continue
-    except OSError:
+    except FileNotFoundError:
+        # NOT `except OSError`. A missing file means nobody has moved a building yet, which is a
+        # real state on a fresh clone. An unreadable one - locked, permissions, a bad sector -
+        # must RAISE, because the POST handler reads this, edits it and writes it straight back:
+        # returning {} here rewrites the file from nothing. That is the exact fault read_verdicts
+        # documents as already having destroyed data once.
         pass
     return out
 
@@ -309,12 +314,35 @@ def write_places(places):
         pid, idx = key.split("|")
         lines.append("building %s %s move %+.2f %+.2f turn %+.2f"
                      % (pid, idx, v["dx"], v["dy"], v["turn"]))
+    # THE CLIFF GUARD, as on write_verdicts. Saving one building does not remove most of the
+    # others, so a write that would is a symptom of something upstream having gone wrong - and
+    # the right move is to stop and let somebody look, not to write "probably fine" over the
+    # evidence. These are hand-made adjustments and no script regenerates them.
+    on_disk = _count_lines_starting(PLACES, "building ")
+    if on_disk >= 10 and len(places) < on_disk * 0.9:
+        raise RuntimeError(
+            f"REFUSING TO WRITE {PLACES}: it holds {on_disk} placed buildings and this write "
+            f"would leave {len(places)}. That is a loss of {on_disk - len(places)}, which is not "
+            f"what saving one building looks like. Nothing has been changed on disk.")
+
     body = "\n".join(lines) + "\n"
 
     tmp = PLACES + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(body)
     os.replace(tmp, PLACES)          # atomic: a half-written overlay would lose adjustments
+
+
+def _count_lines_starting(path, prefix):
+    """How many real records the file on disk holds, for the cliff guards.
+
+    Counted from the file rather than from anything in memory, because the whole point is to
+    catch the case where what is in memory is wrong."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return sum(1 for line in fh if line.lstrip().startswith(prefix))
+    except FileNotFoundError:
+        return 0
 
 
 def _places_header():
@@ -414,7 +442,8 @@ def read_walks():
                     out["blocks"][f"{p[1]}|{p[2]}|{p[3]}"] = p[5]
                 elif len(p) == 6 and p[0] == "block" and p[4] == "was" and p[5] in WAS_VALUES:
                     out["wasBlocks"][f"{p[1]}|{p[2]}|{p[3]}"] = p[5]
-    except OSError:
+    except FileNotFoundError:
+        # See read_places. A missing file is a fresh clone; an unreadable one must raise.
         pass
     return out
 
@@ -447,6 +476,17 @@ def write_walks(w):
             if len(bits) == 3 and side in WALK_SIDES:
                 lines.append(f"block {bits[0]} {bits[1]} {bits[2]} walk {side}")
     body = "\n".join(lines) + "\n"
+    # THE CLIFF GUARD, as on write_verdicts and write_places. Every `road` and `block` line here
+    # is a ruling the owner made by hand about a street that existed in 1991 and which side of it
+    # was walked; nothing regenerates them. Saving one street does not remove the others.
+    records = sum(1 for L in lines if L.startswith("road ") or L.startswith("block "))
+    on_disk = _count_lines_starting(WALKS, "road ") + _count_lines_starting(WALKS, "block ")
+    if on_disk >= 10 and records < on_disk * 0.9:
+        raise RuntimeError(
+            f"REFUSING TO WRITE {WALKS}: it holds {on_disk} road and block rulings and this "
+            f"write would leave {records}. That is a loss of {on_disk - records}, which is not "
+            f"what saving one street looks like. Nothing has been changed on disk.")
+
     tmp = WALKS + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(body)

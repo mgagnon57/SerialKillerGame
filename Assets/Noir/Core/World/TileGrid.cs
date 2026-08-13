@@ -3,8 +3,14 @@ using Noir.Core.Contracts;
 
 namespace Noir.Core.World
 {
+    /// <summary>
+    /// WIDENED FROM byte TO ushort 2026-08-11, because all eight bits were spoken for and the
+    /// verge needed one. Nothing casts these to a byte and nothing serialises them — there is no
+    /// save system — so the widening is invisible outside this file. It costs one extra byte on
+    /// each of 5,040,000 tiles, 5 MB, against the ~50 MB this grid already holds.
+    /// </summary>
     [Flags]
-    public enum TileFlags : byte
+    public enum TileFlags : ushort
     {
         None = 0,
         Walkable = 1 << 0,
@@ -33,6 +39,23 @@ namespace Noir.Core.World
         /// anything asking "can I walk here quickly" keeps the answer it had.
         /// </summary>
         Alley = 1 << 7,
+
+        /// <summary>
+        /// THE PUBLIC GROUND BESIDE THE CARRIAGEWAY, and the reason people stop walking down the
+        /// middle of the street.
+        ///
+        /// A Rossville street paves a 10 m corridor down the middle of a 20 m easement, so five
+        /// metres each side is public ground that is NOT road — the county measured the right of
+        /// way, and `Content/roads-1991.txt` names that gap as where a walk went on the streets
+        /// that had one. Until 2026-08-11 those tiles were indistinguishable from open country,
+        /// so the cheapest way along a street was the asphalt itself and everybody walked in the
+        /// road.
+        ///
+        /// It is grass and it renders as grass: this is a bit, not a Terrain, precisely so that
+        /// no renderer, material or texture has to learn a new ground kind to make people walk
+        /// somewhere sensible.
+        /// </summary>
+        Verge = 1 << 8,
     }
 
     public enum Terrain : byte
@@ -75,6 +98,9 @@ namespace Noir.Core.World
         private readonly int[] _placeId;
         private readonly int[] _roomId;
 
+        /// <summary>Whose lot each tile is part of. See <see cref="LotAt"/>.</summary>
+        private readonly int[] _lot;
+
         /// <summary>
         /// The largest id these arrays can hold. Nothing is close to it; the point is that the
         /// ceiling is now a number somebody can be told about rather than one they find out
@@ -92,12 +118,14 @@ namespace Noir.Core.World
             _terrain = new Terrain[n];
             _placeId = new int[n];
             _roomId = new int[n];
+            _lot = new int[n];
             for (int i = 0; i < n; i++)
             {
                 _terrain[i] = Terrain.Grass;
                 _flags[i] = TileFlags.Walkable;
                 _placeId[i] = -1;
                 _roomId[i] = -1;
+                _lot[i] = NoLot;
             }
         }
 
@@ -153,11 +181,46 @@ namespace Noir.Core.World
             if (!InBounds(x, y)) return float.MaxValue;
             var f = _flags[Index(x, y)];
             if ((f & TileFlags.Walkable) == 0) return float.MaxValue;
-            if ((f & TileFlags.Road) != 0) return 1.0f;
-            if ((f & TileFlags.Path) != 0) return 1.05f;
+
+            // THE ORDER IS THE RANKING, AND IT WAS THE OTHER WAY ROUND UNTIL 2026-08-11.
+            //
+            // A road used to be the cheapest ground in town at 1.00 against a footpath's 1.05,
+            // and the enum above called a road "where people walk fastest". So A* did what it was
+            // asked and walked the whole village down the centre of the carriageway. A made walk
+            // now beats the verge, the verge beats the asphalt, and the asphalt is only what you
+            // use to cross the street.
+            if ((f & TileFlags.Path) != 0) return 0.90f;   // a laid sidewalk — best there is
+            if ((f & TileFlags.Verge) != 0) return 0.95f;  // public ground beside the kerb
+            if ((f & TileFlags.Road) != 0) return 1.00f;   // the carriageway itself
             if ((f & TileFlags.Indoor) != 0) return 1.2f;
             if ((f & TileFlags.Rough) != 0) return 1.7f;
-            return 1.3f; // open grass
+            return 1.3f; // open grass, and see LotAt — whose grass it is costs extra
+        }
+
+        /// <summary>
+        /// WHOSE LOT THIS TILE IS PART OF, or <see cref="NoLot"/> for public ground.
+        ///
+        /// Distinct from <see cref="PlaceAt"/>, which claims only the tiles inside a building's
+        /// own outline: the yard around the house was nobody's, so cutting the corner across it
+        /// cost a walker 1.30 against a road's 1.00 and A* took it whenever going round was more
+        /// than about a third further. That is the whole of "people walk through other people's
+        /// yards" — there was no such thing as somebody's yard.
+        ///
+        /// Stamped from the county's parcel polygons by the survey layer, which is also why this
+        /// is a bare int rather than a PlaceId: a lot exists whether or not anything stands on it.
+        /// int[] and not short[] for the reason given against <see cref="_placeId"/> above — a
+        /// silent wrong answer at a size we intend to reach is not a saving.
+        /// </summary>
+        public int LotAt(int x, int y) => InBounds(x, y) ? _lot[Index(x, y)] : NoLot;
+        public int LotAt(Tile t) => LotAt(t.X, t.Y);
+
+        /// <summary>Public ground — a street, a verge, a field, the churchyard.</summary>
+        public const int NoLot = -1;
+
+        public void SetLot(int x, int y, int lot)
+        {
+            if (!InBounds(x, y)) return;
+            _lot[Index(x, y)] = lot;
         }
 
         // ---- writers, used only by the builder ----

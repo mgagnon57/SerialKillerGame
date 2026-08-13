@@ -47,7 +47,7 @@ namespace Noir.Editor
                 "Freeway_Straight_30x30_City",
 
                 // The pieces for junctions that are NOT four-way crossings. Every junction in
-                // Northgate is laid with a Cross tile, including the two where a dirt track
+                // Rossville is laid with a Cross tile, including the two where a dirt track
                 // dead-ends into a through road - so those crossings have a fourth arm painted
                 // on them that leads into a paddock.
                 "Freeway_T_30x30_City", "Freeway_Turn_30x30_City",
@@ -96,7 +96,7 @@ namespace Noir.Editor
                 One(Sig + n + ".prefab", n);
 
             // WHAT A DOWNTOWN BLOCK IS MADE OF. The terraces are stacked from Bottom + Entrance
-            // + Mid + Roof and every tower is one of three WHOLE prefabs, so Northgate has
+            // + Mid + Roof and every tower is one of three WHOLE prefabs, so Rossville has
             // exactly three building heights. Base/Floor/Roof stack to any height, and the seven
             // Market pieces are shopfront ground floors - all of it unused. Before any of it can
             // be stacked, the pieces have to line up: a Market that is not the same width and

@@ -30,7 +30,7 @@ namespace Noir.Bench
     /// <summary>
     /// Villages, towns and cities built from a seed and nothing else.
     ///
-    /// The benchmark has to measure the ENGINE, not Ashcombe. Ashcombe is one hand-authored
+    /// The benchmark has to measure the ENGINE, not the fixture village. The fixture village is one hand-authored
     /// layout at one size; anything inferred from it about a town of six hundred is an
     /// extrapolation from a sample of one. These are built in code so that population, map
     /// area and place count can each be moved independently, and so the harness runs with no
@@ -84,7 +84,7 @@ namespace Noir.Bench
         }
 
         /// <summary>
-        /// Ratios lifted from Ashcombe: one shop and one pub for a hundred and nine people,
+        /// Ratios lifted from the fixture village: one shop and one pub for a hundred and nine people,
         /// one school, one church. Holding them constant as population grows is what keeps
         /// behaviour comparable across the sweep — a city with one shop would put every
         /// citizen in the same queue and measure that instead of the simulation.
@@ -92,16 +92,16 @@ namespace Noir.Bench
         private static readonly Amenity[] Amenities =
         {
             new Amenity(PlaceKind.Shop, 180),
-            new Amenity(PlaceKind.Pub, 220),
+            new Amenity(PlaceKind.Tavern, 220),
             new Amenity(PlaceKind.School, 400),
             new Amenity(PlaceKind.PostOffice, 500),
             new Amenity(PlaceKind.Mill, 500),
             new Amenity(PlaceKind.BusStop, 500),
-            new Amenity(PlaceKind.PhoneBox, 500),
+            new Amenity(PlaceKind.PhoneBooth, 500),
             new Amenity(PlaceKind.Green, 600),
             new Amenity(PlaceKind.Playground, 600),
-            new Amenity(PlaceKind.Allotments, 600),
-            new Amenity(PlaceKind.Surgery, 700),
+            new Amenity(PlaceKind.Gardens, 600),
+            new Amenity(PlaceKind.Clinic, 700),
             new Amenity(PlaceKind.Farm, 700),
             new Amenity(PlaceKind.Church, 800),
             new Amenity(PlaceKind.Churchyard, 800),
@@ -124,7 +124,7 @@ namespace Noir.Bench
         /// <summary>
         /// Rasterisable description of a settlement.
         ///
-        /// <paramref name="extraPlaces"/> adds telephone boxes, which is the only way found to
+        /// <paramref name="extraPlaces"/> adds telephone boothes, which is the only way found to
         /// move place count without moving anything else: they employ nobody, no schedule ever
         /// sends anyone to one, and they occupy a single tile. Adding shops instead would have
         /// added job slots and errand destinations, and the experiment would have been
@@ -171,7 +171,7 @@ namespace Noir.Bench
                 int n = CountOf(targetPopulation, a.PerHead);
                 for (int k = 0; k < n; k++) wanted.Add(a.Kind);
             }
-            for (int k = 0; k < extraPlaces; k++) wanted.Add(PlaceKind.PhoneBox);
+            for (int k = 0; k < extraPlaces; k++) wanted.Add(PlaceKind.PhoneBooth);
 
             int totalCells = cols * rows;
             int unitsNeeded = (int)Math.Ceiling(targetPopulation / 2.2);
@@ -198,7 +198,7 @@ namespace Noir.Bench
                 if (k.HasValue && k.Value != PlaceKind.Mill) fixedJobs += JobsFor(k.Value, 0);
 
             // The mills soak up whatever employment is left over. Getting the employed share
-            // near Ashcombe's matters more than it looks: an employed citizen commutes twice a
+            // near the fixture village's matters more than it looks: an employed citizen commutes twice a
             // day at a fixed hour, and an unemployed one wanders at random. Those are different
             // load profiles, and a sweep that drifts between them is comparing two things.
             int targetJobs = (int)(targetPopulation * 0.45);
@@ -275,12 +275,12 @@ namespace Noir.Bench
             return spec;
         }
 
-        /// <summary>A phone box is one tile. Everything else takes the whole plot.</summary>
+        /// <summary>A phone booth is one tile. Everything else takes the whole plot.</summary>
         private static TileRect Footprint(PlaceKind kind, TileRect plot)
         {
             switch (kind)
             {
-                case PlaceKind.PhoneBox: return new TileRect(plot.X, plot.Y, 1, 1);
+                case PlaceKind.PhoneBooth: return new TileRect(plot.X, plot.Y, 1, 1);
                 case PlaceKind.BusStop: return new TileRect(plot.X, plot.Y, 2, 2);
                 default: return plot;
             }
@@ -293,10 +293,10 @@ namespace Noir.Bench
                 case PlaceKind.Mill: return millJobs;
                 case PlaceKind.Farm: return 5;
                 case PlaceKind.School: return 4;
-                case PlaceKind.Pub: return 3;
+                case PlaceKind.Tavern: return 3;
                 case PlaceKind.Garage: return 3;
                 case PlaceKind.Shop: return 2;
-                case PlaceKind.Surgery: return 2;
+                case PlaceKind.Clinic: return 2;
                 case PlaceKind.Church: return 1;
                 case PlaceKind.PostOffice: return 1;
                 case PlaceKind.VillageHall: return 1;
@@ -317,7 +317,7 @@ namespace Noir.Bench
                 case PlaceKind.School:
                     spec.Hours.Add(new OpenWindow(8 * 60 + 30, 15 * 60 + 30, OpenWindow.Weekdays));
                     break;
-                case PlaceKind.Pub:
+                case PlaceKind.Tavern:
                     spec.Hours.Add(new OpenWindow(11 * 60, 14 * 60 + 30));
                     spec.Hours.Add(new OpenWindow(17 * 60 + 30, 23 * 60));
                     break;
@@ -332,7 +332,7 @@ namespace Noir.Bench
                 case PlaceKind.VillageHall:
                     spec.Hours.Add(new OpenWindow(9 * 60, 22 * 60));
                     break;
-                case PlaceKind.Surgery:
+                case PlaceKind.Clinic:
                     spec.Hours.Add(new OpenWindow(8 * 60 + 30, 11 * 60 + 30, OpenWindow.Weekdays));
                     spec.Hours.Add(new OpenWindow(16 * 60, 18 * 60, MonTueThuFri));
                     break;

@@ -1,4 +1,4 @@
-﻿using Noir.Core.World;
+using Noir.Core.World;
 
 namespace Noir.Unity
 {
@@ -13,7 +13,7 @@ namespace Noir.Unity
     public sealed class ShopfrontMassing : IMassingGrammar
     {
         public Massing Profile(Place place) =>
-            new Massing(place.Kind == PlaceKind.Surgery ? 3.4f : 3.6f, RoofForm.Hip, 2.0f);
+            new Massing(place.Kind == PlaceKind.Clinic ? 3.4f : 3.6f, RoofForm.Hip, 2.0f);
 
         public void Extras(Place place, MeshChunk into) { }
     }
@@ -24,7 +24,7 @@ namespace Noir.Unity
     /// The gable is doing the work: a public house is usually the oldest and most stubbornly
     /// shaped building on a village street, and an end-on gable to the road is what says so.
     /// </summary>
-    public sealed class PubMassing : IMassingGrammar
+    public sealed class TavernMassing : IMassingGrammar
     {
         public Massing Profile(Place place) => new Massing(3.4f, RoofForm.Gable, 2.4f);
         public void Extras(Place place, MeshChunk into) { }
@@ -79,15 +79,14 @@ namespace Noir.Unity
     ///
     /// The bulk IS the signal - a mill is recognisable because it is half again as tall as
     /// anything near it. The shallow pitch is part of that: a steep roof on a tall building
-    /// reads as a church, and Ashcombe already has one of those.
+    /// reads as a church, and Rossville already has one of those.
     /// </summary>
     public sealed class MillMassing : IMassingGrammar
     {
         public Massing Profile(Place place) => new Massing(6.5f, RoofForm.Gable, 1.6f);
 
         public void Extras(Place place, MeshChunk into) =>
-            MassingExtras.Lucam(place, Profile(place), into,
-                                Materials3D.RoofingFor(place.Bounds.X, place.Bounds.Y));
+            MassingExtras.Lucam(place, Profile(place), into, Materials3D.RoofingFor(place));
     }
 
     /// <summary>

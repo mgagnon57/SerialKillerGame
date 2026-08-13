@@ -20,7 +20,7 @@ namespace Noir.Core.Observation
     /// The thing a watcher across the road saw happen. Nine verbs and a silence.
     ///
     /// Deliberately NOT Activity. Activity is the simulation's word for what a man is really
-    /// doing — GoingToWork, OnTheAllotment — and a watcher sees a figure come out of a door with
+    /// doing — GoingToWork, InTheGarden — and a watcher sees a figure come out of a door with
     /// a bag, which is a different and much poorer claim. Every value below is something a
     /// stranger could name without knowing whose house it is or where the figure is going.
     ///

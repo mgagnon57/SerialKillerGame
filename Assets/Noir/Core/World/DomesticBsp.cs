@@ -38,7 +38,7 @@ namespace Noir.Core.World
             var interior = new TileRect(exterior.X + 1, exterior.Y + 1, exterior.W - 2, exterior.H - 2);
             if (interior.W < MinSide || interior.H < MinSide)
             {
-                // A shed or a phone box: one room, no internal structure.
+                // A shed or a phone booth: one room, no internal structure.
                 if (interior.W > 0 && interior.H > 0)
                     result.Rooms.Add((interior, RoomKind.Living));
                 return result;
@@ -140,8 +140,8 @@ namespace Noir.Core.World
             //
             //   hall -> kitchen -> bedroom -> bathroom -> front room -> more bedrooms
             //
-            // A three-room cottage therefore ends up hall/kitchen/bedroom and the privy is
-            // outside, which for a 1970s village is not a shortcoming but a fact.
+            // A three-room house therefore ends up hall/kitchen/bedroom, and it has a bathroom -
+            // see the threshold below, and the reason it is three rather than four.
 
             kinds[entrance] = cells.Count <= 2 ? RoomKind.Living : RoomKind.Hall;
             taken[entrance] = true;
@@ -149,9 +149,25 @@ namespace Noir.Core.World
             // Bathroom first, and specifically the SMALLEST room. Claiming it early is the
             // point: assigned later it ends up with whatever is left over, which produced
             // houses with a twelve-square-metre bathroom and a nine-metre bedroom.
-            // A house only gets one at all if there are four rooms to go round - a three-room
-            // cottage in 1979 has the privy outside, which is a fact rather than an oversight.
-            if (cells.Count >= 4)
+            // A BATHROOM AT THREE ROOMS, NOT FOUR, AND THE BAR MOVED BECAUSE THE TOWN DID.
+            //
+            // This said: "a house only gets one at all if there are four rooms to go round - a
+            // three-room cottage in 1979 has the privy outside, which is a fact rather than an
+            // oversight." It is a fact about rural England in 1979. Rossville has run its own
+            // water and sewer continuously since 1898 - Content/kinds.txt says so, citing
+            // docs/research/ROSSVILLE-HISTORY.md - so an occupied dwelling here in 1991 with no
+            // bathroom in it does not exist.
+            //
+            // MEASURED BEFORE CHANGING IT, because rooms are what the whole simulation walks
+            // around in and a room count is not a thing to guess at. SmokeTest, 2026-08-09:
+            //
+            //   608 dwellings, 601 with a bathroom (98%)
+            //   rooms per house   1:1   2:1   3:5   4:24   5:124   6:453
+            //
+            // So this moves FIVE houses, to 606 of 608. The two that still have none have one
+            // room and two rooms, and a one-room dwelling with a bathroom carved out of it would
+            // be a bathroom and nothing else. That is the right place for the bar to sit.
+            if (cells.Count >= 3)
             {
                 int bathroom = SmallestFree(cells, taken);
                 if (bathroom >= 0) { kinds[bathroom] = RoomKind.Bathroom; taken[bathroom] = true; }
@@ -159,9 +175,23 @@ namespace Noir.Core.World
 
             // The kitchen wants an outside wall, for a window and a back door. Cells are
             // area-ordered, so the first match is the largest one that qualifies.
-            int kitchen = FirstFree(cells, taken, interior, requireEdge: true);
-            if (kitchen < 0) kitchen = FirstFree(cells, taken, interior, requireEdge: false);
-            if (kitchen >= 0) { kinds[kitchen] = RoomKind.Kitchen; taken[kitchen] = true; }
+            //
+            // AND IT YIELDS TO THE BED WHEN THERE IS ONLY ONE ROOM LEFT. Dropping the bathroom
+            // bar to three took the third room of a three-room house, and hall + kitchen +
+            // bathroom is a house with NOWHERE TO SLEEP - which the fixture suite said out loud
+            // on the next run, correctly, and which is the reason this ordering is worth writing
+            // down rather than leaving to the sequence of statements.
+            //
+            // A three-room house in Rossville is a bedroom, a bathroom and one room you both
+            // cook and sit in. That is what a small frame house on a fifty-foot lot is, and it is
+            // what the entrance cell becomes below when nothing else claims it.
+            bool keepOneForABed = Free(taken) <= 1;
+            if (!keepOneForABed)
+            {
+                int kitchen = FirstFree(cells, taken, interior, requireEdge: true);
+                if (kitchen < 0) kitchen = FirstFree(cells, taken, interior, requireEdge: false);
+                if (kitchen >= 0) { kinds[kitchen] = RoomKind.Kitchen; taken[kitchen] = true; }
+            }
 
             // At least one bedroom, always. Take a middling room rather than the largest -
             // the biggest room in a house is the one you sit in, not the one you sleep in.
@@ -183,6 +213,14 @@ namespace Noir.Core.World
 
             for (int i = 0; i < cells.Count; i++)
                 result.Rooms.Add((cells[i], kinds[i]));
+        }
+
+        /// <summary>How many cells nothing has claimed yet.</summary>
+        private static int Free(bool[] taken)
+        {
+            int n = 0;
+            for (int i = 0; i < taken.Length; i++) if (!taken[i]) n++;
+            return n;
         }
 
         /// <summary>Largest unassigned room, optionally requiring an exterior wall.</summary>

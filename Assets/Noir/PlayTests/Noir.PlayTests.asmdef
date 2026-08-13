@@ -8,7 +8,8 @@
         "Noir.Core.People",
         "Noir.Core.Sim",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Noir.Core.Survey"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

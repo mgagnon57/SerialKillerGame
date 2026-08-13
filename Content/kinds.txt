@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 #  WHAT KINDS OF PLACE THERE ARE
 #
 #  One row per kind. Adding an amenity to the village is a row here and a few
@@ -43,8 +43,8 @@
 #  service    minutes at the counter: this many, plus a draw under the spread.
 #             Only where there is a counter.
 #  hours      when it is open, WHEN THE PLACE DOES NOT SAY FOR ITSELF. Every
-#             place in Ashcombe states its own, so these are what a second shop
-#             or a new surgery would open for if nobody wrote it down.
+#             place in the town states its own, so these are what a second shop
+#             or a new clinic would open for if nobody wrote it down.
 #  jobs       how many work there, again only when the place does not say.
 #  roles      what those people are called, in slot order. The last name covers
 #             every slot after it: "farmer farmhand" is one farmer and the rest
@@ -78,14 +78,14 @@ kind dwelling
   describe  no
 
 # ---- the places people go -------------------------------------------------
-kind pub
-  words     pub
+kind tavern
+  words     tavern bar saloon
   form      building
   rooms     auto
   grammar   open
   roof      yes
-  frontage  pub
-  massing   pub
+  frontage  tavern
+  massing   tavern
   props     none
   counter   no
   hours     11:00-14:30 17:30-23:00
@@ -153,10 +153,10 @@ kind church
 kind school
   # `school2` and `elementary` were a SECOND KIND until 2026-08-03, authored so that
   # CityBuildings could hand Rossville the pack's American School_City while leaving
-  # Ashcombe's village school alone. It cost more than it bought: a kind the PlaceKind
+  # the old village's school alone. It cost more than it bought: a kind the PlaceKind
   # enum has never heard of is numbered past it, and DayPlanner asks for
   # PlaceKind.School by its ENUM MEMBER - so Rossville's 165 children had no school to
-  # be sent to and not one of them ever went. Ashcombe is retired; there is one map.
+  # be sent to and not one of them ever went. The retired village is gone; there is one map.
   # Kept as words so old content still parses.
   words     school elementary school2
   form      building
@@ -176,13 +176,13 @@ kind school
 
 # Longer at the counter than anywhere else, and it is the whole reason a
 # waiting room fills: six minutes and up, against four at the post office.
-kind surgery
-  words     surgery
+kind clinic
+  words     clinic doctors
   form      building
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  surgery
+  frontage  clinic
   massing   shopfront
   props     none
   counter   yes
@@ -283,7 +283,7 @@ kind villagehall
 
 # ---- open ground ----------------------------------------------------------
 # None of these is a building, so none is walled, roofed or given an interior.
-# A phone box counts as street furniture: it is one tile, and walling it would
+# A phone booth counts as street furniture: it is one tile, and walling it would
 # leave nowhere to stand in it.
 kind playground
   words     playground
@@ -317,8 +317,8 @@ kind busstop
   catchment no
   describe  yes
 
-kind phonebox
-  words     phonebox
+kind phonebooth
+  words     phonebooth
   form      open
   ground    grass
   rooms     none
@@ -407,8 +407,8 @@ kind park
   catchment no
   describe  yes
 
-kind allotments
-  words     allotments
+kind gardens
+  words     gardens allotment
   form      open
   ground    field
   rooms     none
@@ -484,7 +484,7 @@ kind precinct
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  none
+  frontage  hall
   massing   hall
   props     none
   counter   yes
@@ -506,7 +506,7 @@ kind hospital
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  surgery
+  frontage  clinic
   massing   shopfront
   props     none
   counter   yes
@@ -560,7 +560,7 @@ kind bank
   rooms     auto
   grammar   spine
   roof      yes
-  frontage  shopfront
+  frontage  bank
   massing   shopfront
   props     none
   counter   yes
@@ -614,7 +614,7 @@ kind icecream
   rooms     auto
   grammar   open
   roof      yes
-  frontage  shopfront
+  frontage  shop
   massing   shopfront
   props     none
   counter   yes
@@ -692,7 +692,7 @@ kind newsstand
   rooms     auto
   grammar   open
   roof      yes
-  frontage  shopfront
+  frontage  shop
   massing   shopfront
   props     none
   counter   yes
@@ -744,7 +744,7 @@ kind waterworks
   grammar   hall
   roof      yes
   frontage  none
-  massing   shed
+  massing   garage
   props     none
   counter   no
   hours     none
@@ -781,7 +781,7 @@ kind publicworks
   grammar   hall
   roof      yes
   frontage  none
-  massing   shed
+  massing   garage
   props     none
   counter   no
   hours     07:00-15:30
@@ -871,7 +871,7 @@ kind railway
   describe  yes
 
 # ---- the country ------------------------------------------------------------
-#  Northgate grew to 360x360 and three of its four quadrants are open land. These
+#  Rossville grew to 360x360 and three of its four quadrants are open land. These
 #  are the kinds that live out there. Between them they open the pack's 486 farm
 #  prefabs, which the city had used none of.
 #
@@ -1085,12 +1085,12 @@ kind camp
 # `home yes` IS THE WHOLE POPULATION OF THE RING. Two hundred and twenty-eight
 # houses stood on this map with nobody in any of them, because a household is
 # made per UNIT of a place whose kind says people live there - and this kind did
-# not say so. Every one of Northgate's 365 people lived in the twenty-seven
+# not say so. Every one of Rossville's 365 people lived in the twenty-seven
 # apartment buildings downtown; the suburbs were scenery.
 #
 # Every cell already declared `units 10` in city.txt and had done all along. The
 # ring was one word away from being lived in: 28 cells x 10 = 280 households
-# against downtown's 162, which takes Northgate from 365 people to about 995.
+# against downtown's 162, which takes Rossville from 365 people to about 995.
 #
 # It is deliberately the CELL that is the home and not the house. WorldModel's
 # place array is fixed at load, so a generator cannot register a place, and the
@@ -1123,7 +1123,7 @@ kind suburb
 # lays the road kit's parking tiles over the top - see the note there about the five
 # Road_Parking pieces that had never been placed.
 #
-# Northgate had a hospital, a casino, a cinema, a school, a police station and a bank
+# Rossville had a hospital, a casino, a cinema, a school, a police station and a bank
 # and nowhere for a single car to stand still.
 kind carpark
   words     carpark parking lot

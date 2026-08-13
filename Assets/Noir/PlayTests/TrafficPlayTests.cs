@@ -15,7 +15,7 @@ namespace Noir.PlayTests
     /// All of them together cannot answer the one question that matters about traffic - DOES IT
     /// STOP - because stopping happens over time and a still has none.
     ///
-    /// Time is compressed with Time.timeScale so a 37-second signal cycle can be watched inside a
+    /// Time is compressed with Time.timeScale so a 36-second signal cycle can be watched inside a
     /// test rather than inside a coffee break. That is legitimate here: everything under test
     /// reads Time.time or Time.deltaTime and therefore scales with it. It would not be legitimate
     /// if anything counted frames instead, and nothing does.
@@ -200,8 +200,13 @@ namespace Noir.PlayTests
         [UnityTest, Timeout(900000)]
         public IEnumerator NoCarWaitsForeverAtTheHeadOfAClearQueue()
         {
-            const float Cycle = 37f;            // CitySignals' own cycle length
-            const float Typical = Cycle;        // the fleet keeps moving
+            // ASKED OF CitySignals RATHER THAN COPIED FROM IT. This was `const float Cycle = 37f`
+            // with the comment "CitySignals' own cycle length", and the cycle is 36.0s - 14s green,
+            // 3s amber, 1s all-red, twice over, exactly as the [signals] line prints every run. The
+            // gate was a second looser than the thing it named, and nobody could see it because the
+            // number was sitting right next to a comment saying it was right.
+            float Cycle = CitySignals.Cycle;
+            float Typical = Cycle;              // the fleet keeps moving
 
             // NOBODY IS STUCK FOR EVER, which is a different and much weaker claim than "nobody
             // waits long", and the two arms are deliberately not the same strictness.
@@ -215,12 +220,16 @@ namespace Noir.PlayTests
             // ignore it. The tail is one junction, not the fleet: the eastbound ring road at
             // x=1008, where a left-turner crosses two lanes of through traffic and can genuinely
             // sit through two greens before a gap arrives. See docs/IDEAS.md.
-            const float Worst = Cycle * 3;
+            float Worst = Cycle * 3;
             const float Still = 0.02f;
 
             var held = new Dictionary<int, float>();
             var longest = new Dictionary<int, float>();
             var previous = new Dictionary<int, Vector3>();
+            // WHERE the longest wait happened, not just how long it was. A p90 on its own cannot
+            // tell "one junction is broken" from "the whole town is over capacity", and those two
+            // want opposite fixes - so the number that fails this test now has to name a place.
+            var longestAt = new Dictionary<int, Vector3>();
             float worst = 0f;
             string where = "";
             float last = Time.time;
@@ -248,7 +257,11 @@ namespace Noir.PlayTests
                     float spell = (held.TryGetValue(id, out float sofar) ? sofar : 0f) + dt;
                     held[id] = spell;
 
-                    if (!longest.TryGetValue(id, out float best) || spell > best) longest[id] = spell;
+                    if (!longest.TryGetValue(id, out float best) || spell > best)
+                    {
+                        longest[id] = spell;
+                        longestAt[id] = now;
+                    }
 
                     if (spell <= worst) continue;
                     worst = spell;
@@ -264,10 +277,53 @@ namespace Noir.PlayTests
 
             float p90 = waits[Mathf.Min(waits.Count - 1, waits.Count * 9 / 10)];
 
+            // WHICH JUNCTIONS HOLD THE TAIL, printed pass or fail.
+            //
+            // "p90 is 37.2s" cannot be acted on. It is consistent with one broken junction and with
+            // a town that has simply outgrown its roads, and those want opposite fixes - the first
+            // is a bug in the give-way rules, the second says the fleet or the network is wrong.
+            // Only 1 of this town's 74 junctions is signalised, so a wait blamed on "a whole signal
+            // cycle" is, for 73 of them, being judged against a light the driver cannot see.
+            var stalls = new Dictionary<int, int>();
+            var stalled = new Dictionary<int, float>();
+            int atSignals = 0, atPriority = 0;
+
+            foreach (var pair in longest)
+            {
+                if (pair.Value <= Cycle) continue;         // a wait inside one cycle is queuing
+                if (!longestAt.TryGetValue(pair.Key, out var at)) continue;
+
+                int j = NearestJunction(at, out _);
+                if (j < 0) continue;
+
+                stalls[j] = (stalls.TryGetValue(j, out int n) ? n : 0) + 1;
+                if (!stalled.TryGetValue(j, out float w) || pair.Value > w) stalled[j] = pair.Value;
+
+                var lights = CityUnderTest.Signals;
+                if (lights != null && lights.IsSignalised(j)) atSignals++; else atPriority++;
+            }
+
+            var ranked = new List<int>(stalls.Keys);
+            ranked.Sort((a, b) => stalls[b].CompareTo(stalls[a]));
+
+            var report = new System.Text.StringBuilder();
+            report.Append($"[traffic] p90 wait {p90:0.0}s against a {Cycle:0.0}s cycle. "
+                        + $"{atSignals + atPriority} of {waits.Count} stopped vehicles waited longer "
+                        + $"than one cycle ({atSignals} at the signals, {atPriority} at priority), "
+                        + $"spread over {ranked.Count} junctions.");
+            for (int i = 0; i < ranked.Count && i < 8; i++)
+                report.Append($"\n[traffic]   {stalls[ranked[i]]} car(s), worst "
+                            + $"{stalled[ranked[i]]:0.0}s, at {NameOf(ranked[i])}");
+            Debug.Log(report.ToString());
+
+            string tail = ranked.Count > 0
+                        ? $" Worst junction: {stalls[ranked[0]]} car(s) at {NameOf(ranked[0])}."
+                        : "";
+
             Assert.That(p90, Is.LessThan(Typical),
                         $"nine tenths of the vehicles that stopped waited {p90:0.0}s or less, which "
-                      + $"is longer than a whole signal cycle - the fleet is starving, not queuing. "
-                      + $"Worst: {where}");
+                      + $"is longer than a whole {Cycle:0.0}s signal cycle - the fleet is starving, "
+                      + $"not queuing. Spread over {ranked.Count} junctions.{tail} Worst: {where}");
 
             Assert.That(worst, Is.LessThan(Worst),
                         $"a car was stuck at a junction well beyond any signal cycle. {where}");
@@ -292,6 +348,92 @@ namespace Noir.PlayTests
                 return true;
             }
             return false;
+        }
+
+        /// <summary>Which junction is this world position nearest, and how far off in metres.</summary>
+        private static int NearestJunction(Vector3 at, out float metres)
+        {
+            metres = float.MaxValue;
+            int which = -1;
+
+            var world = CityUnderTest.World;
+            if (world == null) return -1;
+
+            var here = Space3D.FromWorld(at);
+            for (int i = 0; i < world.Roads.Junctions.Count; i++)
+            {
+                var j = world.Roads.Junctions[i];
+                float d = Mathf.Sqrt((j.X - here.X) * (j.X - here.X)
+                                   + (j.Y - here.Y) * (j.Y - here.Y));
+                if (d >= metres) continue;
+                metres = d;
+                which = i;
+            }
+            return which;
+        }
+
+        /// <summary>"Ross x Attica (priority)" - a name somebody can go and look at.</summary>
+        private static string NameOf(int junction)
+        {
+            var world = CityUnderTest.World;
+            if (world == null || junction < 0 || junction >= world.Roads.Junctions.Count)
+                return "unknown";
+
+            var j = world.Roads.Junctions[junction];
+            var lights = CityUnderTest.Signals;
+            bool lit = lights != null && lights.IsSignalised(junction);
+            return $"{j.NorthSouth.Name} x {j.EastWest.Name} ({(lit ? "signals" : "priority")})";
+        }
+
+        /// <summary>
+        /// WHAT THE MOVING FLEET COSTS, WHICH IS THE HALF THAT MOVES EVERY FRAME.
+        ///
+        /// A Poly Universal Pack car ships as 11 MeshRenderers and **11 MeshColliders** over 12
+        /// objects. At 159 vehicles that is ~1,750 renderers and ~1,750 NON-CONVEX mesh colliders
+        /// being transformed every frame, which makes PhysX rebuild its static tree continuously -
+        /// about the worst thing it can be handed, and it was there long before anybody counted.
+        ///
+        /// Nothing in the traffic model wants them: `Blocked()` is lane arithmetic, `Length()`
+        /// reads mesh bounds, and no wheel is animated - a mover only ever holds the root
+        /// transform. See `CarMesh`.
+        ///
+        /// EXPLICIT AND ASPIRATIONAL, because the obvious fix is measured and WRONG. Collapsing
+        /// each moving car to one mesh - the same change that is a clear win for the 611 parked
+        /// cars - took the PlayMode suite from 368 s to 688 s. These 159 are drawn from a handful
+        /// of shared prefabs and are GPU-instanced nearly for free; 159 unique merged meshes
+        /// cannot be instanced at all. The mesh colliders are still worth removing, and that is
+        /// the part this budget is really asking for, but it needs PerfHud pointed at it rather
+        /// than another confident guess. Same treatment as the 2:1 rule, and for the same reason:
+        /// a permanent red hides the next real one. Run with
+        /// `-testCategory Aspiration`.
+        /// </summary>
+        [UnityTest, Explicit, Category("Aspiration"), Timeout(900000)]
+        public IEnumerator AMovingCarCostsOneRendererAndNoMeshCollider()
+        {
+            var traffic = CityUnderTest.Traffic;
+            Assert.That(traffic, Is.Not.Null, "no traffic was built");
+
+            var cars = CityUnderTest.Vehicles();
+            Assert.That(cars.Count, Is.GreaterThan(0), "no vehicles to measure");
+
+            var root = traffic.gameObject;
+            int renderers = root.GetComponentsInChildren<Renderer>(true).Length;
+            int meshCol = root.GetComponentsInChildren<MeshCollider>(true).Length;
+            int bodies = root.GetComponentsInChildren<Rigidbody>(true).Length;
+
+            float perCar = renderers / (float)cars.Count;
+
+            Debug.Log($"[traffic] cost: {cars.Count} vehicles, {renderers} renderers "
+                    + $"({perCar:0.00}/car), {meshCol} MeshColliders, {bodies} rigidbodies.");
+
+            Assert.That(perCar, Is.LessThanOrEqualTo(2f),
+                        $"each moving car is costing {perCar:0.0} renderers - it has to arrive as "
+                      + "one mesh, not eleven");
+
+            Assert.That(meshCol, Is.EqualTo(0),
+                        $"{meshCol} MeshColliders are being driven around the map every frame");
+
+            yield return null;
         }
 
         /// <summary>Cars are solid. They may queue nose to tail; they may not share a bumper.</summary>
@@ -360,6 +502,14 @@ namespace Noir.PlayTests
             float travelled = 0f;
             int stoppedAtARed = 0;
 
+            // THE TWO WAYS THIS CAN FAIL LOOK IDENTICAL IN THE OLD MESSAGE, and on 2026-08-10
+            // that cost two twelve-minute runs. "No vehicle was ever seen waiting at a red" is
+            // either "the signals are not being obeyed" or "no car ever got near one" - opposite
+            // faults, one in the traffic model and one in where the town put its lights - and the
+            // assert could not tell them apart. So count the approach as well as the stop.
+            int atTheLine = 0, atTheLineOnGreen = 0, stoppedAnywhere = 0;
+            float nearest = float.MaxValue;
+
             yield return Watch(90f, () =>
             {
                 foreach (var car in CityUnderTest.Vehicles())
@@ -377,21 +527,51 @@ namespace Noir.PlayTests
                         // signal is against it. Waiting at the line, in other words.
                         if (moved < 0.02f)
                         {
+                            stoppedAnywhere++;
                             bool northSouth = CityUnderTest.IsNorthSouth(car);
                             for (int j = 0; j < signals.Count; j++)
                             {
+                                // ONLY THE SIGNALISED ONES. `signals.Count` is every junction in
+                                // the town - 120 of them, of which 2 have lights - so a diagnosis
+                                // that measures "the nearest a stopped car got to a signal"
+                                // across all of them measures the nearest stop sign instead, and
+                                // says 5.9 m when the answer for the lights is hundreds.
+                                if (!signals.IsSignalised(j)) continue;
+
                                 var at = signals.Where(j);
                                 float reach = signals.Reach(j);
                                 float dx = Mathf.Abs(now.x - at.x);
                                 float dy = Mathf.Abs(-now.z - at.y);
 
-                                // Just outside the crossing, lined up with it.
-                                bool waiting = northSouth
-                                    ? dx < reach && dy > reach && dy < reach + 12f
-                                    : dy < reach && dx > reach && dx < reach + 12f;
+                                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                                if (d < nearest) nearest = d;
 
-                                if (waiting && signals.State(j, northSouth) != CitySignals.Light.Green)
-                                { stoppedAtARed++; break; }
+                                // LINED UP WITH THE CROSSING AND CLOSE TO IT.
+                                //
+                                // This used to demand `dy > reach` as well - outside the junction
+                                // box - and that excluded the one car the test is looking for.
+                                // Measured 2026-08-10: the nearest a stopped car ever gets to a
+                                // signal is 5.9 m, and the box it was being required to sit
+                                // outside is 15 m. So the LEAD car, the one actually waiting at
+                                // the line, never counted; what the test was really catching was
+                                // the SECOND car in a queue, and it only ever passed while the
+                                // queues were long enough to have one.
+                                //
+                                // That made it a test of queue length dressed up as a test of
+                                // whether the lights are obeyed, and it went red the moment
+                                // CONS-3 redistributed the traffic - with 133 km travelled and
+                                // nothing wrong with the signals at all.
+                                bool waiting = northSouth
+                                    ? dx < reach && dy < reach + 12f
+                                    : dy < reach && dx < reach + 12f;
+                                if (!waiting) continue;
+
+                                atTheLine++;
+                                if (signals.State(j, northSouth) == CitySignals.Light.Green)
+                                { atTheLineOnGreen++; continue; }
+
+                                stoppedAtARed++;
+                                break;
                             }
                         }
                     }
@@ -399,12 +579,26 @@ namespace Noir.PlayTests
                 }
             });
 
+            TestContext.Out.WriteLine(
+                $"[signals] {signals.Count} nodes, {travelled:0} m travelled, "
+              + $"{stoppedAnywhere} stationary samples, {atTheLine} of them at a signal's line "
+              + $"({atTheLineOnGreen} on green), {stoppedAtARed} on a red. "
+              + $"Nearest a stopped car ever got to a signal: {nearest:0.0} m");
+
             Assert.That(world, Is.Not.Null);
             Assert.That(travelled, Is.GreaterThan(100f),
                         "the traffic barely moved - it may be deadlocked");
             Assert.That(stoppedAtARed, Is.GreaterThan(0),
-                        "no vehicle was ever seen waiting at a red light, so either the signals "
-                      + "are not being obeyed or no car reached a junction in ninety seconds");
+                        "no vehicle was ever seen waiting at a red light. Which of the two "
+                      + "faults this is, is now measured rather than guessed at:\n"
+                      + $"  stationary samples anywhere   {stoppedAnywhere}\n"
+                      + $"  of those, at a signal's line  {atTheLine}  ({atTheLineOnGreen} on green)\n"
+                      + $"  nearest approach by a stopped car  {nearest:0.0} m\n"
+                      + "A zero on the middle line means no car ever reached a signalised "
+                      + "junction, which is a question about where the town put its two sets of "
+                      + "lights and how big the fleet is - not about whether the signals are "
+                      + "obeyed. A non-zero with everything on green means the lights are not "
+                      + "stopping anybody.");
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -131,7 +131,7 @@ namespace Noir.Unity
         /// <summary>
         /// Which map the game loads.
         ///
-        /// Northgate is built from bought models placed on authored lots; Ashcombe generated its
+        /// Rossville is built from bought models placed on authored lots; the old village generated its
         /// geometry to fill lots instead, and is kept in the tree because it is the only thing
         /// the two can be compared against. Point this at "village.txt" to get it back.
         /// </summary>
@@ -209,7 +209,43 @@ namespace Noir.Unity
         /// pressed Play to look at the new rail bed and found a dark survey plan had no way to
         /// turn it on short of editing this line, which is what this key is for.
         /// </summary>
-        public static bool ShowBuildings = false;
+        /// <remarks>
+        /// A PROPERTY RATHER THAN A FIELD ONLY SO THE GROUND CAN HEAR IT CHANGE. Materials3D bakes
+        /// the plan-dimming decision when it builds a material and caches the material for the
+        /// life of the domain, so an editor tool that sets this AFTER the palette exists - which
+        /// is most of them, CityShot and GroundShot and HouseProto and LayerShot all do it - was
+        /// rendering with the previous answer. Every one of the twelve assignments in the tree is
+        /// a plain `=` and compiles unchanged; there is no `ref`, `out` or Interlocked use.
+        /// </remarks>
+        public static bool ShowBuildings
+        {
+            get => _showBuildings;
+            set { _showBuildings = value; Materials3D.RefreshPlan(); }
+        }
+
+        /// <summary>
+        /// The minute of the day the town wakes up at when Play begins. 20:00 - THE HOUR THE
+        /// STREET LAMPS ARE ON, asked for by the owner so the lighting is what he lands in
+        /// rather than something he has to go looking for. Not a guess: SunRig.NightLevel is
+        /// InverseLerp(0.35, 0, sunIntensity) and SkyAt's curve crosses 0.35 at about 19:25, so
+        /// at eight the lamps are lit and the sky still has colour in it - the only hour that
+        /// shows BOTH the lamps and the town they stand in. The digit keys skip to 06:00, 08:00,
+        /// 12:00, 17:00, 20:00 and 23:00, so noon is one keypress away.
+        ///
+        /// A FIELD AND NOT A LITERAL, BECAUSE THE OPENING HOUR BROKE THE GATE THE NIGHT IT
+        /// MOVED. The commit that set 20:00 said "nothing in the simulation depends on the
+        /// opening hour" - and nothing does, but four TESTS did, and the first PlayMode run
+        /// afterwards went 4 red with every one tracing back to the clock. The animation sweep
+        /// starts at the next whole hour and cannot rewind, so from a 20:00 start its range came
+        /// out "21:00 to 17:00" and the loop body never ran once - "nobody walked all day". The
+        /// driveways test wants the commuters still OUT, and DayPlan brought them home at 17:10.
+        /// The two traffic gates ran against an evening fleet the suite had never once been
+        /// measured on. CityUnderTest sets this back to noon for the batch suite - the town the
+        /// 19-of-19 baseline was measured on - and the [gate] line says which hour it opened at.
+        /// </summary>
+        public static int OpeningMinuteOfDay = 20 * 60;
+
+        private static bool _showBuildings;
 
         /// <summary>Where the built-town switch is remembered between sessions. Read once in
         /// Bootstrap, before anything makes a material or a mesh - Materials3D.Plan asks
@@ -258,7 +294,22 @@ namespace Noir.Unity
         /// scatter of detail are honest about what the land is and are noise against the one
         /// question being asked, which is whether a centreline sits on its right of way.
         /// </summary>
-        public static bool FlatGroundColour = true;
+        /// TURNED OFF 2026-08-08. This is a survey instrument and it was left switched on, so
+        /// pressing Play showed a flat green sheet with line-art roads on it rather than the town.
+        /// It is the default a demo runs on. See RoadCentrelines below - the same fault.
+        /// <remarks>
+        /// Same treatment as <see cref="ShowBuildings"/>, with one caveat worth stating: only the
+        /// MATERIAL half follows a live change. The MESH half is read at build time (VillageMesh
+        /// chooses which submesh a tile goes in), so flipping this after a build recolours the
+        /// ground without re-zoning it.
+        /// </remarks>
+        public static bool FlatGroundColour
+        {
+            get => _flatGroundColour;
+            set { _flatGroundColour = value; Materials3D.RefreshPlan(); }
+        }
+
+        private static bool _flatGroundColour;
 
         /// <summary>
         /// Draw each road as a thin line down its middle instead of laying real road tiles.
@@ -269,10 +320,45 @@ namespace Noir.Unity
         ///
         /// Turn it off to get the built streets back - see RoadCentrelines.
         /// </summary>
-        public static bool RoadsAsCentrelines = true;
+        /// TURNED OFF 2026-08-08, with FlatGroundColour. Between them these two were the reason
+        /// the game did not look like Rossville on Play: no paved streets, no ground texture, no
+        /// junction pieces. Neither had a key, a menu tick or a preference - the only way to find
+        /// them switched on was to read this file, which is why they stayed on for weeks.
+        public static bool RoadsAsCentrelines = false;
 
         private GameObject _village;
         private XRay _xray;
+
+        /// <summary>The cars standing at houses. See <see cref="CityDriveways"/>.</summary>
+        private CityDriveways _driveways;
+
+        /// <summary>
+        /// The cars standing at houses, for anything that needs to count them. Read-only: the
+        /// presence of a car is decided by whether its owner is out of town and by nothing else.
+        /// </summary>
+        public CityDriveways Driveways => _driveways;
+
+        /// <summary>
+        /// When the driveways were last reconciled against who is out of town, in sim minutes.
+        ///
+        /// Not every frame: the answer only changes when somebody's day-plan block changes, and
+        /// the two that matter are twenty past six and ten past five. A sweep of the citizen list
+        /// once a sim-minute is far cheaper than 286 cars asking every frame, and no player can
+        /// see the difference between a car leaving at 06:20 and one leaving at 06:20:59.
+        /// </summary>
+        private int _drivewaysAt = -1;
+
+        /// <summary>
+        /// The moving fleet, kept so Update can hold it to the clock. `CityTraffic.Create`'s result
+        /// was a local, which was fine while the fleet was a constant and is not now - see
+        /// CityTraffic.CarsOutByHour.
+        /// </summary>
+        private CityTraffic _traffic;
+
+        /// <summary>The town's front doors, and the one thing that swings them.</summary>
+        private CityDoors _doors;
+
+        public CityDoors Doors => _doors;
         private AgentMeshView _agentView;
         private OrbitCamera _rig;
         private SunRig _lighting;
@@ -305,7 +391,7 @@ namespace Noir.Unity
                 : "[host] Survey plan (the default). Noir > Show The Built Town raises the "
                 + "buildings, the greenery and the CSX line instead.");
 
-            var go = new GameObject("Ashcombe");
+            var go = new GameObject("Rossville");
             DontDestroyOnLoad(go);
             go.AddComponent<VillageHost>();
         }
@@ -367,6 +453,36 @@ namespace Noir.Unity
             // error onto. An empty scene has none.
             EnsureCamera();
 
+            // THE CURTAIN GOES UP BEFORE THE WORK, NOT AFTER IT.
+            //
+            // This used to be created two thirds of the way down this method, and so it could not
+            // possibly do its job: UNITY DRAWS NO FRAME UNTIL Awake RETURNS, so a loading screen
+            // built during Awake first appears once the loading it exists to cover has finished.
+            // The owner pressed Play, watched Unity's default blue for over a minute with no sign
+            // of life, and reasonably concluded it had frozen - which is precisely the failure
+            // EnsureCamera's own comment warns about a few lines further down.
+            //
+            // So the curtain is raised here, and `Build` below is deferred to the first Update.
+            // One frame is presented with the screen on it, and only then does the six seconds of
+            // town-building start - behind something that says so.
+            BootScreen.Phase = "Building the town";
+            BootScreen.Create(this, transform);
+        }
+
+        /// <summary>Set once the town has been built, so <see cref="Update"/> only does it once.</summary>
+        private bool _built;
+
+        /// <summary>
+        /// Everything that was in <see cref="Awake"/> until 2026-08-08, run one frame later.
+        ///
+        /// The move is the whole point: see the note in Awake. Nothing here changed except when it
+        /// happens, and the only thing that can notice is code assuming <see cref="World"/> exists
+        /// the instant Awake returns. Nothing in the tree does - the PlayMode suite polls through
+        /// `CityUnderTest.WaitUntilBuilt`, and every system the town needs is created BY this
+        /// method rather than racing it.
+        /// </summary>
+        private void Build()
+        {
             try
             {
                 // ONE CALL. The kind table, the era table, the parse, all five survey passes in
@@ -389,14 +505,12 @@ namespace Noir.Unity
                 // the zoning textures were all there and all unlit, and the honest report was "I
                 // clicked Play and saw black".
                 //
-                // Noon while the world is being built. Nothing about the simulation depends on
-                // the opening hour - the digit keys already skip to 06:00, 08:00, 12:00, 17:00,
-                // 20:00 and 23:00, so arriving at dawn is one keypress away and arriving at a lit
-                // world is the default. Put it back to 6 * 60 when the game is being played
-                // rather than inspected.
-                Sim = new Simulation(World, People, Seed, startMinuteOfDay: 12 * 60);
+                // The hour itself lives on OpeningMinuteOfDay, beside ShowBuildings: 20:00 for
+                // the owner, noon for the batch gate. The story of why - and of the night the
+                // literal that used to sit here turned four tests red - is written on the field.
+                Sim = new Simulation(World, People, Seed, startMinuteOfDay: OpeningMinuteOfDay);
 
-                Debug.Log($"Ashcombe: {World.Width}×{World.Height}, {World.PlaceCount} places, "
+                Debug.Log($"Rossville: {World.Width}×{World.Height}, {World.PlaceCount} places, "
                         + $"{People.Count} people in {People.HouseholdCount} households.");
             }
             catch (Exception ex)
@@ -418,12 +532,19 @@ namespace Noir.Unity
             // tying it to the same flag meant the Generated massing switch had nothing behind it
             // and could never light a single house however many times it was clicked. What gets
             // built is the layer's decision now, and it is made lazily.
+            // BEFORE the massing, because the frontage registers its hinges as it draws them and
+            // the massing is built LAZILY - the first time the layer comes on, which may be now or
+            // may be twenty minutes into a session. A registry that arrived afterwards would take
+            // the doors of whichever build happened to be second.
+            _doors = CityDoors.Create(transform);
+            Frontage.Doors = _doors;
+
             _village = VillageMesh.Build(World, transform, showDressing: true);
             profile.Done("VillageMesh (ground, walls, roofs, frontage, furniture)");
 
             // The ground, roads and props are still drawn by the village renderer; only the
             // BUILDINGS are bought models. Nothing happens here for a map that has no city
-            // kinds in it, so Ashcombe still builds exactly as it did.
+            // kinds in it, so Rossville still builds exactly as it did.
             var city = new GameObject("City");
             city.transform.SetParent(_village.transform, false);
             // THE ROADS COME OUT TOO. Asphalt, kerbs, painted lanes, crossings, lay-bys and
@@ -448,8 +569,15 @@ namespace Noir.Unity
                 else
                 {
                     Layers.Register(Layers.Kind.Streets,
-                                    CityStreets.Build(World, city.transform, out alleyRoot));
+                                    CityStreets.Build(World, city.transform,
+                                                      out alleyRoot, out var streetPlanting));
                     Layers.Register(Layers.Kind.Alleys, alleyRoot);
+
+                    // THE STREET KIT'S PLANTING GOES ON THE TREES SWITCH, not on Streets. A kind
+                    // can hold more than one root, so this sits beside CityGreenery's lazy
+                    // registration below and both come and go together - which is what somebody
+                    // clicking "Trees" means.
+                    Layers.Register(Layers.Kind.Trees, streetPlanting);
                     profile.Done("CityStreets");
                 }
 
@@ -570,6 +698,14 @@ namespace Noir.Unity
                 }
             profile.Done("CityChunker.Bake (all layers)");
 
+            // THE HOUSES GET THEIR SURFACE HERE, AFTER THE BAKE, AND NOT IN CityCollision.Build.
+            // The bake destroys the GameObjects it consumed, so a collider added before it is a
+            // collider thrown away by it - which is half of why the town was walk-through. The
+            // other half is the massing being a lazy layer, and CityCollision.Ready is how the
+            // late build knows to surface itself. Both are argued out in SolidifyWalls.
+            CityCollision.SolidifyWalls(transform);
+            profile.Done("CityCollision.SolidifyWalls");
+
             // Anything parented to `city` that no layer claimed is left unbaked on purpose - it
             // would be invisible to the switches, and a renderer nobody can turn off is worth
             // knowing about rather than quietly merging away.
@@ -664,7 +800,19 @@ namespace Noir.Unity
             signals = CitySignals.Create(World, transform);
             profile.Done("CitySignals");
             traffic = CityTraffic.Create(World, transform, signals);
+            _traffic = traffic;
             profile.Done("CityTraffic");
+
+            // THE OTHER 98% OF THE TOWN'S CARS, WHICH ARE NOT GOING ANYWHERE.
+            //
+            // IDOT counts Rossville at ~19 vehicles moving at an average instant and the village
+            // owns something like two per household, so the cars standing at houses outnumber the
+            // ones being driven by a factor of about sixty - and the game drew none of them until
+            // now. Built HERE, beside the traffic and after CityChunker.Bake, for exactly the
+            // reason the traffic is: a combined mesh cannot be taken away when its owner drives it
+            // to Hoopeston. See docs/research/TRAFFIC-COUNTS.md.
+            _driveways = CityDriveways.Create(World, Seed, transform);
+            profile.Done("CityDriveways");
 
             // The two that MOVE. Registered like the rest, and switching them off hides them
             // exactly as HideActors always did. Not baked: a combined mesh cannot move or change
@@ -687,6 +835,14 @@ namespace Noir.Unity
             // car had been given a reason to stop by code that had never run.
             if (signals != null) Layers.Register(Layers.Kind.Signals, on => ShowRenderers(signals.gameObject, on));
             if (traffic != null) Layers.Register(Layers.Kind.Traffic, on => ShowRenderers(traffic.gameObject, on));
+
+            // Renderers, not the root, for the reason spelled out above - and it composes with the
+            // absence: a car whose owner is at work is an INACTIVE GameObject, so turning the layer
+            // back on re-enables the renderers of the cars that are actually there and leaves the
+            // ones that drove away hidden.
+            if (_driveways != null)
+                Layers.Register(Layers.Kind.Driveways,
+                                on => ShowRenderers(_driveways.gameObject, on));
 
             // DRAWN OR NOT, THEY STILL EXIST. Gating CityTraffic.Create itself on the plan flag
             // was the obvious way to keep cars off a survey drawing and it was wrong twice over:
@@ -721,11 +877,10 @@ namespace Noir.Unity
                 });
             profile.Done("AgentMeshView (the people)");
 
-            // THE CURTAIN. Up before anything can be mistaken for the game running, down only
-            // when the frames have actually settled - and it holds the clock while it is up, so
-            // nothing has quietly started behind it. See BootScreen.
+            // The curtain itself is raised in Awake now, a frame before any of this ran - see the
+            // note there. All that is left here is to say what the wait is FOR, which changes at
+            // this point from building the town to the shader compile below.
             BootScreen.Phase = "Loading assets and shaders";
-            BootScreen.Create(this, transform);
 
             // EVERY SHADER THE TOWN NEEDS, COMPILED NOW, before a single frame is presented.
             // Otherwise each variant compiles the first time something needs to draw with it,
@@ -801,6 +956,13 @@ namespace Noir.Unity
             // sound, and until now the village made none at all.
             VillageAudio.Create(this, transform);
             profile.Done("VillageAudio");
+
+            // AFTER EVERY LAYER, NOT DURING ONE. VillageMesh calls SurfaceTextures.ReportOnce
+            // partway through its own build, before the lazily-registered Massing, Trees and Farm
+            // layers have realised, so that line can only ever say "so far". This one runs when
+            // the town is finished and is the complete census: which names came off the pack,
+            // which off Content/textures/, and which got nothing at all.
+            SurfaceTextures.Report();
 
             profile.Report();
         }
@@ -909,7 +1071,7 @@ namespace Noir.Unity
         /// Cheaper and far safer than not building them: a hidden car still drives its lane, is
         /// still counted by the jam instrument, and still occupies the space in front of the car
         /// behind it, so nothing about the town's behaviour changes when you switch the drawing
-        /// off. A plan is a way of LOOKING at Northgate, not a different Northgate.
+        /// off. A plan is a way of LOOKING at the town, not a different town.
         /// </summary>
         private void HideActors()
         {
@@ -1075,9 +1237,37 @@ namespace Noir.Unity
 
         private void Update()
         {
+            // ONE FRAME LATE, AND DELIBERATELY. Awake raised the boot screen and returned without
+            // building anything, so Unity has now presented a frame with the curtain on it. The
+            // six seconds of town-building happen behind that instead of behind Unity's default
+            // blue, which is what "I pressed Play and it froze" actually was.
+            //
+            // Before the Sim guard below, because the whole point is that there is no Sim yet.
+            if (!_built)
+            {
+                _built = true;
+                Build();
+                return;
+            }
+
             if (Sim == null) return;
 
             HandleHotkeys();
+
+            // The town takes its cars to work. Once a sim-minute, not once a frame - see
+            // _drivewaysAt. This is the one thing in the game whose CHANGE is the content: the
+            // driveway that is empty this morning and was not yesterday.
+            if (_driveways != null && Sim.Clock.MinuteOfDay != _drivewaysAt)
+            {
+                _drivewaysAt = Sim.Clock.MinuteOfDay;
+                _driveways.Refresh(Sim);
+            }
+
+            // And the same clock decides how many are actually MOVING. The fleet is built once at
+            // the peak hour and garaged; this is what holds it to IDOT's curve - ~19 cars at an
+            // average instant, ~46 at the commute - instead of the flat 159 it ran for months.
+            // Retime is idempotent within a minute, so calling it every frame costs a compare.
+            if (_traffic != null) _traffic.Retime(Sim.Clock.MinuteOfDay);
 
             // Drain a queued skip first, a frame's worth at a time.
             if (_skipTicksRemaining > 0)
@@ -1126,6 +1316,15 @@ namespace Noir.Unity
         public double RefreshMs { get; private set; }
 
         /// <summary>What the last frame's rig tick cost, in milliseconds.</summary>
+        /// <summary>
+        /// Milliseconds the CAMERA took this frame. `_rig` is an <see cref="OrbitCamera"/>.
+        ///
+        /// NOT THE CHARACTER RIGS, WHICH IS WHAT EVERYONE READS IT AS. The perf report printed
+        /// this in a column headed `rig.ms` next to `sim.ms` and `refresh.ms`, in a town with
+        /// 1,385 rigged people in it — so the one number a reader would take as "what the skinned
+        /// figures cost" was the orbit camera, and the animators, which really were half the
+        /// frame, appeared nowhere. The column says `camera.ms` now.
+        /// </summary>
         public double RigMs { get; private set; }
 
         /// <summary>

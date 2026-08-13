@@ -53,8 +53,19 @@ namespace Noir.Unity
         // Applies to fonts, panel size, the top bar, and every control height and width, because
         // scaling text alone gives you big words in boxes that clip them.
 
-        /// <summary>1.0 is the old sizing. Clamped to something still usable at both ends.</summary>
-        public static float Scale = 1.6f;
+        /// <summary>
+        /// 1.0 is the old sizing. Clamped to something still usable at both ends.
+        ///
+        /// 1.15 AND NOT 1.6 SINCE 2026-08-11. 1.6 was chosen for a partially sighted player and
+        /// it overshot for this one: at that size the place panel does not fit its own content,
+        /// which is a worse readability failure than small text because the bottom of the form
+        /// simply is not there. The tuning above still works and is still the answer for anybody
+        /// who needs it larger - Ctrl+= - and it is remembered, so nobody has to find this line.
+        /// </summary>
+        public static float Scale = DefaultScale;
+
+        /// <summary>What a profile that has never touched Ctrl+= gets. See Scale.</summary>
+        public const float DefaultScale = 1.15f;
 
         private const float MinScale = 0.8f, MaxScale = 3.0f;
         private const string ScaleKey = "noir.ui.scale";
@@ -66,7 +77,10 @@ namespace Noir.Unity
         private static int F(float px) => Mathf.Max(1, Mathf.RoundToInt(px * Scale));
 
         private static void LoadScale() =>
-            Scale = Mathf.Clamp(PlayerPrefs.GetFloat(ScaleKey, 1.6f), MinScale, MaxScale);
+            // THE DEFAULT LIVES IN ONE PLACE. This read its own 1.6 while the field above said
+            // 1.6 too, so lowering the default meant finding both - and missing one would leave
+            // a fresh profile on the old size with nothing to explain why.
+            Scale = Mathf.Clamp(PlayerPrefs.GetFloat(ScaleKey, DefaultScale), MinScale, MaxScale);
 
         /// <summary>
         /// Ctrl+= larger, Ctrl+- smaller, Ctrl+0 back to default. Held on Ctrl so it cannot
@@ -221,6 +235,22 @@ namespace Noir.Unity
             GUI.skin.textArea.fontSize = F(13);
             GUI.skin.textField.fontSize = F(13);
             GUI.skin.label.fontSize = F(13);
+
+            // AND THE SCROLLBAR, WHICH WAS THE ONE THING SCALE NEVER REACHED.
+            //
+            // "Every size in this file is multiplied by Scale" was true of everything this file
+            // draws and untrue of the one control it does not: GUI.skin's scrollbar keeps its
+            // built-in 15 px whatever the text beside it is doing. At 1.6 that is a hairline
+            // against forty-pixel rows - the owner's words were "scroll is tiny" - and it is the
+            // hardest thing on the panel to hit with a mouse precisely when the panel is at its
+            // longest. Scaled here so it grows with the form it belongs to.
+            float bar = S(15f);
+            GUI.skin.verticalScrollbar.fixedWidth = bar;
+            GUI.skin.verticalScrollbarThumb.fixedWidth = bar;
+            GUI.skin.verticalScrollbarUpButton.fixedHeight = bar;
+            GUI.skin.verticalScrollbarDownButton.fixedHeight = bar;
+            GUI.skin.horizontalScrollbar.fixedHeight = bar;
+            GUI.skin.horizontalScrollbarThumb.fixedHeight = bar;
 
             _stylesReady = true;
         }
@@ -766,13 +796,88 @@ namespace Noir.Unity
             // NO FlexibleSpace BEFORE THE BUTTON when there is a note editor above it: the
             // editor's scroll view expands too, and two expanding siblings split the leftover
             // height between them - which is how a form that fits ends up half-scrolled anyway.
-            if (parcelId >= 0) DrawNoteEditor(parcelId);
-            else GUILayout.FlexibleSpace();
+            // A place with no parcel under it still gets the business editor - it just has no
+            // household form to hang it inside, so it draws on its own and the FlexibleSpace
+            // pushes the close button down as before.
+            if (parcelId >= 0)
+            {
+                DrawNoteEditor(parcelId, place);
+            }
+            else
+            {
+                DrawBusinessEditor(place);
+                GUILayout.FlexibleSpace();
+            }
 
             if (GUILayout.Button("close", _button, GUILayout.Width(S(70f)), GUILayout.Height(S(26f))))
                 _host.SelectedPlace = PlaceId.None;
 
             GUILayout.EndArea();
+        }
+
+        // ---- what traded in THIS UNIT in 1991 -----------------------------------------------
+
+        private string _bizUnit;                 // the handle the drafts below were loaded for
+        private PlaceKind _bizKind;
+        private string _bizName = "", _bizTrade = "";
+
+        /// <summary>
+        /// WHAT TRADED IN THIS UNIT IN 1991, filed against the unit rather than the lot.
+        ///
+        /// The household editor below already asks the same question of a PARCEL, and for a house
+        /// that is the right place for it. It is the wrong place for the commercial row: several
+        /// units stand on one lot, so a business filed by parcel would make a whole terrace into
+        /// one tavern. This writes Content/business-1991.txt, keyed by the unit handle in city.txt.
+        ///
+        /// KIND IS A LIST AND NOT A TEXT BOX, deliberately. It decides the interior, the job
+        /// slots, the opening hours and what animations.txt gives the people inside - and a kind
+        /// nothing answers to does not throw, it falls through to a default and the building
+        /// merely looks wrong. A list cannot be misspelt.
+        /// </summary>
+        private void DrawBusinessEditor(Place place)
+        {
+            string handle = BusinessFromRulings.HandleOf(place.Name);
+
+            // Reload the drafts when the selection moves, so the panel can never show one unit's
+            // ruling over another unit's name.
+            if (_bizUnit != handle)
+            {
+                _bizUnit = handle;
+                var saved = BusinessRulings.For(handle);
+                _bizKind = place.Kind;
+                if (saved != null && saved.Kind.Length > 0
+                    && PlaceKindTable.Current.TryKindOf(saved.Kind, out var k)) _bizKind = k;
+                _bizName = saved?.Business ?? "";
+                _bizTrade = saved?.Trade ?? "";
+            }
+
+            GUILayout.Space(S(10f));
+            GUILayout.Label("<b>what traded here in 1991</b>", _label);
+            GUILayout.Label($"<color=#8a8a86>filed against {handle}</color>", _small);
+            GUILayout.Space(S(4f));
+
+            _bizKind = EnumField("bizkind", "kind - drives jobs, hours and what people do here",
+                                 _bizKind, k => PlaceKindTable.Current.Row(k).Name);
+
+            GUILayout.Space(S(4f));
+            GUILayout.Label("<color=#8a8a86>business - the sign over the door</color>", _small);
+            _bizName = GUILayout.TextField(_bizName, GUILayout.Height(S(22f)));
+
+            GUILayout.Space(S(4f));
+            GUILayout.Label("<color=#8a8a86>trade - what it actually was</color>", _small);
+            _bizTrade = GUILayout.TextField(_bizTrade, GUILayout.Height(S(22f)));
+
+            GUILayout.Space(S(6f));
+            using (new GUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("save", _button, GUILayout.Width(S(70f)),
+                                     GUILayout.Height(S(24f))))
+                    BusinessFromRulings.Save(handle, _bizKind.ToString().ToLowerInvariant(),
+                                             _bizName, _bizTrade);
+
+                GUILayout.Label("<color=#8a8a86>lands on the next build</color>", _small);
+            }
+            GUILayout.Space(S(10f));
         }
 
         /// <summary>
@@ -1158,7 +1263,7 @@ namespace Noir.Unity
             return n;
         }
 
-        private void DrawNoteEditor(int parcelId)
+        private void DrawNoteEditor(int parcelId, Place unit = null)
         {
             if (parcelId < 0) return;
             SeedDrafts(parcelId);
@@ -1210,6 +1315,12 @@ namespace Noir.Unity
             GUILayout.Space(S(10f));
 
             _noteScroll = GUILayout.BeginScrollView(_noteScroll);
+
+            // INSIDE THE SCROLL, NOT ABOVE IT. Drawn above, this block took its height out
+            // of the scroll view's share - the form still did not fit and the scroll it had
+            // to be read through got shorter, which is the "text does not all fit and the
+            // scroll is tiny" the owner reported. Anything that can grow belongs in here.
+            if (unit != null) DrawBusinessEditor(unit);
 
             if (showing == NoteTab.Occupants)
             {
@@ -1403,8 +1514,15 @@ namespace Noir.Unity
             // as knowing it is nothing.
             var zonedAs = _draftZoning;
 
+            // AND NOT WHEN THE UNIT EDITOR IS ALREADY ASKING IT. With a place selected the panel
+            // was drawing two identical "business / trade" pairs a few rows apart - the one above,
+            // filed against the unit and read by the build, and this one, filed against the parcel
+            // and read by NOTHING. Two boxes with the same label where only one has any effect is
+            // worse than the missing feature was: it invites the owner to type his answer into the
+            // one that gets thrown away. A bare parcel with no place on it still gets this pair.
             bool showTrade = zonedAs != ParcelNotes.Zoning.Residential
-                          && zonedAs != ParcelNotes.Zoning.Vacant;
+                          && zonedAs != ParcelNotes.Zoning.Vacant
+                          && unit == null;
 
             // Agricultural keeps the dwelling fields as well as the trade ones: a farmstead is a
             // house AND a business, and at 16 lots showing both costs nothing.
@@ -2300,7 +2418,7 @@ namespace Noir.Unity
                 case Activity.Visiting: return "visiting";
                 case Activity.Walking: return "walking on";
                 case Activity.AtThePlayground: return "playing at";
-                case Activity.OnTheAllotment: return "digging at";
+                case Activity.InTheGarden: return "digging at";
                 case Activity.TravellingTo: return "on the way to";
                 case Activity.Talking: return "stopped to talk on";
                 default: return "at";

@@ -115,9 +115,45 @@ namespace Noir.Unity
 
             // Last, so it can see everything already standing - including the terrace above.
             FillFromSurvey.Apply(layout);
+
+            // AND THEN NOTHING IS LEFT STANDING IN A ROAD. This runs after every other pass on
+            // purpose: FillFromSurvey refuses to RAISE a house in a road, but the fifty that were
+            // already in one came out of city.txt, authored against the 37 ruled roads that
+            // SurveyRoads replaced with the county's 66. The streets moved and the houses did not.
+            // Measured buildings are never moved - see the header of ClearOfRoads.
+            int cleared = ClearOfRoads.Apply(layout, out int stuck);
+            if (cleared > 0 || stuck > 0)
+                Debug.Log($"[survey] {cleared} buildings moved off a road corridor"
+                        + (stuck > 0 ? $", {stuck} could not be cleared and are STILL IN A ROAD" : "")
+                        + ".");
+
+            // AND THEN THE TOWN TRADES UNDER THE NAMES THE OWNER GAVE IT.
+            //
+            // LAST OF THE LAYOUT PASSES AND BEFORE Finish, because it can change a place's KIND
+            // and everything a kind decides - the interior, the rooms, the counters, the job
+            // slots, the opening hours, the households - is generated as the world is built. A
+            // kind changed after that would be a tavern with a shop's rooms in it.
+            BusinessFromRulings.Apply(layout);
+
             SurveyReport.Write();
 
-            return Finish(layout, seed, mapFile);
+            var built = Finish(layout, seed, mapFile);
+
+            // AND THEN PEOPLE HAVE SOMEWHERE TO WALK, AND EVERY YARD BELONGS TO SOMEBODY.
+            //
+            // After Finish and not inside it, because both write to the GRID - which does not
+            // exist until the world is built - and because BuildUnsurveyed must never get either:
+            // the parcel ids and the walk rulings are both the real town's.
+            //
+            // WALKS BEFORE LOTS, and the order is load-bearing the same way the passes above are.
+            // A sidewalk is laid Path|Verge and LotsFromSurvey leaves Verge alone, so running it
+            // first means the footway is already public when the parcels come to claim ground.
+            // The other way round, any lot whose polygon overhangs its own frontage would charge
+            // a walker trespass for using the pavement outside it.
+            WalksFromSurvey.Apply(built.World);
+            LotsFromSurvey.Apply(built.World);
+
+            return built;
         }
 
         /// <summary>
@@ -137,6 +173,34 @@ namespace Noir.Unity
         private static Result Finish(VillageLayout layout, ulong seed, string named)
         {
             var world = WorldBuilder.Build(layout, seed);
+
+            // AND THEN EVERY DOOR OPENS ONTO SOMETHING.
+            //
+            // AFTER THE BUILD AND BEFORE THE VALIDATION, which is the only place it can go. A door
+            // is judged on the GRID - can it be stood on, is it joined to the town - and the grid
+            // does not exist until the world is built. Judged on the layout instead, a neighbour's
+            // LOT reads as its walls and ninety doors look bricked up when nine are.
+            //
+            // ClearOfRoads shoves buildings off road corridors and carries each door along at its
+            // authored offset, which is right - a door is part of a building. What it cannot carry
+            // is the ground outside the wall, so on 2026-08-09 nine doors ended up opening into a
+            // neighbour's back wall, in mutual pairs, each sealing the other.
+            //
+            // ONE REBUILD, and only when something moved: the door is carved into the grid as the
+            // world is built, so a moved door is not in the grid that found it. The build is about
+            // two seconds and this is the only pass that needs a second one.
+            int refaced = DoorsThatOpen.Apply(layout, world, out int walledIn);
+            if (refaced > 0 || walledIn > 0)
+            {
+                Debug.Log($"[survey] {refaced} door(s) moved round to a wall with ground outside it"
+                        + (walledIn > 0
+                            ? $", {walledIn} building(s) are WALLED IN ON EVERY SIDE and cannot be helped"
+                            : "")
+                        + ".");
+
+                if (refaced > 0) world = WorldBuilder.Build(layout, seed);
+            }
+
             var validation = WorldValidator.Validate(world);
 
             // NAMED FROM THE MAP, not written out. These said "village.txt:" while the game had

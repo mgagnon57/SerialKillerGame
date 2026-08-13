@@ -113,7 +113,7 @@ namespace Noir.Core.Observation
         /// <summary>
         /// Fourteen days, and there is no --days flag anywhere that reaches this.
         ///
-        /// Measured on Ashcombe at 3 / 7 / 14 days: 2.20 / 1.40 / 1.00. The number is meaningless
+        /// Measured on Rossville at 3 / 7 / 14 days: 2.20 / 1.40 / 1.00. The number is meaningless
         /// without the day count, so "2:1" means "2:1 at exactly fourteen days". Fourteen because
         /// DayPlanner branches on day % 7, weekend and sunday, and this village's only period is
         /// the week: over three days a Sunday churchgoing looks like a one-off and scores as

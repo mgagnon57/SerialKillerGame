@@ -10,7 +10,7 @@ namespace Noir.Unity
     /// <summary>
     /// Fills a downtown block.
     ///
-    /// Northgate was nine sixty-metre blocks alone in the middle of five hundred metres of
+    /// Rossville was nine sixty-metre blocks alone in the middle of five hundred metres of
     /// arterial road, and the pack has no more landmarks to add - Buildings City holds thirty
     /// prefabs, twelve of them skyscraper modules, and the city already places fourteen of the
     /// seventeen distinct buildings in it. There is no version of a downtown here that is
@@ -131,7 +131,7 @@ namespace Noir.Unity
         /// </summary>
         private static int StoreysFor(TileRect lot, float rank, int index)
         {
-            // FOUR NEAR THE MIDDLE, NOT SIX. Northgate holds about a thousand people, and a
+            // FOUR NEAR THE MIDDLE, NOT SIX. Rossville holds about a thousand people, and a
             // thousand people do not fill six storeys of frontage on twenty-seven blocks - the
             // downtown that came out of it read as a city of a quarter of a million with nobody
             // in it, which is the opposite of the thing being built. Downtown is still where the
@@ -145,7 +145,7 @@ namespace Noir.Unity
         /// Whether a block may raise a tower of its own.
         ///
         /// OFF. Four generated towers stood downtown on top of the two authored ones, and six
-        /// skyscrapers is the skyline of a city of hundreds of thousands - Northgate holds about
+        /// skyscrapers is the skyline of a city of hundreds of thousands - Rossville holds about
         /// a thousand. The two in city.txt stay, because a small city does have one or two tall
         /// things and they are landmarks, which is precisely what an AUTHORED place is for.
         ///

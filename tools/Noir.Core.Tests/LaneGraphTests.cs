@@ -16,7 +16,7 @@ namespace Noir.Core.Tests
     {
         private const string Header = "village Test\nsize 240 240\nterrain path 0,0 240x240\n";
 
-        /// <summary>Northgate's shape: two freeway arterials, two main roads, four junctions.</summary>
+        /// <summary>the fixture village's shape: two freeway arterials, two main roads, four junctions.</summary>
         private const string Grid =
             "road northgate 30 0,75 239,75\n  class freeway\n"
           + "road franklin 30 0,165 239,165\n  class mainroad\n"
@@ -30,7 +30,7 @@ namespace Noir.Core.Tests
             return new LaneGraph(world.Roads, world.Width, world.Height);
         }
 
-        private static LaneGraph Northgate() => Build(Header + Grid, out _);
+        private static LaneGraph FixtureVillage() => Build(Header + Grid, out _);
 
         // ---- the driving side ---------------------------------------------------------
 
@@ -62,7 +62,7 @@ namespace Noir.Core.Tests
         {
             // The whole point of travel coordinates: a car's progress rises whichever way it
             // points, so no caller has to carry a sign.
-            var graph = Northgate();
+            var graph = FixtureVillage();
             foreach (var segment in graph.Segments)
                 Assert.That(segment.Length, Is.GreaterThan(0f),
                             $"segment {segment.Index} on line {segment.Line} runs backwards");
@@ -76,7 +76,7 @@ namespace Noir.Core.Tests
         [Test]
         public void EveryLaneIsCutAtEveryJunctionItCrosses()
         {
-            var graph = Northgate();
+            var graph = FixtureVillage();
 
             // Each road crosses the two roads on the other axis, so each of its lanes is cut
             // into three: edge to first junction, between them, last junction to edge.
@@ -93,7 +93,7 @@ namespace Noir.Core.Tests
         [Test]
         public void EveryRouteEntersAndLeavesTheCity()
         {
-            var graph = Northgate();
+            var graph = FixtureVillage();
 
             // Eight approaches (four roads x two ends) times the lanes on each.
             Assert.That(graph.Entries.Count, Is.EqualTo(2 + 2 + 1 + 1 + 2 + 2 + 1 + 1));
@@ -112,7 +112,7 @@ namespace Noir.Core.Tests
         {
             // A lane nothing can reach is a lane the traffic will never use, which is the sort
             // of fault that looks like "the city is a bit quiet" rather than like a bug.
-            var graph = Northgate();
+            var graph = FixtureVillage();
 
             var seen = new HashSet<int>(graph.Entries);
             var queue = new Queue<int>(graph.Entries);
@@ -135,7 +135,7 @@ namespace Noir.Core.Tests
         [Test]
         public void NobodyMayTurnRoundInAJunction()
         {
-            var graph = Northgate();
+            var graph = FixtureVillage();
             foreach (var turn in graph.Turns)
             {
                 var from = graph.Segments[turn.From];
@@ -148,7 +148,7 @@ namespace Noir.Core.Tests
         [Test]
         public void GoingStraightStaysOnTheSameRoadAndTheSameLane()
         {
-            var graph = Northgate();
+            var graph = FixtureVillage();
             foreach (var turn in graph.Turns.Where(t => t.Kind == TurnKind.Straight))
             {
                 var from = graph.Segments[turn.From];
@@ -189,7 +189,7 @@ namespace Noir.Core.Tests
         [Test]
         public void AFourLaneRoadAndATwoLaneRoadStillConnect()
         {
-            // Northgate is a freeway and First Street a main road; they cross at 75,75. The
+            // the fixture village is a freeway and First Street a main road; they cross at 75,75. The
             // rule has to join two lanes to one without a special case for the pair.
             var graph = Build(Header + Grid, out var world);
 
@@ -225,7 +225,7 @@ namespace Noir.Core.Tests
 
                 // Both directions of both roads arrive, so the count follows from the two
                 // classes that meet - 8 where two freeways cross, 4 where two main roads do,
-                // 6 at the two mixed ones. Northgate has one of each kind of junction.
+                // 6 at the two mixed ones. The fixture village has one of each kind of junction.
                 int expected = 2 * RoadClasses.LanesEachWay(junction.NorthSouth.Class)
                              + 2 * RoadClasses.LanesEachWay(junction.EastWest.Class);
                 Assert.That(arriving.Count, Is.EqualTo(expected),
@@ -478,12 +478,25 @@ namespace Noir.Core.Tests
             var graph = Build(Header
                 + "road bend 30 20,20 20,120 60,180 140,200\n  class mainroad\n", out var world);
 
+            // AND THIS TEST THEN ASSERTED THE NEXT BUG ALONG. It expected the run to end at
+            // `bend.From + bend.Path.Length`, which is exactly what LaneGraph computed - an ARC
+            // LENGTH added to an AXIS MINIMUM. Its own premise line below says why that cannot be
+            // a position: arc length exceeds the chord on a bend. This fixture's bend ends at
+            // y=200 and the sum is 277, so the test was demanding 77 m of lane past the end of the
+            // road while its name promised the opposite. On Content/roads.txt the same arithmetic
+            // gave alley13 thirty-six metres of lane past the end of the alley, and PlayMode found
+            // the cars on it: two stacked at 0.00 m, one 65 m from the nearest asphalt in town.
+            //
+            // Where the road stops is the path's own extent on the road's declared axis.
             var bend = world.Roads.Lines[0];
             Assert.That(bend.To, Is.LessThan(210f), "the fixture's premise: bend ends well inside the map");
             Assert.That(bend.Path.Length, Is.GreaterThan(bend.To - bend.From),
                         "the fixture's premise: arc length must exceed the chord for the bug to bite");
 
-            float pathEnd = bend.From + bend.Path.Length;
+            float pathEnd = bend.Path.MaxY;
+            Assert.That(pathEnd, Is.LessThan(bend.From + bend.Path.Length - 30f),
+                        "the fixture's premise: the two must differ by more than the margin, or "
+                      + "this test cannot tell the off-stage margin from the old arithmetic");
 
             int checkedSegments = 0;
             foreach (var seg in graph.Segments)

@@ -46,6 +46,323 @@ def _load(name, path):
 
 ft = _load("fit_transform", os.path.join(HERE, "fit-transform.py"))
 cr = _load("check_roads", os.path.join(HERE, "check-roads.py"))
+sv = _load("serve_viewer", os.path.join(HERE, "serve-viewer.py"))
+
+# ---------------------------------------------------------------------------------------------
+#  THIS SCRIPT USED TO OVERWRITE Content/roads.txt THE MOMENT YOU RAN IT, WITH NO BACKUP.
+#
+#  No flag, no confirmation, no copy aside - `open(path, "w")` unconditionally, at the bottom of a
+#  600-line file. So a single dry run to check a hypothesis silently reverted the survey network
+#  AND deleted the twelve IDOT traffic counts that fixed the starving junction at church x maple,
+#  because the writer below emits no `aadt` line. Recoverable from git, but you would not know it
+#  had happened: the tool prints "wrote Content/roads.txt" either way and looks like it worked.
+#
+#  Same idiom as the sibling that got it right - build-road-blocks.py:26. No flag is a DRY RUN
+#  that prints what it would do and writes nothing. `--write` backs up first, through the helper
+#  that refuses to overwrite an earlier backup, and only then writes.
+#
+#  tools/roads-proposed.json is behind the same flag on purpose: it is the browser map's copy, and
+#  a dry run must not refresh what the owner is looking at.
+# ---------------------------------------------------------------------------------------------
+WRITE = "--write" in sys.argv
+
+# A path argument writes THERE instead of over Content/roads.txt - no backup needed, nothing at
+# risk, and it is the only safe way to diff what this generator would produce against what is
+# actually in use. That comparison is what proved the generator faithful: 24 lines differ and every
+# one is an `aadt` line changing position, nothing else.
+ELSEWHERE = next((a for a in sys.argv[1:] if not a.startswith("--")), None)
+
+
+def idot_counts():
+    """The county's traffic counts, by road name, from tools/rossville-aadt.txt.
+
+    READ RATHER THAN INVENTED, AND READ RATHER THAN EATEN. These twelve numbers used to live only
+    as hand-typed `aadt` lines inside Content/roads.txt - the file this script REGENERATES - and
+    this writer emitted no aadt line at all. So a single regeneration deleted them silently, and
+    the starving junction at church x maple would have come straight back. A measured fact a tool
+    quietly drops is not stored; it is borrowed until somebody runs the tool.
+
+    A road absent from the file is not an error: IDOT does not count twenty-one of this map's
+    named roads, because there is nothing on them to count.
+    """
+    counts = {}
+    path = os.path.join(HERE, "rossville-aadt.txt")
+    if not os.path.exists(path):
+        print("WARNING: no tools/rossville-aadt.txt - the IDOT counts will NOT be written.")
+        return counts
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            bits = line.split()
+            if len(bits) >= 2:
+                counts[bits[0].lower()] = int(bits[1])
+    return counts
+
+# The county's traffic counts, keyed by road name. Read once at import; see idot_counts.
+AADT = idot_counts()
+
+
+def _alley_registry():
+    """The frozen alley names and the polylines they were derived from."""
+    out = []
+    path = os.path.join(HERE, "rossville-alley-names.txt")
+    if not os.path.exists(path):
+        print("WARNING: no tools/rossville-alley-names.txt - alleys will be renamed by length rank.")
+        return out
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            bits = line.split()
+            pts = [tuple(float(v) for v in t.split(",")) for t in bits[1:] if "," in t]
+            if len(pts) >= 2:
+                out.append((bits[0], pts))
+    return out
+
+
+ALLEYS_NAMED = _alley_registry()
+
+
+def _point_to_segment(p, a, b):
+    (px, py), (ax, ay), (bx, by) = p, a, b
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return math.dist(p, a)
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return math.dist(p, (ax + t * dx, ay + t * dy))
+
+
+def _polyline_gap(one, two):
+    """How far apart two polylines are - the worst of each one's points to the other's SEGMENTS.
+
+    NOT MIDPOINT TO MIDPOINT, and that is the whole correctness of the registry. Eleven of the 31
+    alleys are stitched runs whose own joins land 39.5-92.5 m from their midpoint, so a midpoint
+    rule with any sane radius orphans exactly the parent names it exists to protect - and renames
+    them, which is the fault it was written to prevent.
+    """
+    def worst(src, dst):
+        return max(min(_point_to_segment(p, dst[i], dst[i + 1]) for i in range(len(dst) - 1))
+                   for p in src)
+
+    # THE BETTER DIRECTION, NOT THE WORSE ONE, and that is deliberate. A registered polyline may be
+    # the EXTENDED form of the alley - with a mouth on each end - while the thing being matched is
+    # the freshly derived form that stops short. Taking the worst direction punishes exactly that
+    # difference and renumbers the alley the registry exists to keep, which is the fault the whole
+    # file is here to prevent. Taking the better one asks "does one lie along the other", which is
+    # the real question. A 12 m ceiling still keeps two genuinely different corridors apart.
+    return min(worst(one, two), worst(two, one))
+
+
+#: How far a derived alley may sit from its registered polyline and still be the same alley.
+#: Generous: the derivation moving a whole alley 12 m is a different alley, not a nudge.
+ALLEY_SAME = 12.0
+
+
+def registry_name(runs):
+    """The frozen name for this derived alley, or None if it is genuinely new.
+
+    `runs` is what clip_and_round returns - a LIST OF POLYLINES, because a run that leaves the map
+    and comes back is split rather than bridged. Every run is compared against every registered
+    polyline and the closest wins.
+    """
+    best, gap = None, ALLEY_SAME
+    for name, pts in ALLEYS_NAMED:
+        for run in runs:
+            if len(run) < 2:
+                continue
+            d = _polyline_gap([tuple(q) for q in run], pts)
+            if d < gap:
+                best, gap = name, d
+    return best
+
+
+def registry_next():
+    """The first alley number not already spoken for."""
+    used = [int(n[5:]) for n, _ in ALLEYS_NAMED if n[5:].isdigit()]
+    return max(used) + 1 if used else 1
+
+
+#: How far an alley end may be carried to reach a street, in metres.
+#:
+#: The median gap is 14.9 m and the blanking radius that caused it is 11 m, so anything much beyond
+#: 25 m is not a mouth that was blanked away - it is an alley that genuinely ends in the middle of a
+#: block, and dragging it to the nearest street would be inventing a road rather than restoring one.
+MOUTH_REACH = 25.0
+
+#: Close enough to already be a mouth. Matches tools/check-alleys.py.
+MOUTH_TOUCH = 8.0
+
+MOUTHS = {"opened": 0, "already": 0, "too far": 0, "refused": 0}
+
+_PARCEL_CACHE = {}
+
+
+def _PARCELS(village):
+    """One Parcels index, not one per alley - it builds a grid over every lot in the town."""
+    if "p" not in _PARCEL_CACHE:
+        _PARCEL_CACHE["p"] = cr.Parcels(village)
+    return _PARCEL_CACHE["p"]
+
+
+def _nearest_on_streets(p, roads, exclude=None):
+    """The closest point on any non-alley centreline, and how far away it is.
+
+    `exclude` keeps a road from finding ITSELF, which does not matter while only alleys are
+    extended - an alley is never in this list - and matters entirely once streets are, because
+    every street's own end sits at distance zero from its own centreline.
+    """
+    best, at = float("inf"), None
+    for name, _w, klass, lines, _src in roads:
+        if klass == "alley":
+            continue
+        if exclude is not None and name == exclude:
+            continue
+        for pl in lines:
+            for i in range(len(pl) - 1):
+                a, b = pl[i], pl[i + 1]
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                if dx == 0 and dy == 0:
+                    continue
+                t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)
+                t = max(0.0, min(1.0, t))
+                q = (a[0] + t * dx, a[1] + t * dy)
+                d = math.dist(p, q)
+                if d < best:
+                    best, at = d, q
+    return best, at
+
+
+#: How far a STREET end may be carried to reach the street it stops short of. Shorter than an
+#: alley's reach on purpose: an alley's gap has a known cause and a known size - derive-alleys.py
+#: blanked 11 m around every street - while a street that stops 20 m short of another is more
+#: likely a road that genuinely ends there.
+STREET_REACH = 12.0
+
+#: Close enough that the junction already forms. Half a street's 10 m corridor: `RoadNetwork.
+#: Touches` counts an end as meeting a road when it lands inside that road's CARRIAGEWAY, so
+#: anything nearer than this already has its junction and must not be moved.
+STREET_TOUCH = 5.0
+
+#: How straight-on the approach has to be. A street that stopped short was HEADING for the one it
+#: missed; a street that merely ends near another is a different thing entirely and moving it would
+#: invent a road. 0.87 is thirty degrees.
+STREET_AHEAD = 0.87
+
+STREET_MOUTHS = {"opened": 0, "already": 0, "too far": 0, "refused": 0, "off to one side": 0}
+
+
+def extend_streets_to_streets(name, runs, roads, parcels=None):
+    """Carry a street's end out to the street it stops short of.
+
+    THE SAME FAULT THE ALLEYS HAD, IN A SMALLER NUMBER OF PLACES AND FROM A DIFFERENT CAUSE.
+    `NoTwoStreetsTouchWithoutAJunctionBetweenThem` found four pairs whose corridors overlap with
+    no junction between them, because the county's chained segments stop just outside the other
+    road's carriageway - Dale Avenue ends 0.4 m short of Route 1's. A car cannot turn from Dale
+    onto Route 1, which is a real route through this town.
+
+    REFUSED IN THREE WAYS, because a street is not an alley and the reach cannot be as generous:
+
+      - anything already inside the target's carriageway is left alone - its junction exists;
+      - anything more than STREET_REACH away is left alone - it probably just ends there;
+      - anything whose target is OFF TO ONE SIDE rather than straight ahead is left alone, which
+        is the guard that stops this inventing roads. A street that stopped short was pointing at
+        the one it missed.
+
+    and then the same parcel refusal the alleys get, so no mouth is driven through a front garden.
+    """
+    out = []
+    for pl in runs:
+        pl = [tuple(p) for p in pl]
+        if len(pl) < 2:
+            out.append(pl)
+            continue
+
+        for which in (0, -1):
+            end = pl[which]
+            gap, q = _nearest_on_streets(end, roads, exclude=name)
+
+            if q is None or gap <= STREET_TOUCH:
+                STREET_MOUTHS["already"] += 1 if q is not None else 0
+                continue
+            if gap > STREET_REACH:
+                STREET_MOUTHS["too far"] += 1
+                continue
+
+            # WAS IT HEADING THERE? The road's own direction at this end, against the direction
+            # to the street it stopped short of.
+            inward = pl[1] if which == 0 else pl[-2]
+            ax, ay = end[0] - inward[0], end[1] - inward[1]
+            alen = math.hypot(ax, ay)
+            bx, by = q[0] - end[0], q[1] - end[1]
+            blen = math.hypot(bx, by)
+            if alen < 1e-6 or blen < 1e-6:
+                continue
+            if (ax * bx + ay * by) / (alen * blen) < STREET_AHEAD:
+                STREET_MOUTHS["off to one side"] += 1
+                continue
+
+            tip = (int(round(q[0])), int(round(q[1])))
+
+            if parcels is not None and parcels.hit(tip) is not None:
+                STREET_MOUTHS["refused"] += 1
+                continue
+
+            if which == 0:
+                pl = [tip] + pl
+            else:
+                pl = pl + [tip]
+            STREET_MOUTHS["opened"] += 1
+            print(f"[streets] {name} carried to meet the road it stopped {gap:.1f} m short of, "
+                  f"at {tip[0]},{tip[1]}")
+
+        out.append(pl)
+    return out
+
+
+def extend_to_streets(name, runs, roads, parcels=None):
+    """Carry each end of an alley out to the street it stops short of.
+
+    REFUSED RATHER THAN FORCED where the new stretch would run across somebody's lot. An alley
+    mouth driven through a front garden is a worse fault than an alley with no mouth: the first is
+    a road through a house, the second is only a road to nowhere. The refusals are counted and
+    printed, because a mouth that cannot be opened is a thing somebody should look at rather than a
+    silence.
+    """
+    out = []
+    for pl in runs:
+        pl = [tuple(p) for p in pl]
+        if len(pl) < 2:
+            out.append(pl)
+            continue
+
+        for which in (0, -1):
+            gap, q = _nearest_on_streets(pl[which], roads)
+            if q is None or gap <= MOUTH_TOUCH:
+                MOUTHS["already"] += 1 if q is not None and gap <= MOUTH_TOUCH else 0
+                continue
+            if gap > MOUTH_REACH:
+                MOUTHS["too far"] += 1
+                continue
+
+            # On the integer lattice, because VillageParser reads road points with ContentText.Int
+            # and a fractional coordinate is a parse error rather than a rounding question.
+            tip = (int(round(q[0])), int(round(q[1])))
+
+            if parcels is not None and parcels.hit(tip) is not None:
+                MOUTHS["refused"] += 1
+                continue
+
+            if which == 0:
+                pl = [tip] + pl
+            else:
+                pl = pl + [tip]
+            MOUTHS["opened"] += 1
+
+        out.append(pl)
+    return out
 
 # Names the county spells differently from this project. The county is not automatically right
 # about a name - it is right about geometry - so the project's own spelling wins and the
@@ -339,10 +656,68 @@ def main():
             FLOOR[name] = "street"
             roads.append((name, None, "mainroad", keep, "authored"))
 
-    for i, a in enumerate(sorted(alleys, key=lambda a: -a["len"]), start=1):
+    # ---- AND GIVE A STREET A MOUTH TOO, WHERE IT STOPS SHORT OF ONE -------------------------
+    #
+    # BEFORE THE ALLEYS, deliberately. The alley mouths are aimed at street centrelines, so the
+    # streets have to be in their final shape first or an alley is carried to where a street used
+    # to stop. Same reasoning as doing the alley extension after chain/simplify/clip rather than
+    # upstream of them.
+    #
+    # Four pairs on 2026-08-09: benton x summit, dale x grove, dale x chicago, thompson x chicago.
+    # See extend_streets_to_streets for the three refusals - this is a much narrower reach than
+    # the alleys get, because an alley's gap has a known cause and a street's does not.
+    for i, (nm, w, kl, runs, src) in enumerate(roads):
+        if kl == "alley":
+            continue
+        roads[i] = (nm, w, kl,
+                    extend_streets_to_streets(nm, runs, roads, _PARCELS(village)), src)
+
+    print(f"[streets] mouths: {STREET_MOUTHS['opened']} opened, "
+          f"{STREET_MOUTHS['already']} already meeting, "
+          f"{STREET_MOUTHS['off to one side']} off to one side, "
+          f"{STREET_MOUTHS['too far']} too far, "
+          f"{STREET_MOUTHS['refused']} refused (would cross a lot)")
+
+    # ---- ALLEY NAMES COME FROM THE REGISTRY, NOT FROM THE LENGTH RANK -----------------------
+    #
+    # This was `enumerate(sorted(alleys, key=lambda a: -a["len"]), start=1)`, so a name was never
+    # a name - it was a RANK, and a rank is a property of the whole set. Add one alley, lengthen
+    # one, change the derivation by a metre, and every alley below it in the order silently became
+    # a different road. Anything referring to `alley12` then pointed at different ground with no
+    # error and nothing in a diff to show it.
+    named = []
+    fresh = registry_next()
+    for a in sorted(alleys, key=lambda a: -a["len"]):
         pl = clip_and_round([tuple(p) for p in a["pts"]])
-        if pl:
-            roads.append((f"alley{i}", None, "alley", pl, "parcels"))
+        if not pl:
+            continue
+        name = registry_name(pl)
+        if name is None:
+            name, fresh = f"alley{fresh}", fresh + 1
+            print(f"[alleys] not in the registry, numbered {name} "
+                  f"(len {a['len']:.0f} m) - add it to tools/rossville-alley-names.txt to freeze it")
+        named.append((name, pl))
+
+    # ---- AND GIVE EVERY ALLEY A MOUTH ------------------------------------------------------
+    #
+    # derive-alleys.py blanks 11 m around every street centreline before tracing, so a street's own
+    # corridor is not mistaken for an alley - and nothing ever put the mouth back. The result was a
+    # town whose back lanes touch nothing: 2 of 66 alley ends within 8 m of a street, 31 of 33
+    # alleys stranded at BOTH ends, median gap 14.9 m, which is about the blanking radius plus half
+    # a street corridor. The alleys stopped exactly where the blanking stopped them.
+    #
+    # It survived because it looks right from above - correct places, correct widths, and islands.
+    # A car could not enter one from any direction.
+    #
+    # DONE HERE AND NOT IN derive-alleys.py, which is the correction that matters: this runs AFTER
+    # chain, simplify and clip_and_round, so the extension is aimed at the runs that actually ship.
+    # Computed upstream against raw county centrelines it is three transforms away from the shipped
+    # geometry and lands barely two thirds of the mouths inside tolerance.
+    named = [(n, extend_to_streets(n, pl, roads, _PARCELS(village))) for n, pl in named]
+
+    # Emit in the registry's own order so the file reads stably, with anything new after it.
+    for name, pl in sorted(named, key=lambda t: int(t[0][5:])):
+        roads.append((name, None, "alley", pl, "parcels"))
 
     # ---- MEASURE the right of way, rather than inherit it --------------------------------
     # city.txt calls every street 10 and every alley 4, and those numbers came along with the
@@ -585,12 +960,56 @@ def main():
                 w_(f"  carries {carries}")
             if row and row >= width:
                 w_(f"  easement {row:.1f}")
+            if n.lower() in AADT:
+                w_(f"  aadt {AADT[n.lower()]}   # IDOT count, see tools/rossville-aadt.txt")
         w_("")
 
     path = os.path.join(CONTENT, "roads.txt")
+
+    counted = sum(1 for line in L if line.startswith("  aadt "))
+    print(f"[alleys] mouths opened {MOUTHS['opened']}, already touching {MOUTHS['already']}, "
+          f"refused (would cross a lot) {MOUTHS['refused']}, too far to be a blanked mouth "
+          f"{MOUTHS['too far']}")
+
+    if ELSEWHERE:
+        with open(ELSEWHERE, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("\n".join(L))
+        print(f"wrote {ELSEWHERE}  ({len(roads)} roads, {counted} aadt lines) - "
+              "Content/roads.txt untouched")
+        return
+
+    if not WRITE:
+        have = 0
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                have = sum(1 for line in fh if line.startswith("  aadt "))
+
+        print(f"DRY RUN - nothing written. {len(roads)} roads would be written to")
+        print(f"  {os.path.normpath(path)}")
+        print("  and tools/roads-proposed.json (the browser map's copy).")
+        print(f"  IDOT counts: {counted} aadt lines would be written, {have} are in the file now.")
+
+        # ROADS vs ROAD RUNS - and confusing the two produced a false alarm worth recording.
+        # `len(roads)` is 61 UNIQUE NAMES; the file has 66 `road ` LINES, because Summit, Grove,
+        # Green, Harrison and Holmes each arrive as two runs. Comparing the two numbers looks like
+        # five roads going missing and is nothing of the kind. Compare runs with runs.
+        runs = 0
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                runs = sum(1 for line in fh if line.startswith("road "))
+        mine = sum(1 for line in L if line.startswith("road "))
+        if runs != mine:
+            print(f"  ** WARNING: {runs} road runs in the file, {mine} here. Diff before writing. **")
+        else:
+            print(f"  {mine} road runs, matching the file. {len(roads)} distinct names.")
+
+        print("Re-run with --write to back up and write.")
+        return
+
+    sv.backup(path, "build-roads")
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(L))
-    print(f"wrote Content/roads.txt  ({len(roads)} roads)")
+    print(f"wrote Content/roads.txt  ({len(roads)} roads), backup taken first")
 
     with open(os.path.join(HERE, "roads-proposed.json"), "w", encoding="utf-8") as fh:
         json.dump([{"n": n, "w": width, "c": klass, "src": s, "row": row,

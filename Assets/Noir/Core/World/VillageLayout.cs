@@ -70,6 +70,18 @@ namespace Noir.Core.World
 
         /// <summary>The function this road actually has: what was declared, or its own class.</summary>
         public RoadClass EffectiveCarries => Carries ?? EffectiveClass;
+
+        /// <summary>
+        /// Annual Average Daily Traffic — how many vehicles a day the county actually counted on
+        /// this road, both directions. 0 means NOT COUNTED, which is not the same as none.
+        ///
+        /// IDOT counts village streets by name, not just state routes, and it counts eleven of
+        /// Rossville's. Route 1 is 5,200 a day, Attica 1,100, Church Street 200. Everything that
+        /// wants to know how busy a road is asked its CLASS before this existed, and a class is a
+        /// four-step ladder against a measured spread of twenty-one to one.
+        /// See docs/research/TRAFFIC-COUNTS.md.
+        /// </summary>
+        public int Aadt;
     }
 
     public sealed class PlaceSpec

@@ -1,5 +1,5 @@
 # ==========================================================================
-#  NORTHGATE, ON ROSSVILLE, ILLINOIS'S OWN STREET GRID
+#  ROSSVILLE, ILLINOIS - THE TOWN ON ITS OWN STREET GRID
 #
 #  Not a grid that looks like Rossville - the actual one, taken from
 #  OpenStreetMap and converted to metres about the crossing of Chicago Street
@@ -1315,107 +1315,107 @@ road alley15 4 1149,1791 1351,1791   # EW, +54m off y=1722
 #  THE 100 BLOCKS OF NORTH AND SOUTH CHICAGO STREET
 # ==========================================================================
 
-place casino 694,1282 22x35 "the Opera House"
+place casino 694,1282 22x35 "Rossville unit 35"
   door 715,1299
-  human Open all night, and the carpet is loud enough that nobody notices the hour.
-place shop 684,1258 22x22 "vacant - was the Motion Picture house"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Opera House", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "casino", which is what drives jobs, hours and what people do here.
+place shop 684,1258 22x22 "Rossville unit 36"
   door 705,1269
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. A picture house this size did not survive to 1991 in a town of 1,300 - most of them shut in the sixties - but the building is a real 22 by 22 on the plan and something was in it.
-place bank 675,1227 22x29 "the Rossville bank"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant - was the Motion Picture house", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place bank 675,1227 22x29 "Rossville unit 1"
   door 696,1241
-  human Marble that was meant to look permanent.
-place precinct 660,1166 18x35 "the village office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Rossville bank", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "bank", which is what drives jobs, hours and what people do here.
+place precinct 660,1166 18x35 "Rossville unit 2"
   door 677,1183
-  human The light in the front office never goes off, which is not the same as somebody being awake.
-place villagehall 652,1138 16x26 "the I.O.O.F. hall"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the village office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "precinct", which is what drives jobs, hours and what people do here.
+place villagehall 652,1138 16x26 "Rossville unit 3"
   door 667,1151
-  human Bingo, inquests, and the annual meeting about the verge.
-place villagehall 757,1291 16x26 "the G.A.R. hall"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the I.O.O.F. hall", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "villagehall", which is what drives jobs, hours and what people do here.
+place villagehall 757,1291 16x26 "Rossville unit 4"
   door 757,1304
-  human Scout hut, polling station, and where the inquest was held.
-place shop 749,1271 20x18 "Henderson's"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the G.A.R. hall", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "villagehall", which is what drives jobs, hours and what people do here.
+place shop 749,1271 20x18 "Rossville unit 5"
   door 749,1280
-  human Open at five, which is either a service or an accusation.
-place shop 742,1245 14x24 "the Attica Street market"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "Henderson's", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 742,1245 14x24 "Rossville unit 6"
   door 742,1257
-  human Fruit stacked to a geometry that survives being sold from.
-place pub 734,1221 14x22 "the Livingood House"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Attica Street market", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place tavern 734,1221 14x22 "Rossville unit 7"
   door 734,1232
-  human The car park is bigger than the pub and on Fridays it is not big enough.
-place pub 720,1179 14x22 "the Commercial Hotel"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Livingood House", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "tavern", which is what drives jobs, hours and what people do here.
+place tavern 720,1179 14x22 "Rossville unit 8"
   door 720,1190
-  human Older than the road, and it shows in the floor.
-place pub 712,1155 12x22 "the grain office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Commercial Hotel", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "tavern", which is what drives jobs, hours and what people do here.
+place tavern 712,1155 12x22 "Rossville unit 9"
   door 712,1166
-  human Four o'clock and the same men are in it who were in it at noon.
-place postoffice 706,1137 14x16 "Rossville Post Office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the grain office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "tavern", which is what drives jobs, hours and what people do here.
+place postoffice 706,1137 14x16 "Rossville unit 10"
   door 706,1145
-  human A queue that moves at the speed of one conversation at a time.
-place diner 726,1371 11x20 "the Chicago Street diner"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "Rossville Post Office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "postoffice", which is what drives jobs, hours and what people do here.
+place diner 726,1371 11x20 "Rossville unit 11"
   door 736,1381
-  human Open before anyone needs it to be, and the same four faces are in it at six.
-place gasstation 714,1370 11x20 "the pumps"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Chicago Street diner", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "diner", which is what drives jobs, hours and what people do here.
+place gasstation 714,1370 11x20 "Rossville unit 12"
   door 724,1380
-  human Somebody is always sitting in a car here not buying anything.
-place shop 737,1397 12x16 "the drug store"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the pumps", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "gasstation", which is what drives jobs, hours and what people do here.
+place shop 737,1397 12x16 "Rossville unit 13"
   door 748,1405
-  human A general store, which out here means it stocks what the last person asked for.
-place shop 743,1415 12x16 "the bakery"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the drug store", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 743,1415 12x16 "Rossville unit 14"
   door 754,1423
-  human Sells out by ten and does not bake more, on principle.
-place shop 750,1433 12x16 "vacant storefront - was the printing office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the bakery", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 750,1433 12x16 "Rossville unit 15"
   door 761,1441
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has a printing office here; nobody has said what traded here in 1991.
-place shop 755,1451 12x16 "the hardware"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the printing office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 755,1451 12x16 "Rossville unit 16"
   door 766,1459
-  human A hardware shop that also does keys, shoes, and advice.
-place shop 767,1486 12x16 "the grocer"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the hardware", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 767,1486 12x16 "Rossville unit 17"
   door 778,1494
-  human Run by a family who have never agreed on the opening hours.
-place shop 773,1504 12x16 "vacant storefront - was the millinery"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the grocer", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 773,1504 12x16 "Rossville unit 18"
   door 784,1512
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has a millinery here; nobody has said what traded here in 1991.
-place shop 779,1522 12x16 "vacant storefront - was the confectionery"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the millinery", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 779,1522 12x16 "Rossville unit 19"
   door 790,1530
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has a confectionery here; nobody has said what traded here in 1991.
-place shop 786,1540 12x16 "vacant storefront - was the general merchandise"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the confectionery", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 786,1540 12x16 "Rossville unit 20"
   door 797,1548
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. The 1913 Sanborn has general merchandise here; nobody has said what traded here in 1991.
-place postoffice 792,1558 12x16 "the north sub-office"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the general merchandise", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place postoffice 792,1558 12x16 "Rossville unit 21"
   door 803,1566
-  human One window, one clerk, and a scale that has been condemned twice.
-place icecream 804,1371 11x16 "the ice cream parlour"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the north sub-office", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "postoffice", which is what drives jobs, hours and what people do here.
+place icecream 804,1371 11x16 "Rossville unit 22"
   door 804,1379
-  human Shut half the year, and the queue at Easter goes round the corner.
-place shop 781,1371 10x13 "the jeweller"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the ice cream parlour", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "icecream", which is what drives jobs, hours and what people do here.
+place shop 781,1371 10x13 "Rossville unit 23"
   door 781,1377
-  human Ironmongery, and a man who can find the one screw you need in a minute.
-place shop 785,1386 10x13 "the meat market"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the jeweller", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 785,1386 10x13 "Rossville unit 24"
   door 785,1392
-  human Everything a fortnight from its date and nobody has ever complained.
-place shop 790,1401 10x13 "the barber"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the meat market", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place shop 790,1401 10x13 "Rossville unit 25"
   door 790,1407
-  human A tailor who has outlived three fashions and expects to outlive a fourth.
-place laundry 794,1416 13x10 "the laundromat"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the barber", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place laundry 794,1416 13x10 "Rossville unit 26"
   door 794,1421
-  human Washers along one wall, dryers along the other, and whoever is waiting on them. Open when nothing else on the street is.
-place restroom 799,1428 8x14 "the rest room"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the laundromat", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "laundry", which is what drives jobs, hours and what people do here.
+place restroom 799,1428 8x14 "Rossville unit 27"
   door 799,1435
-  human Council-green tile and a door that does not lock.
-place shop 804,1444 10x11 "vacant storefront - was the second drug store"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the rest room", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "restroom", which is what drives jobs, hours and what people do here.
+place shop 804,1444 10x11 "Rossville unit 28"
   door 804,1449
-  human EMPTY UNTIL SOMEBODY SAYS OTHERWISE. There was one drug store in this town and it is a block north; nobody has said what traded here in 1991.
-place apartment 818,1486 8x6 "the rooms over the grocer"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "vacant storefront - was the second drug store", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "shop", which is what drives jobs, hours and what people do here.
+place apartment 818,1486 8x6 "the rooms over Rossville unit 17"
   door 818,1489
   units 3
-  human Over the shops, and the stairs go up from the street.
-place apartment 821,1494 8x6 "the rooms over the meat market"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the rooms over the grocer", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "apartment", which is what drives jobs, hours and what people do here.
+place apartment 821,1494 8x6 "the rooms over Rossville unit 24"
   door 821,1497
   units 3
-place apartment 823,1502 8x6 "the rooms over the barber"
+place apartment 823,1502 8x6 "the rooms over Rossville unit 25"
   door 823,1505
   units 3
-place apartment 826,1510 8x6 "the rooms over the laundry"
+place apartment 826,1510 8x6 "the rooms over Rossville unit 26"
   door 826,1513
   units 3
 
@@ -1425,35 +1425,47 @@ place apartment 826,1510 8x6 "the rooms over the laundry"
 # tracks any more, see RAILROAD above, only the siting constant and the decorative
 # `rail` feature in features.txt.
 
-place firestation 694,734 28x27 "the Rossville fire house"
+place firestation 694,734 28x27 "Rossville unit 37"
   door 708,760
-  human The doors are open in all weather and the crew watch the street from inside them.
-place school 533,1121 47x18 "Rossville Grade School"
-  door 556,1138
-  human Painted every summer and scuffed back to the undercoat by October.
-
-# THE TWO SCHOOLS FACE EACH OTHER ACROSS CHICAGO STREET, which is how the village is
-# actually laid out and what the two OSM school polygons in features.txt have always
-# said: the west one holds the grade school, the east one runs from Green down to
-# Benton - and until now had no school on it at all. That is why the drawing read
-# wrong. Both buildings still stand today with other things in them; this is the 1991
-# arrangement, not the 1906 one in LANDMARKS-1906.md, where the two brick buildings
-# still shared one ground.
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Rossville fire house", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "firestation", which is what drives jobs, hours and what people do here.
+# THE HIGH SCHOOL IS WEST OF CHICAGO, AND THE COUNTY ALWAYS SAID SO. The map had
+# the two schools swapped until 2026-08-12, when the owner handed the PIN across
+# the table: 08-11-603-004 is parcel 641, tax exempt, west of Chicago Street,
+# carrying FEMA's one measured 4,314 m2 civic building - his words, "back then
+# and today". The old declarations put a 47x18 "grade school" box on top of that
+# very footprint and invented a 60x38 high school on the east block the county
+# classes as commercial ground with nothing standing on it.
 #
-# Kind `school` for both, deliberately. kinds.txt records what splitting it cost the
-# last time somebody tried: a second kind meant PlaceKind.School matched only one of
-# them and Rossville's 165 children had nowhere to go.
-place school 700,1020 60x38 "Rossville-Alvin High School"
+# ONE PLACE, NOT THREE, AND THE FIRST ATTEMPT PROVED WHY. The footprint is an
+# L-complex - main block, east arm, south wing - and it was first declared here
+# as three abutting places tracing those wings. SeatOnSurvey matches places to
+# measured structures BIGGEST FIRST on each lot, and parcel 641 carries four:
+# the school and three outbuildings (one of them "206 North Chicago Street",
+# 342 m2, a real address for a later session). The pass dealt the south wing
+# onto that outbuilding, a hundred metres away at 18x22. One declaration, one
+# primary structure: the pass seats it on the real ground and shrinks the loose
+# box to honest bulk, exactly as its header documents for L-shaped buildings.
+# The true wings are SeatOnSurvey's own named step two - walls from the real
+# OUTLINE, a VillageMesh change - queued in IDEAS with the ruled silhouette:
+# two storeys behind a flat parapet.
+#
+# Kind `school` for the east block too, deliberately - kinds.txt records what
+# a second kind cost the last time somebody split it: Rossville's 165 children
+# had nowhere to go.
+place school 551,1032 52x55 "Rossville unit 30"
+  door 602,1060
+  human Ruled by the owner 2026-08-12 off the county's own PIN: this is Rossville-Alvin High School, parcel 641. The name is his memory; the ground and the outline are the county's measurement.
+place school 700,1020 60x38 "Rossville unit 29"
   door 700,1039
-  human The gym doors are propped open on match nights and you can hear it from Benton.
-place watertower 840,854 18x18 "the water tower"
-  human The name is painted on it and reads from the section road.
-place elevator 1171,1353 24x34 "the Rossville elevator"
-  human Concrete, and it throws a shadow over the tracks all morning.
-place green 537,1730 24x37 "the depot yard"
-  human Grass that grew because nobody got round to paving it.
-place playground 1171,1979 30x28 "the Bishop road swings"
-  human One swing has been chained up since April and nobody remembers why.
+  human Ruled by the owner 2026-08-12: the east block held the GRADE SCHOOL in 1991. FEMA sees no building standing here today and the county classes the ground commercial, so this 60x38 seat is remembered rather than measured - refine it in the browser map.
+place watertower 840,854 18x18 "Rossville unit 31"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the water tower", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "watertower", which is what drives jobs, hours and what people do here.
+place elevator 1171,1353 24x34 "Rossville unit 32"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Rossville elevator", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "elevator", which is what drives jobs, hours and what people do here.
+place green 537,1730 24x37 "Rossville unit 33"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the depot yard", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "green", which is what drives jobs, hours and what people do here.
+place playground 1171,1979 30x28 "Rossville unit 34"
+  human Unnamed, and waiting to be told. Nothing has been established about what was here in 1991. It was called "the Bishop road swings", from the 1913 Sanborn sheet and the county history - seventy-eight years earlier, and not evidence. The place KIND is still "playground", which is what drives jobs, hours and what people do here.
 
 # ==========================================================================
 #  THE HOUSES
@@ -1521,12 +1533,10 @@ place house 566,993 13x7 "304 W Green Ave"
   door 572,993
 place house 592,993 13x7 "302 W Green Ave"
   door 598,993
-place school 540,1076 13x7 "305 W Benton Ave"
-  door 546,1082
-place school 566,1076 13x7 "303 W Benton Ave"
-  door 572,1082
-place school 592,1076 13x7 "301 W Benton Ave"
-  door 598,1082
+# THE WEST CAMPUS CARRIES NO HOUSES THROUGH ITS SCHOOL. 305, 303 and 301
+# W Benton were seeded straight through the high school's measured footprint -
+# the county's building stands where their lots were invented. Owner's ruling
+# 2026-08-12, the same night as the east block's five.
 place house 540,1320 13x7 "305 W Attica Ave"
   door 546,1326
 place house 566,1320 13x7 "303 W Attica Ave"
@@ -1571,8 +1581,11 @@ place house 700,865 13x7 "102 W Henderson Ave"
   door 706,865
 place house 700,954 13x7 "101 W Green Ave"
   door 706,960
-place school 700,1076 13x7 "101 W Benton Ave"
-  door 706,1082
+# THE SCHOOL BLOCK CARRIES NO HOUSES. Four were seeded on Unit 30's campus by
+# block-area math - "101 W Benton" (wearing a west-side name east of Chicago),
+# "102 E Green" (half in Green Avenue since the survey re-lay), "101 E Benton"
+# and "103 E Benton". Owner's ruling, 2026-08-11: the high school's campus owned
+# its whole block, Green down to Benton, and nobody lived on it.
 place house 700,2009 13x7 "101 Greenwood Ave"
   door 706,2015
 place house 700,2048 13x7 "102 Greenwood Ave"
@@ -1593,16 +1606,8 @@ place house 800,954 13x7 "103 E Green Ave"
   door 806,960
 place house 826,954 13x7 "105 E Green Ave"
   door 832,960
-place school 774,993 13x7 "102 E Green Ave"
-  door 780,993
 place house 826,993 13x7 "106 E Green Ave"
   door 832,993
-place school 774,1076 13x7 "101 E Benton Ave"
-  door 780,1082
-place school 800,1076 13x7 "103 E Benton Ave"
-  door 806,1082
-place house 826,1076 13x7 "105 E Benton Ave"
-  door 832,1082
 place house 774,1619 13x7 "102 Gilbert Ave"
   door 780,1619
 place house 800,1619 13x7 "104 Gilbert Ave"
@@ -1691,8 +1696,24 @@ place house 920,1379 13x7 "206 E Attica Ave"
   door 926,1379
 place house 868,1455 13x7 "201 Maple Ave"
   door 874,1461
-place church 920,1455 13x7 "205 Maple Ave"
-  door 926,1461
+# THE CHURCH IS NOT A 13x7 HOUSE BOX, AND THE SURVEY HAS ALWAYS KNOWN WHERE IT IS.
+#
+# This was `place church 920,1455 13x7 "205 Maple Ave"` - the SAME default footprint every one of
+# the town's 315 houses has, with a generated street address for a name, exactly like the seven
+# `place school` boxes taken off the roll in the same commit.
+#
+# Twenty metres away sits parcel 444: an 892.6 m2 footprint measured at 32.5 x 35.6 m, county
+# class 0090 "Tax Exempt", address "116 East Maple Street" - and `Content/parcel-1991.txt` lines
+# 359-360 carry the OWNER'S OWN RULING on it, `was built` and `kind church`. Three sources agreed
+# with each other and disagreed with city.txt, and nothing compared them.
+#
+# Position and size are the bounding box of the surveyed polygon; the name is the county's.
+place church 925,1425 33x36 "116 E Maple Ave"
+  # ON the south wall, because Maple Avenue runs along y=1478 - south of the building - so the
+  # front door faces the street it is named for. The footprint spans y 1425..1460 inclusive, and
+  # 1461 is one row past it: the Core suite caught that on the next run, which is what
+  # DoorsThatOpen is for.
+  door 940,1460
 place house 868,1494 13x7 "202 Maple Ave"
   door 874,1494
 place house 894,1494 13x7 "204 Maple Ave"
@@ -2152,69 +2173,69 @@ place house 1474,2202 13x7 "511 Earlcourt Ave"
 #  THE COUNTRY - corn, beans, and about seven people to the square mile
 # ==========================================================================
 
-place farm 11,8 15x16 "Home Farm"
+place farm 11,8 15x16 "the old place on 3400 North"
   door 18,23
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 36,6 15x16 "Wicker End"
+place farm 36,6 15x16 "the home place on 3200 North"
   door 43,21
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
 place farmyard 54,7 30x28 "the yard"
   human Mud, diesel and forty years of things that might come in useful.
-place barn 97,7 18x39 "the big barn"
+place barn 97,7 18x39 "the place on 3600 North"
   door 106,7
   human Big enough to lose a car in, and dark enough at noon that you would.
-place barn 8,53 11x14 "the old barn"
+place barn 8,53 11x14 "the corner at 3700 North and 2200 East"
   door 13,66
   human Half the roof is down and the half that is not is worse.
-place silo 25,55 7x7 "the near silo"
+place silo 25,55 7x7 "the place on 3300 North"
   human It booms when you knock on it.
-place silo 49,60 7x7 "the far silo"
+place silo 49,60 7x7 "the corner at 3700 North and 2700 East"
   human Empty since the wet year, and the ladder up the side is still sound.
-place cornfield 5,272 70x50 "the top field"
+place cornfield 5,272 70x50 "the headland on 3700 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 7,332 70x50 "the long field"
+place cornfield 7,332 70x50 "the far end of 3800 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 8,397 70x50 "the bottom field"
+place cornfield 8,397 70x50 "the low ground off 3200 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 6,456 70x50 "the far acre"
+place cornfield 6,456 70x50 "the 1900 East field"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 4,529 50x70 "the far field"
+place cornfield 4,529 50x70 "the corner field on 3000 North"
   human Nobody watches this one from anywhere.
-place cornfield 7,1460 70x50 "the top of the hill"
+place cornfield 7,1460 70x50 "the headland on 3550 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 7,1512 70x50 "the middle field"
+place cornfield 7,1512 70x50 "the far end of 3100 North"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 10,1590 70x50 "the near paddock"
+place pasture 10,1590 70x50 "the pasture on 3100 North"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 10,1642 70x50 "the far paddock"
+place pasture 10,1642 70x50 "the pasture on 3600 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 6,1713 70x50 "the long acre"
+place pasture 6,1713 70x50 "the stock lot on 3800 North"
   human Fenced for horses that were sold years ago.
-place orchard 11,1776 70x50 "the orchard"
+place orchard 11,1776 70x50 "the fruit ground off 2300 East"
   human Planted in rows by somebody who is dead now.
-place orchard 263,9 50x70 "the old orchard"
+place orchard 263,9 50x70 "the orchard on 3600 North"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 270,270 70x50 "the west belt"
+place wood 270,270 70x50 "the timber on 3800 North"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 269,328 70x50 "the west belt, middle"
+place wood 269,328 70x50 "the grove off 2700 East"
   human The stretch between the two roads, and the darkest of the three.
-place copse 264,400 70x50 "the west belt, south"
+place wood 264,400 70x50 "the 2000 East timber"
   human It gives out where the ground turns wet.
-place copse 270,454 70x50 "the west belt, end"
+place wood 270,454 70x50 "the 2300 East timber"
   human Somebody has been cutting firewood out of this one.
-place copse 265,529 50x70 "the far spinney"
+place wood 265,529 50x70 "the 1900 East timber"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 270,657 70x50 "the east wood"
+place wood 270,657 70x50 "the grove off 1900 East"
   human Older than the town, and the boundary bank round it is older still.
-place copse 272,712 70x50 "the east wood, lower"
+place wood 272,712 70x50 "the 2100 East timber"
   human The same wood, on the other side of the road that was put through it.
-place allotments 3,79 30x40 "the west allotments"
+place gardens 3,79 30x40 "the west garden plots"
   human Thirty plots, four of them worked properly and the rest an argument.
-place allotments 44,81 50x40 "the east allotments"
+place gardens 44,81 50x40 "the east garden plots"
   human Sheds built from doors, and every one of them locked.
-place allotments 6,606 50x14 "the south allotments"
+place gardens 6,606 50x14 "the south garden plots"
   human The best soil in Vermilion County and everybody knows it.
 place churchyard 69,609 30x24 "the old burial ground"
   human Older than anything still standing, and the names have gone off the stones.
@@ -2222,170 +2243,170 @@ place memorial 103,609 3x3 "the cross on the Bishop road"
   human Somebody replaces the flowers. Nobody has ever been seen doing it.
 place memorial 265,88 3x3 "the cross at the county line"
   human It has been there longer than the road surface it stands on.
-place standing 284,92 4x4 "the high seat"
+place standing 284,92 4x4 "the tree stand over the long field"
   human A platform over the long field. Whoever built it did not build it for deer.
-place standing 294,92 4x4 "the seat above Wicker End"
+place standing 294,92 4x4 "the tree stand above the orchard"
   human It looks at the orchard and at the back of the house, which is a choice.
-place camp 310,91 5x5 "the pitch in the east wood"
+place camp 310,91 5x5 "the camp in the east timber"
   human The fire is out. How long it has been out is the question.
-place camp 322,91 5x5 "the far pitch"
+place camp 322,91 5x5 "the far camp"
   human A bedroll, a case left open, and no track in or out that anybody has found.
-place farm 339,86 15x16 "Home Farm 2"
+place farm 339,86 15x16 "the quarter on 3300 North"
   door 346,101
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 367,86 15x16 "Wicker End 3"
+place farm 367,86 15x16 "the corner at 3200 North and 2300 East"
   door 374,101
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 270,610 30x28 "the yard 4"
+place farmyard 270,610 30x28 "the yard on 3400 North"
   human Mud, diesel and forty years of things that might come in useful.
-place barn 349,713 18x39 "the big barn 5"
+place barn 349,713 18x39 "the north eighty on 3550 North"
   door 358,713
   human Big enough to lose a car in, and dark enough at noon that you would.
-place barn 305,607 11x14 "the old barn 6"
+place barn 305,607 11x14 "the place on 3800 North"
   door 310,620
   human Half the roof is down and the half that is not is worse.
-place silo 269,112 7x7 "the near silo 7"
+place silo 269,112 7x7 "the corner at 3800 North and 2700 East"
   human It booms when you knock on it.
-place silo 283,111 7x7 "the far silo 8"
+place silo 283,111 7x7 "the home place on 3100 North"
   human Empty since the wet year, and the ladder up the side is still sound.
-place farm 325,610 15x16 "Home Farm 9"
+place farm 325,610 15x16 "the south eighty on 3300 North"
   door 332,625
   units 2
   human The kitchen light is on at half past four and the radio is never off.
-place farm 349,608 15x16 "Wicker End 10"
+place farm 349,608 15x16 "the north eighty on 3200 North"
   door 356,623
   units 2
   human Nobody has farmed it for years. Somebody is living in it.
-place farmyard 272,787 30x28 "the yard 11"
+place farmyard 272,787 30x28 "the yard on 3100 North"
   human Mud, diesel and forty years of things that might come in useful.
-place cornfield 310,781 70x50 "the top field 2"
+place cornfield 310,781 70x50 "the field off 3000 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 272,844 70x50 "the long field 3"
+place cornfield 272,844 70x50 "the tile field on 3200 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 266,1717 70x50 "the bottom field 4"
+place cornfield 266,1717 70x50 "the corner field on 3800 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 268,1768 70x50 "the far acre 5"
+place cornfield 268,1768 70x50 "the tile field on 3000 North"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 268,1824 50x70 "the far field 6"
+place cornfield 268,1824 50x70 "the 2400 East field"
   human Nobody watches this one from anywhere.
-place cemetery 271,1959 70x50 "the top of the hill 7"
+place cemetery 271,1959 70x50 "Rossville Cemetery"
   human It catches the weather first and everything here is a week behind.
-place cornfield 269,2020 70x50 "the middle field 8"
+place cornfield 269,2020 70x50 "the 3800 North field"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 270,2213 70x50 "the near paddock 9"
+place pasture 270,2213 70x50 "the stock lot on 3600 North"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 265,2279 70x50 "the far paddock 10"
+place pasture 265,2279 70x50 "the pasture on 3800 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 399,10 70x50 "the long acre 11"
+place pasture 399,10 70x50 "the lot behind the 2600 East place"
   human Fenced for horses that were sold years ago.
-place orchard 398,70 70x50 "the orchard 12"
+place orchard 398,70 70x50 "the orchard on 3200 North"
   human Planted in rows by somebody who is dead now.
-place orchard 400,271 50x70 "the old orchard 13"
+place orchard 400,271 50x70 "the fruit ground off 2200 East"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 401,396 70x50 "the west belt 14"
+place wood 401,396 70x50 "the grove off 2600 East"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 393,457 70x50 "the west belt, middle 15"
+place wood 393,457 70x50 "the timber on 3700 North"
   human The stretch between the two roads, and the darkest of the three.
-place copse 396,525 70x50 "the west belt, south 16"
+place wood 396,525 70x50 "the windbreak on 3550 North"
   human It gives out where the ground turns wet.
-place copse 397,588 70x50 "the west belt, end 17"
+place wood 397,588 70x50 "the timber on 3400 North"
   human Somebody has been cutting firewood out of this one.
-place copse 528,12 50x70 "the far spinney 18"
+place wood 528,12 50x70 "the windbreak on 3800 North"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 528,270 70x50 "the east wood 19"
+place wood 528,270 70x50 "the fencerow on 3200 North"
   human Older than the town, and the boundary bank round it is older still.
-place copse 530,332 70x50 "the east wood, lower 20"
+place wood 530,332 70x50 "the grove off 2200 East"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 529,402 70x50 "the top field 21"
+place cornfield 529,402 70x50 "the field off 3400 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 526,456 70x50 "the long field 22"
+place cornfield 526,456 70x50 "the 2700 East field"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 523,529 70x50 "the bottom field 23"
+place cornfield 523,529 70x50 "the 2200 East field"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 530,590 70x50 "the far acre 24"
+place cornfield 530,590 70x50 "the 3100 North field"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 786,11 50x70 "the far field 25"
+place cornfield 786,11 50x70 "the headland on 3000 North"
   human Nobody watches this one from anywhere.
-place cornfield 786,272 70x50 "the top of the hill 26"
+place cornfield 786,272 70x50 "the strip along 3000 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 787,328 70x50 "the middle field 27"
+place cornfield 787,328 70x50 "the low ground off 3300 North"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 792,395 70x50 "the near paddock 28"
+place pasture 792,395 70x50 "the lot behind the 2700 East place"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 786,456 70x50 "the far paddock 29"
+place pasture 786,456 70x50 "the hay ground on 3800 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 790,523 70x50 "the long acre 30"
+place pasture 790,523 70x50 "the lot behind the 1900 East place"
   human Fenced for horses that were sold years ago.
-place orchard 789,583 70x50 "the orchard 31"
+place orchard 789,583 70x50 "the orchard on 3700 North"
   human Planted in rows by somebody who is dead now.
-place orchard 920,5 50x70 "the old orchard 32"
+place orchard 920,5 50x70 "the fruit ground off 2500 East"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 899,266 70x50 "the west belt 33"
+place wood 899,266 70x50 "the timber on 3100 North"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 899,324 70x50 "the west belt, middle 34"
+place wood 899,324 70x50 "the fencerow on 3000 North"
   human The stretch between the two roads, and the darkest of the three.
-place copse 896,394 70x50 "the west belt, south 35"
+place wood 896,394 70x50 "the grove off 2400 East"
   human It gives out where the ground turns wet.
-place copse 898,459 70x50 "the west belt, end 36"
+place wood 898,459 70x50 "the fencerow on 3100 North"
   human Somebody has been cutting firewood out of this one.
-place copse 899,529 50x70 "the far spinney 37"
+place wood 899,529 50x70 "the fencerow on 3550 North"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 1051,11 70x50 "the east wood 38"
+place wood 1051,11 70x50 "the grove off 2000 East"
   human Older than the town, and the boundary bank round it is older still.
-place copse 1045,66 70x50 "the east wood, lower 39"
+place wood 1045,66 70x50 "the windbreak on 3400 North"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 1025,271 70x50 "the top field 40"
+place cornfield 1025,271 70x50 "the headland on 3200 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 1022,329 70x50 "the long field 41"
+place cornfield 1022,329 70x50 "the corner field on 3400 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 1028,398 70x50 "the bottom field 42"
+place cornfield 1028,398 70x50 "the tile field on 3100 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 1026,454 70x50 "the far acre 43"
+place cornfield 1026,454 70x50 "the 3700 North field"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 1026,524 50x70 "the far field 44"
+place cornfield 1026,524 50x70 "the 3300 North field"
   human Nobody watches this one from anywhere.
-place cornfield 1158,8 70x50 "the top of the hill 45"
+place cornfield 1158,8 70x50 "the far end of 3000 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 1155,65 70x50 "the middle field 46"
+place cornfield 1155,65 70x50 "the 3000 North field"
   human Split by a hedge somebody grubbed out and never finished.
-place paddock 1157,271 70x50 "the near paddock 47"
+place pasture 1157,271 70x50 "the pasture on 3550 North"
   human Cropped flat and empty. The gate has been open for a while.
-place paddock 1160,326 70x50 "the far paddock 48"
+place pasture 1160,326 70x50 "the hay ground on 3400 North"
   human You cannot see this one from the road, or the road from it.
-place paddock 1175,402 70x50 "the long acre 49"
+place pasture 1175,402 70x50 "the lot behind the 2300 East place"
   human Fenced for horses that were sold years ago.
-place orchard 1178,461 70x50 "the orchard 50"
+place orchard 1178,461 70x50 "the orchard on 3400 North"
   human Planted in rows by somebody who is dead now.
-place orchard 1174,527 50x70 "the old orchard 51"
+place orchard 1174,527 50x70 "the fruit ground off 2600 East"
   human Gone to scrub. The fruit falls and nobody picks it up.
-place copse 1304,10 70x50 "the west belt 52"
+place wood 1304,10 70x50 "the 2400 East timber"
   human Planted as a windbreak and never thinned. You cannot see through it.
-place copse 1312,73 70x50 "the west belt, middle 53"
+place wood 1312,73 70x50 "the timber on 3300 North"
   human The stretch between the two roads, and the darkest of the three.
-place copse 1305,275 70x50 "the west belt, south 54"
+place wood 1305,275 70x50 "the timber on 3000 North"
   human It gives out where the ground turns wet.
-place copse 1305,332 70x50 "the west belt, end 55"
+place wood 1305,332 70x50 "the fencerow on 3600 North"
   human Somebody has been cutting firewood out of this one.
-place copse 1309,401 50x70 "the far spinney 56"
+place wood 1309,401 50x70 "the timber on 3550 North"
   human Too small to be worth clearing and too thick to walk through quickly.
-place copse 1310,533 70x50 "the east wood 57"
+place wood 1310,533 70x50 "the fencerow on 3700 North"
   human Older than the town, and the boundary bank round it is older still.
-place copse 1309,593 70x50 "the east wood, lower 58"
+place wood 1309,593 70x50 "the timber on 3200 North"
   human The same wood, on the other side of the road that was put through it.
-place cornfield 1460,8 70x50 "the top field 59"
+place cornfield 1460,8 70x50 "the strip along 3400 North"
   human Forty acres, and the tractor lines run out of true where the ground dips.
-place cornfield 1455,72 70x50 "the long field 60"
+place cornfield 1455,72 70x50 "the strip along 3200 North"
   human It floods at the bottom corner every spring and nobody has ever drained it.
-place cornfield 1458,266 70x50 "the bottom field 61"
+place cornfield 1458,266 70x50 "the back forty on 3000 North"
   human The corn is over head height by August and the rows run away from the track.
-place cornfield 1452,325 70x50 "the far acre 62"
+place cornfield 1452,325 70x50 "the strip along 3700 North"
   human The last field before the road, and the one nobody bothers to walk.
-place cornfield 1452,399 50x70 "the far field 63"
+place cornfield 1452,399 50x70 "the field off 3200 North"
   human Nobody watches this one from anywhere.
-place cornfield 1457,532 70x50 "the top of the hill 64"
+place cornfield 1457,532 70x50 "the far end of 3200 North"
   human It catches the weather first and everything here is a week behind.
-place cornfield 1456,585 70x50 "the middle field 65"
+place cornfield 1456,585 70x50 "the field off 3100 North"
   human Split by a hedge somebody grubbed out and never finished.
 

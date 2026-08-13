@@ -117,8 +117,13 @@ def _stats_module():
 
 def main():
     r, pl = roads_and_places()
+
+    # `r` AND `pl` USED TO BE COMPUTED AND THEN DROPPED ON THE FLOOR. The next line took neither,
+    # so the viewer's whole "here are the ruled lines the survey replaces" comparison was parsed,
+    # built and discarded - and `road_scores` below was handed an empty list, which scores nothing
+    # and reports it as though it had. The function was working; nobody was reading its answer.
     bundle = {"parcels": parcels(), "county": county(), "buildings": buildings(),
-              "newroads": proposed_roads()}
+              "newroads": proposed_roads(), "roads": r, "places": pl}
 
     # EVERY FIGURE THE PAGE SHOWS IS COMPUTED HERE, off the very arrays it is about to draw.
     # The page is a validation tool, so a hand-typed number on it is worse than none: it reads
@@ -126,8 +131,8 @@ def main():
     # typed and both wrong an hour later, after the registration fix moved every footprint.
     vs = _stats_module()
     st = vs.compute(bundle["parcels"], bundle["county"], bundle["buildings"],
-                    [], bundle["newroads"])
-    st.update(vs.road_scores(bundle["parcels"], [], bundle["newroads"]))
+                    r, bundle["newroads"])
+    st.update(vs.road_scores(bundle["parcels"], r, bundle["newroads"]))
     bundle["disagree"] = vs.disagreements(bundle["parcels"], bundle["county"], bundle["buildings"])
     import collections as _c
     st["disagree_counts"] = dict(_c.Counter(bundle["disagree"].values()))

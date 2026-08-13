@@ -1,0 +1,44 @@
+# ============================================================================
+#  WHAT THE COUNTY COUNTS ON ROSSVILLE'S STREETS
+#
+#  Annual Average Daily Traffic, two-way, from Illinois DOT's own count program.
+#  One row: <road name as it appears in roads.txt>  <vehicles per day>  <count year>
+#
+#  WHY THIS FILE EXISTS. These twelve numbers lived only as hand-typed `aadt` lines
+#  inside Content/roads.txt, which `tools/build-roads.py` REGENERATES - and the
+#  generator emits no aadt line at all. So the counts survived exactly until the next
+#  person ran the generator, and they would have gone without a word: the writer had no
+#  backup and printed "wrote Content/roads.txt" either way. A measured fact that a tool
+#  silently deletes is not stored, it is borrowed.
+#
+#  Now the generator READS this and writes the lines itself, so a regeneration carries
+#  the counts through instead of eating them.
+#
+#  THE SOURCE, and it needs no key:
+#    https://gis1.dot.illinois.gov/arcgis/rest/services/AdministrativeData/AADT_Historical/MapServer
+#  Query a layer with an envelope around the village (inSR=4326, about
+#  -87.70,40.363 -> -87.635,40.395) and read ROAD_NAME, AADT, AADT_YR, HCV_AADT.
+#  THE LAYER ID IS THE PUBLICATION YEAR, NOT THE COUNT YEAR - read AADT_YR off the data.
+#
+#  IDOT counts village streets BY NAME, not just state routes, which is the thing nobody
+#  in this project expected. Twenty-one of the map's named roads are not counted at all -
+#  maple, grove, holmes, harrison, park, perry and the rest - because there is nothing
+#  there to count. A road absent from this file is not an error.
+#
+#  NONE OF THESE ARE FROM 1991 and the game is. Route 1 is falling about 4% a year while
+#  the side streets stay flat, so 1991 was BUSIER on Route 1 than any count here - the era
+#  gap runs in the direction that widens the arterial-to-local ratio rather than narrowing
+#  it, which is why these are usable. See docs/research/TRAFFIC-COUNTS.md for the working.
+# ============================================================================
+
+chicago       5200   2019   # IL Route 1 through town. HCV 400/day.
+attica        1100   2019   # the east-west county road. Legs measured 500-1100; the busiest is taken.
+stewart        375   2019
+stufflebeam    375   2019
+benton         300   2019   # a second leg counts 100
+henderson      250   2019   # a second leg counts 75
+creative       225   2019
+summit         225   2019   # both runs of Summit carry the same count
+mckibben       200   2019
+church         200   2019   # about one vehicle every seven minutes
+dale           125   2019

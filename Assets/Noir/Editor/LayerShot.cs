@@ -55,6 +55,7 @@ namespace Noir.Editor
             Material sky = null;
 
             bool wasShowBuildings = VillageHost.ShowBuildings;
+            var wasLayers = Layers.Snapshot();
             var wasSky = RenderSettings.skybox;
             var wasSun = RenderSettings.sun;
             bool wasFog = RenderSettings.fog;
@@ -145,12 +146,20 @@ namespace Noir.Editor
                     Layers.Set(Layers.Kind.Districts, false);
                 });
 
-                // Left as it was found, so a person opening the editor next is not handed a
-                // town with three layers missing and no idea why.
-                Layers.SetAll(true);
             }
             finally
             {
+                // AS THEY WERE FOUND, WHICH IS NOT THE SAME AS ALL ON. This ended with
+                // `Layers.SetAll(true)` under a comment claiming it left them as it found them.
+                // All-on is a THIRD state: if the owner had his trees switched off, this tool
+                // turned them back on and - because `Layers.Set` writes PlayerPrefs whenever
+                // there is a person, and running this from the Noir menu means there is - left
+                // them on for good. It is the same mechanism as the 2026-08-07 incident, from
+                // the other side of the batch-mode guard.
+                //
+                // In the finally, so an exception mid-render does not keep his preferences.
+                Layers.Restore(wasLayers);
+
                 VillageHost.ShowBuildings = wasShowBuildings;
                 RenderSettings.skybox = wasSky;
                 RenderSettings.sun = wasSun;
@@ -166,6 +175,12 @@ namespace Noir.Editor
                 if (sky != null) Object.DestroyImmediate(sky);
             }
 
+            // THE SET THIS MATTERS MOST FOR. LayerProof and this assert only that the right
+            // NUMBER of image files appeared, which twelve identical frames of a field satisfy
+            // perfectly - and did, for a fortnight. Stamp names any two that came out byte for
+            // byte the same.
+            ShotLog.Stamp("layers", CityShot.OutputDir, CityShot.TakeWritten());
+
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 
@@ -180,7 +195,13 @@ namespace Noir.Editor
 
             foreach (var view in Views)
             {
-                var target = new Vector3(view.X, view.Eye, -view.Y);
+                // ON THE GROUND. `view.Eye` is a height ABOVE the ground, not a world y - and this
+                // read it as a world y, so every eye-level layer frame was shot from 1.6 m above
+                // sea level on a map with 24 m of relief. Same fault as CityShot's seven raw
+                // cameras and CityShot.At records it being fixed once already.
+                var target = new Vector3(view.X,
+                                         ElevationGrid.HeightAt(view.X, view.Y) + view.Eye,
+                                         -view.Y);
                 CityShot.Frame(cam.gameObject, target, view.Dist, view.Pitch, view.Yaw);
                 CityShot.Capture(cam, Path.Combine(CityShot.OutputDir, view.Name + "-" + suffix + ".png"));
             }

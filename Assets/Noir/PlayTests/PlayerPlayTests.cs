@@ -12,7 +12,7 @@ namespace Noir.PlayTests
     /// This city has no colliders by design - the chunker combines everything, so picking walks
     /// the world model rather than casting a ray. A CharacterController is the one thing in the
     /// project that IS physics, and the failure it has when the collision shell is wrong is not
-    /// subtle or gradual: the man falls through Northgate and keeps going.
+    /// subtle or gradual: the man falls through Rossville and keeps going.
     /// </summary>
     public class PlayerPlayTests
     {

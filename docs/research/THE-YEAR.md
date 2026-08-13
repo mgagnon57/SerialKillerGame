@@ -135,7 +135,7 @@ Clock times are local — CST in winter, CDT in summer.
 > **Corrected 2026-08-03: the 21 March row was an hour late.** Rebuilding this table for
 > `Core/Contracts/Daylight.cs` reproduced seven of these eight rows to within a minute, and missed
 > the equinox by exactly sixty. The cause is the daylight-saving rule: **the US did not go onto
-> daylight time until the first Sunday in April until 2007**, and this game ends in 2006. In 1991
+> daylight time until the first Sunday in April until 2007**, and the game is set in 1991. In 1991
 > the changeover was **7 April** — seventeen days *after* the equinox — so 21 March was still on
 > CST. The original figures were computed with the modern second-Sunday-in-March rule, which never
 > applies inside the game's window. The other seven rows are unaffected: they are either in winter

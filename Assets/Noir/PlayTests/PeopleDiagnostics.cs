@@ -117,9 +117,85 @@ namespace Noir.PlayTests
             Debug.Log($"[body] of {sample.Count} animators watched over a second, "
                     + $"{moved} advanced their clip and {sample.Count - moved} did not.");
 
+            // ---- and does the SKELETON actually move? ----
+            //
+            // THE STRONGEST FINDING IN THE AUDIT, AND IT HAS BEEN INVISIBLE FOR MONTHS. The line
+            // above printed "1 of 40 advanced" in one recorded run, "0 of 40" in the next and
+            // "40 of 0" in the third - and ALL THREE PASSED, because nothing asserts on it. A clip
+            // whose normalizedTime advances is not the same claim as a person who moves: a figure
+            // can sit in its bind pose with the state machine ticking happily behind it.
+            //
+            // So this asks the bones. A hip that has not moved a millimetre in a second, while its
+            // animator says it is playing, is a T-posing figure.
+            //
+            // MEASURED IN LOCAL SPACE. Two world positions a kilometre out carry about 1.2e-4 m of
+            // float error, which is only eight times under a millimetre threshold - close enough
+            // to turn precision into a verdict. Local space has no such offset.
+            //
+            // AlwaysAnimate is FORCED for the measurement, or the answer is about the camera
+            // rather than the rig - and restored in try/finally rather than a [TearDown], which a
+            // yield break can skip straight past.
+            // Through the view's own hierarchy, which excludes the deactivated away-figures BY
+            // CONSTRUCTION. Walking `_figures` by index picks them up instead, and about four in
+            // twenty-four are out of town at any hour - they would count as failures for no fault.
+            var peopleRoot = Object.FindFirstObjectByType<AgentMeshView>();
+            Assert.That(peopleRoot, Is.Not.Null, "no AgentMeshView - are the people drawn?");
+            var rigged = peopleRoot.GetComponentsInChildren<Animator>();
+            var hips = new List<(Animator a, Transform bone, Vector3 was)>();
+            var modesWere = new List<(Animator a, AnimatorCullingMode mode)>();
+
+            try
+            {
+                foreach (var a in rigged)
+                {
+                    if (a == null || !a.isActiveAndEnabled || a.runtimeAnimatorController == null) continue;
+                    if (!a.isHuman) continue;
+
+                    var hip = a.GetBoneTransform(HumanBodyBones.Hips);
+                    if (hip == null) continue;
+
+                    modesWere.Add((a, a.cullingMode));
+                    a.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                    hips.Add((a, hip, hip.localPosition));
+                    if (hips.Count >= 24) break;
+                }
+
+                for (int frame = 0; frame < 60; frame++) yield return null;
+
+                int still = 0;
+                float worst = 0f;
+                foreach (var (a, bone, was) in hips)
+                {
+                    float shift = Vector3.Distance(bone.localPosition, was);
+                    if (shift > worst) worst = shift;
+                    if (shift < 0.001f) still++;
+                }
+
+                Debug.Log($"[body] SKELETONS: of {hips.Count} rigged figures watched for a second, "
+                        + $"{hips.Count - still} moved a hip bone and {still} did not. "
+                        + $"Largest shift {worst * 1000f:0.0} mm. "
+                        + "A figure whose animator is playing and whose hips never move is T-posing.");
+
+                // RATCHETED FROM W4'S MEASUREMENT, WHICH WAS 24 OF 24 MOVING.
+                //
+                // The bar is a quarter rather than zero because a still figure is not automatically
+                // a fault - a clip can genuinely hold a pose for a beat, and one unlucky sample
+                // should not turn the six-minute gate red. What this has to catch is the failure
+                // the log spent months unable to show: a town where the animators tick and NOTHING
+                // MOVES. That reads as all of them, not a quarter.
+                Assert.That(still, Is.LessThanOrEqualTo(Mathf.Max(1, hips.Count / 4)),
+                    $"{still} of {hips.Count} rigged figures did not move a hip bone in a whole "
+                  + $"second while their animator was playing. Largest shift {worst * 1000f:0.0} mm. "
+                  + "That is a T-posing town, and the clip-advance line above cannot see it.");
+            }
+            finally
+            {
+                foreach (var (a, mode) in modesWere) if (a != null) a.cullingMode = mode;
+            }
+
             // ---- and do they play the right thing while walking? ----
             //
-            // The sim opens at six in the morning, when the honest answer for most of Northgate is
+            // The sim opens at six in the morning, when the honest answer for most of Rossville is
             // that they are asleep behind a wall - so a state count taken now says nothing. What
             // matters is narrower and can be asked at any hour: of the people the simulation says
             // are ON THE MOVE, how many are in the state they should be? A person walking while
@@ -137,11 +213,52 @@ namespace Noir.PlayTests
             float slowest = float.MaxValue, fastest = 0f, rates = 0f;
 
             // DRIVEN, NOT WAITED FOR. Batchmode frames are quick, so a frame is worth a fraction
-            // of a game second and no amount of yielding gets Northgate out of bed - eight rounds
+            // of a game second and no amount of yielding gets Rossville out of bed - eight rounds
             // of ninety frames reached six minutes past six, which is a town where the only honest
             // answer is that everybody is asleep. Ticking the simulation directly walks the clock
             // to the hours where people are actually out.
-            for (int hour = 7; hour <= 18; hour += 2)
+            // FORWARD FROM WHEREVER THE CLOCK IS, BECAUSE THIS SWEEP CANNOT GO BACKWARDS.
+            //
+            // It read `for (int hour = 7; hour <= 18; hour += 2)` and the loop below only ever
+            // ticks FORWARD - `while (Clock.MinuteOfDay < want)`. VillageHost starts the sim at
+            // NOON, so 7, 9 and 11 were already past and the while-loop ran zero times for all
+            // three. Measured off a real run, the six censuses came out as:
+            //
+            //     12:00, 12:00, 12:00, 13:00, 15:00, 17:00
+            //
+            // and the first three were BYTE-IDENTICAL. Half the sweep was one sample printed three
+            // times, and the log looked like six.
+            //
+            // Starting at the next whole hour gives six distinct ones and reaches the EVENING,
+            // which the old range never touched - people coming home is exactly when a walk cycle
+            // is worth watching. The morning is not reachable at all from a noon start, and that
+            // is a property of the simulation rather than of this loop: say so rather than print
+            // noon three times and imply otherwise.
+            // AND IT STOPS AT 17:00, WHICH IS NOT A ROUND NUMBER - IT IS A DEADLINE.
+            //
+            // THE CITY IS BUILT ONCE AND SHARED BY EVERY TEST IN THE RUN, so the clock this sweep
+            // winds forward is the clock the tests after it read.
+            // `TheCarsOfPeopleAtWorkAreNotOnTheirDrives` asserts that the commuters are OUT, and
+            // its own docstring says why: DayPlan sends them at 06:20 and brings them back at
+            // 17:10, so at the moment every test sees, their drives are empty.
+            //
+            // Sweeping to 23:00 was tried, in the commit that fixed the duplicate noons, and it
+            // did exactly what that docstring predicted: the driveways test came back "nobody in
+            // this town works out of it at midday ... Expected: greater than 0, But was: 0",
+            // because by the time it ran the whole town was home. `WhyAreThePeopleNotAnimating`
+            // timed out at 900 s in the same run - eleven simulated hours instead of five.
+            //
+            // 13:00, 15:00, 17:00 from a noon start: three DISTINCT hours where the old range gave
+            // three identical noons plus three real ones. Do not widen it without moving the
+            // driveways test's premise first.
+            const int LastHour = 17;
+            int firstHour = host.Sim.Clock.MinuteOfDay / 60 + 1;
+            Debug.Log($"[body] sweeping {firstHour:00}:00 to {LastHour:00}:00 in two-hour steps. "
+                    + "The sim starts at noon and this cannot rewind, so the morning is not "
+                    + "sampled; it stops before 17:10 because the commuters come home then and "
+                    + "the clock is shared with every test after this one.");
+
+            for (int hour = firstHour; hour <= LastHour; hour += 2)
             {
                 // 20 ticks a second of game time, so an hour is 72,000 of them.
                 int want = hour * 60;
@@ -156,6 +273,16 @@ namespace Noir.PlayTests
                 var census = view.Report();
                 Debug.Log($"[body] {host.Sim.Clock.MinuteOfDay / 60:00}:"
                         + $"{host.Sim.Clock.MinuteOfDay % 60:00}  {census}");
+
+                // DOT-7, RATCHETED LIVE. W4 measured this at zero every hour. A person whose
+                // wanted clip has no state in the controller is FROZEN by Drive - deliberately,
+                // since freezing is honest where treadmilling was a lie - but frozen is still a
+                // person not animating, and the whole dotted-clip fault was exactly this going
+                // uncounted. Above the Moving check, because its victims stand at doors.
+                Assert.That(census.Stateless, Is.EqualTo(0),
+                    $"{census.Stateless} people want a clip the controller has no state for, so "
+                  + "they are frozen. Either a row names a clip nobody downloaded, or the "
+                  + "controller is stale - rebuild with Noir/Build The Townsfolk Animator.");
 
                 if (census.Moving == 0) continue;
                 sampled += census.Moving;
@@ -191,8 +318,27 @@ namespace Noir.PlayTests
             // as 0.00x for that frame and is a person about to stop, not a fault. The band is wide
             // on purpose - what it has to catch is the match not running at all, which pins the
             // rate at exactly 1.00x, or giving up at the ceiling, which pins it at 2.00x.
+            // THE FLOOR IS 0.35, AND HERE IS WHERE THAT NUMBER COMES FROM.
+            //
+            // It was 0.50 against a measured 0.54, which is four hundredths of clearance - a gate
+            // that fires on its own without anybody changing anything, and this run measured 0.54,
+            // 0.62 and 0.72 on different hours. The floor was not describing a fault; it was
+            // describing this town.
+            //
+            // The clip is authored at 1.5 m/s. Rossville's adults walk 1.19-1.51 m/s BEFORE
+            // terrain slows them, so the average villager's honest ceiling is about
+            // 1.35 / 1.5 = 0.90x and the slow end sits near 1.19 / 1.5 = 0.79x - and then terrain,
+            // door pauses and the sampling of people about to stop pull the hourly mean well under
+            // that. A floor of 0.35 is comfortably below anything the town produces and still
+            // catches the two failures that matter, which are the ones the band was always for:
+            // the match not running at all (pinned at exactly 1.00x, caught by the assert below)
+            // and the match giving up at the ceiling (pinned at 2.00x, caught by the 1.4 above).
+            //
+            // NOT FIXED BY RE-AUTHORING THE 1.5. That figure is a FACT ABOUT THE CLIP measured off
+            // its own root motion, not a dial - lowering it to flatter the ratio would put the
+            // skate straight back in for everybody. Owner's decision, 2026-08-08.
             float mean = hours > 0 ? rates / hours : 0f;
-            Assert.That(mean, Is.GreaterThan(0.5f).And.LessThan(1.4f),
+            Assert.That(mean, Is.GreaterThan(0.35f).And.LessThan(1.4f),
                 $"the walk averaged {mean:0.00}x over {hours} hours "
               + $"(span {slowest:0.00}-{fastest:0.00}) - the feet will skate");
             Assert.That(mean, Is.Not.EqualTo(1f).Within(0.001f),

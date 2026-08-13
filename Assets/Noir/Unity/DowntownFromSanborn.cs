@@ -31,8 +31,11 @@ namespace Noir.Unity
     ///
     /// ONE BUILDING, SEVERAL NARROW SHOPS. The owner, on 112 South Chicago: "they were several
     /// narrow shops... but in the same building". That is what a terrace is and what this lays -
-    /// a single continuous structure along the frontage, subdivided by party walls, every unit
-    /// square to the pavement. Not a row of detached boxes with gaps between them.
+    /// a continuous run along the frontage, subdivided by party walls, every unit square to the
+    /// pavement. Not a row of detached boxes with gaps between them - each storefront is its own
+    /// Place so it can carry its own business, but they are laid edge to edge with zero gap and
+    /// left to the massing grammars to render as one row, the same way the 41 hand-placed
+    /// downtown units already do.
     /// </summary>
     public static class DowntownFromSanborn
     {
@@ -74,7 +77,9 @@ namespace Noir.Unity
                 if (!ruled.FootprintIsLater) continue;
                 if (ruled.Was != Rulings.Stood.Built) continue;
 
-                var front = FrontageOf(layout, lot, out var alongDir, out var backDir, out float startDist);
+                string frontAddress = CountyRecord.For(lot.Id)?.Address;
+                var front = FrontageOf(layout, lot, frontAddress, out var alongDir, out var backDir,
+                                        out float startDist);
                 if (front.Length < TooNarrow) continue;
 
                 var laid = CommercialRow.Lay(front.Length, rng);
@@ -93,39 +98,81 @@ namespace Noir.Unity
                     if (on != null && on.Value.Id == lot.Id) drop.Add(p);
                 }
 
-                // ONE building, its outline running the whole terrace. The units are its rooms and
-                // WorldBuilder divides them; what this decides is the fabric - where the wall is,
-                // how far back it runs, and where the party walls fall.
-                var corners = new List<Tile>();
-                var a0 = front.Start;
-                var a1 = front.Start + alongDir * front.Length;
-                var b1 = a1 + backDir * DepthMetres;
-                var b0 = a0 + backDir * DepthMetres;
-                corners.Add(ToTile(a0));
-                corners.Add(ToTile(a1));
-                corners.Add(ToTile(b1));
-                corners.Add(ToTile(b0));
-                corners.Add(ToTile(a0));               // closed
+                // EACH STOREFRONT ITS OWN PLACE, laid edge to edge along the frontage with zero
+                // gap - the fabric is exactly what it was when this was one merged box, just cut
+                // at the same seams CommercialRow already computed. Splitting it is what lets each
+                // one carry its own business, kind, jobs and hours instead of all of them sharing
+                // whatever the single ruling on the row said.
+                string address = frontAddress;
+                int index = 0;
+                int laidHere = 0;
 
-                int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
-                foreach (var t in corners)
+                foreach (var unit in laid)
                 {
-                    if (t.X < minX) minX = t.X; if (t.X > maxX) maxX = t.X;
-                    if (t.Y < minY) minY = t.Y; if (t.Y > maxY) maxY = t.Y;
+                    index++;
+                    var corners = new List<Tile>();
+                    var a0 = front.Start + alongDir * unit.Offset;
+                    var a1 = front.Start + alongDir * unit.End;
+                    var b1 = a1 + backDir * DepthMetres;
+                    var b0 = a0 + backDir * DepthMetres;
+                    corners.Add(ToTile(a0));
+                    corners.Add(ToTile(a1));
+                    corners.Add(ToTile(b1));
+                    corners.Add(ToTile(b0));
+                    corners.Add(ToTile(a0));           // closed
+
+                    int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+                    foreach (var t in corners)
+                    {
+                        if (t.X < minX) minX = t.X; if (t.X > maxX) maxX = t.X;
+                        if (t.Y < minY) minY = t.Y; if (t.Y > maxY) maxY = t.Y;
+                    }
+                    int w = maxX - minX, h = maxY - minY;
+                    if (w < 3 || h < 3) continue;
+
+                    var outline = corners.ToArray();
+
+                    // AS CLOSE TO THE WALL AS THE OUTLINE WILL ALLOW, not a guessed offset.
+                    // An axis-aligned building can leave its door sitting exactly on its Bounds
+                    // edge - WorldBuilder samples a tile's CENTRE, and a horizontal or vertical
+                    // wall always lands the +0.5 just inside - but this frontage runs at whatever
+                    // angle the street does, and a door left that close to an angled edge rounds
+                    // to either side of it as often as not once ToTile has rounded the corners
+                    // themselves. Worse than losing the Outline: a door placed too FAR in read as
+                    // standing in the middle of the shop with no outdoor tile beside it, and
+                    // DoorsThatOpen relocated it to a generic wall spot that knows nothing about
+                    // this Outline, dropping it on the pipeline's second pass regardless. So this
+                    // steps in from the rounded front edge one tile at a time and keeps the very
+                    // first spot Polygon.Contains agrees is inside - the same even-odd test
+                    // WorldBuilder.Inside runs, so what is decided here is guaranteed to still
+                    // hold by the time WorldBuilder asks. See Polygon.cs's own header for what
+                    // silently lost this Outline before any of this existed.
+                    var frontMid = new Vector2((corners[0].X + corners[1].X) * 0.5f,
+                                                (corners[0].Y + corners[1].Y) * 0.5f);
+                    Tile door = Tile.None;
+                    for (int step = 0; step <= 4; step++)
+                    {
+                        var candidate = ToTile(frontMid + backDir * step);
+                        if (!Polygon.Contains(outline, candidate)) continue;
+                        door = candidate;
+                        break;
+                    }
+
+                    var spec = new PlaceSpec
+                    {
+                        Kind = PlaceKind.Shop,
+                        Bounds = new TileRect(minX, minY, w, h),
+                        Outline = outline,
+                        Door = door,
+                        Name = CommercialRow.HandleFor(address, lot.Id, index),
+                    };
+                    add.Add(spec);
+                    laidHere++;
                 }
-                int w = maxX - minX, h = maxY - minY;
-                if (w < 3 || h < 3) continue;
 
-                var spec = new PlaceSpec
-                {
-                    Kind = PlaceKind.Shop,
-                    Bounds = new TileRect(minX, minY, w, h),
-                    Outline = corners.ToArray(),
-                    Name = $"the {front.Street} terrace",
-                };
-                add.Add(spec);
+                if (laidHere == 0) continue;
                 rows++;
-                units += laid.Length;
+                units += laidHere;
             }
 
             foreach (var p in drop) layout.Places.Remove(p);
@@ -133,7 +180,7 @@ namespace Noir.Unity
 
             if (rows > 0)
                 Debug.Log($"[survey] {rows} downtown terrace(s) laid from the 1913 survey - "
-                        + $"{units} shop units in {rows} building(s), replacing "
+                        + $"{units} independently-rulable shop units across them, replacing "
                         + $"{drop.Count} raised from post-2000 sources.");
             return rows;
         }
@@ -149,8 +196,23 @@ namespace Noir.Unity
         /// Which edge of a lot faces its street, which way the terrace runs along it, and which
         /// way is back into the lot. The row is laid from the end NEAREST the crossing, because
         /// that is the direction CommercialRow's decay is measured in.
+        ///
+        /// <paramref name="address"/> decides WHICH road counts as the frontage. 112 S Chicago
+        /// sits right beside alley29 - a 4 m service lane running almost due north-south along
+        /// its back wall, one to three metres off it - while Chicago itself runs some fifty-odd
+        /// metres away, at roughly 18 degrees off true north through this stretch. A plain
+        /// nearest-road search picks the alley every time: it is geometrically closer, and
+        /// nothing about "nearest" knows a shop cannot front a lane meant for the bins. That built
+        /// the whole row dead straight, on the alley's near-vertical line, instead of canted to
+        /// Chicago's real angle - see NoBuildingStandsInAStreet, which is exactly how this was
+        /// found: every unit reported standing progressively deeper into a road the further south
+        /// it ran, because the row's face drifted from the true frontage line as it went. Matching
+        /// the road by the address's own street name, and refusing an alley while a named match or
+        /// any non-alley road exists, is what fixes both the angle and the offset at once - the
+        /// projection below still comes off the lot's own surveyed ring, so once the right road
+        /// picks the right axis, the true near edge falls out of the same geometry.
         /// </summary>
-        private static Frontage FrontageOf(VillageLayout layout, ParcelIndex.Parcel lot,
+        private static Frontage FrontageOf(VillageLayout layout, ParcelIndex.Parcel lot, string address,
                                            out Vector2 along, out Vector2 back, out float startDist)
         {
             along = Vector2.right; back = Vector2.up; startDist = 0f;
@@ -164,7 +226,8 @@ namespace Noir.Unity
             centre /= ring.Length;
 
             // The road this lot fronts, and the direction of its kerb.
-            var road = NearestRoad(layout, centre, out var tangent, out var normal, out string name);
+            var road = NearestRoad(layout, centre, StreetTokenOf(address),
+                                    out var tangent, out var normal, out string name);
             if (road < 0f) return f;
 
             // Project the lot onto the street direction: its extent along the kerb is its frontage.
@@ -200,17 +263,47 @@ namespace Noir.Unity
             return f;
         }
 
-        /// <summary>Distance to the nearest street centreline, with its direction and the way in
-        /// from it. Negative when there is no road at all.</summary>
-        private static float NearestRoad(VillageLayout layout, Vector2 at,
+        /// <summary>
+        /// Distance to the street centreline this lot fronts, with its direction and the way in
+        /// from it. Negative when there is no road at all.
+        ///
+        /// Tries three tiers, each strictly narrower than "nearest road on the whole map": a road
+        /// named for the address's own street, first; failing that, the nearest road that is not
+        /// a service alley; failing that - an address-less footprint-later lot, or a street this
+        /// town has no record of by that name - the nearest road of any kind, which is the old
+        /// behaviour and the only one that can still pick an alley.
+        /// </summary>
+        private static float NearestRoad(VillageLayout layout, Vector2 at, string streetToken,
                                          out Vector2 tangent, out Vector2 normal, out string name)
         {
             tangent = Vector2.right; normal = Vector2.up; name = "";
             if (layout == null || layout.Roads.Count == 0) return -1f;
 
+            if (!string.IsNullOrEmpty(streetToken))
+            {
+                float named = SearchRoads(layout, at,
+                    line => line.EffectiveClass != RoadClass.Alley
+                         && line.Name.IndexOf(streetToken, System.StringComparison.OrdinalIgnoreCase) >= 0,
+                    out tangent, out normal, out name);
+                if (named >= 0f) return named;
+            }
+
+            float unnamed = SearchRoads(layout, at, line => line.EffectiveClass != RoadClass.Alley,
+                                        out tangent, out normal, out name);
+            if (unnamed >= 0f) return unnamed;
+
+            return SearchRoads(layout, at, _ => true, out tangent, out normal, out name);
+        }
+
+        private static float SearchRoads(VillageLayout layout, Vector2 at,
+                                         System.Func<RoadRun, bool> qualifies,
+                                         out Vector2 tangent, out Vector2 normal, out string name)
+        {
+            tangent = Vector2.right; normal = Vector2.up; name = "";
             float best = float.MaxValue;
             foreach (var line in layout.Roads)
             {
+                if (!qualifies(line)) continue;
                 var pts = line.Points;
                 if (pts == null || pts.Count < 2) continue;
                 for (int i = 1; i < pts.Count; i++)
@@ -233,6 +326,36 @@ namespace Noir.Unity
                 }
             }
             return best == float.MaxValue ? -1f : best;
+        }
+
+        /// <summary>
+        /// The street name out of a county address, stripped of its house number, its leading
+        /// compass direction if it has one, and a trailing road-type word if it has one - "112 S
+        /// Chicago" and "108 West Attica Road" both come back "Chicago"/"Attica", which is what
+        /// roads.txt actually calls them: single bare words, no direction, no suffix.
+        /// </summary>
+        private static readonly System.Collections.Generic.HashSet<string> Directions =
+            new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+            { "N", "S", "E", "W", "NE", "NW", "SE", "SW",
+              "North", "South", "East", "West" };
+
+        private static readonly System.Collections.Generic.HashSet<string> Suffixes =
+            new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+            { "St", "Street", "Ave", "Avenue", "Rd", "Road", "Dr", "Drive",
+              "Ln", "Lane", "Way", "Ct", "Court", "Pl", "Place" };
+
+        private static string StreetTokenOf(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address)) return null;
+            var words = address.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+            int start = 0;
+            while (start < words.Length && (char.IsDigit(words[start][0]) || Directions.Contains(words[start])))
+                start++;
+            int end = words.Length;
+            if (end > start && Suffixes.Contains(words[end - 1])) end--;
+
+            return end > start ? string.Join(" ", words, start, end - start) : null;
         }
 
         private static Tile ToTile(Vector2 v) =>

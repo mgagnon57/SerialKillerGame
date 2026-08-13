@@ -15,6 +15,13 @@ namespace Noir.Core.World
         Lamppost,
         Headstone,
         WaterTrough,
+
+        /// <summary>
+        /// Bank growth: cattail, rush and the long wet grass that rings standing water. Appended
+        /// rather than filed next to Bush because this enum is a byte and its VALUES are what a
+        /// prop is stored as - inserting in the middle renumbers every kind after it.
+        /// </summary>
+        Reed,
     }
 
     /// <summary>
@@ -125,6 +132,31 @@ namespace Noir.Core.World
             if (!grid.IsWalkable(x, y)) return;
             if (grid.PlaceAt(x, y).IsValid && terrain == Terrain.Floor) return;
 
+            // THE BANK, BEFORE ANYTHING ELSE GETS THIS TILE.
+            //
+            // Rossville's water is a rasterisation: features.txt carries the real North Fork and
+            // the real school ponds as surveyed polygons with curves, and relay-rossville.py lays
+            // them into city.txt as axis-aligned one-metre rectangles. The mesher then closes each
+            // shore with a 35 cm vertical riser. So every shoreline in the town is a low wall
+            // following a staircase, and it is the most visible straight line left on the ground -
+            // see BANK in docs/TERRAIN-FIXES.md.
+            //
+            // Growing the edge is the honest answer as well as the cheap one: a farm pond in
+            // Vermilion County IS ringed with cattail, and a bare mown edge would be the wrong
+            // picture even if the geometry were perfect. It also costs the tile grid nothing,
+            // which matters - the grid is what BlocksSight and walkability read, and moving water
+            // tiles to soften the line would put open water back under the path across the school
+            // field. That was b9c1271's bug and it is not coming back for a prettier bank.
+            //
+            // Not every shore tile: at 1.0 this is a kerb of reeds, which is the same mistake as
+            // the hedge along every Illinois front yard below. Two in three leaves gaps to see the
+            // water through, which is what a real bank has.
+            if (NextToWater(grid, x, y) && rng.Chance(0.66f))
+            {
+                props.Add(new Prop(PropKind.Reed, new Tile(x, y), Roll(rng)));
+                return;
+            }
+
             switch (terrain)
             {
                 case Terrain.Wood:
@@ -144,9 +176,22 @@ namespace Noir.Core.World
                 case Terrain.Grass:
                     if (NextToRoad(grid, x, y))
                     {
-                        // A hedge along the verge, broken often enough to look grown
-                        // rather than drawn.
-                        if (rng.Chance(0.42f)) props.Add(new Prop(PropKind.Hedge, new Tile(x, y), Roll(rng)));
+                        // AN ILLINOIS FRONT YARD RUNS OPEN TO THE SIDEWALK. There is no hedge
+                        // along it, and that absence is most of what a Midwestern residential
+                        // street looks like: mown grass from the porch to the kerb, a street
+                        // tree every few lots, and a clear view down the whole block.
+                        //
+                        // This planted a hedge on 42% of every grass tile touching a road -
+                        // 17,849 of them, FORTY-FIVE PER CENT of every prop in the town - and it
+                        // came from Ashcombe, where a clipped roadside hedge is exactly right.
+                        // A hedge down both verges of every street is the single most English
+                        // thing the map had left in it, and it hid the openness that is the
+                        // whole character of the place.
+                        //
+                        // A shrub here and there survives, because somebody does plant one by a
+                        // driveway - but at a fortieth of the old rate, so it reads as a choice
+                        // somebody made rather than as a boundary somebody laid.
+                        if (rng.Chance(0.010f)) props.Add(new Prop(PropKind.Bush, new Tile(x, y), Roll(rng)));
                     }
                     // Grass is a yard in town AND open pasture out of it, and it is 27.7% of the
                     // map, so a rate tuned for a village green plants a park across the county.
@@ -161,18 +206,25 @@ namespace Noir.Core.World
                     break;
 
                 case Terrain.Field:
-                    // A ROADSIDE IS HEDGED, NOT POST-AND-RAILED. Post-and-rail is for the
-                    // boundary between one field and the next; what a field shows a road is a
-                    // hedge, the same as grass does.
+                    // A ROADSIDE IN VERMILION COUNTY IS A DITCH, NOT A HEDGE.
                     //
-                    // It is also the difference between a map that builds and one that does not.
-                    // A fence is one prop per tile and a hedge is drawn as a RUN, and a road
-                    // through farmland puts an edge down both of its verges for its whole
-                    // length: on a 960m map that is some thirteen kilometres of verge, which at
-                    // 55% is fourteen thousand individual fence posts and pales.
+                    // This said "a roadside is hedged, not post-and-railed", which is true of
+                    // England and is why the map had one. A county road here runs between a mown
+                    // verge and an open drainage ditch, with the corn coming to within a few feet
+                    // of it; what breaks the line is a volunteer tree or a stand of weeds, not a
+                    // laid boundary. The hedge that WAS here is the osage orange the settlers
+                    // planted as living fence, and by 1991 nearly all of it had gone to the
+                    // machinery that made the fields bigger.
+                    //
+                    // The reason the old comment gave for a hedge - that a fence is one prop per
+                    // tile while a hedge is drawn as a RUN, so hedging a whole county's verges is
+                    // affordable and fencing them is not - still holds, and is exactly why the
+                    // answer is to put NOTHING along most of it. What remains of the old fence
+                    // rows is drawn by OnFieldEdge below, where it belongs.
                     if (NextToRoad(grid, x, y))
                     {
-                        if (rng.Chance(0.42f)) props.Add(new Prop(PropKind.Hedge, new Tile(x, y), Roll(rng)));
+                        if (rng.Chance(0.012f)) props.Add(new Prop(PropKind.Bush, new Tile(x, y), Roll(rng)));
+                        else if (rng.Chance(0.004f)) props.Add(new Prop(PropKind.Tree, new Tile(x, y), Roll(rng)));
                     }
                     else if (OnFieldEdge(grid, x, y))
                     {
@@ -249,6 +301,21 @@ namespace Noir.Core.World
                     return new Tile(x, y);
             }
             return t;
+        }
+
+        /// <summary>
+        /// Whether this tile is on the water's edge.
+        ///
+        /// Four-neighbour and not eight, deliberately. The water is a raster of axis-aligned
+        /// rectangles, so a diagonal neighbour is a staircase CORNER - counting it plants a reed
+        /// on the outside of every step and draws the staircase in cattail instead of hiding it.
+        /// </summary>
+        private static bool NextToWater(TileGrid grid, int x, int y)
+        {
+            return grid.TerrainAt(x - 1, y) == Terrain.Water
+                || grid.TerrainAt(x + 1, y) == Terrain.Water
+                || grid.TerrainAt(x, y - 1) == Terrain.Water
+                || grid.TerrainAt(x, y + 1) == Terrain.Water;
         }
 
         private static bool NextToRoad(TileGrid grid, int x, int y)

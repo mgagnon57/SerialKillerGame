@@ -91,7 +91,12 @@ namespace Noir.Sim
 
             var isDwelling = new bool[world.PlaceCount];
             for (int p = 0; p < world.PlaceCount; p++)
-                isDwelling[p] = world.GetPlace(new PlaceId(p)).Kind == PlaceKind.Dwelling;
+                // THE TABLE, NOT THE ENUM MEMBER - the same fault as Eyewitness.cs had, in the
+                // same shape, one file over. `apartment` declares `home yes` in kinds.txt and is
+                // not in the enum, so seven of Rossville's places and the people in them were not
+                // at home as far as this report was concerned.
+                isDwelling[p] = PlaceKindTable.Current.Row(
+                    world.GetPlace(new PlaceId(p)).Kind).IsHome;
 
             // ---- per person ----
             var streetEvents = new long[n];
@@ -524,7 +529,7 @@ namespace Noir.Sim
             r.Line("                                                 people go on one high street instead");
             r.Line();
             r.Line("    Falsify it rather than believe it. `encounters --tile 2` runs this same content");
-            r.Line("    on four Ashcombes and about four times the people at the same density, which is");
+            r.Line("    on four copies of the fixture village and about four times the people at the same density, which is");
             r.Line("    the only preview of the town this harness can build before one is authored.");
             r.Line();
             r.M("enc_projection", ("from", n), ("to", Target), ("tiles_per_head", tilesPerHead),

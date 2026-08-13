@@ -8,7 +8,7 @@ namespace Noir.Editor
 {
     /// <summary>
     /// Renders a couple of polyperfect's own demo scenes to PNG, headlessly, so the Poly
-    /// Universal Pack's actual look can be judged against Ashcombe's muted palette without
+    /// Universal Pack's actual look can be judged against Rossville's muted palette without
     /// anybody opening the editor. These are the publisher's own assembled scenes - no assembly
     /// code of ours involved yet - so this is purely "what does the kit look like," not a test
     /// of any integration.

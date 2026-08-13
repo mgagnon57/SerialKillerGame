@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using Noir.Unity;
 
 namespace Noir.Editor
 {
@@ -19,7 +20,18 @@ namespace Noir.Editor
     /// </summary>
     public static class PeopleProbe
     {
-        private const string Folk = "Assets/polyperfect/Poly Universal Pack/Prefabs/People";
+        /// <summary>
+        /// Where the cast lives — <see cref="AgentBody.Folk"/> and not a copy of it.
+        ///
+        /// This was a private `const` holding the same string, which is the failure mode the
+        /// public one exists to prevent: `AgentBody.Folk` was MADE public precisely so nobody
+        /// would keep a second copy, and then a second copy was kept anyway. Two identical string
+        /// literals in different assemblies do not drift on the day they are written, they drift
+        /// on the day somebody moves the folder — and then this probe reports an empty cast while
+        /// the game draws people perfectly well, which reads as a broken probe rather than a
+        /// stale path.
+        /// </summary>
+        private const string Folk = AgentBody.Folk;
 
         [MenuItem("Noir/Probe The People")]
         public static void Run()

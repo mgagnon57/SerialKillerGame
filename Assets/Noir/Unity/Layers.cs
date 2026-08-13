@@ -106,6 +106,18 @@ namespace Noir.Unity
             /// up and the lot lines off, which is the view the owner reads the map in.
             /// </summary>
             Labels,
+
+            /// <summary>
+            /// The cars standing at people's houses — which is nearly every car the town owns.
+            ///
+            /// Its own switch and not Parking's: Parking is public lots, this is the driveway of a
+            /// private house, and the useful thing is being able to take the parked cars away and
+            /// still see the lot lines under them. Added at the END of the enum on purpose —
+            /// Layers persists by NAME (<c>KeyPrefix + kind</c> concatenates the enum's ToString),
+            /// so a new member cannot renumber anybody's saved switches, but there is no reason to
+            /// find that out the hard way.
+            /// </summary>
+            Driveways,
         }
 
         /// <summary>How the panel labels each one, and the order it lists them in.</summary>
@@ -120,7 +132,7 @@ namespace Noir.Unity
             Kind.RailBed, Kind.Powerlines, Kind.Farm,
             Kind.Buildings, Kind.Districts, Kind.Houses, Kind.Story,
             Kind.Trees, Kind.Lamps, Kind.Traffic, Kind.People, Kind.Massing,
-            Kind.Plan, Kind.Footprints, Kind.Labels,
+            Kind.Plan, Kind.Footprints, Kind.Labels, Kind.Driveways,
         };
 
         public static string Label(Kind k)
@@ -276,6 +288,27 @@ namespace Noir.Unity
         public static bool IsOn(Kind kind)
         {
             if (_on.TryGetValue(kind, out bool cached)) return cached;
+
+            // BATCH MODE GETS THE COMPILED DEFAULT, NOT A PERSON'S PREFERENCES.
+            //
+            // `Set` already refused to WRITE PlayerPrefs headless; this is the read, and it was
+            // still going to the same place - so whatever the owner last toggled in the editor
+            // silently decided what every headless test measured. CLAUDE.md documents where that
+            // ends: `noir.layer.Traffic = 0`, set once months earlier for a survey view, froze all
+            // 160 vehicles in EVERY subsequent run including the tests, and three gate tests
+            // reported it three different ways before anybody found the cause.
+            //
+            // Fixed HERE rather than by a `[RuntimeInitializeOnLoadMethod]` in the test assembly,
+            // which was the other candidate and is a trap: `Noir.PlayTests.asmdef` has no
+            // `excludePlatforms`, so such a hook fires on EVERY entry into Play, not only under
+            // the test runner - and the owner would press Play one day and permanently lose his
+            // trees, farm and power lines. There is no hook to mis-fire this way.
+            if (Application.isBatchMode)
+            {
+                _on[kind] = true;
+                return true;
+            }
+
             bool stored = PlayerPrefs.GetInt(KeyPrefix + kind, 1) == 1;
             _on[kind] = stored;
             return stored;
@@ -355,6 +388,37 @@ namespace Noir.Unity
         public static void SetAll(bool on)
         {
             foreach (var k in All) Set(k, on);
+        }
+
+        /// <summary>
+        /// Every switch as it stands, so a tool can put them back exactly.
+        ///
+        /// `Set` already refuses to write PlayerPrefs in batch mode, which is what stopped the
+        /// 2026-08-07 incident above from ever happening again headlessly. It does NOT stop a
+        /// tool run from the `Noir` menu, where there IS a person and the write is correct - and
+        /// two of them walked the layers and left them somewhere the owner never put them:
+        ///
+        ///   - `LayerShot` finished with `SetAll(true)` under a comment reading "left as it was
+        ///     found, so a person opening the editor next is not handed a village with half of it
+        ///     switched off". All-on is not as-it-was-found. If he had the trees off, they came
+        ///     back on and stayed on.
+        ///   - `SmokeTest` turned every layer on and restored nothing at all.
+        ///
+        /// Neither is a bug in `Set`. A tool that changes a person's preferences to do its job
+        /// has to change them back, and this is the pair that lets it.
+        /// </summary>
+        public static Dictionary<Kind, bool> Snapshot()
+        {
+            var was = new Dictionary<Kind, bool>();
+            foreach (var k in All) was[k] = IsOn(k);
+            return was;
+        }
+
+        /// <summary>Put back what <see cref="Snapshot"/> took. Safe to call in a `finally`.</summary>
+        public static void Restore(Dictionary<Kind, bool> was)
+        {
+            if (was == null) return;
+            foreach (var pair in was) Set(pair.Key, pair.Value);
         }
 
         /// <summary>

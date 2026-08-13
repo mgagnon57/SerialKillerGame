@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Noir.Core.People;
 using Noir.Core.World;
@@ -6,7 +6,7 @@ using Noir.Core.World;
 namespace Noir.Bench
 {
     /// <summary>
-    /// Ashcombe itself, when it can be found.
+    /// The fixture village itself, when it can be found.
     ///
     /// The synthetic worlds are the measurement; this is the check on it. If the authored
     /// village and a synthetic one of the same population disagree by more than a little, the
@@ -62,7 +62,7 @@ namespace Noir.Bench
             var particulars = ParticularsTable.Parse(File.ReadAllText(Path.Combine(Root, "particulars.txt")));
             var people = PopulationGenerator.Generate(world, names, particulars, seed);
 
-            return new Settlement("Ashcombe", world, people, seed);
+            return new Settlement("the fixture village", world, people, seed);
         }
 
         public static VillageLayout Layout()

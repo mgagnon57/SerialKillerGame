@@ -1,0 +1,31 @@
+{
+    "asset": "826f5f6b7924a2c42937d91eecb914ae",
+    "fileName": "019fda54-b5df-79d7-ab58-999901867944.png",
+    "prompt": "A photograph taken in October 1991 at the grain elevator of a small farm town in east-central Illinois during the corn harvest. A tall concrete elevator with a steel headhouse and a cluster of corrugated steel bins beside a single-track railway line. Two farm grain trucks queued on the scale: a red 1985 Ford tandem grain truck with a steel box and a hoist, and an older green International. Corn dust hanging thick and gold in the low afternoon light. A green and yellow John Deere combine of the late 1980s with a corn head parked at the edge of the lot, its paint dusty. Farmers in seed-corn caps, work jackets and jeans standing by the scale house talking. A pickup with a dog in the back. Behind, dead flat harvested fields of tall coarse corn stubble stretching to the horizon under a big hazy sky, with one field still standing. Warm low October sun, long shadows, dust in the air. Shot on Kodak Gold 400 35mm colour negative and printed at a one-hour photo lab: crisp, good contrast, fine grain, strong warm low sunlight but not a faded vintage cast. IMPORTANT: this is 1991, not the 1970s. No 1960s or 1970s tractors as the subject, no vintage sun-bleached look. Nothing later than 1991: no modern combines with cabs full of screens, no modern grain carts, no GPS domes, no modern pickups.",
+    "negativePrompt": "",
+    "model": "gemini-3.0-pro",
+    "modelName": "Gemini 3.0 Pro",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0,
+    "dynamicParams": {
+        "serializedData": []
+    }
+}

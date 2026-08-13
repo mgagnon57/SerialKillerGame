@@ -204,6 +204,25 @@ namespace Noir.Editor
                     + $"{FoundByName.Length} checked.");
         }
 
+        /// <summary>
+        /// Is any SEGMENT of this relative path in <see cref="NeverShip"/>?
+        ///
+        /// Segment and not file name, and this is the whole of PB-3's risk. `private` is a
+        /// DIRECTORY: matching on the file name alone would ship `private/whatever.txt` while the
+        /// entry sat in the list looking like it was doing something. It was in fact doing nothing
+        /// at all before this - `Directory.GetFiles` without recursion never returns a directory -
+        /// so the list's most important line has never once been exercised.
+        /// </summary>
+        private static bool SegmentIsHeldBack(string relative)
+        {
+            foreach (string segment in relative.Split(
+                         Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                if (Array.Exists(NeverShip,
+                        n => string.Equals(n, segment, StringComparison.OrdinalIgnoreCase)))
+                    return true;
+            return false;
+        }
+
         private static void ShipTheContent(string root, string buildDir)
         {
             string from = Path.Combine(root, "Content");
@@ -219,21 +238,46 @@ namespace Noir.Editor
             Directory.CreateDirectory(to);
             int copied = 0, held = 0;
 
-            foreach (string path in Directory.GetFiles(from))
+            // RECURSIVE, AND `private` BECOMES LOAD-BEARING FOR THE FIRST TIME BECAUSE OF IT.
+            //
+            // This walked the TOP LEVEL only, so `Content/textures/` and `Content/audio/` had
+            // never once shipped - and the shipped game said so the moment it was asked:
+            // `Surface textures: player build, no pack path. 0 loose (), 16 MISSING`. Sixteen of
+            // sixteen surfaces flat, in every build this project has ever made.
+            //
+            // ⚠ THE PRIVACY ENTRY WAS INERT UNTIL THIS LINE CHANGED. `private` is a DIRECTORY,
+            // and `Directory.GetFiles` returns no directories - so `NeverShip`'s most important
+            // entry has been matching nothing at all, harmlessly, for as long as it has existed.
+            // Recursing makes it real, and a file-name match would miss it: the entry has to be
+            // tested against every path SEGMENT, which is what SegmentIsHeldBack does. Get this
+            // wrong and the artifact carries the real names of people who live in a real town.
+            foreach (string path in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
             {
-                string name = Path.GetFileName(path);
-                if (Array.Exists(NeverShip, n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)))
-                { held++; continue; }
+                string relative = path.Substring(from.Length).TrimStart(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (SegmentIsHeldBack(relative)) { held++; continue; }
 
                 // The .before-* backups of the rulings file are working copies, not content.
-                if (name.Contains(".before-")) { held++; continue; }
+                if (Path.GetFileName(path).Contains(".before-")) { held++; continue; }
 
-                File.Copy(path, Path.Combine(to, name), overwrite: true);
+                string target = Path.Combine(to, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(target));
+                File.Copy(path, target, overwrite: true);
                 copied++;
             }
 
             Debug.Log($"[build] shipped {copied} content files beside the exe, held back {held} "
                     + "as local-only.");
+
+            // SAID OUT LOUD, EVERY BUILD, because the privacy rule is one directory name away
+            // from being wrong and nobody should have to remember to check.
+            string leaked = Path.Combine(to, "private");
+            if (Directory.Exists(leaked) || File.Exists(leaked))
+                Debug.LogError("[build] PRIVATE CONTENT IS IN THE BUILD at " + leaked
+                    + " - do not push or share this artifact. NeverShip did not hold.");
+            else
+                Debug.Log("[build] privacy: nothing named in NeverShip reached the build.");
         }
     }
 }
