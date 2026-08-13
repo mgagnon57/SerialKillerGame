@@ -1044,3 +1044,39 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   spurs exist and those run through parcelled ground as they should. Fixing it means shifting the
   `rail` polyline in `features.txt`, which also moves the ballast, the four level crossings and
   anything referencing them — so it goes with the road refit, not before it. — *2026-08-04*
+
+- **The doorhead stops a hand's width shy of the roof, and head-on that is a slit of sky.** Over
+  every front door the panel filling the storey (`Frontage.Doorway`'s `doorhead`) tops out just
+  under the eaves line its flanking wall runs reach — likely the threshold-vs-`GroundUnder` base
+  mismatch in its `f.On` height. A metre of wall reveal used to swallow the gap in shadow; at the
+  real seven inches (2026-08-11) it reads as a small sky notch when you stand square to the door,
+  in `docs/snapshots/interior-street-front.png`. Cosmetic, close-range only. — *2026-08-11*
+
+- **Unit 30's campus grounds are bare grass and should not stay that way.** The four seeded
+  houses came off the school block on the owner's ruling (2026-08-11, in `city.txt` beside the
+  removal) and the block is mown campus for now. What a 1991 Rossville-Alvin High School block
+  actually carries - ball diamond, track, parking apron off Chicago, bike racks, backstop - is
+  his memory to draw from, in daylight, with the browser map open. The `playground` kind and
+  `CityParking` both exist to build from. — *2026-08-11*
+
+- **The survey seating pass does not obey parcel rulings, and Unit 30 proved it.** Lot 590 -
+  the high school's whole super-parcel, ruled `kind school` - happily took seeded dwellings,
+  and deleting one slid the next declaration westward into its slot (105 E Benton, declared
+  at 826, re-seated to 805 the moment 103's ground freed). The fix is refusal at the source:
+  no dwelling may seat on a parcel whose ruling kind is not a home, refusals print loudly by
+  name, and SmokeTest fails on any dwelling standing on non-dwelling-ruled ground. — *2026-08-11*
+
+- **The school bus left with the prefab.** The kind-vehicle table (school bus, fire truck,
+  ambulance) spawns inside the bought-building flow, so a landmark that GENERATES gets no
+  vehicle. Unit 30 generates now and its bus is gone. Spawn kind-vehicles for every landmark
+  place, bought or generated. — *2026-08-11*
+
+- **SchoolMassing: two storeys behind a flat parapet, ruled - and the wings are SeatOnSurvey's
+  own step two.** The owner confirmed the 1991 silhouette the night the school swapped west
+  (2026-08-12): tall brick, built-up flat roof, parapet line. Raise the eaves to a second
+  storey (~7.3 m) and swap the hip for RoofForm.Flat in SchoolMassing. The L-complex outline
+  CANNOT be three places - SeatOnSurvey deals places onto measured structures biggest-first,
+  and it flung the declared south wing onto a 342 m2 outbuilding a hundred metres off - it is
+  the outline work SeatOnSurvey.cs names in its own header: walls from the real polygon in
+  parcel-buildings.txt, a VillageMesh change. Also on parcel 641 for a later session:
+  "206 North Chicago Street", a real commercial address standing on school ground. — *2026-08-12*

@@ -440,6 +440,7 @@ parcel 568 kind dwelling
 parcel 590 was built
 parcel 590 kind school
 parcel 590 property "Grade School"
+parcel 590 note "The original label was right and the night's first correction was wrong: the owner's PIN 08-11-603-004 pins the HIGH SCHOOL to parcel 641 west of Chicago, so this east block is the GRADE SCHOOL of 1991 - standing then, absent from FEMA's layer now, classed commercial by the county today. Five seeded houses came off this ground the same night; the school's seat here is remembered, not measured"
 
 parcel 591 was absent
 
@@ -486,6 +487,8 @@ parcel 636 note "FEMA traces this whole run of joined brick as ONE polygon; the 
 
 parcel 641 was built
 parcel 641 kind school
+parcel 641 property "Rossville-Alvin High School"
+parcel 641 note "The owner's own PIN, 08-11-603-004, tax exempt, one 4,314 m2 civic footprint - the real high school, in his words back then and today. Drawn as three axis-aligned wings (52x55, 23x31, 27x29) because the grid cannot tilt the west side's 16.6 degrees; 305, 303 and 301 W Benton were seeded through its floor and came off the same night"
 
 parcel 642 was built
 parcel 642 kind memorial

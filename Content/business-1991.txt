@@ -22,6 +22,9 @@
 #  save from the game rewrites the whole file.
 # ============================================================================
 
+unit "301 W Benton Ave" kind school
+unit "301 W Benton Ave" business "Rossville-Alvin High School"
+unit "301 W Benton Ave" trade "Teaches"
 unit "Rossville unit 27" kind tavern
 unit "Rossville unit 27" business "The Village Pub"
 unit "Rossville unit 27" trade "Bar and Grill"

@@ -147,21 +147,22 @@ namespace Noir.Unity
                 // grammars, where `massing shopfront` now means a Main Street block.
                 //
                 // What is left here is the handful of things that really do stand alone on their
-                // own ground in a farm town: the fire house, the school, the water tower, the
-                // grain elevator, the filling station, and the farm buildings.
+                // own ground in a farm town: the fire house, the water tower, the grain
+                // elevator, the filling station, and the farm buildings.
                 string prefab = KindOf(place) switch
                 {
-                    // THIS USED TO KEY ON `school2`, A SECOND KIND that existed so Rossville's
-                    // village school would not get the pack's American elementary. The price was
-                    // hidden and much larger than the benefit: a kind the PlaceKind enum has
-                    // never heard of is numbered past it, DayPlanner asks for PlaceKind.School by
-                    // its ENUM MEMBER, and so Rossville's 165 children had no school to be sent
-                    // to. Not one of them ever went, at any hour of any day, and the town read as
-                    // normal because the building was still standing there.
+                    // THE SCHOOL LEFT THIS SWITCH ON 2026-08-11, ruled by the owner off the
+                    // wireframe of its own generated plan: "build your own like the houses."
+                    // School_City is a three-mass city brick and it stood on Unit 30's campus
+                    // like a postcard from the wrong town - while SchoolMassing, the `spine`
+                    // corridor grammar and the `school` frontage sat fully wired beneath it,
+                    // and the classroom run he approved was already carved into the grid of
+                    // every build. Both campuses generate now, the same kind on both sides of
+                    // Chicago Street, for the same reason school2 died: the enum, the day plans
+                    // and the drawing must agree about what a school is.
                     //
-                    // the retired village is gone and there is one map, so the two kinds are one kind
-                    // again and this is simply the school.
-                    "school"      => Whole + "School_City.prefab",
+                    // (school2's own lesson stays on kinds.txt line 154: a second kind cost
+                    // Rossville's 165 children their school, and not one of them ever went.)
                     "firestation" => Whole + "Fire_Station_City.prefab",
                     "gasstation"  => Whole + "Gas_Station_City.prefab",
 
@@ -236,7 +237,8 @@ namespace Noir.Unity
         {
             switch (KindOf(place))
             {
-                case "school": case "firestation": case "gasstation":
+                // the school generates with the town's own massing - see the prefab switch
+                case "firestation": case "gasstation":
                 case "watertower": case "elevator":
                 case "farm": case "barn": case "silo":
                     return true;
