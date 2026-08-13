@@ -510,6 +510,27 @@ namespace Noir.Unity
         public static int BrickIndex => 4;
 
         /// <summary>
+        /// HOW THICK A WALL IS DRAWN, in metres - and the first number this project ever held on
+        /// the subject, because until 2026-08-11 every wall in Rossville filled its whole survey
+        /// tile: 39 inches of clapboard on houses whose real walls are a 2x4, sheathing and a lap
+        /// of siding. The owner measured the consequence from the inside - "the walls eating 70%
+        /// of the square footage" - and on the smallest footprints that was arithmetic, not a
+        /// feeling. A 1991 frame exterior wall is about seven inches through; the downtown row is
+        /// commercial brick at about thirteen. The grid, the rooms, the pathfinding and the doors
+        /// still speak in whole tiles; these numbers only say what is DRAWN over them.
+        /// </summary>
+        public const float FrameDepth = 0.18f, BrickDepth = 0.33f;
+
+        /// <summary>
+        /// How thick this building's skin is drawn. Keyed exactly as <see cref="WallingFor"/> is,
+        /// so a wall and its depth cannot disagree about what the building is made of. No
+        /// building at all gets a painted board fence's few inches.
+        /// </summary>
+        public static float WallDepthFor(Place place) =>
+            place == null ? 0.15f
+                          : WallingFor(place) == BrickIndex ? BrickDepth : FrameDepth;
+
+        /// <summary>
         /// What this building is built of. A house is clapboard, painted one of four ways and
         /// keyed on the BUILDING so it survives being moved - the same argument as
         /// <see cref="RoofingFor"/>. Everything else that is a building is brick: the stores, the

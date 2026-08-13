@@ -668,6 +668,20 @@ namespace Noir.Unity
                     submeshGrid[gy, gx] = SubmeshForLook(softened);
                     flatGrid[gy, gx] = HeightOf(terrain);
                 }
+                else if (terrain == Terrain.Wall && BesideFloor(world, gx, gy))
+                {
+                    // THE GROUND UNDER A WALL IS FLOOR NOW, BECAUSE THE WALL NO LONGER HIDES IT.
+                    // SubmeshFor's fallback used to say "walls sit on grass; their footprint is
+                    // covered by the wall cube anyway" - true while the cube filled the metre,
+                    // and a lie the day the walls thinned to their real inches: the strip they
+                    // gave back would have been lawn, indoors, along the edge of every room. A
+                    // wall tile with floor beside it is inside a building, so it reads as the
+                    // floor it stands over; a garden wall has no floor beside it and keeps its
+                    // grass. The 2 cm rise this borrows from Floor puts its riser at the tile
+                    // edge, exactly under the building's skin, where the slab already covers it.
+                    submeshGrid[gy, gx] = SubmeshFor(Terrain.Floor);
+                    flatGrid[gy, gx] = HeightOf(Terrain.Floor);
+                }
                 else
                 {
                     submeshGrid[gy, gx] = SubmeshFor(terrain);
@@ -1406,7 +1420,12 @@ namespace Noir.Unity
             bool Walled(int gx, int gy) =>
                 IsWall(world, gx, gy) && !bought[gy * world.Width + gx];
 
-            // Horizontal runs first, then whatever vertical runs remain.
+            // ---- find the runs: horizontal first, then whatever vertical remains ----
+            //
+            // The traversal is exactly what it always was. What changed on 2026-08-11 is what a
+            // run BECOMES - see the classification below.
+            var runs = new List<WallRun>();
+
             for (int gy = 0; gy < world.Height; gy++)
             {
                 int gx = 0;
@@ -1423,12 +1442,7 @@ namespace Noir.Unity
                         gx++;
                     }
                     int length = gx - start;
-                    if (length >= 2)
-                    {
-                        AddWall(chunks.At(start, gy), start, gy, length, 1, BaseAt(start, gy),
-                                HeightAt(start, gy), WallingAt(start, gy));
-                        count++;
-                    }
+                    if (length >= 2) runs.Add(new WallRun(start, gy, length, true, mine));
                     else { used[gy * world.Width + start] = false; }   // leave singles for the vertical pass
                 }
             }
@@ -1448,18 +1462,170 @@ namespace Noir.Unity
                         used[gy * world.Width + gx] = true;
                         gy++;
                     }
-                    AddWall(chunks.At(gx, start), gx, start, 1, gy - start, BaseAt(gx, start),
-                            HeightAt(gx, start), WallingAt(gx, start));
-                    count++;
+                    runs.Add(new WallRun(gx, start, gy - start, false, mine));
                 }
+            }
+
+            // ---- what each run is, decided by what stands on its flanks ----
+            //
+            // A run used to become a box filling its tiles to their edges, which with one-metre
+            // tiles meant every wall in Rossville - a frame house's siding and the partition
+            // between two bedrooms alike - was drawn 39 INCHES THROUGH. The owner measured the
+            // consequence from inside: the walls were eating most of the floor, and on a small
+            // footprint that was arithmetic, not impression. A run is a SLAB now, seated across
+            // its row of tiles by what its flanks touch:
+            //
+            //   floor on ONE side    the building's skin. It HUGS THE OUTDOOR EDGE, so the
+            //                        facade stays exactly on the survey line, the frontage keeps
+            //                        its face, and every inch given back is given back INSIDE.
+            //                        Seven inches of frame or thirteen of Main Street brick -
+            //                        Materials3D.WallDepthFor, keyed off the same walling table
+            //                        as the paint, so depth and material cannot disagree.
+            //   floor on BOTH       a partition: a 2x4 and two skins of plaster, five inches,
+            //                        centred on its tile. Each room gains the rest.
+            //   floor on NEITHER    a yard or churchyard boundary - the painted board fence the
+            //                        walling table already promises such walls - or a party
+            //                        seam. Centred at its own few inches.
+            //
+            // Majority is not needed: an exterior run's outdoor flank touches floor NOWHERE, so
+            // one test per flank per tile settles it, and a corner tile's blindness (its flank
+            // is the crossing wall, not floor) cannot outvote the rest of its run.
+            //
+            // THE GRID IS UNTOUCHED. Rooms, pathfinding, doorways, furniture and the witness
+            // model still speak in whole tiles. This decides what is DRAWN over those tiles -
+            // and what the player's body is stopped by, because CityCollision surfaces exactly
+            // these meshes.
+            const float Partition = 0.125f;
+
+            bool FloorAt(int x, int y) => world.Grid.TerrainAt(x, y) == Terrain.Floor;
+
+            int skins = 0, partitions = 0, boundaries = 0;
+            foreach (var run in runs)
+            {
+                int sideA = 0, sideB = 0;   // A = north or west flank, B = south or east
+                for (int t = 0; t < run.Len; t++)
+                {
+                    int x = run.Horizontal ? run.X + t : run.X;
+                    int y = run.Horizontal ? run.Y : run.Y + t;
+                    if (run.Horizontal)
+                    {
+                        if (FloorAt(x, y - 1)) sideA++;
+                        if (FloorAt(x, y + 1)) sideB++;
+                    }
+                    else
+                    {
+                        if (FloorAt(x - 1, y)) sideA++;
+                        if (FloorAt(x + 1, y)) sideB++;
+                    }
+                }
+
+                float centre = (run.Horizontal ? run.Y : run.X) + 0.5f;
+                var place = run.Owner < 0 ? null : world.GetPlace(new PlaceId(run.Owner));
+
+                if (run.Owner >= 0 && (sideA > 0) != (sideB > 0))
+                {
+                    skins++;
+                    float depth = Materials3D.WallDepthFor(place);
+                    if (sideA > 0) { run.Lo = centre + 0.5f - depth; run.Hi = centre + 0.5f; }
+                    else { run.Lo = centre - 0.5f; run.Hi = centre - 0.5f + depth; }
+                }
+                else if (run.Owner >= 0 && sideA > 0 && sideB > 0)
+                {
+                    partitions++;
+                    run.Lo = centre - Partition * 0.5f;
+                    run.Hi = centre + Partition * 0.5f;
+                }
+                else
+                {
+                    boundaries++;
+                    float half = Materials3D.WallDepthFor(place) * 0.5f;
+                    run.Lo = centre - half;
+                    run.Hi = centre + half;
+                }
+            }
+
+            // Every wall tile remembers its run's slab, so a run that stops against a crossing
+            // wall can grow FLUSH TO THE CROSSING SLAB'S NEAR FACE. Flush, not buried: an end
+            // face that shares a plane with the face it meets points the opposite way, so
+            // neither is drawn over the other - while an end left at its own tile boundary
+            // opened a pinhole at every corner, and one pushed PAST the near face z-fought with
+            // the crossing wall's own side along a sliver the full height of the building.
+            var bandLo = new float[world.Width * world.Height];
+            var bandHi = new float[world.Width * world.Height];
+            var bandAxis = new byte[world.Width * world.Height];   // 0 none, 1 horizontal, 2 vertical
+
+            foreach (var run in runs)
+                for (int t = 0; t < run.Len; t++)
+                {
+                    int at = run.Horizontal ? run.Y * world.Width + run.X + t
+                                            : (run.Y + t) * world.Width + run.X;
+                    bandLo[at] = run.Lo;
+                    bandHi[at] = run.Hi;
+                    bandAxis[at] = run.Horizontal ? (byte)1 : (byte)2;
+                }
+
+            foreach (var run in runs)
+            {
+                float aLo = run.Horizontal ? run.X : run.Y;
+                float aHi = aLo + run.Len;
+
+                int backX = run.Horizontal ? run.X - 1 : run.X;
+                int backY = run.Horizontal ? run.Y : run.Y - 1;
+                int onX = run.Horizontal ? run.X + run.Len : run.X;
+                int onY = run.Horizontal ? run.Y : run.Y + run.Len;
+
+                byte crossing = run.Horizontal ? (byte)2 : (byte)1;
+                if (world.Grid.InBounds(backX, backY))
+                {
+                    int at = backY * world.Width + backX;
+                    if (bandAxis[at] == crossing) aLo = Mathf.Min(aLo, bandHi[at]);
+                }
+                if (world.Grid.InBounds(onX, onY))
+                {
+                    int at = onY * world.Width + onX;
+                    if (bandAxis[at] == crossing) aHi = Mathf.Max(aHi, bandLo[at]);
+                }
+
+                if (run.Horizontal)
+                    AddWall(chunks.At(run.X, run.Y), aLo, aHi, run.Lo, run.Hi,
+                            BaseAt(run.X, run.Y), HeightAt(run.X, run.Y), WallingAt(run.X, run.Y));
+                else
+                    AddWall(chunks.At(run.X, run.Y), run.Lo, run.Hi, aLo, aHi,
+                            BaseAt(run.X, run.Y), HeightAt(run.X, run.Y), WallingAt(run.X, run.Y));
+                count++;
             }
 
             var renderers = chunks.Emit(walls.transform, "Walls", Materials3D.Walls,
                                         ShadowCastingMode.On, true);
 
-            Debug.Log($"Walls: {count} runs, {chunks.VertexCount:N0} vertices, "
-                    + $"{renderers.Count} chunk meshes.");
+            Debug.Log($"Walls: {count} runs at their real thickness - {skins} building skins, "
+                    + $"{partitions} partitions, {boundaries} freestanding - "
+                    + $"{chunks.VertexCount:N0} vertices, {renderers.Count} chunk meshes.");
         }
+
+        /// <summary>One straight run of wall tiles and the slab it was ruled to be. Lo/Hi is the
+        /// slab's band across the run's axis, in tile coordinates, filled by the classification
+        /// pass in <see cref="BuildWalls"/>.</summary>
+        private sealed class WallRun
+        {
+            public readonly int X, Y, Len;
+            public readonly bool Horizontal;
+            public readonly int Owner;
+            public float Lo, Hi;
+
+            public WallRun(int x, int y, int len, bool horizontal, int owner)
+            {
+                X = x; Y = y; Len = len; Horizontal = horizontal; Owner = owner;
+            }
+        }
+
+        /// <summary>Inside a building, near enough: the ground pass paints the strip a thinned
+        /// wall gives back as floor rather than the lawn SubmeshFor would fall back to.</summary>
+        private static bool BesideFloor(WorldModel world, int gx, int gy) =>
+            world.Grid.TerrainAt(gx - 1, gy) == Terrain.Floor
+         || world.Grid.TerrainAt(gx + 1, gy) == Terrain.Floor
+         || world.Grid.TerrainAt(gx, gy - 1) == Terrain.Floor
+         || world.Grid.TerrainAt(gx, gy + 1) == Terrain.Floor;
 
         private static bool IsWall(WorldModel world, int gx, int gy) =>
             world.Grid.TerrainAt(gx, gy) == Terrain.Wall;
@@ -1478,15 +1644,18 @@ namespace Noir.Unity
         /// whichever mesh it ends up in, and splitting the runs across meshes cannot change a
         /// single shaded pixel.
         /// </summary>
-        private static void AddWall(MeshChunk into, int gx, int gy, int w, int h,
+        private static void AddWall(MeshChunk into, float wx0, float wx1, float wy0, float wy1,
                                     float bottom, float top, int submesh)
         {
             var verts = into.Verts;
             var uvs = into.Uvs;
             var tris = into.Tris[submesh];
 
-            float x0 = gx, x1 = gx + w;
-            float z0 = -gy, z1 = -(gy + h);
+            // Float extents in tile space, because a wall is a slab seated within its tiles now
+            // rather than a box filling them - the caller has already decided where its faces
+            // sit and how far its ends reach.
+            float x0 = wx0, x1 = wx1;
+            float z0 = -wy0, z1 = -wy1;
 
             // (corner a, corner b) walked so that a->b->up is wound outward.
             // Sunk half a metre below the ground it stands on, so a wall meets a contour that

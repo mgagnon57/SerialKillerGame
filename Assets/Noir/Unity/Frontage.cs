@@ -299,11 +299,19 @@ namespace Noir.Unity
             // two-and-a-half-metre gap of daylight over the door.
             float eaves = MassingGrammars.Of(place).Eaves;
 
-            // Set back into the reveal by five centimetres at each end, so the panel meets the
-            // wall in a shadow line instead of sharing a plane with it.
+            // As deep as the wall it fills - which used to mean the full metre of the tile, and
+            // means seven or thirteen inches now that walls are drawn at their real thickness
+            // (Materials3D.WallDepthFor, the same key the walling paint uses). Still set back a
+            // little at each face, so the panel meets the wall in a shadow line instead of
+            // sharing a plane with it.
+            // And in the building's OWN walling, not the generic white board: painted
+            // Materials3D.Wall it read as a grey stripe over every green or cream house's door -
+            // tolerable while it sat a metre deep in shadow, and flat wrong nearly flush.
+            float wall = Materials3D.WallDepthFor(place);
             Piece(parent, "doorhead",
-                  f.On((DoorHeight + eaves) * 0.5f, -0.5f),
-                  f.Size(1.0f, eaves - DoorHeight, 0.9f), Materials3D.Wall);
+                  f.On((DoorHeight + eaves) * 0.5f, -wall * 0.5f),
+                  f.Size(1.0f, eaves - DoorHeight, Mathf.Max(0.08f, wall - 0.04f)),
+                  Materials3D.Walls[Materials3D.WallingFor(place)]);
 
             Piece(parent, "doorcase", f.On(DoorHeight * 0.5f + 0.03f, -0.05f),
                   f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone);
