@@ -1080,3 +1080,19 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   the outline work SeatOnSurvey.cs names in its own header: walls from the real polygon in
   parcel-buildings.txt, a VillageMesh change. Also on parcel 641 for a later session:
   "206 North Chicago Street", a real commercial address standing on school ground. — *2026-08-12*
+
+- **A shaped place's wall-tile skip decision samples one tile per run, not truly per tile.**
+  `VillageMesh.BuildWalls` now draws a shaped place's exterior from its own `Outline` polygon
+  (`DrawShapedPerimeters`) and tells the old tile-run walker to leave those tiles alone, keyed off
+  `world.Grid.PlaceAt` sampled at each run's start tile (`Assets/Noir/Unity/VillageMesh.cs`, the
+  classification block in `BuildWalls`) — accurate for the run's start tile, but a run's own extent
+  is still decided by the OLD `owner[]` bounding-box array, which can be uniform across tiles that
+  cross a true outline boundary. If a freestanding wall (a churchyard or garden fence owned by no
+  place) ever runs collinear and tile-adjacent to a shaped building close enough that both fall in
+  that building's bounding box, the whole run could be misattributed one way or the other - either
+  dropping the fence's segment or double-drawing the shaped place's own wall over a stale tile box.
+  Not live today: this session measured Rossville's current built town has ZERO wall tiles with no
+  owning place at all, which is the scenario's precondition. Revisit if a future ruling in the
+  browser map ever puts a freestanding fence hard against a shaped building's real footprint - the
+  fix is genuine per-tile `PlaceAt` sampling (or re-splitting a run wherever `PlaceAt` changes)
+  instead of one sample standing in for the whole run. — *2026-08-13*
