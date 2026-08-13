@@ -1523,7 +1523,19 @@ namespace Noir.Unity
                 var place = run.Owner < 0 ? null : world.GetPlace(new PlaceId(run.Owner));
                 bool isPartition = run.Owner >= 0 && sideA > 0 && sideB > 0;
 
-                if (place != null && place.Outline != null && !isPartition)
+                // Core's OWN outline-membership answer for this run's tiles - not the render-
+                // time owner[] array above. owner[] is stamped over each place's full BOUNDING
+                // BOX with lowest-place-id-wins on any tile two places' boxes both reach, but a
+                // shaped place's box is deliberately larger than its real footprint, so two
+                // neighbouring shaped places' boxes can overlap even where their real footprints
+                // do not. world.Grid.PlaceAt only stamps a tile for a shaped place when that
+                // tile tests Inside its real Outline (WorldBuilder.Build's per-place loop), so
+                // it is the accurate answer to "whose wall is this really" wherever the two
+                // disagree.
+                var coreOwner = world.Grid.PlaceAt(run.X, run.Y);
+                var corePlace = coreOwner.IsValid ? world.GetPlace(coreOwner) : null;
+
+                if (corePlace != null && corePlace.Outline != null && !isPartition)
                 {
                     // This tile is on a SHAPED place's exterior - DrawShapedPerimeters draws
                     // its real skin from the place's own Outline instead. Lo/Hi are still
@@ -1533,7 +1545,7 @@ namespace Noir.Unity
                     // other runs may reach for.
                     run.Skip = true;
                     shapedSkipped++;
-                    float depth = Materials3D.WallDepthFor(place);
+                    float depth = Materials3D.WallDepthFor(corePlace);
                     if (sideA > 0) { run.Lo = centre + 0.5f - depth; run.Hi = centre + 0.5f; }
                     else { run.Lo = centre - 0.5f; run.Hi = centre - 0.5f + depth; }
                 }
@@ -1618,14 +1630,14 @@ namespace Noir.Unity
 
             int shapedBefore = count;
             DrawShapedPerimeters(world, chunks, ref count);
-            int shapedEdges = count - shapedBefore;
+            int shapedSlabs = count - shapedBefore;
 
             var renderers = chunks.Emit(walls.transform, "Walls", Materials3D.Walls,
                                         ShadowCastingMode.On, true);
 
             Debug.Log($"Walls: {count} slabs at their real thickness - {skins} building skins, "
-                    + $"{partitions} partitions, {boundaries} freestanding, {shapedEdges} shaped "
-                    + $"perimeter edge(s) drawn from their own outline ({shapedSkipped} tile "
+                    + $"{partitions} partitions, {boundaries} freestanding, {shapedSlabs} shaped "
+                    + $"perimeter slab(s) drawn from their own outline ({shapedSkipped} tile "
                     + $"run(s) left to them) - {chunks.VertexCount:N0} vertices, "
                     + $"{renderers.Count} chunk meshes.");
         }
@@ -1633,8 +1645,8 @@ namespace Noir.Unity
         /// <summary>
         /// A shaped place's real wall, drawn along its own <see cref="Place.Outline"/> instead
         /// of approximated one tile at a time. <see cref="BuildWalls"/> excludes these places'
-        /// exterior tiles from the run-walker (see the `shapedExterior` branch there) so this is
-        /// the only thing that draws their skin.
+        /// exterior tiles from the run-walker (see <c>WallRun.Skip</c>, set in that method's
+        /// classification loop) so this is the only thing that draws their skin.
         ///
         /// EACH EDGE BECOMES ONE SLAB, inset toward the inside of the polygon by
         /// <see cref="Materials3D.WallDepthFor"/> - the true outdoor face stays exactly on the
@@ -1644,10 +1656,24 @@ namespace Noir.Unity
         /// from the same underlying corners rather than from two independent tile roundings -
         /// which is what left an actual gap at 112 S Chicago's party walls before this.
         ///
-        /// THE DOOR IS FOUND IN CONTINUOUS SPACE, not by testing a tile. The one-tile gap
-        /// <c>WorldBuilder.MaskToOutline</c> (Core) carves into the terrain grid for the door has
-        /// no tile for a polygon edge to test any more, so this projects the door position onto
-        /// whichever edge it sits nearest and leaves a one-metre gap centred on that projection.
+        /// THE RING'S WINDING IS SETTLED ONCE PER PLACE, by signed area (the shoelace formula),
+        /// rather than by probing the tile grid edge by edge. Every seated footprint in the
+        /// content files happens to already wind the way <see cref="AddWall"/>'s other callers
+        /// expect, but <c>DowntownFromSanborn.FrontageOf</c> can produce the other winding
+        /// depending which side of the street a lot falls on - so the ring is normalised to the
+        /// expected winding HERE, once, and everything below can assume it rather than either
+        /// discovering it edge by edge or rendering that building's walls backfaced: invisible
+        /// from outside, lit from within.
+        ///
+        /// THE DOOR IS FOUND ONCE, AGAINST EVERY EDGE, not against a fixed distance from one.
+        /// The one-tile gap <c>WorldBuilder.MaskToOutline</c> (Core) used to carve into the
+        /// terrain grid for the door has no tile for a polygon edge to test any more, and
+        /// neither door-placement path (<c>SeatOnSurvey.DoorFor</c>, <c>DowntownFromSanborn</c>)
+        /// guarantees the door lands within any fixed distance of the edge it actually opens
+        /// onto - on the angled frontages this file exists to draw properly it can be the better
+        /// part of a metre off. So every edge is measured - by distance to its own segment, not
+        /// to the infinite line it lies on - and the CLOSEST edge gets the one-metre gap,
+        /// unconditionally.
         /// </summary>
         private static void DrawShapedPerimeters(WorldModel world, MeshChunks chunks, ref int count)
         {
@@ -1662,12 +1688,58 @@ namespace Noir.Unity
                 float bottom = Space3D.GroundUnder(place.Bounds);
                 float top = bottom + MassingGrammars.Of(place).Eaves;
 
-                var ring = place.Outline;
-                int n = ring.Length;
+                var outline = place.Outline;
+                int n = outline.Length;
+
+                // Signed area, shoelace formula: sum of (x_i * y_(i+1) - x_(i+1) * y_i) over
+                // every edge (the formula's usual halving does not matter here - only the sign
+                // is used). Positive means this ring already winds the way the axis-aligned
+                // AddWall callers in BuildWalls wind a rectangle's corners; negative means the
+                // other way. Rather than carry that sign through every computation below, the
+                // ring is reversed ONCE, here, whenever it does not already match - so the
+                // inward normal and AddWall's corner order can both be written as if every ring
+                // that reaches them always wound the same way, because now it does.
+                float signedArea = 0f;
+                for (int i = 0; i < n; i++)
+                {
+                    var a = outline[i];
+                    var b = outline[(i + 1) % n];
+                    signedArea += (float)a.X * b.Y - (float)b.X * a.Y;
+                }
+
+                var ring = outline;
+                if (signedArea < 0f)
+                {
+                    ring = new Tile[n];
+                    for (int i = 0; i < n; i++) ring[i] = outline[n - 1 - i];
+                }
 
                 Vector2? door = place.Door.IsValid
                     ? new Vector2(place.Door.X + 0.5f, place.Door.Y + 0.5f)
                     : (Vector2?)null;
+
+                // Which edge the door actually opens onto: the GLOBAL minimum, over every edge
+                // of this place, of the distance from the door to the closest point ON the
+                // segment - t is clamped into [0, len] before the distance is measured, so a
+                // door nearest a shared corner is measured against the corner itself rather than
+                // against some other edge's infinite extension through it.
+                int doorEdge = -1;
+                float doorT = 0f;
+                if (door.HasValue)
+                {
+                    float bestDist = float.MaxValue;
+                    for (int i = 0; i < n; i++)
+                    {
+                        var p0 = new Vector2(ring[i].X, ring[i].Y);
+                        var p1 = new Vector2(ring[(i + 1) % n].X, ring[(i + 1) % n].Y);
+                        float len = Vector2.Distance(p0, p1);
+                        if (len < 0.01f) continue;
+                        var dir = (p1 - p0) / len;
+                        float t = Mathf.Clamp(Vector2.Dot(door.Value - p0, dir), 0f, len);
+                        float dist = Vector2.Distance(door.Value, p0 + dir * t);
+                        if (dist < bestDist) { bestDist = dist; doorEdge = i; doorT = t; }
+                    }
+                }
 
                 for (int i = 0; i < n; i++)
                 {
@@ -1678,25 +1750,16 @@ namespace Noir.Unity
                     if (len < 0.01f) continue;
                     var dir = edge / len;
 
+                    // +90 degrees from the direction of travel points into a CCW ring's own
+                    // interior - walking a CCW polygon's boundary in order keeps the inside on
+                    // your left - and `ring` is wound CCW now whichever way place.Outline came
+                    // in, so this no longer needs a per-edge probe to tell which side is which.
                     var normal = new Vector2(-dir.y, dir.x);
-                    var probe = (p0 + p1) * 0.5f + normal * 0.3f;
-                    var probeTile = new Tile(Mathf.FloorToInt(probe.x), Mathf.FloorToInt(probe.y));
-                    if (!Polygon.Contains(ring, probeTile)) normal = -normal;   // point inward
 
-                    float doorLo = -1f, doorHi = -1f;
-                    if (door.HasValue)
+                    if (i == doorEdge)
                     {
-                        float t = Vector2.Dot(door.Value - p0, dir);
-                        float perp = Mathf.Abs(Vector2.Dot(door.Value - p0, normal));
-                        if (perp < 0.75f && t > -0.5f && t < len + 0.5f)
-                        {
-                            doorLo = Mathf.Max(0f, t - 0.5f);
-                            doorHi = Mathf.Min(len, t + 0.5f);
-                        }
-                    }
-
-                    if (doorLo >= 0f && doorHi > doorLo)
-                    {
+                        float doorLo = Mathf.Max(0f, doorT - 0.5f);
+                        float doorHi = Mathf.Min(len, doorT + 0.5f);
                         if (doorLo > 0.05f) { Slab(p0, p0 + dir * doorLo); count++; }
                         if (len - doorHi > 0.05f) { Slab(p0 + dir * doorHi, p1); count++; }
                     }
@@ -1706,6 +1769,9 @@ namespace Noir.Unity
                         count++;
                     }
 
+                    // `count` is a ref parameter of the enclosing method, and C# will not let a
+                    // local function capture a ref/out/in parameter - see CS1628 - so it is
+                    // incremented at each call site above rather than inside here.
                     void Slab(Vector2 s0, Vector2 s1)
                     {
                         var mid = (s0 + s1) * 0.5f;
@@ -1750,11 +1816,18 @@ namespace Noir.Unity
             world.Grid.TerrainAt(gx, gy) == Terrain.Wall;
 
         /// <summary>
-        /// One run of wall, appended to its chunk. No bottom face - you never see the
-        /// underside - but a top one, because the roofs lift off when you come in close and
-        /// without a cap every wall in the village grows a metre-wide hole along its top edge
-        /// looking three storeys down at the ground. That is the exact view the cutaway exists
-        /// to give you, so "the roof covers it" was true only when nobody was looking.
+        /// One slab, given as four grid-space (X,Y) corners walked in order around its
+        /// footprint - <c>a</c>&#8594;<c>b</c>&#8594;<c>c</c>&#8594;<c>d</c>&#8594;back to
+        /// <c>a</c>. An axis-aligned caller passes the same four corners a rectangle always
+        /// had; <see cref="DrawShapedPerimeters"/> passes a true outline edge and its
+        /// depth-inset partner, which need not be axis-aligned at all - nothing below this
+        /// line ever assumed they were.
+        ///
+        /// No bottom face - you never see the underside - but a top one, because the roofs
+        /// lift off when you come in close and without a cap every wall in the village grows a
+        /// metre-wide hole along its top edge looking three storeys down at the ground. That is
+        /// the exact view the cutaway exists to give you, so "the roof covers it" was true only
+        /// when nobody was looking.
         ///
         /// Each face gets its own four vertices so the UVs can be per-face - shared corners
         /// would force one wrapping across two perpendicular walls and crease the texture at
@@ -1762,14 +1835,6 @@ namespace Noir.Unity
         /// is shared between faces, so RecalculateNormals gives each face its own flat normal
         /// whichever mesh it ends up in, and splitting the runs across meshes cannot change a
         /// single shaded pixel.
-        /// </summary>
-        /// <summary>
-        /// One slab, given as four grid-space (X,Y) corners walked in order around its
-        /// footprint - <c>a</c>&#8594;<c>b</c>&#8594;<c>c</c>&#8594;<c>d</c>&#8594;back to
-        /// <c>a</c>. An axis-aligned caller passes the same four corners a rectangle always
-        /// had; <see cref="DrawShapedPerimeters"/> passes a true outline edge and its
-        /// depth-inset partner, which need not be axis-aligned at all - nothing below this
-        /// line ever assumed they were.
         /// </summary>
         private static void AddWall(MeshChunk into, Vector2 a, Vector2 b, Vector2 c, Vector2 d,
                                     float bottom, float top, int submesh)
