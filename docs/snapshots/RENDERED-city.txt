@@ -1,23 +1,25 @@
 # city
-taken   2026-08-10 04:18:04 UTC
+taken   2026-08-11 03:50:49 UTC
 unity   6000.3.20f1
 town    ShowBuildings=True  batch=True
-a937d4adaaa9c8eb     993175  city-street.png
-d67ba53f47c00e23    1483001  city-block.png
-4cd0e4bf77d0101d    1046758  city-terrace.png
-74275a85a2cff451     985506  city-corner.png
-2a91ad56d61ab6e9    1346657  city-junction.png
-0210f3d97b1681ed     841413  city-stopline.png
-fb0ea322dc8906fd     964950  suburb-street.png
-bd47ceeb39a86ae5    1933974  suburb-block.png
-8f497c201eb913e3    1727743  suburb-edge.png
-8c89d88f5e7719a0    1473309  country-junction.png
-40a7d45ee3dff33a    1618495  country-stop.png
-bceb54b68354bedc    1410036  country-poles.png
-a09940335e9c720a    1900844  block-yard.png
-9ffc7d8271751149    1853357  city-carpark.png
-687f71fba984961e    1533185  city-carpark-close.png
-079b10d46a05dd8d    1943285  farm-track.png
-1acf8d78b6e64c21    1805425  farm-yard.png
-dbf850112cbb6a04    1600939  farm-country.png
-18 frame(s), 18 distinct
+28dc13a19a786c65    1039799  city-street.png
+00276c64f4a7914f    1642534  city-block.png
+59258c6631ed24b1    1088795  city-terrace.png
+d4e8ea3e2953a9c6     984321  city-corner.png
+c8e49dd05ad7991a    1468840  city-junction.png
+37dd31f976594f56     970111  city-stopline.png
+63e44afb7544f3c9     969538  suburb-street.png
+06319414225b7ee3    1932274  suburb-block.png
+8899cf46a479adc7    1855584  suburb-edge.png
+dd91d991414cb022    1390517  country-junction.png
+0caab683d5121079    1378505  country-stop.png
+42442a04a5f9f83d    1294690  country-poles.png
+afc979d9351e6652    1800817  block-yard.png
+4c09b0b39acea294    1778084  city-carpark.png
+7a151cbe7098c897    1506878  city-carpark-close.png
+ff75f98711c1563d    1498834  farm-track.png
+4a2c792c2457d4de    1422899  farm-yard.png
+37ebdf5b57cae2bd    1741868  farm-country.png
+c7261ca71a613808    1203017  pond-bank.png
+2b32d411d96006d9    1142901  pond-close.png
+20 frame(s), 20 distinct
