@@ -1705,6 +1705,10 @@ namespace Noir.Unity
                 }
                 else
                 {
+                    if (place.OutlinePrecise != null)
+                        Debug.LogWarning($"[walls] '{place.Name}' has OutlinePrecise of length "
+                                        + $"{place.OutlinePrecise.Length}, but Outline has length "
+                                        + $"{n} - falling back to the tile-rounded ring.");
                     for (int i = 0; i < n; i++)
                         pts[i] = new Vector2(place.Outline[i].X, place.Outline[i].Y);
                 }

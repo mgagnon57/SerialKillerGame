@@ -117,6 +117,10 @@ namespace Noir.Core.World
         /// neighbour's - see <c>DrawShapedPerimeters</c> (Assets/Noir/Unity/VillageMesh.cs) for
         /// where this actually gets used, and <c>DowntownFromSanborn</c> for the one caller that
         /// populates it today.
+        ///
+        /// Must be the same length as <see cref="Outline"/>, corner for corner in the same order
+        /// and winding, including the same closing repeat — a mismatch is silently discarded
+        /// (see <c>DrawShapedPerimeters</c>, which now logs when that happens).
         /// </summary>
         public readonly Vec2[] OutlinePrecise;
 

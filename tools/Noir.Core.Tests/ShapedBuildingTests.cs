@@ -160,5 +160,15 @@ namespace Noir.Core.Tests
                         "the precise ring is carried through PlaceSpec -> Place unchanged - it is "
                       + "not rounded, resized or reordered anywhere in WorldBuilder");
         }
+
+        [Test]
+        public void ADeclinedOutlineTakesItsPreciseRingWithIt()
+        {
+            var world = Build(new[] { new Tile(20,20), new Tile(40,20), new Tile(40,28), new Tile(20,28) },
+                              new[] { new Vec2(20.3f,20.7f), new Vec2(40.1f,20.4f),
+                                      new Vec2(40.6f,28.2f), new Vec2(20.4f,28.9f) });
+            Assert.That(world.AllPlaces[0].OutlinePrecise, Is.Null,
+                        "both rings are gated on the same boolean - dropping one must drop the other");
+        }
     }
 }
