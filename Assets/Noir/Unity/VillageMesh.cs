@@ -1607,6 +1607,97 @@ namespace Noir.Unity
                     + $"{chunks.VertexCount:N0} vertices, {renderers.Count} chunk meshes.");
         }
 
+        /// <summary>
+        /// A shaped place's real wall, drawn along its own <see cref="Place.Outline"/> instead
+        /// of approximated one tile at a time. <see cref="BuildWalls"/> excludes these places'
+        /// exterior tiles from the run-walker (see the `shapedExterior` branch there) so this is
+        /// the only thing that draws their skin.
+        ///
+        /// EACH EDGE BECOMES ONE SLAB, inset toward the inside of the polygon by
+        /// <see cref="Materials3D.WallDepthFor"/> - the true outdoor face stays exactly on the
+        /// surveyed line, which the old tile classification could only approximate one metre at
+        /// a time. Two neighbouring shaped places (adjoining storefronts in a terrace) each draw
+        /// their own skin hugging the SAME shared corner-to-corner line, because both read it
+        /// from the same underlying corners rather than from two independent tile roundings -
+        /// which is what left an actual gap at 112 S Chicago's party walls before this.
+        ///
+        /// THE DOOR IS FOUND IN CONTINUOUS SPACE, not by testing a tile. The one-tile gap
+        /// <c>WorldBuilder.MaskToOutline</c> (Core) carves into the terrain grid for the door has
+        /// no tile for a polygon edge to test any more, so this projects the door position onto
+        /// whichever edge it sits nearest and leaves a one-metre gap centred on that projection.
+        /// </summary>
+        private static void DrawShapedPerimeters(WorldModel world, MeshChunks chunks, ref int count)
+        {
+            foreach (var place in world.AllPlaces)
+            {
+                if (place == null || place.Outline == null || place.Outline.Length < 3) continue;
+                if (!PlaceKindTable.Current.Row(place.Kind).IsBuilding) continue;
+                if (CityBuildings.Handles(place)) continue;   // a bought model brings its own walls
+
+                float depth = Materials3D.WallDepthFor(place);
+                int submesh = Materials3D.WallingFor(place);
+                float bottom = Space3D.GroundUnder(place.Bounds);
+                float top = bottom + MassingGrammars.Of(place).Eaves;
+
+                var ring = place.Outline;
+                int n = ring.Length;
+
+                // The ring's own centre, so each edge can tell which of its two perpendicular
+                // directions points inward without caring which way the ring winds.
+                Vector2 centre = Vector2.zero;
+                for (int i = 0; i < n; i++) centre += new Vector2(ring[i].X, ring[i].Y);
+                centre /= n;
+
+                Vector2? door = place.Door.IsValid
+                    ? new Vector2(place.Door.X + 0.5f, place.Door.Y + 0.5f)
+                    : (Vector2?)null;
+
+                for (int i = 0; i < n; i++)
+                {
+                    var p0 = new Vector2(ring[i].X, ring[i].Y);
+                    var p1 = new Vector2(ring[(i + 1) % n].X, ring[(i + 1) % n].Y);
+                    var edge = p1 - p0;
+                    float len = edge.magnitude;
+                    if (len < 0.01f) continue;
+                    var dir = edge / len;
+
+                    var normal = new Vector2(-dir.y, dir.x);
+                    if (Vector2.Dot(normal, centre - p0) < 0f) normal = -normal;   // point inward
+
+                    float doorLo = -1f, doorHi = -1f;
+                    if (door.HasValue)
+                    {
+                        float t = Vector2.Dot(door.Value - p0, dir);
+                        float perp = Mathf.Abs(Vector2.Dot(door.Value - p0, normal));
+                        if (perp < 0.75f && t > -0.5f && t < len + 0.5f)
+                        {
+                            doorLo = Mathf.Max(0f, t - 0.5f);
+                            doorHi = Mathf.Min(len, t + 0.5f);
+                        }
+                    }
+
+                    if (doorLo >= 0f && doorHi > doorLo)
+                    {
+                        if (doorLo > 0.05f) { Slab(p0, p0 + dir * doorLo); count++; }
+                        if (len - doorHi > 0.05f) { Slab(p0 + dir * doorHi, p1); count++; }
+                    }
+                    else
+                    {
+                        Slab(p0, p1);
+                        count++;
+                    }
+
+                    void Slab(Vector2 s0, Vector2 s1)
+                    {
+                        var mid = (s0 + s1) * 0.5f;
+                        AddWall(chunks.At(mid.x, mid.y),
+                                s0, s1, s1 + normal * depth, s0 + normal * depth,
+                                bottom, top, submesh);
+                    }
+                }
+            }
+        }
+
         /// <summary>One straight run of wall tiles and the slab it was ruled to be. Lo/Hi is the
         /// slab's band across the run's axis, in tile coordinates, filled by the classification
         /// pass in <see cref="BuildWalls"/>.</summary>
