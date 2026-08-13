@@ -1642,12 +1642,6 @@ namespace Noir.Unity
                 var ring = place.Outline;
                 int n = ring.Length;
 
-                // The ring's own centre, so each edge can tell which of its two perpendicular
-                // directions points inward without caring which way the ring winds.
-                Vector2 centre = Vector2.zero;
-                for (int i = 0; i < n; i++) centre += new Vector2(ring[i].X, ring[i].Y);
-                centre /= n;
-
                 Vector2? door = place.Door.IsValid
                     ? new Vector2(place.Door.X + 0.5f, place.Door.Y + 0.5f)
                     : (Vector2?)null;
@@ -1662,7 +1656,9 @@ namespace Noir.Unity
                     var dir = edge / len;
 
                     var normal = new Vector2(-dir.y, dir.x);
-                    if (Vector2.Dot(normal, centre - p0) < 0f) normal = -normal;   // point inward
+                    var probe = (p0 + p1) * 0.5f + normal * 0.3f;
+                    var probeTile = new Tile(Mathf.FloorToInt(probe.x), Mathf.FloorToInt(probe.y));
+                    if (!Polygon.Contains(ring, probeTile)) normal = -normal;   // point inward
 
                     float doorLo = -1f, doorHi = -1f;
                     if (door.HasValue)
