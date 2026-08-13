@@ -1499,7 +1499,7 @@ namespace Noir.Unity
 
             bool FloorAt(int x, int y) => world.Grid.TerrainAt(x, y) == Terrain.Floor;
 
-            int skins = 0, partitions = 0, boundaries = 0;
+            int skins = 0, partitions = 0, boundaries = 0, shapedSkipped = 0;
             foreach (var run in runs)
             {
                 int sideA = 0, sideB = 0;   // A = north or west flank, B = south or east
@@ -1521,15 +1521,30 @@ namespace Noir.Unity
 
                 float centre = (run.Horizontal ? run.Y : run.X) + 0.5f;
                 var place = run.Owner < 0 ? null : world.GetPlace(new PlaceId(run.Owner));
+                bool isPartition = run.Owner >= 0 && sideA > 0 && sideB > 0;
 
-                if (run.Owner >= 0 && (sideA > 0) != (sideB > 0))
+                if (place != null && place.Outline != null && !isPartition)
+                {
+                    // This tile is on a SHAPED place's exterior - DrawShapedPerimeters draws
+                    // its real skin from the place's own Outline instead. Lo/Hi are still
+                    // computed the old way so a neighbouring TILE-BASED wall (an interior
+                    // partition, say) still has something sane to flush against at this
+                    // boundary below - only the render is skipped here, not the geometry
+                    // other runs may reach for.
+                    run.Skip = true;
+                    shapedSkipped++;
+                    float depth = Materials3D.WallDepthFor(place);
+                    if (sideA > 0) { run.Lo = centre + 0.5f - depth; run.Hi = centre + 0.5f; }
+                    else { run.Lo = centre - 0.5f; run.Hi = centre - 0.5f + depth; }
+                }
+                else if (run.Owner >= 0 && (sideA > 0) != (sideB > 0))
                 {
                     skins++;
                     float depth = Materials3D.WallDepthFor(place);
                     if (sideA > 0) { run.Lo = centre + 0.5f - depth; run.Hi = centre + 0.5f; }
                     else { run.Lo = centre - 0.5f; run.Hi = centre - 0.5f + depth; }
                 }
-                else if (run.Owner >= 0 && sideA > 0 && sideB > 0)
+                else if (isPartition)
                 {
                     partitions++;
                     run.Lo = centre - Partition * 0.5f;
@@ -1566,6 +1581,8 @@ namespace Noir.Unity
 
             foreach (var run in runs)
             {
+                if (run.Skip) continue;   // DrawShapedPerimeters draws this one instead
+
                 float aLo = run.Horizontal ? run.X : run.Y;
                 float aHi = aLo + run.Len;
 
@@ -1599,12 +1616,18 @@ namespace Noir.Unity
                 count++;
             }
 
+            int shapedBefore = count;
+            DrawShapedPerimeters(world, chunks, ref count);
+            int shapedEdges = count - shapedBefore;
+
             var renderers = chunks.Emit(walls.transform, "Walls", Materials3D.Walls,
                                         ShadowCastingMode.On, true);
 
-            Debug.Log($"Walls: {count} runs at their real thickness - {skins} building skins, "
-                    + $"{partitions} partitions, {boundaries} freestanding - "
-                    + $"{chunks.VertexCount:N0} vertices, {renderers.Count} chunk meshes.");
+            Debug.Log($"Walls: {count} slabs at their real thickness - {skins} building skins, "
+                    + $"{partitions} partitions, {boundaries} freestanding, {shapedEdges} shaped "
+                    + $"perimeter edge(s) drawn from their own outline ({shapedSkipped} tile "
+                    + $"run(s) left to them) - {chunks.VertexCount:N0} vertices, "
+                    + $"{renderers.Count} chunk meshes.");
         }
 
         /// <summary>
@@ -1703,6 +1726,11 @@ namespace Noir.Unity
             public readonly bool Horizontal;
             public readonly int Owner;
             public float Lo, Hi;
+
+            /// <summary>True for a shaped place's exterior run - DrawShapedPerimeters draws its
+            /// real wall from the place's own Outline instead, so this run still fills the
+            /// flush-fit band data below but is never boxed itself.</summary>
+            public bool Skip;
 
             public WallRun(int x, int y, int len, bool horizontal, int owner)
             {
