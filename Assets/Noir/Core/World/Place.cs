@@ -108,6 +108,19 @@ namespace Noir.Core.World
         public readonly Tile[] Outline;
 
         /// <summary>
+        /// The same corners as <see cref="Outline"/>, before they were rounded to the nearest
+        /// tile - or null when nothing more precise than the tile-rounded ring was ever computed.
+        /// Rendering the wrong precision costs nothing in the grid: pathfinding, room stamping and
+        /// every other tile-based system still reads <see cref="Outline"/>, unchanged. It costs a
+        /// visible kink between two adjacent buildings' walls once a unit is narrow enough that a
+        /// single tile of rounding on nearby corners swings its own edge several degrees off its
+        /// neighbour's - see <c>DrawShapedPerimeters</c> (Assets/Noir/Unity/VillageMesh.cs) for
+        /// where this actually gets used, and <c>DowntownFromSanborn</c> for the one caller that
+        /// populates it today.
+        /// </summary>
+        public readonly Vec2[] OutlinePrecise;
+
+        /// <summary>
         /// What this building is called, in the only sense the generators care about: a stable
         /// 64-bit name that does not move when the file around it does.
         ///
@@ -154,9 +167,10 @@ namespace Noir.Core.World
 
         public Place(PlaceId id, PlaceKind kind, string name, string human,
                      TileRect bounds, Tile door, OpenWindow[] hours, int jobSlots, int units,
-                     string keySource, Tile[] outline)
+                     string keySource, Tile[] outline, Vec2[] outlinePrecise = null)
         {
             Outline = outline;
+            OutlinePrecise = outlinePrecise;
             Units = units < 1 ? 1 : units;
             Id = id;
             Kind = kind;

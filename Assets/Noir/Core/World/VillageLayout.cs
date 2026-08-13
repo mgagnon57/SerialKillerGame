@@ -124,6 +124,15 @@ namespace Noir.Core.World
         public Tile[] Outline;
 
         /// <summary>
+        /// The same ring as <see cref="Outline"/>, in continuous metres rather than tiles - or
+        /// null to say nothing more precise than the tile-rounded ring was ever computed, which is
+        /// what every caller except <c>DowntownFromSanborn</c> does today. See
+        /// <see cref="Place.OutlinePrecise"/> for why this exists and where it actually changes
+        /// what gets drawn.
+        /// </summary>
+        public Vec2[] OutlinePrecise;
+
+        /// <summary>
         /// Outdoor places are drawn as open ground, without walls or a door. Which are which is
         /// the `form` column in kinds.txt: this used to be a list of exceptions here and another
         /// one in the renderer, and they had drifted apart.
