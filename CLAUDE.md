@@ -67,9 +67,16 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **501 pass, 0 fail, 501 total, 8 skipped, 2 m 02 s.** Measured 2026-08-12 19:47, after
+> **503 pass, 0 fail, 503 total, 8 skipped, 2 m 02 s.** Measured 2026-08-13, after `OutlinePreciseIsNullWhenNeverSet`
+> and `OutlinePreciseSurvivesToTheBuiltPlaceUnchanged` (+2) landed with the fix for 112 S Chicago's
+> storefronts kinking several degrees at their party walls — rounding a narrow unit's corners to
+> the nearest tile swung its wall's own direction off its neighbour's; `Place.OutlinePrecise` now
+> carries the corner `DowntownFromSanborn` actually computed, before `ToTile` touched it. **This
+> was the SECOND branch running to move this number without updating this file** — the
+> shaped-perimeter-walls branch took it to 501 the day before and this file still said 493 when the
+> next branch started, caught only because a review went looking. (501 on 2026-08-12 19:47, after
 > `PolygonTests` (+8) landed with the fix for 112 S Chicago fronting an alley instead of Chicago
-> Street. (493 at 17:18 the same day, after the driveway door-clearance fix
+> Street. 493 at 17:18 the same day, after the driveway door-clearance fix
 > (`Driveways.Edge`/`OffDoor`, +2 tests) and the terrace-business-units split
 > (`CommercialRow.HandleFor`, `BusinessRulings.Unmatched`, +5 tests) landed. 486 on
 > 2026-08-11 15:05, at the end of the walking pass; 477 on 2026-08-10 at the end of the road pass;
