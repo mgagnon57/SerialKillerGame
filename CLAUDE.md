@@ -67,9 +67,11 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **493 pass, 0 fail, 493 total, 8 skipped, 2 m 01 s.** Measured 2026-08-12 17:18, after the
-> driveway door-clearance fix (`Driveways.Edge`/`OffDoor`, +2 tests) and the terrace-business-units
-> split (`CommercialRow.HandleFor`, `BusinessRulings.Unmatched`, +5 tests) landed. (486 on
+> **501 pass, 0 fail, 501 total, 8 skipped, 2 m 02 s.** Measured 2026-08-12 19:47, after
+> `PolygonTests` (+8) landed with the fix for 112 S Chicago fronting an alley instead of Chicago
+> Street. (493 at 17:18 the same day, after the driveway door-clearance fix
+> (`Driveways.Edge`/`OffDoor`, +2 tests) and the terrace-business-units split
+> (`CommercialRow.HandleFor`, `BusinessRulings.Unmatched`, +5 tests) landed. 486 on
 > 2026-08-11 15:05, at the end of the walking pass; 477 on 2026-08-10 at the end of the road pass;
 > **two other documents were stale within the same afternoon** — this file said 469 and
 > `docs/ROAD-FIXES.md` had measured 473 — which is the failure THIS FILE WINS exists to stop.)
