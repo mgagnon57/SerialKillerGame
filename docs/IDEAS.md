@@ -1096,3 +1096,17 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   browser map ever puts a freestanding fence hard against a shaped building's real footprint - the
   fix is genuine per-tile `PlaceAt` sampling (or re-splitting a run wherever `PlaceAt` changes)
   instead of one sample standing in for the whole run. — *2026-08-13*
+
+- **`CityOutlines`'s plan-line overlay draws a downtown terrace's footprint from the tile-rounded
+  outline, and now visibly disagrees with the walls it is supposed to be tracing.** `Place.OutlinePrecise`
+  (this session) fixed the WALLS' several-degree party-wall kink by drawing from the true corner
+  instead of the one rounded to the nearest tile - but `CityOutlines.Footprints` (`CityOutlines.cs:162`,
+  `var ring = place.Outline;`) was never told about it, so the plan-line layer - on by default -
+  still carries the full sawtooth on the same buildings whose walls are now dead straight. Up to
+  ~0.7 m of disagreement on 112 S Chicago. Not a regression (that overlay's own behaviour is
+  unchanged) and out of scope for the plan that just landed, but the next full snapshot re-render
+  will bake it into `docs/snapshots/layers/03-house-outlines-alone.png`, where it could easily read
+  as "the fix didn't work" to a session that doesn't know to check which layer it's looking at. Fix
+  is the same shape as `DrawShapedPerimeters`'s own fix: prefer `OutlinePrecise` when present, fall
+  back to `Outline`. Worth a shared helper (e.g. `Place.Ring`) once a second consumer needs this,
+  rather than a third copy of the same fallback logic. — *2026-08-13*
