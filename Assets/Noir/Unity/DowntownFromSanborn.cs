@@ -121,6 +121,19 @@ namespace Noir.Unity
                     corners.Add(ToTile(b0));
                     corners.Add(ToTile(a0));           // closed
 
+                    // THE SAME FOUR CORNERS, BEFORE ToTile TOUCHES THEM. A unit's front edge is
+                    // as short as four or five metres on this row, where rounding both its
+                    // corners to the nearest tile can swing the wall's own direction several
+                    // degrees off its neighbour's - invisible face-on, and a visible gap the
+                    // moment you look down the row instead of across it. DrawShapedPerimeters
+                    // (Assets/Noir/Unity/VillageMesh.cs) prefers this ring when it is present;
+                    // Outline above still exists and is still what the tile grid stamps from.
+                    var precise = new[]
+                    {
+                        new Vec2(a0.x, a0.y), new Vec2(a1.x, a1.y), new Vec2(b1.x, b1.y),
+                        new Vec2(b0.x, b0.y), new Vec2(a0.x, a0.y),   // closed, matching corners above
+                    };
+
                     int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
                     foreach (var t in corners)
                     {
@@ -163,6 +176,7 @@ namespace Noir.Unity
                         Kind = PlaceKind.Shop,
                         Bounds = new TileRect(minX, minY, w, h),
                         Outline = outline,
+                        OutlinePrecise = precise,
                         Door = door,
                         Name = CommercialRow.HandleFor(address, lot.Id, index),
                     };
