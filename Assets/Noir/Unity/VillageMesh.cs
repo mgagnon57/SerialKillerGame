@@ -1688,8 +1688,26 @@ namespace Noir.Unity
                 float bottom = Space3D.GroundUnder(place.Bounds);
                 float top = bottom + MassingGrammars.Of(place).Eaves;
 
-                var outline = place.Outline;
-                int n = outline.Length;
+                // THE TRUE CORNER WHEN ONE WAS MEASURED, the tile-rounded one otherwise. Rounding
+                // every corner to the nearest metre is fine for a wide unit - the direction error
+                // it introduces is a fraction of a degree - but a downtown storefront can be four
+                // or five metres across, where the SAME one-tile rounding on two corners just a
+                // few metres apart can swing the wall's own direction several degrees off its
+                // neighbour's. Two flat panels meeting at that angle look solid face-on and open
+                // up the moment you look down the row rather than across it. See
+                // Place.OutlinePrecise for where this comes from and who populates it.
+                int n = place.Outline.Length;
+                var pts = new Vector2[n];
+                if (place.OutlinePrecise != null && place.OutlinePrecise.Length == n)
+                {
+                    for (int i = 0; i < n; i++)
+                        pts[i] = new Vector2(place.OutlinePrecise[i].X, place.OutlinePrecise[i].Y);
+                }
+                else
+                {
+                    for (int i = 0; i < n; i++)
+                        pts[i] = new Vector2(place.Outline[i].X, place.Outline[i].Y);
+                }
 
                 // Signed area, shoelace formula: sum of (x_i * y_(i+1) - x_(i+1) * y_i) over
                 // every edge (the formula's usual halving does not matter here - only the sign
@@ -1702,16 +1720,16 @@ namespace Noir.Unity
                 float signedArea = 0f;
                 for (int i = 0; i < n; i++)
                 {
-                    var a = outline[i];
-                    var b = outline[(i + 1) % n];
-                    signedArea += (float)a.X * b.Y - (float)b.X * a.Y;
+                    var a = pts[i];
+                    var b = pts[(i + 1) % n];
+                    signedArea += a.x * b.y - b.x * a.y;
                 }
 
-                var ring = outline;
+                var ring = pts;
                 if (signedArea < 0f)
                 {
-                    ring = new Tile[n];
-                    for (int i = 0; i < n; i++) ring[i] = outline[n - 1 - i];
+                    ring = new Vector2[n];
+                    for (int i = 0; i < n; i++) ring[i] = pts[n - 1 - i];
                 }
 
                 Vector2? door = place.Door.IsValid
@@ -1730,8 +1748,8 @@ namespace Noir.Unity
                     float bestDist = float.MaxValue;
                     for (int i = 0; i < n; i++)
                     {
-                        var p0 = new Vector2(ring[i].X, ring[i].Y);
-                        var p1 = new Vector2(ring[(i + 1) % n].X, ring[(i + 1) % n].Y);
+                        var p0 = ring[i];
+                        var p1 = ring[(i + 1) % n];
                         float len = Vector2.Distance(p0, p1);
                         if (len < 0.01f) continue;
                         var dir = (p1 - p0) / len;
@@ -1743,8 +1761,8 @@ namespace Noir.Unity
 
                 for (int i = 0; i < n; i++)
                 {
-                    var p0 = new Vector2(ring[i].X, ring[i].Y);
-                    var p1 = new Vector2(ring[(i + 1) % n].X, ring[(i + 1) % n].Y);
+                    var p0 = ring[i];
+                    var p1 = ring[(i + 1) % n];
                     var edge = p1 - p0;
                     float len = edge.magnitude;
                     if (len < 0.01f) continue;
