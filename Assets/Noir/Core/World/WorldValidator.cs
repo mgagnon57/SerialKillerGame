@@ -197,8 +197,19 @@ namespace Noir.Core.World
 
                 for (int j = i + 1; j < places.Count; j++)
                 {
-                    if (p.Bounds.Overlaps(places[j].Bounds))
-                        report.Errors.Add($"'{p.Name}' {p.Bounds} overlaps '{places[j].Name}' {places[j].Bounds}");
+                    if (!p.Bounds.Overlaps(places[j].Bounds)) continue;
+
+                    // A Place with an Outline may be ROTATED, and a rotated rectangle's own
+                    // bounding box always covers more ground than the rectangle itself - two
+                    // such buildings standing edge to edge on an angled street get boxes that
+                    // overlap even though neither building does. Fall through to Bounds only
+                    // when either side has no Outline to check against - the axis-aligned
+                    // majority of the town, where Bounds already IS the true footprint.
+                    if (p.Outline != null && places[j].Outline != null
+                        && !Polygon.Overlaps(p.Outline, places[j].Outline))
+                        continue;
+
+                    report.Errors.Add($"'{p.Name}' {p.Bounds} overlaps '{places[j].Name}' {places[j].Bounds}");
                 }
 
                 // Dwellings get their character from the household living in them, not from the
