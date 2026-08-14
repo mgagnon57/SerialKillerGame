@@ -225,22 +225,33 @@ namespace Noir.Unity
             public readonly Vector3 Face;
             public readonly Vector3 Out;
             public readonly Vector3 Along;
+            public readonly Quaternion Rotation;
             public readonly float Lo, Hi;
 
-            public Front(Vector3 face, Vector3 outward, Vector3 along, float lo, float hi)
+            /// <summary>
+            /// <paramref name="outward"/> is the only direction this needs - <see cref="Along"/> is
+            /// always <paramref name="outward"/> rotated so a piece's local +X runs along the wall
+            /// and local +Z points through it, which is what makes a single <see cref="Rotation"/>
+            /// correct for every piece this frontage builds, cardinal or not.
+            ///
+            /// <paramref name="lo"/>/<paramref name="hi"/> must already be projections onto THIS
+            /// Along (i.e. Vector3.Dot(worldPoint, Along) for the wall's two extreme corners) - see
+            /// <see cref="FrontAt"/>, which is the only caller.
+            /// </summary>
+            public Front(Vector3 face, Vector3 outward, float lo, float hi)
             {
                 Valid = true;
                 Face = face;
                 Out = outward;
-                Along = along;
+                Along = new Vector3(outward.z, 0f, -outward.x);
+                float yaw = Mathf.Atan2(-Along.z, Along.x) * Mathf.Rad2Deg;
+                Rotation = Quaternion.Euler(0f, yaw, 0f);
                 Lo = lo;
                 Hi = hi;
             }
 
-            private bool AlongX => Along.x > 0.5f;
-
             public float Span => Hi - Lo;
-            public float FaceAlong => AlongX ? Face.x : Face.z;
+            public float FaceAlong => Vector3.Dot(Face, Along);
 
             /// <summary>A point on this frontage: where along the wall, how high, and how far out.</summary>
             public Vector3 At(float along, float up, float outward) =>
@@ -249,9 +260,12 @@ namespace Noir.Unity
             /// <summary>Straight over the threshold, at a height and a standoff.</summary>
             public Vector3 On(float up, float outward) => At(FaceAlong, up, outward);
 
-            /// <summary>A box size in the same terms: along the wall, up it, and through it.</summary>
-            public Vector3 Size(float along, float up, float through) =>
-                new Vector3(AlongX ? along : through, up, AlongX ? through : along);
+            /// <summary>
+            /// A box's LOCAL size - along the wall, up it, and through it - unrotated. The piece
+            /// this feeds must apply <see cref="Rotation"/> itself; this no longer swaps which world
+            /// axis is which; that was only ever correct because every wall used to be cardinal.
+            /// </summary>
+            public Vector3 Size(float along, float up, float through) => new Vector3(along, up, through);
 
             /// <summary>Trim a board so it cannot overhang the end of the building it is nailed to.</summary>
             public float Fit(float width) => Mathf.Min(width, Mathf.Max(1.2f, Span - 1.2f));
@@ -275,12 +289,36 @@ namespace Noir.Unity
             else if (door.Y == b.Bottom) outward = Vector3.back;
             else return default;
 
-            bool acrossX = Mathf.Abs(outward.z) > 0.5f;
-            var along = acrossX ? Vector3.right : Vector3.forward;
-            float lo = acrossX ? b.X : -(b.Y + b.H);
-            float hi = acrossX ? b.X + b.W : -b.Y;
+            var f = FrontOf(outward, BoundsCorners(b));
+            return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, f.Lo, f.Hi);
+        }
 
-            return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, along, lo, hi);
+        /// <summary>The four corners of an axis-aligned footprint, in world space.</summary>
+        private static Vector3[] BoundsCorners(TileRect b) => new[]
+        {
+            Space3D.ToWorld(b.X, b.Y), Space3D.ToWorld(b.Right + 1, b.Y),
+            Space3D.ToWorld(b.X, b.Bottom + 1), Space3D.ToWorld(b.Right + 1, b.Bottom + 1),
+        };
+
+        /// <summary>
+        /// A Front for a wall facing <paramref name="outward"/>, spanning whichever of
+        /// <paramref name="corners"/> project furthest apart along it. <paramref name="corners"/>
+        /// only needs to contain the wall's own two ends for a shaped edge (Task 3) - the bounding
+        /// box's four corners is what a cardinal wall uses, and projecting is what makes both work
+        /// through the same formula. Face is set by the CALLER (from the door's own position, not
+        /// from any of these corners) - this only ever supplies Lo/Hi.
+        /// </summary>
+        private static Front FrontOf(Vector3 outward, Vector3[] corners)
+        {
+            var along = new Vector3(outward.z, 0f, -outward.x);
+            float lo = float.MaxValue, hi = float.MinValue;
+            foreach (var c in corners)
+            {
+                float t = Vector3.Dot(c, along);
+                if (t < lo) lo = t;
+                if (t > hi) hi = t;
+            }
+            return new Front(Vector3.zero, outward, lo, hi);
         }
 
         // ---------- doors ----------
