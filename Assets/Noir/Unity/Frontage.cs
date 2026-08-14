@@ -261,18 +261,12 @@ namespace Noir.Unity
             public Vector3 On(float up, float outward) => At(FaceAlong, up, outward);
 
             /// <summary>
-            /// A box size, still in WORLD axes - <see cref="Piece"/> places every box at identity
-            /// rotation, and applying <see cref="Rotation"/> there is Task 2's job, not landed yet.
-            /// The swap this used to key off <c>Along.x &gt; 0.5f</c> - Along's sign is exactly what
-            /// changed for the {right,back} walls (see the constructor), so that test would now
-            /// silently swap the wrong walls. <see cref="Out"/> was never sign-ambiguous - it is
-            /// still one of the four cardinal unit vectors here - so the swap is keyed on it instead.
+            /// A box's LOCAL size - along the wall, up it, and through it - unrotated. The piece
+            /// this feeds must apply <see cref="Rotation"/> itself (see <see cref="Piece"/>, next
+            /// step) - this no longer swaps which world axis is which, which was only ever a
+            /// stand-in for real rotation while nothing applied one (see Task 1).
             /// </summary>
-            public Vector3 Size(float along, float up, float through)
-            {
-                bool alongX = Mathf.Abs(Out.z) > 0.5f;
-                return new Vector3(alongX ? along : through, up, alongX ? through : along);
-            }
+            public Vector3 Size(float along, float up, float through) => new Vector3(along, up, through);
 
             /// <summary>Trim a board so it cannot overhang the end of the building it is nailed to.</summary>
             public float Fit(float width) => Mathf.Min(width, Mathf.Max(1.2f, Span - 1.2f));
@@ -356,10 +350,10 @@ namespace Noir.Unity
             Piece(parent, "doorhead",
                   f.On((DoorHeight + eaves) * 0.5f, -wall * 0.5f),
                   f.Size(1.0f, eaves - DoorHeight, Mathf.Max(0.08f, wall - 0.04f)),
-                  Materials3D.Walls[Materials3D.WallingFor(place)]);
+                  Materials3D.Walls[Materials3D.WallingFor(place)], f.Rotation);
 
             Piece(parent, "doorcase", f.On(DoorHeight * 0.5f + 0.03f, -0.05f),
-                  f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone);
+                  f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone, f.Rotation);
 
             // THE LEAF HANGS ON A HINGE NOW. It was a box in a hole for as long as this file has
             // existed - see CityDoors, which swings it.
@@ -377,6 +371,7 @@ namespace Noir.Unity
             var hinge = new GameObject("hinge");
             hinge.transform.SetParent(parent, false);
             hinge.transform.position = f.At(hingeAlong, 0f, Proud - 0.06f);
+            hinge.transform.rotation = f.Rotation;
 
             var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
             leaf.name = "door";
@@ -387,27 +382,26 @@ namespace Noir.Unity
             leafRenderer.shadowCastingMode = ShadowCastingMode.On;
             leafRenderer.receiveShadows = true;
 
-            // Local, because the hinge is what turns: half a leaf along the wall from the post,
-            // and half a leaf up from the threshold.
-            bool alongX = Mathf.Abs(f.Along.x) > 0.5f;
+            // Local to the hinge, which now CARRIES the wall's rotation - so "half a leaf along
+            // the wall from the post" is always local +X, the same for every wall, cardinal or
+            // not. This is what f.Rotation on the hinge buys: the AlongX branch that used to pick
+            // world X or world Z is gone because there is no more world-axis case to pick between.
             float half = DoorWidth * 0.5f;
-            leaf.transform.localPosition = new Vector3(alongX ? half : 0f,
-                                                       (DoorHeight - 0.06f) * 0.5f,
-                                                       alongX ? 0f : half);
+            leaf.transform.localPosition = new Vector3(half, (DoorHeight - 0.06f) * 0.5f, 0f);
             leaf.transform.localScale = f.Size(DoorWidth, DoorHeight - 0.06f, 0.12f);
 
-            // Which way is "in"? `Out` points away from the building, so a shop turns the leaf
-            // towards Out and a house away from it. The sign of the yaw follows the wall's own
-            // heading so both walls of a corner shop still open outward.
-            float shutYaw = hinge.transform.localEulerAngles.y;
-            float side = alongX ? Mathf.Sign(f.Out.z) : -Mathf.Sign(f.Out.x);
+            // Which way is "in"? Out points away from the building; with the hinge's own rotation
+            // now carrying the wall's true heading, "outward" in the hinge's LOCAL frame is
+            // always local +Z (see Front's constructor: Rotation*forward == Out) - so the shop/
+            // house sign no longer needs to read Out's world components at all.
+            float shutYaw = hinge.transform.eulerAngles.y;
             float swing = Commercial(place) ? 85f : -85f;
-            Doors?.Add(hinge.transform, shutYaw, shutYaw + swing * side);
+            Doors?.Add(hinge.transform, shutYaw, shutYaw + swing);
 
             // Sunk a little below zero, because a road is worn 4cm down and a step that started
             // exactly at ground level floated over it.
             Piece(parent, "doorstep", f.On(0.02f, 0.30f),
-                  f.Size(1.30f, 0.16f, 0.62f), Materials3D.Stone);
+                  f.Size(1.30f, 0.16f, 0.62f), Materials3D.Stone, f.Rotation);
 
             return 4;
         }
@@ -587,7 +581,7 @@ namespace Noir.Unity
         {
             width = f.Fit(width);
             Piece(parent, name, f.At(f.Centred(width), sill + height * 0.5f, Proud + 0.02f + 0.07f),
-                  f.Size(width, height, 0.14f), material);
+                  f.Size(width, height, 0.14f), material, f.Rotation);
             return 1;
         }
 
@@ -605,10 +599,10 @@ namespace Noir.Unity
             // through the gap. Half the section plus a five-millimetre bite into the board, so
             // the two overlap rather than sharing a plane and shimmering along the join.
             Piece(parent, name + ":bracket", f.On(centreY + height * 0.5f + 0.03f, project * 0.5f),
-                  f.Size(0.07f, 0.07f, project), Materials3D.Ironwork);
+                  f.Size(0.07f, 0.07f, project), Materials3D.Ironwork, f.Rotation);
 
             Piece(parent, name, f.On(centreY, project - length * 0.5f - 0.10f),
-                  f.Size(0.09f, height, length), board);
+                  f.Size(0.09f, height, length), board, f.Rotation);
             return 2;
         }
 
@@ -619,7 +613,7 @@ namespace Noir.Unity
             float reach = 0.95f + width * 0.5f;
             float side = f.FaceAlong + reach > f.Hi - 0.3f ? -1f : 1f;
             Piece(parent, name, f.At(f.FaceAlong + side * reach, centreY, Proud + 0.03f),
-                  f.Size(width, height, 0.06f), material);
+                  f.Size(width, height, 0.06f), material, f.Rotation);
             return 1;
         }
 
@@ -633,9 +627,9 @@ namespace Noir.Unity
             float along = Mathf.Clamp(f.FaceAlong + 1.9f,
                                       f.Lo + width * 0.5f + 0.4f, f.Hi - width * 0.5f - 0.4f);
 
-            Piece(parent, name, f.At(along, 1.55f, Proud + 0.09f), f.Size(width, height, 0.14f), board);
+            Piece(parent, name, f.At(along, 1.55f, Proud + 0.09f), f.Size(width, height, 0.14f), board, f.Rotation);
             Piece(parent, name + ":hood", f.At(along, 1.55f + height * 0.5f + 0.06f, Proud + 0.16f),
-                  f.Size(width + 0.16f, 0.09f, 0.44f), Materials3D.Bark);
+                  f.Size(width + 0.16f, 0.09f, 0.44f), Materials3D.Bark, f.Rotation);
             return 2;
         }
 
@@ -736,7 +730,7 @@ namespace Noir.Unity
                 Piece(parent, "board",
                       f.At(centre - width * 0.5f + pitch * (i + 0.5f), 0.02f + height * 0.5f,
                            ShutterProud + 0.05f),
-                      f.Size(pitch - 0.06f, height, 0.10f), material);
+                      f.Size(pitch - 0.06f, height, 0.10f), material, f.Rotation);
 
             Batten(parent, f, centre, width, 0.55f);
             Batten(parent, f, centre, width, 1.80f);
@@ -746,7 +740,7 @@ namespace Noir.Unity
         private static void Batten(Transform parent, Front f, float centre, float width, float y)
         {
             Piece(parent, "batten", f.At(centre, y, ShutterProud + 0.13f),
-                  f.Size(width + 0.06f, 0.13f, 0.06f), Materials3D.Bark);
+                  f.Size(width + 0.06f, 0.13f, 0.06f), Materials3D.Bark, f.Rotation);
         }
 
         /// <summary>A pair of heavy doors closed over the opening, for the places that only lock.</summary>
@@ -756,7 +750,7 @@ namespace Noir.Unity
             for (int i = 0; i < 2; i++)
                 Piece(parent, "gate",
                       f.At(f.FaceAlong + (i == 0 ? -0.255f : 0.255f), height * 0.5f, ShutterProud + 0.05f),
-                      f.Size(0.47f, height, 0.10f), Materials3D.Bark);
+                      f.Size(0.47f, height, 0.10f), Materials3D.Bark, f.Rotation);
             return 2;
         }
 
@@ -770,12 +764,13 @@ namespace Noir.Unity
         }
 
         private static void Piece(Transform parent, string name, Vector3 position, Vector3 size,
-                                  Material material)
+                                  Material material, Quaternion rotation)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
             go.transform.SetParent(parent, false);
             go.transform.position = position;
+            go.transform.rotation = rotation;
             go.transform.localScale = size;
 
             Discard(go.GetComponent<Collider>());
