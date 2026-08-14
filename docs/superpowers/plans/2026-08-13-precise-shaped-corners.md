@@ -1,6 +1,6 @@
 # Precise Shaped-Building Corners Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Stop a downtown terrace's front wall from kinking several degrees between neighbouring
 storefronts by carrying each corner's true, continuous position through to rendering instead of
@@ -64,7 +64,7 @@ real geometric kink, not a rendering artifact of viewing angle alone, but its VI
   Task 2 (`DowntownFromSanborn`, which populates it) and Task 3 (`DrawShapedPerimeters`, which reads
   it).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `tools/Noir.Core.Tests/ShapedBuildingTests.cs`, inside the `ShapedBuildingTests` class. First,
 replace the existing `Build` helper (it needs an optional second parameter) — find:
@@ -119,14 +119,14 @@ Then add two new tests, after `AnOutlineTheDoorIsNotInsideIsIgnoredRatherThanObe
         }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj --filter "FullyQualifiedName~ShapedBuildingTests.OutlinePrecise"`
 
 Expected: build error — `PlaceSpec` has no member `OutlinePrecise`, `Place` has no member
 `OutlinePrecise`.
 
-- [ ] **Step 3: Add the field to `PlaceSpec`**
+- [x] **Step 3: Add the field to `PlaceSpec`**
 
 In `Assets/Noir/Core/World/VillageLayout.cs`, find:
 
@@ -149,7 +149,7 @@ Replace with:
         public Vec2[] OutlinePrecise;
 ```
 
-- [ ] **Step 4: Add the field and constructor parameter to `Place`**
+- [x] **Step 4: Add the field and constructor parameter to `Place`**
 
 In `Assets/Noir/Core/World/Place.cs`, find:
 
@@ -200,7 +200,7 @@ Replace with:
             Units = units < 1 ? 1 : units;
 ```
 
-- [ ] **Step 5: Thread it through `WorldBuilder`**
+- [x] **Step 5: Thread it through `WorldBuilder`**
 
 In `Assets/Noir/Core/World/WorldBuilder.cs`, find:
 
@@ -221,19 +221,19 @@ Replace with:
                                       shaped ? spec.OutlinePrecise : null);
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj --filter "FullyQualifiedName~ShapedBuildingTests"`
 
 Expected: PASS, 7 of 7 (the 5 existing tests in this file plus the 2 new ones).
 
-- [ ] **Step 7: Run the full Core suite to confirm nothing else moved**
+- [x] **Step 7: Run the full Core suite to confirm nothing else moved**
 
 Run: `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj`
 
 Expected: 503 pass, 0 fail (501 baseline + 2).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Assets/Noir/Core/World/VillageLayout.cs Assets/Noir/Core/World/Place.cs Assets/Noir/Core/World/WorldBuilder.cs tools/Noir.Core.Tests/ShapedBuildingTests.cs
@@ -258,7 +258,7 @@ No Core test is possible for this file (`Assets/Noir/Unity` cannot compile under
 `UnityEngine.Vector2` is not available there). Verified by `dotnet build` and the PlayMode/visual
 check in Task 4, matching this file's own existing convention (see its class doc header).
 
-- [ ] **Step 1: Build the precise ring alongside the tile-rounded one**
+- [x] **Step 1: Build the precise ring alongside the tile-rounded one**
 
 In `Assets/Noir/Unity/DowntownFromSanborn.cs`, find:
 
@@ -309,7 +309,7 @@ Replace with:
                     };
 ```
 
-- [ ] **Step 2: Attach it to the `PlaceSpec`**
+- [x] **Step 2: Attach it to the `PlaceSpec`**
 
 Find:
 
@@ -338,7 +338,7 @@ Replace with:
                     };
 ```
 
-- [ ] **Step 3: Verify it compiles**
+- [x] **Step 3: Verify it compiles**
 
 Close the Unity editor first if it is open (per `CLAUDE.md`'s standing precondition), or verify via
 the live MCP tools if someone is using it.
@@ -347,7 +347,7 @@ Run: `dotnet build Noir.Unity.csproj -c Debug`
 
 Expected: build succeeds, 0 errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Assets/Noir/Unity/DowntownFromSanborn.cs
@@ -367,7 +367,7 @@ git commit -m "DowntownFromSanborn hands over the corner it actually computed, n
   `OutlinePrecise` is present and matches `Outline`'s length; otherwise behaviour is byte-identical
   to before this task (tile-rounded `Outline`, converted to `Vector2` exactly as it already was).
 
-- [ ] **Step 1: Replace the ring-building section**
+- [x] **Step 1: Replace the ring-building section**
 
 In `Assets/Noir/Unity/VillageMesh.cs`, find `DrawShapedPerimeters` and replace its body from the
 start of the method through the ring-reversal block — find:
@@ -474,7 +474,7 @@ Replace with:
                 }
 ```
 
-- [ ] **Step 2: Remove the now-redundant per-point `Vector2` conversions**
+- [x] **Step 2: Remove the now-redundant per-point `Vector2` conversions**
 
 `ring[i]` is now already a `Vector2` (built in Step 1), where before it was a `Tile` that had to be
 converted at every point of use. Find the door-edge search:
@@ -523,7 +523,7 @@ Everything else in `DrawShapedPerimeters` (the door-gap math, the `Slab` local f
 `AddWall` call) is unchanged — it already operated on `Vector2`, and `ring[i]` now simply IS one
 directly instead of needing the conversion at every use.
 
-- [ ] **Step 3: Verify it compiles**
+- [x] **Step 3: Verify it compiles**
 
 Close the Unity editor first if it is open, or verify via the live MCP tools if someone is using it.
 
@@ -531,7 +531,7 @@ Run: `dotnet build Noir.Unity.csproj -c Debug`
 
 Expected: build succeeds, 0 errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Assets/Noir/Unity/VillageMesh.cs
@@ -544,7 +544,7 @@ git commit -m "DrawShapedPerimeters draws from the corner that was actually meas
 
 No new code — confirms Tasks 1-3 actually closed what the owner pointed at.
 
-- [ ] **Step 1: Full Unity build**
+- [x] **Step 1: Full Unity build**
 
 Close the Unity editor first if it is open.
 
@@ -558,13 +558,13 @@ dotnet build Noir.PlayTests.csproj -c Debug
 
 Expected: all three succeed, 0 errors.
 
-- [ ] **Step 2: Confirm the Core baseline**
+- [x] **Step 2: Confirm the Core baseline**
 
 Run: `dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj`
 
 Expected: 503 pass, 0 fail (unchanged from Task 1's own check — this task adds no new Core code).
 
-- [ ] **Step 3: Run the PlayMode gate**
+- [x] **Step 3: Run the PlayMode gate**
 
 If the editor is closed:
 
@@ -574,7 +574,7 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 
 Expected: 20 of 20 pass, 0 fail, 1 skipped (unchanged baseline).
 
-- [ ] **Step 4: Look at 112 S Chicago from the grazing angle, not just face-on**
+- [x] **Step 4: Look at 112 S Chicago from the grazing angle, not just face-on**
 
 This is the step a face-on screenshot cannot substitute for — the whole point of this plan is that
 the kink is invisible from most angles and only opens up looking down the row. If the editor is
@@ -593,8 +593,31 @@ angle between consecutive units' front edges should now be near 0° (a fraction 
 `CommercialRow`'s own frontage-length division, not the several-degree jumps tile-rounding caused),
 wherever `OutlinePrecise` is populated.
 
-- [ ] **Step 5: Report to the owner**
+- [x] **Step 5: Report to the owner**
 
 Tell him it's ready to look at, with the before/after angle numbers from Step 4 if he wants them,
 and remind him `SeatOnSurvey`-sourced buildings (the school, and any other measured real footprint)
 were deliberately left out of this plan's scope per the Global Constraints note.
+
+---
+
+**Verification, 2026-08-13 21:08:** Step 4 was interrupted mid-check by a machine reboot (unrelated,
+new monitors) with the editor caught mid-Play — resumed in a fresh session. Reopened the editor,
+confirmed 0 compile errors, re-entered Play (`Application.runInBackground = true` set in the same
+command per the standing trap), and drove it live via `Unity_RunCommand`:
+
+- All 17 `112 S Chicago #1`-`#17` `Place`s carry a 5-point `OutlinePrecise` ring; every other `Chicago`
+  street address (`202 North Chicago Street` etc., non-terrace) correctly carries `null`.
+- Rendered a camera directly to PNG (`Unity_Camera_Capture` fails on a specific instance ID mid-Play,
+  a known limitation - `cam.Render()` + `ReadPixels` + `EncodeToPNG` sidesteps it) from
+  `(789, 17, -1374)` at `(pitch 18°, yaw 261°)`, the same grazing angle the kink was first reported
+  from. Saved to `docs/snapshots/grazing-angle-check.png`: the row reads as one continuous brick wall
+  end to end, no pale slivers between units.
+- Numeric cross-check: each unit's front-edge direction (`OutlinePrecise[1] - OutlinePrecise[0]`) is
+  **exactly -107.68° for all 17 units, delta 0.00° between every consecutive pair** - stronger than
+  the "near 0°" this step predicted, because `DowntownFromSanborn` cuts every unit's front edge from
+  the same straight `alongDir` line, so they are exactly colinear once rounding is out of the way.
+
+Core baseline reconfirmed 503/0 and the PlayMode gate 20/20 (1 skipped) both stand from before the
+reboot - see `Logs/verify-2026-08-13/playmode.log` and `playmode-results.xml`. Nothing further to do
+on this plan.
