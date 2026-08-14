@@ -22,12 +22,13 @@ namespace Noir.Core.Tests
         private const string OneHouse =
             "place house 20,20 20x20 \"the test house\"\n  door 30,39\n";
 
-        private static WorldModel Build(Tile[] outline, Vec2[] outlinePrecise = null)
+        private static WorldModel Build(Tile[] outline, Vec2[] outlinePrecise = null, float? groundHeight = null)
         {
             TestContent.EnsureKinds();
             var layout = VillageParser.Parse(Header + OneHouse);
             layout.Places[0].Outline = outline;
             layout.Places[0].OutlinePrecise = outlinePrecise;
+            layout.Places[0].GroundHeight = groundHeight;
             return WorldBuilder.Build(layout, 1234UL);
         }
 
@@ -169,6 +170,33 @@ namespace Noir.Core.Tests
                                       new Vec2(40.6f,28.2f), new Vec2(20.4f,28.9f) });
             Assert.That(world.AllPlaces[0].OutlinePrecise, Is.Null,
                         "both rings are gated on the same boolean - dropping one must drop the other");
+        }
+
+        [Test]
+        public void GroundHeightIsNullWhenNeverSet()
+        {
+            var world = Build(Ell());
+            Assert.That(world.AllPlaces[0].GroundHeight, Is.Null,
+                        "nothing set a shared ground height, so the built Place should not invent one");
+        }
+
+        [Test]
+        public void GroundHeightSurvivesToTheBuiltPlaceUnchanged()
+        {
+            var world = Build(Ell(), groundHeight: 12.375f);
+            Assert.That(world.AllPlaces[0].GroundHeight, Is.EqualTo(12.375f),
+                        "the shared ground height is carried through PlaceSpec -> Place unchanged");
+        }
+
+        [Test]
+        public void GroundHeightSurvivesEvenWhenTheOutlineIsDeclined()
+        {
+            // Unlike OutlinePrecise, GroundHeight is not gated on the outline being accepted -
+            // an ordinary rectangular building can still be told to share its row's floor level.
+            var world = Build(new[] { new Tile(20,20), new Tile(40,20), new Tile(40,28), new Tile(20,28) },
+                              groundHeight: 9.5f);
+            Assert.That(world.AllPlaces[0].GroundHeight, Is.EqualTo(9.5f),
+                        "a declined outline drops Outline and OutlinePrecise, not GroundHeight");
         }
     }
 }

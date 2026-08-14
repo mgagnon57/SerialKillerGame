@@ -133,6 +133,13 @@ namespace Noir.Core.World
         public Vec2[] OutlinePrecise;
 
         /// <summary>
+        /// The wall's base height in metres, shared with this place's row neighbours - or null to
+        /// say "measure it yourself", which is what every caller except <c>DowntownFromSanborn</c>
+        /// does today. See <see cref="Place.GroundHeight"/> for why this exists.
+        /// </summary>
+        public float? GroundHeight;
+
+        /// <summary>
         /// Outdoor places are drawn as open ground, without walls or a door. Which are which is
         /// the `form` column in kinds.txt: this used to be a list of exceptions here and another
         /// one in the renderer, and they had drifted apart.

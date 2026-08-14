@@ -79,7 +79,8 @@ namespace Noir.Core.World
                                       spec.Bounds, spec.Door, spec.Hours.ToArray(),
                                       spec.JobSlots, spec.Units, spec.Key,
                                       shaped ? spec.Outline : null,
-                                      shaped ? spec.OutlinePrecise : null);
+                                      shaped ? spec.OutlinePrecise : null,
+                                      spec.GroundHeight);
                 places.Add(place);
 
                 if (keys.TryGetValue(place.Key, out int clash))

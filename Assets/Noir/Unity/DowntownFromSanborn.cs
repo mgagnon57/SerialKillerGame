@@ -85,6 +85,19 @@ namespace Noir.Unity
                 var laid = CommercialRow.Lay(front.Length, rng);
                 if (laid.Length == 0) continue;
 
+                // ONE GROUND HEIGHT FOR THE WHOLE ROW, sampled at its own middle rather than
+                // letting each unit measure under itself. DrawShapedPerimeters seats every wall
+                // at Space3D.GroundUnder(place.Bounds) - the elevation grid under the MIDDLE OF
+                // THAT UNIT'S OWN, narrow bounds - and neighbouring units on a terrace are close
+                // enough that this is usually the same few centimetres, but not always: a party
+                // wall seated a few centimetres apart from its own neighbour's copy of the same
+                // wall is invisible face-on and a visible sliver of sky between two storefronts
+                // the moment you look down the row instead of across it, for exactly the same
+                // reason the tile-rounded corners were - see Place.GroundHeight.
+                float rowGroundHeight = ElevationGrid.HeightAt(
+                    front.Start.x + alongDir.x * front.Length * 0.5f,
+                    front.Start.y + alongDir.y * front.Length * 0.5f);
+
                 // EVERYTHING ALREADY STANDING ON THIS LOT COMES OFF. The generator put a building
                 // here by its own rules before this pass ran, and the terrace replaces it rather
                 // than joining it - two buildings on one frontage is exactly the tangle the
@@ -177,6 +190,7 @@ namespace Noir.Unity
                         Bounds = new TileRect(minX, minY, w, h),
                         Outline = outline,
                         OutlinePrecise = precise,
+                        GroundHeight = rowGroundHeight,
                         Door = door,
                         Name = CommercialRow.HandleFor(address, lot.Id, index),
                     };

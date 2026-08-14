@@ -1685,7 +1685,15 @@ namespace Noir.Unity
 
                 float depth = Materials3D.WallDepthFor(place);
                 int submesh = Materials3D.WallingFor(place);
-                float bottom = Space3D.GroundUnder(place.Bounds);
+
+                // THE ROW'S SHARED HEIGHT WHEN ONE WAS MEASURED, this unit's own otherwise.
+                // Space3D.GroundUnder samples the elevation grid under THIS PLACE'S OWN bounds -
+                // fine for a freestanding building, but two neighbouring terrace units each
+                // measuring under their own narrow footprint can land on different points of the
+                // grid and seat their shared party wall a few centimetres apart. Invisible
+                // face-on; a visible sliver of sky between two storefronts once you look down the
+                // row instead of across it. See Place.GroundHeight.
+                float bottom = place.GroundHeight ?? Space3D.GroundUnder(place.Bounds);
                 float top = bottom + MassingGrammars.Of(place).Eaves;
 
                 // THE TRUE CORNER WHEN ONE WAS MEASURED, the tile-rounded one otherwise. Rounding
