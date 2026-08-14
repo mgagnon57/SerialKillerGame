@@ -1110,3 +1110,13 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   is the same shape as `DrawShapedPerimeters`'s own fix: prefer `OutlinePrecise` when present, fall
   back to `Outline`. Worth a shared helper (e.g. `Place.Ring`) once a second consumer needs this,
   rather than a third copy of the same fallback logic. — *2026-08-13*
+
+- [ ] `SeatOnSurvey`/`FillFromSurvey`-sourced shaped buildings (not just DowntownFromSanborn's
+  terrace) have the same door/sign-misalignment bug the angled-frontage plan fixed for 112 S
+  Chicago - `Frontage.PreciseEdgeAt` only reads `Place.OutlinePrecise`, which only
+  `DowntownFromSanborn` populates; `Outline` (which those two DO set, for genuinely non-rectangular
+  footprints like the L-shaped high school) is never consulted. `DrawShapedPerimeters` already
+  falls back Outline→OutlinePrecise the other way (Assets/Noir/Unity/VillageMesh.cs:1721-1729) as
+  a model. Fixing this widens the blast radius from 17 buildings to however many `SeatOnSurvey`
+  reports as "built to its real outline" - needs its own planned, verified pass, not a
+  bolt-on. (Found by the final review of the angled-frontage plan, 2026-08-14.)

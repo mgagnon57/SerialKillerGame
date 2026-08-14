@@ -219,6 +219,14 @@ namespace Noir.Unity
         /// Everything else in this file is written in these terms - along the wall, up it, and
         /// out through it - so no piece of geometry has to know which of four walls it is on.
         /// </summary>
+        /// <summary>
+        /// <paramref name="outward"/> rotated so a piece's local +X runs along the wall it faces -
+        /// the one formula Front's own Rotation and FrontOf both need to agree on, so it exists in
+        /// exactly one place. See Front's constructor for why this specific rotation is the one
+        /// that works for every wall angle, not just the four cardinal ones.
+        /// </summary>
+        private static Vector3 AlongOf(Vector3 outward) => new Vector3(outward.z, 0f, -outward.x);
+
         private readonly struct Front
         {
             public readonly bool Valid;
@@ -237,13 +245,21 @@ namespace Noir.Unity
             /// <paramref name="lo"/>/<paramref name="hi"/> must already be projections onto THIS
             /// Along (i.e. Vector3.Dot(worldPoint, Along) for the wall's two extreme corners) - see
             /// <see cref="FrontAt"/>, which is the only caller.
+            ///
+            /// Along is derived from Out, which does NOT match the pre-rotation code's own
+            /// always-positive convention for outward in {right,back} (see the SDD ledger for this
+            /// plan, "Task 1: BLOCKED report and ruling") - ANY consumer that offsets asymmetrically
+            /// along it, not only Doorway's hinge/leaf, mirrors on those two walls relative to the
+            /// pre-plan original. Plate and Notice do. Nothing offsetting symmetrically (Fascia's
+            /// Centred, Boarding's, Gates') does, because Mathf.Clamp commutes with a sign flip
+            /// applied consistently to both the value and its bounds.
             /// </summary>
             public Front(Vector3 face, Vector3 outward, float lo, float hi)
             {
                 Valid = true;
                 Face = face;
                 Out = outward;
-                Along = new Vector3(outward.z, 0f, -outward.x);
+                Along = AlongOf(outward);
                 float yaw = Mathf.Atan2(-Along.z, Along.x) * Mathf.Rad2Deg;
                 Rotation = Quaternion.Euler(0f, yaw, 0f);
                 Lo = lo;
@@ -282,16 +298,20 @@ namespace Noir.Unity
         /// the same "closest point on the closest edge" search DrawShapedPerimeters
         /// (Assets/Noir/Unity/VillageMesh.cs) runs for the SAME reason: the two must agree about
         /// which wall a door belongs to, or the hole and the frame that fills it disagree about
-        /// which direction is outward.
+        /// which direction is outward. That agreement is exact for place.Door, the one tile
+        /// DrawShapedPerimeters actually cuts a hole at - Frontage.Build also calls this for every
+        /// tile in a multi-door place's Openings() list, and any opening beyond the first is only
+        /// as good as its own nearest edge, with no guarantee a hole was cut there specifically.
         ///
-        /// Returns false (and leaves outward/edgeStart/edgeEnd untouched) when the place has no
+        /// Returns false (and leaves outward/edgeStart/edgeEnd/foot untouched) when the place has no
         /// usable precise ring, or the ring is malformed - the caller falls back to the cardinal
         /// FrontAt in that case, exactly as it always has.
         /// </summary>
         private static bool PreciseEdgeAt(Place place, Tile door,
-                                          out Vector3 outward, out Vector3 edgeStart, out Vector3 edgeEnd)
+                                          out Vector3 outward, out Vector3 edgeStart, out Vector3 edgeEnd,
+                                          out Vector3 foot)
         {
-            outward = default; edgeStart = default; edgeEnd = default;
+            outward = default; edgeStart = default; edgeEnd = default; foot = default;
             var precise = place.OutlinePrecise;
             var outline = place.Outline;
             if (precise == null || outline == null || precise.Length != outline.Length || precise.Length < 3)
@@ -318,6 +338,7 @@ namespace Noir.Unity
             var doorPoint = new Vector2(door.X + 0.5f, door.Y + 0.5f);
             int bestEdge = -1;
             float bestDist = float.MaxValue;
+            Vector2 bestFoot = default;
             for (int i = 0; i < n; i++)
             {
                 var p0 = ring[i];
@@ -326,8 +347,9 @@ namespace Noir.Unity
                 if (len < 0.01f) continue;
                 var dir = (p1 - p0) / len;
                 float t = Mathf.Clamp(Vector2.Dot(doorPoint - p0, dir), 0f, len);
-                float dist = Vector2.Distance(doorPoint, p0 + dir * t);
-                if (dist < bestDist) { bestDist = dist; bestEdge = i; }
+                var footHere = p0 + dir * t;
+                float dist = Vector2.Distance(doorPoint, footHere);
+                if (dist < bestDist) { bestDist = dist; bestEdge = i; bestFoot = footHere; }
             }
             if (bestEdge < 0) return false;
 
@@ -350,6 +372,12 @@ namespace Noir.Unity
             outward = new Vector3(normal2.x, 0f, -normal2.y);
             edgeStart = new Vector3(e0.x, 0f, -e0.y);
             edgeEnd = new Vector3(e1.x, 0f, -e1.y);
+            // The point on the wall's OWN surface nearest the door, not the door tile's centre
+            // pushed out by an assumed half-tile (the cardinal path's approximation, correct only
+            // because a cardinal wall always runs exactly one tile from its door's centre - a
+            // shaped wall does not). PreciseEdgeAt already computes this to find bestEdge; this
+            // stops throwing it away. Found by the final whole-branch review on this plan.
+            foot = new Vector3(bestFoot.x, 0f, -bestFoot.y);
             return true;
         }
 
@@ -357,10 +385,10 @@ namespace Noir.Unity
         {
             if (!door.IsValid) return default;
 
-            if (PreciseEdgeAt(place, door, out var outward, out var edgeStart, out var edgeEnd))
+            if (PreciseEdgeAt(place, door, out var outward, out var edgeStart, out var edgeEnd, out var foot))
             {
-                var f = FrontOf(outward, new[] { edgeStart, edgeEnd });
-                return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, f.Lo, f.Hi);
+                var (lo, hi) = FrontOf(outward, new[] { edgeStart, edgeEnd });
+                return new Front(foot, outward, lo, hi);
             }
 
             return FrontAtBounds(place.Bounds, door);
@@ -379,8 +407,8 @@ namespace Noir.Unity
             else if (door.Y == b.Bottom) outward = Vector3.back;
             else return default;
 
-            var f = FrontOf(outward, BoundsCorners(b));
-            return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, f.Lo, f.Hi);
+            var (lo, hi) = FrontOf(outward, BoundsCorners(b));
+            return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, lo, hi);
         }
 
         /// <summary>The four corners of an axis-aligned footprint, in world space.</summary>
@@ -391,16 +419,15 @@ namespace Noir.Unity
         };
 
         /// <summary>
-        /// A Front for a wall facing <paramref name="outward"/>, spanning whichever of
-        /// <paramref name="corners"/> project furthest apart along it. <paramref name="corners"/>
-        /// only needs to contain the wall's own two ends for a shaped edge (Task 3) - the bounding
-        /// box's four corners is what a cardinal wall uses, and projecting is what makes both work
-        /// through the same formula. Face is set by the CALLER (from the door's own position, not
-        /// from any of these corners) - this only ever supplies Lo/Hi.
+        /// A wall's span along itself: Lo/Hi, projected from whichever of <paramref name="corners"/>
+        /// reach furthest along <paramref name="outward"/>'s own Along direction (see AlongOf).
+        /// <paramref name="corners"/> only needs the wall's own two ends for a shaped edge (Task 3)
+        /// - the bounding box's four corners is what a cardinal wall uses, and projecting is what
+        /// makes both work through the same formula.
         /// </summary>
-        private static Front FrontOf(Vector3 outward, Vector3[] corners)
+        private static (float lo, float hi) FrontOf(Vector3 outward, Vector3[] corners)
         {
-            var along = new Vector3(outward.z, 0f, -outward.x);
+            var along = AlongOf(outward);
             float lo = float.MaxValue, hi = float.MinValue;
             foreach (var c in corners)
             {
@@ -408,7 +435,7 @@ namespace Noir.Unity
                 if (t < lo) lo = t;
                 if (t > hi) hi = t;
             }
-            return new Front(Vector3.zero, outward, lo, hi);
+            return (lo, hi);
         }
 
         // ---------- doors ----------
@@ -460,7 +487,7 @@ namespace Noir.Unity
             var hinge = new GameObject("hinge");
             hinge.transform.SetParent(parent, false);
             hinge.transform.position = f.At(hingeAlong, 0f, Proud - 0.06f);
-            hinge.transform.rotation = f.Rotation;
+            hinge.transform.localRotation = f.Rotation;
 
             var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
             leaf.name = "door";
@@ -483,7 +510,7 @@ namespace Noir.Unity
             // now carrying the wall's true heading, "outward" in the hinge's LOCAL frame is
             // always local +Z (see Front's constructor: Rotation*forward == Out) - so the shop/
             // house sign no longer needs to read Out's world components at all.
-            float shutYaw = hinge.transform.eulerAngles.y;
+            float shutYaw = hinge.transform.localEulerAngles.y;
             float swing = Commercial(place) ? 85f : -85f;
             Doors?.Add(hinge.transform, shutYaw, shutYaw + swing);
 
