@@ -471,19 +471,26 @@ namespace Noir.Unity
             {
                 if (BoughtBuildingOwns(f.Footprint)) { indoors++; continue; }
 
+                var fp = f.Footprint;
+                float height = f.Height;
+                var centre = new Vector3(fp.X + fp.W * 0.5f, 0f, -(fp.Y + fp.H * 0.5f));
+                float floor = FloorUnder(fp);
+
+                // The plan is data and these models are merely its visible expression.  When
+                // there is no suitable asset (a cooker is deliberately not replaced by a camp
+                // stove, for example), retain the precise procedural stand-in below.
+                if (InteriorFurnitureModels.TryBuild(f, root.transform, centre, floor)) continue;
+
                 var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 box.name = f.Kind.ToString();
                 box.transform.SetParent(root.transform, false);
-
-                var fp = f.Footprint;
-                float height = f.Height;
 
                 // Slightly inset so adjacent pieces read as separate objects rather than one
                 // continuous slab running round the room.
                 box.transform.localScale = new Vector3(fp.W - 0.12f, height, fp.H - 0.12f);
                 box.transform.position = new Vector3(
                     fp.X + fp.W * 0.5f,
-                    FloorUnder(fp) + height * 0.5f + 0.02f,   // on the raised interior floor
+                    floor + height * 0.5f + 0.02f,             // on the raised interior floor
                     -(fp.Y + fp.H * 0.5f));
 
                 Discard(box.GetComponent<BoxCollider>());
