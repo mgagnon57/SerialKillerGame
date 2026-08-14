@@ -26,7 +26,9 @@ namespace Noir.Core.Tests
 
         // ---------- a village of one house on one street ----------
 
-        private const int RoadY = 100;          // 10 wide, so it covers y 95..105
+        private const int RoadY = 90;           // 10 wide, so it covers y 85..95 - a full-depth
+                                                 // Rossville yard between the kerb and the wall,
+                                                 // not the 3-tile strip a RoadY of 100 used to leave
 
         private static VillageLayout OneHouse(Tile door, int units = 1, int houseY = 108)
         {
@@ -65,6 +67,31 @@ namespace Noir.Core.Tests
             var spot = plan[0].Spot;
             Assert.That(System.Math.Abs(spot.X - 51), Is.GreaterThanOrEqualTo(2),
                         $"spot {spot} stands on the door's own line out of the house");
+        }
+
+        /// <summary>
+        /// Matches CityParking's own measured docstring: "its cars run 5.0 to 5.5m nose to tail."
+        /// A car parked at this spot stands NOSE-ON to the wall (see Driveway.AlongX), so half
+        /// its length reaches back toward the house from the spot's own centre.
+        /// </summary>
+        private const float LongestCarLength = 5.5f;
+
+        [Test]
+        public void ACarNeverStandsCloseEnoughToPutItsTailInTheWall()
+        {
+            // Door on the top edge (ny = -1), plenty of open yard ahead - the shallowest, most
+            // common case, where Standing() takes the very first step it is offered.
+            var world = Build(OneHouse(new Tile(56, 108)));
+
+            var plan = Driveways.Plan(world, 1991UL);
+            Assert.That(plan.Length, Is.EqualTo(1));
+
+            var spot = plan[0].Spot;
+            float distanceFromWall = 108 - spot.Y;
+            Assert.That(distanceFromWall, Is.GreaterThanOrEqualTo(LongestCarLength / 2f),
+                        $"a car standing {distanceFromWall}m out has its tail inside the wall it "
+                      + "is nose-on to - CityDriveways centres a real car model on this spot and "
+                      + "the fleet's cars run up to 5.5m nose to tail");
         }
 
         [Test]

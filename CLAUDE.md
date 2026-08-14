@@ -67,14 +67,27 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **503 pass, 0 fail, 503 total, 8 skipped, 2 m 02 s.** Measured 2026-08-13, after `OutlinePreciseIsNullWhenNeverSet`
-> and `OutlinePreciseSurvivesToTheBuiltPlaceUnchanged` (+2) landed with the fix for 112 S Chicago's
+> **508 pass, 0 fail, 508 total, 8 skipped, 2 m 03 s.** Measured 2026-08-14, after
+> `ACarNeverStandsCloseEnoughToPutItsTailInTheWall` (+1) landed with the fix for vehicles parking
+> inside the homes they belong to: `CityDriveways` centres a real car model — up to 5.5 m nose to
+> tail, per `CityParking`'s own measured docstring — nose-on over the single tile `Driveways.Plan`
+> reserves, but `Driveways.Standing`'s `Clearance` of 2 m only kept that tile's own centre off the
+> building, so a car's rear half routinely stood inside the wall it was supposedly parked clear of.
+> `Clearance` is 4 now, with margin against a fleet this project has not measured car-by-car the
+> way `CityParking.Width`/`Long` do. **THIS FILE STILL SAID 503 GOING INTO THIS FIX** — the
+> angled-frontage plan's four tests (`ADeclinedOutlineTakesItsPreciseRingWithIt`,
+> `GroundHeightIsNullWhenNeverSet`, `GroundHeightSurvivesToTheBuiltPlaceUnchanged`,
+> `GroundHeightSurvivesEvenWhenTheOutlineIsDeclined`) took it to 507 on 2026-08-13 and nobody
+> recorded it — a THIRD branch in a week moving this number without updating this file, caught only
+> because this session measured before trusting the doc. (503 pass, 0 fail, 503 total, 8 skipped,
+> 2 m 02 s, measured 2026-08-13, after `OutlinePreciseIsNullWhenNeverSet` and
+> `OutlinePreciseSurvivesToTheBuiltPlaceUnchanged` (+2) landed with the fix for 112 S Chicago's
 > storefronts kinking several degrees at their party walls — rounding a narrow unit's corners to
 > the nearest tile swung its wall's own direction off its neighbour's; `Place.OutlinePrecise` now
-> carries the corner `DowntownFromSanborn` actually computed, before `ToTile` touched it. **This
-> was the SECOND branch running to move this number without updating this file** — the
+> carries the corner `DowntownFromSanborn` actually computed, before `ToTile` touched it. That was
+> the SECOND branch running to move this number without updating this file — the
 > shaped-perimeter-walls branch took it to 501 the day before and this file still said 493 when the
-> next branch started, caught only because a review went looking. (501 on 2026-08-12 19:47, after
+> next branch started, caught only because a review went looking. 501 on 2026-08-12 19:47, after
 > `PolygonTests` (+8) landed with the fix for 112 S Chicago fronting an alley instead of Chicago
 > Street. 493 at 17:18 the same day, after the driveway door-clearance fix
 > (`Driveways.Edge`/`OffDoor`, +2 tests) and the terrace-business-units split

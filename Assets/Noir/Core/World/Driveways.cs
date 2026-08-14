@@ -67,8 +67,19 @@ namespace Noir.Core.World
         /// </summary>
         public const int Reach = 12;
 
-        /// <summary>How near the wall the car may stand. Nobody parks against their own siding.</summary>
-        private const int Clearance = 2;
+        /// <summary>
+        /// How near the wall a car's SPOT - its centre, not its bumper - may stand.
+        ///
+        /// A car parks nose-on to the wall it faces (see <see cref="Driveway.AlongX"/>), so half
+        /// its own length reaches back toward the house from this point. CityParking's own
+        /// measured docstring puts the fleet at 5.0 to 5.5m nose to tail, so anything under 2.75m
+        /// backs a car's tail into the siding it is supposedly standing clear of - which is
+        /// exactly what a Clearance of 2 did, and it is the deciding half of "vehicles parking
+        /// inside the homes". 4 leaves a working margin against a car this project has not
+        /// measured yet, the same reason CityParking measures Width/Long off the mesh rather than
+        /// trusting a guessed number - and Rossville's lots are deep enough that it costs nothing.
+        /// </summary>
+        private const int Clearance = 4;
 
         /// <summary>
         /// Metres between two cars on the same frontage. A car is about 1.8 m wide, so this is a
