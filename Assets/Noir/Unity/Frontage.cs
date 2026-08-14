@@ -83,7 +83,7 @@ namespace Noir.Unity
 
                 foreach (var tile in openings)
                 {
-                    var opening = FrontAt(place.Bounds, tile);
+                    var opening = FrontAt(place, tile);
                     if (!opening.Valid) continue;
                     pieces += Doorway(doorsRoot, place, tile, opening);
                     doors++;
@@ -91,7 +91,7 @@ namespace Noir.Unity
 
                 // Signs and shutters hang off the authored door, which is the one on the street
                 // even in a building that turned out to have several.
-                var front = FrontAt(place.Bounds, place.Door.IsValid ? place.Door
+                var front = FrontAt(place, place.Door.IsValid ? place.Door
                                   : openings.Count > 0 ? openings[0] : Tile.None);
                 if (!front.Valid) continue;
 
@@ -277,7 +277,96 @@ namespace Noir.Unity
                 : Mathf.Clamp(FaceAlong, Lo + width * 0.5f, Hi - width * 0.5f);
         }
 
-        private static Front FrontAt(TileRect b, Tile door)
+        /// <summary>
+        /// Which edge of a shaped place's own precise ring a doorway sits on, and where along it -
+        /// the same "closest point on the closest edge" search DrawShapedPerimeters
+        /// (Assets/Noir/Unity/VillageMesh.cs) runs for the SAME reason: the two must agree about
+        /// which wall a door belongs to, or the hole and the frame that fills it disagree about
+        /// which direction is outward.
+        ///
+        /// Returns false (and leaves outward/edgeStart/edgeEnd untouched) when the place has no
+        /// usable precise ring, or the ring is malformed - the caller falls back to the cardinal
+        /// FrontAt in that case, exactly as it always has.
+        /// </summary>
+        private static bool PreciseEdgeAt(Place place, Tile door,
+                                          out Vector3 outward, out Vector3 edgeStart, out Vector3 edgeEnd)
+        {
+            outward = default; edgeStart = default; edgeEnd = default;
+            var precise = place.OutlinePrecise;
+            var outline = place.Outline;
+            if (precise == null || outline == null || precise.Length != outline.Length || precise.Length < 3)
+                return false;
+
+            int n = precise.Length;
+            var pts = new Vector2[n];
+            for (int i = 0; i < n; i++) pts[i] = new Vector2(precise[i].X, precise[i].Y);
+
+            float signedArea = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                var a = pts[i];
+                var b = pts[(i + 1) % n];
+                signedArea += a.x * b.y - b.x * a.y;
+            }
+            var ring = pts;
+            if (signedArea < 0f)
+            {
+                ring = new Vector2[n];
+                for (int i = 0; i < n; i++) ring[i] = pts[n - 1 - i];
+            }
+
+            var doorPoint = new Vector2(door.X + 0.5f, door.Y + 0.5f);
+            int bestEdge = -1;
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                var p0 = ring[i];
+                var p1 = ring[(i + 1) % n];
+                float len = Vector2.Distance(p0, p1);
+                if (len < 0.01f) continue;
+                var dir = (p1 - p0) / len;
+                float t = Mathf.Clamp(Vector2.Dot(doorPoint - p0, dir), 0f, len);
+                float dist = Vector2.Distance(doorPoint, p0 + dir * t);
+                if (dist < bestDist) { bestDist = dist; bestEdge = i; }
+            }
+            if (bestEdge < 0) return false;
+
+            var e0 = ring[bestEdge];
+            var e1 = ring[(bestEdge + 1) % n];
+            var edgeDir = (e1 - e0).normalized;
+            // +90 degrees from the direction of travel points into a CCW ring's own interior (see
+            // DrawShapedPerimeters's own comment on this exact formula) - negate it for OUTWARD.
+            var normal2 = new Vector2(edgeDir.y, -edgeDir.x);
+
+            // village space is (x, y) with y counting rows SOUTH; world space is (x, height, -y) -
+            // see Space3D.ToWorld and VillageMesh.AddWall, which both negate the second component
+            // when they turn a village-space point into a world-space one. normal2 and edgeDir are
+            // DIRECTIONS, not points, but the map is linear (no translation term), so a direction
+            // negates on that same axis exactly as a point does. Verified live against 112 S
+            // Chicago #1 (the terrace): the naive `new Vector3(normal2.x, 0f, normal2.y)` lands
+            // 35 degrees off the wall's true outward direction (dot 0.82 against the ring's own
+            // centroid-to-edge-midpoint vector, converted to world space the same way); negating
+            // here, as below, lands exactly on it (dot 1.00).
+            outward = new Vector3(normal2.x, 0f, -normal2.y);
+            edgeStart = new Vector3(e0.x, 0f, -e0.y);
+            edgeEnd = new Vector3(e1.x, 0f, -e1.y);
+            return true;
+        }
+
+        private static Front FrontAt(Place place, Tile door)
+        {
+            if (!door.IsValid) return default;
+
+            if (PreciseEdgeAt(place, door, out var outward, out var edgeStart, out var edgeEnd))
+            {
+                var f = FrontOf(outward, new[] { edgeStart, edgeEnd });
+                return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, f.Lo, f.Hi);
+            }
+
+            return FrontAtBounds(place.Bounds, door);
+        }
+
+        private static Front FrontAtBounds(TileRect b, Tile door)
         {
             if (!door.IsValid) return default;
 
