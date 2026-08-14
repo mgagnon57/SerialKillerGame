@@ -342,12 +342,54 @@ git commit -m "Front computes a rotation and projects Lo/Hi instead of reading a
 - Modify: `Assets/Noir/Unity/Frontage.cs` (`Piece`, `Doorway`)
 
 **Interfaces:**
-- Consumes: `Front.Rotation`, `Front.Size` (Task 1 - now returns unrotated local dimensions).
-- Produces: `Piece(parent, name, position, size, material, rotation)` - every existing call site is
-  updated to pass `f.Rotation`. No new public surface; `Doorway`'s hinge/leaf code no longer branches
-  on `AlongX`.
+- Consumes: `Front.Rotation`.
+- Produces: `Front.Size` returning unrotated local dimensions (flattened here, not in Task 1 - see
+  Step 1's own note on why). `Piece(parent, name, position, size, material, rotation)` - every
+  existing call site is updated to pass `f.Rotation`. No new public surface; `Doorway`'s hinge/leaf
+  code no longer branches on `AlongX`.
 
-- [ ] **Step 1: Add rotation to `Piece`**
+> **Plan correction, made during Task 1's review (see the SDD ledger for this plan):** Task 1
+> originally flattened `Front.Size()` in its own Step 2. Task 1's task review found that this broke
+> box dimensions on `outward∈{left,right}` walls immediately, because nothing applies `Rotation` to
+> a box until THIS task's Step 2 lands - the flattening and the rotation are two halves of one
+> change and are not independently safe. Task 1 shipped with `Size()` still doing a world-axis swap
+> (now keyed on `Out.z`, not the sign-ambiguous `Along`) as a stand-in. **Step 1 below undoes that
+> stand-in** - it belongs here, not in Task 1, and must land in the same task as Step 2 (which is
+> what actually makes the stand-in unnecessary).
+
+- [ ] **Step 1: Flatten `Front.Size()` now that this task is about to give `Piece()` real rotation**
+
+In `Assets/Noir/Unity/Frontage.cs`'s `Front` struct, find:
+
+```csharp
+            /// <summary>
+            /// A box size, still in WORLD axes - <see cref="Piece"/> places every box at identity
+            /// rotation, and applying <see cref="Rotation"/> there is Task 2's job, not landed yet.
+            /// The swap this used to key off <c>Along.x &gt; 0.5f</c> - Along's sign is exactly what
+            /// changed for the {right,back} walls (see the constructor), so that test would now
+            /// silently swap the wrong walls. <see cref="Out"/> was never sign-ambiguous - it is
+            /// still one of the four cardinal unit vectors here - so the swap is keyed on it instead.
+            /// </summary>
+            public Vector3 Size(float along, float up, float through)
+            {
+                bool alongX = Mathf.Abs(Out.z) > 0.5f;
+                return new Vector3(alongX ? along : through, up, alongX ? through : along);
+            }
+```
+
+Replace with:
+
+```csharp
+            /// <summary>
+            /// A box's LOCAL size - along the wall, up it, and through it - unrotated. The piece
+            /// this feeds must apply <see cref="Rotation"/> itself (see <see cref="Piece"/>, next
+            /// step) - this no longer swaps which world axis is which, which was only ever a
+            /// stand-in for real rotation while nothing applied one (see Task 1).
+            /// </summary>
+            public Vector3 Size(float along, float up, float through) => new Vector3(along, up, through);
+```
+
+- [ ] **Step 2: Add rotation to `Piece`**
 
 Find (lines 727-742):
 
@@ -392,11 +434,11 @@ Replace with:
         }
 ```
 
-- [ ] **Step 2: Pass `f.Rotation` at every call site**
+- [ ] **Step 3: Pass `f.Rotation` at every call site**
 
 Every existing `Piece(...)` call in this file gains a trailing `f.Rotation` argument (every call site
 has an `f`/`Front` in scope - that is what `Piece` positions the box relative to). Find and update
-each of these nine call sites (`Boarding`'s and `Gates`' calls are handled separately in Step 3):
+each of these nine call sites (`Boarding`'s and `Gates`' calls are handled separately in Step 4):
 
 In `Doorway` (around line 311-317 before this plan's edits; line numbers will have shifted after
 Task 1 - search for the text instead):
@@ -501,7 +543,7 @@ Replace with:
                   f.Size(width + 0.16f, 0.09f, 0.44f), Materials3D.Bark, f.Rotation);
 ```
 
-- [ ] **Step 3: Find the remaining `Piece(` call sites and update them the same way**
+- [ ] **Step 4: Find the remaining `Piece(` call sites and update them the same way**
 
 `Boarding` and `Gates` (the shutter builders, around what is currently lines 676-720) also call
 `Piece` and were not quoted above - read them directly in the file (they follow the exact same
@@ -514,9 +556,9 @@ grep -n "Piece(" Assets/Noir/Unity/Frontage.cs
 
 Expected: every match's line ends with `f.Rotation);` (or is the `Piece` method definition itself).
 If any call site is missing the trailing argument, add it before continuing - a compile error here is
-the safe failure mode (Step 4 will catch it), a silently-unrotated leftover box is not.
+the safe failure mode (Step 6 will catch it), a silently-unrotated leftover box is not.
 
-- [ ] **Step 4: Simplify the hinge/leaf placement in `Doorway`**
+- [ ] **Step 5: Simplify the hinge/leaf placement in `Doorway`**
 
 Find:
 
@@ -588,11 +630,11 @@ Replace with:
             Doors?.Add(hinge.transform, shutYaw, shutYaw + swing);
 ```
 
-- [ ] **Step 5: Build and check for compile errors**
+- [ ] **Step 6: Build and check for compile errors**
 
 Same as Task 1 Step 4.
 
-- [ ] **Step 6: Render the SAME two ordinary buildings again, pixel-compare against Task 1's "after" shot**
+- [ ] **Step 7: Render the SAME two ordinary buildings again, pixel-compare against Task 1's "after" shot**
 
 This is the load-bearing check for Task 2, because it is the step that touches hinge/swing sign - the
 one thing Task 1 deliberately left untested. Render both doors again (Play mode, same camera poses as
@@ -606,10 +648,10 @@ which). Save to `docs/snapshots/frontage-task2-<name>-{shut,open}.png`.
 Expected: shut-state pixel-identical to Task 1's "after" shot (proving the geometry didn't move even
 though it is now nominally rotated by an identity-equivalent quaternion for a cardinal wall); open
 state swings the same direction as it did on the pre-Task-1 tree. If a swing direction flipped: STOP.
-The `shutYaw`/no-`side` simplification in Step 4 is wrong for at least one of house-vs-shop or one of
+The `shutYaw`/no-`side` simplification in Step 5 is wrong for at least one of house-vs-shop or one of
 the four wall directions, and needs to be found before Task 3.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add Assets/Noir/Unity/Frontage.cs
@@ -788,7 +830,7 @@ Same as Task 1 Step 4.
 Every non-terrace `Place` has `OutlinePrecise == null`, so `PreciseEdgeAt` returns `false` for all of
 them and `FrontAt` falls straight through to `FrontAtBounds` - the exact path Task 1/2 already proved
 unchanged. Re-render the same two ordinary buildings' doors (shut state is enough here) and confirm
-still pixel-identical to Task 2 Step 6's shot. This is a cheap, fast confirmation that Step 2's
+still pixel-identical to Task 2 Step 7's shot. This is a cheap, fast confirmation that Step 2's
 `FrontAt`/`FrontAtBounds` split didn't change the fallback path while renaming it.
 
 - [ ] **Step 6: Commit**
