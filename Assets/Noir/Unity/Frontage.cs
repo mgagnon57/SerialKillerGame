@@ -261,11 +261,18 @@ namespace Noir.Unity
             public Vector3 On(float up, float outward) => At(FaceAlong, up, outward);
 
             /// <summary>
-            /// A box's LOCAL size - along the wall, up it, and through it - unrotated. The piece
-            /// this feeds must apply <see cref="Rotation"/> itself; this no longer swaps which world
-            /// axis is which; that was only ever correct because every wall used to be cardinal.
+            /// A box size, still in WORLD axes - <see cref="Piece"/> places every box at identity
+            /// rotation, and applying <see cref="Rotation"/> there is Task 2's job, not landed yet.
+            /// The swap this used to key off <c>Along.x &gt; 0.5f</c> - Along's sign is exactly what
+            /// changed for the {right,back} walls (see the constructor), so that test would now
+            /// silently swap the wrong walls. <see cref="Out"/> was never sign-ambiguous - it is
+            /// still one of the four cardinal unit vectors here - so the swap is keyed on it instead.
             /// </summary>
-            public Vector3 Size(float along, float up, float through) => new Vector3(along, up, through);
+            public Vector3 Size(float along, float up, float through)
+            {
+                bool alongX = Mathf.Abs(Out.z) > 0.5f;
+                return new Vector3(alongX ? along : through, up, alongX ? through : along);
+            }
 
             /// <summary>Trim a board so it cannot overhang the end of the building it is nailed to.</summary>
             public float Fit(float width) => Mathf.Min(width, Mathf.Max(1.2f, Span - 1.2f));
