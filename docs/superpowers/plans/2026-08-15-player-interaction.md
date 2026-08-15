@@ -548,9 +548,15 @@ Expected: 3 of 3 pass. The editor must be closed first.
 - [ ] **Step 7: Look at it**
 
 This is the one part of the spec that no test can see (its own Testing section says so). Build,
-press **P** to enter the street, walk up to a house door, confirm an "Open" or "Close" button
-appears near it and does what it says, and confirm it relabels the same frame after a click.
-Per this project's standing rule, do not report this task done without having actually looked.
+press **P** to enter the street, walk up to a house door, confirm an "Open"/"Close" button appears
+and that clicking it actually does something. Do not assert it relabels "the same frame" — a real
+door takes the whole swing (~0.57s) to finish moving, and `IsOpen` (which the label reads) is
+derived from that same in-progress angle, so a label that flips instantly would mean the door
+teleported rather than swung. Per this project's standing rule, do not report this task done
+without having actually looked — and note that IMGUI's `Event.current.mousePosition` does not
+track real mouse movement while `Cursor.lockState == Locked` (which `Player.Enter()` sets), so
+"looked at it" here means confirming the click actually registers, not just that the button is
+visible.
 
 - [ ] **Step 8: Commit**
 
