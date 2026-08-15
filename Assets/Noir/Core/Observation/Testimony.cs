@@ -81,13 +81,19 @@ namespace Noir.Core.Observation
             return sb.ToString();
         }
 
-        /// <summary>"a dark pickup", "a van", "a car". Blank is still a car — the witness saw
-        /// the event; it is the DESCRIPTION that failed to register.</summary>
+        /// <summary>"a dark pickup", "an ordinary-looking van", "a car". Blank is still a car —
+        /// the witness saw the event; it is the DESCRIPTION that failed to register. Mid is NOT
+        /// the same silence as Unnoticed: a witness who registered Mid looked at the car and
+        /// found nothing about its colour worth remarking on, which is itself a fact — the same
+        /// distinction Clothing(Mid) and Build(Average) already draw for a person.</summary>
         private static string Car(CarDescription c)
         {
             string tone = c.Tone switch
             {
-                CarTone.Dark => "dark ", CarTone.Light => "light-coloured ", _ => "",
+                CarTone.Dark => "dark ",
+                CarTone.Light => "light-coloured ",
+                CarTone.Mid => "ordinary-looking ",
+                _ => "",
             };
             string shape = c.Shape switch
             {

@@ -129,10 +129,14 @@ namespace Noir.Core.Witness
         /// Everything one villager could tell you about recorded EVENTS, for one day. The
         /// same stationary-witness arithmetic as WhatTheySaw, run against the event list
         /// instead of the player's track: an event is witnessed by exactly the people the
-        /// existing rules say could see that tile at that minute.
+        /// existing rules say could see that tile at that minute — INCLUDING the same
+        /// INightWitnesses exception WhatTheySaw honours, asked once per citizen rather than
+        /// once per event, because whether somebody is a light sleeper is a fact about the
+        /// person, not about the moment.
         /// </summary>
         public static EventSighting[] WhatTheySawOfEvents(WorldModel world, Population population,
             Citizen who, int day, HitEvents hits, ulong seed,
+            INightWitnesses nightWitnesses = null,
             IInterruptions interruptions = null, ISightBlocked blocked = null)
         {
             var found = new List<EventSighting>();
@@ -140,6 +144,9 @@ namespace Noir.Core.Witness
 
             DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
             int downedFrom = interruptions?.DownedFromMinute(who.Id) ?? int.MaxValue;
+
+            // ASKED ONCE, not per event: see the identical comment on WhatTheySaw.
+            bool seesWhileAsleep = nightWitnesses != null && nightWitnesses.AwakeEnough(who.Id);
 
             hits.ForEach((minute, where, tone, shape) =>
             {
@@ -149,7 +156,7 @@ namespace Noir.Core.Witness
 
                 Block block = plan.At(minuteOfDay);
                 if (block.What == Activity.TravellingTo) return;
-                if (block.What == Activity.Asleep) return;
+                if (block.What == Activity.Asleep && !seesWhileAsleep) return;
                 if (!block.Where.IsValid) return;
 
                 Tile watcher = world.GetPlace(block.Where).Door;
@@ -190,15 +197,30 @@ namespace Noir.Core.Witness
             Sighting[] saw = WhatTheySaw(world, population, who, day, track, seed,
                                          nightWitnesses, blocked);
             EventSighting[] events = WhatTheySawOfEvents(world, population, who, day, hits,
-                                                         seed, interruptions, blocked);
+                                                         seed, nightWitnesses, interruptions, blocked);
 
             // A SENTENCE, NOT AN EMPTY ARRAY. "I saw nobody" and "nobody asked me" are the same
             // value to a caller holding an empty list and completely different answers to a
             // player. An alibi is evidence too.
             if (saw.Length == 0 && events.Length == 0) return new[] { Testimony.SawNothing };
 
-            var lines = new List<string>(Testimony.InEnglish(saw));
-            foreach (var e in events) lines.Add(Testimony.InEnglish(e));
+            // MERGED BY MINUTE, OLDEST FIRST - "the order they happened" is this method's own
+            // promise, and it has to hold ACROSS the two kinds of thing a witness can report,
+            // not just within one of them: drive past, hit somebody, walk on is the feature's
+            // whole scenario, and telling it hit-then-drive is telling it backwards. Both arrays
+            // already arrive in minute order - WhatTheySaw and WhatTheySawOfEvents each walk the
+            // day forwards - so this is a merge of two sorted runs, not a sort. Ties go to the
+            // person line: seeing somebody is the ordinary thing a witness reports, and it is
+            // what they would say first if asked "what did you see?" at that same moment.
+            var lines = new List<string>(saw.Length + events.Length);
+            int i = 0, j = 0;
+            while (i < saw.Length && j < events.Length)
+            {
+                if (saw[i].Minute <= events[j].Minute) lines.Add(Testimony.InEnglish(saw[i++]));
+                else lines.Add(Testimony.InEnglish(events[j++]));
+            }
+            while (i < saw.Length) lines.Add(Testimony.InEnglish(saw[i++]));
+            while (j < events.Length) lines.Add(Testimony.InEnglish(events[j++]));
             return lines.ToArray();
         }
 
