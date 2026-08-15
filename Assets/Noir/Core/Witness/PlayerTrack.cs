@@ -18,6 +18,10 @@ namespace Noir.Core.Witness
         Carrying = 1,
         Quickly = 2,
         InCompany = 4,
+        /// <summary>In (driving) a vehicle. A witness who saw this saw a car, not a figure —
+        /// Recollection treats such minutes as unremarkable traffic rather than a person
+        /// sighting, because in a town with ambient cars, one more car is not a memory.</summary>
+        InAVehicle = 8,
     }
 
     /// <summary>One minute of a body's history: where it was, and how it looked.</summary>
