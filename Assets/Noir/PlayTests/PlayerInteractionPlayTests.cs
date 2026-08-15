@@ -19,6 +19,23 @@ namespace Noir.PlayTests
             yield return CityUnderTest.WaitUntilBuilt();
         }
 
+        /// <summary>
+        /// THE CITY IS BUILT ONCE AND SHARED BY EVERY TEST IN A RUN (CLAUDE.md names this trap,
+        /// and both historic "flaky" tests were this shape). The trailing player.Toggle() at the
+        /// end of each walking test never runs when an assertion fails mid-test, which would
+        /// leave Walking=true, OrbitCamera disabled and the body parked at a door - and the NEXT
+        /// test's Toggle() would then Leave() instead of Enter(), deactivate the body, and die on
+        /// GameObject.Find returning null, hiding the original red behind an NRE. This runs on
+        /// every exit path and puts the player back on the overview camera.
+        /// </summary>
+        [UnityTearDown]
+        public IEnumerator BackToTheOverview()
+        {
+            var player = Object.FindFirstObjectByType<Player>();
+            if (player != null && player.Walking) player.Toggle();
+            yield break;
+        }
+
         [UnityTest, Timeout(900000)]
         public IEnumerator NearestDoorFindsTheClosestOneInRange()
         {

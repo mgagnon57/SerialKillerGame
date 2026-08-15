@@ -45,16 +45,10 @@ namespace Noir.Unity
     /// </summary>
     public sealed class PlayerInteraction : MonoBehaviour
     {
-        /// <summary>
-        /// How close the player must stand for a door to offer its verb - deliberately a stride
-        /// MORE than CityDoors.Reach (1.9 m), the distance at which the door already opens for
-        /// you on its own. The first version used Reach exactly, and that made "Open" a verb you
-        /// could never meaningfully press: by the time the prompt appeared, proximity had begun
-        /// the same swing, the label flipped to "Close" within a rehash (≤12 frames), and either
-        /// press looked like it did nothing. Between Reach and here, "E — Open" is a choice the
-        /// automatism has not yet made.
-        /// </summary>
-        private const float Range = 3.0f;
+        /// <summary>How close the player must stand for a door to offer its verb. The value and
+        /// its reasoning live in <see cref="CityDoors.Offer"/>, beside Reach and Hold, so the
+        /// three door distances stay one file's to keep consistent.</summary>
+        private const float Range = CityDoors.Offer;
 
         private VillageHost _host;
         private GUIStyle _prompt;
@@ -95,8 +89,11 @@ namespace Noir.Unity
                 _currentIndex = nearest;
             }
 
+            // Guarded like every other gameplay key reader (OrbitCamera, VillageHost's travel
+            // hotkeys): an 'e' typed into a focused panel text field is a letter, not a verb.
             var keys = Keyboard.current;
-            if (keys != null && keys.eKey.wasPressedThisFrame) PerformOffered();
+            if (keys != null && keys.eKey.wasPressedThisFrame && !VillageUI.KeyboardCaptured)
+                PerformOffered();
         }
 
         /// <summary>Carry out the offered verb - exactly what pressing E does, public so the
@@ -121,10 +118,14 @@ namespace Noir.Unity
         {
             if (Current == null) return;
 
-            if (_prompt == null)
+            // Rebuilt whenever the UI scale moves (Ctrl+= / Ctrl+-), not cached once - the rects
+            // below read S() live every frame, and a style caught at the old scale leaves wrong-
+            // sized text in a right-sized box for the rest of the session.
+            int wantFont = VillageUI.F(16);
+            if (_prompt == null || _prompt.fontSize != wantFont)
                 _prompt = new GUIStyle(GUI.skin.box)
                 {
-                    fontSize = VillageUI.F(16),
+                    fontSize = wantFont,
                     alignment = TextAnchor.MiddleCenter,
                 };
 

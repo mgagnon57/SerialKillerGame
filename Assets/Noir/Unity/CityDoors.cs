@@ -40,12 +40,20 @@ namespace Noir.Unity
         /// <summary>How near the camera a door has to be before it is even considered.</summary>
         private const float LiveRange = 55f;
 
-        /// <summary>How near a person has to be for the door to open. Public so
-        /// PlayerInteraction can offer its menu at exactly this distance, rather than choosing a
-        /// second, independently-picked number that can drift out of sync with it - and public
-        /// rather than internal because the PlayMode tests that reference it live in the separate
-        /// Noir.PlayTests assembly, which this project grants no InternalsVisibleTo access to.</summary>
+        /// <summary>How near a person has to be for the door to open on its own. Public because
+        /// the PlayMode tests reference it, and they live in the separate Noir.PlayTests assembly,
+        /// which this project grants no InternalsVisibleTo access to.</summary>
         public const float Reach = 1.9f;
+
+        /// <summary>How near the player has to be for a door to OFFER its verb - deliberately a
+        /// stride more than <see cref="Reach"/>, at which the door already opens for you on its
+        /// own. When the two were the same constant, "Open" was a verb you could never
+        /// meaningfully press: by the time the prompt appeared, proximity had begun the same
+        /// swing, the label flipped to "Close" within a rehash, and either press looked like it
+        /// did nothing. Between Reach and here, "E — Open" is a choice the automatism has not
+        /// yet made. Lives beside Reach and Hold so all three door distances are one file's to
+        /// keep consistent; PlayerInteraction reads it rather than picking its own number.</summary>
+        public const float Offer = 3.0f;
 
         /// <summary>How near a person has to stay for it to remain open - hysteresis, so a door
         /// somebody is standing beside does not chatter open and shut every frame.</summary>
