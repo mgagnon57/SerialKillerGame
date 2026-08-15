@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Noir.Core.Contracts;
 using Noir.Core.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -80,8 +81,26 @@ namespace Noir.Unity
 
         public bool Walking { get; private set; }
 
+        /// <summary>Behind a wheel rather than on foot. Walking and Driving are exclusive.</summary>
+        public bool Driving { get; private set; }
+
+        /// <summary>The track recorder's question, by its own name.</summary>
+        public bool InVehicle => Driving;
+
+        /// <summary>The taken car's witness-facing identity. Valid while Driving.</summary>
+        public CarTone CarTone { get; private set; }
+        public CarShape CarShape { get; private set; }
+
+        /// <summary>The car's position at the START of this frame's drive step, or null on
+        /// the first frame — the other end of the hit sweep's segment.</summary>
+        public Vector3? CarTravelledFrom { get; private set; }
+
+        private GameObject _car;
+        private float _carSpeed;                       // m/s, signed (negative = reverse)
+
         /// <summary>
-        /// Where the body is standing, in world space, or null when nobody is in it.
+        /// Where the body is standing, in world space, or null when nobody is in it. Answers for
+        /// the car as well while Driving — same witness-facing question, different vehicle.
         ///
         /// DELIBERATELY A UNITY TYPE AND NOTHING MORE. VillageHost writes the observation track
         /// and is the only file in the game allowed to name the witness assembly - see
@@ -93,7 +112,9 @@ namespace Noir.Unity
         /// code and prose would also be a check somebody could talk their way around.)
         /// </summary>
         public Vector3? Where =>
-            Walking && _body != null ? _body.transform.position : (Vector3?)null;
+            Walking && _body != null ? _body.transform.position
+          : Driving && _car != null ? _car.transform.position
+          : (Vector3?)null;
 
         public static Player Create(VillageHost host, Transform parent)
         {
@@ -107,7 +128,10 @@ namespace Noir.Unity
         private void Update()
         {
             var keys = Keyboard.current;
-            if (keys != null && keys.pKey.wasPressedThisFrame) Toggle();
+            if (keys != null && keys.pKey.wasPressedThisFrame && !Driving
+                && !VillageUI.KeyboardCaptured) Toggle();
+
+            if (Driving) { DriveStep(keys); return; }
 
             if (!Walking || _target == null || _camera == null) return;
 
@@ -151,6 +175,75 @@ namespace Noir.Unity
             _camera.transform.rotation = Quaternion.LookRotation(pivot - _camera.transform.position);
         }
 
+        /// <summary>
+        /// One frame behind the wheel. Kinematic on purpose — see the spec and CarMesh.cs's
+        /// own measurement: a physics vehicle halved this town's frame rate. Real time
+        /// (Time.deltaTime), same clock the NPC fleet drives on.
+        /// </summary>
+        private void DriveStep(Keyboard keys)
+        {
+            if (_car == null || _camera == null) { Driving = false; return; }
+            float dt = Time.deltaTime;
+            bool typing = VillageUI.KeyboardCaptured;
+
+            // ---- throttle ----
+            float want = 0f;
+            if (!typing && keys != null)
+            {
+                if (keys.wKey.isPressed || keys.upArrowKey.isPressed) want = TopSpeed;
+                if (keys.sKey.isPressed || keys.downArrowKey.isPressed) want = -ReverseSpeed;
+            }
+            float rate = Mathf.Abs(want) > Mathf.Abs(_carSpeed) ? Accelerate : Brake;
+            _carSpeed = Mathf.MoveTowards(_carSpeed, want, rate * dt);
+
+            // ---- steering, scaled by speed so the car cannot pivot on a point ----
+            if (!typing && keys != null && Mathf.Abs(_carSpeed) > 0.2f)
+            {
+                float steer = 0f;
+                if (keys.aKey.isPressed || keys.leftArrowKey.isPressed) steer -= 1f;
+                if (keys.dKey.isPressed || keys.rightArrowKey.isPressed) steer += 1f;
+                float sign = _carSpeed < 0f ? -1f : 1f;      // reversing steers the other way
+                _car.transform.Rotate(0f,
+                    steer * sign * TurnRate * (Mathf.Abs(_carSpeed) / TopSpeed) * dt, 0f);
+            }
+
+            // ---- move, stopped by the same walls that stop a person ----
+            CarTravelledFrom = _car.transform.position;
+            Vector3 step = _car.transform.forward * _carSpeed * dt;
+            float distance = step.magnitude;
+            if (distance > 0f)
+            {
+                var half = new Vector3(0.95f, 0.7f, 2.6f);
+                if (Physics.BoxCast(_car.transform.position + Vector3.up * 0.9f, half,
+                                    step.normalized, out var hit, _car.transform.rotation,
+                                    distance, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    distance = Mathf.Max(0f, hit.distance - 0.05f);
+                    _carSpeed = 0f;
+                }
+                var to = _car.transform.position + step.normalized * distance;
+                to.y = ElevationGrid.HeightAt(to.x, -to.z);
+                _car.transform.position = to;
+            }
+
+            // ---- camera: the walking follow block, on a longer tether ----
+            var mouse = Mouse.current;
+            if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
+            {
+                var d = mouse.delta.ReadValue() * (LookSpeed * 0.0006f);
+                _yaw += d.x;
+                _pitch = Mathf.Clamp(_pitch - d.y, MinPitch, MaxPitch);
+            }
+            var pivot = _car.transform.position + Vector3.up * 1.2f;
+            var back = Quaternion.Euler(_pitch, _yaw, 0f) * Vector3.back;
+            float reach = DriveCamDistance;
+            if (Physics.SphereCast(pivot, 0.25f, back, out var wall, DriveCamDistance,
+                                   ~0, QueryTriggerInteraction.Ignore))
+                reach = Mathf.Max(0.6f, wall.distance - 0.15f);
+            _camera.transform.position = pivot + back * reach;
+            _camera.transform.rotation = Quaternion.LookRotation(pivot - _camera.transform.position);
+        }
+
         /// <summary>In or out of the body.</summary>
         public void Toggle()
         {
@@ -180,6 +273,56 @@ namespace Noir.Unity
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+
+        /// <summary>Speeds: the county's own scale. NPC traffic runs 8 m/s; the player may
+        /// hurry a little, and 12 m/s is 27 mph — a lot, on a street where people walk.</summary>
+        private const float TopSpeed = 12f, ReverseSpeed = 4f, Accelerate = 8f, Brake = 16f;
+        private const float TurnRate = 90f;            // degrees/second at full speed
+        private const float DriveCamDistance = 7f;
+
+        /// <summary>Into the driver's seat of driveway car <paramref name="index"/> — called
+        /// by the interaction seam's Perform. Takes the car out of CityDriveways' ownership
+        /// (its old owner's schedule would otherwise blink it invisible mid-drive).</summary>
+        public void EnterCar(int index)
+        {
+            if (Driving || !Walking) return;
+            var driveways = _host.Driveways;
+            if (driveways == null) return;
+
+            var (car, tone, shape) = driveways.Take(index);
+            if (car == null) return;
+
+            _car = car;
+            CarTone = tone;
+            CarShape = shape;
+            _carSpeed = 0f;
+            CarTravelledFrom = null;
+
+            Walking = false;
+            Driving = true;
+            _body.SetActive(false);
+            _yaw = _car.transform.eulerAngles.y;
+            Debug.Log($"[player] driving {shape} ({tone}). E to get out.");
+        }
+
+        /// <summary>Out at the driver's door. The car stays exactly where it stands.</summary>
+        public void LeaveCar()
+        {
+            if (!Driving) return;
+            var at = _car.transform.position - _car.transform.right * 1.6f;
+            at.y = ElevationGrid.HeightAt(at.x, -at.z) + 0.5f;
+
+            Driving = false;
+            _car = null;
+            CarTravelledFrom = null;
+
+            Walking = true;
+            _body.SetActive(true);
+            var cc = _body.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+            _body.transform.position = at;
+            if (cc != null) cc.enabled = true;
         }
 
         /// <summary>
