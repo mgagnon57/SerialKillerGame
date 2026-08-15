@@ -33,10 +33,10 @@ namespace Noir.Unity
     /// once, that is the day this needs more keys (or a Mouse.current hit-test over the drawn
     /// rects, the OrbitCamera.HandleSelection pattern - never a GUI.Button).
     ///
-    /// ONE PROVIDER FOR NOW, ASKED DIRECTLY. CityDoors is the only source of interactables this
-    /// pass builds, so this asks it directly rather than through a registry - a registry earns
-    /// its keep the day a second provider exists, and guessing its shape before that day arrives
-    /// is more likely to be wrong than useful.
+    /// TWO PROVIDERS NOW, A PAIR OF IFS RATHER THAN A LIST. CityDoors and CityDriveways each
+    /// answer "nearest candidate, squared distance" and the closer one wins; see the registry
+    /// comment inside Update. That was written the day a second provider actually existed rather
+    /// than guessed at in advance - grow it into a real list the day there are four.
     ///
     /// ONLY LIVE WHILE THE PLAYER IS IN THE STREET. Interaction is a first-person mechanic; there
     /// is nothing to act on from the overview camera, and Player.Where is null there anyway. E is
@@ -50,12 +50,22 @@ namespace Noir.Unity
         /// three door distances stay one file's to keep consistent.</summary>
         private const float Range = CityDoors.Offer;
 
+        /// <summary>How close the player must stand for a car to offer Drive. Cars offer a
+        /// stride further than a door does - you approach a car from any side, and its measured
+        /// body is 5.5 m long.</summary>
+        private const float CarOffer = 3.0f;
+
         private VillageHost _host;
         private GUIStyle _prompt;
 
-        /// <summary>The hinge index the prompt is currently built for, or -1 - so a new
-        /// DoorInteractable is only allocated when the nearest door actually changes, not once a
-        /// frame for whichever door happens to still be nearest.</summary>
+        /// <summary>The one GetOutInteractable this component ever needs, built once and reused
+        /// for as long as the player stays behind the wheel.</summary>
+        private GetOutInteractable _getOut;
+
+        /// <summary>The provider-tagged index the prompt is currently built for, or -1 - so a
+        /// new interactable is only allocated when the nearest one actually changes, not once a
+        /// frame for whichever candidate happens to still be nearest. See the cache-key comment
+        /// in Update for how a door index and a car index share this one int.</summary>
         private int _currentIndex = -1;
 
         /// <summary>The interactable currently offering its verb, or null.</summary>
@@ -73,24 +83,50 @@ namespace Noir.Unity
         private void Update()
         {
             var player = _host.Player;
-            if (player == null || !player.Walking) { Current = null; _currentIndex = -1; return; }
+            if (player == null) { Current = null; _currentIndex = -1; return; }
+
+            // Behind the wheel there is exactly one verb and proximity has nothing to say.
+            if (player.Driving)
+            {
+                if (!(Current is GetOutInteractable))
+                    Current = _getOut ??= new GetOutInteractable(player);
+                _currentIndex = -1;
+                var driveKeys = Keyboard.current;
+                if (driveKeys != null && driveKeys.eKey.wasPressedThisFrame
+                    && !VillageUI.KeyboardCaptured) PerformOffered();
+                return;
+            }
+
+            if (!player.Walking) { Current = null; _currentIndex = -1; return; }
             var where = player.Where;
             if (!where.HasValue) { Current = null; _currentIndex = -1; return; }
 
-            var doors = _host.Doors;
-            if (doors == null) { Current = null; _currentIndex = -1; return; }
+            // THE PROVIDER REGISTRY, the day the header scheduled. Each provider answers
+            // "nearest candidate, squared distance"; the closest wins. Two providers is a
+            // pair of ifs rather than a list - grow it into one the day there are four.
+            int doorIx = _host.Doors != null
+                ? _host.Doors.NearestDoor(where.Value, Range) : -1;
+            int carIx = _host.Driveways != null
+                ? _host.Driveways.NearestCar(where.Value, CarOffer) : -1;
 
-            int nearest = doors.NearestDoor(where.Value, Range);
-            if (nearest < 0) { Current = null; _currentIndex = -1; return; }
+            float doorD2 = doorIx >= 0
+                ? (_host.Doors.PositionOf(doorIx) - where.Value).sqrMagnitude : float.MaxValue;
+            float carD2 = carIx >= 0
+                ? (_host.Driveways.PositionOf(carIx) - where.Value).sqrMagnitude : float.MaxValue;
 
-            if (nearest != _currentIndex || Current == null)
+            if (doorIx < 0 && carIx < 0) { Current = null; _currentIndex = -1; return; }
+
+            // Cache key: provider in the sign, index in the magnitude - doors positive,
+            // cars bitwise-complemented, so switching provider always rebuilds Current.
+            int key = carD2 < doorD2 ? ~carIx : doorIx;
+            if (key != _currentIndex || Current == null)
             {
-                Current = new DoorInteractable(doors, nearest);
-                _currentIndex = nearest;
+                Current = carD2 < doorD2
+                    ? (IInteractable)new CarInteractable(_host, carIx)
+                    : new DoorInteractable(_host.Doors, doorIx);
+                _currentIndex = key;
             }
 
-            // Guarded like every other gameplay key reader (OrbitCamera, VillageHost's travel
-            // hotkeys): an 'e' typed into a focused panel text field is a letter, not a verb.
             var keys = Keyboard.current;
             if (keys != null && keys.eKey.wasPressedThisFrame && !VillageUI.KeyboardCaptured)
                 PerformOffered();

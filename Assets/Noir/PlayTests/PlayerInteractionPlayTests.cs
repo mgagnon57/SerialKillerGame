@@ -32,6 +32,7 @@ namespace Noir.PlayTests
         public IEnumerator BackToTheOverview()
         {
             var player = Object.FindFirstObjectByType<Player>();
+            if (player != null && player.Driving) player.LeaveCar();
             if (player != null && player.Walking) player.Toggle();
             yield break;
         }
@@ -301,6 +302,75 @@ namespace Noir.PlayTests
             while (Time.time < shutUntil) yield return null;   // let it swing shut
             Assert.That(doors.IsOpen(0), Is.False,
                         "performing the offered verb (Close) did not shut the door");
+
+            player.Toggle();
+        }
+
+        /// <summary>
+        /// The registry's whole point: standing beside a car rather than a door, the offer is
+        /// Drive, not Open/Close, and the closer provider wins. Position-flaky in principle - if
+        /// a house door ever sits nearer than the car at this teleport offset, the test would
+        /// see the door's verb instead - but a door would have to be within ~1.5 m of the car to
+        /// win, which is not this town's layout today; if this ever reds, fix the teleport
+        /// offset, not the registry.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator ACarOffersDriveAndTheClosestProviderWins()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var driveways = host.Driveways;
+            Assert.That(driveways, Is.Not.Null.And.Property("Count").GreaterThan(0),
+                "no driveway cars in this town - the provider has nothing to offer");
+
+            int car = driveways.NearestCar(driveways.PositionOf(0), 0.5f);
+            Assert.That(car, Is.EqualTo(0), "a car's own position did not find itself");
+
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+            var cc = body.GetComponent<CharacterController>();
+
+            cc.enabled = false;
+            body.transform.position = driveways.PositionOf(0) + new Vector3(1.5f, 0.5f, 0f);
+            cc.enabled = true;
+            yield return null;
+
+            var interaction = host.Interaction;
+            Assert.That(interaction.Current, Is.Not.Null, "no verb offered beside a car");
+            Assert.That(interaction.Current.Verbs[0], Is.EqualTo("Drive"));
+        }
+
+        [UnityTest, Timeout(900000)]
+        public IEnumerator EnterDriveExitRoundTrip()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var driveways = host.Driveways;
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+            var cc = body.GetComponent<CharacterController>();
+
+            int car = driveways.NearestCar(body.transform.position, 100000f);
+            Assert.That(car, Is.GreaterThanOrEqualTo(0), "no standing car anywhere");
+            var carPos = driveways.PositionOf(car);
+
+            cc.enabled = false;
+            body.transform.position = carPos + new Vector3(1.5f, 0.5f, 0f);
+            cc.enabled = true;
+            yield return null;
+
+            host.Interaction.PerformOffered();                 // E - Drive
+            yield return null;
+            Assert.That(player.Driving, Is.True, "Perform(Drive) did not enter the car");
+            Assert.That(player.Where, Is.Not.Null, "Where went null while driving");
+            Assert.That(host.Interaction.Current.Verbs[0], Is.EqualTo("Get out"));
+
+            host.Interaction.PerformOffered();                 // E - Get out
+            yield return null;
+            Assert.That(player.Driving, Is.False);
+            Assert.That(player.Walking, Is.True, "leaving the car did not restore walking");
 
             player.Toggle();
         }
