@@ -54,6 +54,8 @@ namespace Noir.Unity
 
         private readonly List<GameObject> _cars = new List<GameObject>();
         private readonly List<PlaceId> _homeOf = new List<PlaceId>();
+        private readonly List<CarTone> _tone = new List<CarTone>();
+        private readonly List<CarShape> _shape = new List<CarShape>();
         private readonly Dictionary<int, List<int>> _byHome = new Dictionary<int, List<int>>();
 
         /// <summary>How many cars were drawn, standing or not.</summary>
@@ -119,6 +121,13 @@ namespace Noir.Unity
 
                 CarMesh.Flatten(car);
 
+                // The identity the rename below is about to discard, banded the way a witness
+                // would band it: shape off the prefab's own name, tone off the flattened
+                // mesh's average albedo. Captured here because after Flatten + rename there is
+                // nothing left to read it from.
+                it._shape.Add(ShapeOf(car.name));
+                it._tone.Add(ToneOf(car));
+
                 car.name = $"Parked_{d.Home.Value}_{d.Unit}";
                 it._homeOf.Add(d.Home);
                 it._cars.Add(car);
@@ -175,6 +184,70 @@ namespace Noir.Unity
             }
 
             return Standing;
+        }
+
+        private static CarShape ShapeOf(string prefabName) =>
+            prefabName.IndexOf("Pickup", System.StringComparison.OrdinalIgnoreCase) >= 0
+                ? CarShape.Pickup
+          : prefabName.IndexOf("Van", System.StringComparison.OrdinalIgnoreCase) >= 0
+                ? CarShape.Van
+          : CarShape.Car;
+
+        private static CarTone ToneOf(GameObject car)
+        {
+            var r = car.GetComponent<MeshRenderer>();
+            if (r == null) return CarTone.Mid;
+            float sum = 0f; int n = 0;
+            foreach (var m in r.sharedMaterials)
+            {
+                if (m == null) continue;
+                var c = m.color; sum += (c.r + c.g + c.b) / 3f; n++;
+            }
+            if (n == 0) return CarTone.Mid;
+            float lum = sum / n;
+            return lum < 0.35f ? CarTone.Dark : lum > 0.65f ? CarTone.Light : CarTone.Mid;
+        }
+
+        /// <summary>
+        /// Where car <paramref name="index"/> stands right now. Only defined for an index
+        /// <see cref="NearestCar"/> actually returned: a taken slot is null and this will NRE
+        /// against it, on purpose — NearestCar already skips null and inactive cars, and never
+        /// hands back an index it would not be safe to call this on.
+        /// </summary>
+        public Vector3 PositionOf(int index) => _cars[index].transform.position;
+
+        /// <summary>
+        /// The nearest standing car to <paramref name="from"/> within <paramref name="within"/>
+        /// metres, or -1. CityDoors.NearestDoor's XZ scan, on wheels. Skips inactive cars —
+        /// their owners drove them to work — and taken ones (null slots).
+        /// </summary>
+        public int NearestCar(Vector3 from, float within)
+        {
+            int best = -1;
+            float bestD2 = within * within;
+            for (int i = 0; i < _cars.Count; i++)
+            {
+                var car = _cars[i];
+                if (car == null || !car.activeSelf) continue;
+                var d = car.transform.position - from;
+                float d2 = d.x * d.x + d.z * d.z;
+                if (d2 > bestD2) continue;
+                bestD2 = d2; best = i;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Hand car <paramref name="index"/> over and stop owning it: the slot goes null so
+        /// Refresh's absence schedule and the layer switch never touch it again — Refresh
+        /// already tolerates a null slot by construction. Once taken, a car is loose for
+        /// good; whether it ever goes home again is a later feature, recorded in IDEAS.
+        /// </summary>
+        public (GameObject car, CarTone tone, CarShape shape) Take(int index)
+        {
+            var car = _cars[index];
+            _cars[index] = null;
+            return (car, _tone[index], _shape[index]);
         }
 
         // ---------- the prefabs ----------
