@@ -371,6 +371,8 @@ namespace Noir.PlayTests
             yield return null;
             Assert.That(player.Driving, Is.False);
             Assert.That(player.Walking, Is.True, "leaving the car did not restore walking");
+            Assert.That(host.Interaction.Current, Is.Not.InstanceOf<GetOutInteractable>(),
+                        "the Get out prompt survived leaving the car - the cache key aliased");
 
             player.Toggle();
         }

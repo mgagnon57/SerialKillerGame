@@ -55,6 +55,13 @@ namespace Noir.Unity
         /// body is 5.5 m long.</summary>
         private const float CarOffer = 3.0f;
 
+        /// <summary>The "nothing offered" sentinel for <see cref="_currentIndex"/>. Not -1: a
+        /// car's cache key is its index bitwise-complemented (see Update), and ~0 == -1, so -1
+        /// would alias car index 0 and could leave a stale Current uncleared the moment that car
+        /// became the nearest candidate again. int.MinValue is unreachable by either encoding -
+        /// door keys are always >= 0, car keys (~ix for ix >= 0) never go lower than ~int.MaxValue.</summary>
+        private const int NoCandidate = int.MinValue;
+
         private VillageHost _host;
         private GUIStyle _prompt;
 
@@ -62,11 +69,12 @@ namespace Noir.Unity
         /// for as long as the player stays behind the wheel.</summary>
         private GetOutInteractable _getOut;
 
-        /// <summary>The provider-tagged index the prompt is currently built for, or -1 - so a
-        /// new interactable is only allocated when the nearest one actually changes, not once a
-        /// frame for whichever candidate happens to still be nearest. See the cache-key comment
-        /// in Update for how a door index and a car index share this one int.</summary>
-        private int _currentIndex = -1;
+        /// <summary>The provider-tagged index the prompt is currently built for, or
+        /// <see cref="NoCandidate"/> - so a new interactable is only allocated when the nearest
+        /// one actually changes, not once a frame for whichever candidate happens to still be
+        /// nearest. See the cache-key comment in Update for how a door index and a car index
+        /// share this one int.</summary>
+        private int _currentIndex = NoCandidate;
 
         /// <summary>The interactable currently offering its verb, or null.</summary>
         public IInteractable Current { get; private set; }
@@ -83,23 +91,23 @@ namespace Noir.Unity
         private void Update()
         {
             var player = _host.Player;
-            if (player == null) { Current = null; _currentIndex = -1; return; }
+            if (player == null) { Current = null; _currentIndex = NoCandidate; return; }
 
             // Behind the wheel there is exactly one verb and proximity has nothing to say.
             if (player.Driving)
             {
                 if (!(Current is GetOutInteractable))
                     Current = _getOut ??= new GetOutInteractable(player);
-                _currentIndex = -1;
+                _currentIndex = NoCandidate;
                 var driveKeys = Keyboard.current;
                 if (driveKeys != null && driveKeys.eKey.wasPressedThisFrame
                     && !VillageUI.KeyboardCaptured) PerformOffered();
                 return;
             }
 
-            if (!player.Walking) { Current = null; _currentIndex = -1; return; }
+            if (!player.Walking) { Current = null; _currentIndex = NoCandidate; return; }
             var where = player.Where;
-            if (!where.HasValue) { Current = null; _currentIndex = -1; return; }
+            if (!where.HasValue) { Current = null; _currentIndex = NoCandidate; return; }
 
             // THE PROVIDER REGISTRY, the day the header scheduled. Each provider answers
             // "nearest candidate, squared distance"; the closest wins. Two providers is a
@@ -114,7 +122,7 @@ namespace Noir.Unity
             float carD2 = carIx >= 0
                 ? (_host.Driveways.PositionOf(carIx) - where.Value).sqrMagnitude : float.MaxValue;
 
-            if (doorIx < 0 && carIx < 0) { Current = null; _currentIndex = -1; return; }
+            if (doorIx < 0 && carIx < 0) { Current = null; _currentIndex = NoCandidate; return; }
 
             // Cache key: provider in the sign, index in the magnitude - doors positive,
             // cars bitwise-complemented, so switching provider always rebuilds Current.
