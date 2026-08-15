@@ -499,6 +499,17 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   `Test run completed. Exiting with code 3 (RunError). Scripts had compilation errors.` Eighteen
   minutes for nothing, and the log says it near the top where nobody looks. Docs and `Content/`
   are safe to edit mid-run; source is not. Queue the edit, or accept losing the run.
+- **EDITING A `.cs` WHILE THE EDITOR IS IN LIVE PLAY MODE BREAKS THE RUNNING TOWN, SILENTLY.**
+  Unity recompiles and domain-reloads mid-Play same as it would in Edit mode, and that reload
+  preserves plain serializable fields (a `bool` survives) but NOT the plain C# object graph
+  `VillageHost.World`/`Sim` point at — those come back `null`. `VillageHost.Update`'s `if
+  (!_built)` gate survived the reload as `true`, so it never rebuilt: the town sat there with
+  `World == null`, no error logged, `isPlaying` still `true`, looking exactly like a live but
+  frozen game rather than a crash. Measured 2026-08-14, after a Core-only edit (no Unity API
+  touched at all) mid-session. The fix is `EditorApplication.isPlaying = false` then `true` again
+  — a full stop/start, not a recompile-and-hope — and it visibly restarts whatever the owner was
+  looking at, so say so before doing it. Safe to edit `.cs` while HE is in Play, same as always;
+  the trap is an agent editing source out from under a session it is also watching run.
 - **Core bans transcendentals** for replay determinism. `Daylight` embeds a 365-entry table rather
   than call six of them. Linear interpolation and integer hashing only — no `Math.Pow` to shape a
   curve. `Math.Sqrt` is fine and always was: IEEE-754 requires it correctly rounded.
@@ -596,10 +607,15 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   `frontage shopfront`, a word no arm answered to, so the bank wore the same anonymous plank as
   seven apartment blocks; and `waterworks` and `publicworks` declared `massing shed`, a grammar
   that has never existed, so the pump house rendered as a cottage.
-
----
-
-## What does not exist yet
+- **A HOUSE'S VISUAL SILHOUETTE IS BIGGER THAN `Place.Bounds`, AND `world.Grid` HAS NEVER HEARD OF
+  THE DIFFERENCE.** `FrameHouseGrammars.FrameHouse.Porch` draws a roofed, posted porch — up to
+  2.6m deep on a bungalow, full-width on a foursquare — as roof "extras" baked straight into the
+  mesh, the same way `BackEll`/`RearOutbuilding`/the chimney are: "it hangs off the front of the
+  box rather than changing the box," by the function's own comment. None of it is registered in
+  `world.Grid` or in `Place.Bounds`. Every Core-side system that reasons about how close something
+  may stand to a house — right now that is only `Driveways.Standing`, which learned this the hard
+  way (see `Clearance`'s own doc comment) — is blind to it unless it deliberately reserves the
+  worst case on top of the wall. If another such system gets written, it inherits this trap fresh.
 
 Worth knowing before planning against it, because more than one document has described these as
 though they were built:

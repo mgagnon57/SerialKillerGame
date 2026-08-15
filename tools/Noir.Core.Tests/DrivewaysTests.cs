@@ -76,8 +76,15 @@ namespace Noir.Core.Tests
         /// </summary>
         private const float LongestCarLength = 5.5f;
 
+        /// <summary>
+        /// Matches FrameHouseGrammars.FrameHouse.Porch's deepest call (BungalowMassing, depth:
+        /// 2.6f) - a roofed, posted porch built as roof "extras" on the SAME door-fronted wall
+        /// Driveways.Facing reads, invisible to world.Grid and to every check keyed off it.
+        /// </summary>
+        private const float DeepestPorch = 2.6f;
+
         [Test]
-        public void ACarNeverStandsCloseEnoughToPutItsTailInTheWall()
+        public void ACarNeverStandsCloseEnoughToParkUnderAPorchRoof()
         {
             // Door on the top edge (ny = -1), plenty of open yard ahead - the shallowest, most
             // common case, where Standing() takes the very first step it is offered.
@@ -88,10 +95,11 @@ namespace Noir.Core.Tests
 
             var spot = plan[0].Spot;
             float distanceFromWall = 108 - spot.Y;
-            Assert.That(distanceFromWall, Is.GreaterThanOrEqualTo(LongestCarLength / 2f),
-                        $"a car standing {distanceFromWall}m out has its tail inside the wall it "
-                      + "is nose-on to - CityDriveways centres a real car model on this spot and "
-                      + "the fleet's cars run up to 5.5m nose to tail");
+            Assert.That(distanceFromWall, Is.GreaterThanOrEqualTo(DeepestPorch + LongestCarLength / 2f),
+                        $"a car standing {distanceFromWall}m out has its tail under the porch roof "
+                      + "or inside the wall it is nose-on to - CityDriveways centres a real car "
+                      + "model on this spot, the fleet's cars run up to 5.5m nose to tail, and a "
+                      + "bungalow's porch alone projects 2.6m further out than its own wall");
         }
 
         [Test]

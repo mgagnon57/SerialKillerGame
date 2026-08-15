@@ -72,14 +72,26 @@ namespace Noir.Core.World
         ///
         /// A car parks nose-on to the wall it faces (see <see cref="Driveway.AlongX"/>), so half
         /// its own length reaches back toward the house from this point. CityParking's own
-        /// measured docstring puts the fleet at 5.0 to 5.5m nose to tail, so anything under 2.75m
-        /// backs a car's tail into the siding it is supposedly standing clear of - which is
-        /// exactly what a Clearance of 2 did, and it is the deciding half of "vehicles parking
-        /// inside the homes". 4 leaves a working margin against a car this project has not
-        /// measured yet, the same reason CityParking measures Width/Long off the mesh rather than
-        /// trusting a guessed number - and Rossville's lots are deep enough that it costs nothing.
+        /// measured docstring puts the fleet at 5.0 to 5.5m nose to tail, so an unadorned wall
+        /// alone needs at least 2.75m of this - which is what Clearance = 4 gave it, and it was
+        /// not enough.
+        ///
+        /// THE WALL IS NOT WHERE THE HOUSE ACTUALLY ENDS. `FrameHouseGrammars.FrameHouse.Porch`
+        /// draws every farmhouse, foursquare and bungalow - the bulk of Rossville's housing stock
+        /// - with a roofed, posted porch projecting up to 2.6m out from the SAME door-fronted wall
+        /// Facing() reads (foursquare 2.4m full-width, bungalow 2.6m). It is built as roof
+        /// "extras" rather than into the Place's own footprint, so nothing in `world.Grid` - and
+        /// nothing this file could check - has ever known it is there. A Clearance calibrated only
+        /// against the wall let a car park with its centre 4m out and its near edge barely 1.3m
+        /// clear, squarely under a bungalow's porch roof: reported directly as "vehicles parking
+        /// inside the homes... it looks like what looks like a porch is the garage or something."
+        ///
+        /// Driveways cannot see which grammar a given house will get - that choice is Unity's,
+        /// made after Core hands the world over - so this reserves the WORST case, the bungalow's
+        /// 2.6m, for every house. 6 = ceil(2.6 porch + 2.75 half-car), with no further padding on
+        /// top of two numbers that are already upper bounds themselves.
         /// </summary>
-        private const int Clearance = 4;
+        private const int Clearance = 6;
 
         /// <summary>
         /// Metres between two cars on the same frontage. A car is about 1.8 m wide, so this is a
