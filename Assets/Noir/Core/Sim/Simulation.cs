@@ -401,6 +401,11 @@ namespace Noir.Core.Sim
             _agents[i].TalkCooldown = 0;
             _agents[i].DoorPauseTicks = 0;
             _agents[i].QueueSlot = -1;
+
+            // Safe unconditionally - it only decrements StrandedCount when the flag is set.
+            // Without this, downing somebody who was mid-retry left StrandedCount permanently
+            // one too high: nobody would ever clear a flag whose owner stopped taking journeys.
+            ClearStranded(i);
         }
 
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few
