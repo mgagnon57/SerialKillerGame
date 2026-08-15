@@ -705,6 +705,22 @@ namespace Noir.Unity
                 }
             profile.Done("CityChunker.Bake (all layers)");
 
+            // GREPPABLE, AND ONLY MEANINGFUL HERE, AFTER THE BAKE: a hinge with no leaf under it
+            // is a door CityDoors will swing invisibly forever, and for a week that was all 589
+            // of them - Combinable's hinge exemption is what keeps it zero now. Zero is the only
+            // healthy number; the PlayMode gate EveryDoorHingeKeepsItsLeafThroughTheBake asserts
+            // the same thing where a red can stop a merge.
+            if (_doors != null && _doors.Count > 0)
+            {
+                int leafless = _doors.Leafless();
+                if (leafless == 0)
+                    Debug.Log($"[doors] all {_doors.Count} hinges kept their leaves through the bake.");
+                else
+                    Debug.LogWarning($"[doors] {leafless} of {_doors.Count} hinges have NO LEAF "
+                                   + "after the bake - those doors swing invisibly. CityChunker's "
+                                   + "hinge exemption has stopped matching what Frontage builds.");
+            }
+
             // THE HOUSES GET THEIR SURFACE HERE, AFTER THE BAKE, AND NOT IN CityCollision.Build.
             // The bake destroys the GameObjects it consumed, so a collider added before it is a
             // collider thrown away by it - which is half of why the town was walk-through. The

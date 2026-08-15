@@ -510,8 +510,17 @@ namespace Noir.Unity
             // now carrying the wall's true heading, "outward" in the hinge's LOCAL frame is
             // always local +Z (see Front's constructor: Rotation*forward == Out) - so the shop/
             // house sign no longer needs to read Out's world components at all.
+            //
+            // THE SIGN, DERIVED AND NOT GUESSED, because it shipped backwards once: the leaf
+            // extends along local +X, and in Unity's left-handed Y-up frame a POSITIVE yaw takes
+            // +X toward -Z (Euler(0,90,0) maps forward to right, so it maps right to back). -Z is
+            // the INTERIOR here. So a shop, which must swing OUT (+Z), needs a NEGATIVE swing,
+            // and a house, which must swing IN (-Z), needs a POSITIVE one. It was written the
+            // other way round and nobody could see it - every leaf in town was being destroyed by
+            // the bake at the time (see CityChunker.Combinable's hinge exemption), so the wrong
+            // swing had never once been drawn.
             float shutYaw = hinge.transform.localEulerAngles.y;
-            float swing = Commercial(place) ? 85f : -85f;
+            float swing = Commercial(place) ? -85f : 85f;
             Doors?.Add(hinge.transform, shutYaw, shutYaw + swing);
 
             // Sunk a little below zero, because a road is worn 4cm down and a step that started

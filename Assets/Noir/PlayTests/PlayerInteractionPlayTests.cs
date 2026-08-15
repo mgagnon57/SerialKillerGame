@@ -220,5 +220,72 @@ namespace Noir.PlayTests
 
             player.Toggle();
         }
+
+        /// <summary>
+        /// THE GATE THIS FILE WAS MISSING, and the reason it was missing an entire bug class:
+        /// every test above asserts on CityDoors' ANGLE BOOKKEEPING (IsOpen), which is blind to
+        /// whether anything on screen moves. On 2026-08-15 the whole suite was green while all
+        /// 589 door leaves in Rossville had been destroyed at startup - CityChunker.Bake combined
+        /// each leaf into a static chunk at its shut pose and DestroyImmediated it, leaving
+        /// CityDoors swinging childless hinge transforms. Invisible in every log, count and test.
+        /// This asks the town that is RUNNING whether each registered hinge still has a renderer
+        /// to swing.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator EveryDoorHingeKeepsItsLeafThroughTheBake()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            Assert.That(doors, Is.Not.Null, "no CityDoors was created by the host");
+            Assert.That(doors.Count, Is.GreaterThan(0), "no doors in this town");
+            Assert.That(doors.Leafless(), Is.Zero,
+                        "hinges with no door leaf renderer beneath them - CityChunker.Bake ate "
+                      + "the leaves again, so every swing in town (Force and proximity alike) is "
+                      + "invisible. It was 589 of 589 when this was first measured.");
+            yield break;
+        }
+
+        /// <summary>
+        /// The action half of the E-key seam: PerformOffered() is exactly what pressing E does,
+        /// minus the literal Keyboard.current read (three lines that cannot meaningfully be
+        /// tested without forging a keyboard). Standing at a door that proximity has opened, the
+        /// offered verb is Close, and performing it must actually shut the door.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator PerformingTheOfferedVerbForcesTheDoor()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            var interaction = Object.FindFirstObjectByType<PlayerInteraction>();
+            var at = doors.PositionOf(0);
+
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+
+            // See ForceCloseBeatsProximityUntilItExpires for why the controller must be
+            // disabled around a raw teleport.
+            var cc = body.GetComponent<CharacterController>();
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+
+            const float SwingWait = 1.5f;   // see ForceCloseBeatsProximityUntilItExpires
+
+            float openUntil = Time.time + SwingWait;
+            while (Time.time < openUntil) yield return null;   // let proximity swing it open
+            Assert.That(doors.IsOpen(0), Is.True, "the door never opened for a standing player");
+            Assert.That(interaction.Current, Is.Not.Null, "no verb offered standing at the door");
+            Assert.That(interaction.Current.Verbs[0], Is.EqualTo("Close"),
+                        "an open door should offer Close");
+
+            interaction.PerformOffered();                      // what pressing E does
+
+            float shutUntil = Time.time + SwingWait;
+            while (Time.time < shutUntil) yield return null;   // let it swing shut
+            Assert.That(doors.IsOpen(0), Is.False,
+                        "performing the offered verb (Close) did not shut the door");
+
+            player.Toggle();
+        }
     }
 }

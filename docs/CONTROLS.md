@@ -50,8 +50,11 @@ there's nothing to toggle.
 | Right-drag | look around |
 | **WASD** or arrows | walk |
 | **Shift** | jog |
+| **E** | open or close the door you're standing at — an "E — Open" / "E — Close" prompt appears under the crosshair when you're close enough |
 
 Eye height is 1.7 m. Roofs stay on at street level — you're outside looking at buildings.
+Doors also open on their own when you walk right up to them; **E** is for doing it deliberately —
+a door you close stays closed for a few seconds even with someone at it.
 
 ---
 

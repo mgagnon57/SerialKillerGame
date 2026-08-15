@@ -827,6 +827,13 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   else in it. The owner: *"For now I want it as close to 1991 as possible. Add deterioration
   later."* — *2026-08-04*
 
+- [ ] A door the player deliberately closes swings back open in their face 5 seconds later if
+  they are still standing within reach — `CityDoors.OverrideHold` expires and hands control
+  straight back to proximity, which the PlayMode test `ForceCloseBeatsProximityUntilItExpires`
+  asserts as intended. Design call: should a player's explicit Close outlast proximity for as
+  long as they stand still at the door (refresh the override while the closer remains within
+  Hold), or is the reopen the wanted behavior? — *2026-08-15*
+
 ## People
 
 - [x] ~~One journey in five in Rossville failed at the node cap.~~ **DONE 2026-08-11 — the guard

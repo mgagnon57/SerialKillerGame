@@ -116,6 +116,27 @@ namespace Noir.Unity
         public bool IsOpen(int index) => _angle[index] != _shut[index];
 
         /// <summary>
+        /// How many registered hinges have NO renderer left beneath them - doors this component
+        /// still swings faithfully with nothing visible on the end of the arm.
+        ///
+        /// Exists because that state was real and invisible: on 2026-08-15 all 589 leaves had
+        /// been destroyed by CityChunker.Bake at startup, every count and test stayed green
+        /// (they all read the angle bookkeeping, which needs no leaf), and the only symptom was
+        /// a player reporting that the verb menu "does not do anything". Non-zero is a fault;
+        /// VillageHost prints it after the bake and a PlayMode gate asserts zero.
+        /// </summary>
+        public int Leafless()
+        {
+            int n = 0;
+            for (int i = 0; i < _hinges.Count; i++)
+            {
+                var h = _hinges[i];
+                if (h == null || h.GetComponentInChildren<MeshRenderer>(true) == null) n++;
+            }
+            return n;
+        }
+
+        /// <summary>
         /// The hinge index of the nearest door to <paramref name="from"/> within
         /// <paramref name="within"/> metres, or -1 if none.
         ///

@@ -267,6 +267,17 @@ namespace Noir.Unity
             if (r.GetComponent<SkinnedMeshRenderer>() != null) return false;
             if (r.GetComponentInParent<ParticleSystem>() != null) return false;
 
+            // A DOOR LEAF HANGS ON A HINGE SO IT CAN SWING, AND A BAKED DOOR CANNOT. Frontage
+            // parents every swinging leaf under an empty pivot named "hinge" and registers that
+            // pivot with CityDoors; baking the leaf freezes its triangles into a chunk at the
+            // shut pose and destroys the GameObject, leaving CityDoors rotating a childless
+            // transform. That happened, to all 589 doors at once, and nothing could see it -
+            // every test reads the angle bookkeeping, which needs no leaf. The parent's name is
+            // the same kind of signal the material names below are: nothing else in the town is
+            // called "hinge", and CityDoors.Leafless() plus a PlayMode gate now fail loudly if
+            // this exemption ever stops matching.
+            if (r.transform.parent != null && r.transform.parent.name == "hinge") return false;
+
             // ANYTHING THAT LIGHTS UP STAYS ADDRESSABLE.
             //
             // Baking trades away the ability to change a thing at runtime, which is the whole
