@@ -410,14 +410,20 @@ namespace Noir.Core.Sim
         }
 
         /// <summary>
-        /// Undo <see cref="Down"/>. Clears Downed and hands the citizen back to their plan -
-        /// nothing else needs touching. <see cref="Tick"/>'s own early-continue on Downed is the
-        /// only thing standing between this agent and the ordinary wants-check every other agent
-        /// runs every tick (`block.Where != Destination`), and Down never touched Destination, so
-        /// the moment that guard stops firing the mismatch reads true again on its own and
-        /// StartJourney walks them to wherever the plan currently says - the same self-heal
-        /// mechanism a Stranded retry leans on, not a copy of it. Consumes no RNG, so reviving
-        /// somebody disturbs nobody else's day.
+        /// Undo <see cref="Down"/>. Clears Downed and hands the citizen back to their plan - ON
+        /// THE VERY NEXT TICK, not whenever the plan's current block next happens to change.
+        /// <see cref="Tick"/>'s wants-check fires on `block.Where != Destination`, and Down never
+        /// touched Destination - it is left frozen at whatever block was active the moment they
+        /// went down. For a PROMPT revive (this method's whole reason to exist: the ambulance,
+        /// a test's own teardown) that is very likely STILL the current block, so without more,
+        /// block.Where would still equal Destination, wants would stay false, and the citizen
+        /// would stand exactly where they were hit - Doing correct, feet wrong - until the plan
+        /// moved on by itself, which could be a long wait. Resetting Destination to PlaceId.None
+        /// makes that mismatch true immediately, so the very next tick is a departure.
+        /// StartJourney overwrites Destination with the real block.Where the moment it starts
+        /// (before Travelling is ever set true), so the invalid value never survives past the
+        /// one departure it exists to trigger. Consumes no RNG, so reviving somebody disturbs
+        /// nobody else's day.
         ///
         /// Exists for two consumers, neither built yet when this was written: the ambulance that
         /// will one day take the body away, and a test that has to hand a shared town back
@@ -429,6 +435,7 @@ namespace Noir.Core.Sim
             if (!_agents[i].Downed) return;
 
             _agents[i].Downed = false;
+            _agents[i].Destination = PlaceId.None;
         }
 
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few

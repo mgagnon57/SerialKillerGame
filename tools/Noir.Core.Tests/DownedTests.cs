@@ -52,30 +52,48 @@ namespace Noir.Core.Tests
         }
 
         [Test]
-        public void ARevivedAgentGoesBackToTheirPlanAndMoves()
+        public void ARevivedAgentDepartsPromptlyEvenMidBlock()
         {
             // CitizenId(0) is Queueham.Shopkeeper, who stands at one counter all day and would
             // "pass" a movement assertion by never having anywhere else to go, downed or not.
             // CitizenId(1) is an ordinary customer whose only errand is the walk to the shop and
             // back, which is exactly the case a car hitting somebody on that walk looks like.
             var sim = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60);
-            for (int t = 0; t < 600; t++) sim.Tick();          // let the morning start
-
             var who = new CitizenId(1);
+
+            // WAIT UNTIL THEY ARE ACTUALLY OUT ON THE ERRAND, not just ticking a fixed warm-up.
+            // Downing them while still AtHome (Position already sitting on whatever tile their
+            // OWN block targets) would let a revived StartJourney "arrive" on the very first
+            // tick with zero distance travelled - not because the fix failed, but because
+            // going-home-when-already-home is a real zero-length journey. Caught measuring
+            // this the hard way: a fixed 8:00:35 start put citizen 1 exactly on their own front
+            // doorstep and the test passed for the wrong reason (Position never moved) until it
+            // was rewritten to wait for Travelling. Mid-errand is also the honest case: a car
+            // hits somebody ON THE WALK, not standing still at their own door.
+            int guard = 20 * 60 * 60 * 4; // up to four sim hours to catch a departure
+            while (!sim.GetAgent(who).Travelling && guard-- > 0) sim.Tick();
+            Assert.That(sim.GetAgent(who).Travelling, Is.True,
+                "customer #2 never set off on their one daily errand - fixture or seed changed?");
+
             sim.Down(who);
             var frozenAt = sim.GetAgent(who).Position;
 
-            for (int t = 0; t < 20 * 60 * 60; t++) sim.Tick(); // a sim hour, still down
-            Assert.That(sim.GetAgent(who).Doing, Is.EqualTo(Activity.Downed),
-                "still down an hour later, before Revive was ever called");
-
+            // A FEW SIM SECONDS DOWN, NOT AN HOUR - the plan's current block is still the one
+            // that was active when they went down, which is exactly the case a PROMPT revive
+            // (the PlayMode teardown, the future ambulance) actually hits. Down never touches
+            // Destination, so without Revive resetting it too, block.Where would still equal
+            // Destination and the wants-check would never fire until the plan's own block
+            // happened to change on its own - which an hour-long down/revive gap would paper
+            // over (the block usually HAS changed by then) without ever proving this case.
+            for (int t = 0; t < 100; t++) sim.Tick();
             sim.Revive(who);
 
-            for (int t = 0; t < 20 * 60 * 60; t++) sim.Tick(); // another sim hour, back on the plan
+            for (int t = 0; t < 20 * 60 * 10; t++) sim.Tick(); // ten sim minutes back on the plan
             Assert.That(sim.GetAgent(who).Doing, Is.Not.EqualTo(Activity.Downed),
                 "Revive did not hand the citizen back to their plan");
             Assert.That(sim.GetAgent(who).Position, Is.Not.EqualTo(frozenAt),
-                "the revived citizen never moved from the spot they were downed at");
+                "a promptly revived citizen never left the spot they were downed at - Destination "
+              + "was left equal to the still-active block's Where, so the wants-check never fired");
         }
 
         [Test]
