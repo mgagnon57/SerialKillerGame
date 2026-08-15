@@ -50,6 +50,7 @@ namespace Noir.Unity
         public PlayerTrack Track { get; } = new PlayerTrack();
 
         private Player _player;
+        private PlayerInteraction _interaction;
 
         /// <summary>Whoever is walking about, if anybody is. Read by the testimony panel, which
         /// asks about where the player is STANDING - the answer is a function of where they have
@@ -916,6 +917,8 @@ namespace Noir.Unity
             // street costs nothing to nobody who never asks for it.
             _player = Player.Create(this, transform);
             profile.Done("Player");
+            _interaction = PlayerInteraction.Create(this, transform);
+            profile.Done("PlayerInteraction");
             _lighting = SunRig.Create(this, transform);
             profile.Done("SunRig");
 

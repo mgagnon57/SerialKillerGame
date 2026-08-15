@@ -98,5 +98,41 @@ namespace Noir.PlayTests
 
             player.Toggle();
         }
+
+        [UnityTest, Timeout(900000)]
+        public IEnumerator OffersTheNearestDoorsMenuAndSwitchesVerbOnState()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            var interaction = Object.FindFirstObjectByType<PlayerInteraction>();
+            Assert.That(interaction, Is.Not.Null, "no PlayerInteraction was created by the host");
+
+            var at = doors.PositionOf(0);
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+
+            var body = GameObject.Find("PlayerArmature");
+
+            // See ForceCloseBeatsProximityUntilItExpires for why: a CharacterController owns its
+            // transform every frame through CharacterController.Move(), so a raw teleport while
+            // it is enabled is silently reverted on the next frame. Disable it around the write,
+            // same as that test.
+            var cc = body.GetComponent<CharacterController>();
+
+            cc.enabled = false;
+            body.transform.position = at + new Vector3(1000f, 0f, 0f);   // far from every door
+            cc.enabled = true;
+            yield return null;
+            Assert.That(interaction.Current, Is.Null, "offered a menu with nobody near a door");
+
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+            yield return null;
+            Assert.That(interaction.Current, Is.Not.Null, "no menu offered standing at a door");
+            Assert.That(interaction.Current.Verbs, Does.Contain("Open").Or.Contain("Close"));
+
+            player.Toggle();
+        }
     }
 }
