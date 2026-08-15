@@ -122,6 +122,19 @@ namespace Noir.Unity
         {
             if (_camera == null) return;
 
+            // Player.Enter()/Leave() set `enabled` to hand the camera to the walking body and
+            // take it back - but VillageHost calls Tick() directly rather than through Unity's
+            // own Update() dispatch, so a plain MonoBehaviour `enabled = false` was silently not
+            // stopping anything: this method ran every frame regardless and Apply() kept
+            // overwriting whatever Player.Update() had just written, every frame, with this
+            // rig's own unchanged orbit transform. Whether that made the walking camera visibly
+            // "stuck" depended on the unspecified script-execution-order tie between VillageHost
+            // and Player for that process - so it looked correct in some runs and frozen in
+            // others with byte-identical code. Honouring the flag here, once, fixes it regardless
+            // of ordering and finally makes `enabled` mean what the two call sites already assume
+            // it means.
+            if (!enabled) return;
+
             HandleModeSwitch();
 
             if (Mode == ViewMode.Street)

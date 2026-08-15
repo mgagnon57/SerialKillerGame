@@ -40,8 +40,12 @@ namespace Noir.Unity
         /// <summary>How near the camera a door has to be before it is even considered.</summary>
         private const float LiveRange = 55f;
 
-        /// <summary>How near a person has to be for the door to open.</summary>
-        private const float Reach = 1.9f;
+        /// <summary>How near a person has to be for the door to open. Public so
+        /// PlayerInteraction can offer its menu at exactly this distance, rather than choosing a
+        /// second, independently-picked number that can drift out of sync with it - and public
+        /// rather than internal because the PlayMode tests that reference it live in the separate
+        /// Noir.PlayTests assembly, which this project grants no InternalsVisibleTo access to.</summary>
+        public const float Reach = 1.9f;
 
         /// <summary>How near a person has to stay for it to remain open - hysteresis, so a door
         /// somebody is standing beside does not chatter open and shut every frame.</summary>
@@ -53,11 +57,17 @@ namespace Noir.Unity
         private const int RehashFrames = 12;
         private const float CellSize = 8f;
 
+        /// <summary>How long a manual Close beats automatic proximity, in seconds. Long enough to
+        /// step away from the door; short enough that walking back up to a shut door behaves
+        /// normally again rather than staying artificially locked.</summary>
+        private const float OverrideHold = 5f;
+
         private readonly List<Transform> _hinges = new List<Transform>();
         private readonly List<float> _shut = new List<float>();
         private readonly List<float> _open = new List<float>();
         private readonly List<float> _angle = new List<float>();
         private readonly List<Vector3> _at = new List<Vector3>();
+        private readonly List<float> _overrideUntil = new List<float>();
 
         private readonly Dictionary<long, List<Vector3>> _people = new Dictionary<long, List<Vector3>>();
         private int _sinceRehash = 999;
@@ -88,6 +98,50 @@ namespace Noir.Unity
             _open.Add(openYaw);
             _angle.Add(shutYaw);
             _at.Add(hinge.position);
+            _overrideUntil.Add(0f);
+        }
+
+        /// <summary>The world position Update measures this door's own distance checks from.</summary>
+        public Vector3 PositionOf(int index) => _at[index];
+
+        /// <summary>Whether hinge <paramref name="index"/> is currently ajar rather than shut.</summary>
+        public bool IsOpen(int index) => _angle[index] != _shut[index];
+
+        /// <summary>
+        /// The hinge index of the nearest door to <paramref name="from"/> within
+        /// <paramref name="within"/> metres, or -1 if none.
+        ///
+        /// Ignores the LiveRange gate Update uses to limit its own per-frame cost - a menu asking
+        /// "what is nearest" is a one-off query on approach, not a per-frame walk of every door in
+        /// town, so it costs nothing to check all of them.
+        /// </summary>
+        public int NearestDoor(Vector3 from, float within)
+        {
+            int best = -1;
+            float bestD2 = within * within;
+            for (int i = 0; i < _hinges.Count; i++)
+            {
+                if (_hinges[i] == null) continue;
+                var d = _at[i] - from;
+                float d2 = d.x * d.x + d.z * d.z;
+                if (d2 > bestD2) continue;
+                bestD2 = d2;
+                best = i;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// The player's own choice, which beats proximity for a while rather than forever.
+        ///
+        /// Opening clears any active override and lets Update's own easing carry the swing the
+        /// rest of the way - the way out of a bad Close. Closing sets the override: without it a
+        /// door shut here would swing straight back open next frame, because the player is by
+        /// definition standing within Hold range to have reached this door's menu at all.
+        /// </summary>
+        public void Force(int index, bool open)
+        {
+            _overrideUntil[index] = open ? 0f : Time.time + OverrideHold;
         }
 
         private static long CellOf(Vector3 p)
@@ -188,7 +242,9 @@ namespace Noir.Unity
                 }
 
                 bool open = _angle[i] != _shut[i];                     // already ajar?
-                want = SomebodyWithin(_at[i], open ? Hold : Reach) ? _open[i] : _shut[i];
+                bool overridden = Time.time < _overrideUntil[i];
+                want = overridden ? _shut[i]
+                     : SomebodyWithin(_at[i], open ? Hold : Reach) ? _open[i] : _shut[i];
 
                 if (Mathf.Approximately(_angle[i], want)) continue;
 
