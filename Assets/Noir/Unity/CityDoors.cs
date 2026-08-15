@@ -57,9 +57,15 @@ namespace Noir.Unity
         private const int RehashFrames = 12;
         private const float CellSize = 8f;
 
-        /// <summary>How long a manual Close beats automatic proximity, in seconds. Long enough to
-        /// step away from the door; short enough that walking back up to a shut door behaves
-        /// normally again rather than staying artificially locked.</summary>
+        /// <summary>How long a manual Force beats automatic proximity, in seconds, in either
+        /// direction. Long enough to step away from the door; short enough that walking back up
+        /// to a shut door behaves normally again rather than staying artificially locked.
+        ///
+        /// A CLOSED OVERRIDE BLOCKS THE PROXIMITY SWING FOR EVERYONE, NOT JUST THE PLAYER, for
+        /// its whole duration - Update's SomebodyWithin check is only reached once the override
+        /// has expired, and it does not distinguish who is standing there. Deliberate: a door
+        /// somebody has just shut should stay shut for a while even if an NPC happens to walk up
+        /// to it next, not swing back open for the first passer-by. Not a bug.</summary>
         private const float OverrideHold = 5f;
 
         private readonly List<Transform> _hinges = new List<Transform>();
@@ -68,6 +74,7 @@ namespace Noir.Unity
         private readonly List<float> _angle = new List<float>();
         private readonly List<Vector3> _at = new List<Vector3>();
         private readonly List<float> _overrideUntil = new List<float>();
+        private readonly List<float> _forceOpenUntil = new List<float>();
 
         private readonly Dictionary<long, List<Vector3>> _people = new Dictionary<long, List<Vector3>>();
         private int _sinceRehash = 999;
@@ -99,6 +106,7 @@ namespace Noir.Unity
             _angle.Add(shutYaw);
             _at.Add(hinge.position);
             _overrideUntil.Add(0f);
+            _forceOpenUntil.Add(0f);
         }
 
         /// <summary>The world position Update measures this door's own distance checks from.</summary>
@@ -111,9 +119,12 @@ namespace Noir.Unity
         /// The hinge index of the nearest door to <paramref name="from"/> within
         /// <paramref name="within"/> metres, or -1 if none.
         ///
-        /// Ignores the LiveRange gate Update uses to limit its own per-frame cost - a menu asking
-        /// "what is nearest" is a one-off query on approach, not a per-frame walk of every door in
-        /// town, so it costs nothing to check all of them.
+        /// AN UNBOUNDED LINEAR SCAN OF EVERY DOOR IN TOWN, CALLED EVERY FRAME WHILE THE PLAYER IS
+        /// WALKING - PlayerInteraction.Update asks this once a frame, not as a one-off query on
+        /// approach. It ignores the LiveRange gate Update (this file's own) uses to limit its own
+        /// per-frame cost, and does the whole ~589-door town instead. Cheap enough to be invisible
+        /// at that count; the thing to bucket or spatially index first if the door count grows
+        /// substantially.
         /// </summary>
         public int NearestDoor(Vector3 from, float within)
         {
@@ -132,16 +143,29 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// The player's own choice, which beats proximity for a while rather than forever.
+        /// The player's own choice, which beats proximity for a while rather than forever, in
+        /// either direction.
         ///
-        /// Opening clears any active override and lets Update's own easing carry the swing the
-        /// rest of the way - the way out of a bad Close. Closing sets the override: without it a
-        /// door shut here would swing straight back open next frame, because the player is by
-        /// definition standing within Hold range to have reached this door's menu at all.
+        /// Opening clears any active close-override and sets its own open-override, so the door
+        /// starts swinging open immediately rather than waiting on proximity to notice and the
+        /// next Rehash to agree - both of which could otherwise sit the swing out for up to
+        /// RehashFrames frames, or forever if proximity never happens to agree. Closing is the
+        /// mirror: it clears any active open-override and sets the close-override, so a door shut
+        /// here does not swing straight back open next frame - the player is by definition
+        /// standing within Hold range to have reached this door's menu at all.
         /// </summary>
         public void Force(int index, bool open)
         {
-            _overrideUntil[index] = open ? 0f : Time.time + OverrideHold;
+            if (open)
+            {
+                _overrideUntil[index] = 0f;
+                _forceOpenUntil[index] = Time.time + OverrideHold;
+            }
+            else
+            {
+                _overrideUntil[index] = Time.time + OverrideHold;
+                _forceOpenUntil[index] = 0f;
+            }
         }
 
         private static long CellOf(Vector3 p)
@@ -242,8 +266,10 @@ namespace Noir.Unity
                 }
 
                 bool open = _angle[i] != _shut[i];                     // already ajar?
-                bool overridden = Time.time < _overrideUntil[i];
-                want = overridden ? _shut[i]
+                bool closedOverride = Time.time < _overrideUntil[i];
+                bool openOverride = Time.time < _forceOpenUntil[i];
+                want = closedOverride ? _shut[i]
+                     : openOverride ? _open[i]
                      : SomebodyWithin(_at[i], open ? Hold : Reach) ? _open[i] : _shut[i];
 
                 if (Mathf.Approximately(_angle[i], want)) continue;

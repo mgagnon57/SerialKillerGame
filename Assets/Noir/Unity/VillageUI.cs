@@ -70,11 +70,15 @@ namespace Noir.Unity
         private const float MinScale = 0.8f, MaxScale = 3.0f;
         private const string ScaleKey = "noir.ui.scale";
 
-        /// <summary>Scale a pixel measurement. `S(24)` is "24 pixels at the default size".</summary>
-        private static float S(float px) => px * Scale;
+        /// <summary>Scale a pixel measurement. `S(24)` is "24 pixels at the default size". Public
+        /// so anything drawing IMGUI outside this file - PlayerInteraction's verb menu is the
+        /// first - can follow the same display-scale convention without a second, duplicated
+        /// formula.</summary>
+        public static float S(float px) => px * Scale;
 
-        /// <summary>Scale a font size. Rounded, because a fractional point size renders muddy.</summary>
-        private static int F(float px) => Mathf.Max(1, Mathf.RoundToInt(px * Scale));
+        /// <summary>Scale a font size. Rounded, because a fractional point size renders muddy.
+        /// Public for the same reason as <see cref="S"/>.</summary>
+        public static int F(float px) => Mathf.Max(1, Mathf.RoundToInt(px * Scale));
 
         private static void LoadScale() =>
             // THE DEFAULT LIVES IN ONE PLACE. This read its own 1.6 while the field above said

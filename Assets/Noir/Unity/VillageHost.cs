@@ -57,6 +57,12 @@ namespace Noir.Unity
         /// been, so it has to know where that is.</summary>
         public Player Player => _player;
 
+        /// <summary>The verb-menu framework that offers doors (and, later, whatever else)
+        /// while the player is walking. Was write-only from here until now - nothing outside
+        /// this file needed to read it yet, but a field nothing exposes is a field nothing can
+        /// be tested or driven against from outside without a scene search.</summary>
+        public PlayerInteraction Interaction => _interaction;
+
         /// <summary>The last minute written to the track, so a frame does not write it twice.</summary>
         private int _lastTrackedMinute = -1;
 

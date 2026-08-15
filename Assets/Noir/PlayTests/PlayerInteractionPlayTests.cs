@@ -100,6 +100,91 @@ namespace Noir.PlayTests
         }
 
         [UnityTest, Timeout(900000)]
+        public IEnumerator ForceOpenMidOverrideOpensImmediately()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            var at = doors.PositionOf(0);
+
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+
+            // See ForceCloseBeatsProximityUntilItExpires for why the controller has to be
+            // disabled around a raw teleport.
+            var cc = body.GetComponent<CharacterController>();
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+
+            const float SwingWait = 1.5f;   // see ForceCloseBeatsProximityUntilItExpires
+
+            float openUntil = Time.time + SwingWait;
+            while (Time.time < openUntil) yield return null;   // let it swing open
+            Assert.That(doors.IsOpen(0), Is.True, "the door never opened for a standing player");
+
+            doors.Force(0, false);
+            float forcedAt = Time.time;
+            float shutUntil = Time.time + SwingWait;
+            while (Time.time < shutUntil) yield return null;   // let it swing shut
+            Assert.That(doors.IsOpen(0), Is.False, "Force(false) did not shut the door");
+
+            // WALK AWAY BEFORE FORCING IT BACK OPEN - BUT ONLY 25 m, NOT OUT OF LIVERANGE. This
+            // is the point of the test: with the player standing right at the door,
+            // SomebodyWithin would already agree the moment the close-override lapses, so a test
+            // that force-opens from right there would pass even against the old, buggy
+            // Force(true) (which only cleared the override and left reopening to ambient
+            // proximity) - proximity alone would happen to produce the same result. Moving away
+            // first means proximity says "shut" for as long as the player is gone, so only an
+            // explicit force-open mechanism can be the reason the door opens. 25 m clears
+            // Hold/Reach (2.9 m / 1.9 m) and CellSize's 3x3 neighbourhood (8 m cells) by a wide
+            // margin, while staying well inside CityDoors' own LiveRange (55 m) - go further, as
+            // the "no menu" case in OffersTheNearestDoorsMenuAndSwitchesVerbOnState does with
+            // 1000 m, and the door drops out of Update's own "near" gate entirely and never eases
+            // its swing at all, which would make this test fail for the wrong reason.
+            cc.enabled = false;
+            body.transform.position = at + new Vector3(25f, 0f, 0f);
+            cc.enabled = true;
+
+            // TIME-BASED, NOT FRAME-COUNTED, same reasoning as SwingWait above: long enough for
+            // Rehash (every RehashFrames = 12 frames) to run at least once even on a slow frame
+            // rate and record the player's new, distant position, so SomebodyWithin(_at[0], ...)
+            // reliably reads false from here on rather than stale data from when the player still
+            // stood there.
+            float settledAt = Time.time + SwingWait;
+            while (Time.time < settledAt) yield return null;
+            Assert.That(doors.IsOpen(0), Is.False, "door should still be shut with nobody near it");
+
+            // Still well inside the close override's 5s window - proximity alone could not have
+            // reopened it, and now genuinely cannot (nobody is near). Force(true) here must open
+            // it anyway, promptly, not by waiting out the override or the next rehash.
+            Assert.That(Time.time, Is.LessThan(forcedAt + 4.5f),
+                        "test took too long to reach the mid-override Force(true) - window may "
+                      + "have already lapsed, which would make this assertion meaningless");
+            doors.Force(0, true);
+
+            // A small, generous, time-based wait - not a frame count and not the override window
+            // itself - so this fails if Force(true) merely cleared the close-override and left
+            // the door to be picked up by ambient proximity/rehash timing (which, with nobody
+            // near it, would never happen at all) instead of opening it directly.
+            float reopenUntil = Time.time + SwingWait + 1f;
+            bool reopened = false;
+            while (Time.time < reopenUntil)
+            {
+                if (doors.IsOpen(0)) { reopened = true; break; }
+                yield return null;
+            }
+            Assert.That(reopened, Is.True,
+                        "Force(0, true) mid-override, with nobody near the door, did not open it "
+                      + "promptly - it must not depend on proximity");
+
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+            player.Toggle();
+        }
+
+        [UnityTest, Timeout(900000)]
         public IEnumerator OffersTheNearestDoorsMenuAndSwitchesVerbOnState()
         {
             var doors = Object.FindFirstObjectByType<CityDoors>();
@@ -130,7 +215,8 @@ namespace Noir.PlayTests
             cc.enabled = true;
             yield return null;
             Assert.That(interaction.Current, Is.Not.Null, "no menu offered standing at a door");
-            Assert.That(interaction.Current.Verbs, Does.Contain("Open").Or.Contain("Close"));
+            Assert.That(interaction.Current.Verbs,
+                        Is.EqualTo(doors.IsOpen(0) ? new[] { "Close" } : new[] { "Open" }));
 
             player.Toggle();
         }

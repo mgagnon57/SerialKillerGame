@@ -133,6 +133,12 @@ namespace Noir.Unity
             // others with byte-identical code. Honouring the flag here, once, fixes it regardless
             // of ordering and finally makes `enabled` mean what the two call sites already assume
             // it means.
+            //
+            // SIDE EFFECT, AND ALMOST CERTAINLY THE RIGHT ONE: HandleModeSwitch() below is what
+            // Tab drives, so returning here before it runs means Tab does nothing while the
+            // player is walking - the rig has been handed off to the player for the duration, and
+            // there is no orbit mode to switch between until Player.Leave() hands it back and
+            // re-enables this component. Not a bug; stated here because it was not before.
             if (!enabled) return;
 
             HandleModeSwitch();
