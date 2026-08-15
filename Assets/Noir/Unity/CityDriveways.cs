@@ -116,17 +116,21 @@ namespace Noir.Unity
                 float yaw = d.AlongX ? 90f : 0f;
                 if (rng.Chance(0.5f)) yaw += 180f;        // nose in or nose out, both are normal
 
-                var car = Put(go.transform, fleet[rng.NextInt(fleet.Count)], vx, vy, yaw);
+                string path = fleet[rng.NextInt(fleet.Count)];
+                var car = Put(go.transform, path, vx, vy, yaw);
                 if (car == null) continue;
 
                 CarMesh.Flatten(car);
 
-                // The identity the rename below is about to discard, banded the way a witness
-                // would band it: shape AND tone both off the prefab's own name, the paint per
-                // ToneOf's measured variant-letter map. Captured here because after the rename
-                // there is nothing left to read either from.
-                it._shape.Add(ShapeOf(car.name));
-                it._tone.Add(ToneOf(car.name));
+                // Shape and tone both come off the PREFAB ASSET's own name, not the instantiated
+                // clone's: Object.Instantiate names its clone "<assetName>(Clone)", and reading
+                // car.name here would feed ToneOf's tail-anchored '_' check a trailing ')' every
+                // time, silently defaulting every car to the same band. The asset name has no
+                // such suffix - structurally immune, not patched around. Captured here because
+                // once the rename below runs there is nothing left to read either from.
+                string prefabName = System.IO.Path.GetFileNameWithoutExtension(path);
+                it._shape.Add(ShapeOf(prefabName));
+                it._tone.Add(ToneOf(prefabName));
 
                 car.name = $"Parked_{d.Home.Value}_{d.Unit}";
                 it._homeOf.Add(d.Home);
