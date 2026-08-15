@@ -105,5 +105,41 @@ namespace Noir.Core.Witness
         /// </summary>
         private static CarriedThing CarriedOf(Visibly looked) =>
             (looked & Visibly.Carrying) != 0 ? CarriedThing.Bag : CarriedThing.NothingSeen;
+
+        private static readonly ulong CarPurpose = Rolls.Purpose("witness.degradation.car");
+
+        /// <summary>
+        /// What stuck about the car. Two bands instead of six: at a clear look both survive,
+        /// partial keeps one (seeded pick), a glimpse keeps one only half the time — and a
+        /// glimpsed TONE may be wrong by a band, the same designed fallibility as ApparentSex.
+        /// </summary>
+        public static CarDescription CarRegistered(SightingClarity clarity,
+            CarTone actualTone, CarShape actualShape,
+            CitizenKey witness, int minute, ulong seed)
+        {
+            var tone = CarTone.Unnoticed;
+            var shape = CarShape.Unnoticed;
+
+            int keep = clarity == SightingClarity.Clear ? 2
+                     : clarity == SightingClarity.Partial ? 1
+                     : Rolls.Int(seed, CarPurpose, witness.Value, minute, 0xCA51UL, 0, 2); // 0 or 1
+
+            bool toneFirst = Rolls.Int(seed, CarPurpose, witness.Value, minute, 0xF1A7UL, 0, 2) == 0;
+            for (int i = 0; i < keep; i++)
+            {
+                bool pickTone = (i == 0) == toneFirst;
+                if (pickTone)
+                {
+                    tone = actualTone;
+                    if (clarity == SightingClarity.Glimpsed &&
+                        Rolls.Int(seed, CarPurpose, witness.Value, minute, 0x70E5UL, 0, 4) == 0)
+                        tone = tone == CarTone.Dark ? CarTone.Mid
+                             : tone == CarTone.Light ? CarTone.Mid : CarTone.Dark;
+                }
+                else shape = actualShape;
+            }
+
+            return new CarDescription(tone, shape);
+        }
     }
 }

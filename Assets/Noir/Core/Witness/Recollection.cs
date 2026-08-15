@@ -71,6 +71,12 @@ namespace Noir.Core.Witness
 
                 if (!track.TryGet(minute, out Step step)) { inSight = false; continue; }
 
+                // A car among cars. While the player is driving, a witness saw ONE MORE CAR
+                // in a town where ambient traffic passes all day - not a figure, and not a
+                // memory. Sightings of the person stop; anything worth remembering about the
+                // car is an EVENT (WhatTheySawOfEvents), which is where a hit goes.
+                if ((step.Looked & Visibly.InAVehicle) != 0) { inSight = false; continue; }
+
                 Block block = plan.At(minuteOfDay);
                 if (block.What == Activity.TravellingTo) { inSight = false; continue; }
 
@@ -120,6 +126,48 @@ namespace Noir.Core.Witness
         }
 
         /// <summary>
+        /// Everything one villager could tell you about recorded EVENTS, for one day. The
+        /// same stationary-witness arithmetic as WhatTheySaw, run against the event list
+        /// instead of the player's track: an event is witnessed by exactly the people the
+        /// existing rules say could see that tile at that minute.
+        /// </summary>
+        public static EventSighting[] WhatTheySawOfEvents(WorldModel world, Population population,
+            Citizen who, int day, HitEvents hits, ulong seed,
+            IInterruptions interruptions = null, ISightBlocked blocked = null)
+        {
+            var found = new List<EventSighting>();
+            if (hits == null || hits.Count == 0) return System.Array.Empty<EventSighting>();
+
+            DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
+            int downedFrom = interruptions?.DownedFromMinute(who.Id) ?? int.MaxValue;
+
+            hits.ForEach((minute, where, tone, shape) =>
+            {
+                int minuteOfDay = minute % MinutesPerDay;
+                if (minute / MinutesPerDay != day) return;
+                if (minute >= downedFrom) return;              // the victim testifies to nothing
+
+                Block block = plan.At(minuteOfDay);
+                if (block.What == Activity.TravellingTo) return;
+                if (block.What == Activity.Asleep) return;
+                if (!block.Where.IsValid) return;
+
+                Tile watcher = world.GetPlace(block.Where).Door;
+                var when = new GameClock(GameClock.TickAt(day, minuteOfDay));
+                SightingClarity clarity = Sightlines.HowGoodALook(watcher, where, when, who);
+                if (!Sightlines.SawAnythingAtAll(clarity, watcher, where, when, blocked)) return;
+
+                var car = Degradation.CarRegistered(clarity, tone, shape, who.Key, minute, seed);
+                found.Add(new EventSighting(new ObserverId(found.Count),
+                                            BlurredMinute(minute, clarity),
+                                            watcher, clarity,
+                                            EventAct.CarStruckSomebody, car));
+            });
+
+            return found.ToArray();
+        }
+
+        /// <summary>
         /// The same question, answered in English. One line per sighting, oldest first, and a
         /// single sentence when they saw nothing.
         ///
@@ -135,17 +183,23 @@ namespace Noir.Core.Witness
         public static string[] AskInEnglish(WorldModel world, Population population,
                                             Citizen who, int day, PlayerTrack track, ulong seed,
                                             INightWitnesses nightWitnesses = null,
-                                            ISightBlocked blocked = null)
+                                            ISightBlocked blocked = null,
+                                            HitEvents hits = null,
+                                            IInterruptions interruptions = null)
         {
             Sighting[] saw = WhatTheySaw(world, population, who, day, track, seed,
                                          nightWitnesses, blocked);
+            EventSighting[] events = WhatTheySawOfEvents(world, population, who, day, hits,
+                                                         seed, interruptions, blocked);
 
             // A SENTENCE, NOT AN EMPTY ARRAY. "I saw nobody" and "nobody asked me" are the same
             // value to a caller holding an empty list and completely different answers to a
             // player. An alibi is evidence too.
-            if (saw.Length == 0) return new[] { Testimony.SawNothing };
+            if (saw.Length == 0 && events.Length == 0) return new[] { Testimony.SawNothing };
 
-            return Testimony.InEnglish(saw);
+            var lines = new List<string>(Testimony.InEnglish(saw));
+            foreach (var e in events) lines.Add(Testimony.InEnglish(e));
+            return lines.ToArray();
         }
 
         /// <summary>
