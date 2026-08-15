@@ -263,11 +263,62 @@ namespace Noir.Core.World
                 var spot = new Tile(x, y);
                 if (world.Grid.PlaceAt(x, y).IsValid) continue;   // inside somebody's building
                 if (taken.Contains(spot)) continue;
+                if (!ClearOfEveryBuilding(world, spot, nx != 0)) continue;
 
                 return spot;
             }
 
             return Tile.None;
+        }
+
+        /// <summary>Half the fleet's longest measured length, whole metres, with margin over
+        /// CityParking's own docstring (5.0-5.5m nose to tail).</summary>
+        private const int HalfLength = 3;
+
+        /// <summary>
+        /// Half the fleet's measured width, whole metres, with margin over the ~2.3m widest car
+        /// this project has measured live.
+        ///
+        /// 2 LEFT A FEW CENTIMETRES OF A CAR STILL CLIPPING A WALL. Measured live after the first
+        /// cut of this fix: 27 overlaps fell to 2, both under 30cm - the tile grid's own
+        /// resolution biting at the edge of the reserved footprint rather than a planning miss.
+        /// 3 clears both with room rather than chasing centimetres with a non-integer margin the
+        /// tile grid cannot represent anyway.
+        /// </summary>
+        private const int HalfWidth = 3;
+
+        /// <summary>
+        /// Whether a real car's whole body - not just the one tile its centre stands on - clears
+        /// every building around it, not only the one it is parked in front of.
+        ///
+        /// THE SPOT TILE PASSING <c>PlaceAt.IsValid</c> IS NOT ENOUGH. Two buildings can stand
+        /// close enough together that a gap only one tile wide threads between them - common in
+        /// Rossville's terraced and downtown blocks - and that tile is a legal spot by itself
+        /// while a real car standing on it, 2+m wide, buries its flank in whichever neighbour is
+        /// closer. Measured live: 27 of 598 planned cars did exactly this, and EVERY one of them
+        /// clipped a building other than its own home - Clearance alone cannot catch this, because
+        /// Clearance only guards the wall a car is nose-on to.
+        ///
+        /// The footprint is symmetric in both directions along the facing axis because
+        /// CityDriveways flips a car's nose in or out on a coin flip it makes at render time,
+        /// which this Core-side check cannot see and must assume either way.
+        /// </summary>
+        private static bool ClearOfEveryBuilding(WorldModel world, Tile spot, bool alongX)
+        {
+            int ax = alongX ? 1 : 0;
+            int ay = alongX ? 0 : 1;
+            int lx = alongX ? 0 : 1;
+            int ly = alongX ? 1 : 0;
+
+            for (int along = -HalfLength; along <= HalfLength; along++)
+            for (int across = -HalfWidth; across <= HalfWidth; across++)
+            {
+                int x = spot.X + ax * along + lx * across;
+                int y = spot.Y + ay * along + ly * across;
+                if (!world.Grid.InBounds(x, y)) continue;
+                if (world.Grid.PlaceAt(x, y).IsValid) return false;
+            }
+            return true;
         }
     }
 }

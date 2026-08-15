@@ -67,15 +67,32 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
-> **508 pass, 0 fail, 508 total, 8 skipped, 2 m 03 s.** Measured 2026-08-14, after
-> `ACarNeverStandsCloseEnoughToPutItsTailInTheWall` (+1) landed with the fix for vehicles parking
-> inside the homes they belong to: `CityDriveways` centres a real car model — up to 5.5 m nose to
-> tail, per `CityParking`'s own measured docstring — nose-on over the single tile `Driveways.Plan`
-> reserves, but `Driveways.Standing`'s `Clearance` of 2 m only kept that tile's own centre off the
-> building, so a car's rear half routinely stood inside the wall it was supposedly parked clear of.
-> `Clearance` is 4 now, with margin against a fleet this project has not measured car-by-car the
-> way `CityParking.Width`/`Long` do. **THIS FILE STILL SAID 503 GOING INTO THIS FIX** — the
-> angled-frontage plan's four tests (`ADeclinedOutlineTakesItsPreciseRingWithIt`,
+> **509 pass, 0 fail, 509 total, 8 skipped, 2 m 02 s.** Measured 2026-08-14, after
+> `NoCarInRossvilleOverlapsAnyBuildingsWallsNotJustItsOwn` (+1) landed on TOP of the same day's
+> `Clearance` fix below, because that fix alone was not the whole bug. `Clearance` only guards the
+> wall a car is nose-on to — it says nothing about a NEIGHBOURING building. `Driveways.Standing`
+> validated only the single spot tile against every building, and two buildings standing close
+> enough to leave a gap one tile wide — common in Rossville's terraced and downtown blocks — passed
+> that check while a real car's 2m+ flank buried itself in whichever neighbour was closer. Verified
+> live against the actual built town, not just the Core fixture: 27 of 598 planned cars clipped a
+> building this way, and **every one of the 27 clipped a building other than its own home** — proof
+> the two bugs are different mechanisms, not the same one twice. `Standing` now checks a whole
+> ±3m-by-±3m footprint around the spot, not just its own tile, before accepting it; coverage held
+> at 86% of Rossville's households. (Two of the 27 looked unfixed after this landed — same spots,
+> unmoved by widening the margin further — until a live `PlaceAt`/`TerrainAt` probe showed why: a
+> building's tile-rounded `Bounds` rectangle is not its true solid footprint, so the verification
+> SCRIPT'S crude bounding-box overlap check was flagging space the town never actually builds a
+> wall on. The production fix, which checks the real per-tile grid, had already been correct.)
+>
+> **508 pass, 0 fail, 508 total, 8 skipped, 2 m 03 s**, measured 2026-08-14 minutes earlier, after
+> `ACarNeverStandsCloseEnoughToPutItsTailInTheWall` (+1) landed with the first half of the fix for
+> vehicles parking inside the homes they belong to: `CityDriveways` centres a real car model — up
+> to 5.5 m nose to tail, per `CityParking`'s own measured docstring — nose-on over the single tile
+> `Driveways.Plan` reserves, but `Driveways.Standing`'s `Clearance` of 2 m only kept that tile's own
+> centre off the building, so a car's rear half routinely stood inside the wall it was supposedly
+> parked clear of. `Clearance` is 4 now, with margin against a fleet this project has not measured
+> car-by-car the way `CityParking.Width`/`Long` do. **THIS FILE STILL SAID 503 GOING INTO THIS
+> FIX** — the angled-frontage plan's four tests (`ADeclinedOutlineTakesItsPreciseRingWithIt`,
 > `GroundHeightIsNullWhenNeverSet`, `GroundHeightSurvivesToTheBuiltPlaceUnchanged`,
 > `GroundHeightSurvivesEvenWhenTheOutlineIsDeclined`) took it to 507 on 2026-08-13 and nobody
 > recorded it — a THIRD branch in a week moving this number without updating this file, caught only

@@ -197,6 +197,49 @@ namespace Noir.Core.Tests
                         $"{indoors.Count} cars parked inside a building, e.g. {indoors.FirstOrDefault().Spot}");
         }
 
+        /// <summary>
+        /// Matches Driveways.HalfLength/HalfWidth - the footprint a real car occupies around its
+        /// spot, nose-on, in whichever direction CityDriveways happens to face it.
+        /// </summary>
+        private const int HalfLength = 3, HalfWidth = 3;
+
+        [Test]
+        public void NoCarInRossvilleOverlapsAnyBuildingsWallsNotJustItsOwn()
+        {
+            // The spot tile itself passing PlaceAt is not enough: two buildings can stand close
+            // enough that a gap only one tile wide threads between them, and a real car parked
+            // there buries its flank in whichever neighbour is closer. Measured live in Unity
+            // before this test existed: 27 of 598 planned cars did exactly this, and every one
+            // clipped a building OTHER than its own home.
+            var world = Rossville();
+            var plan = Driveways.Plan(world, 1991UL);
+            Assert.That(plan.Length, Is.GreaterThan(0), "nothing was planned at all");
+
+            var bad = new List<string>();
+            foreach (var d in plan)
+            {
+                int ax = d.AlongX ? 1 : 0, ay = d.AlongX ? 0 : 1;
+                int lx = d.AlongX ? 0 : 1, ly = d.AlongX ? 1 : 0;
+
+                for (int along = -HalfLength; along <= HalfLength; along++)
+                for (int across = -HalfWidth; across <= HalfWidth; across++)
+                {
+                    int x = d.Spot.X + ax * along + lx * across;
+                    int y = d.Spot.Y + ay * along + ly * across;
+                    if (!world.Grid.InBounds(x, y)) continue;
+                    if (world.Grid.PlaceAt(x, y).IsValid)
+                    {
+                        bad.Add($"{d} clips a building at ({x},{y})");
+                        goto next;
+                    }
+                }
+                next: ;
+            }
+
+            Assert.That(bad, Is.Empty, $"{bad.Count} cars overlap a building beyond their own "
+                                      + $"home, e.g. {bad.FirstOrDefault()}");
+        }
+
         [Test]
         public void TwoCarsAreNeverParkedOnTheSameSpot()
         {
