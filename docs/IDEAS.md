@@ -920,6 +920,12 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Story
 
+- [ ] Drivable-car Phase 2, owner's scope 2026-08-15: the police respond to a vehicular
+  accident, and an ambulance takes the body away after the investigation completes. Phase 1
+  (in design the same day) is the car, the hit, the body staying, and witnesses recording it —
+  its harm-event record must carry victim, place, minute and car identity so this response can
+  consume it later. — *2026-08-15*
+
 - [x] ~~`Survival` is 174 prefabs and nothing has ever placed one.~~ DONE - `Assets/Noir/Unity/CityStory.cs`,
   six sites and nineteen pieces. AUTHORED, NOT SCATTERED, which is the whole of it: the note above
   was right that where a bear trap goes is a story decision, so each site is a `place` in city.txt
