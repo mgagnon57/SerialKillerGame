@@ -47,6 +47,17 @@ namespace Noir.Core.People
         /// facing each other reads as conversation with no dialogue written at all.
         /// </summary>
         Talking,
+
+        /// <summary>
+        /// Struck down and staying down — the sim's word for a body in the street.
+        ///
+        /// Set only by <see cref="Noir.Core.Sim.Simulation"/> when something (a car, so far)
+        /// downs a person. Live state that outranks the plan forever, same mechanism as
+        /// Stranded: the tick loop never overwrites a downed agent's Doing, never starts them
+        /// on a journey, and never stands them up. AT THE END OF THE ENUM on purpose — the
+        /// values are positional and the animations.txt keys are name-based.
+        /// </summary>
+        Downed,
     }
 
     /// <summary>One stretch of a person's day: be at this place, from this minute to that one.</summary>

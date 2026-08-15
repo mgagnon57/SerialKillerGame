@@ -168,6 +168,12 @@ walking         Standing Idle, Neutral Idle, Looking Around, Weight Shift
 # the only thing that ever shows it is the window not being lit.
 asleep
 
+# downed: a body in the street. There is no lying/death clip in the set (checked 2026-08-15,
+# pack included), so the row points at a harmless idle to keep the animator gate green and
+# AgentMeshView pitches the figure flat and freezes the animator instead — see the Downed
+# branch in AgentMeshView.Refresh. Replace this row when a real lying clip is imported.
+downed          Breathing Idle
+
 # ---- the fallback --------------------------------------------------------
 # Every situation with nothing else to say. This row is worth more variety than
 # it looks: it is what anybody unaccounted for is doing, so a thin one is a

@@ -96,6 +96,10 @@ namespace Noir.Core.Sim
 
         /// <summary>When they first failed to set off. Zero when not stranded.</summary>
         public long StrandedSinceTick;
+
+        /// <summary>Struck down and staying down. Live state that outranks the plan forever —
+        /// see Activity.Downed. Only Simulation.Down sets it; nothing clears it.</summary>
+        public bool Downed;
     }
 
     /// <summary>
@@ -373,6 +377,32 @@ namespace Noir.Core.Sim
         public AgentState GetAgent(int index) => _agents[index];
         public AgentState GetAgent(CitizenId id) => _agents[id.Value];
 
+        /// <summary>
+        /// Put one person down where they stand, permanently. The one external mutation the
+        /// sim accepts, because a player's car is genuine history the plan cannot know about.
+        /// Entry cleanup mirrors Arrive + StandStill so every derived system — queues,
+        /// conversations, the renderer — lets go of them on its own. Consumes no RNG, so
+        /// every other agent's day is byte-identical to the un-downed run.
+        /// </summary>
+        public void Down(CitizenId who)
+        {
+            int i = who.Value;
+            if (_agents[i].Downed) return;
+
+            _agents[i].Downed = true;
+            _agents[i].Doing = Activity.Downed;
+            _agents[i].Travelling = false;
+            ReleasePath(i);
+            StandStill(i);
+            _agents[i].WalkingWith = CitizenId.None;
+            _agents[i].Carrying = false;
+            _agents[i].TalkTicks = 0;
+            _agents[i].TalkingTo = CitizenId.None;
+            _agents[i].TalkCooldown = 0;
+            _agents[i].DoorPauseTicks = 0;
+            _agents[i].QueueSlot = -1;
+        }
+
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few
         /// hundred ticks behind at midnight, and anybody asking from outside is not.</summary>
         public DayPlan PlanFor(CitizenId id)
@@ -399,6 +429,12 @@ namespace Noir.Core.Sim
             {
                 var citizen = People.Get(new CitizenId(i));
                 var block = _plans[i].At(minute);
+
+                // A downed agent has left the plan for good: no journeys, no talk, no queue,
+                // no Doing overwrite. One branch, taken by nobody in a healthy town — the
+                // byte-identical replays behind watched.floor depend on this being a no-op
+                // when the flag is never set.
+                if (_agents[i].Downed) continue;
 
                 // Somewhere new to be, and their own moment within this minute to leave for it —
                 // or a failed attempt whose backoff has run out, which is not a departure and is
