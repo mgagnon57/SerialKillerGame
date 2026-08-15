@@ -2,6 +2,8 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Noir.Core.People;
+using Noir.Core.World;
 using Noir.Unity;
 
 namespace Noir.PlayTests
@@ -373,6 +375,48 @@ namespace Noir.PlayTests
             Assert.That(player.Walking, Is.True, "leaving the car did not restore walking");
             Assert.That(host.Interaction.Current, Is.Not.InstanceOf<GetOutInteractable>(),
                         "the Get out prompt survived leaving the car - the cache key aliased");
+
+            player.Toggle();
+        }
+
+        /// <summary>
+        /// The other half of Task 8: a car driven through a person downs them in the sim, and
+        /// the body stays exactly where it fell. Drives SweepForVictims directly - the same
+        /// method DriveStep calls at the end of every drive frame - rather than scripting
+        /// throttle input, so a refusal from the driving physics can never make this test flaky.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator AHitDownsSomebodyAndTheBodyStays()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var sim = host.Sim;
+            var player = Object.FindFirstObjectByType<Player>();
+
+            // Find somebody outdoors to be the victim - the sweep's own filters, inverted.
+            int victim = -1;
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var a = sim.GetAgent(i);
+                if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
+                if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+                victim = i; break;
+            }
+            Assert.That(victim, Is.GreaterThanOrEqualTo(0), "nobody is outdoors to test with");
+
+            // Drive the sweep straight through them - the exact method the car calls.
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var p = Space3D.ToWorld(sim.GetAgent(victim).Position);
+            player.SweepForVictims(p + new Vector3(-3f, 0f, 0f), p + new Vector3(3f, 0f, 0f));
+            yield return null;
+
+            Assert.That(sim.GetAgent(victim).Doing, Is.EqualTo(Activity.Downed),
+                "the sweep passed through a person and nobody went down");
+            var at = sim.GetAgent(victim).Position;
+
+            float until = Time.time + 3f;
+            while (Time.time < until) yield return null;
+            Assert.That(sim.GetAgent(victim).Position, Is.EqualTo(at), "the body moved");
 
             player.Toggle();
         }

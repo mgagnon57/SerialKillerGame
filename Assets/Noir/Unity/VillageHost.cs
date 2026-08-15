@@ -1167,7 +1167,9 @@ namespace Noir.Unity
         public string[] AskWhatTheySaw(CitizenId who, int day)
         {
             if (People == null || World == null) return System.Array.Empty<string>();
-            return Recollection.AskInEnglish(World, People, People.Get(who), day, Track, Seed);
+            _interruptions ??= new SimInterruptions(this);
+            return Recollection.AskInEnglish(World, People, People.Get(who), day, Track, Seed,
+                                             null, null, _hitEvents, _interruptions);
         }
 
         /// <summary>
@@ -1200,6 +1202,47 @@ namespace Noir.Unity
                 best = id;
             }
             return best;
+        }
+
+        /// <summary>Vehicular harm, the second genuine history. See its own header.</summary>
+        private readonly HitEvents _hitEvents = new HitEvents();
+
+        /// <summary>Which minute each downed citizen went down - the sim knows WHO, this
+        /// knows WHEN, and Phase 2's police will want both. Also the answer Recollection's
+        /// IInterruptions asks for, so a dead witness stops testifying.</summary>
+        private readonly Dictionary<int, int> _downedAtMinute = new Dictionary<int, int>();
+
+        private sealed class SimInterruptions : IInterruptions
+        {
+            private readonly VillageHost _host;
+            public SimInterruptions(VillageHost host) { _host = host; }
+            public int DownedFromMinute(CitizenId who) =>
+                _host._downedAtMinute.TryGetValue(who.Value, out int m) ? m : int.MaxValue;
+        }
+        private SimInterruptions _interruptions;
+
+        /// <summary>
+        /// A car hit a person. The one recording seam, fed plain data by Player exactly as
+        /// Player.Where feeds the track - the car controller never names this layer. Downs
+        /// the victim in the sim (the body stays), stamps the event with the sim clock, and
+        /// keeps the victim-to-minute pairing Phase 2's police will consume.
+        /// </summary>
+        public void CarStruckSomebody(CitizenId victim, Vector3 at)
+        {
+            if (Sim == null) return;
+            if (Sim.GetAgent(victim).Downed) return;
+
+            Sim.Down(victim);
+
+            int minute = Sim.Clock.Day * (GameClock.TicksPerDay / GameClock.TicksPerMinute)
+                       + Sim.Clock.MinuteOfDay;
+            _hitEvents.Record(minute, Space3D.TileAt(at),
+                              _player != null ? _player.CarTone : CarTone.Unnoticed,
+                              _player != null ? _player.CarShape : CarShape.Unnoticed);
+            _downedAtMinute[victim.Value] = minute;
+
+            Debug.Log($"[hit] a car struck citizen {victim.Value} at {Space3D.TileAt(at)} "
+                    + $"minute {minute}. They are down, and the town can be asked about it.");
         }
 
         private void RecordWhereThePlayerWas()
@@ -1240,6 +1283,10 @@ namespace Noir.Unity
             // Running rather than walking. A body moving at a pace is the thing a witness
             // notices first and remembers longest.
             if (_fastestSinceEntry > RunningPace) looked |= Visibly.Quickly;
+
+            // Behind a wheel. What a witness saw was a car - Recollection treats these
+            // minutes as traffic, not a figure.
+            if (_player != null && _player.InVehicle) looked |= Visibly.InAVehicle;
 
             // Somebody else within a few metres. Not who - Visibly cannot say who, and neither
             // can the witness - only that they were not on their own.

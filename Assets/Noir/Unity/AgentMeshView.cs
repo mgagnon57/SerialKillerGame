@@ -205,6 +205,22 @@ namespace Noir.Unity
                     root.gameObject.SetActive(!away);
                 if (away) continue;
 
+                // A BODY, NOT A PERSON. Ordered after the away-toggle rather than before it,
+                // and that ordering never fights: Downed and AwayFromTown are different
+                // Activity values, so a downed figure always has `away == false` and the
+                // toggle above has already made sure its root is active - exactly what a body
+                // left in the street needs. No lying clip exists in the set (checked
+                // 2026-08-15, pack included), so the figure is laid flat procedurally and its
+                // animator is left un-driven - which freezes it, the documented missing-state
+                // behavior. Works identically for the primitive fallback bodies, which have no
+                // Animator at all. Replace with a real clip via the 'downed' row in
+                // animations.txt when one is imported.
+                if (agent.Doing == Activity.Downed)
+                {
+                    root.localRotation = Quaternion.Euler(90f, _yaw[i], 0f);
+                    continue;   // past the pose/Drive calls for this figure
+                }
+
                 bool walking = agent.Heading.X != 0f || agent.Heading.Y != 0f;
 
                 // ---- which way they are facing ----

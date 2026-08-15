@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
+using Noir.Core.People;
 using Noir.Core.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -271,6 +272,55 @@ namespace Noir.Unity
                 reach = Mathf.Max(0.6f, wall.distance - 0.15f);
             _camera.transform.position = pivot + back * reach;
             _camera.transform.rotation = Quaternion.LookRotation(pivot - _camera.transform.position);
+
+            // ---- did this frame's travel go through anybody? ----
+            //
+            // AFTER the camera, not before: a refused move (the BoxCast/CheckBox pair above
+            // held the car at its old spot) or a zero-throttle frame leaves CarTravelledFrom
+            // equal to the car's current position, and the closest-approach math in
+            // SweepForVictims handles that segment fine - t clamps to 0 and the test becomes a
+            // plain point-distance check - so a stalled car standing on somebody still hits
+            // them rather than getting a free pass because it never moved.
+            if (CarTravelledFrom.HasValue) SweepForVictims(CarTravelledFrom.Value, _car.transform.position);
+        }
+
+        /// <summary>Half the car's width plus a shoulder. A person inside this lateral
+        /// distance of the car's path was hit.</summary>
+        private const float HitRadius = 1.3f;
+
+        /// <summary>
+        /// Did this frame's travel pass through anybody? SIM positions, never figures - the
+        /// blessed pattern (AgentMeshView.Pick's own header). Segment-vs-point with the
+        /// agent's own last-tick travel folded in, so neither a fast car nor a fast sim
+        /// clock tunnels. Public so the PlayMode gate can prove a hit without forging input.
+        /// </summary>
+        public void SweepForVictims(Vector3 from, Vector3 to)
+        {
+            var sim = _host.Sim;
+            var world = _host.World;
+            if (sim == null || world == null) return;
+
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var agent = sim.GetAgent(i);
+                if (agent.Downed) continue;
+                if (agent.Doing == Activity.AwayFromTown) continue;
+
+                var p = Space3D.ToWorld(agent.Position);        // same conversion the view uses
+                var tile = agent.Position.ToTile();
+                if ((world.Grid.FlagsAt(tile) & TileFlags.Indoor) != 0) continue;
+
+                // Closest approach of the car's segment to the person, in XZ.
+                Vector3 seg = to - from; seg.y = 0f;
+                Vector3 rel = p - from; rel.y = 0f;
+                float len2 = seg.sqrMagnitude;
+                float t = len2 > 0.0001f ? Mathf.Clamp01(Vector3.Dot(rel, seg) / len2) : 0f;
+                Vector3 nearest = from + seg * t; nearest.y = 0f;
+                Vector3 flat = p; flat.y = 0f;
+                if ((flat - nearest).sqrMagnitude > HitRadius * HitRadius) continue;
+
+                _host.CarStruckSomebody(new CitizenId(i), p);
+            }
         }
 
         /// <summary>In or out of the body.</summary>

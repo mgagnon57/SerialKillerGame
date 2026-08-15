@@ -543,6 +543,7 @@ namespace Noir.Unity
         private string Census()
         {
             int asleep = 0, walking = 0, work = 0, school = 0, pub = 0, outside = 0, talking = 0;
+            int down = 0;
             var sim = _host.Sim;
             for (int i = 0; i < sim.AgentCount; i++)
             {
@@ -561,12 +562,14 @@ namespace Noir.Unity
                     case Activity.AtSchool: school++; break;
                     case Activity.AtThePub: pub++; break;
                     case Activity.AtHome: break;
+                    case Activity.Downed: down++; break;
                     default: outside++; break;
                 }
             }
             return $"{_host.People.Count} souls   ·   asleep {asleep}   walking {walking}   "
                  + $"talking {talking}   at work {work}   school {school}   pub {pub}   "
-                 + $"out {outside}";
+                 + $"out {outside}"
+                 + (down > 0 ? $"   down {down}" : "");
         }
 
         private bool _showTestimony;
@@ -2426,6 +2429,7 @@ namespace Noir.Unity
                 case Activity.InTheGarden: return "digging at";
                 case Activity.TravellingTo: return "on the way to";
                 case Activity.Talking: return "stopped to talk on";
+                case Activity.Downed: return "lying hurt at";
                 default: return "at";
             }
         }
