@@ -193,6 +193,7 @@ namespace Noir.Unity
                 // with Walking also false and the player nowhere at all.
                 Driving = false;
                 CarTravelledFrom = null;
+                _sweepPrev = null;
                 Walking = true;
                 if (_body != null) _body.SetActive(true);
                 return;
@@ -289,10 +290,38 @@ namespace Noir.Unity
         private const float HitRadius = 1.3f;
 
         /// <summary>
+        /// Where each sim agent stood at the last SweepForVictims call, world space, indexed the
+        /// same way sim.GetAgent(i) is. Null whenever there is no "last sweep" to compare
+        /// against: fresh out of Awake, and again every time a driving session ends or begins -
+        /// LeaveCar, the torn-out-of-the-seat bailout in DriveStep, and EnterCar itself, so a
+        /// walking-mode caller (the PlayMode gate calls this directly, with no car at all) can
+        /// never leave a stale cache for the next real drive to inherit.
+        /// </summary>
+        private Vector3[] _sweepPrev;
+
+        /// <summary>
         /// Did this frame's travel pass through anybody? SIM positions, never figures - the
-        /// blessed pattern (AgentMeshView.Pick's own header). Segment-vs-point with the
-        /// agent's own last-tick travel folded in, so neither a fast car nor a fast sim
-        /// clock tunnels. Public so the PlayMode gate can prove a hit without forging input.
+        /// blessed pattern (AgentMeshView.Pick's own header).
+        ///
+        /// BOTH ENDS ARE MOVING, NOT JUST THE CAR. Checking the car's segment against a person's
+        /// CURRENT point treats them as standing still, and at a fast sim clock - 300x batches
+        /// thousands of ticks into one Update - a person's own travel across that one frame can
+        /// be metres, which is exactly the tunnelling this method exists to prevent.
+        /// AgentState.PreviousPosition cannot fix this: it is one sim TICK back, nothing next to
+        /// a frame spanning thousands of them. So this keeps its OWN cache of where everybody
+        /// stood at the last sweep and finds the closest approach between two moving points over
+        /// the frame - the car travelling from -> to, the person travelling _sweepPrev[i] -> now
+        /// - both parameterised by the same t in [0,1]: with A = _sweepPrev[i] - from and
+        /// B = (now - _sweepPrev[i]) - (to - from), the squared distance is |A + B*t|, minimised
+        /// at t* = clamp01(-Dot(A,B) / Dot(B,B)).
+        ///
+        /// THE CACHE HAS TO BE SEEDED BEFORE IT MEANS ANYTHING. The first sweep after EnterCar,
+        /// or the very first call from a walking-mode caller, has no "last sweep" to compare
+        /// against, so it only records where everybody stood and reports no hits - the
+        /// alternative is inventing a "previous" position out of nothing and calling whatever
+        /// that invents a hit.
+        ///
+        /// Public so the PlayMode gate can prove a hit without forging input.
         /// </summary>
         public void SweepForVictims(Vector3 from, Vector3 to)
         {
@@ -300,24 +329,37 @@ namespace Noir.Unity
             var world = _host.World;
             if (sim == null || world == null) return;
 
+            bool seeding = _sweepPrev == null;
+            if (seeding) _sweepPrev = new Vector3[sim.AgentCount];
+
+            Vector3 segCar = to - from; segCar.y = 0f;
+
             for (int i = 0; i < sim.AgentCount; i++)
             {
                 var agent = sim.GetAgent(i);
+                var p = Space3D.ToWorld(agent.Position);        // same conversion the view uses
+
+                if (seeding) { _sweepPrev[i] = p; continue; }    // no "last sweep" yet - seed only
+
+                // ALWAYS refreshed, even for an agent the filters below skip - a stale prev on a
+                // filtered agent (indoors, away, already down) must not read as a sudden jump the
+                // instant the filter stops applying to them.
+                Vector3 prev = _sweepPrev[i];
+                _sweepPrev[i] = p;
+
                 if (agent.Downed) continue;
                 if (agent.Doing == Activity.AwayFromTown) continue;
 
-                var p = Space3D.ToWorld(agent.Position);        // same conversion the view uses
                 var tile = agent.Position.ToTile();
                 if ((world.Grid.FlagsAt(tile) & TileFlags.Indoor) != 0) continue;
 
-                // Closest approach of the car's segment to the person, in XZ.
-                Vector3 seg = to - from; seg.y = 0f;
-                Vector3 rel = p - from; rel.y = 0f;
-                float len2 = seg.sqrMagnitude;
-                float t = len2 > 0.0001f ? Mathf.Clamp01(Vector3.Dot(rel, seg) / len2) : 0f;
-                Vector3 nearest = from + seg * t; nearest.y = 0f;
-                Vector3 flat = p; flat.y = 0f;
-                if ((flat - nearest).sqrMagnitude > HitRadius * HitRadius) continue;
+                // Closest approach of two moving points over the frame - see the method header.
+                Vector3 a = prev - from; a.y = 0f;
+                Vector3 b = (p - prev) - segCar; b.y = 0f;
+                float bb = Vector3.Dot(b, b);
+                float t = bb < 1e-6f ? 0f : Mathf.Clamp01(-Vector3.Dot(a, b) / bb);
+                Vector3 rel = a + b * t;
+                if (rel.sqrMagnitude > HitRadius * HitRadius) continue;
 
                 _host.CarStruckSomebody(new CitizenId(i), p);
             }
@@ -383,6 +425,12 @@ namespace Noir.Unity
             _carSpeed = 0f;
             CarTravelledFrom = null;
 
+            // A fresh driving session gets a fresh cache, even if a walking-mode caller (the
+            // PlayMode gate) left one behind - "the first sweep after EnterCar" has to mean
+            // exactly that, not "the first sweep since whenever this field last happened to be
+            // null".
+            _sweepPrev = null;
+
             Walking = false;
             Driving = true;
             _body.SetActive(false);
@@ -400,6 +448,7 @@ namespace Noir.Unity
             Driving = false;
             _car = null;
             CarTravelledFrom = null;
+            _sweepPrev = null;
 
             Walking = true;
             _body.SetActive(true);

@@ -2,6 +2,7 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Noir.Core.Contracts;
 using Noir.Core.People;
 using Noir.Core.World;
 using Noir.Unity;
@@ -22,6 +23,14 @@ namespace Noir.PlayTests
         }
 
         /// <summary>
+        /// Set by AHitDownsSomebodyAndTheBodyStays the moment it confirms a hit, and consumed by
+        /// BackToTheOverview below - static because a UnityTearDown method runs against a fresh
+        /// instance of this class, not the one the test body ran on, so an instance field would
+        /// not survive between them. -1 means nobody is owed a revive.
+        /// </summary>
+        private static int _downedVictim = -1;
+
+        /// <summary>
         /// THE CITY IS BUILT ONCE AND SHARED BY EVERY TEST IN A RUN (CLAUDE.md names this trap,
         /// and both historic "flaky" tests were this shape). The trailing player.Toggle() at the
         /// end of each walking test never runs when an assertion fails mid-test, which would
@@ -29,6 +38,12 @@ namespace Noir.PlayTests
         /// test's Toggle() would then Leave() instead of Enter(), deactivate the body, and die on
         /// GameObject.Find returning null, hiding the original red behind an NRE. This runs on
         /// every exit path and puts the player back on the overview camera.
+        ///
+        /// ALSO STANDS THE TOWN'S VICTIM BACK UP, same reasoning: AHitDownsSomebodyAndTheBodyStays
+        /// downs a real citizen in the shared town, and leaving them down would corrupt every
+        /// test that runs after it for the rest of the suite. Reviving here, not at the end of
+        /// that test's own body, means it happens on every exit path including an assertion
+        /// failure partway through - the PlayMode equivalent of a try/finally.
         /// </summary>
         [UnityTearDown]
         public IEnumerator BackToTheOverview()
@@ -36,6 +51,13 @@ namespace Noir.PlayTests
             var player = Object.FindFirstObjectByType<Player>();
             if (player != null && player.Driving) player.LeaveCar();
             if (player != null && player.Walking) player.Toggle();
+
+            if (_downedVictim >= 0)
+            {
+                var host = Object.FindFirstObjectByType<VillageHost>();
+                if (host != null && host.Sim != null) host.Sim.Revive(new CitizenId(_downedVictim));
+                _downedVictim = -1;
+            }
             yield break;
         }
 
@@ -403,15 +425,27 @@ namespace Noir.PlayTests
             }
             Assert.That(victim, Is.GreaterThanOrEqualTo(0), "nobody is outdoors to test with");
 
-            // Drive the sweep straight through them - the exact method the car calls.
+            // Drive the sweep straight through them - the exact method the car calls. Two calls,
+            // not one: SweepForVictims' first-ever call only seeds its per-agent motion cache and
+            // reports no hits by design (there is no "last sweep" yet to compare against), so it
+            // never counts as evidence here - the second call is the real sweep, comparing the
+            // seeded (unmoved, since no frame passed between the two calls) position against the
+            // same segment.
             player.Toggle();
             for (int frame = 0; frame < 5; frame++) yield return null;
             var p = Space3D.ToWorld(sim.GetAgent(victim).Position);
+            player.SweepForVictims(p + new Vector3(-3f, 0f, 0f), p + new Vector3(3f, 0f, 0f));
             player.SweepForVictims(p + new Vector3(-3f, 0f, 0f), p + new Vector3(3f, 0f, 0f));
             yield return null;
 
             Assert.That(sim.GetAgent(victim).Doing, Is.EqualTo(Activity.Downed),
                 "the sweep passed through a person and nobody went down");
+
+            // Owed a revive from here on, whatever happens for the rest of this test -
+            // BackToTheOverview picks this up on every exit path, assertion failure included, so
+            // a shared-town test after this one never inherits a permanently downed citizen.
+            _downedVictim = victim;
+
             var at = sim.GetAgent(victim).Position;
 
             float until = Time.time + 3f;

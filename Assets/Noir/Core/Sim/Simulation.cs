@@ -97,8 +97,9 @@ namespace Noir.Core.Sim
         /// <summary>When they first failed to set off. Zero when not stranded.</summary>
         public long StrandedSinceTick;
 
-        /// <summary>Struck down and staying down. Live state that outranks the plan forever —
-        /// see Activity.Downed. Only Simulation.Down sets it; nothing clears it.</summary>
+        /// <summary>Struck down and staying down. Live state that outranks the plan while it
+        /// holds — see Activity.Downed. Only Simulation.Down sets it, and only
+        /// Simulation.Revive clears it.</summary>
         public bool Downed;
     }
 
@@ -378,11 +379,11 @@ namespace Noir.Core.Sim
         public AgentState GetAgent(CitizenId id) => _agents[id.Value];
 
         /// <summary>
-        /// Put one person down where they stand, permanently. The one external mutation the
-        /// sim accepts, because a player's car is genuine history the plan cannot know about.
-        /// Entry cleanup mirrors Arrive + StandStill so every derived system — queues,
-        /// conversations, the renderer — lets go of them on its own. Consumes no RNG, so
-        /// every other agent's day is byte-identical to the un-downed run.
+        /// Put one person down where they stand, until <see cref="Revive"/> says otherwise. The
+        /// one external mutation the sim accepts, because a player's car is genuine history the
+        /// plan cannot know about. Entry cleanup mirrors Arrive + StandStill so every derived
+        /// system — queues, conversations, the renderer — lets go of them on its own. Consumes
+        /// no RNG, so every other agent's day is byte-identical to the un-downed run.
         /// </summary>
         public void Down(CitizenId who)
         {
@@ -406,6 +407,28 @@ namespace Noir.Core.Sim
             // Without this, downing somebody who was mid-retry left StrandedCount permanently
             // one too high: nobody would ever clear a flag whose owner stopped taking journeys.
             ClearStranded(i);
+        }
+
+        /// <summary>
+        /// Undo <see cref="Down"/>. Clears Downed and hands the citizen back to their plan -
+        /// nothing else needs touching. <see cref="Tick"/>'s own early-continue on Downed is the
+        /// only thing standing between this agent and the ordinary wants-check every other agent
+        /// runs every tick (`block.Where != Destination`), and Down never touched Destination, so
+        /// the moment that guard stops firing the mismatch reads true again on its own and
+        /// StartJourney walks them to wherever the plan currently says - the same self-heal
+        /// mechanism a Stranded retry leans on, not a copy of it. Consumes no RNG, so reviving
+        /// somebody disturbs nobody else's day.
+        ///
+        /// Exists for two consumers, neither built yet when this was written: the ambulance that
+        /// will one day take the body away, and a test that has to hand a shared town back
+        /// exactly as it found it after proving a hit works.
+        /// </summary>
+        public void Revive(CitizenId who)
+        {
+            int i = who.Value;
+            if (!_agents[i].Downed) return;
+
+            _agents[i].Downed = false;
         }
 
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few

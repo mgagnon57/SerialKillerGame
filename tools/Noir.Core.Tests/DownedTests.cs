@@ -52,6 +52,33 @@ namespace Noir.Core.Tests
         }
 
         [Test]
+        public void ARevivedAgentGoesBackToTheirPlanAndMoves()
+        {
+            // CitizenId(0) is Queueham.Shopkeeper, who stands at one counter all day and would
+            // "pass" a movement assertion by never having anywhere else to go, downed or not.
+            // CitizenId(1) is an ordinary customer whose only errand is the walk to the shop and
+            // back, which is exactly the case a car hitting somebody on that walk looks like.
+            var sim = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60);
+            for (int t = 0; t < 600; t++) sim.Tick();          // let the morning start
+
+            var who = new CitizenId(1);
+            sim.Down(who);
+            var frozenAt = sim.GetAgent(who).Position;
+
+            for (int t = 0; t < 20 * 60 * 60; t++) sim.Tick(); // a sim hour, still down
+            Assert.That(sim.GetAgent(who).Doing, Is.EqualTo(Activity.Downed),
+                "still down an hour later, before Revive was ever called");
+
+            sim.Revive(who);
+
+            for (int t = 0; t < 20 * 60 * 60; t++) sim.Tick(); // another sim hour, back on the plan
+            Assert.That(sim.GetAgent(who).Doing, Is.Not.EqualTo(Activity.Downed),
+                "Revive did not hand the citizen back to their plan");
+            Assert.That(sim.GetAgent(who).Position, Is.Not.EqualTo(frozenAt),
+                "the revived citizen never moved from the spot they were downed at");
+        }
+
+        [Test]
         public void NobodyDownedIsByteIdenticalToBefore()
         {
             // The guard must be a true no-op when the downed set is empty: two sims, same

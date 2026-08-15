@@ -209,15 +209,25 @@ namespace Noir.Unity
                 // and that ordering never fights: Downed and AwayFromTown are different
                 // Activity values, so a downed figure always has `away == false` and the
                 // toggle above has already made sure its root is active - exactly what a body
-                // left in the street needs. No lying clip exists in the set (checked
-                // 2026-08-15, pack included), so the figure is laid flat procedurally and its
-                // animator is left un-driven - which freezes it, the documented missing-state
-                // behavior. Works identically for the primitive fallback bodies, which have no
-                // Animator at all. Replace with a real clip via the 'downed' row in
-                // animations.txt when one is imported.
+                // left in the street needs.
+                //
+                // No lying clip exists in the set (checked 2026-08-15, pack included), so the
+                // figure is laid flat procedurally instead. THE FREEZE IS DONE RIGHT HERE, BY
+                // ZEROING THE ANIMATOR'S SPEED - not by skipping the Drive call below. Skipping
+                // Drive only stops this loop from asking for a NEW clip; Unity keeps advancing
+                // whichever clip was already playing on its own, so without this a victim caught
+                // mid-stride would keep cycling their walk animation lying flat on their back.
+                // The missing-state fallback (see Report's Stateless counter) freezes a figure by
+                // a completely different route - a wanted clip with no matching controller state
+                // - and never runs here at all, since it lives downstream of the very Drive call
+                // this branch skips. Works identically for the primitive fallback bodies, which
+                // have no Animator to begin with (null-guarded below) and were never driven
+                // regardless. Replace with a real clip via the 'downed' row in animations.txt
+                // when one is imported.
                 if (agent.Doing == Activity.Downed)
                 {
-                    root.localRotation = Quaternion.Euler(90f, _yaw[i], 0f);
+                    if (root != null) root.localRotation = Quaternion.Euler(90f, _yaw[i], 0f);
+                    if (_figures[i].Animator != null) _figures[i].Animator.speed = 0f;
                     continue;   // past the pose/Drive calls for this figure
                 }
 
