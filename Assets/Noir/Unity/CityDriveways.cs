@@ -122,11 +122,11 @@ namespace Noir.Unity
                 CarMesh.Flatten(car);
 
                 // The identity the rename below is about to discard, banded the way a witness
-                // would band it: shape off the prefab's own name, tone off the flattened
-                // mesh's average albedo. Captured here because after Flatten + rename there is
-                // nothing left to read it from.
+                // would band it: shape AND tone both off the prefab's own name, the paint per
+                // ToneOf's measured variant-letter map. Captured here because after the rename
+                // there is nothing left to read either from.
                 it._shape.Add(ShapeOf(car.name));
-                it._tone.Add(ToneOf(car));
+                it._tone.Add(ToneOf(car.name));
 
                 car.name = $"Parked_{d.Home.Value}_{d.Unit}";
                 it._homeOf.Add(d.Home);
@@ -193,19 +193,25 @@ namespace Noir.Unity
                 ? CarShape.Van
           : CarShape.Car;
 
-        private static CarTone ToneOf(GameObject car)
+        /// <summary>
+        /// The paint, banded the way a witness would band it. The pack's materials all
+        /// serialize a white _Color - the paint lives in the Universal palette atlas - so this
+        /// is a MEASURED map, not a computed one: the six sheets' "primary painted metal"
+        /// slot (the car body), read off the atlas textures on 2026-08-15. A = deep red,
+        /// B = dark navy, C = dark green, D = amber, E = black, F = silver. Re-measure if the
+        /// pack's palettes ever change - same rule as Materials3D's measured fallbacks.
+        /// </summary>
+        private static CarTone ToneOf(string prefabName)
         {
-            var r = car.GetComponent<MeshRenderer>();
-            if (r == null) return CarTone.Mid;
-            float sum = 0f; int n = 0;
-            foreach (var m in r.sharedMaterials)
+            char variant = 'A';
+            int tail = prefabName.Length - 2;
+            if (tail >= 0 && prefabName[tail] == '_') variant = prefabName[tail + 1];
+            switch (variant)
             {
-                if (m == null) continue;
-                var c = m.color; sum += (c.r + c.g + c.b) / 3f; n++;
+                case 'D': return CarTone.Mid;      // amber
+                case 'F': return CarTone.Light;    // silver
+                default: return CarTone.Dark;      // deep red, navy, dark green, black
             }
-            if (n == 0) return CarTone.Mid;
-            float lum = sum / n;
-            return lum < 0.35f ? CarTone.Dark : lum > 0.65f ? CarTone.Light : CarTone.Mid;
         }
 
         /// <summary>
@@ -240,13 +246,18 @@ namespace Noir.Unity
         /// <summary>
         /// Hand car <paramref name="index"/> over and stop owning it: the slot goes null so
         /// Refresh's absence schedule and the layer switch never touch it again — Refresh
-        /// already tolerates a null slot by construction. Once taken, a car is loose for
-        /// good; whether it ever goes home again is a later feature, recorded in IDEAS.
+        /// already tolerates a null slot by construction. The car is also detached from the
+        /// Driveways hierarchy (world position kept), because the layer toggle walks
+        /// GetComponentsInChildren&lt;Renderer&gt; under this root — a taken car left parented
+        /// here would still have its renderer flipped by that walk even with its slot null.
+        /// Once taken, a car is loose for good; whether it ever goes home again is a later
+        /// feature, recorded in IDEAS.
         /// </summary>
         public (GameObject car, CarTone tone, CarShape shape) Take(int index)
         {
             var car = _cars[index];
             _cars[index] = null;
+            car.transform.SetParent(null, true);
             return (car, _tone[index], _shape[index]);
         }
 
