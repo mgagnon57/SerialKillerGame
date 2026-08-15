@@ -182,7 +182,20 @@ namespace Noir.Unity
         /// </summary>
         private void DriveStep(Keyboard keys)
         {
-            if (_car == null || _camera == null) { Driving = false; return; }
+            if (_car == null || _camera == null)
+            {
+                // Torn out of the seat rather than stepping out of it - most plausibly the car
+                // was destroyed out from under the driver (the town tore the driveway down mid-
+                // drive). LeaveCar's own exit math needs the car's transform, which is gone, so
+                // this is LeaveCar without a car: stand the body back up where it was left - its
+                // position was never touched while driving - rather than leaving Driving false
+                // with Walking also false and the player nowhere at all.
+                Driving = false;
+                CarTravelledFrom = null;
+                Walking = true;
+                if (_body != null) _body.SetActive(true);
+                return;
+            }
             float dt = Time.deltaTime;
             bool typing = VillageUI.KeyboardCaptured;
 
@@ -213,17 +226,33 @@ namespace Noir.Unity
             float distance = step.magnitude;
             if (distance > 0f)
             {
-                var half = new Vector3(0.95f, 0.7f, 2.6f);
-                if (Physics.BoxCast(_car.transform.position + Vector3.up * 0.9f, half,
-                                    step.normalized, out var hit, _car.transform.rotation,
-                                    distance, ~0, QueryTriggerInteraction.Ignore))
+                // The box floats above the road - bottom at +0.4m, raised from an earlier
+                // +0.9/0.7 - so neither this cast nor the destination checks below ever pick up
+                // the ground collider itself, on any slope the elevation grid can produce.
+                var half = new Vector3(0.95f, 0.6f, 2.6f);
+                var origin = _car.transform.position + Vector3.up * 1.0f;
+                if (Physics.BoxCast(origin, half, step.normalized, out var hit,
+                                    _car.transform.rotation, distance, ~0,
+                                    QueryTriggerInteraction.Ignore))
                 {
                     distance = Mathf.Max(0f, hit.distance - 0.05f);
                     _carSpeed = 0f;
                 }
                 var to = _car.transform.position + step.normalized * distance;
                 to.y = ElevationGrid.HeightAt(to.x, -to.z);
-                _car.transform.position = to;
+
+                // A cast is blind to a collider it STARTS inside of, and steering is not swept -
+                // a rotation can put the nose into a wall, and the next frame's cast sees
+                // nothing. So the destination is checked too, with an escape rule: a move that
+                // would take a CLEAN car into overlap is refused; a car already overlapping may
+                // move (that is how it backs out of the wall it was steered into).
+                bool cleanNow = !Physics.CheckBox(origin, half, _car.transform.rotation,
+                                                  ~0, QueryTriggerInteraction.Ignore);
+                bool cleanThere = !Physics.CheckBox(to + Vector3.up * 1.0f, half,
+                                                    _car.transform.rotation,
+                                                    ~0, QueryTriggerInteraction.Ignore);
+                if (cleanNow && !cleanThere) _carSpeed = 0f;
+                else _car.transform.position = to;
             }
 
             // ---- camera: the walking follow block, on a longer tether ----
@@ -247,6 +276,11 @@ namespace Noir.Unity
         /// <summary>In or out of the body.</summary>
         public void Toggle()
         {
+            // Guarded here too, not only at the P-key call site: a public caller (a PlayMode
+            // test, in particular) can reach this directly, and Toggle while Driving would run
+            // Enter() with Driving still true - Where left answering with the stale body
+            // position, and the witness track recording garbage, mid-drive.
+            if (Driving) return;
             if (Walking) { Leave(); return; }
             Enter();
         }
