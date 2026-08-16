@@ -6,6 +6,16 @@ wrong for us and say why, so nobody researches it twice.
 
 Prices are indicative and were correct when this was written.
 
+**And a third source now: the owner makes models.** House-made props live in
+`Assets/Noir/Models/` as OBJ+MTL, converted from Designer's GLB exports by
+`python tools/glb-to-obj.py <file.glb> <Name>` — flat-color materials only (the tool refuses
+textured GLBs rather than dropping their textures silently), node transforms baked, one mesh
+with a submesh per material. First one in: **DesktopPC1991** (2026-08-16, his first model) —
+a complete beige 1991 desktop, CRT, keyboard with modeled keys, mouse and cables, 10,072 tris,
+6 flat materials, real-world metres, and it sits in register with the pack. Preview:
+`docs/snapshots/pc-preview-front.png`. Not yet PLACED anywhere — a placement seam for desk
+props is the follow-on.
+
 ---
 
 ## The four filters
