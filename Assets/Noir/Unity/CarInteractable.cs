@@ -32,4 +32,21 @@ namespace Noir.Unity
         public IReadOnlyList<string> Verbs => OutVerb;
         public void Perform(string verb) => _player.LeaveCar();
     }
+
+    /// <summary>The player's own abandoned car, offered back - the registry's third candidate,
+    /// stateless like the other two. Wraps a Player rather than a (CityDriveways, index) pair,
+    /// because there is only ever one of these to offer: Player.LastCarPosition and
+    /// Player.ReenterLastCar already do all the remembering, so there is nothing else here to
+    /// carry.</summary>
+    public sealed class OwnCarInteractable : IInteractable
+    {
+        private static readonly string[] DriveVerb = { "Drive" };
+        private readonly Player _player;
+
+        public OwnCarInteractable(Player player) { _player = player; }
+
+        public Vector3 Position => _player.LastCarPosition ?? Vector3.zero;
+        public IReadOnlyList<string> Verbs => DriveVerb;
+        public void Perform(string verb) => _player.ReenterLastCar();
+    }
 }

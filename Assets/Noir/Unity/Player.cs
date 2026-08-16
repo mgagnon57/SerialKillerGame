@@ -99,6 +99,14 @@ namespace Noir.Unity
         private GameObject _car;
         private float _carSpeed;                       // m/s, signed (negative = reverse)
 
+        /// <summary>The last car the player got out of, remembered so the interaction seam can
+        /// offer it back - PlayerInteraction's own-car candidate, CarInteractable.
+        /// OwnCarInteractable. Only one car is remembered, the most recent: taking a different
+        /// car forgets the old one where it stands (v1 - the town's other 546 cars are still
+        /// there). Null before any car has ever been taken, and cleared the moment the player is
+        /// back behind a wheel - see SitIn.</summary>
+        private GameObject _lastCar;
+
         /// <summary>
         /// Where the body is standing, in world space, or null when nobody is in it. Answers for
         /// the car as well while Driving — same witness-facing question, different vehicle.
@@ -116,6 +124,12 @@ namespace Noir.Unity
             Walking && _body != null ? _body.transform.position
           : Driving && _car != null ? _car.transform.position
           : (Vector3?)null;
+
+        /// <summary>Where the player's own abandoned car stands, for the interaction seam -
+        /// null while driving (nothing is "abandoned" mid-drive) or before any car was ever
+        /// taken.</summary>
+        public Vector3? LastCarPosition =>
+            _lastCar != null && !Driving ? _lastCar.transform.position : (Vector3?)null;
 
         public static Player Create(VillageHost host, Transform parent)
         {
@@ -191,7 +205,16 @@ namespace Noir.Unity
                 // this is LeaveCar without a car: stand the body back up where it was left - its
                 // position was never touched while driving - rather than leaving Driving false
                 // with Walking also false and the player nowhere at all.
+                //
+                // THE CAR ITSELF MAY STILL BE STANDING even though this branch fired - the other
+                // half of the guard is _camera, and losing the camera says nothing about the
+                // car. Stash it into _lastCar exactly as LeaveCar would, but only "if the
+                // reference is still alive": Unity's overloaded == already reports a destroyed
+                // car as null, so a car that really was torn out from under the driver leaves
+                // nothing worth remembering.
+                if (_car != null) _lastCar = _car;
                 Driving = false;
+                _car = null;
                 CarTravelledFrom = null;
                 _sweepPrev = null;
                 Walking = true;
@@ -419,26 +442,48 @@ namespace Noir.Unity
             var (car, tone, shape) = driveways.Take(index);
             if (car == null) return;
 
-            _car = car;
             CarTone = tone;
             CarShape = shape;
+            SitIn(car);
+            Debug.Log($"[player] driving {shape} ({tone}). E to get out.");
+        }
+
+        /// <summary>Back into the car just stepped out of - the interaction seam's own-car
+        /// candidate, CarInteractable.OwnCarInteractable, offered wherever LastCarPosition says
+        /// the abandoned car stands. Guarded the same way EnterCar is (not already driving, on
+        /// foot), plus the obvious third: there has to BE a remembered car. CarTone/CarShape are
+        /// already sitting from the drive that put the car there in the first place, so unlike
+        /// EnterCar there is nothing here to take or re-derive.</summary>
+        public void ReenterLastCar()
+        {
+            if (Driving || !Walking || _lastCar == null) return;
+            var car = _lastCar;
+            _lastCar = null;
+            SitIn(car);
+            Debug.Log($"[player] back in the {CarShape} ({CarTone}). E to get out.");
+        }
+
+        /// <summary>The mode-entry tail EnterCar and ReenterLastCar share, so the two paths
+        /// cannot drift apart: body off, Driving true, yaw taken from the car's own facing,
+        /// speed zeroed, and CarTravelledFrom/_sweepPrev cleared. THE CACHE HAS TO BE FRESH
+        /// EVERY TIME, even if a walking-mode caller (the PlayMode gate) left one behind - "the
+        /// first sweep after entering a car" has to mean exactly that, not "the first sweep
+        /// since whenever this field last happened to be null".</summary>
+        private void SitIn(GameObject car)
+        {
+            _car = car;
             _carSpeed = 0f;
             CarTravelledFrom = null;
-
-            // A fresh driving session gets a fresh cache, even if a walking-mode caller (the
-            // PlayMode gate) left one behind - "the first sweep after EnterCar" has to mean
-            // exactly that, not "the first sweep since whenever this field last happened to be
-            // null".
             _sweepPrev = null;
 
             Walking = false;
             Driving = true;
             _body.SetActive(false);
             _yaw = _car.transform.eulerAngles.y;
-            Debug.Log($"[player] driving {shape} ({tone}). E to get out.");
         }
 
-        /// <summary>Out at the driver's door. The car stays exactly where it stands.</summary>
+        /// <summary>Out at the driver's door. The car stays exactly where it stands, remembered
+        /// as _lastCar so the interaction seam can offer it back - see ReenterLastCar.</summary>
         public void LeaveCar()
         {
             if (!Driving) return;
@@ -446,6 +491,7 @@ namespace Noir.Unity
             at.y = ElevationGrid.HeightAt(at.x, -at.z) + 0.5f;
 
             Driving = false;
+            _lastCar = _car;
             _car = null;
             CarTravelledFrom = null;
             _sweepPrev = null;

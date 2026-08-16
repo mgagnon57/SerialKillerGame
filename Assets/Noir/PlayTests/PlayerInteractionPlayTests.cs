@@ -398,7 +398,24 @@ namespace Noir.PlayTests
             Assert.That(host.Interaction.Current, Is.Not.InstanceOf<GetOutInteractable>(),
                         "the Get out prompt survived leaving the car - the cache key aliased");
 
-            player.Toggle();
+            // THE ROUND TRIP'S OTHER HALF - CityDriveways.Take() drops the car from its own
+            // registry the moment EnterCar takes it, so without a separate own-car candidate
+            // nothing would ever offer Drive again and a car, once entered, could never be
+            // re-entered. LeaveCar's own exit spot is 1.6 m off the driver's door - well inside
+            // CarOffer's 3.0 m - so the abandoned car should be back on offer as soon as the
+            // next Update runs.
+            yield return null;
+            Assert.That(host.Interaction.Current, Is.Not.Null,
+                        "no prompt offered beside the car just left");
+            Assert.That(host.Interaction.Current.Verbs[0], Is.EqualTo("Drive"),
+                        "the abandoned car did not offer Drive again after LeaveCar");
+
+            host.Interaction.PerformOffered();                 // E - Drive, back into the same car
+            yield return null;
+            Assert.That(player.Driving, Is.True,
+                        "re-entering the car just stepped out of did not work");
+
+            player.LeaveCar();                                 // hand teardown a clean state
         }
 
         /// <summary>

@@ -33,10 +33,13 @@ namespace Noir.Unity
     /// once, that is the day this needs more keys (or a Mouse.current hit-test over the drawn
     /// rects, the OrbitCamera.HandleSelection pattern - never a GUI.Button).
     ///
-    /// TWO PROVIDERS NOW, A PAIR OF IFS RATHER THAN A LIST. CityDoors and CityDriveways each
-    /// answer "nearest candidate, squared distance" and the closer one wins; see the registry
-    /// comment inside Update. That was written the day a second provider actually existed rather
-    /// than guessed at in advance - grow it into a real list the day there are four.
+    /// THREE CANDIDATES NOW, STILL PLAIN IFS RATHER THAN A LIST. CityDoors and CityDriveways each
+    /// answer "nearest candidate, squared distance" and the closest wins; the player's own
+    /// abandoned car is a third, read straight off Player.LastCarPosition rather than a class of
+    /// its own - there is only ever one of it, so it needs no provider to ask on its behalf. See
+    /// the registry comment inside Update. This was written the day a second provider actually
+    /// existed rather than guessed at in advance - grow it into a real list the day there are
+    /// four.
     ///
     /// ONLY LIVE WHILE THE PLAYER IS IN THE STREET. Interaction is a first-person mechanic; there
     /// is nothing to act on from the overview camera, and Player.Where is null there anyway. E is
@@ -61,6 +64,13 @@ namespace Noir.Unity
         /// became the nearest candidate again. int.MinValue is unreachable by either encoding -
         /// door keys are always >= 0, car keys (~ix for ix >= 0) never go lower than ~int.MaxValue.</summary>
         private const int NoCandidate = int.MinValue;
+
+        /// <summary>The cache key for the player's own abandoned car - the registry's third
+        /// candidate. Distinct from every door key (always >= 0), every driveway car key (~ix,
+        /// in [-590, -1] for this town's fleet), and NoCandidate above: there is only ever one
+        /// own-car candidate, so unlike the other two it needs no index of its own, just a fixed
+        /// sentinel one above NoCandidate.</summary>
+        private const int OwnCarKey = int.MinValue + 1;
 
         private VillageHost _host;
         private GUIStyle _prompt;
@@ -110,8 +120,8 @@ namespace Noir.Unity
             if (!where.HasValue) { Current = null; _currentIndex = NoCandidate; return; }
 
             // THE PROVIDER REGISTRY, the day the header scheduled. Each provider answers
-            // "nearest candidate, squared distance"; the closest wins. Two providers is a
-            // pair of ifs rather than a list - grow it into one the day there are four.
+            // "nearest candidate, squared distance"; the closest wins. Three candidates is
+            // still plain ifs rather than a list - grow it into one the day there are four.
             int doorIx = _host.Doors != null
                 ? _host.Doors.NearestDoor(where.Value, Range) : -1;
             int carIx = _host.Driveways != null
@@ -122,16 +132,34 @@ namespace Noir.Unity
             float carD2 = carIx >= 0
                 ? (_host.Driveways.PositionOf(carIx) - where.Value).sqrMagnitude : float.MaxValue;
 
-            if (doorIx < 0 && carIx < 0) { Current = null; _currentIndex = NoCandidate; return; }
+            // The player's own abandoned car - not a provider with a class of its own (there is
+            // only ever one of it), so it is read straight off Player.LastCarPosition and gated
+            // to the same CarOffer range a driveway car offers Drive at.
+            float ownD2 = player.LastCarPosition.HasValue
+                ? (player.LastCarPosition.Value - where.Value).sqrMagnitude : float.MaxValue;
+            if (ownD2 > CarOffer * CarOffer) ownD2 = float.MaxValue;
 
-            // Cache key: provider in the sign, index in the magnitude - doors positive,
-            // cars bitwise-complemented, so switching provider always rebuilds Current.
-            int key = carD2 < doorD2 ? ~carIx : doorIx;
+            if (doorIx < 0 && carIx < 0 && ownD2 == float.MaxValue)
+            { Current = null; _currentIndex = NoCandidate; return; }
+
+            // Cache key: provider in the sign, index in the magnitude - doors positive, driveway
+            // cars bitwise-complemented, the player's own car the fixed OwnCarKey sentinel - so
+            // switching candidate always rebuilds Current.
+            //
+            // ownWins/carWins ARE TRACKED SEPARATELY FROM key RATHER THAN RE-DERIVED FROM IT
+            // below - key == ~carIx cannot tell "the car won" from "the door won and happens to
+            // share ~carIx's value" when carIx is -1 (no car in range): ~(-1) == 0, which door
+            // index 0 also produces, so reversing the encoding is ambiguous exactly when it
+            // would matter most.
+            bool ownWins = ownD2 <= doorD2 && ownD2 <= carD2;
+            bool carWins = !ownWins && carD2 < doorD2;
+            int key = ownWins ? OwnCarKey : carWins ? ~carIx : doorIx;
+
             if (key != _currentIndex || Current == null)
             {
-                Current = carD2 < doorD2
-                    ? (IInteractable)new CarInteractable(_host, carIx)
-                    : new DoorInteractable(_host.Doors, doorIx);
+                Current = ownWins ? (IInteractable)new OwnCarInteractable(player)
+                        : carWins ? new CarInteractable(_host, carIx)
+                        : new DoorInteractable(_host.Doors, doorIx);
                 _currentIndex = key;
             }
 
