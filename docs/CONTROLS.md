@@ -59,9 +59,13 @@ a door you close stays closed for a few seconds even with someone at it.
 
 A car is not a costume: witnesses see a car, not you, and a car that hits somebody is a recorded
 event the town can be asked about (**T**, near a witness — "about half past four, I saw a dark
-car hit somebody"). The victim stays where they fell. NPC traffic cannot see your car yet — it
-will drive through you — and only driveway cars can be entered (the lot cars are baked into the
-town's chunks). The police response and the ambulance are Phase 2, in IDEAS.md.
+car hit somebody"). The victim stays where they fell — until the town notices: hit somebody
+where a window can see it and the town responds. An officer walks over and holds the scene, a
+county car drives in and knocks on the witnesses' doors, and an ambulance takes the victim away
+— dead above ~18 mph, back on their own doorstep three days later below it. Phase 2 delivered;
+the police never look for **you** (yet). NPC traffic cannot see your car — it will drive
+through you — and only driveway cars can be entered (the lot cars are baked into the town's
+chunks).
 
 ---
 

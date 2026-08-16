@@ -920,11 +920,28 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Story
 
-- [ ] Drivable-car Phase 2, owner's scope 2026-08-15: the police respond to a vehicular
+- [x] Drivable-car Phase 2, owner's scope 2026-08-15: the police respond to a vehicular
   accident, and an ambulance takes the body away after the investigation completes. Phase 1
   (in design the same day) is the car, the hit, the body staying, and witnesses recording it —
   its harm-event record must carry victim, place, minute and car identity so this response can
-  consume it later. — *2026-08-15*
+  consume it later. — *2026-08-15* **Delivered 2026-08-16**: spec
+  `docs/superpowers/specs/2026-08-15-police-response-design.md`, both gates green
+  (Core 561/0, PlayMode 31 of 31).
+
+- [ ] **The response rigs "arrive" far from the scene, and the gate cannot see it.** Watched
+  live 2026-08-16 (dusk hit at village (679,760), editor Play, 60×): the county car parked
+  1,700 ft short at (649,-1276) — plausibly the documented Patience park-and-walk, and the
+  county officer did walk the rest, canvassed ~10 doors, case file correct — but the AMBULANCE
+  was seen MOVING at 500 ft out, then drove AWAY and declared Loading at (377,-195), 2,100 ft
+  from the body, which matches neither the park-and-walk nor a genuine block. The machine
+  closes cleanly either way because arrival can come from `CityResponse`'s held deadline, and
+  `ResponsePlayTests` asserts case-state only — nothing anywhere asserts where a rig STANDS
+  when it reports arrival. Suspects, in order: `LaneRoutes.NearestSegment`'s travel-window
+  filter near the scene (its own doc warns about the arc→axis conversion), the 15 m
+  candidate-lane list in `CityResponse.PlanRoute`, or the deadline firing while genuinely en
+  route. Fix wants a PlayMode assertion that a rig reporting geometric arrival is within ~20 m
+  of the scene's nearest lane, and a probe of `NearestSegment((679.5, 760.5))` against the
+  real graph. Stills: `docs/snapshots/response-*.png`. — *2026-08-16*
 
 - [x] ~~`Survival` is 174 prefabs and nothing has ever placed one.~~ DONE - `Assets/Noir/Unity/CityStory.cs`,
   six sites and nineteen pieces. AUTHORED, NOT SCATTERED, which is the whole of it: the note above

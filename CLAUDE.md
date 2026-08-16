@@ -30,6 +30,7 @@ runtime for a noisier answer. Facts here get ONE home. Everywhere else points at
 | **Building the town** | `TownPipeline.Build()` and nothing else. See below |
 | **Randomness** | Everything routes through `IRng`, one substream per system: `Xoshiro256ss.Substream(seed, "name")`. No `System.Random`, no `DateTime.Now`. That is what makes a seed reproduce a village |
 | **Which source outranks which** | `docs/SOURCES-OF-TRUTH.md` |
+| **The town's answer to a body in the street** | `ResponseCases` (Contracts-only `Noir.Core.Response`) emits orders, never predicts travel, consumes NO RNG; `VillageHost.RunResponse` is its one host and the one legal `Noir.Core.Witness` caller. Spec: `docs/superpowers/specs/2026-08-15-police-response-design.md` |
 | **The people, and what animates them** | `Content/animations.txt` maps a SITUATION to clips; the key is `Activity.ToString().ToLowerInvariant()`, optionally `@place` and `:person`. Rename an `Activity` and the row must move in the same commit or `Resolve` falls through to `default` and those people play a generic idle forever — `EveryActivityHasARowInTheRealFile` fails the Core gate if you forget. The clips live in `Townsfolk.controller`, rebuilt by `Noir > Build The Townsfolk Animator` |
 
 ### There is exactly one way to build the town
@@ -67,6 +68,14 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
+> **561 pass, 0 fail, 561 total, 8 skipped, 2 m 21 s.** Measured 2026-08-16, after the
+> police-response branch's Core tasks landed (+35 across `LaneRoutesTests`,
+> `ResponseCasesTests`, `ResponseFirewallTests`, `TakeAwayTests`, `RespondTests`,
+> `DiscoveryTests`, `PrecinctRotaTests` and `EventTestimonyTests`' interval-window additions).
+> The response machine is `ResponseCases` in the new Contracts-only `Noir.Core.Response`
+> assembly; `VillageHost.RunResponse` is its one host. Plan:
+> `docs/superpowers/plans/2026-08-15-police-response.md`.
+>
 > **526 pass, 0 fail, 526 total, 8 skipped, 3 m 13 s.** Measured 2026-08-15, after
 > `ADownedWitnessTestifiesToNothingFromThatMinuteOn` (+1) landed closing the drivable-car branch's
 > final whole-branch review Critical finding: `Recollection.WhatTheySaw` never consulted
@@ -246,6 +255,22 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-16: 31 of 31 PASS, 0 fail, 1 skipped, 562 s.** The new one is
+> `AWitnessedHitBringsTheTownsWholeResponse` — discovery, officer, county car, canvass,
+> ambulance, removal, end to end against `host.Cases`. **~390 s of the growth is that ONE test
+> and it is by design**: the scenario runs the shared town at 300× while the rigs drive on real
+> seconds (~174 s, burning ~9 sim hours), and its teardown then winds the clock forward to the
+> same minute-of-day (~210 s) — because the FIRST run of this gate went 27/4 and all four reds
+> were the 02:18 town it left behind (commuters home, fleet garaged, "no car ever reached a
+> signalised junction"). The hour-sensitive traffic/geometry tests inherit whatever hour the
+> suite leaves them — they always did; the diagnostic's day-walk was accidentally parking the
+> town near the 17:00 peak for them. The wind-back preserves that; the real fix is still the
+> documented one (a test that needs traffic sets the hour). Confirmed on an unchanged re-run,
+> and every other test's duration was identical to the tenth of a second across red and green
+> runs. Also fixed in the same commit (`0996c53`): every sweep hit opens a case now, so both
+> hit-test teardowns revive ALL the downed (the ±3m sweep catches bystanders — citizens 490 and
+> 206 lay in the street for a whole suite) and `CloseLoudly` every leftover case.
+>
 > **BASELINE, 2026-08-15: 30 of 30 PASS, 0 fail, 1 skipped, 172 s.** Ten tests landed in one
 > day — six for the door verb (four in `f04f75a`, two in `761c299`) and four for the drivable
 > car (enter/drive/exit, the closest-provider rule, a standing hit, a moving-victim hit) — and
@@ -296,8 +321,10 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > **THE RUN IS 165 s AS OF 2026-08-11, and the ten minutes it used to take was a BUG.** It was
 > 371.6 s wall clock with `WhyAreThePeopleNotAnimating` alone at 292.9 s — 79% of the suite — and
 > that test is 94.3 s now with nothing changed in it. What it had been paying for was the stale
-> node cap above. Budget five minutes, and treat a return to ten as a regression to investigate
-> rather than a cost to plan around.
+> node cap above. Budget ten minutes as of 2026-08-16 — the response scenario and its clock
+> wind-back are ~390 s of that by design, see the 31-of-31 baseline — and treat growth beyond
+> that as a regression to investigate rather than a cost to plan around, suspecting the node
+> cap first.
 >
 > **THE STARVING JUNCTION WAS FIXED BY THE COUNTY'S TRAFFIC COUNTS, NOT BY MOVING A GATE.**
 > `NoCarWaitsForeverAtTheHeadOfAClearQueue` swings **37.2 s to 21.9 s on an unchanged tree** with
