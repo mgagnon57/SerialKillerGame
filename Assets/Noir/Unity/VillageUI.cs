@@ -706,7 +706,7 @@ namespace Noir.Unity
             Row("Tab", "<b>overview ⇄ street level</b>");
             Row("WASD", "pan, or walk when at street level");
             Row("Shift", "jog");
-            Row("E", "open / close the door you're standing at (street level)");
+            Row("E", "open / close the door - or get in / out of the car - you're at (street level)");
             Row("right-drag", "orbit, or look around in the street");
             Row("Q  E", "rotate");
             Row("R  Shift+F", "tilt up / down");

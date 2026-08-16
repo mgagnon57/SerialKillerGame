@@ -51,10 +51,17 @@ there's nothing to toggle.
 | **WASD** or arrows | walk |
 | **Shift** | jog |
 | **E** | open or close the door you're standing at — an "E — Open" / "E — Close" prompt appears under the crosshair when you're close enough |
+| **E** at a parked car | get in — then **WASD** drive, **E** get out. The car stays where you leave it |
 
 Eye height is 1.7 m. Roofs stay on at street level — you're outside looking at buildings.
 Doors also open on their own when you walk right up to them; **E** is for doing it deliberately —
 a door you close stays closed for a few seconds even with someone at it.
+
+A car is not a costume: witnesses see a car, not you, and a car that hits somebody is a recorded
+event the town can be asked about (**T**, near a witness — "about half past four, I saw a dark
+car hit somebody"). The victim stays where they fell. NPC traffic cannot see your car yet — it
+will drive through you — and only driveway cars can be entered (the lot cars are baked into the
+town's chunks). The police response and the ambulance are Phase 2, in IDEAS.md.
 
 ---
 

@@ -232,11 +232,12 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 ```
 
 > ⚠ **THE BASELINE BELOW IS STALE AND THE TRUE NUMBER IS UNMEASURED, said here rather than
-> guessed: 2026-08-15 landed six PlayerInteraction tests (four in `f04f75a`, two in `761c299`),
-> so `!Diagnostic` should now select 26 — but the full gate has not run since, because it needs
-> the editor closed and the owner was in it. The two newest tests' predicates were verified
-> against the live editor instead (589 of 589 leaves survive the bake; PerformOffered shuts the
-> door). Run the gate, then replace this warning and the numbers below with what it measures.**
+> guessed: 2026-08-15 landed six PlayerInteraction tests for the doors (four in `f04f75a`, two
+> in `761c299`) and three more for the drivable car (`a2daa15`, `f058042`), so `!Diagnostic`
+> should now select 29 — but the full gate has not run since, because it needs the editor
+> closed and the owner was in it. The newest tests' predicates were verified against the live
+> editor instead (leaf census, PerformOffered, the drive round trip, the hit). Run the gate,
+> then replace this warning and the numbers below with what it measures.**
 >
 > **BASELINE, 2026-08-12 17:18: 20 of 20 PASS, 0 fail, 1 skipped, 158 s.** The new one is
 > `ATerraceLotProducesMoreThanOneIndependentlyNamedStorefront`, proving 112 S Chicago builds as
