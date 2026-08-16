@@ -60,8 +60,9 @@ namespace Noir.Unity
     /// </summary>
     public sealed class CityResponse : MonoBehaviour
     {
-        /// <summary>Which vehicle. The county car answers first; the ambulance comes for a body.</summary>
-        public enum Rig { County, Ambulance }
+        /// <summary>Which vehicle. The county car answers first; the ambulance comes for a
+        /// body; the cruiser carries Rossville's own officer in from the precinct.</summary>
+        public enum Rig { County, Ambulance, Cruiser }
 
         /// <summary>
         /// Metres per second. A shade over the ambient fleet's 8 — an official car moving with
@@ -420,7 +421,7 @@ namespace Noir.Unity
             public Vector3 ParkedAt;
         }
 
-        private readonly Car[] _cars = new Car[2];
+        private readonly Car[] _cars = new Car[3];   // sized to the Rig enum
 
         private WorldModel _world;
         private CityTraffic _traffic;
@@ -503,11 +504,12 @@ namespace Noir.Unity
         /// (`CityBuildings.cs:540-541`). A bespoke county livery is not in the pack and is not
         /// worth chasing for a car seen from across a street.
         /// </summary>
-        private static string PrefabOf(Rig rig) => rig == Rig.County
-            ? CarsCity + "Car_Police_Modern.prefab"
-            : CarsCity + "Car_Ambulance_Modern.prefab";
+        private static string PrefabOf(Rig rig) => rig == Rig.Ambulance
+            ? CarsCity + "Car_Ambulance_Modern.prefab"
+            : CarsCity + "Car_Police_Modern.prefab";   // county AND cruiser: the pack's one police car
 
-        private static string NameOf(Rig rig) => rig == Rig.County ? "county car" : "ambulance";
+        private static string NameOf(Rig rig) =>
+            rig == Rig.County ? "county car" : rig == Rig.Ambulance ? "ambulance" : "cruiser";
 
         public static CityResponse Create(WorldModel world, Transform parent, CityTraffic traffic)
         {
@@ -636,6 +638,74 @@ namespace Noir.Unity
             car.OnArrived = null;
         }
 
+        /// <summary>True when the cruiser slot is free — the host only sends the officer by car
+        /// when there is a car to send.</summary>
+        public bool CruiserAvailable => _cars[(int)Rig.Cruiser] == null;
+
+        /// <summary>
+        /// The cruiser, from the precinct to the scene. Same machinery as <see cref="DriveIn"/>
+        /// with one difference: the route starts at the lane nearest <paramref name="fromNear"/>
+        /// (the precinct's own kerb) rather than at a map edge. <paramref name="onArrived"/> gets
+        /// the car's actual stop position — the host turns that into the kerb tile the officer
+        /// alights at — and fires exactly once, off-stage fallback included, so the officer can
+        /// never be sealed inside a cruiser that failed to route.
+        /// </summary>
+        public void CruiserOut(Vec2 fromNear, Tile scene, System.Action<Vector3> onArrived)
+        {
+            int slot = (int)Rig.Cruiser;
+            if (_cars[slot] != null)
+            {
+                Debug.LogWarning("[response] the cruiser was still out; recalling it");
+                Despawn(slot);
+            }
+
+            var car = new Car { SceneAt = Space3D.ToWorld(scene) };
+            car.OnArrived = () => onArrived(car.What != null ? car.What.position : car.SceneAt);
+            _cars[slot] = car;
+
+            if (_traffic == null || _traffic.Graph == null || !PlanRouteFrom(car, fromNear, scene))
+            {
+                Debug.Log($"[response] no route from the precinct to tile ({scene.X},{scene.Y})"
+                        + " — the cruiser arrives off-stage");
+                car.OffStage = OffStageSeconds;
+                return;
+            }
+
+            Dress(car, Rig.Cruiser);
+            Seat(car);
+        }
+
+        /// <summary>
+        /// Back to the station: from where it stands to the lane nearest the precinct, and gone.
+        /// The Leaving arm despawns it at the end of its last lane — a block past the station at
+        /// worst, which from across a street is a cruiser driving home. The set-dressing police
+        /// car parked outside the precinct never moved, so there is nothing to re-park.
+        /// </summary>
+        public void CruiserHome(Vec2 toNear)
+        {
+            int slot = (int)Rig.Cruiser;
+            var car = _cars[slot];
+            if (car == null) return;
+
+            if (car.What == null || _traffic == null || _traffic.Graph == null)
+            { Despawn(slot); return; }
+
+            CandidatesNear(toNear);
+            bool planned = false;
+            for (int c = 0; c < _candidates.Count && c < MostPlans && !planned; c++)
+                planned = LaneRoutes.Plan(_traffic.Graph, car.Segment, _candidates[c].Seg, car.Turns);
+            if (!planned) { Despawn(slot); return; }
+
+            // The old plan's turn is not this plan's turn — PlanOut's own rule.
+            car.Leg = 0;
+            car.InTurn = false;
+            car.T = 0f;
+            car.HeldFor = 0f;
+            car.Arrived = false;
+            car.Leaving = true;
+            car.OnArrived = null;
+        }
+
         /// <summary>Is that vehicle standing at the scene? False before it gets there and false
         /// again the moment it is ordered away.</summary>
         public bool Arrived(Rig rig)
@@ -693,6 +763,50 @@ namespace Noir.Unity
                     // A STOP BEHIND THE SPAWN IS NOT A DRIVE. Only reachable when the scene sits
                     // on the entry lane itself, which on a village edge is a real case: the car
                     // would be parked before it had moved.
+                    if (seg == from && s <= fromS + car.Reach + 1f) continue;
+
+                    plans++;
+                    if (!LaneRoutes.Plan(graph, from, seg, car.Turns)) continue;
+
+                    car.Segment = from;
+                    car.S = fromS;
+                    car.StopAtS = s;
+                    car.Leg = 0;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// <see cref="PlanRoute"/> with the map edge swapped for a point in town: the route
+        /// starts on a lane beside <paramref name="fromNear"/> (the precinct) instead of at an
+        /// entry. Same both-directions, nearest-first search on BOTH ends, for PlanRoute's own
+        /// reason — NearestSegment's single answer picks a direction arbitrarily and the graph
+        /// has no U-turns, so asking once would strand the cruiser on half the town's scenes.
+        /// </summary>
+        private bool PlanRouteFrom(Car car, Vec2 fromNear, Tile scene)
+        {
+            var graph = _traffic.Graph;
+
+            CandidatesNear(Vec2.CentreOf(scene));
+            if (_candidates.Count == 0) return false;
+            var dests = _candidates.ToArray();
+
+            CandidatesNear(fromNear);
+            if (_candidates.Count == 0) return false;
+
+            int plans = 0;
+            for (int f = 0; f < _candidates.Count; f++)
+            {
+                var (from, fromS, _) = _candidates[f];
+
+                for (int c = 0; c < dests.Length && plans < MostPlans; c++)
+                {
+                    var (seg, s, _) = dests[c];
+
+                    // A stop behind the start is not a drive — PlanRoute's own guard, one
+                    // street over: precinct and scene on the same lane, scene behind the car.
                     if (seg == from && s <= fromS + car.Reach + 1f) continue;
 
                     plans++;
