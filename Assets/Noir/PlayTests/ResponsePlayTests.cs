@@ -158,16 +158,49 @@ namespace Noir.PlayTests
             host.SpeedIndex = VillageHost.Speeds.Length - 1;   // 300x
 
             // The full sequence is ~50-70 sim minutes ≈ 15-25 real seconds at 300x plus
-            // walking/driving; poll state, not time. Give it four real minutes.
+            // walking/driving; poll state, not time. Give it four real minutes. Along the way,
+            // OBSERVE the new choreography rather than assume it: whether the officer ever rode
+            // (Doing == AwayFromTown mid-OfficerEnRoute — the noon watch drives, but an on-call
+            // fallback walking is not a failure, so it is logged, not asserted) and whether the
+            // crowd gathered (somebody Gawking during the canvass — that one IS the contract).
             float deadline = Time.time + 240f;
             var seen = new List<CaseState>();
+            bool rode = false, gawked = false;
             while (Time.time < deadline && host.Cases.StateOf(_caseId) != CaseState.Closed)
             {
                 var s = host.Cases.StateOf(_caseId);
                 if (seen.Count == 0 || seen[seen.Count - 1] != s) seen.Add(s);
+
+                if (s == CaseState.OfficerEnRoute && !rode)
+                {
+                    var officer = host.Cases.OfficerOf(_caseId);
+                    if (officer.IsValid
+                        && sim.GetAgent(officer).Doing == Activity.AwayFromTown) rode = true;
+                }
+                if (s == CaseState.Canvassing && !gawked)
+                    for (int i = 0; i < sim.AgentCount && !gawked; i++)
+                        gawked = sim.GetAgent(i).Doing == Activity.Gawking;
+
                 yield return null;
             }
             host.SpeedIndex = _wasSpeed; _wasSpeed = -1;
+            Debug.Log($"[response-test] officer rode the cruiser: {rode}");
+
+            Assert.That(gawked, Is.True,
+                "nobody ever stood watching during the canvass - the crowd never gathered");
+
+            // And the crowd goes home: within a few real seconds of the close, nobody is
+            // still Gawking (dispersal keys on Closed in RunResponse's own minute).
+            float dispersed = Time.time + 5f;
+            bool anybody = true;
+            while (Time.time < dispersed && anybody)
+            {
+                anybody = false;
+                for (int i = 0; i < sim.AgentCount && !anybody; i++)
+                    anybody = sim.GetAgent(i).Doing == Activity.Gawking;
+                if (anybody) yield return null;
+            }
+            Assert.That(anybody, Is.False, "the crowd never dispersed after the case closed");
 
             Assert.That(host.Cases.StateOf(_caseId), Is.EqualTo(CaseState.Closed),
                 "the case never closed; states seen: " + string.Join(" → ", seen));
