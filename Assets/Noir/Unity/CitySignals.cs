@@ -45,8 +45,16 @@ namespace Noir.Unity
     /// </summary>
     public sealed class CitySignals : MonoBehaviour
     {
-        /// <summary>Seconds. A green long enough to clear a queue, an amber long enough to see.</summary>
+        /// <summary>Sim seconds. A green long enough to clear a queue, an amber long enough to see.</summary>
         private const float Green = 14f, Amber = 3f, AllRed = 1f;
+
+        /// <summary>
+        /// The town's clock in seconds, pushed by VillageHost.Update. The cycle used to read
+        /// Time.time - the wall clock - so the lights ran through a pause and ignored the speed
+        /// dial while every pedestrian obeyed it. ONE CLOCK (owner, 2026-08-16). Below zero
+        /// until first fed; the phase simply holds at its epoch until the town's clock arrives.
+        /// </summary>
+        public double TownSeconds = -1.0;
 
         /// <summary>
         /// Seconds for both arms to have their turn. PUBLIC BECAUSE A TEST WAS HARDCODING IT AND
@@ -148,7 +156,10 @@ namespace Noir.Unity
         {
             if (!IsSignalised(node)) return Light.Green;
 
-            float t = Mathf.Repeat(Time.time + _nodes[node].Offset, Cycle);
+            // Double modulo, not Mathf.Repeat: a week of sim seconds in a float loses the
+            // sub-second phase, and a double does not.
+            double clock = TownSeconds < 0 ? 0.0 : TownSeconds;
+            float t = (float)(((clock + _nodes[node].Offset) % Cycle + Cycle) % Cycle);
             float half = Green + Amber + AllRed;
 
             // First half of the cycle belongs to north-south, second half to east-west.

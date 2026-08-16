@@ -368,6 +368,10 @@ namespace Noir.Unity
         /// test builds one.</summary>
         public CityTraffic Traffic => _traffic;
 
+        /// <summary>The lights, kept so Update can hand them the town's clock - they cycle in
+        /// SIM seconds now (one-clock ruling, 2026-08-16). May be null like the fleet.</summary>
+        private CitySignals _signals;
+
         /// <summary>The county car and the ambulance. Built beside the traffic because it drives
         /// the traffic's own lane graph; may be null for the same reason <see cref="Traffic"/>
         /// may be.</summary>
@@ -832,6 +836,7 @@ namespace Noir.Unity
             // has always said it should, and the switch works without a restart because there is
             // nothing left to build.
             signals = CitySignals.Create(World, transform);
+            _signals = signals;
             profile.Done("CitySignals");
             traffic = CityTraffic.Create(World, transform, signals);
             _traffic = traffic;
@@ -1789,6 +1794,8 @@ namespace Noir.Unity
                 _traffic.Retime(Sim.Clock.MinuteOfDay);
                 _traffic.TownTick = Sim.Clock.Tick;
             }
+            if (_signals != null)
+                _signals.TownSeconds = Sim.Clock.Tick / (double)GameClock.TicksPerSecond;
 
             // And the town answers for somebody lying in the street. Once a sim-minute for the
             // same reason the driveways are: the case machine reasons in whole minutes, and the
