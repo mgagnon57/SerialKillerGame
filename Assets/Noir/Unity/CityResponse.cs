@@ -21,19 +21,27 @@ namespace Noir.Unity
     /// assumes a car that WANDERS: it is recycled at the map edge, it picks its turns at random,
     /// and <see cref="CityTraffic.Retime"/> garages it when the hour says the town is quiet. A
     /// vehicle answering a call does none of those things. Putting one in that list would mean a
-    /// guard in eight places and a ninth one missed. So it drives beside the fleet instead: the
-    /// ambient cars see it through <see cref="CityTraffic.Obstacles"/> once it is standing at a
-    /// scene, and it sees them through <see cref="CityTraffic.AnyMoverWithin"/> while it moves.
+    /// guard in eight places and a ninth one missed. So it drives beside the fleet instead: it
+    /// sees the ambient cars through <see cref="CityTraffic.AnyMoverWithin"/>, and they see it as
+    /// an entry in <see cref="CityTraffic.Obstacles"/> — registered from the moment it is spawned
+    /// to the moment it is destroyed, not merely while it stands at a scene. That registration is
+    /// what stops cross traffic driving THROUGH an ambulance mid-junction: `_movers` is the only
+    /// other thing `Blocked` consults, and a vehicle in neither list is a vehicle nobody can see.
     ///
     /// THEY RUN ON SIM TIME, NOT ON FRAMES. Everything here advances by the SIMULATION clock's
     /// own delta — `(Tick - lastTick) / GameClock.TicksPerSecond` — so fast-forward compresses
     /// the drive exactly as it compresses a citizen's walk to work, and a paused sim stops the
     /// car dead. The ambient traffic is scenery and is entitled to run off `Time.deltaTime`; a
-    /// response that the case machine is timing in SIM MINUTES is not.
+    /// response that the case machine is timing in SIM MINUTES is not. THE TWO THEREFORE DIVERGE
+    /// ABOVE 1x, BY DESIGN: at speed the response outruns an ambient fleet still driving in real
+    /// time, which looks odd and is the correct trade — a case counted in sim minutes may not
+    /// have its arrival decided by how fast the player has wound the clock.
     ///
     /// THEY DO NOT STOP AT RED LIGHTS. There is no signal test anywhere in this file, on purpose:
-    /// what holds a response car is what is physically in front of it, and nothing else. An
-    /// official car crossing a junction against the light is what the town would see.
+    /// what holds a response vehicle is what is physically in front of it, and nothing else. An
+    /// official car crossing a junction against the light is what the town would see — and it is
+    /// safe to draw only because the ambient fleet can see it coming, which is the obstacle
+    /// registration above rather than any rule in here.
     /// </summary>
     public sealed class CityResponse : MonoBehaviour
     {
@@ -61,6 +69,25 @@ namespace Noir.Unity
 
         /// <summary>Half a vehicle, when there is no mesh to measure. CityTraffic's own fallback.</summary>
         private const float DefaultReach = 2.2f;
+
+        /// <summary>
+        /// How much further than the following box counts as "close enough to the scene".
+        ///
+        /// THE AMBULANCE COULD NEVER REACH A SCENE THE COUNTY CAR WAS STANDING AT, and the two
+        /// numbers that made it impossible never overlapped by about eight metres. Task 13 sends
+        /// both vehicles to the SAME tile, so <see cref="CandidatesNear"/> hands both the same
+        /// segment and the same `StopAtS`; the county car arrives first and parks half a lane off
+        /// the centre line, which is well inside `LookWide` and therefore squarely inside the
+        /// following box. The second vehicle then held at `Reach + 2.2 + Headway` — about 8.5 m
+        /// short — while <see cref="Park"/> only fired within about 3.2 m of the stop. It waited
+        /// there for ever: `onArrived` never fired, the case never advanced to `VehiclesLeave`,
+        /// and the vehicle blocking it was never ordered away. A wedge with no error in the log.
+        ///
+        /// So an arrival is a BAND rather than a point: held by something on the final approach,
+        /// within the box plus a metre of the scene, IS arriving. Two emergency vehicles queued
+        /// nose to tail outside a house is what the street would actually look like.
+        /// </summary>
+        private const float ArrivalMargin = 1f;
 
         /// <summary>
         /// How long a slice of driving is, in SIM seconds, and how many a frame may run.
@@ -268,8 +295,10 @@ namespace Noir.Unity
 
         /// <summary>
         /// Send it home: from where it stands to an exit at the same edge it came in by, and off
-        /// the map. It stops being an obstacle the moment it is ordered away, and the GameObject
-        /// goes when it reaches the end of the last lane.
+        /// the map. The GameObject goes when it reaches the end of the last lane, and it stays an
+        /// entry in <see cref="CityTraffic.Obstacles"/> until then — a vehicle pulling out into
+        /// the carriageway is not less of a hazard than one standing at the kerb, and the
+        /// registration is dropped in one place only, <see cref="Despawn"/>.
         /// </summary>
         public void Depart(Rig rig, bool edgeSouth)
         {
@@ -282,8 +311,6 @@ namespace Noir.Unity
             // It never took the stage, so there is nothing to drive away.
             if (car.What == null || _traffic == null || _traffic.Graph == null)
             { Despawn(slot); return; }
-
-            _traffic.Obstacles.Remove(car.What);
 
             if (!PlanOut(car, edgeSouth))
             {
@@ -379,7 +406,16 @@ namespace Noir.Unity
             for (int e = 0; e < _edge.Count && e < MostPlans; e++)
             {
                 if (!LaneRoutes.Plan(graph, car.Segment, _edge[e], car.Turns)) continue;
+
+                // THE OLD PLAN'S TURN IS NOT THIS PLAN'S TURN. `Depart` can be ordered at any
+                // moment, including one where the vehicle is part-way round a junction — an
+                // ambulance recalled mid-turn, or a second case taking the county car. Leaving
+                // `InTurn`/`T` alone applies however far it had got through the abandoned turn to
+                // the FIRST turn of the new route, which is a different arc entirely: the vehicle
+                // would appear part-way through a corner it had never entered.
                 car.Leg = 0;
+                car.InTurn = false;
+                car.T = 0f;
                 return true;
             }
             return false;
@@ -524,22 +560,33 @@ namespace Noir.Unity
             float step = ResponseSpeed * dt;
 
             bool last = car.Leg >= car.Turns.Count;
+            bool stopping = last && !car.Leaving;
+            float toStop = stopping ? car.StopAtS - car.S : float.MaxValue;
 
-            if (last && !car.Leaving)
+            if (stopping)
             {
                 // THE NOSE STOPS AT THE SCENE, NOT THE MIDDLE OF THE CAR — `RunSegment`'s own
                 // arithmetic (`CityTraffic.cs:1039`), for the same reason it is written there:
                 // `S` is the car's CENTRE, so easing the centre to the stop leaves the front
                 // `Reach` metres past it. The taper is the same one a car eases to a stop line
                 // with, so a response vehicle arrives rather than stopping dead on the spot.
-                float toStop = car.StopAtS - car.S;
                 float allowed = Mathf.Max(0f, toStop - car.Reach - 0.4f);
                 step = Mathf.Min(step, allowed, Mathf.Max(step * (toStop / Braking), 0f));
 
                 if (allowed <= 0.05f) { Park(car); return; }
             }
 
-            if (Held(car)) return;
+            if (Held(car))
+            {
+                // HELD ON THE LAST APPROACH, WITHIN THE BOX OF THE SCENE, IS ARRIVED. Whatever is
+                // in front — the other response vehicle, an ambient car that stopped — cannot be
+                // waited out from here, because the thing most likely to be there is a vehicle
+                // this same system parked and will not move until this case advances. See
+                // ArrivalMargin for the wedge this closes.
+                if (stopping && toStop <= car.Reach + ObstacleReach + Headway + ArrivalMargin)
+                    Park(car);
+                return;
+            }
 
             car.S += step;
             if (car.S < segment.ToS) return;
@@ -646,8 +693,16 @@ namespace Noir.Unity
         /// HALF A LANE TOWARD THE VERGE, MEASURED RATHER THAN TYPED: `CityStreets.LaneOffset` is
         /// the distance from the centre line to the middle of a lane, so its lane-0 value is
         /// exactly half a lane width off the asphalt this road was actually paved with. A vehicle
-        /// answering a call stands at the kerb, not in the running lane — and once it is there it
-        /// joins <see cref="CityTraffic.Obstacles"/>, so the ambient fleet goes round it.
+        /// answering a call stands at the kerb rather than square in the running lane.
+        ///
+        /// IT STILL BLOCKS THE LANE, AND THAT IS THE INTENDED FICTION. Half a lane is well inside
+        /// `LookWide`, and <see cref="CityTraffic.Blocked"/> only ever STOPS a car — there is no
+        /// overtake, no lane change and no rerouting anywhere in that file — so what forms behind
+        /// a parked cruiser is a permanent queue, not a stream flowing round it. A cruiser at a
+        /// scene closing a lane is exactly what a town sees; what bounds the jam is that the
+        /// response is FINITE. The case machine orders `VehiclesLeave`, <see cref="Depart"/>
+        /// despawns, and the lane opens. If a case ever fails to close, that queue is permanent —
+        /// which is one more reason nothing in this file may wedge on a route it cannot plan.
         /// </summary>
         private void Park(Car car)
         {
@@ -660,6 +715,9 @@ namespace Noir.Unity
                 car.What.position += car.What.right * CityStreets.LaneOffset(line.Class, 0);
                 car.ParkedAt = car.What.position;
 
+                // Normally already registered — Dress does it at spawn — but a vehicle that is
+                // standing at a scene is the one that MUST be in this list, so it is asserted
+                // here rather than assumed.
                 if (!_traffic.Obstacles.Contains(car.What)) _traffic.Obstacles.Add(car.What);
             }
             else car.ParkedAt = car.SceneAt;
@@ -715,6 +773,19 @@ namespace Noir.Unity
 
             car.What = go.transform;
             car.Reach = LengthOf(go) * 0.5f;
+
+            // VISIBLE TO THE AMBIENT FLEET FROM THE MOMENT IT EXISTS, not merely once it parks.
+            //
+            // A response vehicle is in neither `_movers` nor `Obstacles` while it drives, and
+            // those two lists are the whole of what `CityTraffic.Blocked` consults — so an
+            // ambulance crossing a junction against the light was something no ambient car could
+            // see, and cross traffic drove straight through it. Registering here rather than at
+            // the stop costs nothing (the obstacle arm is a box test against a transform, and it
+            // does not care whether that transform is moving) and closes the one case where this
+            // system's deliberate disregard for the signals could put two vehicles in the same
+            // space. It is removed in Despawn and nowhere else.
+            if (_traffic != null && !_traffic.Obstacles.Contains(car.What))
+                _traffic.Obstacles.Add(car.What);
         }
 
         /// <summary>A vehicle's length nose to tail, off the mesh — <see cref="CityTraffic"/>'s
