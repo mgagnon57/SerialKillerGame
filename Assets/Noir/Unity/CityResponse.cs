@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
+using Noir.Core.Sim;
 using Noir.Core.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -44,6 +45,17 @@ namespace Noir.Unity
     /// official car crossing a junction against the light is what the town would see — and it is
     /// safe to draw only because the ambient fleet can see it coming, which is the obstacle
     /// registration above rather than any rule in here.
+    ///
+    /// AND ONE MAN ON FOOT. The county car carries an OFFICER, who gets out where it parks and
+    /// walks the town's real walkable grid from door to door for the canvass — see
+    /// <see cref="WalkCountyTo"/>. He is NOT a citizen: `Simulation`'s agent array is fixed at
+    /// construction, so there is no slot to put him in and no plan for him to follow, and every
+    /// witness, sighting and schedule in Core would have to learn about a person who exists for
+    /// four sim hours a case. He is a Unity-side actor with a transform and a route, and the
+    /// simulation never hears of him. What he DOES share with a citizen is the ground: the same
+    /// <see cref="Pathfinder"/> over the same <see cref="TileGrid"/>, the same terrain-scaled
+    /// pace, and the same trespass pricing — which already exempts the two endpoint lots, so a
+    /// walk aimed at somebody's front door enters that yard lawfully with no plumbing at all.
     /// </summary>
     public sealed class CityResponse : MonoBehaviour
     {
@@ -188,6 +200,92 @@ namespace Noir.Unity
         private const float OffStageSeconds = 120f;
 
         /// <summary>
+        /// The officer's pace on ground that costs 1.0, in metres per SIM second.
+        ///
+        /// `Citizen.BaseSpeedIn`'s adult baseline, restated because he is not a citizen and has
+        /// nobody to ask. The terrain division is the simulation's too (`Simulation.cs:1283-1294`)
+        /// — a road is quick and a ploughed field is not — including its clamp: an unwalkable tile
+        /// answers `float.MaxValue`, which would divide his speed to nothing, so a cost over 100
+        /// is read as open ground exactly as the sim reads it.
+        /// </summary>
+        private const float WalkSpeed = 1.35f;
+
+        /// <summary>
+        /// How long he stands before reporting an arrival he did not actually make, in SIM
+        /// seconds — two sim minutes, and it is the same two minutes as
+        /// <see cref="OffStageSeconds"/> for the same reason. A door the walkable grid cannot
+        /// reach must not wedge a canvass any more than an unroutable street may wedge a drive:
+        /// he stands where he is for as long as the walk would plausibly have taken, and then the
+        /// case machine's dwell runs from the kerb.
+        /// </summary>
+        private const float KerbStand = 120f;
+
+        /// <summary>
+        /// How long a walk may keep coming back <see cref="PathOutcome.GaveUp"/> before he gives
+        /// up on it too, in SIM seconds.
+        ///
+        /// `GaveUp` is a property of THIS MOMENT rather than of the map — the search ran out of
+        /// node budget — so the honest answer is to ask again shortly, and this file's own
+        /// <see cref="Update"/> is a perfectly good "shortly". But asking for ever is a wedge with
+        /// no error in the log, which is the exact shape of failure the whole of
+        /// <see cref="Patience"/> exists to stop, so the retrying is bounded and ends in the same
+        /// kerb fallback a permanently-unreachable door gets.
+        /// </summary>
+        private const float SearchPatience = 120f;
+
+        /// <summary>
+        /// The most tiles one frame may carry the officer over.
+        ///
+        /// The same argument as <see cref="MostSteps"/>: at 600x fast-forward one frame is minutes
+        /// of sim time, and a walker who consumed all of it at once would cross the town in a
+        /// single step. Past this he falls behind rather than teleports, and the next frame picks
+        /// the walk up where it was. Generous — a whole Rossville block is about thirty tiles —
+        /// because the cap is a guard against a hitch, not a speed limit.
+        /// </summary>
+        private const int MostTiles = 256;
+
+        /// <summary>
+        /// How far from the parked car a walkable tile is looked for, in tiles.
+        ///
+        /// A car parks half a lane toward the verge (see <see cref="Park"/>), which can leave the
+        /// tile under it unwalkable — and `Pathfinder.FindPath` answers `NoRouteExists` for an
+        /// unwalkable ORIGIN, not just an unwalkable destination. Standing the officer on the
+        /// nearest foothold instead of on the exact parked point is the difference between a
+        /// canvass that walks and a canvass that reports every door from the kerb.
+        /// </summary>
+        private const int Foothold = 4;
+
+        /// <summary>
+        /// The figure the officer is drawn as: the first name in <see cref="AgentBody"/>'s Men
+        /// cast, by direct path.
+        ///
+        /// NOT THROUGH `AgentBody.Build`, which wants a `Citizen` to decide who somebody looks
+        /// like and to dress their mesh from their key — and the officer deliberately has no
+        /// citizen. One named prefab is the whole of what this needs, and naming it here means a
+        /// pack reshuffle that moves the cast breaks one visible thing rather than silently
+        /// drawing nobody. If this path stops resolving, <see cref="Create"/>'s count says so.
+        /// </summary>
+        private const string OfficerPrefab =
+            "Assets/polyperfect/Poly Universal Pack/Prefabs/People/Slavic People/"
+            + "Man_Slavic_Summer_Hair.prefab";
+
+        /// <summary>What the officer is doing about the door he was last sent to.</summary>
+        private enum Foot
+        {
+            /// <summary>Not spawned, or spawned and standing about with no order.</summary>
+            Idle,
+
+            /// <summary>Walking a planned route.</summary>
+            Walking,
+
+            /// <summary>The search gave up; ask the grid again next pass.</summary>
+            Looking,
+
+            /// <summary>No route at all: standing out <see cref="KerbStand"/> before reporting.</summary>
+            Standing,
+        }
+
+        /// <summary>
         /// One vehicle's whole state, mirroring <see cref="CityTraffic"/>'s `Mover` — and a CLASS
         /// for the same reason that one is: it is mutated in place from several methods, and a
         /// struct in a field array would hand each of them a copy to change and throw away.
@@ -260,6 +358,41 @@ namespace Noir.Unity
             new List<(int Seg, float S, float Lateral)>();
         private readonly List<int> _edge = new List<int>();
 
+        // ---- the officer's state ----
+        //
+        // ONE Pathfinder FOR THE COMPONENT'S LIFETIME, not one per walk. Its scratch arrays are
+        // the entire point of the class: a `new Pathfinder(grid)` allocates four arrays the size
+        // of the map — 5,040,000 tiles on Rossville — and building one per door would allocate
+        // eighty megabytes a canvass to answer a question the same instance answers for nothing.
+        // Built on first use rather than in Awake, because `Create` assigns `_world` AFTER
+        // `AddComponent` has already run Awake.
+        private Pathfinder _finder;
+
+        private Transform _officer;
+
+        /// <summary>Where he is, in village coordinates — the sim's own space, so the tile he is
+        /// on and the cost of the ground under him are one lookup rather than a conversion.</summary>
+        private Vec2 _officerAt;
+
+        /// <summary>Which way he is pointing, in world space. Kept so a step of zero length —
+        /// standing still, or snapping onto a tile he was already on — cannot spin him.</summary>
+        private Vector3 _officerFacing = Vector3.forward;
+
+        /// <summary>The route he is walking. Reused, never reallocated: `FindPath` clears it.</summary>
+        private readonly List<Tile> _walk = new List<Tile>();
+
+        /// <summary>How far along <see cref="_walk"/> he is — the index of the tile he is walking
+        /// TOWARDS, so `_walked == _walk.Count` means he is there.</summary>
+        private int _walked;
+
+        private Foot _foot = Foot.Idle;
+        private Tile _door;
+        private System.Action _atDoor;
+
+        /// <summary>Sim seconds left of the kerb stand, or spent so far on giving-up searches.
+        /// Only one of the two states that read it can be current at a time.</summary>
+        private float _standing, _searching;
+
         private const string CarsCity =
             "Assets/polyperfect/Poly Universal Pack/Prefabs/Cars/Cars City/";
 
@@ -299,6 +432,18 @@ namespace Noir.Unity
 #endif
                 invisible++;
             }
+
+            // THE OFFICER IS THE THIRD ACTOR, and he degrades exactly as the vehicles do:
+            // invisible but real, spawning at the same spot, walking the same route and reporting
+            // the same arrivals. He is counted in this line rather than given one of his own so
+            // that a session reading the log gets one number for "how much of the response can be
+            // seen" instead of two that have to be added up.
+            bool officerDrawn = false;
+#if UNITY_EDITOR
+            officerDrawn = AssetDatabase.LoadAssetAtPath<GameObject>(OfficerPrefab) != null;
+#endif
+            if (officerDrawn) drawn++; else invisible++;
+
             Debug.Log($"[response] {drawn} actors drawn, {invisible} invisible (editor-only prefabs)");
 
             return response;
@@ -357,6 +502,12 @@ namespace Noir.Unity
         {
             int slot = (int)rig;
             if (slot < 0 || slot >= _cars.Length) return;
+
+            // HE GETS BACK IN BEFORE IT MOVES. Ordered here as well as in Despawn because this is
+            // the path on which the county car DOES NOT despawn — it plans a route out and drives
+            // it — and an officer left behind would stand in the street for the rest of the game
+            // with nothing that could ever pick him up again.
+            if (rig == Rig.County) SendHimHome();
 
             var car = _cars[slot];
             if (car == null) return;
@@ -571,6 +722,14 @@ namespace Noir.Unity
             float dtSim = (now - _lastTick) / (float)GameClock.TicksPerSecond;
             _lastTick = now;
             if (dtSim <= 0f) return;                      // paused, or the same tick twice
+
+            // The man on foot, on the same clock and the WHOLE of this frame's slice — he is not
+            // in the slicing loop below because nothing he does depends on where the vehicles are.
+            // He has no junction to cross, nothing to queue behind and no stop to ease into; he
+            // walks a list of tiles, and his own MostTiles guard is what keeps a fast-forwarded
+            // frame from carrying him across the town in one go. Ordered BEFORE the loop, which
+            // consumes `dtSim`.
+            WalkTheOfficer(dtSim);
 
             // The held deadline charges REAL time — and it is read here, BELOW the guard above,
             // so a paused sim charges nothing. Handed to the first slice only, because charging
@@ -867,6 +1026,13 @@ namespace Noir.Unity
 
         private void Despawn(int slot)
         {
+            // WHEREVER THE COUNTY CAR GOES, SO DOES ITS OFFICER. This is the other half of the
+            // order in Depart, and it is the half that catches everything else: the recall in
+            // DriveIn, the boxed-in despawn in HeldTooLong, and the vehicle that reaches the map
+            // edge on its way out. He exists only while his car is at a scene, and this is the one
+            // place that is true of every way a car can stop being at one.
+            if (slot == (int)Rig.County) SendHimHome();
+
             var car = _cars[slot];
             if (car == null) return;
 
@@ -937,6 +1103,308 @@ namespace Noir.Unity
                 hi = Mathf.Max(hi, b.max.z);
             }
             return hi > lo ? hi - lo : DefaultReach * 2f;
+        }
+
+        // ---- the officer on foot --------------------------------------------------------
+
+        /// <summary>Where the county officer is standing, or null when there is no officer —
+        /// which is every moment the county car is not at a scene.</summary>
+        public Vector3? CountyOfficerAt =>
+            _officer != null ? _officer.position : (Vector3?)null;
+
+        /// <summary>
+        /// Walk the county officer from wherever he stands to this tile; fires
+        /// <paramref name="onArrived"/> exactly once. He exists only while his car is at a scene.
+        ///
+        /// HE IS SPAWNED HERE, LAZILY, ON THE FIRST DOOR HE IS SENT TO. There is no arrival hook
+        /// to hang it on that would be honest: <see cref="Park"/> fires the case machine's own
+        /// callback, and a callback is the machine's to decide about — putting a spawn inside it
+        /// would mean an officer standing beside every parked county car in the game whether
+        /// anybody was going to canvass or not, including the ones that parked a hundred feet
+        /// short because <see cref="Patience"/> ran out. First-order-spawns is the simplest thing
+        /// that is exactly true: he gets out of the car when there is a door to knock on.
+        ///
+        /// ORDERED WITH NO CAR AT THE SCENE, he reports the door immediately and says so. That
+        /// cannot happen from Task 13's machine, which canvasses only after an arrival; the
+        /// alternative to reporting is a callback that never fires, which is the wedge shape this
+        /// whole file is written against.
+        /// </summary>
+        public void WalkCountyTo(Tile door, System.Action onArrived)
+        {
+            if (_officer == null && !SendHimOut())
+            {
+                Debug.LogWarning($"[response] a door at ({door.X},{door.Y}) was canvassed with no "
+                               + "county car at the scene — reporting it unwalked");
+                onArrived?.Invoke();
+                return;
+            }
+
+            // A SECOND ORDER BEFORE THE FIRST FINISHED. The case machine knocks on one door at a
+            // time and waits for the callback, so this is defensive only — but the alternative to
+            // replacing the walk outright is two routes and two callbacks racing over one
+            // transform, and the first one's promise is dropped rather than fired because he
+            // plainly did not reach that door.
+            if (_foot != Foot.Idle)
+                Debug.LogWarning($"[response] the officer was still on his way to "
+                               + $"({_door.X},{_door.Y}); sending him to ({door.X},{door.Y}) "
+                               + "instead — the first door goes unanswered");
+
+            _door = door;
+            _atDoor = onArrived;
+            _standing = 0f;
+            _searching = 0f;
+            PlanTheWalk();
+        }
+
+        /// <summary>
+        /// Put him on the pavement beside the parked county car. False when there is no county
+        /// car standing anywhere, which is the one case the caller has to report around.
+        /// </summary>
+        private bool SendHimOut()
+        {
+            if (_world == null || _world.Grid == null) return false;
+
+            // THE RIG'S OWN PUBLIC ANSWER, not a second copy of where it parked. `ParkedAt` is
+            // already the half-lane offset for a car that drove and the scene point for one that
+            // arrived off-stage, and both of those are decisions this method must not re-take.
+            var parked = ParkedAt(Rig.County);
+            if (parked == null) return false;
+
+            GameObject go = null;
+#if UNITY_EDITOR
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(OfficerPrefab);
+            if (prefab != null) go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+#endif
+            // Unity's own ==, not `??=`: an unloadable prefab instance is a "fake null" the C#
+            // null-coalescing operators walk straight past. Same trap, same shape, as Dress.
+            if (go == null) go = new GameObject("county officer");
+            go.name = "county officer";
+            go.transform.SetParent(transform, false);
+
+            _officer = go.transform;
+            _officerAt = NearestFoothold(new Vec2(parked.Value.x, -parked.Value.z));
+            _officerFacing = Vector3.forward;
+            _foot = Foot.Idle;
+            _walk.Clear();
+            _walked = 0;
+            SeatOfficer();
+            return true;
+        }
+
+        /// <summary>
+        /// Back in the car and gone. Everything he was doing goes with him — including any
+        /// pending callback, which is DROPPED RATHER THAN FIRED: a callback is a promise that he
+        /// reached a door, and a scene whose car has been ordered away is not a scene anybody is
+        /// still canvassing.
+        /// </summary>
+        private void SendHimHome()
+        {
+            if (_officer != null) Destroy(_officer.gameObject);
+            _officer = null;
+
+            _walk.Clear();
+            _walked = 0;
+            _foot = Foot.Idle;
+            _standing = 0f;
+            _searching = 0f;
+            _atDoor = null;
+        }
+
+        /// <summary>
+        /// One frame of walking, on SIM seconds — the same clock the vehicles drive on, so a
+        /// paused sim stands him still and a fast-forwarded one hurries him along at the same
+        /// rate it hurries a citizen going to work.
+        /// </summary>
+        private void WalkTheOfficer(float dt)
+        {
+            if (_officer == null) return;
+
+            switch (_foot)
+            {
+                case Foot.Idle:
+                    return;
+
+                case Foot.Standing:
+                    _standing -= dt;
+                    if (_standing <= 0f) ReachedTheDoor();
+                    return;
+
+                case Foot.Looking:
+                    _searching += dt;
+                    if (!PlanTheWalk())
+                    {
+                        // STILL GIVING UP, AND THE RETRIES ARE BOUNDED. He has already stood here
+                        // for the whole of SearchPatience, which is the same two sim minutes the
+                        // kerb fallback would have made him stand — so the door is reported now
+                        // rather than after another two. See SearchPatience.
+                        if (_foot == Foot.Looking && _searching >= SearchPatience)
+                        {
+                            Debug.Log($"[response] the search for a walk to door "
+                                    + $"({_door.X},{_door.Y}) kept giving up, "
+                                    + "canvassing from the kerb");
+                            ReachedTheDoor();
+                        }
+                        return;
+                    }
+                    break;
+            }
+
+            StepAlong(dt);
+        }
+
+        /// <summary>
+        /// Ask the walkable grid for a route to <see cref="_door"/> and set him walking it. False
+        /// when there is nothing to walk this pass — he is either standing out the kerb fallback
+        /// or waiting to be asked again.
+        /// </summary>
+        private bool PlanTheWalk()
+        {
+            if (_world == null || _world.Grid == null) { StandAtTheKerb(); return false; }
+            if (_finder == null) _finder = new Pathfinder(_world.Grid);
+
+            // PLAIN FindPath, NEVER FindPathViaAlley. That one models a boy taking the back lane
+            // because it is the back lane, at up to 1.8x the direct route; an officer walking to
+            // a front door goes the way that gets him there.
+            var outcome = _finder.FindPath(_officerAt.ToTile(), _door, _walk);
+
+            if (outcome == PathOutcome.Found)
+            {
+                _walked = 0;
+                _foot = Foot.Walking;
+                return true;
+            }
+
+            // A PROPERTY OF THE MAP, so asking again is wasted work — the door is behind
+            // something, or he is standing somewhere the grid does not call walkable.
+            if (outcome == PathOutcome.NoRouteExists) { StandAtTheKerb(); return false; }
+
+            // A PROPERTY OF THIS MOMENT: the search ran out of node budget. Worth asking again
+            // next pass, and PathOutcome's own header says so.
+            _foot = Foot.Looking;
+            return false;
+        }
+
+        /// <summary>He cannot walk there, so he does the interview from where he is: two sim
+        /// minutes on his feet and then the door is reported answered. See <see cref="KerbStand"/>
+        /// for why a door the grid cannot reach may not stop a case.</summary>
+        private void StandAtTheKerb()
+        {
+            Debug.Log($"[response] no walkable route to door ({_door.X},{_door.Y}), "
+                    + "canvassing from the kerb");
+
+            _walk.Clear();
+            _walked = 0;
+            _standing = KerbStand;
+            _foot = Foot.Standing;
+        }
+
+        /// <summary>
+        /// Cover this slice's ground along the planned tiles.
+        ///
+        /// The pace is the simulation's own, terrain and all — see <see cref="WalkSpeed"/> — and
+        /// the leftovers of a slice carry on into the next tile rather than being thrown away, so
+        /// his speed does not depend on how many tile boundaries happened to fall inside a frame.
+        /// </summary>
+        private void StepAlong(float dt)
+        {
+            var grid = _world.Grid;
+
+            int guard = 0;
+            while (dt > 0f && _walked < _walk.Count && guard++ < MostTiles)
+            {
+                var here = _officerAt.ToTile();
+                float cost = grid.InBounds(here)
+                    ? grid.MoveCost(here.X, here.Y)
+                    : TileGrid.TypicalMoveCost;
+                if (cost > 100f) cost = TileGrid.TypicalMoveCost;
+                float speed = WalkSpeed / cost;
+
+                var target = Vec2.CentreOf(_walk[_walked]);
+                var delta = target - _officerAt;
+                float dist = Mathf.Sqrt(delta.LengthSquared);
+
+                // Village y runs SOUTH and world z is its negation, as everywhere in Space3D.
+                if (dist > 0.0001f)
+                    _officerFacing = new Vector3(delta.X, 0f, -delta.Y).normalized;
+
+                float step = speed * dt;
+                if (dist <= step)
+                {
+                    _officerAt = target;
+                    _walked++;
+                    dt -= dist / speed;
+                }
+                else
+                {
+                    _officerAt += delta * (step / dist);
+                    dt = 0f;
+                }
+            }
+
+            SeatOfficer();
+            if (_walked >= _walk.Count) ReachedTheDoor();
+        }
+
+        /// <summary>He is there. Report it once.</summary>
+        private void ReachedTheDoor()
+        {
+            _walk.Clear();
+            _walked = 0;
+            _standing = 0f;
+            _searching = 0f;
+            _foot = Foot.Idle;
+
+            // Nulled BEFORE it fires, exactly as Park does it and for the same reason: a callback
+            // that sends him straight on to the next door must not find this walk's arrival still
+            // pending behind it.
+            var fire = _atDoor;
+            _atDoor = null;
+            fire?.Invoke();
+        }
+
+        /// <summary>Put him where his position says he is, on the ground and facing the way he is
+        /// walking. <see cref="Space3D.ToWorld(Vec2)"/> folds the relief in, so he walks over what
+        /// little of it Rossville has rather than through it.</summary>
+        private void SeatOfficer()
+        {
+            if (_officer == null) return;
+
+            _officer.position = Space3D.ToWorld(_officerAt);
+            if (_officerFacing.sqrMagnitude > 0.0001f)
+                _officer.rotation = Quaternion.LookRotation(_officerFacing, Vector3.up);
+        }
+
+        /// <summary>
+        /// The nearest spot he can actually stand on, searched outwards in rings.
+        ///
+        /// WITHOUT THIS, EVERY DOOR WOULD BE REPORTED FROM THE KERB. `Pathfinder.FindPath` answers
+        /// `NoRouteExists` for an unwalkable ORIGIN as readily as for an unwalkable destination,
+        /// and a car parks half a lane toward the verge (see <see cref="Park"/>) — which is
+        /// frequently a tile the grid does not call walkable. One ring search at spawn is the
+        /// difference between a canvass that walks and a canvass that never leaves the car.
+        /// </summary>
+        private Vec2 NearestFoothold(Vec2 at)
+        {
+            var grid = _world.Grid;
+
+            var here = at.ToTile();
+            if (grid.InBounds(here) && grid.IsWalkable(here)) return at;
+
+            for (int r = 1; r <= Foothold; r++)
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++)
+                    {
+                        // The ring only: everything inside it was tried on an earlier pass.
+                        if (dx > -r && dx < r && dy > -r && dy < r) continue;
+
+                        int x = here.X + dx, y = here.Y + dy;
+                        if (!grid.InBounds(x, y) || !grid.IsWalkable(x, y)) continue;
+                        return Vec2.CentreOf(new Tile(x, y));
+                    }
+
+            // Nowhere at all. He stands where the car did and reports every door from there,
+            // which is the kerb fallback doing exactly the job it exists for.
+            return at;
         }
     }
 }
