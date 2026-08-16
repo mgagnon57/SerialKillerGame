@@ -24,8 +24,13 @@ blue lens materials), A-pillar spotlight, door roundel and wipers; 10,012 tris. 
 against the real 1991 Caprice (17.9 ft) and the pack police car (17.6 ft): his is 18.5 ft,
 wheels on y=0 to the millimetre, origin centred — authored facing +X, so the converter grew a
 yaw argument and bakes the quarter-turn to the +Z drive convention. The natural next step is
-swapping it in as CityResponse's cruiser. None of the three is PLACED as furniture yet — the
-desk-prop placement seam is the follow-on.
+swapping it in as CityResponse's cruiser. Fourth: **SodaVendingMachine** (same day)
+— his first TEXTURED export: 622 tris, three flat-graphic textures (red body, a SODA marquee,
+wood trim), 3.2 ft x 6.0 ft footprint dead on the real thing. The converter learned to extract
+embedded GLB textures to PNGs with map_Kd + UVs — and since Unity's OBJ importer ignores
+map_Kd, the textured materials are wired through the ModelImporter's remap table as real .mat
+assets beside the model (the pattern for every textured model after it). None of the four is
+PLACED as furniture yet — the prop placement seam is the follow-on.
 
 ---
 
