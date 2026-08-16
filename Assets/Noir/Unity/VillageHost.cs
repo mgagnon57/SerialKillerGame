@@ -1784,7 +1784,11 @@ namespace Noir.Unity
             // the peak hour and garaged; this is what holds it to IDOT's curve - ~19 cars at an
             // average instant, ~46 at the commute - instead of the flat 159 it ran for months.
             // Retime is idempotent within a minute, so calling it every frame costs a compare.
-            if (_traffic != null) _traffic.Retime(Sim.Clock.MinuteOfDay);
+            if (_traffic != null)
+            {
+                _traffic.Retime(Sim.Clock.MinuteOfDay);
+                _traffic.TownTick = Sim.Clock.Tick;
+            }
 
             // And the town answers for somebody lying in the street. Once a sim-minute for the
             // same reason the driveways are: the case machine reasons in whole minutes, and the

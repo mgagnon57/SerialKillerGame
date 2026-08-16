@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Noir.Core.Contracts;
 using Noir.Core.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -39,7 +40,7 @@ namespace Noir.Unity
     /// </summary>
     public sealed class CityTraffic : MonoBehaviour
     {
-        /// <summary>Metres per second. A town speed, not a motorway one.</summary>
+        /// <summary>Metres per SIM second. A town speed, not a motorway one.</summary>
         private const float Speed = 8f;
 
         /// <summary>Slower round a corner, as anybody is.</summary>
@@ -961,20 +962,38 @@ namespace Noir.Unity
         /// <summary>
         /// The most driving one frame may do, as slices.
         ///
-        /// Twelve is four hundred milliseconds of game time. Past that the traffic falls behind
-        /// rather than trying to catch up, because catching up costs more frame time, which puts
-        /// it further behind - and a spiral that ends in a locked editor is worse than a lorry
-        /// arriving somewhere a little late.
+        /// Sized for the 300x dial: at 60 fps one frame owes five TOWN seconds, which is 150
+        /// slices, and a little headroom on top. Past that the traffic falls behind rather than
+        /// trying to catch up, because catching up costs more frame time, which puts it further
+        /// behind - and a spiral that ends in a locked editor is worse than a lorry arriving
+        /// somewhere a little late. (It was 12 when a slice was a REAL thirtieth - the same
+        /// philosophy, one clock earlier.)
         /// </summary>
-        private const int MostSlices = 12;
+        private const int MostSlices = 160;
 
         private float _owed;
+
+        /// <summary>
+        /// The sim clock's tick, pushed by VillageHost.Update every frame. -1 until first fed -
+        /// a traffic system nobody feeds a clock does not move, which is what a preview town
+        /// without a running sim should do. ONE CLOCK (owner, 2026-08-16, reversing the
+        /// scenery-runs-on-Time.deltaTime ruling): the fleet advances by the SIM delta, so the
+        /// speed dial scales cars and pedestrians together, and a paused town is paused.
+        /// </summary>
+        public long TownTick = -1;
+        private long _lastTick = -1;
 
         private void Update()
         {
             if (Graph == null) return;
+            if (TownTick < 0) return;
+            if (_lastTick < 0) { _lastTick = TownTick; return; }
 
-            _owed += Time.deltaTime;
+            float dtTown = (TownTick - _lastTick) / (float)GameClock.TicksPerSecond;
+            _lastTick = TownTick;
+            if (dtTown <= 0f) return;                     // paused, or the same tick twice
+
+            _owed += dtTown;
 
             int slices = 0;
             while (_owed >= Slice && slices++ < MostSlices)
