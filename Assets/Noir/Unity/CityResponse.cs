@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.Contracts;
+using Noir.Core.People;
 using Noir.Core.Sim;
 using Noir.Core.World;
 #if UNITY_EDITOR
@@ -234,6 +235,54 @@ namespace Noir.Unity
         private const float SearchPatience = 120f;
 
         /// <summary>
+        /// How long he waits between asking again while a search keeps giving up, in SIM seconds.
+        ///
+        /// A `GaveUp` COSTS THE WHOLE ALLOWANCE BEFORE IT CAN SAY SO. That is the exact mechanism
+        /// of CLAUDE.md's stale-node-cap incident: a capped search spends every one of its 300,000
+        /// nodes before it can report failure, so seven honest walks became 171 refusals and
+        /// seventeen million nodes were burnt to avoid paying about one million. Retrying every
+        /// frame for the whole of <see cref="SearchPatience"/> would repeat that at roughly 7,200
+        /// full-budget searches a canvass. Five sim seconds is the same answer for a sixtieth of
+        /// the cost: `GaveUp` is a property of how busy this MOMENT is, and a moment does not
+        /// change meaningfully between two frames.
+        /// </summary>
+        private const float LookAgainEvery = 5f;
+
+        /// <summary>
+        /// Degrees a second his facing may swing, on the REAL clock.
+        ///
+        /// <see cref="AgentMeshView"/>'s own `TurnRate` and its own `Time.unscaledDeltaTime`,
+        /// deliberately identical rather than merely similar: he walks among people whose yaw is
+        /// smoothed at exactly this rate, and a figure that snaps 45 degrees at a corner while the
+        /// townsman beside him leans into it does not read as a different animation, it reads as a
+        /// glitch.
+        /// </summary>
+        private const float TurnRate = 540f;
+
+        /// <summary>
+        /// How tall he is made, in metres.
+        ///
+        /// The adult baseline `AgentLook` scales the whole town to, and the height
+        /// <see cref="AgentAnimation"/>'s clips were authored for — `AgentAnimation.AdultStride`
+        /// is this number times 0.82. AT EXACTLY THIS HEIGHT THE STRIDE TERM IS 1, which is what
+        /// makes passing `stride: 0f` to `Drive` honest rather than merely absent: he is the body
+        /// the walk cycle was animated for, so there is nothing to correct.
+        ///
+        /// The pack's own adult males are 1.86 to 2.03 m, so without this he stands a head over
+        /// everybody he interviews.
+        /// </summary>
+        private const float AdultHeight = 1.71f;
+
+        /// <summary>
+        /// Which clip he draws out of a row that offers several. A FIXED number, so he walks the
+        /// same way in every case and in every replay of a seed.
+        ///
+        /// NOT A VILLAGE SEED AND NOT A DATE — it feeds `AgentAnimation`'s clip choice and nothing
+        /// else. Changing it changes which walk cycle one man plays.
+        /// </summary>
+        private const ulong OfficerSeed = 0x0FF1CEuL;
+
+        /// <summary>
         /// The most tiles one frame may carry the officer over.
         ///
         /// The same argument as <see cref="MostSteps"/>: at 600x fast-forward one frame is minutes
@@ -268,6 +317,20 @@ namespace Noir.Unity
         private const string OfficerPrefab =
             "Assets/polyperfect/Poly Universal Pack/Prefabs/People/Slavic People/"
             + "Man_Slavic_Summer_Hair.prefab";
+
+        /// <summary>
+        /// What he plays: the town's own animator, the one `Noir > Build The Townsfolk Animator`
+        /// rebuilds. <see cref="AgentBody"/>'s `Controller`, restated because it is private there.
+        ///
+        /// THE AVATAR IS NOT FETCHED HERE, and it is the one thing that would fail in silence.
+        /// `AgentBody` has to go and find one because not every prefab in the pack carries an
+        /// Animator of its own, and one added by hand has nothing on it — seventy-four of 365
+        /// figures arrived in their bind pose that way. This prefab is not one of them: it ships
+        /// its own Animator with its avatar already bound, so the controller is the whole of what
+        /// is missing. If that ever stops being true he stands in his bind pose and slides, which
+        /// is precisely what that comment in `AgentBody` warns of.
+        /// </summary>
+        private const string TownsfolkController = "Assets/Noir/Animations/Townsfolk.controller";
 
         /// <summary>What the officer is doing about the door he was last sent to.</summary>
         private enum Foot
@@ -369,6 +432,20 @@ namespace Noir.Unity
         private Pathfinder _finder;
 
         private Transform _officer;
+
+        /// <summary>His legs, or null when the prefab did not load and he is an empty GameObject.
+        /// Every failure mode below it is a no-op or a held pose; none of them throws.</summary>
+        private Animator _officerAnim;
+
+        /// <summary>How fast he is walking, in metres per SIM second — the last step's own
+        /// terrain-scaled speed. Zero whenever he is not walking. Read by
+        /// <see cref="Animate"/>, which has to hand `Drive` a REAL-time pace.</summary>
+        private float _officerPace;
+
+        /// <summary>Sim seconds until the next attempt while <see cref="Foot.Looking"/>.
+        /// Owned by <see cref="PlanTheWalk"/>'s give-up arm, which is the only thing that arms
+        /// it. See <see cref="LookAgainEvery"/>.</summary>
+        private float _lookAgain;
 
         /// <summary>Where he is, in village coordinates — the sim's own space, so the tile he is
         /// on and the cost of the ground under him are one lookup rather than a conversion.</summary>
@@ -503,10 +580,16 @@ namespace Noir.Unity
             int slot = (int)rig;
             if (slot < 0 || slot >= _cars.Length) return;
 
-            // HE GETS BACK IN BEFORE IT MOVES. Ordered here as well as in Despawn because this is
-            // the path on which the county car DOES NOT despawn — it plans a route out and drives
-            // it — and an officer left behind would stand in the street for the rest of the game
-            // with nothing that could ever pick him up again.
+            // HE DOES NOT WALK BACK TO THE CAR — v1 DESTROYS HIM WHERE HE STANDS, mid-stride if
+            // that is where the order finds him. A walk back is a second journey to plan and a
+            // departure that cannot begin until it finishes, which is a wedge shape this file
+            // already knows too well; the honest v1 is that the officer stops existing as the car
+            // pulls away, and from across a street nobody was watching him get in anyway.
+            //
+            // ORDERED HERE AS WELL AS IN DESPAWN because this is the path on which the county car
+            // DOES NOT despawn — it plans a route out and drives it — and an officer left behind
+            // would stand in the street for the rest of the game with nothing that could ever pick
+            // him up again.
             if (rig == Rig.County) SendHimHome();
 
             var car = _cars[slot];
@@ -1153,6 +1236,7 @@ namespace Noir.Unity
             _atDoor = onArrived;
             _standing = 0f;
             _searching = 0f;
+            _lookAgain = 0f;
             PlanTheWalk();
         }
 
@@ -1181,32 +1265,106 @@ namespace Noir.Unity
             go.name = "county officer";
             go.transform.SetParent(transform, false);
 
+            // ---- how tall he is ----
+            //
+            // UNIFORM, and that is the safe one. The warning in `AgentBody` is against the
+            // NON-uniform version — `new Vector3(wide, tall, wide)`, which shears a skinned
+            // hierarchy as its bones swing — and this is the arm that replaced it and has run on
+            // every rigged figure in Rossville since 2026-08-08. See AdultHeight for why 1.71.
+            var rends = go.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                var b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                if (b.size.y > 0.01f)
+                    go.transform.localScale = Vector3.one * (AdultHeight / b.size.y);
+            }
+
+            // ---- and something to play ----
+            //
+            // The prefab brings its own Animator with its avatar bound; only the controller is
+            // missing. See TownsfolkController. Every one of the four settings below is
+            // `AgentBody`'s, for the reasons argued out at length there — root motion off because
+            // the walk decides where he is, CullUpdateTransforms because CullCompletely stops a
+            // figure dead when it leaves view, and UnscaledTime because the sim itself is unscaled
+            // and legs on a different clock from positions is what skating is.
+            _officerAnim = go.GetComponentInChildren<Animator>();
+            if (_officerAnim != null)
+            {
+#if UNITY_EDITOR
+                var controller =
+                    AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(TownsfolkController);
+                if (controller != null) _officerAnim.runtimeAnimatorController = controller;
+#endif
+                _officerAnim.applyRootMotion = false;
+                _officerAnim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+                _officerAnim.updateMode = AnimatorUpdateMode.UnscaledTime;
+            }
+
             _officer = go.transform;
-            _officerAt = NearestFoothold(new Vec2(parked.Value.x, -parked.Value.z));
+            _officerAt = NearestFoothold(Space3D.FromWorld(OutOfTheCar(parked.Value)));
             _officerFacing = Vector3.forward;
+            _officerPace = 0f;
+            _lookAgain = 0f;
             _foot = Foot.Idle;
             _walk.Clear();
             _walked = 0;
-            SeatOfficer();
+
+            // Snapped rather than swung: there is no previous facing to turn away from.
+            SeatOfficer(360f);
             return true;
         }
 
         /// <summary>
-        /// Back in the car and gone. Everything he was doing goes with him — including any
-        /// pending callback, which is DROPPED RATHER THAN FIRED: a callback is a promise that he
-        /// reached a door, and a scene whose car has been ordered away is not a scene anybody is
-        /// still canvassing.
+        /// The middle of the pavement beside the parked cruiser, rather than the driver's seat.
+        ///
+        /// <see cref="ParkedAt"/> IS THE CAR'S CENTRE, and <see cref="Park"/> has already moved
+        /// that half a lane toward the verge — so standing him on it puts him inside the bodywork,
+        /// and the tile under it is ordinary walkable carriageway, which means
+        /// <see cref="NearestFoothold"/> is perfectly happy and hands it straight back. Nothing
+        /// downstream can catch this; it is only visible by looking at him.
+        ///
+        /// `CityStreets.VergeOffset` is the measured middle of the pavement — its own docstring
+        /// says "for anything that stands rather than drives", which is this exactly — so the
+        /// correction is the difference between the two offsets, applied along the car's own
+        /// right. Both come off the asphalt this road class was really paved with, so an alley and
+        /// a main road each get their own answer.
+        ///
+        /// A VEHICLE WITH NO BODY NEVER DROVE: it arrived off-stage and `ParkedAt` is the scene
+        /// point rather than a spot on any lane, so there is no road class to ask about and no
+        /// bodywork to stand outside of. It is returned unmoved.
+        /// </summary>
+        private Vector3 OutOfTheCar(Vector3 parked)
+        {
+            var car = _cars[(int)Rig.County];
+            if (car == null || car.What == null) return parked;
+            if (_traffic == null || _traffic.Graph == null || _world == null) return parked;
+
+            var klass = _world.Roads.Lines[_traffic.Graph.Segments[car.Segment].Line].Class;
+            return parked + car.What.right
+                 * (CityStreets.VergeOffset(klass) - CityStreets.LaneOffset(klass, 0));
+        }
+
+        /// <summary>
+        /// The car has left, so he goes with it — destroyed where he stands rather than walked
+        /// back to the kerb; see the note in <see cref="Depart"/>. Everything he was doing goes
+        /// too, INCLUDING ANY PENDING CALLBACK, which is DROPPED RATHER THAN FIRED: a callback is
+        /// a promise that he reached a door, and a scene whose car has been ordered away is not a
+        /// scene anybody is still canvassing.
         /// </summary>
         private void SendHimHome()
         {
             if (_officer != null) Destroy(_officer.gameObject);
             _officer = null;
+            _officerAnim = null;
 
             _walk.Clear();
             _walked = 0;
             _foot = Foot.Idle;
             _standing = 0f;
             _searching = 0f;
+            _lookAgain = 0f;
+            _officerPace = 0f;
             _atDoor = null;
         }
 
@@ -1219,6 +1377,16 @@ namespace Noir.Unity
         {
             if (_officer == null) return;
 
+            Afoot(dt);
+
+            // Once per pass whatever happened above — including nothing. `Afoot` can end with him
+            // destroyed, if an arrival's callback ordered the car away, so this re-checks.
+            Animate(dt);
+        }
+
+        /// <summary>The state machine itself. See <see cref="WalkTheOfficer"/>.</summary>
+        private void Afoot(float dt)
+        {
             switch (_foot)
             {
                 case Foot.Idle:
@@ -1231,6 +1399,13 @@ namespace Noir.Unity
 
                 case Foot.Looking:
                     _searching += dt;
+
+                    // NOT EVERY FRAME. A refusal costs the whole node allowance before it can be
+                    // reported, so asking again immediately is how a bounded retry turns into the
+                    // most expensive thing in the town. See LookAgainEvery.
+                    _lookAgain -= dt;
+                    if (_lookAgain > 0f) return;
+
                     if (!PlanTheWalk())
                     {
                         // STILL GIVING UP, AND THE RETRIES ARE BOUNDED. He has already stood here
@@ -1279,8 +1454,11 @@ namespace Noir.Unity
             if (outcome == PathOutcome.NoRouteExists) { StandAtTheKerb(); return false; }
 
             // A PROPERTY OF THIS MOMENT: the search ran out of node budget. Worth asking again
-            // next pass, and PathOutcome's own header says so.
+            // shortly, and PathOutcome's own header says so — but SHORTLY, not immediately. This
+            // is the one place the retry clock is armed, so there is exactly one thing deciding
+            // how often the town pays for a refusal.
             _foot = Foot.Looking;
+            _lookAgain = LookAgainEvery;
             return false;
         }
 
@@ -1318,6 +1496,7 @@ namespace Noir.Unity
                     : TileGrid.TypicalMoveCost;
                 if (cost > 100f) cost = TileGrid.TypicalMoveCost;
                 float speed = WalkSpeed / cost;
+                _officerPace = speed;          // what his legs have to keep up with; see Animate
 
                 var target = Vec2.CentreOf(_walk[_walked]);
                 var delta = target - _officerAt;
@@ -1341,7 +1520,7 @@ namespace Noir.Unity
                 }
             }
 
-            SeatOfficer();
+            SeatOfficer(TurnRate * Time.unscaledDeltaTime);
             if (_walked >= _walk.Count) ReachedTheDoor();
         }
 
@@ -1352,6 +1531,8 @@ namespace Noir.Unity
             _walked = 0;
             _standing = 0f;
             _searching = 0f;
+            _lookAgain = 0f;
+            _officerPace = 0f;
             _foot = Foot.Idle;
 
             // Nulled BEFORE it fires, exactly as Park does it and for the same reason: a callback
@@ -1362,26 +1543,89 @@ namespace Noir.Unity
             fire?.Invoke();
         }
 
-        /// <summary>Put him where his position says he is, on the ground and facing the way he is
+        /// <summary>
+        /// Put him where his position says he is, on the ground and turning towards the way he is
         /// walking. <see cref="Space3D.ToWorld(Vec2)"/> folds the relief in, so he walks over what
-        /// little of it Rossville has rather than through it.</summary>
-        private void SeatOfficer()
+        /// little of it Rossville has rather than through it.
+        ///
+        /// <paramref name="turn"/> is how many degrees he may swing this pass — see
+        /// <see cref="TurnRate"/> for why he swings at all rather than snapping. Pass 360 to place
+        /// him outright, which is what spawning him is.
+        /// </summary>
+        private void SeatOfficer(float turn)
         {
             if (_officer == null) return;
 
             _officer.position = Space3D.ToWorld(_officerAt);
             if (_officerFacing.sqrMagnitude > 0.0001f)
-                _officer.rotation = Quaternion.LookRotation(_officerFacing, Vector3.up);
+                _officer.rotation = Quaternion.RotateTowards(
+                    _officer.rotation,
+                    Quaternion.LookRotation(_officerFacing, Vector3.up),
+                    turn);
+        }
+
+        /// <summary>
+        /// Give his legs something to do, once a pass.
+        ///
+        /// THE PACE IS METRES PER *REAL* SECOND AND HIS WALK IS METRES PER *SIM* SECOND, and those
+        /// are two different numbers whenever the clock is wound. `AgentAnimation.Drive` divides
+        /// the pace by the speed the clip was animated at to decide how fast to play it, and the
+        /// animator itself runs on `UnscaledTime` — real seconds — so handing it a sim-time pace
+        /// would play the walk cycle at 1x while the man covered ten times the ground, which is
+        /// the skating fault `Drive`'s whole pace argument exists to remove. The ratio between the
+        /// clocks is exactly this frame's `dtSim / unscaledDeltaTime`.
+        ///
+        /// A REAL DELTA OF ZERO IS "I DO NOT KNOW", not "he has stopped". Passing `-1f` is
+        /// `Drive`'s own way of saying the caller has no pace to offer, and it leaves the clip
+        /// alone rather than freezing him; passing a 0 or an infinity would be a claim.
+        ///
+        /// HE IS `Talking` WHEN HE IS NOT WALKING, AND THE ROW WAS CHOSEN BY READING IT. `Moving`
+        /// short-circuits the activity entirely while he walks — the row is `moving` — so the
+        /// activity is only ever consulted while he is stopped, which for this man means standing
+        /// at a door interviewing somebody, or doing the same thing from the kerb. The `talking`
+        /// row is fifteen standing conversational clips (Talking, Arm Gesture, Shrugging,
+        /// Acknowledging, Agreeing) and it is exactly that.
+        ///
+        /// `visiting` WOULD HAVE SAT HIM DOWN ON THE PAVEMENT. Its row opens `Sitting Idle,
+        /// Sitting Talking, Sitting Laughing, Seated Idle` — it is written for somebody in
+        /// somebody else's front room — and with a FIXED `who` seed he would have picked one of
+        /// those and played it at every door of every case. Nothing would have failed; he would
+        /// simply have been sitting in the road. A row name that reads right is not a row that
+        /// looks right, and the only way to tell is to open `Content/animations.txt`.
+        /// </summary>
+        private void Animate(float dtSim)
+        {
+            if (_officer == null || _officerAnim == null) return;
+
+            float real = Time.unscaledDeltaTime;
+            float pace = real > 0.0001f ? _officerPace * (dtSim / real) : -1f;
+
+            AgentAnimation.Drive(
+                _officerAnim,
+                new AgentAnimation.Situation(Activity.Talking, moving: _foot == Foot.Walking),
+                who: OfficerSeed,
+                pace: pace,
+
+                // NOTHING TO CORRECT: he is built to AdultHeight, which is the height the clips
+                // were authored for, so the stride term would be exactly 1. See AdultHeight.
+                stride: 0f);
         }
 
         /// <summary>
         /// The nearest spot he can actually stand on, searched outwards in rings.
         ///
-        /// WITHOUT THIS, EVERY DOOR WOULD BE REPORTED FROM THE KERB. `Pathfinder.FindPath` answers
+        /// WHERE HE IS PUT DOWN DECIDES WHETHER HE CAN WALK AT ALL: `Pathfinder.FindPath` answers
         /// `NoRouteExists` for an unwalkable ORIGIN as readily as for an unwalkable destination,
-        /// and a car parks half a lane toward the verge (see <see cref="Park"/>) — which is
-        /// frequently a tile the grid does not call walkable. One ring search at spawn is the
-        /// difference between a canvass that walks and a canvass that never leaves the car.
+        /// and a bad origin fails EVERY door of the canvass rather than one.
+        ///
+        /// THE ORDINARY CASE DOES NOT NEED THIS, and an earlier version of this comment claimed it
+        /// did. A cruiser that drove parks on carriageway, and both the carriageway and the
+        /// pavement <see cref="OutOfTheCar"/> steps him onto are walkable — so the first test
+        /// passes and he is handed straight back. What this is really for is the vehicle that did
+        /// NOT drive to a spot chosen for standing on: an off-stage arrival is put at the SCENE
+        /// tile, which is wherever the player struck somebody, and a <see cref="HeldTooLong"/>
+        /// park is wherever the traffic happened to stop it. Neither was picked for being ground a
+        /// man can stand on.
         /// </summary>
         private Vec2 NearestFoothold(Vec2 at)
         {
@@ -1402,8 +1646,14 @@ namespace Noir.Unity
                         return Vec2.CentreOf(new Tile(x, y));
                     }
 
-            // Nowhere at all. He stands where the car did and reports every door from there,
-            // which is the kerb fallback doing exactly the job it exists for.
+            // NOWHERE AT ALL, AND IT SAYS SO. The kerb fallback below will handle it — he reports
+            // every door of the case from where he stands — but it will do that by logging "no
+            // walkable route to door (x,y)" once per door, which points at the doors and not at
+            // the cause. This is the only line that names the real one, and it is the difference
+            // between a two-minute diagnosis and an afternoon spent auditing addresses.
+            Debug.LogWarning($"[response] the officer found nowhere to stand within {Foothold} "
+                           + $"tiles of ({at.X:0.0},{at.Y:0.0}) — every door of this case will be "
+                           + "canvassed from the kerb");
             return at;
         }
     }
