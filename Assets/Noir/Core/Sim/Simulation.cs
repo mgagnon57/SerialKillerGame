@@ -129,6 +129,11 @@ namespace Noir.Core.Sim
         /// world, exactly as AwayFromTown draws — set only by Simulation.Board, cleared by
         /// Alight or Release. Meaningless unless Responding.</summary>
         public bool Aboard;
+
+        /// <summary>What a Responding agent wears once they stand at RespondTarget —
+        /// Activity.Responding for the officer, Gawking for the ring around him. Set only
+        /// by Simulation.Respond. Meaningless unless Responding.</summary>
+        public Activity StandAs;
     }
 
     /// <summary>
@@ -529,7 +534,7 @@ namespace Noir.Core.Sim
         /// No-op if already Responding, or Downed, or the ambulance already has them
         /// (AwayUntilMinute != 0) — a body cannot be dispatched to a scene.
         /// </summary>
-        public void Respond(CitizenId who, Tile scene)
+        public void Respond(CitizenId who, Tile scene, Activity standAs = Activity.Responding)
         {
             int i = who.Value;
             if (_agents[i].Responding) return;
@@ -550,6 +555,7 @@ namespace Noir.Core.Sim
 
             _agents[i].Responding = true;
             _agents[i].RespondTarget = scene;
+            _agents[i].StandAs = standAs;
             _agents[i].Destination = PlaceId.None;
         }
 
@@ -594,7 +600,7 @@ namespace Noir.Core.Sim
             _agents[i].Position = Vec2.CentreOf(at);
             _agents[i].PreviousPosition = _agents[i].Position;
             _agents[i].At = PlaceId.None;
-            _agents[i].Doing = Activity.Responding;
+            _agents[i].Doing = _agents[i].StandAs;
         }
 
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few
@@ -1193,8 +1199,8 @@ namespace Noir.Core.Sim
             var from = _agents[index].Position.ToTile();
             if (from == _agents[index].RespondTarget)
             {
-                if (_agents[index].Doing != Activity.Responding)
-                { _agents[index].Doing = Activity.Responding; StandStill(index); }
+                if (_agents[index].Doing != _agents[index].StandAs)
+                { _agents[index].Doing = _agents[index].StandAs; StandStill(index); }
                 return;
             }
 
@@ -1205,8 +1211,8 @@ namespace Noir.Core.Sim
             // OTHER target.
             if (_agents[index].Stranded && _clock.Tick < _retryAtTick[index])
             {
-                if (_agents[index].Doing != Activity.Responding)
-                { _agents[index].Doing = Activity.Responding; StandStill(index); }
+                if (_agents[index].Doing != _agents[index].StandAs)
+                { _agents[index].Doing = _agents[index].StandAs; StandStill(index); }
                 return;
             }
 
@@ -1221,8 +1227,8 @@ namespace Noir.Core.Sim
                 // target (see the comment above) — exactly the condition Strand's own doubling
                 // wants, and false on a first failure gives it FirstRetryTicks instead.
                 Strand(index, _agents[index].Stranded);
-                if (_agents[index].Doing != Activity.Responding)
-                { _agents[index].Doing = Activity.Responding; StandStill(index); }
+                if (_agents[index].Doing != _agents[index].StandAs)
+                { _agents[index].Doing = _agents[index].StandAs; StandStill(index); }
                 return;   // stand where they are; the host's per-minute poll sees no arrival and waits
             }
             ClearStranded(index);
@@ -1377,7 +1383,7 @@ namespace Noir.Core.Sim
             _agents[index].TalkTicks = 0;
             _agents[index].TalkingTo = CitizenId.None;
             _agents[index].Doing = _agents[index].Responding
-                ? Activity.Responding
+                ? _agents[index].StandAs
                 : _plans[index].At(_clock.MinuteOfDay).What;
         }
 

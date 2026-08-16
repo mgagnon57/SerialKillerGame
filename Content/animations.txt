@@ -179,6 +179,10 @@ downed          Breathing Idle
 # rows already carry, so the controller needs no rebuild for this row.
 responding      Standing Idle, Looking Around, Weight Shift
 
+# gawking: the loose ring around somebody else's misfortune. Same rule as responding -
+# every clip here is carried by another row, so no controller rebuild.
+gawking         Standing Idle, Looking Around, Weight Shift, Bored, Talking
+
 # ---- the fallback --------------------------------------------------------
 # Every situation with nothing else to say. This row is worth more variety than
 # it looks: it is what anybody unaccounted for is doing, so a thin one is a

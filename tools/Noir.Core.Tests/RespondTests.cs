@@ -19,6 +19,91 @@ namespace Noir.Core.Tests
         // can pass by already standing on it.
         private static readonly Tile Scene = new Tile(42, 13);
 
+        // AnimationTableTests' own file-local pattern: walk up from the test binary to the tree.
+        private static string RepoRoot()
+        {
+            var dir = new System.IO.DirectoryInfo(System.AppContext.BaseDirectory);
+            while (dir != null)
+            {
+                if (System.IO.Directory.Exists(System.IO.Path.Combine(
+                        dir.FullName, "Assets", "Noir", "Core", "Observation")))
+                    return dir.FullName;
+                dir = dir.Parent;
+            }
+            throw new System.IO.DirectoryNotFoundException(
+                "Could not find Assets/Noir/Core/Observation above " + System.AppContext.BaseDirectory);
+        }
+
+        [Test]
+        public void AStandAsActivityIsWornOnArrival()
+        {
+            var sim = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60);
+            var who = new CitizenId(1);
+
+            sim.Respond(who, Scene, Activity.Gawking);
+
+            bool arrived = false;
+            for (int t = 0; t < 20 * 60 * 20 && !arrived; t++)
+            {
+                sim.Tick();
+                arrived = !sim.GetAgent(who).Travelling
+                       && sim.GetAgent(who).Position.ToTile() == Scene;
+            }
+            Assert.That(arrived, Is.True, "the gawker never reached the ring tile");
+            Assert.That(sim.GetAgent(who).Doing, Is.EqualTo(Activity.Gawking),
+                "a stand-as of Gawking must be what they wear on arrival, not Responding");
+        }
+
+        [Test]
+        public void TheDefaultStandAsIsRespondingUnchanged()
+        {
+            var sim = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60);
+            var who = new CitizenId(1);
+
+            sim.Respond(who, Scene);   // no stand-as: the officer's own default
+
+            bool arrived = false;
+            for (int t = 0; t < 20 * 60 * 20 && !arrived; t++)
+            {
+                sim.Tick();
+                arrived = !sim.GetAgent(who).Travelling
+                       && sim.GetAgent(who).Position.ToTile() == Scene;
+            }
+            Assert.That(arrived, Is.True);
+            Assert.That(sim.GetAgent(who).Doing, Is.EqualTo(Activity.Responding),
+                "the parameterless call must behave exactly as before the parameter existed");
+        }
+
+        [Test]
+        public void GawkingHasARowInTheRealFileUsingOnlyCarriedClips()
+        {
+            // EveryActivityHasARowInTheRealFile covers existence globally; this pins the
+            // no-controller-rebuild guarantee: every clip the gawking row names must appear on
+            // some OTHER row too, or the row needs a Townsfolk controller rebuild nobody ran.
+            string path = System.IO.Path.Combine(RepoRoot(), "Content", "animations.txt");
+            var lines = System.IO.File.ReadAllLines(path);
+            string gawking = null;
+            var others = new System.Collections.Generic.List<string>();
+            foreach (var line in lines)
+            {
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("#") || trimmed.Length == 0) continue;
+                if (trimmed.StartsWith("gawking")) gawking = trimmed;
+                else others.Add(trimmed);
+            }
+            Assert.That(gawking, Is.Not.Null, "no gawking row in Content/animations.txt");
+
+            string clipsPart = gawking.Substring("gawking".Length).Trim();
+            foreach (var clip in clipsPart.Split(','))
+            {
+                string name = clip.Trim();
+                bool carried = others.Exists(o => o.Contains(name));
+                Assert.That(carried, Is.True,
+                    $"the gawking row names '{name}', which no other row carries - "
+                  + "that clip would need a controller rebuild");
+            }
+        }
+
         [Test]
         public void ARespondingCitizenWalksToTheTileAndStandsThere()
         {

@@ -2431,6 +2431,7 @@ namespace Noir.Unity
                 case Activity.Talking: return "stopped to talk on";
                 case Activity.Downed: return "lying hurt at";
                 case Activity.Responding: return "standing over";
+                case Activity.Gawking: return "watching";
                 default: return "at";
             }
         }

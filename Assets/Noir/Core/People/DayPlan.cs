@@ -65,6 +65,13 @@ namespace Noir.Core.People
         /// values are positional.
         /// </summary>
         Responding,
+
+        /// <summary>
+        /// Standing in the loose ring around somebody else's misfortune. Live state set only
+        /// by Simulation.Respond's standAs parameter; the tick loop never writes it. At the
+        /// end of the enum — values are positional.
+        /// </summary>
+        Gawking,
     }
 
     /// <summary>One stretch of a person's day: be at this place, from this minute to that one.</summary>
