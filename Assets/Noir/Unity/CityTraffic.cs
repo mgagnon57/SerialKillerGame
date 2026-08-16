@@ -306,10 +306,14 @@ namespace Noir.Unity
         /// </summary>
         private readonly List<Mover> _garage = new List<Mover>();
 
-        /// <summary>Stationary things ambient cars must not drive through — the player's parked
-        /// car, a response vehicle standing at a scene. Phase 1 named this seam and deferred it
-        /// ("a second obstacle source those five queries consult"); this is the minimal landing:
-        /// FOLLOWING only. Moving obstacles stay invisible, documented as ever.</summary>
+        /// <summary>Things ambient cars must not drive through — the player's parked car, and
+        /// every response vehicle from the moment it spawns to the moment it despawns, MOVING
+        /// INCLUDED: `CityResponse` registers its rigs here at spawn, because this list and
+        /// `_movers` are the whole of what `Blocked` consults and a vehicle in neither is one no
+        /// ambient car can see. Phase 1 named this seam ("a second obstacle source those five
+        /// queries consult") and the landing is still minimal — FOLLOWING only, and
+        /// heading-blind: a box test against a bare Transform, which carries no travel
+        /// direction to judge by.</summary>
         public readonly List<Transform> Obstacles = new List<Transform>();
 
         private int _households;

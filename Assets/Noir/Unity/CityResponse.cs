@@ -229,8 +229,9 @@ namespace Noir.Unity
             /// REAL seconds this vehicle has been held without covering ground — charged from
             /// `Time.unscaledDeltaTime`, at most once per frame, and only on frames the sim
             /// moved, so a paused sim charges nothing — zeroed the moment it moves a real step.
-            /// The one number in this file on the wall clock rather than the sim's, because what
-            /// holds a rig clears in real seconds; see <see cref="Patience"/> for the argument.
+            /// The accumulator the <see cref="Patience"/> threshold reads, on the same REAL
+            /// clock as that deadline; see Patience for why the wait is on the wall clock when
+            /// the driving is not.
             /// </summary>
             public float HeldFor;
 
@@ -572,10 +573,12 @@ namespace Noir.Unity
             if (dtSim <= 0f) return;                      // paused, or the same tick twice
 
             // The held deadline charges REAL time — and it is read here, BELOW the guard above,
-            // so a paused sim charges nothing. Handed to the first slice only: a held vehicle is
-            // held for every slice of a frame (nothing it is judging against moves between them),
-            // and charging each slice would multiply one frame's wait by the slice count. See
-            // Patience for why the wait is on the wall clock when the driving is not.
+            // so a paused sim charges nothing. Handed to the first slice only, because charging
+            // each slice would multiply one frame's wait by the slice count: the ambient fleet
+            // and the player's car do not move between slices; the sibling rig does, but a slice
+            // in which anything clears is a slice in which this rig covers ground, which zeroes
+            // the charge anyway. See Patience for why the wait is on the wall clock when the
+            // driving is not.
             float heldDt = Time.unscaledDeltaTime;
 
             int steps = 0;
