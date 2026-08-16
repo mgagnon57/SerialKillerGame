@@ -65,6 +65,10 @@ namespace Noir.PlayTests
                 // back up and close every case, whatever this test's exit path was.
                 for (int i = 0; i < host.Sim.AgentCount; i++)
                     if (host.Sim.GetAgent(i).Downed) host.Sim.Revive(new CitizenId(i));
+                // Officers AND gawkers alike: anyone still off-plan goes back to their day,
+                // whatever this test's exit path was. Release also clears an Aboard ride.
+                for (int i = 0; i < host.Sim.AgentCount; i++)
+                    if (host.Sim.GetAgent(i).Responding) host.Sim.Release(new CitizenId(i));
                 for (int c = 0; c < host.Cases.Count; c++)
                     if (host.Cases.StateOf(c) != CaseState.Closed)
                         host.Cases.CloseLoudly(c, "test residue: the suite moves on");

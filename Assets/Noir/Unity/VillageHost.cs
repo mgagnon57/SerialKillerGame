@@ -1342,6 +1342,36 @@ namespace Noir.Unity
         /// </summary>
         private readonly Dictionary<int, CitizenId> _officerWalking = new Dictionary<int, CitizenId>();
 
+        /// <summary>Which citizens are standing in each case's ring. The machine cannot hold
+        /// this for <see cref="_officerWalking"/>'s own reason: it has no idea who is nearby.</summary>
+        private readonly Dictionary<int, List<CitizenId>> _gawkers =
+            new Dictionary<int, List<CitizenId>>();
+
+        /// <summary>
+        /// The fixed ring: offsets at Chebyshev radius 2-3 in one declared order, so the crowd's
+        /// shape is deterministic per scene. Slot N is the (N+1)th WALKABLE spot — a ring tile
+        /// inside a wall is skipped, not assigned. Reachability is left to RespondTick: a sealed
+        /// but walkable tile strands its gawker standing wherever the path gave out, which reads
+        /// as somebody craning from a distance and costs nothing.
+        /// </summary>
+        private static readonly (int dx, int dy)[] RingSpots =
+        {
+            (2, 0), (-2, 0), (0, 2), (0, -2), (2, 2), (-2, -2), (2, -2), (-2, 2),
+            (3, 1), (-3, -1), (1, 3), (-1, -3),
+        };
+
+        private Tile? RingTileFor(Tile scene, int taken)
+        {
+            int placed = 0;
+            for (int i = 0; i < RingSpots.Length; i++)
+            {
+                var t = new Tile(scene.X + RingSpots[i].dx, scene.Y + RingSpots[i].dy);
+                if (!World.Grid.IsWalkable(t)) continue;
+                if (placed++ == taken) return t;
+            }
+            return null;
+        }
+
         /// <summary>When the response last ran, in minutes of the day. The
         /// <see cref="_drivewaysAt"/> pattern, for the same reason: the machine reasons in whole
         /// minutes and running it per frame would ask the same question sixty times.</summary>
@@ -1425,6 +1455,58 @@ namespace Noir.Unity
             _caseOrders.Clear();
             _cases.Tick(minute, _caseOrders);
             for (int i = 0; i < _caseOrders.Count; i++) Execute(_caseOrders[i], minute);
+
+            // ---- 3½. The crowd ----
+            //
+            // THE MACHINE NEVER HEARS OF THEM. Gawkers are pure choreography: once a case is
+            // discovered, one nearby citizen a minute drifts over to a ring tile — nearest
+            // eligible first, citizen-index tiebreak, NO RNG (the response path's standing
+            // rule) — up to six, and the whole ring is released the minute the case closes,
+            // however it closed. Keying dispersal on Closed rather than on VehiclesLeave means
+            // CloseLoudly and every teardown path disperse the crowd for free.
+            for (int c = 0; c < _cases.Count; c++)
+            {
+                var state = _cases.StateOf(c);
+                if (state == CaseState.Closed)
+                {
+                    if (_gawkers.TryGetValue(c, out var crowd))
+                    {
+                        for (int g = 0; g < crowd.Count; g++) Sim.Release(crowd[g]);
+                        _gawkers.Remove(c);
+                        Debug.Log($"[case] case {c}: the crowd loses interest");
+                    }
+                    continue;
+                }
+                if (state == CaseState.Undiscovered) continue;
+
+                if (!_gawkers.TryGetValue(c, out var ring))
+                    _gawkers[c] = ring = new List<CitizenId>();
+                if (ring.Count >= 6) continue;
+
+                var sceneTile = _cases.SceneOf(c);
+                var sceneV = Vec2.CentreOf(sceneTile);
+                int best = -1;
+                float bestD = 80f * 80f;   // nobody drifts over from more than 80 m
+                for (int i = 0; i < Sim.AgentCount; i++)
+                {
+                    if (i == _cases.VictimOf(c).Value) continue;
+                    var a = Sim.GetAgent(i);
+                    if (a.Downed || a.Responding || a.AwayUntilMinute != 0) continue;
+                    if (a.Doing == Activity.Asleep) continue;
+                    float dx = a.Position.X - sceneV.X, dy = a.Position.Y - sceneV.Y;
+                    float d = dx * dx + dy * dy;
+                    if (d < bestD) { bestD = d; best = i; }
+                }
+                if (best < 0) continue;
+
+                var spot = RingTileFor(sceneTile, ring.Count);
+                if (!spot.HasValue) continue;
+
+                var who = new CitizenId(best);
+                Sim.Respond(who, spot.Value, Activity.Gawking);
+                ring.Add(who);
+                Debug.Log($"[case] case {c}: citizen {best} drifts over");
+            }
 
             // ---- 4. The record ----
             _caseLog.Clear();
