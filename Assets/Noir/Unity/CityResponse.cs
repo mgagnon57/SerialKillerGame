@@ -90,6 +90,32 @@ namespace Noir.Unity
         private const float ArrivalMargin = 1f;
 
         /// <summary>
+        /// How long a vehicle on its last leg will sit behind something before deciding it has
+        /// arrived, in SIM seconds.
+        ///
+        /// THE BAND ABOVE AND THIS ARE FOR TWO DIFFERENT WEDGES, and each one is useless against
+        /// the other's:
+        ///
+        ///   <see cref="ArrivalMargin"/> is the HEAD-TO-HEAD case — the sibling vehicle parked at
+        ///   the same scene, directly in front, which is the common one because Task 13 sends both
+        ///   rigs to the same tile.
+        ///
+        ///   THIS is a QUEUE INSERTED BETWEEN. A parked response vehicle is a hard lane block (see
+        ///   <see cref="Park"/>), so ambient cars stack up behind it — and the second rig then
+        ///   queues behind THAT stack, which can leave it further from its stop than any band
+        ///   worth having reaches. Every car in front of it is stationary for the same reason: the
+        ///   thing at the head of the queue does not move until this case closes, and this case
+        ///   does not close until this vehicle arrives. Nothing in the queue can break it.
+        ///
+        /// Thirty seconds because it must be long enough never to fire on ordinary traffic — a
+        /// signal cycle is 36 s but a queue at one drains continuously, so a response vehicle that
+        /// has not moved an inch in half a minute on the final approach is not in traffic, it is
+        /// stuck behind the scene it was sent to. A driver in that position parks and walks the
+        /// last few yards, which is exactly what this models.
+        /// </summary>
+        private const float Patience = 30f;
+
+        /// <summary>
         /// How long a slice of driving is, in SIM seconds, and how many a frame may run.
         ///
         /// The same argument as <see cref="CityTraffic"/>'s `Slice`/`MostSlices` with the frame
@@ -181,6 +207,14 @@ namespace Noir.Unity
 
             /// <summary>Sim seconds left of an un-routable arrival; negative when it is driving.</summary>
             public float OffStage = -1f;
+
+            /// <summary>
+            /// Sim seconds this vehicle has been held without covering ground, zeroed the moment
+            /// it moves a real step. The same accounting `Mover.Waited`/`Mover.Held` keeps, in sim
+            /// seconds rather than frame seconds because everything here is on the sim clock.
+            /// Read by the deadline in <see cref="Patience"/>.
+            /// </summary>
+            public float HeldFor;
 
             /// <summary>Fired once, at the moment it is parked. Nulled as it fires.</summary>
             public System.Action OnArrived;
@@ -416,6 +450,7 @@ namespace Noir.Unity
                 car.Leg = 0;
                 car.InTurn = false;
                 car.T = 0f;
+                car.HeldFor = 0f;
                 return true;
             }
             return false;
@@ -578,17 +613,36 @@ namespace Noir.Unity
 
             if (Held(car))
             {
-                // HELD ON THE LAST APPROACH, WITHIN THE BOX OF THE SCENE, IS ARRIVED. Whatever is
-                // in front — the other response vehicle, an ambient car that stopped — cannot be
-                // waited out from here, because the thing most likely to be there is a vehicle
-                // this same system parked and will not move until this case advances. See
-                // ArrivalMargin for the wedge this closes.
-                if (stopping && toStop <= car.Reach + ObstacleReach + Headway + ArrivalMargin)
-                    Park(car);
+                car.HeldFor += dt;
+
+                if (stopping)
+                {
+                    // TWO WAYS TO ARRIVE WHILE HELD, FOR TWO DIFFERENT WEDGES.
+                    //
+                    // THE BAND is the sibling vehicle parked directly in front, which is the
+                    // ordinary case because both rigs are sent to the same tile: within the
+                    // following box of the stop, held, IS arrived.
+                    //
+                    // THE DEADLINE is a queue inserted between — ambient cars stacked behind the
+                    // parked vehicle, with this one at the back of them, too far out for any
+                    // sensible band. Nothing in that queue can move until the case closes and the
+                    // case cannot close until this vehicle arrives, so waiting is not a strategy.
+                    //
+                    // Neither can fire off the final leg: `stopping` is "the plan is exhausted and
+                    // it is not on its way out", so a vehicle held mid-route still simply waits.
+                    bool inBand = toStop <= car.Reach + ObstacleReach + Headway + ArrivalMargin;
+                    if (inBand || car.HeldFor >= Patience) Park(car);
+                }
                 return;
             }
 
             car.S += step;
+
+            // MOVED, so the wait starts again from nothing. Anything that covers ground is
+            // progress; the deadline above is only ever meant to catch a vehicle that is not
+            // moving at all.
+            if (step > 0.001f) car.HeldFor = 0f;
+
             if (car.S < segment.ToS) return;
 
             if (last)
@@ -617,9 +671,10 @@ namespace Noir.Unity
             _traffic.TurnArc(turn, out var a, out _, out var c);
             float length = Mathf.Max(0.5f, Vector3.Distance(a, c));
 
-            if (Held(car)) return;
+            if (Held(car)) { car.HeldFor += dt; return; }
 
             car.T += ResponseSpeed * dt / length;
+            car.HeldFor = 0f;                    // moving, so the wait starts again from nothing
             if (car.T < 1f) return;
 
             var to = _traffic.Graph.Segments[_traffic.Graph.Turns[turn].To];
