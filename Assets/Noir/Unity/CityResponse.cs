@@ -1506,8 +1506,12 @@ namespace Noir.Unity
             go.transform.SetParent(transform, false);
 
             // The same navy the precinct wears — one treatment, one table of measured cells,
-            // in AgentBody.PoliceCells. A no-op on the bare-GameObject fallback.
+            // in AgentBody.PoliceCells. A no-op on the bare-GameObject fallback. Editor-only
+            // like AgentBody itself: a shipped build's officer is already invisible (the
+            // prefab never loads), so there is nothing there to dress.
+#if UNITY_EDITOR
             AgentBody.UniformThisInstance(go);
+#endif
 
             // ---- how tall he is ----
             //
