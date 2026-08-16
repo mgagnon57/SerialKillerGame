@@ -62,12 +62,14 @@ a door you close stays closed for a few seconds even with someone at it.
 A car is not a costume: witnesses see a car, not you, and a car that hits somebody is a recorded
 event the town can be asked about (**T**, near a witness — "about half past four, I saw a dark
 car hit somebody"). The victim stays where they fell — until the town notices: hit somebody
-where a window can see it and the town responds. An officer walks over and holds the scene, a
-county car drives in and knocks on the witnesses' doors, and an ambulance takes the victim away
-— dead above ~18 mph, back on their own doorstep three days later below it. Phase 2 delivered;
-the police never look for **you** (yet). NPC traffic cannot see your car — it will drive
-through you — and only driveway cars can be entered (the lot cars are baked into the town's
-chunks).
+where a window can see it and the town responds. On watch, the Rossville officer arrives in
+his **cruiser, light bar going** (overnight, the on-call man comes on foot from his bed), holds
+the scene while **neighbours gather in a loose ring to watch**, then the county car drives in
+and knocks on the witnesses' doors, and an ambulance takes the victim away — dead above
+~18 mph, back on their own doorstep three days later below it. The precinct wears navy.
+Stepping out of third person (P or Tab) keeps the camera over the scene you just left. The
+police never look for **you** (yet). NPC traffic cannot see your car — it will drive through
+you — and only driveway cars can be entered (the lot cars are baked into the town's chunks).
 
 ---
 

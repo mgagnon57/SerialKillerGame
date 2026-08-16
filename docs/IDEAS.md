@@ -942,6 +942,15 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   route. Fix wants a PlayMode assertion that a rig reporting geometric arrival is within ~20 m
   of the scene's nearest lane, and a probe of `NearestSegment((679.5, 760.5))` against the
   real graph. Stills: `docs/snapshots/response-*.png`. — *2026-08-16*
+  **Reproduced same day, evening, with a signature:** the CRUISER (the police-look branch's
+  third rig) drove a visibly wandering route from the precinct — east to x=823, two full
+  east-west sweeps of the southern ring roads — and stopped at **(649,-1276), the exact spot
+  the county car ended at in the morning look**, 1,700 ft from the same scene (679,-760).
+  The park-and-walk kept the case honest (SceneHeld 10 min after dispatch; the officer
+  alighted at the far kerb and walked a third of a mile), so the machine is fine and the
+  ROUTE/HOLD is the defect: either that junction starves rigs until Patience parks them, or
+  the plan itself terminates there. (649,-1276) twice from two different starts is where to
+  put the probe first.
 
 - [x] ~~`Survival` is 174 prefabs and nothing has ever placed one.~~ DONE - `Assets/Noir/Unity/CityStory.cs`,
   six sites and nineteen pieces. AUTHORED, NOT SCATTERED, which is the whole of it: the note above

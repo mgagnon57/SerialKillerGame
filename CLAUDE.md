@@ -68,6 +68,14 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
+> **569 pass, 0 fail, 569 total, 8 skipped, 2 m 13 s.** Measured 2026-08-16 (evening), after
+> the police-look branch's Core tasks landed (+8: `BoardTests` — the officer rides the
+> cruiser, present in the town and absent from the street — and `RespondTests`' stand-as
+> additions backing `Activity.Gawking`). One red appeared mid-branch and was REAL, not
+> machine noise: `RuntimeCodeNeverCallsAnEditorOnlyMember` caught runtime code calling the
+> editor-only `AgentBody` — chased and fixed the same hour (`a2352a1`). Plan:
+> `docs/superpowers/plans/2026-08-16-police-look.md`.
+>
 > **561 pass, 0 fail, 561 total, 8 skipped, 2 m 21 s.** Measured 2026-08-16, after the
 > police-response branch's Core tasks landed (+35 across `LaneRoutesTests`,
 > `ResponseCasesTests`, `ResponseFirewallTests`, `TakeAwayTests`, `RespondTests`,
@@ -255,6 +263,16 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-16 (night): 33 of 33 PASS, 0 fail, 1 skipped, 628/641 s over two
+> runs.** Two new: `LeavingThirdPersonStaysOverTheScene` (the ArriveOver camera handoff) and
+> the response scenario's crowd/dispersal assertions — `officer rode the cruiser: True` in
+> both runs, six gawkers gathered and dispersed. The staged evening look then caught what the
+> gate could not (`dcedc19`): the uniform pin was landing on the ALPHABETICALLY first cast
+> path (farm wellies and a straw hat — `Cast()` sorts), and the cruiser arrived off-stage on
+> every case because the precinct door sits 17.7 m from the nearest lane, past the 15 m
+> start-side reach. Both fixed and re-watched: the cruiser drives with its bar going. The
+> rig-route wander (IDEAS.md, the (649,-1276) attractor) is still open.
+>
 > **BASELINE, 2026-08-16 (evening): 32 of 32 PASS, 0 fail, 1 skipped, 596/598 s over two
 > runs.** The new one is `AmbientTrafficFreezesWhenTheTownIsPaused`, the one-clock ruling's
 > gate: the ambient fleet, the signals and the train advance on the SIM clock now (spec
