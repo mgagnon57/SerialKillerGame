@@ -1218,6 +1218,10 @@ namespace Noir.Unity
             public SimInterruptions(VillageHost host) { _host = host; }
             public int DownedFromMinute(CitizenId who) =>
                 _host._downedAtMinute.TryGetValue(who.Value, out int m) ? m : int.MaxValue;
+
+            // Task 9 wires the real record - nobody has ever come back yet, so every citizen
+            // reads as never-returned, the same as the dead.
+            public int BackFromMinute(CitizenId who) => int.MaxValue;
         }
         private SimInterruptions _interruptions;
 

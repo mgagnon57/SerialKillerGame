@@ -17,5 +17,12 @@ namespace Noir.Core.Witness
     {
         /// <summary>Minutes since the simulation began, or int.MaxValue if never.</summary>
         int DownedFromMinute(CitizenId who);
+
+        /// <summary>Minutes since the simulation began when they came back — the ambulance's
+        /// survivor walking home — or int.MaxValue if they never did (the dead, and everyone
+        /// never taken). The silenced window is [DownedFromMinute, BackFromMinute): one window
+        /// per citizen; a re-hit widens it (earliest down, latest back), which silences the
+        /// between-hits stretch too — a twice-struck witness says less, never more.</summary>
+        int BackFromMinute(CitizenId who);
     }
 }

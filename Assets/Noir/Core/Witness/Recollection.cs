@@ -66,6 +66,7 @@ namespace Noir.Core.Witness
             // of Interruptions.cs's promise that stops the corpse describing the player's own
             // afternoon after it stopped being able to see anything.
             int downedFrom = interruptions?.DownedFromMinute(who.Id) ?? int.MaxValue;
+            int backFrom = interruptions?.BackFromMinute(who.Id) ?? int.MaxValue;
 
             // ASKED ONCE, not per minute: whether somebody is a light sleeper is a fact about
             // the person, not about the moment. Null means nobody is, which is the default.
@@ -76,7 +77,7 @@ namespace Noir.Core.Witness
             for (int minuteOfDay = 0; minuteOfDay < MinutesPerDay; minuteOfDay++)
             {
                 int minute = day * MinutesPerDay + minuteOfDay;
-                if (minute >= downedFrom) { inSight = false; continue; }   // saw nothing, downed
+                if (minute >= downedFrom && minute < backFrom) { inSight = false; continue; }   // saw nothing, downed or away
 
                 if (!track.TryGet(minute, out Step step)) { inSight = false; continue; }
 
@@ -153,6 +154,7 @@ namespace Noir.Core.Witness
 
             DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
             int downedFrom = interruptions?.DownedFromMinute(who.Id) ?? int.MaxValue;
+            int backFrom = interruptions?.BackFromMinute(who.Id) ?? int.MaxValue;
 
             // ASKED ONCE, not per event: see the identical comment on WhatTheySaw.
             bool seesWhileAsleep = nightWitnesses != null && nightWitnesses.AwakeEnough(who.Id);
@@ -161,7 +163,7 @@ namespace Noir.Core.Witness
             {
                 int minuteOfDay = minute % MinutesPerDay;
                 if (minute / MinutesPerDay != day) return;
-                if (minute >= downedFrom) return;              // the victim testifies to nothing
+                if (minute >= downedFrom && minute < backFrom) return;   // silenced while down or away
 
                 Block block = plan.At(minuteOfDay);
                 if (block.What == Activity.TravellingTo) return;
