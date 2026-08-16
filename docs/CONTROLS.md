@@ -20,6 +20,8 @@ Speeds, slowest to fastest:
 
 Starts at **10×**. At 60× a day passes in about 24 seconds; at 300× in about five.
 Drop to **¼×** to watch a single thing happen — someone arriving, stopping, going in.
+The whole town scales together — traffic, lights and the response included (one clock,
+2026-08-16) — so a paused town is actually paused. Only you move on real time.
 
 Skipping is queued rather than instant. A full day is 1.7 million simulation ticks, so it
 drains over a few frames instead of freezing the window.

@@ -255,6 +255,19 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-16 (evening): 32 of 32 PASS, 0 fail, 1 skipped, 596/598 s over two
+> runs.** The new one is `AmbientTrafficFreezesWhenTheTownIsPaused`, the one-clock ruling's
+> gate: the ambient fleet, the signals and the train advance on the SIM clock now (spec
+> `docs/superpowers/specs/2026-08-16-one-clock-design.md`), so cars and walkers scale together
+> with the dial and SpeedIndex 0 actually pauses the town — before, at the owner's default
+> 10×, pedestrians did an effective 30 mph past an 18 mph fleet still driving on
+> `Time.deltaTime`. `TrafficPlayTests` pins SpeedIndex to 10× and counts town seconds off
+> `Sim.Clock.Tick` instead of compressing with `timeScale` (which no longer touches the
+> town); its real-second numbers kept their meaning, measured p90 wait 12.3/14.7 town-seconds
+> against the 36.0 s cycle across the two runs, zero cars held beyond a cycle in either.
+> Measured live at 10×: cars net 68 m/s median (p90 85) against walkers' unchanged 13.5 peak
+> — the correct ~6:1 street, restored.
+>
 > **BASELINE, 2026-08-16: 31 of 31 PASS, 0 fail, 1 skipped, 562 s.** The new one is
 > `AWitnessedHitBringsTheTownsWholeResponse` — discovery, officer, county car, canvass,
 > ambulance, removal, end to end against `host.Cases`. **~390 s of the growth is that ONE test
@@ -537,11 +550,15 @@ can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
   `SurveyRoads.Apply` no-ops and the town quietly keeps `city.txt`'s roads — deliberate, but it
   means a run that built the *pre-survey* town looks identical in every log, test and render.
   Confirm the line appears: `[roads] survey network in use: … from Content/roads.txt, replacing …`
-- **`Time.timeScale` does not speed the sim clock.** The simulation runs on `Time.unscaledDeltaTime`
-  on purpose — how fast a day passes is a property of the game, not of Unity. Anything asserting on
-  sim time waits in *real* seconds. This is why the PlayMode diagnostics carry two and a half hours
-  of timeout budget between them (counted under *Verifying a change*) and cannot be shortened by
-  touching `timeScale`.
+- **`Time.timeScale` does not speed the sim clock — and since 2026-08-16 it speeds NOTHING in
+  the town.** The simulation runs on `Time.unscaledDeltaTime` on purpose — how fast a day passes
+  is a property of the game, not of Unity. The one-clock ruling (owner, 2026-08-16; spec
+  `docs/superpowers/specs/2026-08-16-one-clock-design.md`) put the ambient fleet, the signals
+  and the train on the SIM clock too, so `timeScale` no longer compresses traffic either —
+  `TrafficPlayTests` pins `SpeedIndex` instead. Only the PLAYER moves on the wall clock now
+  (input cannot scale). Anything asserting on sim time waits in *real* seconds. This is why the
+  PlayMode diagnostics carry two and a half hours of timeout budget between them (counted under
+  *Verifying a change*) and cannot be shortened by touching `timeScale`.
 - **The city is built once and shared by every test in a run.** Anything you change on
   `VillageHost` — especially `SpeedIndex` — must be restored in a teardown. Both "flaky" tests
   above were this shape.
