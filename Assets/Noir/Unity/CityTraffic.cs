@@ -306,6 +306,12 @@ namespace Noir.Unity
         /// </summary>
         private readonly List<Mover> _garage = new List<Mover>();
 
+        /// <summary>Stationary things ambient cars must not drive through — the player's parked
+        /// car, a response vehicle standing at a scene. Phase 1 named this seam and deferred it
+        /// ("a second obstacle source those five queries consult"); this is the minimal landing:
+        /// FOLLOWING only. Moving obstacles stay invisible, documented as ever.</summary>
+        public readonly List<Transform> Obstacles = new List<Transform>();
+
         private int _households;
         private int _retimedAt = -1;
 
@@ -1576,6 +1582,19 @@ namespace Noir.Unity
 
                 return true;
             }
+
+            for (int j = 0; j < Obstacles.Count; j++)
+            {
+                var what = Obstacles[j];
+                if (what == null) continue;
+                var gap = what.position - here;
+                float ahead = Vector3.Dot(gap, me.Forward);
+                if (ahead <= 0f) continue;
+                if (ahead > me.Reach + 2.2f + Headway) continue;
+                if (Vector3.Cross(me.Forward, gap).magnitude > LookWide) continue;
+                return true;
+            }
+
             return false;
         }
     }

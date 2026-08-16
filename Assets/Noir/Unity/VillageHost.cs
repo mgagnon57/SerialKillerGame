@@ -363,6 +363,11 @@ namespace Noir.Unity
         /// </summary>
         private CityTraffic _traffic;
 
+        /// <summary>The moving fleet, for anything that needs to register a stationary obstacle
+        /// against it (see <see cref="CityTraffic.Obstacles"/>). May be null: not every scene or
+        /// test builds one.</summary>
+        public CityTraffic Traffic => _traffic;
+
         /// <summary>The town's front doors, and the one thing that swings them.</summary>
         private CityDoors _doors;
 

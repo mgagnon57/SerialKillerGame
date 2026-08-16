@@ -491,6 +491,8 @@ namespace Noir.Unity
             Driving = true;
             _body.SetActive(false);
             _yaw = _car.transform.eulerAngles.y;
+
+            _host.Traffic?.Obstacles.Remove(car.transform);
         }
 
         /// <summary>Out at the driver's door. The car stays exactly where it stands, remembered
@@ -503,6 +505,7 @@ namespace Noir.Unity
 
             Driving = false;
             _lastCar = _car;
+            _host.Traffic?.Obstacles.Add(_lastCar.transform);
             _car = null;
             CarTravelledFrom = null;
             _sweepPrev = null;
