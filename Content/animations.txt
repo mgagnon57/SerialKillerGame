@@ -175,6 +175,10 @@ asleep
 # is imported.
 downed          Breathing Idle
 
+# responding: an officer standing over a scene, or holding it. Clips are all ones other
+# rows already carry, so the controller needs no rebuild for this row.
+responding      Standing Idle, Looking Around, Weight Shift
+
 # ---- the fallback --------------------------------------------------------
 # Every situation with nothing else to say. This row is worth more variety than
 # it looks: it is what anybody unaccounted for is doing, so a thin one is a

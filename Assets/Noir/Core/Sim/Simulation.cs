@@ -110,6 +110,20 @@ namespace Noir.Core.Sim
         /// minute, clears it. int.MaxValue is how "never" is spelled: no clock reaches it.
         /// </summary>
         public int AwayUntilMinute;
+
+        /// <summary>
+        /// On their way to, or standing over, a scene nobody's plan sent them to — the first
+        /// off-plan walk in the game. Outranks the plan the same way Downed does while it holds:
+        /// the tick loop runs RespondTick for them instead of the ordinary journey/Doing logic,
+        /// and Arrive is taught to write Activity.Responding rather than whatever the plan's
+        /// current block says. Only Simulation.Respond sets it; only Simulation.Release or
+        /// Simulation.Down clears it.
+        /// </summary>
+        public bool Responding;
+
+        /// <summary>Where a Responding agent is walking to, or already standing over. Meaningless
+        /// unless Responding is true.</summary>
+        public Tile RespondTarget;
     }
 
     /// <summary>
@@ -414,6 +428,11 @@ namespace Noir.Core.Sim
             _agents[i].DoorPauseTicks = 0;
             _agents[i].QueueSlot = -1;
 
+            // A responding officer struck down mid-walk has to lose the assignment here, or
+            // RespondTick would keep running for a body: the host sees Responding drop and
+            // Downed rise on the same tick and reports the officer lost.
+            _agents[i].Responding = false;
+
             // Safe unconditionally - it only decrements StrandedCount when the flag is set.
             // Without this, downing somebody who was mid-retry left StrandedCount permanently
             // one too high: nobody would ever clear a flag whose owner stopped taking journeys.
@@ -492,6 +511,56 @@ namespace Noir.Core.Sim
             _agents[i].Destination = PlaceId.None;
         }
 
+        /// <summary>
+        /// Send one citizen off their plan entirely and toward a scene nobody staged for them —
+        /// the first walk in the game with no Block behind it. Mirrors Down's own entry cleanup
+        /// (the same reasons: queues, conversations, the renderer all have to let go of them),
+        /// then leaves them to RespondTick, which is the tick loop's whole handling for anyone
+        /// with Responding set. Works from Asleep, because the plan is simply not consulted
+        /// while Responding holds — the same relationship Downed already has to it. Consumes no
+        /// RNG, so nobody else's day moves when an officer is called out.
+        ///
+        /// No-op if already Responding, or Downed, or the ambulance already has them
+        /// (AwayUntilMinute != 0) — a body cannot be dispatched to a scene.
+        /// </summary>
+        public void Respond(CitizenId who, Tile scene)
+        {
+            int i = who.Value;
+            if (_agents[i].Responding) return;
+            if (_agents[i].Downed) return;
+            if (_agents[i].AwayUntilMinute != 0) return;
+
+            _agents[i].Travelling = false;
+            ReleasePath(i);
+            StandStill(i);
+            _agents[i].WalkingWith = CitizenId.None;
+            _agents[i].Carrying = false;
+            _agents[i].TalkTicks = 0;
+            _agents[i].TalkingTo = CitizenId.None;
+            _agents[i].TalkCooldown = 0;
+            _agents[i].DoorPauseTicks = 0;
+            _agents[i].QueueSlot = -1;
+            ClearStranded(i);
+
+            _agents[i].Responding = true;
+            _agents[i].RespondTarget = scene;
+            _agents[i].Destination = PlaceId.None;
+        }
+
+        /// <summary>
+        /// Undo <see cref="Respond"/>. Clears Responding and resets Destination — Revive's own
+        /// trick — so the wants-check picks the citizen back up onto their plan within the
+        /// minute rather than waiting for the plan's current block to change on its own. No-op
+        /// if not Responding.
+        /// </summary>
+        public void Release(CitizenId who)
+        {
+            int i = who.Value;
+            if (!_agents[i].Responding) return;
+            _agents[i].Responding = false;
+            _agents[i].Destination = PlaceId.None;
+        }
+
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few
         /// hundred ticks behind at midnight, and anybody asking from outside is not.</summary>
         public DayPlan PlanFor(CitizenId id)
@@ -536,6 +605,11 @@ namespace Noir.Core.Sim
                     if (now < _agents[i].AwayUntilMinute) continue;
                     Return(new CitizenId(i));      // falls through: they rejoin the plan this tick
                 }
+
+                // Sent to a scene by nobody's plan: no journeys, no talk, no queue, and Doing is
+                // Simulation's to write, not the plan's — RespondTick is this agent's whole tick.
+                // Same no-op guarantee as the two gates above when Responding is never set.
+                if (_agents[i].Responding) { RespondTick(i, citizen, dt); continue; }
 
                 // Somewhere new to be, and their own moment within this minute to leave for it —
                 // or a failed attempt whose backoff has run out, which is not a departure and is
@@ -1056,6 +1130,49 @@ namespace Noir.Core.Sim
         }
 
         /// <summary>
+        /// The tick loop's whole handling for a Responding agent — a trimmed StartJourney with
+        /// no companions, no Carrying, no TargetIn, because there is no Block behind this walk
+        /// to read any of that from. Standing at the target is itself the "arrived" state; there
+        /// is no place to enter and nothing to queue for.
+        ///
+        /// Retrying the path every tick when one has not been found is deliberate, not a bug:
+        /// the Regions pre-check answers an impossible route in O(1), and a GaveUp is worth
+        /// asking again (see PathOutcome's own doc). Budgeted like every other journey, so a
+        /// scene nobody can reach yet costs no more than its fair share of the tick.
+        /// </summary>
+        private void RespondTick(int index, Citizen citizen, float dt)
+        {
+            if (_agents[index].Travelling) { Advance(index, citizen, dt); return; }
+
+            var from = _agents[index].Position.ToTile();
+            if (from == _agents[index].RespondTarget)
+            {
+                if (_agents[index].Doing != Activity.Responding)
+                { _agents[index].Doing = Activity.Responding; StandStill(index); }
+                return;
+            }
+
+            if (!CanAffordAPath()) return;
+            _scratchPath.Clear();
+            var outcome = _pathfinder.FindPath(from, _agents[index].RespondTarget, _scratchPath);
+            _pathNodesThisTick += _pathfinder.LastNodesExamined;
+            _pathsThisTick++;
+            if (outcome != PathOutcome.Found || _scratchPath.Count == 0)
+            {
+                if (_agents[index].Doing != Activity.Responding)
+                { _agents[index].Doing = Activity.Responding; StandStill(index); }
+                return;   // stand where they are; the host's per-minute poll sees no arrival and waits
+            }
+            var route = RentPath(index);
+            route.Clear();
+            route.AddRange(_scratchPath);
+            _agents[index].PathIndex = 0;
+            _agents[index].Travelling = true;
+            _agents[index].At = PlaceId.None;
+            _agents[index].Doing = Activity.TravellingTo;
+        }
+
+        /// <summary>
         /// They are not moving. The single place that is recorded, so that no stop can forget.
         ///
         /// <see cref="AgentState.Heading"/> is doing double duty — a direction and an is-walking
@@ -1196,7 +1313,9 @@ namespace Noir.Core.Sim
             _agents[index].Carrying = false;
             _agents[index].TalkTicks = 0;
             _agents[index].TalkingTo = CitizenId.None;
-            _agents[index].Doing = _plans[index].At(_clock.MinuteOfDay).What;
+            _agents[index].Doing = _agents[index].Responding
+                ? Activity.Responding
+                : _plans[index].At(_clock.MinuteOfDay).What;
         }
 
         // ---- doorways ----

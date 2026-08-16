@@ -2430,6 +2430,7 @@ namespace Noir.Unity
                 case Activity.TravellingTo: return "on the way to";
                 case Activity.Talking: return "stopped to talk on";
                 case Activity.Downed: return "lying hurt at";
+                case Activity.Responding: return "standing over";
                 default: return "at";
             }
         }

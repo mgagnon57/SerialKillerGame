@@ -58,6 +58,13 @@ namespace Noir.Core.People
         /// values are positional and the animations.txt keys are name-based.
         /// </summary>
         Downed,
+
+        /// <summary>
+        /// Standing over the scene, or walking to it off-plan. Live state set only by
+        /// Simulation.Respond; the tick loop never overwrites it. At the end of the enum —
+        /// values are positional.
+        /// </summary>
+        Responding,
     }
 
     /// <summary>One stretch of a person's day: be at this place, from this minute to that one.</summary>
