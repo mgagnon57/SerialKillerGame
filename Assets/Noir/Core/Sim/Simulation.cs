@@ -124,6 +124,11 @@ namespace Noir.Core.Sim
         /// <summary>Where a Responding agent is walking to, or already standing over. Meaningless
         /// unless Responding is true.</summary>
         public Tile RespondTarget;
+
+        /// <summary>Riding a response vehicle: present in the population, absent from the
+        /// world, exactly as AwayFromTown draws — set only by Simulation.Board, cleared by
+        /// Alight or Release. Meaningless unless Responding.</summary>
+        public bool Aboard;
     }
 
     /// <summary>
@@ -403,16 +408,17 @@ namespace Noir.Core.Sim
 
         /// <summary>
         /// Put one person down where they stand, until <see cref="Revive"/> says otherwise. One
-        /// of the sim's four external mutations (Down, Revive, TakeAway/Return, Respond/Release),
-        /// because a player's car is genuine history the plan cannot know about. Entry cleanup
-        /// mirrors Arrive + StandStill so every derived system — queues, conversations, the
-        /// renderer — lets go of them on its own. Consumes no RNG, so every other agent's day is
-        /// byte-identical to the un-downed run.
+        /// of the sim's five external mutation pairs (Down/Revive, TakeAway/Return,
+        /// Respond/Release, Board/Alight), because a player's car is genuine history the plan
+        /// cannot know about. Entry cleanup mirrors Arrive + StandStill so every derived system
+        /// — queues, conversations, the renderer — lets go of them on its own. Consumes no RNG,
+        /// so every other agent's day is byte-identical to the un-downed run.
         /// </summary>
         public void Down(CitizenId who)
         {
             int i = who.Value;
             if (_agents[i].AwayUntilMinute != 0) return;  // a body off-map cannot be hit again
+            if (_agents[i].Aboard) return;                // inside a car is not on the street
             if (_agents[i].Downed) return;
 
             _agents[i].Downed = true;
@@ -557,8 +563,38 @@ namespace Noir.Core.Sim
         {
             int i = who.Value;
             if (!_agents[i].Responding) return;
+            _agents[i].Aboard = false;           // a released rider reappears where boarded
             _agents[i].Responding = false;
             _agents[i].Destination = PlaceId.None;
+        }
+
+        /// <summary>Into the cruiser. Requires Responding (only a dispatched officer ever
+        /// rides) — the walk stops where it stands and the agent presents as AwayFromTown,
+        /// reusing every not-drawn/census/sweep-skip arm the commuters already exercise.
+        /// Consumes no RNG.</summary>
+        public void Board(CitizenId who)
+        {
+            int i = who.Value;
+            if (!_agents[i].Responding || _agents[i].Aboard) return;
+            _agents[i].Travelling = false;
+            ReleasePath(i);
+            StandStill(i);
+            _agents[i].Aboard = true;
+            _agents[i].Doing = Activity.AwayFromTown;
+        }
+
+        /// <summary>Out at the kerb. Places them at the tile (Return's own re-entry
+        /// precedent) and hands them back to RespondTick, which walks the last stretch to
+        /// RespondTarget. Consumes no RNG.</summary>
+        public void Alight(CitizenId who, Tile at)
+        {
+            int i = who.Value;
+            if (!_agents[i].Aboard) return;
+            _agents[i].Aboard = false;
+            _agents[i].Position = Vec2.CentreOf(at);
+            _agents[i].PreviousPosition = _agents[i].Position;
+            _agents[i].At = PlaceId.None;
+            _agents[i].Doing = Activity.Responding;
         }
 
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few
@@ -605,6 +641,11 @@ namespace Noir.Core.Sim
                     if (now < _agents[i].AwayUntilMinute) continue;
                     Return(new CitizenId(i));      // falls through: they rejoin the plan this tick
                 }
+
+                // Riding a response vehicle: the car moves, they do not. Before the Responding
+                // gate on purpose — a boarded officer must not path toward the scene from inside
+                // the cruiser. Same no-op guarantee as every gate above when Aboard is never set.
+                if (_agents[i].Aboard) continue;
 
                 // Sent to a scene by nobody's plan: no journeys, no talk, no queue, and Doing is
                 // Simulation's to write, not the plan's — RespondTick is this agent's whole tick.
