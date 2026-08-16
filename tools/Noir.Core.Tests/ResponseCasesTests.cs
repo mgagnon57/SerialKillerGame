@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -122,6 +123,110 @@ namespace Noir.Core.Tests
             cases.Tick(2053, orders);
             Assert.That(orders.Count, Is.EqualTo(1));
             Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.AmbulanceIn));
+        }
+
+        /// <summary>
+        /// Rossville has one response team. Case A is opened first (lower id) but discovered
+        /// SECOND, while case B — opened later, higher id — is already well into its own response.
+        /// The controller's ruling: the active case is sticky by discovery order, not by id, and a
+        /// later discovery never preempts. A must sit at Alarm, emitting nothing, until B closes;
+        /// and A's own alarm delay is measured from whichever is later — its own discovery, or the
+        /// minute B actually closed — never from its discovery alone, which would have already
+        /// elapsed by the time A gets its turn.
+        /// </summary>
+        [Test]
+        public void ALaterDiscoveredLowerIdCaseNeverPreemptsTheActiveOne()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+
+            int idA = cases.Open(new CitizenId(101), 100, new Tile(1, 1), CarTone.Mid, CarShape.Car, fatal: false);
+            int idB = cases.Open(new CitizenId(102), 200, new Tile(2, 2), CarTone.Dark, CarShape.Van, fatal: false);
+            Assert.That(idA, Is.LessThan(idB), "A must have the lower id for this test to prove anything");
+
+            // B is discovered first and becomes active.
+            cases.BodySeen(idB, 210, new CitizenId(103));
+            cases.Tick(214, orders);   // 210 + AlarmDelayMinutes
+            Assert.That(orders.Select(o => o.Case), Is.EqualTo(new[] { idB }));
+            orders.Clear();
+
+            cases.OfficerDispatched(idB, new CitizenId(105));
+            cases.OfficerArrived(idB, 220);
+            cases.Tick(238, orders);   // 220 + CountyOffMapMinutes
+            Assert.That(orders.Select(o => o.Case), Is.EqualTo(new[] { idB }));
+            orders.Clear();
+
+            cases.CountyArrived(idB, 245);   // B is now well past CountyArrived: mid-response
+
+            // A is discovered while B is still being worked. Lower id, later discovery: must NOT
+            // preempt B, whatever its id.
+            cases.BodySeen(idA, 250, new CitizenId(104));
+            Assert.That(cases.StateOf(idA), Is.EqualTo(CaseState.Alarm));
+
+            cases.CanvassBegins(idB, new CitizenId[0]);
+
+            // (a) subsequent Ticks keep emitting orders for B only, (b) A gets nothing.
+            cases.Tick(250, orders);
+            Assert.That(orders, Is.Empty);
+            cases.Tick(255, orders);   // 245 + NoWitnessSceneMinutes: canvass done, ambulance due 265
+            Assert.That(orders, Is.Empty);
+            Assert.That(cases.StateOf(idA), Is.EqualTo(CaseState.Alarm), "A has not moved");
+
+            cases.Tick(265, orders);   // ambulance due
+            Assert.That(orders.Select(o => o.Case), Is.EqualTo(new[] { idB }));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.AmbulanceIn));
+            orders.Clear();
+            Assert.That(cases.StateOf(idA), Is.EqualTo(CaseState.Alarm), "still nothing for A");
+
+            cases.AmbulanceArrived(idB, 270);
+            cases.Tick(273, orders);   // 270 + LoadingMinutes: B closes here
+            Assert.That(orders.Select(o => o.Case), Is.EqualTo(new[] { idB, idB, idB }));
+            Assert.That(cases.StateOf(idB), Is.EqualTo(CaseState.Closed));
+            orders.Clear();
+
+            // (c) A's alarm floor is max(discoveredAt=250, B's close minute=273) = 273, so
+            // DispatchOfficer fires at 277, not at 254 (250 + AlarmDelayMinutes) which would
+            // already have elapsed had A's own discovery alone been the floor.
+            cases.Tick(276, orders);   // one minute short of 277
+            Assert.That(orders, Is.Empty, "A's alarm floor is B's close minute, not its own discovery");
+            cases.Tick(277, orders);   // 273 + AlarmDelayMinutes
+            Assert.That(orders.Select(o => o.Case), Is.EqualTo(new[] { idA }));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.DispatchOfficer));
+        }
+
+        [Test]
+        public void AWrongStateArrivalCallThrows()
+        {
+            var cases = new ResponseCases();
+            int id = cases.Open(new CitizenId(1), 100, new Tile(5, 5), CarTone.Mid, CarShape.Car, fatal: false);
+
+            // The case is still Undiscovered: nobody can have an officer arrive at it yet.
+            Assert.Throws<InvalidOperationException>(() => cases.OfficerArrived(id, 105));
+        }
+
+        [Test]
+        public void CountyReachedDoorThrowsOnAMisattributedWitness()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            int id = cases.Open(new CitizenId(1), 1000, new Tile(5, 5), CarTone.Mid, CarShape.Car, fatal: false);
+
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders);
+            orders.Clear();
+            cases.OfficerDispatched(id, new CitizenId(12));
+            cases.OfficerArrived(id, 1010);
+            cases.Tick(1028, orders);
+            orders.Clear();
+            cases.CountyArrived(id, 1033);
+            cases.CanvassBegins(id, new[] { new CitizenId(3), new CitizenId(9) });
+            cases.Tick(1033, orders);   // emits CanvassNext for citizen 3
+            orders.Clear();
+
+            // The outstanding order names citizen 3; reporting citizen 9's answer against it must
+            // throw rather than file the words under the wrong name.
+            Assert.Throws<InvalidOperationException>(() =>
+                cases.CountyReachedDoor(id, 1036, new CitizenId(9), new[] { "wrong door" }));
         }
     }
 }

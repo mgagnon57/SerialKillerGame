@@ -47,12 +47,17 @@ namespace Noir.Core.Response
     /// chooses who and reports the choice back in; the machine only ever reasons about minutes,
     /// tiles and the coarse identifiers it was handed.
     ///
-    /// CASES ARE WORKED ONE AT A TIME, lowest id first, in DISCOVERY order rather than HIT order.
-    /// A case opened first but discovered second waits behind whichever lower-id case is already
-    /// being worked — Rossville does not have two response teams. That is why <see cref="BodySeen"/>
-    /// records a discovery minute rather than starting the alarm clock outright: the clock reads
-    /// from whichever is later, the discovery itself or the moment the case ahead of it closes,
-    /// so a case that sat queued for hours does not silently skip its own four-minute alarm delay.
+    /// CASES ARE WORKED ONE AT A TIME, earliest-discovered first, and THE ACTIVE CASE IS STICKY:
+    /// once a case is being worked it holds that slot until it Closes, no matter what turns up
+    /// meanwhile or what id it has. Rossville does not have two response teams, and it does not
+    /// abandon a scene it is already standing in because a body two blocks over was just found —
+    /// a LATER discovery never preempts a case already in progress, even one with a lower id.
+    /// That is why <see cref="BodySeen"/> records a discovery minute rather than starting the
+    /// alarm clock outright: a case that had to queue reads its alarm clock from whichever is
+    /// later, its own discovery or the moment the case ahead of it closes, so queued time is
+    /// never silently swallowed and a case never skips its own four-minute alarm delay just
+    /// because the clock happened to pass 4 minutes after discovery while some other case still
+    /// held the slot.
     ///
     /// Every order is emitted exactly once, guarded per case, because <see cref="Tick"/> is called
     /// every minute of the game — sometimes several times at the same minute, sometimes with whole
@@ -87,8 +92,7 @@ namespace Noir.Core.Response
             public readonly bool Fatal;
 
             public int DiscoveredAt = -1;
-            public int ClosedAt;               // 0 until Closed; also this case's contribution
-                                                 // to the NEXT case's alarm-clock floor
+            public int ClosedAt;               // 0 until Closed
 
             public CitizenId Officer = CitizenId.None;
             public bool DispatchOfficerEmitted;
@@ -118,6 +122,16 @@ namespace Noir.Core.Response
         private readonly List<Case> _cases = new List<Case>();
         private readonly List<string> _pendingLog = new List<string>();
         private int _lastTickMinute = int.MinValue;
+
+        /// <summary>The one case Tick is allowed to advance, or -1 when nobody is. STICKY: set
+        /// only by <see cref="ActivateNextIfNeeded"/>, which refuses to touch it while it already
+        /// names somebody — see the class header.</summary>
+        private int _activeCaseId = -1;
+
+        /// <summary>The close minute of whichever case was active most recently, or 0 before any
+        /// case has ever closed. This is the floor a freshly-active case's alarm clock reads
+        /// against — see TickAlarm.</summary>
+        private int _lastActiveClosedAt;
 
         /// <summary>Appends a case in Undiscovered and returns its index. Two hits in one minute
         /// are two cases: nothing here folds them together.</summary>
@@ -172,6 +186,7 @@ namespace Noir.Core.Response
             c.DiscoveredAt = minute;
             c.State = CaseState.Alarm;
             Emit(caseId, "case " + caseId + ": discovered at minute " + minute + " by citizen " + discoverer.Value);
+            ActivateNextIfNeeded();
         }
 
         /// <summary>Records who was sent, once Tick has already moved the case to
@@ -228,13 +243,28 @@ namespace Noir.Core.Response
         /// <summary>The county car finished one door. Its answer lines join the case file
         /// verbatim — this is the ONLY place a witness's own words land in it — and the next
         /// door (or the ambulance, if that was the last one) is not ready for
-        /// CanvassMinutesPerDoor more minutes.</summary>
+        /// CanvassMinutesPerDoor more minutes.
+        ///
+        /// The reported witness MUST be the one named by the outstanding CanvassNext order.
+        /// There is no forgiving mismatch here: a mis-attributed answer sitting quietly in a case
+        /// file — words from citizen 9 filed under citizen 3 — is worse than the crash this
+        /// throws instead. The host is expected to wire this callback exactly once per order; a
+        /// mismatch means that wiring is wrong, and that is a bug worth finding loudly, now,
+        /// rather than as a testimony inconsistency months later.</summary>
         public void CountyReachedDoor(int caseId, int minute, CitizenId witness, string[] lines)
         {
             Case c = _cases[caseId];
             if (c.State != CaseState.Canvassing)
                 throw new InvalidOperationException(
                     "case " + caseId + " is not canvassing; it is in state " + c.State + ".");
+            if (c.WitnessIndex >= c.Witnesses.Length)
+                throw new InvalidOperationException(
+                    "case " + caseId + " has no outstanding CanvassNext order for anybody to have answered.");
+            CitizenId expected = c.Witnesses[c.WitnessIndex];
+            if (!witness.Equals(expected))
+                throw new InvalidOperationException(
+                    "case " + caseId + " was expecting an answer from " + expected +
+                    " (the outstanding CanvassNext), not " + witness + ".");
             if (lines != null)
                 for (int i = 0; i < lines.Length; i++)
                     c.File.Add("case " + caseId + ": citizen " + witness.Value + " said: " + lines[i]);
@@ -267,8 +297,8 @@ namespace Noir.Core.Response
                     nameof(minute));
             _lastTickMinute = minute;
 
-            int active = ActiveCaseId();
-            if (active < 0) return;
+            if (_activeCaseId < 0) return;
+            int active = _activeCaseId;
             Case c = _cases[active];
 
             switch (c.State)
@@ -278,22 +308,28 @@ namespace Noir.Core.Response
                 case CaseState.Canvassing: TickCanvassing(active, c, minute, orders); break;
                 case CaseState.Loading: TickLoading(active, c, minute, orders); break;
                     // OfficerEnRoute, CountyEnRoute and AmbulanceEnRoute wait on a host call;
-                    // Undiscovered and Closed never reach here, ActiveCaseId skips both.
+                    // Undiscovered and Closed are never the active case.
             }
         }
 
-        /// <summary>The lowest-id case that has been BodySeen and is not yet Closed — the only
-        /// case Tick advances. A case discovered while a lower-id case is still being worked
-        /// simply sits at Alarm until its turn comes; see TickAlarm for how its own clock accounts
-        /// for that wait.</summary>
-        private int ActiveCaseId()
+        /// <summary>Hands the active slot to somebody, but ONLY when nobody currently holds it —
+        /// the sticky half of the rule in the class header. When the slot is free, the winner is
+        /// whichever non-Closed, BodySeen case has the EARLIEST discovery minute, regardless of
+        /// id; a tie goes to the lower id, which is arbitrary but at least deterministic. Called
+        /// from BodySeen (in case nobody was working anything yet) and from TickLoading right
+        /// after a case closes (to hand the slot on).</summary>
+        private void ActivateNextIfNeeded()
         {
+            if (_activeCaseId >= 0) return;
+
+            int best = -1;
             for (int i = 0; i < _cases.Count; i++)
             {
-                CaseState s = _cases[i].State;
-                if (s != CaseState.Undiscovered && s != CaseState.Closed) return i;
+                Case c = _cases[i];
+                if (c.State == CaseState.Undiscovered || c.State == CaseState.Closed) continue;
+                if (best < 0 || c.DiscoveredAt < _cases[best].DiscoveredAt) best = i;
             }
-            return -1;
+            _activeCaseId = best;
         }
 
         private void TickAlarm(int id, Case c, int minute, List<CaseOrder> orders)
@@ -301,10 +337,10 @@ namespace Noir.Core.Response
             if (c.DispatchOfficerEmitted) return;
 
             // The alarm clock reads from whichever is later: this case's own discovery, or the
-            // moment the response team came free off the case ahead of it. A case queued behind
-            // a long-running scene does not get to skip its four minutes once its turn arrives.
-            int previousClosedAt = id > 0 ? _cases[id - 1].ClosedAt : 0;
-            int alarmStart = c.DiscoveredAt > previousClosedAt ? c.DiscoveredAt : previousClosedAt;
+            // moment the response team came free off whichever case held the slot before it. A
+            // case that queued behind a long-running scene does not get to skip its four minutes
+            // just because four minutes of clock time passed while someone else held the slot.
+            int alarmStart = c.DiscoveredAt > _lastActiveClosedAt ? c.DiscoveredAt : _lastActiveClosedAt;
             if (minute < alarmStart + AlarmDelayMinutes) return;
 
             c.DispatchOfficerEmitted = true;
@@ -375,6 +411,12 @@ namespace Noir.Core.Response
             orders.Add(new CaseOrder(OrderKind.VehiclesLeave, id, c.Scene, CitizenId.None));
             orders.Add(new CaseOrder(OrderKind.ReleaseOfficer, id, c.Scene, c.Officer));
             Emit(id, "case " + id + ": scene cleared at minute " + minute + ", case closed");
+
+            // Hand the slot on. Whoever is queued longest (by discovery minute, not id) gets it;
+            // their own alarm clock reads this same minute as its floor, via _lastActiveClosedAt.
+            _lastActiveClosedAt = minute;
+            _activeCaseId = -1;
+            ActivateNextIfNeeded();
         }
 
         // ---- the record -----------------------------------------------------------------------
