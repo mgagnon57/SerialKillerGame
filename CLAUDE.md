@@ -246,13 +246,16 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
-> ⚠ **THE BASELINE BELOW IS STALE AND THE TRUE NUMBER IS UNMEASURED, said here rather than
-> guessed: 2026-08-15 landed six PlayerInteraction tests for the doors (four in `f04f75a`, two
-> in `761c299`) and three more for the drivable car (`a2daa15`, `f058042`), so `!Diagnostic`
-> should now select 29 — but the full gate has not run since, because it needs the editor
-> closed and the owner was in it. The newest tests' predicates were verified against the live
-> editor instead (leaf census, PerformOffered, the drive round trip, the hit). Run the gate,
-> then replace this warning and the numbers below with what it measures.**
+> **BASELINE, 2026-08-15: 30 of 30 PASS, 0 fail, 1 skipped, 172 s.** Ten tests landed in one
+> day — six for the door verb (four in `f04f75a`, two in `761c299`) and four for the drivable
+> car (enter/drive/exit, the closest-provider rule, a standing hit, a moving-victim hit) — and
+> the gate's FIRST run that evening went 28/2: both reds were TEST assumptions, not game bugs.
+> One hardcoded "car 0 is standing" and car 0's owner had driven it to work (the absence
+> schedule beating a test is the feature working); the other picked a "travelling" victim who
+> was stopped mid-conversation, so the car had nothing moving to hit. Both were fixed to
+> observe the town rather than assume it (`efbd34c`) and the re-run was clean, at an identical
+> duration to the red run (172.7 s vs 172.4 s) — the suite's cost did not move, only its
+> assumptions did.
 >
 > **BASELINE, 2026-08-12 17:18: 20 of 20 PASS, 0 fail, 1 skipped, 158 s.** The new one is
 > `ATerraceLotProducesMoreThanOneIndependentlyNamedStorefront`, proving 112 S Chicago builds as
