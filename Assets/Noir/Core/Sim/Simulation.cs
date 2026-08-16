@@ -101,6 +101,15 @@ namespace Noir.Core.Sim
         /// holds — see Activity.Downed. Only Simulation.Down sets it, and only
         /// Simulation.Revive clears it.</summary>
         public bool Downed;
+
+        /// <summary>
+        /// The absolute minute (day * 1440 + minuteOfDay) the ambulance brings them back, or
+        /// zero when nobody has been taken away. Outranks the plan the same way Downed does —
+        /// see Activity.AwayFromTown — while it holds; only Simulation.TakeAway sets it, and
+        /// only Simulation.Return, whether called by a hand or by the tick loop reaching this
+        /// minute, clears it. int.MaxValue is how "never" is spelled: no clock reaches it.
+        /// </summary>
+        public int AwayUntilMinute;
     }
 
     /// <summary>
@@ -379,15 +388,17 @@ namespace Noir.Core.Sim
         public AgentState GetAgent(CitizenId id) => _agents[id.Value];
 
         /// <summary>
-        /// Put one person down where they stand, until <see cref="Revive"/> says otherwise. The
-        /// one external mutation the sim accepts, because a player's car is genuine history the
-        /// plan cannot know about. Entry cleanup mirrors Arrive + StandStill so every derived
-        /// system — queues, conversations, the renderer — lets go of them on its own. Consumes
-        /// no RNG, so every other agent's day is byte-identical to the un-downed run.
+        /// Put one person down where they stand, until <see cref="Revive"/> says otherwise. One
+        /// of the sim's four external mutations (Down, Revive, TakeAway/Return, Respond/Release),
+        /// because a player's car is genuine history the plan cannot know about. Entry cleanup
+        /// mirrors Arrive + StandStill so every derived system — queues, conversations, the
+        /// renderer — lets go of them on its own. Consumes no RNG, so every other agent's day is
+        /// byte-identical to the un-downed run.
         /// </summary>
         public void Down(CitizenId who)
         {
             int i = who.Value;
+            if (_agents[i].AwayUntilMinute != 0) return;  // a body off-map cannot be hit again
             if (_agents[i].Downed) return;
 
             _agents[i].Downed = true;
@@ -442,6 +453,45 @@ namespace Noir.Core.Sim
             _agents[i].Destination = PlaceId.None;
         }
 
+        /// <summary>
+        /// The ambulance leaves with them. Requires Downed (Phase 2's ambulance only ever
+        /// collects a body) — clears it and replaces it with an absent state the renderer
+        /// already knows how to not-draw: Doing becomes AwayFromTown, the same value the
+        /// out-of-town commuters carry, so no display site needed teaching. int.MaxValue
+        /// never returns — dead, and still in the population: 1,300 is load-bearing and
+        /// nobody is ever removed, they are frozen out of the world. Consumes no RNG.
+        /// </summary>
+        public void TakeAway(CitizenId who, int returnAbsoluteMinute)
+        {
+            int i = who.Value;
+            if (!_agents[i].Downed) return;
+            _agents[i].Downed = false;
+            _agents[i].Doing = Activity.AwayFromTown;
+            _agents[i].AwayUntilMinute = returnAbsoluteMinute;
+        }
+
+        /// <summary>
+        /// Back from the hospital, at their own front door, and the plan takes them from
+        /// there — Destination = None is Revive's own trick to fire the departure within
+        /// the minute. Public for the same second consumer Revive has: a test handing a
+        /// shared town back the way it found it.
+        /// </summary>
+        public void Return(CitizenId who)
+        {
+            int i = who.Value;
+            if (_agents[i].AwayUntilMinute == 0) return;
+            _agents[i].AwayUntilMinute = 0;
+
+            var home = World.GetPlace(People.Get(who).Home);
+            if (home != null)
+            {
+                _agents[i].Position = Vec2.CentreOf(home.Door);
+                _agents[i].PreviousPosition = _agents[i].Position;
+                _agents[i].At = People.Get(who).Home;
+            }
+            _agents[i].Destination = PlaceId.None;
+        }
+
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few
         /// hundred ticks behind at midnight, and anybody asking from outside is not.</summary>
         public DayPlan PlanFor(CitizenId id)
@@ -474,6 +524,18 @@ namespace Noir.Core.Sim
                 // byte-identical replays behind watched.floor depend on this being a no-op
                 // when the flag is never set.
                 if (_agents[i].Downed) continue;
+
+                // The ambulance has them, and the plan stays frozen out until the clock reaches
+                // the return minute — same shape as the Downed skip above, same no-op guarantee
+                // when AwayUntilMinute is never set. `minute` here IS minuteOfDay (see above),
+                // so `_clock.Day * 1440 + minute` is the same absolute-minute unit TakeAway was
+                // handed.
+                if (_agents[i].AwayUntilMinute != 0)
+                {
+                    int now = _clock.Day * 1440 + minute;
+                    if (now < _agents[i].AwayUntilMinute) continue;
+                    Return(new CitizenId(i));      // falls through: they rejoin the plan this tick
+                }
 
                 // Somewhere new to be, and their own moment within this minute to leave for it —
                 // or a failed attempt whose backoff has run out, which is not a departure and is
