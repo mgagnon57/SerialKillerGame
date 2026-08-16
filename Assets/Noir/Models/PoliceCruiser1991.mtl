@@ -1,0 +1,45 @@
+newmtl paint_white
+Kd 0.8148 0.8308 0.8388
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl chrome
+Kd 0.5647 0.5972 0.6308
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass
+Kd 0.0437 0.0578 0.0742
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl interior_grey
+Kd 0.0423 0.0513 0.0612
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_black
+Kd 0.0123 0.0137 0.0144
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl tire_rubber
+Kd 0.0086 0.0091 0.0103
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl steel_blue
+Kd 0.0999 0.2159 0.3813
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl lens_red
+Kd 0.4564 0.0409 0.0284
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl lens_blue
+Kd 0.0331 0.0931 0.3419
+Ks 0.05 0.05 0.05
+Ns 10
+

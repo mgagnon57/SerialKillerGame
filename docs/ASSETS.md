@@ -18,8 +18,14 @@ the cradle, rotary dial, a coiled cord spiralling onto the desk; 44,408 tris, mo
 the coil and dial. That is HERO-PROP weight: fine for a handful of desks, but a phone is an
 every-house object in 1991, and 500 households of 44k tris is another whole town of triangles
 — the everywhere version wants a lower-segment re-export from Designer. Preview:
-`docs/snapshots/phone-preview.png`. Neither is PLACED anywhere yet — a placement seam for
-desk props is the follow-on.
+`docs/snapshots/phone-preview.png`. Third: **PoliceCruiser1991** (same
+day) — a boxy Caprice-shaped white-and-blue cruiser with a modeled light bar (separate red and
+blue lens materials), A-pillar spotlight, door roundel and wipers; 10,012 tris. Size-reviewed
+against the real 1991 Caprice (17.9 ft) and the pack police car (17.6 ft): his is 18.5 ft,
+wheels on y=0 to the millimetre, origin centred — authored facing +X, so the converter grew a
+yaw argument and bakes the quarter-turn to the +Z drive convention. The natural next step is
+swapping it in as CityResponse's cruiser. None of the three is PLACED as furniture yet — the
+desk-prop placement seam is the follow-on.
 
 ---
 

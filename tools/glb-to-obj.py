@@ -6,11 +6,17 @@ Designer comes out as GLB with flat-color materials and no textures - which OBJ+
 carries losslessly. Usage:
 
     python tools/glb-to-obj.py "C:/Users/mgagn/Downloads/desktop-pc-1991.glb" DesktopPC1991
+    python tools/glb-to-obj.py "C:/.../police-cruiser-1991.glb" PoliceCruiser1991 -90
 
-writes DesktopPC1991.obj + DesktopPC1991.mtl into Assets/Noir/Models/. Faces are
-grouped by material, so Unity imports ONE mesh with one submesh per material - a
-single renderer, ready for the chunker. Node transforms (TRS or matrix) are baked
-into world space. Textured GLBs are refused rather than half-converted.
+writes <Name>.obj + <Name>.mtl into Assets/Noir/Models/. Faces are grouped by
+material, so Unity imports ONE mesh with one submesh per material - a single
+renderer, ready for the chunker. Node transforms (TRS or matrix) are baked into
+world space. Textured GLBs are refused rather than half-converted.
+
+The optional third argument is a YAW in degrees about +Y, baked into the verts -
+for models authored facing the wrong axis. The game's vehicles must face +Z
+(CityResponse.LengthOf's own note); the owner's cruiser came out facing +X, and
+-90 turns +X into +Z.
 
 First used 2026-08-16 for the owner's desktop-pc-1991 - his first model, and it
 went straight in.
@@ -63,9 +69,10 @@ def node_matrix(n):
 
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 4):
         raise SystemExit(__doc__)
     src, name = sys.argv[1], sys.argv[2]
+    yaw = float(sys.argv[3]) if len(sys.argv) == 4 else 0.0
     doc, buf = load_glb(src)
 
     if doc.get('textures'):
@@ -90,9 +97,12 @@ def main():
         for c in n.get('children', []):
             walk(c, m)
 
-    identity = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+    import math
+    rad = math.radians(yaw)
+    c, s = math.cos(rad), math.sin(rad)
+    root_m = [[c, 0, s, 0], [0, 1, 0, 0], [-s, 0, c, 0], [0, 0, 0, 1]]
     for root in doc['scenes'][doc.get('scene', 0)]['nodes']:
-        walk(root, identity)
+        walk(root, root_m)
 
     outdir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                           'Assets', 'Noir', 'Models')
