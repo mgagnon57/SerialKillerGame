@@ -35,7 +35,9 @@ namespace Noir.Unity
     /// response that the case machine is timing in SIM MINUTES is not. THE TWO THEREFORE DIVERGE
     /// ABOVE 1x, BY DESIGN: at speed the response outruns an ambient fleet still driving in real
     /// time, which looks odd and is the correct trade — a case counted in sim minutes may not
-    /// have its arrival decided by how fast the player has wound the clock.
+    /// have its arrival decided by how fast the player has wound the clock. The ONE exception is
+    /// the held deadline: <see cref="Patience"/> counts REAL seconds, because everything that
+    /// holds a rig — the ambient fleet, a 36-real-second signal cycle — clears on the wall clock.
     ///
     /// THEY DO NOT STOP AT RED LIGHTS. There is no signal test anywhere in this file, on purpose:
     /// what holds a response vehicle is what is physically in front of it, and nothing else. An
@@ -95,7 +97,8 @@ namespace Noir.Unity
 
         /// <summary>
         /// How long a vehicle will sit behind something, ANYWHERE at all, before it stops waiting
-        /// to be somewhere else. SIM seconds; <see cref="HeldTooLong"/> is what happens then.
+        /// to be somewhere else. REAL seconds — the one number in this file that is not on the
+        /// sim clock — and <see cref="HeldTooLong"/> is what happens then.
         ///
         /// THE BAND AND THIS ARE NOT TWO PATCHES ON ONE WEDGE:
         ///
@@ -112,13 +115,22 @@ namespace Noir.Unity
         ///   blocking arrives. Wherever in that chain the second vehicle is standing, waiting is
         ///   not a strategy — so waiting is given a limit.
         ///
-        /// Thirty seconds because it must be long enough never to fire on ordinary traffic — a
-        /// signal cycle is 36 s, but a queue at a signal DRAINS continuously, so a vehicle that
-        /// has not moved an inch in half a minute is not in traffic, it is behind something that
-        /// is not going to move. A driver in that position gets out and walks, which is exactly
-        /// what this models: Task 12's officer covers the difference on foot.
+        /// WHY THE WALL CLOCK: everything that HOLDS a rig clears in real seconds. The ambient
+        /// fleet drives on Time.deltaTime and the signals cycle in 36 REAL seconds, so a queue at
+        /// a red drains on the wall clock however fast the sim is wound. A deadline in sim
+        /// seconds shrank with the speed dial — at the default 10x, thirty sim seconds elapsed in
+        /// three real ones, and a rig behind an ordinary red "gave up" and parked (or a leaving
+        /// one despawned) before the light could even change. Sixty REAL seconds outlasts the
+        /// whole 36 s cycle with margin for the queue in front to drain, so a rig never gives up
+        /// on a block that was going to clear.
+        ///
+        /// THE ACCEPTED COST: at high sim speeds a genuinely-permanent block now delays a case by
+        /// many sim minutes before the park fires — sixty real seconds at the default 10x is ten
+        /// sim minutes, more at higher speeds. The case machine runs on sim minutes and survives
+        /// the wait; nothing in it times out. A driver who finally parks gets out and walks,
+        /// which is exactly what this models: Task 12's officer covers the difference on foot.
         /// </summary>
-        private const float Patience = 30f;
+        private const float Patience = 60f;
 
         /// <summary>
         /// How long a slice of driving is, in SIM seconds, and how many a frame may run.
@@ -214,10 +226,11 @@ namespace Noir.Unity
             public float OffStage = -1f;
 
             /// <summary>
-            /// Sim seconds this vehicle has been held without covering ground, zeroed the moment
-            /// it moves a real step. The same accounting `Mover.Waited`/`Mover.Held` keeps, in sim
-            /// seconds rather than frame seconds because everything here is on the sim clock.
-            /// Read by the deadline in <see cref="Patience"/>.
+            /// REAL seconds this vehicle has been held without covering ground — charged from
+            /// `Time.unscaledDeltaTime`, at most once per frame, and only on frames the sim
+            /// moved, so a paused sim charges nothing — zeroed the moment it moves a real step.
+            /// The one number in this file on the wall clock rather than the sim's, because what
+            /// holds a rig clears in real seconds; see <see cref="Patience"/> for the argument.
             /// </summary>
             public float HeldFor;
 
@@ -558,16 +571,24 @@ namespace Noir.Unity
             _lastTick = now;
             if (dtSim <= 0f) return;                      // paused, or the same tick twice
 
+            // The held deadline charges REAL time — and it is read here, BELOW the guard above,
+            // so a paused sim charges nothing. Handed to the first slice only: a held vehicle is
+            // held for every slice of a frame (nothing it is judging against moves between them),
+            // and charging each slice would multiply one frame's wait by the slice count. See
+            // Patience for why the wait is on the wall clock when the driving is not.
+            float heldDt = Time.unscaledDeltaTime;
+
             int steps = 0;
             while (dtSim > 0f && steps++ < MostSteps)
             {
                 float slice = Mathf.Min(Step, dtSim);
                 dtSim -= slice;
-                for (int i = 0; i < _cars.Length; i++) Advance(i, slice);
+                for (int i = 0; i < _cars.Length; i++) Advance(i, slice, heldDt);
+                heldDt = 0f;                              // at most once per frame
             }
         }
 
-        private void Advance(int slot, float dt)
+        private void Advance(int slot, float dt, float heldDt)
         {
             var car = _cars[slot];
             if (car == null) return;
@@ -584,8 +605,8 @@ namespace Noir.Unity
             if (car.Arrived || car.What == null) return;
             if (_traffic == null || _traffic.Graph == null) return;
 
-            if (car.InTurn) CrossJunction(slot, car, dt);
-            else RunSegment(slot, car, dt);
+            if (car.InTurn) CrossJunction(slot, car, dt, heldDt);
+            else RunSegment(slot, car, dt, heldDt);
 
             // Destroyed by the branch above, or parked by it — Park has already put it where it
             // stands and Seat would undo the offset.
@@ -593,8 +614,10 @@ namespace Noir.Unity
             Seat(car);
         }
 
-        /// <summary>Along a straight piece of lane, up to the stop beside the scene or the end.</summary>
-        private void RunSegment(int slot, Car car, float dt)
+        /// <summary>Along a straight piece of lane, up to the stop beside the scene or the end.
+        /// `dt` is sim seconds of driving; `heldDt` is this frame's REAL seconds, charged only
+        /// when held (see <see cref="Patience"/>).</summary>
+        private void RunSegment(int slot, Car car, float dt, float heldDt)
         {
             var segment = _traffic.Graph.Segments[car.Segment];
             float step = ResponseSpeed * dt;
@@ -626,8 +649,8 @@ namespace Noir.Unity
                 { Park(car); return; }
 
                 // THE DEADLINE IS THE LIVENESS GUARANTEE, and it applies ANYWHERE en route — see
-                // HeldTooLong.
-                HeldTooLong(slot, car, dt);
+                // HeldTooLong. It charges REAL seconds, once per frame.
+                HeldTooLong(slot, car, heldDt);
                 return;
             }
 
@@ -655,8 +678,9 @@ namespace Noir.Unity
             car.T = 0f;
         }
 
-        /// <summary>Through the junction on the next planned turn.</summary>
-        private void CrossJunction(int slot, Car car, float dt)
+        /// <summary>Through the junction on the next planned turn. `dt` is sim seconds of
+        /// driving; `heldDt` is this frame's REAL seconds, charged only when held.</summary>
+        private void CrossJunction(int slot, Car car, float dt, float heldDt)
         {
             int turn = car.Turns[car.Leg];
 
@@ -669,7 +693,7 @@ namespace Noir.Unity
             // A JUNCTION IS NOT AN EXEMPTION. Held mid-arc counts against the same deadline it
             // would on a straight, because a vehicle stopped inside a junction is if anything more
             // urgent to resolve than one stopped on a lane. See HeldTooLong.
-            if (Held(car)) { HeldTooLong(slot, car, dt); return; }
+            if (Held(car)) { HeldTooLong(slot, car, heldDt); return; }
 
             car.T += ResponseSpeed * dt / length;
             car.HeldFor = 0f;                    // moving, so the wait starts again from nothing
@@ -684,9 +708,9 @@ namespace Noir.Unity
         }
 
         /// <summary>
-        /// Charge a slice of standing still, and end the journey if it has gone on too long.
-        /// True when the vehicle is finished with — parked or destroyed — so the caller must not
-        /// touch it again.
+        /// Charge this frame's REAL seconds of standing still, and end the journey if it has gone
+        /// on too long. True when the vehicle is finished with — parked or destroyed — so the
+        /// caller must not touch it again.
         ///
         /// THIS IS THE LIVENESS GUARANTEE, AND IT IS DELIBERATELY NOT A GEOMETRY. Three wedges
         /// were found and patched here one shape at a time — the sibling parked nose to nose, then
@@ -695,7 +719,7 @@ namespace Noir.Unity
         /// the same fault: this system parks a vehicle that blocks a lane, and everything stopped
         /// behind that block is stopped until the case closes, which cannot happen until the
         /// vehicle it is blocking arrives. So the rule is not about where the vehicle is. Anything
-        /// answering a call that has not covered ground in <see cref="Patience"/> sim seconds, on
+        /// answering a call that has not covered ground in <see cref="Patience"/> REAL seconds, on
         /// any segment, mid-turn included, ARRIVES WHERE IT STANDS. Arrival is what unblocks the
         /// case; Task 12's officer walks whatever difference is left, and a police car stopped a
         /// hundred feet short of a scene is a cost this project has accepted in writing.
@@ -705,9 +729,9 @@ namespace Noir.Unity
         /// vehicle standing in a street it cannot get out of. It says so in the log rather than
         /// disappearing quietly.
         /// </summary>
-        private bool HeldTooLong(int slot, Car car, float dt)
+        private bool HeldTooLong(int slot, Car car, float realDt)
         {
-            car.HeldFor += dt;
+            car.HeldFor += realDt;
             if (car.HeldFor < Patience) return false;
 
             if (car.Leaving)
@@ -738,13 +762,16 @@ namespace Noir.Unity
         /// a hazard on where it happens to be pointing, is how a parked car sideways-on to the lane
         /// becomes invisible. A box test with no heading is the conservative reading.
         ///
-        /// WHAT IT SKIPS: itself, and the SIBLING RESPONSE VEHICLE WHILE THAT ONE IS STILL MOVING.
-        /// Heading-blindness costs something here and only here — two rigs approaching head-on down
-        /// a narrow alley each fall inside the other's box, each stops for the other, and neither
-        /// ever moves again; both are on calls, so neither will ever clear. A moving sibling needs
-        /// no obstacle test at all: same-direction following is already handled by the box against
-        /// whichever of them is in front, and the deadline above covers the rest. A PARKED sibling
-        /// stays visible, because that one really is a wall.
+        /// WHAT IT SKIPS: itself, and nothing else. Both response transforms are in this list from
+        /// the moment they spawn, so the two rigs see EACH OTHER through this same scan — and this
+        /// scan is the ONLY channel they can appear to each other on: response vehicles are never
+        /// in `_movers`, so `AnyMoverWithin` has never heard of them. Skipping a moving sibling
+        /// here (tried, then removed) made a rig following its sibling drive straight into it.
+        /// What heading-blindness costs is the head-on case — two rigs meeting in a narrow alley
+        /// each fall inside the other's box and each holds for the other — and that standoff is
+        /// not resolved here, it is BOUNDED: the <see cref="Patience"/> deadline, on the REAL
+        /// clock, parks an arriving rig where it stands and despawns a leaving one, so neither
+        /// waits for ever.
         /// </summary>
         private bool Held(Car car)
         {
@@ -756,7 +783,6 @@ namespace Noir.Unity
             {
                 var what = _traffic.Obstacles[i];
                 if (what == null || what == car.What) continue;
-                if (IsMovingSibling(car, what)) continue;
 
                 var gap = what.position - at;
                 float ahead = Vector3.Dot(gap, car.Forward);
@@ -764,19 +790,6 @@ namespace Noir.Unity
                 if (ahead > car.Reach + ObstacleReach + Headway) continue;
                 if (Vector3.Cross(car.Forward, gap).magnitude > LookWide) continue;
                 return true;
-            }
-            return false;
-        }
-
-        /// <summary>Is that obstacle the OTHER response vehicle, and is it still under way? See
-        /// <see cref="Held"/> for why a moving one is skipped and a parked one is not.</summary>
-        private bool IsMovingSibling(Car car, Transform what)
-        {
-            for (int i = 0; i < _cars.Length; i++)
-            {
-                var other = _cars[i];
-                if (other == null || other == car) continue;
-                if (other.What == what) return !other.Arrived;
             }
             return false;
         }
