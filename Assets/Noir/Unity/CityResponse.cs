@@ -86,32 +86,37 @@ namespace Noir.Unity
         /// So an arrival is a BAND rather than a point: held by something on the final approach,
         /// within the box plus a metre of the scene, IS arriving. Two emergency vehicles queued
         /// nose to tail outside a house is what the street would actually look like.
+        ///
+        /// THIS IS THE GOOD-LOOKING CASE AND NOT THE SAFETY NET. It only fires near the scene, on
+        /// the final leg. What guarantees that no vehicle ever waits for ever, wherever it is, is
+        /// <see cref="Patience"/>.
         /// </summary>
         private const float ArrivalMargin = 1f;
 
         /// <summary>
-        /// How long a vehicle on its last leg will sit behind something before deciding it has
-        /// arrived, in SIM seconds.
+        /// How long a vehicle will sit behind something, ANYWHERE at all, before it stops waiting
+        /// to be somewhere else. SIM seconds; <see cref="HeldTooLong"/> is what happens then.
         ///
-        /// THE BAND ABOVE AND THIS ARE FOR TWO DIFFERENT WEDGES, and each one is useless against
-        /// the other's:
+        /// THE BAND AND THIS ARE NOT TWO PATCHES ON ONE WEDGE:
         ///
-        ///   <see cref="ArrivalMargin"/> is the HEAD-TO-HEAD case — the sibling vehicle parked at
-        ///   the same scene, directly in front, which is the common one because Task 13 sends both
-        ///   rigs to the same tile.
+        ///   <see cref="ArrivalMargin"/> is the CLEAN STOP AT THE SCENE. The vehicle is already as
+        ///   near as whatever is in front will let it get, so it parks there and looks right. It
+        ///   is what makes the ordinary case — both rigs sent to the same tile, one of them
+        ///   already standing on it — an arrival rather than a queue.
         ///
-        ///   THIS is a QUEUE INSERTED BETWEEN. A parked response vehicle is a hard lane block (see
-        ///   <see cref="Park"/>), so ambient cars stack up behind it — and the second rig then
-        ///   queues behind THAT stack, which can leave it further from its stop than any band
-        ///   worth having reaches. Every car in front of it is stationary for the same reason: the
-        ///   thing at the head of the queue does not move until this case closes, and this case
-        ///   does not close until this vehicle arrives. Nothing in the queue can break it.
+        ///   THIS is the LIVENESS GUARANTEE, and it holds EVERYWHERE: any segment, mid-turn
+        ///   included, however far from the scene. The wedge it closes is not a geometry, which is
+        ///   why three attempts to fix it as one each only moved the failure somewhere the last
+        ///   could not see. A parked response vehicle blocks a lane; everything behind that block
+        ///   is stopped until the case closes; the case cannot close until the vehicle it is
+        ///   blocking arrives. Wherever in that chain the second vehicle is standing, waiting is
+        ///   not a strategy — so waiting is given a limit.
         ///
         /// Thirty seconds because it must be long enough never to fire on ordinary traffic — a
-        /// signal cycle is 36 s but a queue at one drains continuously, so a response vehicle that
-        /// has not moved an inch in half a minute on the final approach is not in traffic, it is
-        /// stuck behind the scene it was sent to. A driver in that position parks and walks the
-        /// last few yards, which is exactly what this models.
+        /// signal cycle is 36 s, but a queue at a signal DRAINS continuously, so a vehicle that
+        /// has not moved an inch in half a minute is not in traffic, it is behind something that
+        /// is not going to move. A driver in that position gets out and walks, which is exactly
+        /// what this models: Task 12's officer covers the difference on foot.
         /// </summary>
         private const float Patience = 30f;
 
@@ -613,26 +618,16 @@ namespace Noir.Unity
 
             if (Held(car))
             {
-                car.HeldFor += dt;
+                // THE BAND IS THE GOOD-LOOKING CASE: a clean stop AT the scene. Held on the final
+                // approach, within the following box of the stop, is close enough to be there —
+                // which is what makes the sibling vehicle parked directly in front an arrival
+                // rather than a wait. See ArrivalMargin.
+                if (stopping && toStop <= car.Reach + ObstacleReach + Headway + ArrivalMargin)
+                { Park(car); return; }
 
-                if (stopping)
-                {
-                    // TWO WAYS TO ARRIVE WHILE HELD, FOR TWO DIFFERENT WEDGES.
-                    //
-                    // THE BAND is the sibling vehicle parked directly in front, which is the
-                    // ordinary case because both rigs are sent to the same tile: within the
-                    // following box of the stop, held, IS arrived.
-                    //
-                    // THE DEADLINE is a queue inserted between — ambient cars stacked behind the
-                    // parked vehicle, with this one at the back of them, too far out for any
-                    // sensible band. Nothing in that queue can move until the case closes and the
-                    // case cannot close until this vehicle arrives, so waiting is not a strategy.
-                    //
-                    // Neither can fire off the final leg: `stopping` is "the plan is exhausted and
-                    // it is not on its way out", so a vehicle held mid-route still simply waits.
-                    bool inBand = toStop <= car.Reach + ObstacleReach + Headway + ArrivalMargin;
-                    if (inBand || car.HeldFor >= Patience) Park(car);
-                }
+                // THE DEADLINE IS THE LIVENESS GUARANTEE, and it applies ANYWHERE en route — see
+                // HeldTooLong.
+                HeldTooLong(slot, car, dt);
                 return;
             }
 
@@ -671,7 +666,10 @@ namespace Noir.Unity
             _traffic.TurnArc(turn, out var a, out _, out var c);
             float length = Mathf.Max(0.5f, Vector3.Distance(a, c));
 
-            if (Held(car)) { car.HeldFor += dt; return; }
+            // A JUNCTION IS NOT AN EXEMPTION. Held mid-arc counts against the same deadline it
+            // would on a straight, because a vehicle stopped inside a junction is if anything more
+            // urgent to resolve than one stopped on a lane. See HeldTooLong.
+            if (Held(car)) { HeldTooLong(slot, car, dt); return; }
 
             car.T += ResponseSpeed * dt / length;
             car.HeldFor = 0f;                    // moving, so the wait starts again from nothing
@@ -686,14 +684,67 @@ namespace Noir.Unity
         }
 
         /// <summary>
+        /// Charge a slice of standing still, and end the journey if it has gone on too long.
+        /// True when the vehicle is finished with — parked or destroyed — so the caller must not
+        /// touch it again.
+        ///
+        /// THIS IS THE LIVENESS GUARANTEE, AND IT IS DELIBERATELY NOT A GEOMETRY. Three wedges
+        /// were found and patched here one shape at a time — the sibling parked nose to nose, then
+        /// ambient cars queued between them, then the same thing part-way round a junction — and
+        /// each patch only moved the failure somewhere the last one could not see. They are all
+        /// the same fault: this system parks a vehicle that blocks a lane, and everything stopped
+        /// behind that block is stopped until the case closes, which cannot happen until the
+        /// vehicle it is blocking arrives. So the rule is not about where the vehicle is. Anything
+        /// answering a call that has not covered ground in <see cref="Patience"/> sim seconds, on
+        /// any segment, mid-turn included, ARRIVES WHERE IT STANDS. Arrival is what unblocks the
+        /// case; Task 12's officer walks whatever difference is left, and a police car stopped a
+        /// hundred feet short of a scene is a cost this project has accepted in writing.
+        ///
+        /// ONE ON ITS WAY OUT VANISHES INSTEAD, because nothing is waiting on a departure — the
+        /// case is already closed — so there is no arrival to report and no reason to leave a
+        /// vehicle standing in a street it cannot get out of. It says so in the log rather than
+        /// disappearing quietly.
+        /// </summary>
+        private bool HeldTooLong(int slot, Car car, float dt)
+        {
+            car.HeldFor += dt;
+            if (car.HeldFor < Patience) return false;
+
+            if (car.Leaving)
+            {
+                Debug.Log($"[response] {NameOf((Rig)slot)} boxed in while leaving — "
+                        + "despawned in place");
+                Despawn(slot);
+                return true;
+            }
+
+            Park(car);
+            return true;
+        }
+
+        /// <summary>
         /// Is there something close in front, going roughly this way?
         ///
         /// The moving half is <see cref="CityTraffic.AnyMoverWithin"/>, which is `Blocked`'s own
         /// loop — parallel-only, because cross traffic at a junction is the signals' business and
-        /// counting it stops a car dead in a box it has already claimed. The standing half is the
-        /// obstacle list, which has no heading to compare against, so it is judged on the box
-        /// alone. A response vehicle skips ITSELF and nothing else: the other one, parked at the
-        /// same scene, is exactly the sort of thing worth not driving into.
+        /// counting it stops a car dead in a box it has already claimed.
+        ///
+        /// THE OBSTACLE LIST IS NO LONGER "THINGS THAT ARE STANDING STILL", and this comment said
+        /// it was until this file put every response vehicle in it at spawn (see the class header
+        /// and <see cref="Dress"/>). It now holds the player's parked car, any response vehicle
+        /// parked at a scene, AND both response vehicles while they are driving. The arm stays
+        /// HEADING-BLIND anyway: a `Transform` in that list carries no travel direction to compare
+        /// against — `Mover.Forward` is the fleet's private business — and the alternative, judging
+        /// a hazard on where it happens to be pointing, is how a parked car sideways-on to the lane
+        /// becomes invisible. A box test with no heading is the conservative reading.
+        ///
+        /// WHAT IT SKIPS: itself, and the SIBLING RESPONSE VEHICLE WHILE THAT ONE IS STILL MOVING.
+        /// Heading-blindness costs something here and only here — two rigs approaching head-on down
+        /// a narrow alley each fall inside the other's box, each stops for the other, and neither
+        /// ever moves again; both are on calls, so neither will ever clear. A moving sibling needs
+        /// no obstacle test at all: same-direction following is already handled by the box against
+        /// whichever of them is in front, and the deadline above covers the rest. A PARKED sibling
+        /// stays visible, because that one really is a wall.
         /// </summary>
         private bool Held(Car car)
         {
@@ -705,6 +756,7 @@ namespace Noir.Unity
             {
                 var what = _traffic.Obstacles[i];
                 if (what == null || what == car.What) continue;
+                if (IsMovingSibling(car, what)) continue;
 
                 var gap = what.position - at;
                 float ahead = Vector3.Dot(gap, car.Forward);
@@ -712,6 +764,19 @@ namespace Noir.Unity
                 if (ahead > car.Reach + ObstacleReach + Headway) continue;
                 if (Vector3.Cross(car.Forward, gap).magnitude > LookWide) continue;
                 return true;
+            }
+            return false;
+        }
+
+        /// <summary>Is that obstacle the OTHER response vehicle, and is it still under way? See
+        /// <see cref="Held"/> for why a moving one is skipped and a parked one is not.</summary>
+        private bool IsMovingSibling(Car car, Transform what)
+        {
+            for (int i = 0; i < _cars.Length; i++)
+            {
+                var other = _cars[i];
+                if (other == null || other == car) continue;
+                if (other.What == what) return !other.Arrived;
             }
             return false;
         }
