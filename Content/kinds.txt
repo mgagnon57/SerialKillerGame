@@ -52,7 +52,7 @@
 #             that employs somebody must name what they are - either on its own
 #             is an amenity whose windows never light from anyone being in it.
 #  shifts     one, or split when several opening windows are genuinely separate
-#             shifts rather than a lunch break. Only the mill.
+#             shifts rather than a lunch break. The mill, the factory and the precinct.
 #  catchment  whether a household belongs to a particular one of these.
 #  describe   whether it is expected to carry its own `human` sentence. A
 #             dwelling is not: its character comes from who lives in it.
@@ -489,8 +489,8 @@ kind precinct
   props     none
   counter   yes
   service   5 9
-  hours     00:00-23:59
-  jobs      12
+  hours     06:00-18:00 18:00-23:59
+  jobs      4
   roles     sergeant officer
   shifts    split
   catchment yes
