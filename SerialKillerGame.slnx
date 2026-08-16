@@ -18,6 +18,7 @@
   <Project Path="Noir.Core.Observation.csproj" />
   <Project Path="Noir.Core.Sim.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Noir.Core.Response.csproj" />
   <Project Path="Polyperfect.Crafting.Framework.Tests.csproj" />
   <Project Path="undream.llmunity.Editor.Tests.csproj" />
   <Project Path="Cloud.Unum.USearch.csproj" />
