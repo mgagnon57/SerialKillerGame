@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using Noir.Core.Contracts;
 using Noir.Core.People;
+using Noir.Core.Response;
 using Noir.Core.World;
 using Noir.Unity;
 
@@ -58,6 +59,25 @@ namespace Noir.PlayTests
                 var host = Object.FindFirstObjectByType<VillageHost>();
                 if (host != null && host.Sim != null) host.Sim.Revive(new CitizenId(_downedVictim));
                 _downedVictim = -1;
+            }
+
+            // THE SWEEP HITS MORE THAN THE CHOSEN VICTIM, AND EVERY HIT OPENS A CASE NOW. The
+            // ±3m segment catches whoever else stood in it - measured 2026-08-16: citizens 490
+            // and 206 lay in the street for the whole suite because only _downedVictim was ever
+            // revived - and since Phase 2, each of those hits also opened a ResponseCases case
+            // that sits live in the shared town, one line of sight away from dispatching an
+            // officer into the middle of a traffic measurement. Stand everyone back up and close
+            // every case this test left open, on every exit path.
+            {
+                var host = Object.FindFirstObjectByType<VillageHost>();
+                if (host != null && host.Sim != null)
+                {
+                    for (int i = 0; i < host.Sim.AgentCount; i++)
+                        if (host.Sim.GetAgent(i).Downed) host.Sim.Revive(new CitizenId(i));
+                    for (int c = 0; c < host.Cases.Count; c++)
+                        if (host.Cases.StateOf(c) != CaseState.Closed)
+                            host.Cases.CloseLoudly(c, "test residue: the suite moves on");
+                }
             }
             yield break;
         }

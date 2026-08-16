@@ -7,6 +7,7 @@
         "Noir.Core.World",
         "Noir.Core.People",
         "Noir.Core.Sim",
+        "Noir.Core.Response",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Noir.Core.Survey"
