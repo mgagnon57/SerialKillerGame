@@ -395,7 +395,7 @@ namespace Noir.Unity
                 Vector3 rel = a + b * t;
                 if (rel.sqrMagnitude > HitRadius * HitRadius) continue;
 
-                _host.CarStruckSomebody(new CitizenId(i), p);
+                _host.CarStruckSomebody(new CitizenId(i), p, Mathf.Abs(_carSpeed));
             }
         }
 

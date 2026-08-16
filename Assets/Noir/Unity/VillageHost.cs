@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
 using Noir.Core.People;
+using Noir.Core.Response;
 using Noir.Core.Sim;
 
 // THE ONE FILE IN THE GAME THAT NAMES THIS ASSEMBLY. WitnessFirewallTests holds the line and
@@ -1207,21 +1208,21 @@ namespace Noir.Unity
         /// <summary>Vehicular harm, the second genuine history. See its own header.</summary>
         private readonly HitEvents _hitEvents = new HitEvents();
 
-        /// <summary>Which minute each downed citizen went down - the sim knows WHO, this
-        /// knows WHEN, and Phase 2's police will want both. Also the answer Recollection's
-        /// IInterruptions asks for, so a dead witness stops testifying.</summary>
-        private readonly Dictionary<int, int> _downedAtMinute = new Dictionary<int, int>();
+        /// <summary>Which minute each downed citizen went down, whether it killed them, and when
+        /// they came back — the sim knows WHO, this knows WHEN. Phase 2's police consume it, and
+        /// Recollection's IInterruptions answers from it: silenced while [DownedFrom, BackFrom).
+        /// A re-hit of a returned survivor widens the window (earliest down, latest back).</summary>
+        private struct VictimRecord { public int DownedFrom; public int BackFrom; public bool Fatal; }
+        private readonly Dictionary<int, VictimRecord> _victims = new Dictionary<int, VictimRecord>();
 
         private sealed class SimInterruptions : IInterruptions
         {
             private readonly VillageHost _host;
             public SimInterruptions(VillageHost host) { _host = host; }
             public int DownedFromMinute(CitizenId who) =>
-                _host._downedAtMinute.TryGetValue(who.Value, out int m) ? m : int.MaxValue;
-
-            // Task 9 wires the real record - nobody has ever come back yet, so every citizen
-            // reads as never-returned, the same as the dead.
-            public int BackFromMinute(CitizenId who) => int.MaxValue;
+                _host._victims.TryGetValue(who.Value, out var r) ? r.DownedFrom : int.MaxValue;
+            public int BackFromMinute(CitizenId who) =>
+                _host._victims.TryGetValue(who.Value, out var r) ? r.BackFrom : int.MaxValue;
         }
         private SimInterruptions _interruptions;
 
@@ -1229,9 +1230,9 @@ namespace Noir.Unity
         /// A car hit a person. The one recording seam, fed plain data by Player exactly as
         /// Player.Where feeds the track - the car controller never names this layer. Downs
         /// the victim in the sim (the body stays), stamps the event with the sim clock, and
-        /// keeps the victim-to-minute pairing Phase 2's police will consume.
+        /// keeps the victim record Phase 2's police will consume.
         /// </summary>
-        public void CarStruckSomebody(CitizenId victim, Vector3 at)
+        public void CarStruckSomebody(CitizenId victim, Vector3 at, float speed)
         {
             if (Sim == null) return;
             if (Sim.GetAgent(victim).Downed) return;
@@ -1243,10 +1244,29 @@ namespace Noir.Unity
             _hitEvents.Record(minute, Space3D.TileAt(at),
                               _player != null ? _player.CarTone : CarTone.Unnoticed,
                               _player != null ? _player.CarShape : CarShape.Unnoticed);
-            _downedAtMinute[victim.Value] = minute;
+
+            bool fatal = speed >= ResponseCases.FatalSpeed;
+            _victims.TryGetValue(victim.Value, out var was);   // default: DownedFrom=0 → treat absent
+            _victims[victim.Value] = new VictimRecord
+            {
+                DownedFrom = _victims.ContainsKey(victim.Value) ? Math.Min(was.DownedFrom, minute) : minute,
+                BackFrom   = int.MaxValue,
+                Fatal      = fatal,
+            };
 
             Debug.Log($"[hit] a car struck citizen {victim.Value} at {Space3D.TileAt(at)} "
-                    + $"minute {minute}. They are down, and the town can be asked about it.");
+                    + $"minute {minute}, speed {speed:0.0} m/s, fatal={fatal}. "
+                    + "They are down, and the town can be asked about it.");
+        }
+
+        /// <summary>Task 13 calls this when ordering TakeBodyAway for a survivor - the return
+        /// minute is known at order time. Widens the record rather than replacing it, so a
+        /// re-hit of somebody already on their way back does not lose the earlier DownedFrom.</summary>
+        public void VictimReturned(CitizenId who, int minute)
+        {
+            _victims.TryGetValue(who.Value, out var r);
+            r.BackFrom = minute;
+            _victims[who.Value] = r;
         }
 
         private void RecordWhereThePlayerWas()
