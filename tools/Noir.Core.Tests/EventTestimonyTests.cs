@@ -155,5 +155,88 @@ namespace Noir.Core.Tests
 
         private static bool IsStationary(Block b) =>
             b.What != Activity.Asleep && b.What != Activity.TravellingTo && b.Where.IsValid;
+
+        /// <summary>
+        /// C1 of the 2026-08-15 final whole-branch review: "the corpse testifies." WhatTheySaw
+        /// never consulted IInterruptions - only WhatTheySawOfEvents did - so a witness downed
+        /// mid-afternoon kept describing the player's movements for the rest of the day they were
+        /// lying in the street, while the event arm correctly went silent about them. Same fix,
+        /// same test shape as EventsAndPersonSightingsMergeInMinuteOrder above: two isolated
+        /// minutes, not a continuous track, so each becomes its own separate Sighting rather than
+        /// merging into one long visit (Recollection only starts a new Sighting when inSight goes
+        /// false and back true - a gap in the track between the two forces exactly that).
+        /// </summary>
+        [Test]
+        public void ADownedWitnessTestifiesToNothingFromThatMinuteOn()
+        {
+            const int day = 3;
+            const int gap = 240; // four hours apart - comfortably clear of blur's -14 minute reach
+
+            var v = VillageContext.Load();
+
+            Citizen who = null;
+            int earlyMinute = -1, lateMinute = -1;
+
+            foreach (Citizen candidate in v.People.Citizens)
+            {
+                DayPlan plan = DayPlanner.Plan(v.World, v.People, candidate, day, v.Seed);
+                for (int m = 0; m + gap < Sighting.MinutesPerDay; m++)
+                {
+                    if (!IsStationary(plan.At(m)) || !IsStationary(plan.At(m + gap))) continue;
+                    who = candidate;
+                    earlyMinute = m;
+                    lateMinute = m + gap;
+                    break;
+                }
+                if (who != null) break;
+            }
+            Assert.That(who, Is.Not.Null,
+                "no citizen in the fixture village is stationary twice, four hours apart, in one " +
+                "day - the test needs a different search, not a bigger gap");
+
+            DayPlan whosPlan = DayPlanner.Plan(v.World, v.People, who, day, v.Seed);
+            Tile earlySpot = v.World.GetPlace(whosPlan.At(earlyMinute).Where).Door;
+            Tile lateSpot = v.World.GetPlace(whosPlan.At(lateMinute).Where).Door;
+
+            // DISTANCE ZERO, ON PURPOSE - the same trick EventsAndPersonSightingsMergeInMinuteOrder
+            // and WitnessTests' TrackOutside use: standing exactly where the witness themselves is
+            // guarantees SawAnythingAtAll regardless of light, range or attention. Two isolated
+            // minutes with nothing recorded between them, not a continuous track, so each becomes
+            // its own Sighting instead of one visit swallowing both.
+            var track = new PlayerTrack();
+            int earlyAbs = day * Sighting.MinutesPerDay + earlyMinute;
+            int lateAbs = day * Sighting.MinutesPerDay + lateMinute;
+            track.Record(earlyAbs, earlySpot, Visibly.Nothing);
+            track.Record(lateAbs, lateSpot, Visibly.Nothing);
+
+            Sighting[] undisturbed = Recollection.WhatTheySaw(v.World, v.People, who, day, track, v.Seed);
+            Assert.That(undisturbed.Length, Is.EqualTo(2),
+                "expected two separate sightings, one at each isolated minute - fixture or seed " +
+                "changed? " +
+                string.Join(", ", System.Array.ConvertAll(undisturbed, s => s.Minute.ToString())));
+
+            // Downed strictly between the two minutes: still on their feet for the early sighting,
+            // lying in the street by the late one.
+            var interruptions = new DownedAt(who.Id, earlyAbs + 1);
+            Sighting[] afterDowning = Recollection.WhatTheySaw(v.World, v.People, who, day, track,
+                                                               v.Seed, interruptions: interruptions);
+
+            Assert.That(afterDowning.Length, Is.EqualTo(1),
+                "a downed witness should still testify to what they saw before going down - the " +
+                "corpse is testifying to something it should have gone silent about");
+            Assert.That(afterDowning[0].Minute, Is.EqualTo(undisturbed[0].Minute),
+                "the surviving sighting should be the early one, unchanged by the guard");
+        }
+
+        /// <summary>A stub IInterruptions naming exactly one citizen's downed-from minute, so this
+        /// file can prove Recollection's own gate without standing up a live Simulation.</summary>
+        private sealed class DownedAt : IInterruptions
+        {
+            private readonly CitizenId _who;
+            private readonly int _minute;
+            public DownedAt(CitizenId who, int minute) { _who = who; _minute = minute; }
+            public int DownedFromMinute(CitizenId who) =>
+                who.Value == _who.Value ? _minute : int.MaxValue;
+        }
     }
 }

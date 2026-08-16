@@ -54,10 +54,18 @@ namespace Noir.Core.Witness
         public static Sighting[] WhatTheySaw(WorldModel world, Population population,
                                              Citizen who, int day, PlayerTrack track, ulong seed,
                                              INightWitnesses nightWitnesses = null,
-                                             ISightBlocked blocked = null)
+                                             ISightBlocked blocked = null,
+                                             IInterruptions interruptions = null)
         {
             DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
             var found = new List<Sighting>();
+
+            // THE SAME GATE WhatTheySawOfEvents CARRIES - see its own comment ("the victim
+            // testifies to nothing"). A downed witness is not on their feet at their planned
+            // door any more; they are lying wherever the car left them, and this is the half
+            // of Interruptions.cs's promise that stops the corpse describing the player's own
+            // afternoon after it stopped being able to see anything.
+            int downedFrom = interruptions?.DownedFromMinute(who.Id) ?? int.MaxValue;
 
             // ASKED ONCE, not per minute: whether somebody is a light sleeper is a fact about
             // the person, not about the moment. Null means nobody is, which is the default.
@@ -68,6 +76,7 @@ namespace Noir.Core.Witness
             for (int minuteOfDay = 0; minuteOfDay < MinutesPerDay; minuteOfDay++)
             {
                 int minute = day * MinutesPerDay + minuteOfDay;
+                if (minute >= downedFrom) { inSight = false; continue; }   // saw nothing, downed
 
                 if (!track.TryGet(minute, out Step step)) { inSight = false; continue; }
 
@@ -195,7 +204,7 @@ namespace Noir.Core.Witness
                                             IInterruptions interruptions = null)
         {
             Sighting[] saw = WhatTheySaw(world, population, who, day, track, seed,
-                                         nightWitnesses, blocked);
+                                         nightWitnesses, blocked, interruptions);
             EventSighting[] events = WhatTheySawOfEvents(world, population, who, day, hits,
                                                          seed, nightWitnesses, interruptions, blocked);
 
@@ -204,14 +213,18 @@ namespace Noir.Core.Witness
             // player. An alibi is evidence too.
             if (saw.Length == 0 && events.Length == 0) return new[] { Testimony.SawNothing };
 
-            // MERGED BY MINUTE, OLDEST FIRST - "the order they happened" is this method's own
-            // promise, and it has to hold ACROSS the two kinds of thing a witness can report,
-            // not just within one of them: drive past, hit somebody, walk on is the feature's
-            // whole scenario, and telling it hit-then-drive is telling it backwards. Both arrays
-            // already arrive in minute order - WhatTheySaw and WhatTheySawOfEvents each walk the
-            // day forwards - so this is a merge of two sorted runs, not a sort. Ties go to the
-            // person line: seeing somebody is the ordinary thing a witness reports, and it is
-            // what they would say first if asked "what did you see?" at that same moment.
+            // MINUTE-ORDERED, TIES GO TO THE PERSON LINE - "the order they happened" is this
+            // method's own promise, and it has to hold ACROSS the two kinds of thing a witness
+            // can report, not just within one of them: drive past, hit somebody, walk on is the
+            // feature's whole scenario, and telling it hit-then-drive is telling it backwards.
+            // Both arrays already arrive in TRUE-minute order - WhatTheySaw and
+            // WhatTheySawOfEvents each walk the day forwards - so this is a merge of two sorted
+            // runs, not a sort. NOT STRICTLY OLDEST-FIRST ON THE STAMP SHOWN, THOUGH: the merge
+            // key is BlurredMinute, and blur (up to -14 minutes, worse for a worse look) can
+            // locally invert two close true minutes, so an equal blurred stamp is a genuine tie
+            // rather than proof the two happened at the same moment. Ties go to the person line:
+            // seeing somebody is the ordinary thing a witness reports, and it is what they would
+            // say first if asked "what did you see?" at that same moment.
             var lines = new List<string>(saw.Length + events.Length);
             int i = 0, j = 0;
             while (i < saw.Length && j < events.Length)

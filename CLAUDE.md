@@ -67,6 +67,21 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
+> **526 pass, 0 fail, 526 total, 8 skipped, 3 m 13 s.** Measured 2026-08-15, after
+> `ADownedWitnessTestifiesToNothingFromThatMinuteOn` (+1) landed closing the drivable-car branch's
+> final whole-branch review Critical finding: `Recollection.WhatTheySaw` never consulted
+> `IInterruptions`, only `WhatTheySawOfEvents` did, so a witness downed mid-afternoon kept
+> describing the player's own movements for the rest of the day they were lying in the street —
+> "the corpse testifies" — while the event arm correctly went silent about them. `WhatTheySaw` now
+> takes the same `IInterruptions` and skips every minute from `DownedFromMinute` on, threaded
+> through `AskInEnglish` exactly as the event arm already was. **THIS FILE STILL SAID 509 GOING
+> INTO THIS FIX** — the drivable-car branch itself had already taken it to 525 that same day (the
+> branch's own final review measured it; nothing here was updated): `DownedTests` (+4, including
+> the mid-block revive case), `HitEventsTests` (+3), `EventSightingTests` (+3), and
+> `EventTestimonyTests` (+6, then +1 more from this fix wave's own test, to 7). A fourth branch in
+> eight days moving this number without recording it here — see the paragraph below for the first
+> three times this happened in one week.
+>
 > **509 pass, 0 fail, 509 total, 8 skipped, 2 m 02 s.** Measured 2026-08-14, after
 > `NoCarInRossvilleOverlapsAnyBuildingsWallsNotJustItsOwn` (+1) landed on TOP of the same day's
 > `Clearance` fix below, because that fix alone was not the whole bug. `Clearance` only guards the

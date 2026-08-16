@@ -410,16 +410,20 @@ namespace Noir.Core.Sim
         }
 
         /// <summary>
-        /// Undo <see cref="Down"/>. Clears Downed and hands the citizen back to their plan - ON
-        /// THE VERY NEXT TICK, not whenever the plan's current block next happens to change.
-        /// <see cref="Tick"/>'s wants-check fires on `block.Where != Destination`, and Down never
-        /// touched Destination - it is left frozen at whatever block was active the moment they
-        /// went down. For a PROMPT revive (this method's whole reason to exist: the ambulance,
-        /// a test's own teardown) that is very likely STILL the current block, so without more,
-        /// block.Where would still equal Destination, wants would stay false, and the citizen
-        /// would stand exactly where they were hit - Doing correct, feet wrong - until the plan
-        /// moved on by itself, which could be a long wait. Resetting Destination to PlaceId.None
-        /// makes that mismatch true immediately, so the very next tick is a departure.
+        /// Undo <see cref="Down"/>. Clears Downed and hands the citizen back to their plan -
+        /// WITHIN THE MINUTE, not whenever the plan's current block next happens to change.
+        /// Not literally the very next tick: <see cref="Tick"/>'s wants-check also gates on
+        /// DepartureOffset's own per-citizen jitter within the minute, so a revive can still
+        /// wait up to that long before the departure fires. <see cref="Tick"/>'s wants-check
+        /// fires on `block.Where != Destination`, and Down never touched Destination - it is
+        /// left frozen at whatever block was active the moment they went down. For a PROMPT
+        /// revive (this method's whole reason to exist: the ambulance, a test's own teardown)
+        /// that is very likely STILL the current block, so without more, block.Where would
+        /// still equal Destination, wants would stay false, and the citizen would stand exactly
+        /// where they were hit - Doing correct, feet wrong - until the plan moved on by itself,
+        /// which could be a long wait. Resetting Destination to PlaceId.None makes that
+        /// mismatch true immediately, so the departure fires within the minute rather than
+        /// waiting for the plan's next scheduled change.
         /// StartJourney overwrites Destination with the real block.Where the moment it starts
         /// (before Travelling is ever set true), so the invalid value never survives past the
         /// one departure it exists to trigger. Consumes no RNG, so reviving somebody disturbs

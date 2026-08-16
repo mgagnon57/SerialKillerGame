@@ -471,5 +471,78 @@ namespace Noir.PlayTests
 
             player.Toggle();
         }
+
+        /// <summary>
+        /// The moving half of SweepForVictims' own design, which AHitDownsSomebodyAndTheBodyStays
+        /// never exercises: that test's two calls happen on the same frame with nothing yielded
+        /// between them, so the victim never moves and the closest-approach math's own
+        /// relative-motion term - (p - prev), the agent's OWN travel across the frame - is zero
+        /// throughout ("the degenerate b ≈ -segCar path", finding I4 of the whole-branch review).
+        /// A sign error in that term would down nobody, silently, and nothing in the suite would
+        /// notice. This picks somebody actually on the move, lets real frames pass so the sim
+        /// genuinely relocates them, then sweeps a segment that crosses the path they walked.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator AMovingVictimCrossingThePathIsHit()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var sim = host.Sim;
+            var player = Object.FindFirstObjectByType<Player>();
+
+            // The hit test's own filters, plus Heading nonzero - somebody actually walking, not
+            // just standing outdoors.
+            int victim = -1;
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var a = sim.GetAgent(i);
+                if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
+                if (a.Heading.X == 0f && a.Heading.Y == 0f) continue;
+                if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+                victim = i; break;
+            }
+            Assert.That(victim, Is.GreaterThanOrEqualTo(0), "nobody outdoors is travelling to test with");
+
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+
+            // SEED THE CACHE - the first call's own job (SweepForVictims' own header), so the
+            // real sweep below compares against an actual "last sweep" position rather than
+            // treating the victim as having always stood wherever they end up.
+            var start = Space3D.ToWorld(sim.GetAgent(victim).Position);
+            player.SweepForVictims(start + new Vector3(-3f, 0f, 0f), start + new Vector3(3f, 0f, 0f));
+
+            // LET THE SIM GENUINELY ADVANCE - real frames at whatever clock speed the town is
+            // already running at (VillageHost.SpeedIndex, untouched by this test), not a second
+            // call on the same frame - so the victim actually covers ground along their own
+            // travel between the seed and the real sweep below.
+            for (int frame = 0; frame < 60; frame++) yield return null;
+
+            var now = Space3D.ToWorld(sim.GetAgent(victim).Position);
+            Assert.That(now, Is.Not.EqualTo(start),
+                "the victim never moved - a travelling agent should have covered ground in 60 " +
+                "frames at the town's own clock speed. Fixture or SpeedIndex default changed?");
+
+            // A SEGMENT ACROSS THEIR TRAVEL, CENTRED ON ITS MIDPOINT - perpendicular to the line
+            // from where they started to where they ended up, and symmetric about the point they
+            // pass through exactly halfway across the frame (t=0.5 in the same closest-approach
+            // parametrisation SweepForVictims itself uses for both moving points). That symmetry
+            // is what makes the intersection exact and the span irrelevant to whether it hits:
+            // at t=0.5 the victim's own interpolated position is the midpoint of start->now, and
+            // a segment built symmetric about that same midpoint is AT that midpoint too at
+            // t=0.5, so the two coincide - a real crossing, not a near miss tuned to HitRadius.
+            Vector3 travel = now - start; travel.y = 0f;
+            Vector3 mid = (start + now) * 0.5f;
+            Vector3 across = new Vector3(-travel.z, 0f, travel.x).normalized;
+            player.SweepForVictims(mid - across * 4f, mid + across * 4f);
+
+            Assert.That(sim.GetAgent(victim).Doing, Is.EqualTo(Activity.Downed),
+                "a segment crossing a moving victim's own path did not down them");
+
+            // Owed a revive, same slot AHitDownsSomebodyAndTheBodyStays uses - BackToTheOverview
+            // picks this up on every exit path.
+            _downedVictim = victim;
+
+            player.Toggle();
+        }
     }
 }

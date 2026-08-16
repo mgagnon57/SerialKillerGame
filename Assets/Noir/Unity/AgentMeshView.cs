@@ -462,6 +462,13 @@ namespace Noir.Unity
             /// <summary>Out of town and not drawn. See Report - they are skipped, not counted.</summary>
             public int Away;
 
+            /// <summary>Downed and not counted - see Report. A frozen body's animator is left
+            /// wherever Refresh's own zero-speed freeze caught it (mid-stride, most likely), not
+            /// in the "downed" clip this census would otherwise go looking for, so counting it
+            /// here would either inflate Stateless or, worse, silently pass as "right" for a
+            /// question the frozen pose was never trying to answer.</summary>
+            public int Downed;
+
             /// <summary>
             /// People whose wanted clip has NO state in the controller, so Drive freezes them.
             ///
@@ -476,6 +483,7 @@ namespace Noir.Unity
               + $"{Moving} on the move, "
               + $"{Wrong} of those NOT in the state they should be. "
               + $"{Away} out of town and not drawn. "
+              + $"{Downed} down and not counted toward the clip census. "
               + (Stateless > 0 ? $"{Stateless} WANT A CLIP THE CONTROLLER HAS NO STATE FOR. " : "")
               + (Moving > 0 ? $"Walk playing at {Rate:0.00}x "
                             + $"({Slowest:0.00}-{Fastest:0.00}). " : "")
@@ -515,7 +523,7 @@ namespace Noir.Unity
             if (sim == null) return new Census { Wanted = "no simulation" };
 
             int walking = 0, walkingAndIdle = 0, animated = 0, rated = 0;
-            int away = 0, stateless = 0;
+            int away = 0, downed = 0, stateless = 0;
             float slowest = float.MaxValue, fastest = 0f, rates = 0f;
             var states = new Dictionary<string, int>();
 
@@ -532,6 +540,18 @@ namespace Noir.Unity
                 // histogram described people nobody can see. Skipping them is not hiding a fault,
                 // it is the census agreeing with the renderer about who is here.
                 if (agent.Doing == Activity.AwayFromTown) { away++; continue; }
+
+                // DOWNED, SO NOT COUNTED EITHER - the same reasoning as away, aimed at a
+                // different silent miscount. `Refresh` freezes a downed figure by zeroing its
+                // Animator's speed rather than asking for a new clip (see Refresh's own comment
+                // on the Downed branch), so whatever state the animator was in the instant they
+                // went down is what keeps showing - mid-stride, most likely - while this census
+                // would still ask ClipFor for the "downed" row (Breathing Idle) and either count
+                // a body that will never play it as Stateless, or, since a non-moving agent skips
+                // the right/wrong state check below entirely, count it as fine when nobody ever
+                // checked. Neither answer is about the fault this census exists to catch, so a
+                // downed figure is skipped from the clip census exactly like an absent one.
+                if (agent.Doing == Activity.Downed) { downed++; continue; }
 
                 bool moves = agent.Heading.X != 0f || agent.Heading.Y != 0f;
                 if (moves) walking++;
@@ -595,7 +615,7 @@ namespace Noir.Unity
             return new Census
             {
                 People = _figures.Length, Animated = animated, Running = Animating,
-                Away = away, Stateless = stateless,
+                Away = away, Downed = downed, Stateless = stateless,
                 Moving = walking, Wrong = walkingAndIdle,
                 Rate = rated > 0 ? rates / rated : 0f,
                 Slowest = slowest == float.MaxValue ? 0f : slowest, Fastest = fastest,

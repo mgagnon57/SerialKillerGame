@@ -7,7 +7,11 @@ namespace Noir.Core.Witness
     /// their plan. INightWitnesses' pattern exactly — Core states the question, the one
     /// caller answers it from live sim state, and null means nobody ever was (the default,
     /// and the honest one). A downed citizen neither witnesses nor is placed by any replay
-    /// consumer from that minute on.
+    /// consumer from that minute on — <see cref="Recollection.WhatTheySaw"/> enforces the
+    /// witness half (a downed citizen stops describing the player's own afternoon) and
+    /// <see cref="Recollection.WhatTheySawOfEvents"/> enforces the event half (a downed
+    /// citizen stops being placed at, or testifying about, a recorded event), both against
+    /// the same DownedFromMinute.
     /// </summary>
     public interface IInterruptions
     {

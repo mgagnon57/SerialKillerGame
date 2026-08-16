@@ -99,8 +99,14 @@ namespace Noir.Core.Tests
         [Test]
         public void NobodyDownedIsByteIdenticalToBefore()
         {
-            // The guard must be a true no-op when the downed set is empty: two sims, same
-            // seed, one carrying the new code path — every agent identical after an hour.
+            // NOT "before vs. after the change" - both sims here run the SAME binary, so this
+            // cannot compare against the pre-Downed codebase and would pass even if the guard
+            // had rewritten every agent's day, so long as it did so deterministically. What it
+            // actually proves is narrower and still worth having: two same-seed sims replayed in
+            // one process, with the Downed guard sitting in the tick loop and never once
+            // triggered, come out byte-identical - a smoke test that the guard is a true no-op
+            // when the downed set stays empty, not a drift gate. The real drift gate is
+            // watched.floor's ratchets (ProgressDoesNotReverse, TheEyeHasNotBeenNarrowed).
             //
             // Queueham (the suite's own shop-queue fixture) has 16 agents, not the 40 a fixture
             // with children and households would carry, so the check below walks its real

@@ -103,8 +103,11 @@ namespace Noir.Unity
         /// offer it back - PlayerInteraction's own-car candidate, CarInteractable.
         /// OwnCarInteractable. Only one car is remembered, the most recent: taking a different
         /// car forgets the old one where it stands (v1 - the town's other 546 cars are still
-        /// there). Null before any car has ever been taken, and cleared the moment the player is
-        /// back behind a wheel - see SitIn.</summary>
+        /// there). Null before any car has ever been taken. SitIn itself never touches this
+        /// field - the two callers that put the player back behind a wheel do: ReenterLastCar
+        /// clears it (it IS the remembered car, taken back), and EnterCar leaves it stale (a
+        /// DIFFERENT car was taken, and LastCarPosition's own `!Driving` guard is what keeps the
+        /// stale value from being offered again while driving).</summary>
         private GameObject _lastCar;
 
         /// <summary>
@@ -305,7 +308,15 @@ namespace Noir.Unity
             // SweepForVictims handles that segment fine - t clamps to 0 and the test becomes a
             // plain point-distance check - so a stalled car standing on somebody still hits
             // them rather than getting a free pass because it never moved.
-            if (CarTravelledFrom.HasValue) SweepForVictims(CarTravelledFrom.Value, _car.transform.position);
+            //
+            // GATED ON SPEED, NOT ON WHETHER IT CALLS AT ALL - SweepForVictims itself stays
+            // ungated (the PlayMode gate drives it directly, without throttle input), only this
+            // call site is. A pedestrian brushing a parked or crawling car is a bump, not a
+            // casualty; the harm threshold is a walking pace, roughly the 1.5 m/s a person on
+            // foot moves at, so a car below that is not travelling fast enough to be the one
+            // doing the hitting.
+            if (CarTravelledFrom.HasValue && Mathf.Abs(_carSpeed) >= 1.5f)
+                SweepForVictims(CarTravelledFrom.Value, _car.transform.position);
         }
 
         /// <summary>Half the car's width plus a shoulder. A person inside this lateral
