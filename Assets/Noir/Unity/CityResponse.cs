@@ -237,14 +237,18 @@ namespace Noir.Unity
         /// <summary>
         /// How long he waits between asking again while a search keeps giving up, in SIM seconds.
         ///
-        /// A `GaveUp` COSTS THE WHOLE ALLOWANCE BEFORE IT CAN SAY SO. That is the exact mechanism
-        /// of CLAUDE.md's stale-node-cap incident: a capped search spends every one of its 300,000
-        /// nodes before it can report failure, so seven honest walks became 171 refusals and
-        /// seventeen million nodes were burnt to avoid paying about one million. Retrying every
-        /// frame for the whole of <see cref="SearchPatience"/> would repeat that at roughly 7,200
-        /// full-budget searches a canvass. Five sim seconds is the same answer for a sixtieth of
-        /// the cost: `GaveUp` is a property of how busy this MOMENT is, and a moment does not
-        /// change meaningfully between two frames.
+        /// A `GaveUp` COSTS THE WHOLE ALLOWANCE BEFORE IT CAN SAY SO, which is the mechanism
+        /// behind CLAUDE.md's stale-node-cap incident: a capped search spends its entire budget
+        /// before it can report failure, so seven honest walks became 171 refusals and seventeen
+        /// million nodes were burnt to avoid paying about one million. THAT MEASUREMENT WAS TAKEN
+        /// AGAINST A 100,000-NODE CEILING — 171 x 100k — and the ceiling is 300,000 now, so the
+        /// same shape of mistake costs three times as much today as it did when it was written up.
+        ///
+        /// Retrying every frame for the whole of <see cref="SearchPatience"/> would be that shape:
+        /// at 60 fps and 1x it is about 7,200 full-budget searches PER DOOR, and about 720 per door
+        /// at the default 10x — a canvass is many doors. Five sim seconds is the same answer for a
+        /// sixtieth of the cost: `GaveUp` is a property of how busy this MOMENT is, and a moment
+        /// does not change meaningfully between two frames.
         /// </summary>
         private const float LookAgainEvery = 5f;
 
@@ -274,11 +278,15 @@ namespace Noir.Unity
         private const float AdultHeight = 1.71f;
 
         /// <summary>
-        /// Which clip he draws out of a row that offers several. A FIXED number, so he walks the
+        /// Which clip he draws out of a row that offers several. A FIXED number, so he behaves the
         /// same way in every case and in every replay of a seed.
         ///
+        /// IT ONLY EVER PICKS A STANDING GESTURE. The `moving` row holds a single clip, so his
+        /// walk is not a choice at all; what this decides is which of the fifteen `talking` clips
+        /// he does at a door — whether he shrugs, gestures or nods along. See <see cref="Animate"/>.
+        ///
         /// NOT A VILLAGE SEED AND NOT A DATE — it feeds `AgentAnimation`'s clip choice and nothing
-        /// else. Changing it changes which walk cycle one man plays.
+        /// else, and no seed reproduces a different town because of it.
         /// </summary>
         private const ulong OfficerSeed = 0x0FF1CEuL;
 
@@ -294,13 +302,17 @@ namespace Noir.Unity
         private const int MostTiles = 256;
 
         /// <summary>
-        /// How far from the parked car a walkable tile is looked for, in tiles.
+        /// How far from where he is put down a walkable tile is looked for, in tiles.
         ///
-        /// A car parks half a lane toward the verge (see <see cref="Park"/>), which can leave the
-        /// tile under it unwalkable — and `Pathfinder.FindPath` answers `NoRouteExists` for an
-        /// unwalkable ORIGIN, not just an unwalkable destination. Standing the officer on the
-        /// nearest foothold instead of on the exact parked point is the difference between a
-        /// canvass that walks and a canvass that reports every door from the kerb.
+        /// `Pathfinder.FindPath` answers `NoRouteExists` for an unwalkable ORIGIN and not just an
+        /// unwalkable destination, so a bad spawn point fails EVERY door of a canvass rather than
+        /// one — and it fails them with a log line that names the doors.
+        ///
+        /// NOT FOR THE ORDINARY PARKED CAR, whatever an earlier version of this said. A cruiser
+        /// that drove parks at the asphalt edge and <see cref="OutOfTheCar"/> steps him onto the
+        /// pavement beside it; both are walkable, the first test passes, and this search never
+        /// runs. It earns its keep on the vehicle that did NOT drive to a spot chosen for standing
+        /// on — see <see cref="NearestFoothold"/>, which holds the full argument.
         /// </summary>
         private const int Foothold = 4;
 
@@ -437,9 +449,19 @@ namespace Noir.Unity
         /// Every failure mode below it is a no-op or a held pose; none of them throws.</summary>
         private Animator _officerAnim;
 
-        /// <summary>How fast he is walking, in metres per SIM second — the last step's own
-        /// terrain-scaled speed. Zero whenever he is not walking. Read by
-        /// <see cref="Animate"/>, which has to hand `Drive` a REAL-time pace.</summary>
+        /// <summary>
+        /// How fast he is walking, in metres per SIM second — the last step's own terrain-scaled
+        /// speed. Read by <see cref="Animate"/>, which converts it to a REAL-time pace.
+        ///
+        /// IT CAN BE STALE, AND THAT IS HARMLESS ONLY BECAUSE OF WHAT READS IT. The tidy exits
+        /// zero it — <see cref="ReachedTheDoor"/>, <see cref="SendHimHome"/>, spawning — but the
+        /// interrupt paths do not: a walk replaced mid-stride by a second `WalkCountyTo`, or one
+        /// that falls through to <see cref="StandAtTheKerb"/>, leaves the last step's figure
+        /// sitting here. Nothing reads it in those states: `Drive` is handed this pace against the
+        /// `talking` row, and that row declares no pace of its own, so `Drive` ignores the number
+        /// entirely and plays the gesture at 1x. If a standing row is ever given a pace, this
+        /// field has to be zeroed on those paths too.
+        /// </summary>
         private float _officerPace;
 
         /// <summary>Sim seconds until the next attempt while <see cref="Foot.Looking"/>.
@@ -798,6 +820,15 @@ namespace Noir.Unity
             // up again rather than left as a "fake null" the C# operators walk past.
             if (_host == null) _host = VillageHost.Instance;
             if (_host == null || _host.Sim == null) return;
+
+            // HIS LEGS ARE DRIVEN ABOVE EVERY RETURN BELOW, AND THAT IS THE POINT. A paused sim
+            // takes the `dtSim <= 0` return, so an Animate called from inside the walk never ran
+            // on a paused frame — and the animator is on UnscaledTime, so it carried on playing
+            // whatever speed it was last given while all 1,385 citizens stood frozen around him.
+            // One man treadmilling in a stopped town. Nothing here needs a delta any more (see
+            // Animate), so it is simply hoisted: paused means SpeedIndex 0, which means a pace of
+            // zero, which means Drive holds his pose exactly as it holds everybody else's.
+            Animate();
 
             long now = _host.Sim.Clock.Tick;
             if (_lastTick < 0) { _lastTick = now; return; }
@@ -1318,17 +1349,26 @@ namespace Noir.Unity
         /// <summary>
         /// The middle of the pavement beside the parked cruiser, rather than the driver's seat.
         ///
-        /// <see cref="ParkedAt"/> IS THE CAR'S CENTRE, and <see cref="Park"/> has already moved
-        /// that half a lane toward the verge — so standing him on it puts him inside the bodywork,
-        /// and the tile under it is ordinary walkable carriageway, which means
+        /// <see cref="ParkedAt"/> IS THE CAR'S CENTRE, and standing him on it puts him inside the
+        /// bodywork. The tile under it is ordinary walkable carriageway, so
         /// <see cref="NearestFoothold"/> is perfectly happy and hands it straight back. Nothing
         /// downstream can catch this; it is only visible by looking at him.
         ///
+        /// THE PARKED CAR IS AT THE ASPHALT EDGE, NOT HALF A LANE OUT, AND THE OFFSET IS COUNTED
+        /// TWICE TO GET THERE. `CityTraffic.PointOn` has ALREADY placed the car on its own lane
+        /// centre — `LaneOffset(class, segment.Lane)` — before <see cref="Park"/> adds a further
+        /// `LaneOffset(class, 0)` on top. For a class with one lane each way those two sum to the
+        /// half-width of the asphalt, which is to say the kerb; a main road's outer lane lands on
+        /// its own kerb the same way. So reaching the pavement means subtracting BOTH, and an
+        /// earlier version of this subtracted only the second — overshooting by exactly one lane
+        /// offset, which is 4.9 ft past the kerb on a street and clean outside the corridor on an
+        /// alley.
+        ///
         /// `CityStreets.VergeOffset` is the measured middle of the pavement — its own docstring
-        /// says "for anything that stands rather than drives", which is this exactly — so the
-        /// correction is the difference between the two offsets, applied along the car's own
-        /// right. Both come off the asphalt this road class was really paved with, so an alley and
-        /// a main road each get their own answer.
+        /// says "for anything that stands rather than drives", which is this exactly. Everything
+        /// here comes off the asphalt this road class was really paved with, so an alley and a
+        /// main road each get their own answer, and asking the segment for its own `Lane` rather
+        /// than assuming lane 0 keeps it right for a vehicle parked in an outer lane.
         ///
         /// A VEHICLE WITH NO BODY NEVER DROVE: it arrived off-stage and `ParkedAt` is the scene
         /// point rather than a spot on any lane, so there is no road class to ask about and no
@@ -1340,9 +1380,13 @@ namespace Noir.Unity
             if (car == null || car.What == null) return parked;
             if (_traffic == null || _traffic.Graph == null || _world == null) return parked;
 
-            var klass = _world.Roads.Lines[_traffic.Graph.Segments[car.Segment].Line].Class;
+            var segment = _traffic.Graph.Segments[car.Segment];
+            var klass = _world.Roads.Lines[segment.Line].Class;
+
             return parked + car.What.right
-                 * (CityStreets.VergeOffset(klass) - CityStreets.LaneOffset(klass, 0));
+                 * (CityStreets.VergeOffset(klass)
+                    - CityStreets.LaneOffset(klass, segment.Lane)
+                    - CityStreets.LaneOffset(klass, 0));
         }
 
         /// <summary>
@@ -1372,21 +1416,15 @@ namespace Noir.Unity
         /// One frame of walking, on SIM seconds — the same clock the vehicles drive on, so a
         /// paused sim stands him still and a fast-forwarded one hurries him along at the same
         /// rate it hurries a citizen going to work.
+        ///
+        /// WHERE HE IS, ONLY. What his legs do is <see cref="Animate"/>, which is driven from
+        /// <see cref="Update"/> above every early return in this one — a paused sim reaches the
+        /// animation and does not reach this.
         /// </summary>
         private void WalkTheOfficer(float dt)
         {
             if (_officer == null) return;
 
-            Afoot(dt);
-
-            // Once per pass whatever happened above — including nothing. `Afoot` can end with him
-            // destroyed, if an arrival's callback ordered the car away, so this re-checks.
-            Animate(dt);
-        }
-
-        /// <summary>The state machine itself. See <see cref="WalkTheOfficer"/>.</summary>
-        private void Afoot(float dt)
-        {
             switch (_foot)
             {
                 case Foot.Idle:
@@ -1572,12 +1610,16 @@ namespace Noir.Unity
         /// the pace by the speed the clip was animated at to decide how fast to play it, and the
         /// animator itself runs on `UnscaledTime` — real seconds — so handing it a sim-time pace
         /// would play the walk cycle at 1x while the man covered ten times the ground, which is
-        /// the skating fault `Drive`'s whole pace argument exists to remove. The ratio between the
-        /// clocks is exactly this frame's `dtSim / unscaledDeltaTime`.
+        /// the skating fault `Drive`'s whole pace argument exists to remove.
         ///
-        /// A REAL DELTA OF ZERO IS "I DO NOT KNOW", not "he has stopped". Passing `-1f` is
-        /// `Drive`'s own way of saying the caller has no pace to offer, and it leaves the clip
-        /// alone rather than freezing him; passing a 0 or an infinity would be a claim.
+        /// THE RATIO IS READ OFF THE SPEED DIAL, NOT MEASURED PER FRAME. `dtSim / unscaledDelta`
+        /// looks like the same quantity and is not: `dtSim` comes from the sim's own TICK counter,
+        /// which is quantised, so the quotient is only that ratio in long-run AVERAGE and is a
+        /// frame-rate-dependent lurch in any single frame. Measured at 1x and 60 fps it reads 3.0
+        /// where it should read 1.0 — his legs ran at twice the rate of a town walking at 0.9x,
+        /// beside him, from the same clip. `VillageHost.Speeds[SpeedIndex]` is the exact multiplier
+        /// by construction, and it is what <see cref="AgentMeshView"/> already uses and documents
+        /// for precisely this sum.
         ///
         /// HE IS `Talking` WHEN HE IS NOT WALKING, AND THE ROW WAS CHOSEN BY READING IT. `Moving`
         /// short-circuits the activity entirely while he walks — the row is `moving` — so the
@@ -1593,12 +1635,13 @@ namespace Noir.Unity
         /// simply have been sitting in the road. A row name that reads right is not a row that
         /// looks right, and the only way to tell is to open `Content/animations.txt`.
         /// </summary>
-        private void Animate(float dtSim)
+        private void Animate()
         {
-            if (_officer == null || _officerAnim == null) return;
+            if (_officer == null || _officerAnim == null || _host == null) return;
 
-            float real = Time.unscaledDeltaTime;
-            float pace = real > 0.0001f ? _officerPace * (dtSim / real) : -1f;
+            float pace = _officerPace
+                * VillageHost.Speeds[
+                    Mathf.Clamp(_host.SpeedIndex, 0, VillageHost.Speeds.Length - 1)];
 
             AgentAnimation.Drive(
                 _officerAnim,
