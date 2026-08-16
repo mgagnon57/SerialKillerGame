@@ -30,16 +30,16 @@ namespace Noir.Unity
     /// what stops cross traffic driving THROUGH an ambulance mid-junction: `_movers` is the only
     /// other thing `Blocked` consults, and a vehicle in neither list is a vehicle nobody can see.
     ///
-    /// THEY RUN ON SIM TIME, NOT ON FRAMES. Everything here advances by the SIMULATION clock's
-    /// own delta — `(Tick - lastTick) / GameClock.TicksPerSecond` — so fast-forward compresses
-    /// the drive exactly as it compresses a citizen's walk to work, and a paused sim stops the
-    /// car dead. The ambient traffic is scenery and is entitled to run off `Time.deltaTime`; a
-    /// response that the case machine is timing in SIM MINUTES is not. THE TWO THEREFORE DIVERGE
-    /// ABOVE 1x, BY DESIGN: at speed the response outruns an ambient fleet still driving in real
-    /// time, which looks odd and is the correct trade — a case counted in sim minutes may not
-    /// have its arrival decided by how fast the player has wound the clock. The ONE exception is
-    /// the held deadline: <see cref="Patience"/> counts REAL seconds, because everything that
-    /// holds a rig — the ambient fleet, a 36-real-second signal cycle — clears on the wall clock.
+    /// THEY RUN ON SIM TIME, NOT ON FRAMES — and since 2026-08-16 SO DOES EVERYTHING ELSE THAT
+    /// MOVES. Everything here advances by the SIMULATION clock's own delta — `(Tick - lastTick)
+    /// / GameClock.TicksPerSecond` — and the one-clock ruling (owner, 2026-08-16, spec
+    /// docs/superpowers/specs/2026-08-16-one-clock-design.md) put the ambient fleet, the
+    /// signals and the train on the same delta. The earlier ruling recorded here — "the ambient
+    /// traffic is scenery and is entitled to run off Time.deltaTime... the two therefore
+    /// diverge above 1x, by design" — is REVERSED: at the default 10x the town's walkers were
+    /// doing an effective 30 mph past an 18 mph fleet, and the divergence read as a fault, not
+    /// a trade. One consequence follows: the held deadline (<see cref="Patience"/>) counts SIM
+    /// seconds now too, because everything that holds a rig clears on the sim clock.
     ///
     /// THEY DO NOT STOP AT RED LIGHTS. There is no signal test anywhere in this file, on purpose:
     /// what holds a response vehicle is what is physically in front of it, and nothing else. An
@@ -110,8 +110,9 @@ namespace Noir.Unity
 
         /// <summary>
         /// How long a vehicle will sit behind something, ANYWHERE at all, before it stops waiting
-        /// to be somewhere else. REAL seconds — the one number in this file that is not on the
-        /// sim clock — and <see cref="HeldTooLong"/> is what happens then.
+        /// to be somewhere else. SIM seconds since the 2026-08-16 one-clock ruling — it counted
+        /// REAL seconds while the ambient fleet and the signal cycle ran on the wall clock — and
+        /// <see cref="HeldTooLong"/> is what happens then.
         ///
         /// THE BAND AND THIS ARE NOT TWO PATCHES ON ONE WEDGE:
         ///
@@ -128,20 +129,21 @@ namespace Noir.Unity
         ///   blocking arrives. Wherever in that chain the second vehicle is standing, waiting is
         ///   not a strategy — so waiting is given a limit.
         ///
-        /// WHY THE WALL CLOCK: everything that HOLDS a rig clears in real seconds. The ambient
-        /// fleet drives on Time.deltaTime and the signals cycle in 36 REAL seconds, so a queue at
-        /// a red drains on the wall clock however fast the sim is wound. A deadline in sim
-        /// seconds shrank with the speed dial — at the default 10x, thirty sim seconds elapsed in
-        /// three real ones, and a rig behind an ordinary red "gave up" and parked (or a leaving
-        /// one despawned) before the light could even change. Sixty REAL seconds outlasts the
-        /// whole 36 s cycle with margin for the queue in front to drain, so a rig never gives up
-        /// on a block that was going to clear.
+        /// WHY SIM SECONDS NOW, WALL SECONDS BEFORE: the deadline must outlast everything that
+        /// can legitimately hold a rig, measured on the clock those things clear by. When the
+        /// fleet drove on Time.deltaTime and the lights cycled in 36 REAL seconds, that clock
+        /// was the wall clock, and a sim-seconds deadline shrank with the speed dial — at 10x a
+        /// rig behind an ordinary red gave up before the light could change. The one-clock
+        /// ruling (2026-08-16) moved the fleet and the cycle onto the sim clock, which inverts
+        /// the argument exactly: queues drain and lights change in SIM seconds now, so sixty
+        /// SIM seconds outlasts the whole 36 s cycle with margin AT EVERY DIAL — the property
+        /// the wall-clock version could only promise at 1x.
         ///
-        /// THE ACCEPTED COST: at high sim speeds a genuinely-permanent block now delays a case by
-        /// many sim minutes before the park fires — sixty real seconds at the default 10x is ten
-        /// sim minutes, more at higher speeds. The case machine runs on sim minutes and survives
-        /// the wait; nothing in it times out. A driver who finally parks gets out and walks,
-        /// which is exactly what this models: Task 12's officer covers the difference on foot.
+        /// A genuinely-permanent block therefore delays a case by the same sixty sim seconds
+        /// whatever the dial, which is also new: it used to cost ten sim minutes at 10x. The
+        /// case machine runs on sim minutes and survives either way. A driver who finally parks
+        /// gets out and walks, which is exactly what this models: the county officer covers the
+        /// difference on foot.
         /// </summary>
         private const float Patience = 60f;
 
@@ -845,14 +847,14 @@ namespace Noir.Unity
             // consumes `dtSim`.
             WalkTheOfficer(dtSim);
 
-            // The held deadline charges REAL time — and it is read here, BELOW the guard above,
-            // so a paused sim charges nothing. Handed to the first slice only, because charging
-            // each slice would multiply one frame's wait by the slice count: the ambient fleet
-            // and the player's car do not move between slices; the sibling rig does, but a slice
-            // in which anything clears is a slice in which this rig covers ground, which zeroes
-            // the charge anyway. See Patience for why the wait is on the wall clock when the
-            // driving is not.
-            float heldDt = Time.unscaledDeltaTime;
+            // The held deadline charges TOWN time now, like everything else — see Patience for
+            // the 2026-08-16 reversal. Captured here while dtSim still holds the whole frame's
+            // delta, and handed to the first slice only, because charging each slice would
+            // multiply one frame's wait by the slice count: the ambient fleet and the player's
+            // car do not move between slices; the sibling rig does, but a slice in which
+            // anything clears is a slice in which this rig covers ground, which zeroes the
+            // charge anyway.
+            float heldDt = dtSim;
 
             int steps = 0;
             while (dtSim > 0f && steps++ < MostSteps)
