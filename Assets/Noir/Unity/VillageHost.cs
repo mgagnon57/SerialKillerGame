@@ -368,6 +368,11 @@ namespace Noir.Unity
         /// test builds one.</summary>
         public CityTraffic Traffic => _traffic;
 
+        /// <summary>The county car and the ambulance. Built beside the traffic because it drives
+        /// the traffic's own lane graph; may be null for the same reason <see cref="Traffic"/>
+        /// may be.</summary>
+        public CityResponse Response { get; private set; }
+
         /// <summary>The town's front doors, and the one thing that swings them.</summary>
         private CityDoors _doors;
 
@@ -831,6 +836,13 @@ namespace Noir.Unity
             traffic = CityTraffic.Create(World, transform, signals);
             _traffic = traffic;
             profile.Done("CityTraffic");
+
+            // THE TWO THAT COME WHEN SOMEBODY IS HURT. Built here rather than lazily and for the
+            // same reason the traffic above it is: it drives the traffic's own lane graph, it runs
+            // on the SIM clock rather than on frames, and a case the machine has opened must be
+            // answerable whether or not anybody has the Traffic layer switched on.
+            Response = CityResponse.Create(World, transform, traffic);
+            profile.Done("CityResponse");
 
             // THE OTHER 98% OF THE TOWN'S CARS, WHICH ARE NOT GOING ANYWHERE.
             //

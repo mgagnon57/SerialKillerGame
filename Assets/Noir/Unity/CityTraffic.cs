@@ -1538,6 +1538,47 @@ namespace Noir.Unity
         }
 
         /// <summary>
+        /// Is any MOVING vehicle close in front of this pose?
+        ///
+        /// THE ONE THING CITYRESPONSE CANNOT ASK ANY OTHER WAY. A response vehicle drives the same
+        /// lane graph and has to keep the same following distance, but it is deliberately not in
+        /// `_movers` (see <see cref="CityResponse"/> for why), so it can neither call
+        /// <see cref="Blocked"/> nor be seen by it. This is `Blocked`'s mover loop with the
+        /// caller's own pose substituted for `_movers[index]`, and it exists so that `_movers`
+        /// itself stays private: the eight loops that walk it all assume a wandering car, and the
+        /// moment it is exposed somebody will add a ninth that does not.
+        ///
+        /// THE PARALLEL-ONLY DOT TEST IS KEPT, and it is not an oversight that cross traffic is
+        /// invisible here. This is a FOLLOWING model — a 2.4 m box projected down the caller's own
+        /// heading — and it cannot separate crossing paths anyway; counting them made a car with a
+        /// green light sit still because somebody waiting at the red on the crossing street fell
+        /// inside the box. See `Blocked`'s own note.
+        ///
+        /// <paramref name="reach"/> is the CALLER's half-length; each mover's own is added, as it
+        /// is between two ambient cars, so a lorry is given a lorry's room.
+        /// </summary>
+        public bool AnyMoverWithin(Vector3 pos, Vector3 forward, float reach)
+        {
+            for (int j = 0; j < _movers.Count; j++)
+            {
+                var other = _movers[j];
+                if (other.What == null) continue;
+                if (Vector3.Dot(forward, other.Forward) < 0.7f) continue;
+
+                var gap = other.What.position - pos;
+
+                float ahead = Vector3.Dot(gap, forward);
+                if (ahead <= 0f) continue;                                // behind me
+                if (ahead > reach + other.Reach + Headway) continue;      // far enough off
+
+                if (Vector3.Cross(forward, gap).magnitude > LookWide) continue;   // not in my lane
+
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Is there a car close in front, going roughly my way?
         ///
         /// Parallel traffic only. Cross traffic at a junction is separated by the signals, and
