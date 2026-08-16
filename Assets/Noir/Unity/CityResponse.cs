@@ -696,7 +696,7 @@ namespace Noir.Unity
             if (car.What == null || _traffic == null || _traffic.Graph == null)
             { Despawn(slot); return; }
 
-            CandidatesNear(toNear);
+            CandidatesNear(toNear, reach: 60f);   // the station's street, not its doorstep
             bool planned = false;
             for (int c = 0; c < _candidates.Count && c < MostPlans && !planned; c++)
                 planned = LaneRoutes.Plan(_traffic.Graph, car.Segment, _candidates[c].Seg, car.Turns);
@@ -799,7 +799,13 @@ namespace Noir.Unity
             if (_candidates.Count == 0) return false;
             var dests = _candidates.ToArray();
 
-            CandidatesNear(fromNear);
+            // The START is not a scene: SceneReach's 15 m exists because a road has two sides
+            // and a verge, but a station's front door sits wherever its lot put it — measured
+            // 2026-08-16: Rossville's precinct door is 17.7 m from the nearest lane, so the
+            // 15 m start-side search came back empty and the cruiser arrived off-stage on
+            // every case. The car spawns ONTO the lane anyway; 60 m just has to find the
+            // street the station is on, not park on the doorstep.
+            CandidatesNear(fromNear, reach: 60f);
             if (_candidates.Count == 0) return false;
 
             int plans = 0;
@@ -861,7 +867,7 @@ namespace Noir.Unity
         /// `TravelOf`, kept identical because FromS/ToS are travel-signed AXIS coordinates while
         /// `RoadPath.Project` returns ARC length, and the two disagree on every curve.
         /// </summary>
-        private void CandidatesNear(Vec2 point)
+        private void CandidatesNear(Vec2 point, float reach = SceneReach)
         {
             _candidates.Clear();
 
@@ -881,7 +887,7 @@ namespace Noir.Unity
                 if (travel < seg.FromS || travel > seg.ToS) continue;
 
                 float d = lateral < 0f ? -lateral : lateral;
-                if (d > SceneReach) continue;
+                if (d > reach) continue;
 
                 _candidates.Add((i, travel, d));
             }

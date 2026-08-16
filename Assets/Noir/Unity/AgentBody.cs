@@ -210,15 +210,23 @@ namespace Noir.Unity
 
             // POLICE LOOK ALIKE — that is what a uniform is. A precinct worker bypasses the
             // hash pick for the one pinned figure whose garment cells PoliceCells was measured
-            // against. Adult men only for now: PoliceCells is a fact about ONE mesh, and the
-            // roster has yet to produce a woman officer to probe a second figure for — if the
-            // look step ever shows one in civvies, that is the signal to extend, not a fault.
-            bool pin = uniformed && !who.IsChildIn(VillageHost.Year) && who.Male;
+            // against — BY NAME, because Cast() sorts its paths (the crowd-stability rule) and
+            // "first of the declared list" is really "alphabetically first folder", which is how
+            // the first officer ever drawn wore farm wellies and a straw hat (measured
+            // 2026-08-16). Adult men only for now: PoliceCells is a fact about ONE mesh, and
+            // the roster has yet to produce a woman officer to probe a second figure for — if
+            // the look step ever shows one in civvies, that is the signal to extend, not a fault.
+            string pinPath = null;
+            if (uniformed && !who.IsChildIn(VillageHost.Year) && who.Male)
+                foreach (var candidate in set)
+                    if (candidate.EndsWith("/" + OfficerFigure + ".prefab"))
+                    { pinPath = candidate; break; }
 
             ulong seed = who.Key.Value;
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                pin ? set[0] : set[(int)(Mix(seed, 0x9E37) % (ulong)set.Count)]);
+                pinPath ?? set[(int)(Mix(seed, 0x9E37) % (ulong)set.Count)]);
             if (prefab == null) return null;
+            bool pin = pinPath != null;
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             go.name = who.FullName;
@@ -372,6 +380,10 @@ namespace Noir.Unity
         /// rgb(0.12,0.16,0.25). Skin (11,1), hair and shoes are untouched. A cell pair here is
         /// a FACT about ONE mesh — do not reuse across models.
         /// </summary>
+        /// <summary>The one figure PoliceCells was measured against. A NAME, matched against
+        /// Cast()'s sorted paths — never an index into them.</summary>
+        private const string OfficerFigure = "Man_Slavic_Summer_Hair";
+
         private static readonly (Vector2Int from, Vector2Int to)[] PoliceCells =
         {
             (new Vector2Int(19, 26), new Vector2Int(24, 10)),
