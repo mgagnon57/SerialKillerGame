@@ -469,6 +469,30 @@ namespace Noir.Unity
         private static Vector2 GroundPoint(Vector3 worldPoint) =>
             new Vector2(worldPoint.x, -worldPoint.z);
 
+        /// <summary>
+        /// Somewhere worth hovering: pivot to this point, zoom clamped into a band that frames
+        /// a street (close enough for figures, far enough for context), pitch floored so the
+        /// first frame looks DOWN at the scene rather than along the grass. Player.Leave hands
+        /// us the body's position so stepping out of third person stays over whatever just
+        /// happened there — the reason this exists: a player who ran somebody over and pressed
+        /// Tab used to land wherever the overview last sat, hundreds of metres from the body.
+        /// Clears Following, or HandleFollow lerps the pivot straight back next frame.
+        /// </summary>
+        public void ArriveOver(Vector3 world)
+        {
+            world.x = Mathf.Clamp(world.x, 1f, _host.World.Width - 1f);
+            world.z = Mathf.Clamp(world.z, -(_host.World.Height - 1f), -1f);
+            world.y = 0f;
+            _target = world;
+            _distance = Mathf.Clamp(_distance, 40f, 120f);
+            _pitch = Mathf.Max(_pitch, 35f);
+            Mode = ViewMode.Overview;
+            _host.Following = false;
+        }
+
+        /// <summary>Read-only for the PlayMode gate: where the orbit is looking.</summary>
+        public Vector3 Target => _target;
+
         private void HandleFollow()
         {
             // Keys belong to the text field while one has focus - see

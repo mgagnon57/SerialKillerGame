@@ -427,9 +427,17 @@ namespace Noir.Unity
 
         private void Leave()
         {
+            // Where the player was standing, captured before the body deactivates: the orbit
+            // camera opens over the scene just left, not wherever the overview last sat.
+            var at = _body != null ? _body.transform.position : transform.position;
+
             Walking = false;
             if (_body != null) _body.SetActive(false);
-            if (_orbit != null) _orbit.enabled = true;
+            if (_orbit != null)
+            {
+                _orbit.enabled = true;
+                _orbit.ArriveOver(at);
+            }
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
