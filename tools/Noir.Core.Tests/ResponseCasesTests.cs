@@ -228,5 +228,126 @@ namespace Noir.Core.Tests
             Assert.Throws<InvalidOperationException>(() =>
                 cases.CountyReachedDoor(id, 1036, new CitizenId(9), new[] { "wrong door" }));
         }
+
+        /// <summary>
+        /// The officer dispatched to a case can be struck the same way the case's own victim was
+        /// — or the host may simply have found nobody free to send. Either way OfficerLost must
+        /// clear the officer and make the very next Tick ask again, exactly as if the alarm had
+        /// only just fired.
+        /// </summary>
+        [Test]
+        public void ADownedOfficerIsReplaced()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            int id = cases.Open(new CitizenId(1), 1000, new Tile(5, 5), CarTone.Mid, CarShape.Car, fatal: false);
+
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders);
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.DispatchOfficer));
+            orders.Clear();
+
+            cases.OfficerDispatched(id, new CitizenId(12));
+            Assert.That(cases.OfficerOf(id), Is.EqualTo(new CitizenId(12)));
+
+            cases.OfficerLost(id);
+            Assert.That(cases.OfficerOf(id), Is.EqualTo(CitizenId.None),
+                "no officer until the host reports a replacement");
+
+            cases.Tick(1005, orders);
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.DispatchOfficer));
+
+            cases.OfficerDispatched(id, new CitizenId(20));
+            Assert.That(cases.OfficerOf(id), Is.EqualTo(new CitizenId(20)));
+        }
+
+        [Test]
+        public void TheLogRunsForwardAndDrains()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            int id = cases.Open(new CitizenId(7), 1000, new Tile(50, 50),
+                                CarTone.Dark, CarShape.Pickup, fatal: false);
+
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders);
+            orders.Clear();
+            cases.OfficerDispatched(id, new CitizenId(12));
+            cases.OfficerArrived(id, 1010);
+            cases.Tick(1028, orders);
+            orders.Clear();
+            cases.CountyArrived(id, 1033);
+
+            var log = new List<string>();
+            cases.DrainLog(log);
+            Assert.That(log.Count, Is.GreaterThan(0));
+
+            int discovered = log.FindIndex(l => l.Contains("discovered at minute"));
+            int alarm = log.FindIndex(l => l.Contains("alarm raised"));
+            int officerOnScene = log.FindIndex(l => l.Contains("officer on scene"));
+            int countySentFor = log.FindIndex(l => l.Contains("county car sent for"));
+            int countyOnScene = log.FindIndex(l => l.Contains("county car on scene"));
+
+            Assert.That(discovered, Is.EqualTo(0), "discovered is the very first line");
+            Assert.That(alarm, Is.GreaterThan(discovered), "discovered before the alarm is raised");
+            Assert.That(officerOnScene, Is.GreaterThan(alarm), "the alarm before the officer arrives");
+            Assert.That(countySentFor, Is.GreaterThan(officerOnScene));
+            Assert.That(countyOnScene, Is.GreaterThan(countySentFor));
+
+            var second = new List<string>();
+            cases.DrainLog(second);
+            Assert.That(second, Is.Empty, "a drain empties the queue; a second drain finds nothing new");
+        }
+
+        /// <summary>
+        /// CloseLoudly is the escape hatch nothing should reach: verifies it can still force-close
+        /// the ACTIVE case, free the slot for whoever queued behind it (same machinery as a normal
+        /// close), and that the cleanup pair — VehiclesLeave, ReleaseOfficer — lands on the very
+        /// next Tick rather than being lost, since CloseLoudly itself has no orders list to write
+        /// into.
+        /// </summary>
+        [Test]
+        public void CloseLoudlyFreesTheSlotAndQueuesCleanupOrders()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+
+            int idA = cases.Open(new CitizenId(1), 100, new Tile(1, 1), CarTone.Mid, CarShape.Car, fatal: false);
+            int idB = cases.Open(new CitizenId(2), 300, new Tile(2, 2), CarTone.Dark, CarShape.Van, fatal: false);
+
+            cases.BodySeen(idA, 100, new CitizenId(9));
+            cases.Tick(104, orders);   // DispatchOfficer for A
+            orders.Clear();
+            cases.OfficerDispatched(idA, new CitizenId(12));
+            cases.OfficerArrived(idA, 110);   // SceneHeld, officer 12 on scene
+            cases.Tick(110, orders);          // nothing due yet; keeps the clock current
+            orders.Clear();
+
+            // B queues behind A while A is still active.
+            cases.BodySeen(idB, 115, new CitizenId(8));
+            Assert.That(cases.StateOf(idB), Is.EqualTo(CaseState.Alarm));
+
+            // A's victim state stops making sense; the host force-closes rather than keep asking
+            // for orders against a story that is no longer true.
+            cases.CloseLoudly(idA, "victim turned up alive");
+            Assert.That(cases.StateOf(idA), Is.EqualTo(CaseState.Closed));
+
+            // The very next Tick emits A's cleanup pair before anything else, and the slot has
+            // already passed to B.
+            cases.Tick(112, orders);
+            Assert.That(orders.Select(o => o.Kind), Is.EqualTo(new[] { OrderKind.VehiclesLeave, OrderKind.ReleaseOfficer }));
+            Assert.That(orders[0].Case, Is.EqualTo(idA));
+            Assert.That(orders[1].Who, Is.EqualTo(new CitizenId(12)), "the officer who was on scene is released");
+            orders.Clear();
+
+            // B's own alarm floor (max(115, A's close minute 110) = 115) proceeds normally,
+            // proving the slot really did pass rather than the queue silently freezing.
+            cases.Tick(118, orders);
+            Assert.That(orders, Is.Empty);
+            cases.Tick(119, orders);
+            Assert.That(orders.Select(o => o.Case), Is.EqualTo(new[] { idB }));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.DispatchOfficer));
+        }
     }
 }

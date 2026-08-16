@@ -133,6 +133,12 @@ namespace Noir.Core.Response
         /// against — see TickAlarm.</summary>
         private int _lastActiveClosedAt;
 
+        /// <summary>Case ids force-closed by <see cref="CloseLoudly"/> that still owe the world a
+        /// VehiclesLeave/ReleaseOfficer pair. CloseLoudly has no orders list to write into — it is
+        /// not driven by Tick — so it queues here and the very next Tick drains it before doing
+        /// anything else.</summary>
+        private readonly List<int> _forcedCleanupQueue = new List<int>();
+
         /// <summary>Appends a case in Undiscovered and returns its index. Two hits in one minute
         /// are two cases: nothing here folds them together.</summary>
         public int Open(CitizenId victim, int minute, Tile scene, CarTone tone, CarShape shape, bool fatal)
@@ -211,6 +217,24 @@ namespace Noir.Core.Response
             Emit(caseId, "case " + caseId + ": officer on scene at minute " + minute + ", holding for the county car");
         }
 
+        /// <summary>Two consumers, both reported by the host, both resolved the same way: the
+        /// dispatched officer was struck en route — the case's own victim's fate, visited on the
+        /// response — OR none was available to send in the first place. Either way there is no
+        /// officer coming right now, so the case goes back to asking: the emitted-flag on
+        /// DispatchOfficer is cleared so the very next Tick asks again, and <see cref="OfficerOf"/>
+        /// reads CitizenId.None until the host reports a replacement.</summary>
+        public void OfficerLost(int caseId)
+        {
+            Case c = _cases[caseId];
+            if (c.State != CaseState.OfficerEnRoute)
+                throw new InvalidOperationException(
+                    "case " + caseId + " has no officer en route to lose; it is in state " + c.State + ".");
+            c.State = CaseState.Alarm;
+            c.Officer = CitizenId.None;
+            c.DispatchOfficerEmitted = false;
+            Emit(caseId, "case " + caseId + ": officer lost, dispatching again");
+        }
+
         public void CountyArrived(int caseId, int minute)
         {
             Case c = _cases[caseId];
@@ -284,6 +308,42 @@ namespace Noir.Core.Response
             Emit(caseId, "case " + caseId + ": ambulance on scene at minute " + minute + ", loading");
         }
 
+        /// <summary>THE ESCAPE HATCH. Nothing in this game should ever call this — every other
+        /// transition above is the machine reasoning correctly about a response that is still
+        /// happening — but the host owns the one fact this file cannot see: the actual state of
+        /// the victim it is running a response for. If that ever stops making sense (the "victim"
+        /// turns out to be walking around fine, say), the host force-closes the case rather than
+        /// let the machine keep asking for orders against a story that is no longer true. Works
+        /// from ANY state, including Closed (a no-op there) and Undiscovered (nothing was ever out,
+        /// so nothing to release). One log line names why — that line is the alarm this method is
+        /// meant to trip, since a case reaching it at all is itself the bug worth finding.
+        ///
+        /// Takes no minute, unlike everything else here, because there is no meaningful "when" for
+        /// a response to a fact that was never true — it closes at whatever minute this machine
+        /// last heard the clock say. If a county car, an ambulance or an officer was ever sent for,
+        /// VehiclesLeave and ReleaseOfficer still go out, but not from here: CloseLoudly carries no
+        /// orders list, so they queue and the very next Tick emits them before anything else.</summary>
+        public void CloseLoudly(int caseId, string why)
+        {
+            Case c = _cases[caseId];
+            if (c.State == CaseState.Closed) return;
+
+            bool anythingWasOut = c.State != CaseState.Undiscovered && c.State != CaseState.Alarm;
+
+            c.State = CaseState.Closed;
+            c.ClosedAt = _lastTickMinute;
+            Emit(caseId, "case " + caseId + ": closed loudly at minute " + _lastTickMinute + " - " + why);
+
+            if (anythingWasOut) _forcedCleanupQueue.Add(caseId);
+
+            if (_activeCaseId == caseId)
+            {
+                _lastActiveClosedAt = _lastTickMinute;
+                _activeCaseId = -1;
+                ActivateNextIfNeeded();
+            }
+        }
+
         // ---- the clock ------------------------------------------------------------------------
 
         /// <summary>Advances whichever case is active and appends any orders now due. Safe to
@@ -296,6 +356,21 @@ namespace Noir.Core.Response
                     "Tick only runs forward. Tried minute " + minute + " after minute " + _lastTickMinute + ".",
                     nameof(minute));
             _lastTickMinute = minute;
+
+            // Any case CloseLoudly force-closed since the last Tick still owes the world its
+            // vehicles and its officer. Drain that queue before anything else, so it never waits
+            // behind whatever the active case happens to be doing.
+            if (_forcedCleanupQueue.Count > 0)
+            {
+                for (int i = 0; i < _forcedCleanupQueue.Count; i++)
+                {
+                    int id = _forcedCleanupQueue[i];
+                    Case fc = _cases[id];
+                    orders.Add(new CaseOrder(OrderKind.VehiclesLeave, id, fc.Scene, CitizenId.None));
+                    orders.Add(new CaseOrder(OrderKind.ReleaseOfficer, id, fc.Scene, fc.Officer));
+                }
+                _forcedCleanupQueue.Clear();
+            }
 
             if (_activeCaseId < 0) return;
             int active = _activeCaseId;
