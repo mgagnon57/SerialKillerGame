@@ -1,0 +1,25 @@
+newmtl casing_beige
+Kd 0.4793 0.4179 0.3515
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl dark_plastic
+Kd 0.0242 0.0203 0.0176
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl number_card
+Kd 0.9047 0.8632 0.7758
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl chrome_trim
+Kd 0.6240 0.5906 0.5210
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl dial_wheel
+Kd 0.7231 0.6795 0.5972
+Ks 0.05 0.05 0.05
+Ns 10
+

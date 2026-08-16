@@ -13,8 +13,13 @@ textured GLBs rather than dropping their textures silently), node transforms bak
 with a submesh per material. First one in: **DesktopPC1991** (2026-08-16, his first model) —
 a complete beige 1991 desktop, CRT, keyboard with modeled keys, mouse and cables, 10,072 tris,
 6 flat materials, real-world metres, and it sits in register with the pack. Preview:
-`docs/snapshots/pc-preview-front.png`. Not yet PLACED anywhere — a placement seam for desk
-props is the follow-on.
+`docs/snapshots/pc-preview-front.png`. Second: **RotaryDeskPhone** (same day) — handset in
+the cradle, rotary dial, a coiled cord spiralling onto the desk; 44,408 tris, most of them in
+the coil and dial. That is HERO-PROP weight: fine for a handful of desks, but a phone is an
+every-house object in 1991, and 500 households of 44k tris is another whole town of triangles
+— the everywhere version wants a lower-segment re-export from Designer. Preview:
+`docs/snapshots/phone-preview.png`. Neither is PLACED anywhere yet — a placement seam for
+desk props is the follow-on.
 
 ---
 
