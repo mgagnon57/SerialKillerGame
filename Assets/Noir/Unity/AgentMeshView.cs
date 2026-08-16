@@ -58,6 +58,18 @@ namespace Noir.Unity
             _host = host;
             _block = new MaterialPropertyBlock();
 
+            // Who wears the navy: the precinct's roster, resolved once — WhoIsOnDuty's own
+            // resolution. A town whose kind table declares no precinct simply uniforms nobody.
+            var officers = new HashSet<int>();
+            if (PlaceKindTable.IsInstalled
+                && PlaceKindTable.Current.TryKindOf("precinct", out PlaceKind precinctKind))
+            {
+                var stations = host.World.PlacesOfKind(precinctKind);
+                if (stations != null && stations.Count > 0)
+                    foreach (var officer in host.People.WorkersAt(stations[0]))
+                        officers.Add(officer.Value);
+            }
+
             int n = host.People.Count, rigged = 0;
             _figures = new IAgentBody[n];
             _looks = new AgentLook[n];
@@ -79,7 +91,7 @@ namespace Noir.Unity
                 // like, and it is what Rossville has always looked like.
                 IAgentBody body = null;
 #if UNITY_EDITOR
-                body = AgentBody.Build(transform, citizen, look);
+                body = AgentBody.Build(transform, citizen, look, uniformed: officers.Contains(i));
                 if (body != null) rigged++;
 #endif
                 _figures[i] = body ?? AgentFigure.Build(transform, citizen.FullName, look, _block);

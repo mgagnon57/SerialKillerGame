@@ -1298,6 +1298,10 @@ namespace Noir.Unity
             go.name = "county officer";
             go.transform.SetParent(transform, false);
 
+            // The same navy the precinct wears — one treatment, one table of measured cells,
+            // in AgentBody.PoliceCells. A no-op on the bare-GameObject fallback.
+            AgentBody.UniformThisInstance(go);
+
             // ---- how tall he is ----
             //
             // UNIFORM, and that is the safe one. The warning in `AgentBody` is against the

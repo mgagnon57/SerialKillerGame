@@ -201,15 +201,23 @@ namespace Noir.Unity
         /// knowing rather than working around, since it is also why `AgeBand` can only ever say
         /// adult or child.
         /// </summary>
-        public static AgentBody Build(Transform parent, Citizen who, in AgentLook look)
+        public static AgentBody Build(Transform parent, Citizen who, in AgentLook look,
+                                      bool uniformed = false)
         {
             var set = who.IsChildIn(VillageHost.Year) ? (who.Male ? Boys() : Girls())
                                   : (who.Male ? Men() : Women());
             if (set.Count == 0) return null;
 
+            // POLICE LOOK ALIKE — that is what a uniform is. A precinct worker bypasses the
+            // hash pick for the one pinned figure whose garment cells PoliceCells was measured
+            // against. Adult men only for now: PoliceCells is a fact about ONE mesh, and the
+            // roster has yet to produce a woman officer to probe a second figure for — if the
+            // look step ever shows one in civvies, that is the signal to extend, not a fault.
+            bool pin = uniformed && !who.IsChildIn(VillageHost.Year) && who.Male;
+
             ulong seed = who.Key.Value;
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                set[(int)(Mix(seed, 0x9E37) % (ulong)set.Count)]);
+                pin ? set[0] : set[(int)(Mix(seed, 0x9E37) % (ulong)set.Count)]);
             if (prefab == null) return null;
 
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
@@ -264,7 +272,8 @@ namespace Noir.Unity
                 : null;
 
             if (skin != null && skin.sharedMesh != null)
-                skin.sharedMesh = Dressed(skin.sharedMesh, who.Key);
+                skin.sharedMesh = pin ? Uniformed(skin.sharedMesh)
+                                      : Dressed(skin.sharedMesh, who.Key);
             body._skin = skin;
 
             // ---- and something to play ----
@@ -351,6 +360,74 @@ namespace Noir.Unity
             copy.UploadMeshData(false);
             _dressed[key] = copy;
             return copy;
+        }
+
+        /// <summary>
+        /// Atlas cells (x,y in the 32-grid) that make the pinned officer figure a uniform:
+        /// source garment cell -> the navy cell. Found empirically 2026-08-16 by probing
+        /// man-slavic-summer-hair's 12 distinct UV cells against Universal_A_Alb (the probe is
+        /// in the plan, Task 3 Step 1; the numbers are the keeper): the off-white shirt at
+        /// (19,26)/(18,26) and its red accent at (6,15) go to navy (24,10) rgb(0.16,0.25,0.39);
+        /// the khaki trousers at (10,28)/(8,28) go to the darker navy (24,11)
+        /// rgb(0.12,0.16,0.25). Skin (11,1), hair and shoes are untouched. A cell pair here is
+        /// a FACT about ONE mesh — do not reuse across models.
+        /// </summary>
+        private static readonly (Vector2Int from, Vector2Int to)[] PoliceCells =
+        {
+            (new Vector2Int(19, 26), new Vector2Int(24, 10)),
+            (new Vector2Int(18, 26), new Vector2Int(24, 10)),
+            (new Vector2Int(6, 15),  new Vector2Int(24, 10)),
+            (new Vector2Int(10, 28), new Vector2Int(24, 11)),
+            (new Vector2Int(8, 28),  new Vector2Int(24, 11)),
+        };
+
+        private static readonly Dictionary<Mesh, Mesh> _uniformed = new Dictionary<Mesh, Mesh>();
+
+        /// <summary>
+        /// The pinned figure's mesh in navy — Dressed()'s clone shape, but a targeted cell
+        /// REMAP and no per-citizen shift: a uniform is the same coat on every officer, which
+        /// is what a uniform is. Cached per SOURCE mesh, not per citizen.
+        /// </summary>
+        private static Mesh Uniformed(Mesh source)
+        {
+            if (_uniformed.TryGetValue(source, out var had) && had != null) return had;
+
+            var copy = Object.Instantiate(source);
+            copy.name = source.name + "_police";
+
+            var uv = copy.uv;
+            if (uv == null || uv.Length == 0) { _uniformed[source] = copy; return copy; }
+
+            for (int i = 0; i < uv.Length; i++)
+            {
+                var cell = new Vector2Int(Mathf.FloorToInt(Mathf.Repeat(uv[i].x, 1f) * 32f),
+                                          Mathf.FloorToInt(Mathf.Repeat(uv[i].y, 1f) * 32f));
+                foreach (var (from, to) in PoliceCells)
+                {
+                    if (cell != from) continue;
+                    float fx = Mathf.Repeat(uv[i].x, 1f) * 32f - cell.x;
+                    float fy = Mathf.Repeat(uv[i].y, 1f) * 32f - cell.y;
+                    uv[i] = new Vector2((to.x + fx) / 32f, (to.y + fy) / 32f);
+                    break;
+                }
+            }
+
+            copy.uv = uv;
+            copy.UploadMeshData(false);
+            _uniformed[source] = copy;
+            return copy;
+        }
+
+        /// <summary>
+        /// The county officer actor's version of the same treatment: CityResponse instantiates
+        /// its own prefab (he has no Citizen), so the navy goes on after the fact. Safe on any
+        /// instance; a no-op when there is no skinned mesh to dress.
+        /// </summary>
+        public static void UniformThisInstance(GameObject go)
+        {
+            var skin = go != null ? go.GetComponentInChildren<SkinnedMeshRenderer>() : null;
+            if (skin == null || skin.sharedMesh == null) return;
+            skin.sharedMesh = Uniformed(skin.sharedMesh);
         }
 
         // ---- who the pack can offer ----
