@@ -396,6 +396,12 @@ namespace Noir.Unity
             /// <summary>Half this vehicle's measured length, nose to tail.</summary>
             public float Reach = DefaultReach;
 
+            /// <summary>The light bar: two roof boxes alternating red/blue on the town clock,
+            /// and one point light carrying the spill. Null on the invisible fallback.</summary>
+            public MeshRenderer BarA, BarB;
+            public Light BarLight;
+            public int BarPhase = -1;   // last written half-cycle, so writes are change-only
+
             public Vector3 Forward = Vector3.forward;
 
             /// <summary>Sim seconds left of an un-routable arrival; negative when it is driving.</summary>
@@ -945,6 +951,7 @@ namespace Noir.Unity
             // Animate), so it is simply hoisted: paused means SpeedIndex 0, which means a pace of
             // zero, which means Drive holds his pose exactly as it holds everybody else's.
             Animate();
+            BlinkTheBars();   // phased off the town clock: a paused town holds its lights
 
             long now = _host.Sim.Clock.Tick;
             if (_lastTick < 0) { _lastTick = now; return; }
@@ -1318,6 +1325,92 @@ namespace Noir.Unity
             // space. It is removed in Despawn and nowhere else.
             if (_traffic != null && !_traffic.Obstacles.Contains(car.What))
                 _traffic.Obstacles.Add(car.What);
+
+            DressTheBar(car, go);
+        }
+
+        /// <summary>
+        /// The pack bakes every light bar into the car body, so a bar that BLINKS is added
+        /// geometry: two small boxes on the cab roof wearing CitySignals' own unlit-HDR lens
+        /// treatment — Unlit so it reads at noon, property-block colors so bloom carries it,
+        /// phased off the town clock so a paused town holds its lights like everything else.
+        /// One point light per rig carries the spill; with at most three rigs alive there is no
+        /// pool to manage. Skipped entirely on the invisible no-prefab fallback.
+        /// </summary>
+        private static Material _barMaterial;
+
+        private void DressTheBar(Car car, GameObject go)
+        {
+            if (go.GetComponentInChildren<MeshFilter>() == null) return;   // invisible fallback
+
+            if (_barMaterial == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Unlit")
+                          ?? Shader.Find("Unlit/Color");
+                _barMaterial = new Material(shader) { name = "M_Response_Bar_Emission" };
+            }
+
+            // The roof, off the meshes' own bounds — LengthOf's sweep, one axis over.
+            float top = 0f;
+            foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+                if (mf.sharedMesh != null) top = Mathf.Max(top, mf.sharedMesh.bounds.max.y);
+
+            MeshRenderer Box(string name, float x)
+            {
+                var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.Destroy(box.GetComponent<Collider>());
+                box.name = name;
+                box.transform.SetParent(go.transform, false);
+                box.transform.localScale = new Vector3(0.22f, 0.09f, 0.34f);
+                box.transform.localPosition = new Vector3(x, top + 0.05f, 0.15f);
+                var mr = box.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = _barMaterial;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                return mr;
+            }
+
+            car.BarA = Box("lightbar-left", -0.24f);
+            car.BarB = Box("lightbar-right", 0.24f);
+
+            var lamp = new GameObject("lightbar-lamp");
+            lamp.transform.SetParent(go.transform, false);
+            lamp.transform.localPosition = new Vector3(0f, top + 0.4f, 0.15f);
+            car.BarLight = lamp.AddComponent<Light>();
+            car.BarLight.type = LightType.Point;
+            car.BarLight.range = 11f;                       // the signal head-lamp numbers
+            car.BarLight.intensity = 2.2f;
+            car.BarLight.shadows = LightShadows.None;
+        }
+
+        /// <summary>HDR above 1 so bloom reads them — CitySignals' RedLens discipline — and the
+        /// dark half is its DeadLens: dark glass, not black.</summary>
+        private static readonly Color BarRed = new Color(3.0f, 0.10f, 0.06f);
+        private static readonly Color BarBlue = new Color(0.1f, 0.4f, 3.0f);
+        private static readonly Color BarDead = new Color(0.06f, 0.06f, 0.07f);
+
+        private MaterialPropertyBlock _barBlock;
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
+        private void BlinkTheBars()
+        {
+            if (_host == null || _host.Sim == null) return;
+            double seconds = _host.Sim.Clock.Tick / (double)GameClock.TicksPerSecond;
+            int phase = (seconds % 1.0) < 0.5 ? 0 : 1;
+
+            for (int i = 0; i < _cars.Length; i++)
+            {
+                var car = _cars[i];
+                if (car == null || car.BarA == null || car.BarPhase == phase) continue;
+                car.BarPhase = phase;
+
+                _barBlock ??= new MaterialPropertyBlock();
+                _barBlock.SetColor(BaseColorId, phase == 0 ? BarRed : BarDead);
+                car.BarA.SetPropertyBlock(_barBlock);
+                _barBlock.SetColor(BaseColorId, phase == 0 ? BarDead : BarBlue);
+                car.BarB.SetPropertyBlock(_barBlock);
+                if (car.BarLight != null)
+                    car.BarLight.color = phase == 0 ? Color.red : Color.blue;
+            }
         }
 
         /// <summary>A vehicle's length nose to tail, off the mesh — <see cref="CityTraffic"/>'s

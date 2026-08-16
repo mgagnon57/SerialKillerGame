@@ -1459,11 +1459,34 @@ namespace Noir.Unity
                         _cases.OfficerLost(order.Case);
                         return;
                     }
+                    // Read BEFORE Respond: its entry cleanup leaves Doing alone, but the watch
+                    // question belongs to the moment of dispatch, not to whatever RespondTick
+                    // writes a tick later.
+                    bool onWatch = Sim.GetAgent(officer).Doing == Activity.AtWork;
+
                     Sim.Respond(officer, order.Scene);
                     _cases.OfficerDispatched(order.Case, officer);
                     _officerWalking[order.Case] = officer;
-                    Debug.Log($"[case] case {order.Case}: citizen {officer.Value} sent to "
-                            + $"({order.Scene.X},{order.Scene.Y})");
+
+                    // ON WATCH, HE TAKES THE CRUISER; the overnight on-call man still comes on
+                    // foot from his bed — no cruiser at his house. Boarding hides him from the
+                    // world; the arrival callback sets him down at the kerb and RespondTick
+                    // walks the last few metres. Off-stage fallback included, the callback
+                    // always fires, so he can never be sealed inside a cruiser.
+                    if (onWatch && Response != null && Response.CruiserAvailable
+                        && PrecinctSpot().HasValue)
+                    {
+                        Sim.Board(officer);
+                        var scene = order.Scene;
+                        var who = officer;
+                        Response.CruiserOut(PrecinctSpot().Value, scene,
+                            onArrived: at => Sim.Alight(who, KerbTileNear(at, scene)));
+                        Debug.Log($"[case] case {order.Case}: citizen {officer.Value} takes "
+                                + $"the cruiser to ({order.Scene.X},{order.Scene.Y})");
+                    }
+                    else
+                        Debug.Log($"[case] case {order.Case}: citizen {officer.Value} sent to "
+                                + $"({order.Scene.X},{order.Scene.Y})");
                     return;
                 }
 
@@ -1541,6 +1564,11 @@ namespace Noir.Unity
                     // a special case for it. Nothing to do is a legitimate outcome here.
                     _officerWalking.Remove(order.Case);
                     if (order.Who.IsValid) Sim.Release(order.Who);
+
+                    // His ride goes home when he does — Release cleared any Aboard, so even a
+                    // case closed mid-drive leaves nobody sealed in the car it recalls.
+                    if (Response != null && PrecinctSpot().HasValue)
+                        Response.CruiserHome(PrecinctSpot().Value);
                     return;
                 }
 
@@ -1578,6 +1606,41 @@ namespace Noir.Unity
         /// downed, nobody the ambulance already has, and nobody already standing at another
         /// scene - Rossville does not have two response teams.
         /// </summary>
+        /// <summary>The precinct's own kerb, cached after the first ask: where the cruiser
+        /// starts from and returns to. Null in a town whose kind table has no precinct.</summary>
+        private Vec2? _precinctSpot;
+        private bool _precinctLooked;
+
+        private Vec2? PrecinctSpot()
+        {
+            if (_precinctLooked) return _precinctSpot;
+            _precinctLooked = true;
+            if (World == null || !PlaceKindTable.IsInstalled) return null;
+            if (!PlaceKindTable.Current.TryKindOf("precinct", out PlaceKind kind)) return null;
+            IReadOnlyList<PlaceId> stations = World.PlacesOfKind(kind);
+            if (stations == null || stations.Count == 0) return null;
+            var place = World.GetPlace(stations[0]);
+            if (place != null) _precinctSpot = Vec2.CentreOf(place.Door);
+            return _precinctSpot;
+        }
+
+        /// <summary>The tile the officer steps out onto: the nearest walkable tile to where the
+        /// cruiser actually stopped, spiralling out a few tiles, with the scene itself as the
+        /// fallback — always walkable, because somebody was standing on it when they were hit.</summary>
+        private Tile KerbTileNear(Vector3 world, Tile fallback)
+        {
+            var centre = Space3D.TileAt(world);
+            for (int r = 0; r <= 4; r++)
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++)
+                    {
+                        if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) != r) continue;   // ring only
+                        var t = new Tile(centre.X + dx, centre.Y + dy);
+                        if (World.Grid.IsWalkable(t)) return t;
+                    }
+            return fallback;
+        }
+
         private CitizenId WhoIsOnDuty()
         {
             if (World == null || People == null || Sim == null) return CitizenId.None;
