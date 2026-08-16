@@ -86,6 +86,110 @@ namespace Noir.Core.Tests
         }
 
         [Test]
+        public void ReleaseMidWalkHandsThemBackToThePlanPromptly()
+        {
+            // The reviewer's own hand-trace said this already works via the ordinary
+            // wants-check (Release resets Destination, same as Revive), and this pins it: catch
+            // the officer WHILE Travelling, before arrival, and confirm the interruption lands
+            // the same way the post-arrival case does.
+            var sim = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60);
+            var who = new CitizenId(1);
+
+            sim.Respond(who, Scene);
+
+            int guard = 20 * 60 * 5;
+            while (!sim.GetAgent(who).Travelling && guard-- > 0) sim.Tick();
+            Assert.That(sim.GetAgent(who).Travelling, Is.True, "setup: the officer never set off");
+            Assert.That(sim.GetAgent(who).Position.ToTile(), Is.Not.EqualTo(Scene),
+                "setup: arrived before Release could catch them mid-walk - Scene moved closer?");
+
+            sim.Release(who);
+
+            bool released = false;
+            for (int t = 0; t < 20 * 60 * 10; t++)   // ten sim minutes
+            {
+                sim.Tick();
+                if (sim.GetAgent(who).Doing != Activity.Responding) { released = true; break; }
+            }
+            Assert.That(released, Is.True,
+                "Release mid-walk did not hand the citizen back to their plan within ten sim minutes");
+            Assert.That(sim.GetAgent(who).Responding, Is.False);
+
+            // Genuinely back on the plan, not just relabelled: either still walking (now toward
+            // wherever the plan actually wants them) or already arrived somewhere.
+            Assert.That(sim.GetAgent(who).Travelling || sim.GetAgent(who).At != PlaceId.None, Is.True,
+                "a released mid-walk citizen should be travelling toward, or arrived at, a plan "
+              + "destination, not stood still with nowhere to be");
+        }
+
+        [Test]
+        public void ARespondingOfficerWhoCannotPathBecomesStrandedAndStaysPut()
+        {
+            // pathNodeCap: 1 is the constructor's own diagnostic seam (Simulation -> Pathfinder's
+            // maxNodesExamined): every search examines at most a node or two before running out
+            // of budget, so a ~30-tile walk GaveUp's rather than Found's every single time. This
+            // is the case the backoff exists for - NoRouteExists costs nothing to ask again
+            // (Regions answers it in O(1)), but GaveUp means a real search ran, and this fixture
+            // forces every attempt to be one.
+            var sim = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60,
+                                      pathNodeCap: 1);
+            var who = new CitizenId(1);
+
+            sim.Respond(who, Scene);
+
+            bool stranded = false;
+            Vec2 positionAtStrand = default;
+            for (int t = 0; t < 20 * 60 * 5; t++)   // five sim minutes - many retry cycles
+            {
+                sim.Tick();
+                if (sim.GetAgent(who).Stranded)
+                {
+                    stranded = true;
+                    positionAtStrand = sim.GetAgent(who).Position;
+                    break;
+                }
+            }
+            Assert.That(stranded, Is.True,
+                "an officer who cannot path within the node budget should be marked Stranded - "
+              + "the honest state - rather than silently standing forever");
+            Assert.That(sim.GetAgent(who).Doing, Is.EqualTo(Activity.Responding));
+            Assert.That(sim.GetAgent(who).Travelling, Is.False);
+            Assert.That(sim.GetAgent(who).Heading, Is.EqualTo(Vec2.Zero));
+
+            // Keep ticking well past several backoff cycles: the officer neither creeps nor
+            // wedges the sim - the tick loop keeps running, they just keep standing exactly
+            // where the failed attempt left them.
+            for (int t = 0; t < 20 * 60 * 3; t++) sim.Tick();
+            Assert.That(sim.GetAgent(who).Position, Is.EqualTo(positionAtStrand),
+                "a stranded responder moved without ever having found a path");
+            Assert.That(sim.GetAgent(who).Doing, Is.EqualTo(Activity.Responding));
+        }
+
+        [Test]
+        public void TheBackoffItselfIsByteIdenticalAcrossTwoIdenticalRuns()
+        {
+            // NobodyRespondingIsByteIdenticalToBefore proves the gate is a no-op when unused.
+            // This is the companion case: the gate FIRING every tick, hitting Strand's own
+            // shared state (_retryDelay, _retryAtTick, _strandedCount) the whole way through,
+            // still consumes no RNG and produces the same result on two identical runs.
+            var a = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60,
+                                    pathNodeCap: 1);
+            var b = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60,
+                                    pathNodeCap: 1);
+            a.Respond(new CitizenId(1), Scene);
+            b.Respond(new CitizenId(1), Scene);
+
+            for (int t = 0; t < 20 * 60 * 10; t++) { a.Tick(); b.Tick(); }
+
+            for (int i = 0; i < a.AgentCount; i++)
+            {
+                Assert.That(a.GetAgent(i).Position, Is.EqualTo(b.GetAgent(i).Position));
+                Assert.That(a.GetAgent(i).Doing, Is.EqualTo(b.GetAgent(i).Doing));
+                Assert.That(a.GetAgent(i).Stranded, Is.EqualTo(b.GetAgent(i).Stranded));
+            }
+        }
+
+        [Test]
         public void RespondWorksFromAsleep()
         {
             // 02:00 - well before WakeTime's earliest case (05:00, Farmer/FarmHand), and

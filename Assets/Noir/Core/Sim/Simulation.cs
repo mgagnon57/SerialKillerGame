@@ -1135,10 +1135,15 @@ namespace Noir.Core.Sim
         /// to read any of that from. Standing at the target is itself the "arrived" state; there
         /// is no place to enter and nothing to queue for.
         ///
-        /// Retrying the path every tick when one has not been found is deliberate, not a bug:
-        /// the Regions pre-check answers an impossible route in O(1), and a GaveUp is worth
-        /// asking again (see PathOutcome's own doc). Budgeted like every other journey, so a
-        /// scene nobody can reach yet costs no more than its fair share of the tick.
+        /// A failed respond-path goes through the same Strand/backoff machinery every other
+        /// failed journey does, and NOT because retrying every tick would otherwise be free:
+        /// Regions answers <see cref="PathOutcome.NoRouteExists"/> in O(1), but
+        /// <see cref="PathOutcome.GaveUp"/> means a real search ran and spent its whole budget
+        /// before giving up, and re-spending that at 20 ticks/second is exactly what Strand's
+        /// exponential backoff exists to stop paying for. The two are not told apart here, same
+        /// as StartJourney isn't: Strand only doubles the delay when `_retryDelay` is already
+        /// set from a previous failure AT THIS SAME TARGET, so a first failure of either kind
+        /// still costs one search and backs off at FirstRetryTicks either way.
         /// </summary>
         private void RespondTick(int index, Citizen citizen, float dt)
         {
@@ -1152,6 +1157,18 @@ namespace Noir.Core.Sim
                 return;
             }
 
+            // Backed off from a failed attempt at this same target: stand and wait out
+            // _retryAtTick rather than spending another search this tick. RespondTarget cannot
+            // change without going through Respond() again, and Respond()'s own entry cleanup
+            // calls ClearStranded — so this can never be reading a delay left over from some
+            // OTHER target.
+            if (_agents[index].Stranded && _clock.Tick < _retryAtTick[index])
+            {
+                if (_agents[index].Doing != Activity.Responding)
+                { _agents[index].Doing = Activity.Responding; StandStill(index); }
+                return;
+            }
+
             if (!CanAffordAPath()) return;
             _scratchPath.Clear();
             var outcome = _pathfinder.FindPath(from, _agents[index].RespondTarget, _scratchPath);
@@ -1159,10 +1176,15 @@ namespace Noir.Core.Sim
             _pathsThisTick++;
             if (outcome != PathOutcome.Found || _scratchPath.Count == 0)
             {
+                // Stranded is already true only if this is a repeat failure at this same
+                // target (see the comment above) — exactly the condition Strand's own doubling
+                // wants, and false on a first failure gives it FirstRetryTicks instead.
+                Strand(index, _agents[index].Stranded);
                 if (_agents[index].Doing != Activity.Responding)
                 { _agents[index].Doing = Activity.Responding; StandStill(index); }
                 return;   // stand where they are; the host's per-minute poll sees no arrival and waits
             }
+            ClearStranded(index);
             var route = RentPath(index);
             route.Clear();
             route.AddRange(_scratchPath);
