@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -337,6 +338,13 @@ namespace Noir.PlayTests
         /// see the door's verb instead - but a door would have to be within ~1.5 m of the car to
         /// win, which is not this town's layout today; if this ever reds, fix the teleport
         /// offset, not the registry.
+        ///
+        /// PICKS A STANDING CAR RATHER THAN ASSUMING SLOT 0 - the gate town runs at noon, and
+        /// CityDriveways.Refresh deactivates a car whose owner is away at work; car 0 specifically
+        /// may be one of them, and NearestCar correctly skips inactive cars, so hardcoding 0 fights
+        /// the absence system instead of testing the registry (first measured red, gate run
+        /// 2026-08-15). Only an active car finds itself via NearestCar, so the self-find loop
+        /// below doubles as the pick.
         /// </summary>
         [UnityTest, Timeout(900000)]
         public IEnumerator ACarOffersDriveAndTheClosestProviderWins()
@@ -346,8 +354,14 @@ namespace Noir.PlayTests
             Assert.That(driveways, Is.Not.Null.And.Property("Count").GreaterThan(0),
                 "no driveway cars in this town - the provider has nothing to offer");
 
-            int car = driveways.NearestCar(driveways.PositionOf(0), 0.5f);
-            Assert.That(car, Is.EqualTo(0), "a car's own position did not find itself");
+            int standing = -1;
+            for (int i = 0; i < driveways.Count; i++)
+            {
+                if (driveways.NearestCar(driveways.PositionOf(i), 0.5f) == i) { standing = i; break; }
+            }
+            Assert.That(standing, Is.GreaterThanOrEqualTo(0),
+                "no car is standing - at noon some owners drive to work, but not all 500+");
+            int car = standing;
 
             var player = Object.FindFirstObjectByType<Player>();
             player.Toggle();
@@ -356,7 +370,7 @@ namespace Noir.PlayTests
             var cc = body.GetComponent<CharacterController>();
 
             cc.enabled = false;
-            body.transform.position = driveways.PositionOf(0) + new Vector3(1.5f, 0.5f, 0f);
+            body.transform.position = driveways.PositionOf(car) + new Vector3(1.5f, 0.5f, 0f);
             cc.enabled = true;
             yield return null;
 
@@ -479,8 +493,16 @@ namespace Noir.PlayTests
         /// relative-motion term - (p - prev), the agent's OWN travel across the frame - is zero
         /// throughout ("the degenerate b ≈ -segCar path", finding I4 of the whole-branch review).
         /// A sign error in that term would down nobody, silently, and nothing in the suite would
-        /// notice. This picks somebody actually on the move, lets real frames pass so the sim
-        /// genuinely relocates them, then sweeps a segment that crosses the path they walked.
+        /// notice. This lets real frames pass so the sim genuinely relocates somebody, then sweeps
+        /// a segment that crosses the path they actually walked.
+        ///
+        /// PICKS THE VICTIM BY OBSERVED MOTION, NOT BY PREDICTING IT. The first version filtered
+        /// on Heading nonzero and bet that agent would still be moving 60 frames later - it
+        /// wasn't: a Travelling agent can be paused mid-frame (a talker frozen in conversation, a
+        /// walker who has just arrived), and Heading nonzero only means "intends to move", not
+        /// "is moving right now" (first measured red, gate run 2026-08-15). This snapshots every
+        /// outdoor, non-Downed, non-AwayFromTown agent before the wait and, after it, picks
+        /// whichever one's position actually changed - proof of motion instead of a bet on it.
         /// </summary>
         [UnityTest, Timeout(900000)]
         public IEnumerator AMovingVictimCrossingThePathIsHit()
@@ -489,47 +511,74 @@ namespace Noir.PlayTests
             var sim = host.Sim;
             var player = Object.FindFirstObjectByType<Player>();
 
-            // The hit test's own filters, plus Heading nonzero - somebody actually walking, not
-            // just standing outdoors.
-            int victim = -1;
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+
+            // (a) Snapshot every candidate - the hit test's own filters, minus Heading, since we
+            // no longer predict who will move and instead observe who did. Taken on the SAME
+            // frame as the seed call right below, with nothing yielded between them, so this is
+            // exactly what SweepForVictims itself caches as "last sweep" for each agent - not an
+            // earlier guess that could have drifted from it.
+            var candidates = new List<int>();
             for (int i = 0; i < sim.AgentCount; i++)
             {
                 var a = sim.GetAgent(i);
                 if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
-                if (a.Heading.X == 0f && a.Heading.Y == 0f) continue;
                 if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
-                victim = i; break;
+                candidates.Add(i);
             }
-            Assert.That(victim, Is.GreaterThanOrEqualTo(0), "nobody outdoors is travelling to test with");
+            Assert.That(candidates.Count, Is.GreaterThan(0), "nobody is outdoors to test with");
 
-            player.Toggle();
-            for (int frame = 0; frame < 5; frame++) yield return null;
+            var before = new Vector3[candidates.Count];
+            for (int c = 0; c < candidates.Count; c++)
+                before[c] = Space3D.ToWorld(sim.GetAgent(candidates[c]).Position);
 
-            // SEED THE CACHE - the first call's own job (SweepForVictims' own header), so the
-            // real sweep below compares against an actual "last sweep" position rather than
-            // treating the victim as having always stood wherever they end up.
-            var start = Space3D.ToWorld(sim.GetAgent(victim).Position);
-            player.SweepForVictims(start + new Vector3(-3f, 0f, 0f), start + new Vector3(3f, 0f, 0f));
+            // (b) SEED THE CACHE - the first call's own job (SweepForVictims' own header), so the
+            // real sweep below compares against an actual "last sweep" position for every agent
+            // rather than treating each of them as having always stood wherever they end up. The
+            // segment plays no part in seeding - SweepForVictims records every agent's position
+            // into its cache regardless of (from, to) on this call; only the real sweep below
+            // uses the segment for the hit test.
+            player.SweepForVictims(before[0] + new Vector3(-3f, 0f, 0f), before[0] + new Vector3(3f, 0f, 0f));
 
-            // LET THE SIM GENUINELY ADVANCE - real frames at whatever clock speed the town is
+            // (c) LET THE SIM GENUINELY ADVANCE - real frames at whatever clock speed the town is
             // already running at (VillageHost.SpeedIndex, untouched by this test), not a second
-            // call on the same frame - so the victim actually covers ground along their own
-            // travel between the seed and the real sweep below.
+            // call on the same frame - so anybody actually travelling covers ground between the
+            // seed and the real sweep below.
             for (int frame = 0; frame < 60; frame++) yield return null;
 
-            var now = Space3D.ToWorld(sim.GetAgent(victim).Position);
-            Assert.That(now, Is.Not.EqualTo(start),
-                "the victim never moved - a travelling agent should have covered ground in 60 " +
-                "frames at the town's own clock speed. Fixture or SpeedIndex default changed?");
+            // (d) Choose a victim from the candidates whose position ACTUALLY CHANGED by a
+            // meaningful amount, and who is still outdoors and not already Downed - observed
+            // motion, not the Heading guess this test used to make.
+            int victim = -1;
+            Vector3 start = default, now = default;
+            for (int c = 0; c < candidates.Count; c++)
+            {
+                int i = candidates[c];
+                var a = sim.GetAgent(i);
+                if (a.Downed) continue;
+                if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
 
-            // A SEGMENT ACROSS THEIR TRAVEL, CENTRED ON ITS MIDPOINT - perpendicular to the line
-            // from where they started to where they ended up, and symmetric about the point they
-            // pass through exactly halfway across the frame (t=0.5 in the same closest-approach
-            // parametrisation SweepForVictims itself uses for both moving points). That symmetry
-            // is what makes the intersection exact and the span irrelevant to whether it hits:
-            // at t=0.5 the victim's own interpolated position is the midpoint of start->now, and
-            // a segment built symmetric about that same midpoint is AT that midpoint too at
-            // t=0.5, so the two coincide - a real crossing, not a near miss tuned to HitRadius.
+                var p = Space3D.ToWorld(a.Position);
+                Vector3 delta = p - before[c]; delta.y = 0f;
+                if (delta.sqrMagnitude <= 0.5f * 0.5f) continue;   // not a meaningful move
+
+                victim = i; start = before[c]; now = p; break;
+            }
+            Assert.That(victim, Is.GreaterThanOrEqualTo(0),
+                "nobody moved in 60 frames - the town is frozen, which is a bigger bug than this test's");
+
+            // (e) A SEGMENT ACROSS THEIR TRAVEL, CENTRED ON ITS MIDPOINT - perpendicular to the
+            // line from where they started to where they ended up, and symmetric about the point
+            // they pass through exactly halfway across the frame (t=0.5 in the same
+            // closest-approach parametrisation SweepForVictims itself uses for both moving
+            // points). That symmetry is what makes the intersection exact and the span irrelevant
+            // to whether it hits: at t=0.5 the victim's own interpolated position is the midpoint
+            // of start->now, and a segment built symmetric about that same midpoint is AT that
+            // midpoint too at t=0.5, so the two coincide - a real crossing, not a near miss tuned
+            // to HitRadius. start->now is exactly the OBSERVED pair the production sweep itself
+            // compares - the cache seeded in (b) against the position read in (d) - so this is
+            // the same geometry SweepForVictims uses internally, not a re-derivation of it.
             Vector3 travel = now - start; travel.y = 0f;
             Vector3 mid = (start + now) * 0.5f;
             Vector3 across = new Vector3(-travel.z, 0f, travel.x).normalized;
