@@ -172,3 +172,10 @@ docs/reference/**/*.png
 # rc=0 citing a BLANK line and echoes the queried path back as though it were the pattern. It does
 # that for every untracked directory in this tree. Query a real FILE path.
 GeneratedAssets/
+
+# ---- PLAYWRIGHT MCP SESSION LOGS ----
+#
+# The browser tool writes per-session console logs and page snapshots here whenever an agent
+# drives a browser (first appeared 2026-08-16, the streetview reference session). Transient
+# debugging artifacts, regenerated every session, never read back.
+.playwright-mcp/
