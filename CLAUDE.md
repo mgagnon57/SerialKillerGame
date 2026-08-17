@@ -272,8 +272,11 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > corner sprouted no third signal. ⚠ **The +200 s over the 628/641 baseline is REAL
 > (consistent across both runs) and unexplained** — prime suspect is the 14,901 unbaked
 > furniture renderers `CityChunker` reports (`MeshReadable` walks city tiles + figures
-> only, found just 1 model to fix; see the IDEAS.md City item, 2026-08-16). Rule out the
-> node cap second, per below.
+> only, found just 1 model to fix; see the IDEAS.md City item, 2026-08-16). SECOND
+> SUSPECT, found and removed 2026-08-17: an uncommitted `UniversalRP.asset` edit
+> (shadow distance 50 → 320, cascades 1 → 4) was in the working tree during both +200 s
+> runs — reverted by owner's ruling, so the NEXT gate run is the experiment: if the
+> +200 s vanishes, it was the shadows. Rule out the node cap third, per below.
 >
 > **BASELINE, 2026-08-16 (night): 33 of 33 PASS, 0 fail, 1 skipped, 628/641 s over two
 > runs.** Two new: `LeavingThirdPersonStaysOverTheScene` (the ArriveOver camera handoff) and
