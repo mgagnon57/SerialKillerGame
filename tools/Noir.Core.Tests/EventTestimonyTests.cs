@@ -256,6 +256,31 @@ namespace Noir.Core.Tests
         }
 
         /// <summary>
+        /// Phase 2 of witness voices: being asked is an event, and it must read like a witness
+        /// saying it — same clock, same clarity hedging as the hit line — while naming NOBODY.
+        /// "Somebody" is the whole description; the vagueness rule is load-bearing here.
+        /// </summary>
+        [Test]
+        public void AnAskSightingReadsLikeAWitness()
+        {
+            var s = new EventSighting(new ObserverId(0), 990, new Tile(4, 4),
+                SightingClarity.Partial, EventAct.SomebodyAskedQuestions,
+                new CarDescription(CarTone.Unnoticed, CarShape.Unnoticed));
+            Assert.That(Testimony.InEnglish(s),
+                Is.EqualTo("16:30, I saw somebody going around asking questions."));
+        }
+
+        [Test]
+        public void AGlimpsedAskSightingHedges()
+        {
+            var s = new EventSighting(new ObserverId(0), 990, new Tile(4, 4),
+                SightingClarity.Glimpsed, EventAct.SomebodyAskedQuestions,
+                new CarDescription(CarTone.Unnoticed, CarShape.Unnoticed));
+            Assert.That(Testimony.InEnglish(s),
+                Does.StartWith("16:30, I think I saw somebody"));
+        }
+
+        /// <summary>
         /// The window half of Task 6: a survivor who comes back should testify again, but only
         /// about what happened AFTER they returned - the stretch they were down or away for stays
         /// silenced, the same shape ADownedWitnessTestifiesToNothingFromThatMinuteOn already

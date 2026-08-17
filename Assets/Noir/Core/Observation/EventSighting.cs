@@ -10,6 +10,7 @@ namespace Noir.Core.Observation
     public enum EventAct : byte
     {
         CarStruckSomebody = 0,
+        SomebodyAskedQuestions = 1,
     }
 
     /// <summary>

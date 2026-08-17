@@ -71,11 +71,13 @@ namespace Noir.Core.Observation
                 SightingClarity.Partial => "I saw",
                 _ => "I think I saw",
             });
-            sb.Append(' ').Append(Car(e.Car));
+            sb.Append(' ');
+            sb.Append(e.Act == EventAct.CarStruckSomebody ? Car(e.Car) : "somebody");
             sb.Append(e.Act switch
             {
-                EventAct.CarStruckSomebody => " hit somebody",
-                _ => " do something",
+                EventAct.CarStruckSomebody      => " hit somebody",
+                EventAct.SomebodyAskedQuestions => " going around asking questions",
+                _                               => " do something",
             });
             sb.Append('.');
             return sb.ToString();
