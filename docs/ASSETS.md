@@ -29,8 +29,13 @@ swapping it in as CityResponse's cruiser. Fourth: **SodaVendingMachine** (same d
 wood trim), 3.2 ft x 6.0 ft footprint dead on the real thing. The converter learned to extract
 embedded GLB textures to PNGs with map_Kd + UVs — and since Unity's OBJ importer ignores
 map_Kd, the textured materials are wired through the ModelImporter's remap table as real .mat
-assets beside the model (the pattern for every textured model after it). None of the four is
-PLACED as furniture yet — the prop placement seam is the follow-on.
+assets beside the model (the pattern for every textured model after it). Fifth: **DerelictFreightDepot**
+(same day) — his first BUILDING: 75 ft x 37 ft x 23 ft on pier footings, 1,816 tris, five flat
+materials (weathered wood, railroad red, rust, concrete, dark void), one freight door hanging
+off its hinges. A building wants a LOT, not a shelf: its natural anchor is the railroad
+corridor, where the real Rossville depot stood — an owner placement decision on the parcel
+layer, not the prop seam. None of the five is placed yet; props want the placement seam,
+the depot wants a parcel ruling.
 
 ---
 
