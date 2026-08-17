@@ -263,6 +263,18 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-17: 33 of 33 PASS, 0 fail, 1 skipped, 846/841 s over two runs** —
+> first gate against the estate-lawn town (106 Gilbert deleted, carriage drive laid as
+> terrain path; commit `0d48e1c`). Every census number held across the pair: p90 wait
+> 13.7/12.8 s against the 36.0 s cycle, zero cars held beyond a cycle, `[geometry] 30
+> buildings standing in a street` both runs (the deleted 106, whose east wall stood in
+> Route 1's tarmac, is no longer among them), still `2 signalised (8 heads)` — the drive's path tiles near the Perry/Route 1
+> corner sprouted no third signal. ⚠ **The +200 s over the 628/641 baseline is REAL
+> (consistent across both runs) and unexplained** — prime suspect is the 14,901 unbaked
+> furniture renderers `CityChunker` reports (`MeshReadable` walks city tiles + figures
+> only, found just 1 model to fix; see the IDEAS.md City item, 2026-08-16). Rule out the
+> node cap second, per below.
+>
 > **BASELINE, 2026-08-16 (night): 33 of 33 PASS, 0 fail, 1 skipped, 628/641 s over two
 > runs.** Two new: `LeavingThirdPersonStaysOverTheScene` (the ArriveOver camera handoff) and
 > the response scenario's crowd/dispersal assertions — `officer rode the cruiser: True` in

@@ -51,6 +51,14 @@ against a standing project rule rather than being merely large or risky. Both ne
   bracket) for exactly this reason - it is real without being a photograph of someone's actual
   front door. If this is wanted anyway, it wants a decision from a person, in daylight, not a
   default "the agent was told to keep going." Not attempted.
+  — **Decided in daylight, 2026-08-16, and narrower than the ask:** the owner set up a Google
+  Maps API key himself and directed Street View + satellite use to verify HIS OWN placement
+  rulings (`tools/streetview.py`; first use confirmed the 101 Perry estate against the real
+  street and removed the county's phantom "106 Gilbert" from its front lawn). What stands
+  authorized is reference imagery for geography and architecture, fetched to untracked scratch
+  space and never committed. The thing this item was written to head off — scoring a real,
+  occupied home's upkeep into per-address game data — was not asked for and remains not done;
+  `ParcelNotes`/`CountyRecord` stay the source for housing quality.
 
 - **Newspaper/archive research per real parcel, 1995-2006, to inform character notes.** This one
   is not a grey area - it is the EXACT thing the design spec's "NO REAL RESIDENTS" section
@@ -763,6 +771,18 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   0.00m), not one or the other. — *2026-07-30*
 
 ## City
+
+- [ ] **`CityChunker` leaves 14,901 renderers unbaked, first name `Table`, and `MeshReadable`
+  cannot see them.** Measured 2026-08-16 in the live town build: `[chunker] 14901 renderer(s) are
+  NOT Read/Write enabled and were left unbaked - first: 'Table'` (plus 1 'default'). This is NOT
+  the fresh-clone city-tile state the error message assumes — `MeshReadable.Enable` ran the same
+  night and found only **1** model to fix (351 already had it), because it walks the city tile set
+  and the 25 figure prefabs and nothing else. `Table` is interior furniture: a whole population of
+  prop meshes (probably in with the doors/interiors work of 2026-08-15) reaches the chunker
+  without ever having been walked by the tool. The town draws fine — unbaked means uncombined,
+  which is renderer count, which is frame time nobody has measured (`PerfCensus`, editor closed).
+  The fix wants `MeshReadable` to derive its asset list from the renderers `CityChunker` actually
+  bakes, rather than from a hand-kept list of directories. — *2026-08-16*
 
 - [x] ~~Two buildings standing on the same ground, at every block corner.~~ FIXED, and it was the
   same arithmetic slip in two files. A block's end runs take the full width and are `Depth` deep;
