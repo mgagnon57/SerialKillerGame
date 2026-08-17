@@ -1,0 +1,18 @@
+# ==========================================================================
+#  HAND-MADE BUILDINGS STANDING ON SURVEYED LOTS - the owner's rulings.
+#
+#  Each row stands one model from Assets/Noir/Models/<model>.obj on the place
+#  whose address matches. The generated town stands down for that lot: no
+#  grammar walls, no roof, no frontage - the model brings its own. The place
+#  itself stays fully real (door, household, witnesses at the windows); only
+#  the LOOK is the owner's.
+#
+#  address | model | yaw
+#
+#  yaw is degrees about up, applied after the automatic long-side-to-long-side
+#  fit, for models whose front faces the wrong way. Rows are read by
+#  CityBuildings; a missing model logs loudly and the lot falls back to the
+#  grammars rather than standing empty.
+# ==========================================================================
+
+101 Perry St | VictorianHouse | 0

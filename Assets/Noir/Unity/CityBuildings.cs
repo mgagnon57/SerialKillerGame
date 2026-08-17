@@ -149,6 +149,31 @@ namespace Noir.Unity
                 // What is left here is the handful of things that really do stand alone on their
                 // own ground in a farm town: the fire house, the water tower, the grain
                 // elevator, the filling station, and the farm buildings.
+                // The owner's buildings outrank the pack: a models.txt ruling stands his
+                // model here, Landmark's own fit-rotate-and-ground included, plus the row's
+                // yaw for a model whose front faces the wrong way after the automatic fit.
+                if (OwnerModels().TryGetValue(place.Name, out var ruling))
+                {
+                    var owned = Landmark(root.transform,
+                        "Assets/Noir/Models/" + ruling.model + ".obj", place.Bounds);
+                    if (owned != null)
+                    {
+                        if (ruling.yaw != 0f)
+                        {
+                            var centre = new Vector3(place.Bounds.X + place.Bounds.W / 2f, 0f,
+                                                     -(place.Bounds.Y + place.Bounds.H / 2f));
+                            owned.transform.RotateAround(centre, Vector3.up, ruling.yaw);
+                        }
+                        Record(place, owned);
+                        pieces++;
+                        continue;
+                    }
+                    Debug.LogError("[models] '" + ruling.model + "' did not build for '"
+                        + place.Name + "' - the lot falls back to the grammars");
+                    // fall through: Handles() said true, so the grammars already stood down;
+                    // better an empty lot logged loudly than a silent box inside a ghost.
+                }
+
                 string prefab = KindOf(place) switch
                 {
                     // THE SCHOOL LEFT THIS SWITCH ON 2026-08-11, ruled by the owner off the
@@ -235,6 +260,11 @@ namespace Noir.Unity
 
         public static bool Handles(Place place)
         {
+            // The owner's buildings first: a Content/models.txt ruling stands a hand-made
+            // model on this lot, so the generated town stands down exactly as it does for
+            // the pack landmarks below.
+            if (place != null && OwnerModels().ContainsKey(place.Name)) return true;
+
             switch (KindOf(place))
             {
                 // the school generates with the town's own massing - see the prefab switch
@@ -245,6 +275,48 @@ namespace Noir.Unity
                 default:
                     return false;
             }
+        }
+
+        // ---- the owner's buildings ----------------------------------------------------
+        //
+        // Content/models.txt: `address | model | yaw` - hand-made buildings standing on
+        // surveyed lots (spec docs/superpowers/specs/... none; the ruling is the row).
+        // The first was the grand house at 101 Perry St, 2026-08-16, stood on the block
+        // the street itself confirmed. An absent file means no rulings and costs nothing;
+        // a malformed row or a missing model complains out loud and the lot falls back to
+        // the grammars rather than standing empty.
+        private static Dictionary<string, (string model, float yaw)> _ownerModels;
+
+        private static Dictionary<string, (string model, float yaw)> OwnerModels()
+        {
+            if (_ownerModels != null) return _ownerModels;
+            _ownerModels = new Dictionary<string, (string, float)>(
+                System.StringComparer.OrdinalIgnoreCase);
+
+            string path = System.IO.Path.Combine("Content", "models.txt");
+            if (!System.IO.File.Exists(path)) return _ownerModels;
+
+            foreach (var raw in System.IO.File.ReadAllLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                var parts = line.Split('|');
+                if (parts.Length < 2)
+                {
+                    Debug.LogError("[models] unreadable row in Content/models.txt: " + raw);
+                    continue;
+                }
+                float yaw = 0f;
+                if (parts.Length >= 3 && !float.TryParse(parts[2].Trim(), out yaw))
+                {
+                    Debug.LogError("[models] yaw is not a number in: " + raw);
+                    continue;
+                }
+                _ownerModels[parts[0].Trim()] = (parts[1].Trim(), yaw);
+            }
+            if (_ownerModels.Count > 0)
+                Debug.Log($"[models] {_ownerModels.Count} owner building(s) ruled in Content/models.txt");
+            return _ownerModels;
         }
 
         /// <summary>

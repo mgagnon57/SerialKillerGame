@@ -1608,10 +1608,14 @@ place house 826,954 13x7 "105 E Green Ave"
   door 832,960
 place house 826,993 13x7 "106 E Green Ave"
   door 832,993
-place house 774,1619 13x7 "102 Gilbert Ave"
-  door 780,1619
-place house 800,1619 13x7 "104 Gilbert Ave"
-  door 806,1619
+# THE ESTATE. Owner's ruling 2026-08-16: the grand house stands on Perry's south side
+# just west of Route 1 — confirmed against the street itself (red brick, mansard roof,
+# carriage drive, the whole block face of grounds). The two modest houses the county
+# generator guessed at 102 and 104 never existed; 106 stays as the western neighbour.
+# The address keeps the town's own name for the street — Perry, not Gilbert (line 21).
+# The building is the owner's hand-made model, stood by Content/models.txt.
+place house 782,1617 26x13 "101 Perry St"
+  door 795,1617
 place house 826,1619 13x7 "106 Gilbert Ave"
   door 832,1619
 place house 774,1705 13x7 "101 Stewart Ave"

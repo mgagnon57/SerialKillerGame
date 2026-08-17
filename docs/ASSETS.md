@@ -42,8 +42,13 @@ One stray floating disc beside the tower awaits a re-export. Seventh: **Victoria
 bracketed cornice, wraparound porch; 5,160 tris. SIZE FLAG, deliberate: 84 ft of frontage —
 two and a half ordinary lots — which fails as a house and passes as the town's ONE grand
 house (and every 1991 town's grand house is usually the funeral home). Scale at placement if
-it should be merely the biggest house on a corner lot. None of the seven is placed yet; props
-want the placement seam, the buildings want parcel rulings.
+it should be merely the biggest house on a corner lot. THE FIRST PLACEMENT LANDED
+2026-08-16 night: **the mansion stands at 101 Perry St** — a city.txt ruling replaced the
+county's guessed 102/104 Gilbert Ave with one grand lot (verified against the real street:
+the actual red-brick mansard estate stands exactly there), and Content/models.txt +
+CityBuildings.OwnerModels() stand any hand-made model on any addressed lot from now on. The
+place is fully real: door, household, witnesses. Props (PC, phone, soda machine) still want
+the desk/interior placement seam.
 
 ---
 
