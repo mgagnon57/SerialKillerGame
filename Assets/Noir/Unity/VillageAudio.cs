@@ -55,16 +55,14 @@ namespace Noir.Unity
         private float _nextStrike;
 
         // ---- ambience ----
-        //
-        // Three beds playing at once with the level driven by the hour, rather than one bed
-        // being swapped for another: at half past four you want the night still underneath the
-        // chorus, not cut away from it.
-        //
-        // The crossfade runs on REAL time (unscaledDeltaTime) and not on sim time. Driving it
-        // from the clock means that at 300x the whole day's lighting-up and dying-down happens
-        // in five minutes of wall clock, and the beds strobe. Slewing towards the target level
-        // over a couple of real seconds means fast-forward sounds like a long dissolve, which
-        // is the only thing it could honestly sound like.
+        // Three beds playing at once with the level driven by the hour, rather than one
+        // bed being swapped for another: at half past four you want the night still
+        // underneath the chorus, not cut away from it. The crossfade runs on REAL time
+        // (unscaledDeltaTime) and not on sim time. Driving it from the clock means that at
+        // 300x the whole day's lighting-up and dying-down happens in five minutes of wall
+        // clock, and the beds strobe. Slewing towards the target level over a couple of
+        // real seconds means fast-forward sounds like a long dissolve, which is the only
+        // thing it could honestly sound like.
         private const float FadeSeconds = 2.5f;
         private const float AmbienceVolume = 0.75f;
 
@@ -75,23 +73,21 @@ namespace Noir.Unity
         private const float IndoorDuck = 0.3f;
 
         /// <summary>
-        /// ALL THREE AMBIENCE BEDS ARE OFF. Not the dawn one - all of them.
+        /// The beds were all off from 2026-08-02 to 2026-08-17 under a rule that nothing loops
+        /// until somebody actually listens to the three files and rules on what each contains.
+        /// That listen happened on 2026-08-17, each bed looped solo to the owner through the
+        /// live editor, and the census is: NIGHT is wind and rustle only, DAWN is clear
+        /// birdsong, DAY is birds again. Two of the three carry birds and their windows
+        /// overlap from about 03:48 to 20:30 - which is why the original "disable the dawn
+        /// chorus" fix never silenced the birds: the day bed carried on regardless. (The same
+        /// session also found why nothing at all was audible for a while: Windows' default
+        /// playback device was pointing at a virtual mic-return endpoint, so Unity played
+        /// faithfully into the void. Game silence is not always game code.)
         ///
-        /// This started as BirdsEnabled, disabling bed 1 (ambience_dawn) alone, on the reasoning
-        /// that the dawn chorus is where birds live. That reasoning came from the comment a few
-        /// lines down rather than from the audio, and it was wrong: the three files are three
-        /// different recordings of the same length, and the one actually audible when the game
-        /// opens is ambience_NIGHT - the clock starts at 06:00, night fades out until 06:30, so
-        /// at the moment you press Play it is up at about a fifth volume. It has birds in it too.
-        /// The dawn bed was silenced correctly and the player kept hearing birds anyway, three
-        /// times, while being told it was fixed.
-        ///
-        /// So this is no longer a guess about which file contains what. Nothing loops until
-        /// somebody has actually listened to the three files and decided what each is for. The
-        /// bell and the footsteps are untouched - they are event sounds, they only fire when
-        /// something happens, and neither has ever been the complaint.
+        /// Owner's ruling, 2026-08-17: all three run as designed - wind at night, the chorus
+        /// at dawn and dusk, day birds through the daytime.
         /// </summary>
-        private const bool AmbienceEnabled = false;
+        private const bool AmbienceEnabled = true;
 
         private static readonly string[] BedNames = { "ambience_night", "ambience_dawn", "ambience_day" };
         private readonly AudioSource[] _beds = new AudioSource[BedNames.Length];
@@ -204,9 +200,8 @@ namespace Noir.Unity
         {
             for (int i = 0; i < BedNames.Length; i++)
             {
-                // EVERY bed is off, not just the dawn one - see AmbienceEnabled above for why
-                // silencing bed 1 alone did not stop the birds. Not loaded at all, so there is
-                // no source anywhere for any of them to leak from.
+                // When ambience is off the bed is not loaded at all, so there is no source
+                // anywhere for it to leak from - see AmbienceEnabled for the beds' history.
                 if (!AmbienceEnabled) continue;
 
                 var go = new GameObject(BedNames[i]);
@@ -264,9 +259,9 @@ namespace Noir.Unity
             // Night comes up from half past six, well before the evening chorus has finished,
             // so that dusk is two things overlapping rather than a hole between them. Its fall
             // is written as 28:00 to 30:30 — see Window on why the numbers run past midnight.
-            // GATED, WHERE THEY NEVER WERE. Only the dawn bed was ever conditional, so night
-            // and day went on playing at whatever the clock asked for - and night is the one
-            // audible at 06:00 when the game opens.
+            // All three windows are gated on AmbienceEnabled: in the era when only the dawn
+            // bed was conditional, the other two went on playing whatever the clock asked for,
+            // which is how "the birds are fixed" kept being wrong.
             float night = AmbienceEnabled ? Window(hour, 18.5f, 21.0f, 28.0f, 30.5f) : 0f;
             float day = AmbienceEnabled ? Window(hour, 6.5f, 8.5f, 18.0f, 20.5f) : 0f;
 
