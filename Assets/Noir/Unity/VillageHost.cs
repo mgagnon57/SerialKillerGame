@@ -1218,7 +1218,39 @@ namespace Noir.Unity
             if (People == null || World == null) return System.Array.Empty<string>();
             _interruptions ??= new SimInterruptions(this);
             return Recollection.AskInEnglish(World, People, People.Get(who), day, Track, Seed,
-                                             null, null, _hitEvents, _interruptions);
+                                             null, null, _hitEvents, _interruptions, _askEvents);
+        }
+
+        /// <summary>
+        /// The T key's ask, with Phase 2's consequences. A CIVILIAN who questions a witness is
+        /// REMEMBERED — the ask joins AskEvents at the witness's own tile, so anybody who could
+        /// see that doorstep at that minute can later say somebody was going around asking
+        /// questions; the killer's own canvass becomes a sighting. A BADGE ask instead lands the
+        /// witness's words in every case the town knows about and has not shut, through
+        /// ResponseCases.BadgeAsked — the county canvass's sibling seam. Recorded AFTER the
+        /// answer is taken, so the testimony handed back never contains the ask that produced it.
+        /// The county's own canvass does not come through here and is neither remembered nor
+        /// double-filed — CountyReachedDoor already files it.
+        /// </summary>
+        public string[] PlayerAsks(CitizenId who, int day)
+        {
+            string[] lines = AskWhatTheySaw(who, day);
+            if (Sim == null || People == null) return lines;
+
+            if (Badge)
+            {
+                for (int i = 0; i < _cases.Count; i++)
+                {
+                    CaseState s = _cases.StateOf(i);
+                    if (s == CaseState.Undiscovered || s == CaseState.Closed) continue;
+                    _cases.BadgeAsked(i, who, lines);
+                }
+            }
+            else
+            {
+                _askEvents.Record(NowMinute(), Sim.GetAgent(who).Position.ToTile());
+            }
+            return lines;
         }
 
         /// <summary>
@@ -1255,6 +1287,9 @@ namespace Noir.Unity
 
         /// <summary>Vehicular harm, the second genuine history. See its own header.</summary>
         private readonly HitEvents _hitEvents = new HitEvents();
+
+        /// <summary>Every ask a witness was ever put, so a doorstep canvass can itself be seen.</summary>
+        private readonly AskEvents _askEvents = new AskEvents();
 
         /// <summary>Which minute each downed citizen went down, whether it killed them, and when
         /// they came back — the sim knows WHO, this knows WHEN. Phase 2's police consume it, and

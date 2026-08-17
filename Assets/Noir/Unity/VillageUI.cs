@@ -739,7 +739,7 @@ namespace Noir.Unity
             int day = _host.Sim != null ? _host.Sim.Clock.Day : 0;
 
             var citizen = _host.People.Get(who);
-            _said = _host.AskWhatTheySaw(who, day);
+            _said = _host.PlayerAsks(who, day);
             _askedDay = day;
             _asked = $"<b>{citizen.FullName}</b>, asked about day {day} — "
                    + (_host.Badge ? "<color=#7fb4ff>with the badge shown</color>:"
