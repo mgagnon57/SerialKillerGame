@@ -34,8 +34,11 @@ assets beside the model (the pattern for every textured model after it). Fifth: 
 materials (weathered wood, railroad red, rust, concrete, dark void), one freight door hanging
 off its hinges. A building wants a LOT, not a shelf: its natural anchor is the railroad
 corridor, where the real Rossville depot stood — an owner placement decision on the parcel
-layer, not the prop seam. None of the five is placed yet; props want the placement seam,
-the depot wants a parcel ruling.
+layer, not the prop seam. Sixth: **BrickChurch** (same day) —
+central bell tower with spire, stone water tables, corner turret, apse; 50 x 55 ft, tower
+52 ft, 5,020 tris, foundation deliberately a foot below grade (right for the elevation grid).
+One stray floating disc beside the tower awaits a re-export. None of the six is placed yet;
+props want the placement seam, the depot and church want parcel rulings.
 
 ---
 
