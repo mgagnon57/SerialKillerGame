@@ -84,7 +84,7 @@ AND SOUND, not surface detail.
 
   THE CONTROLLABLE PERSON, and the reason to start here rather than with a paid controller is
   measured: **78 of our 79 characters are already imported as `animationType: 3`, a Humanoid rig.**
-  Starter Assets drives any Humanoid, so it should be walking around Rossville in an afternoon at
+  Starter Assets drives any Humanoid, so it should be walking around Northgate in an afternoon at
   no cost. It brings a Cinemachine third-person camera with it.
 
   What it touches: a new controllable agent alongside `OrbitCamera`, which already does Tab to
@@ -142,7 +142,7 @@ AND SOUND, not surface detail.
   is played at the ratio between that and the ground the person actually covers:
 
   ```
-  moving          1.5m/s  Walking, Walking Male, Walking Female
+  moving          1.4m/s  Walking
   hurrying        3.6m/s  Running
   ```
 
@@ -156,9 +156,7 @@ AND SOUND, not surface detail.
 
   ### What to download
 
-  Named for the states in `Activity` (see `Core/People/DayPlan.cs` — there are fourteen, and this
-  line said thirteen for long enough that the count is not written down here any more), and the
-  mapping is
+  Named for the thirteen states in `Activity` (see `Core/People/DayPlan.cs`), and the mapping is
   already written down in `Assets/Noir/Unity/AgentAnimation.cs` - **the code asks for Mixamo's own
   clip names verbatim**, so there is no translation step between what you downloaded and what it
   wants. Name the Animator state exactly what Mixamo called the clip.
@@ -167,7 +165,7 @@ AND SOUND, not surface detail.
   |---|---|
   | **Walking** (in place) | `Walking`, `TravellingTo` - the workhorse |
   | **Standing Idle** | the fallback for everything, and `AtWork` |
-  | **Running** (in place) | **nothing — it has never played once.** See below |
+  | **Running** (in place) | `AtThePlayground`, and NOTHING else - see the note below |
   | **Talking** | `Talking` |
   | **Drinking** | `AtThePub` |
   | **Looking Around** | `Shopping` |
@@ -178,38 +176,18 @@ AND SOUND, not surface detail.
   `Asleep` needs nothing. They are indoors, behind a wall, in the dark, and the only thing that
   ever shows it is the window not being lit.
 
-  RUNNING IS NOBODY, AND THAT IS NOT WHAT THIS PARAGRAPH USED TO SAY. It read "the child at play
-  and nobody else… `AgentAnimation` enforces it", and the enforcement is real — but the row it
-  guards **has never played a single frame and cannot**. `hurrying` is only true of somebody
-  *moving* while `AtThePlayground`, which the simulation never produces: a child at the playground
-  is at the playground, not travelling to it. Measured, not inferred — `Running=` appears zero
-  times across all three recorded runs against censuses reporting up to 317 people on the move.
-
-  The reasoning above is still right, which is why the row is being deleted rather than fixed: if
-  running belongs in this game it belongs to a story event — somebody fleeing — not to a commute,
-  and the simulation's ceiling is about 3.4 mph against a clip authored for 8 mph. Scheduled in
-  `docs/ANIMATION-FIXES.md` W5. **Do not download `Running` on the strength of this table.**
+  RUNNING IS THE CHILD AT PLAY AND NOBODY ELSE. An adult jogging across Northgate reads as
+  fleeing, which is a story event rather than a commute, and this game should not say that by
+  accident. `AgentAnimation` enforces it.
 
   ### Into Unity
 
-  Drop the FBXs in `Assets/Noir/Animations/`. **That is the whole procedure** — then add the clip's
-  name to a row in `Content/animations.txt` and run `Noir/Build The Townsfolk Animator`.
+  Drop the FBXs in `Assets/Noir/Animations/`, then per file:
 
-  `AnimationImport` configures each file on the way in: Animation Type **Humanoid**, Avatar
-  **Create From This Model**, and **Loop Time** on. No materials to sort out, because you
-  downloaded without skin.
-
-  **DO NOT DO IT BY HAND, AND THIS SECTION USED TO TELL YOU TO.** It listed the Rig and Animation
-  tabs step by step, which is worse than redundant: `AnimationImport` only acts when
-  `importSettingsMissing` is true — first import and no other time — so any setting a human applies
-  by hand becomes permanent and invisible, and the automation will never correct it. Following the
-  old steps could not fail loudly; it just quietly took a file out of the system's hands forever.
-
-  It also said to leave Loop Time **off** for one-shots. The importer loops everything, and there
-  are about a dozen one-shot gestures on the list — so the document and the tool disagreed, and the
-  tool wins on every file either way. Whether looping a one-shot is actually wrong is a real
-  question and it is open: `docs/ANIMATION-FIXES.md` decision 7 wants it measured before anybody
-  touches 87 import settings, because `loopPose` does not merely mark a clip, it *warps* it.
+  1. **Rig** tab -> Animation Type **Humanoid**, Avatar Definition **Create From This Model**, Apply.
+  2. **Animation** tab -> tick **Loop Time** on the cycles (walk, run, idle); leave it off for
+     one-shots.
+  3. No materials to sort out, because you downloaded without skin.
 
   Mecanim retargets through the Humanoid abstraction, so a clip authored on Mixamo's skeleton plays
   correctly on our people despite them being a different height and build. **No scaling needed.**
@@ -219,18 +197,9 @@ AND SOUND, not surface detail.
   - **The player probably does not need Mixamo at all.** Unity Starter Assets ships its own
     walk/run/idle/jump already wired to a controller. Mixamo is for the TOWNSPEOPLE's activity
     states, which is the thing Starter Assets cannot give you.
-  - **One of the 79 characters is not Humanoid, and it is `SKM_Woman_Rabbit_Easter`** —
-    `animationType: 2` (Generic) where the other 78 are `3`, in
-    `Poly Universal Pack/Meshes/People/Seasons People/`. It would silently refuse to retarget, so
-    it would read as a broken clip rather than an import setting.
-    **It is never cast, so this costs nothing today.** `AgentBody` draws from the ordinary
-    townsfolk; a woman in an Easter rabbit costume is not going to be walking down Chicago Street
-    in 1991 whatever her rig says. Left alone deliberately — changing an import setting on a pack
-    asset that nobody uses is churn. It matters only if somebody widens the cast, and then the fix
-    is one dropdown.
-    *(This line used to say "whichever it is", which is a note asking the next person to redo the
-    search. It took one `rg --no-ignore` — the pack is gitignored, so a plain grep finds nothing
-    and reports the folder as empty.)*
+  - **One of the 79 characters is not Humanoid.** 78 are `animationType: 3` and one is not.
+    Whichever it is will silently fail to retarget until its import setting is changed - worth
+    knowing so it reads as a settings problem rather than a broken clip.
 
   ### Where it lands
 
@@ -277,23 +246,33 @@ AND SOUND, not surface detail.
 
 ---
 
-## Audio — currently there is none at all
+## Audio — a working layer, no longer none
 
-`OVERNIGHT.md` has said "No audio at all" since the beginning. This is the cheapest large gain
-after the lighting.
+This header said "currently there is none at all" until 2026-08-17, three commits stale.
+Measured against the tree that day: `VillageAudio.cs` rings `bell.wav` on the hour at the
+church's own belfry height, plays terrain-driven footsteps, carries three ambience beds, and
+is silent in batch mode always. What actually exists in `Content/audio/` — fourteen loose
+WAVs: the bell, three ambience beds (dawn/day/night, ~1 MB each, loaded and DELIBERATELY
+silenced until somebody listens to all three and decides what each is for — the war story is
+in `VillageAudio.cs`), and ten step samples.
 
-- [ ] **Footsteps Pack** — ~$30. 3,011 samples: concrete, grass, mud, gravel, water, metal, snow.
-  [Listing](https://unityassetcollection.com/footsteps-pack-free-download/)
-
-  NEARLY FREE TO WIRE, which is the point: the map already knows the terrain of every tile, so
-  `world.Grid.TerrainAt` picks the surface and the sample follows. Every other game has to author
-  that mapping by hand.
+- [ ] **Footsteps Pack** — ~$30, 3,011 samples. **No longer the way to GET footsteps — the
+  game has them, wired exactly the way this item predicted would be nearly free**:
+  `step_<surface>_a/b` pairs for grass, road, path, floor and churchyard, chosen by
+  `world.Grid.TerrainAt` under the camera, stride 1.25–2.0 m by speed, alternating feet,
+  player-only in Street mode. What the pack would still add is SURFACES the ten home-made
+  WAVs do not cover (mud, gravel, water, metal, snow) and per-step variety. Worth it the day
+  the player walks a gravel alley or a wet ditch and hears grass. Buy it from the Asset
+  Store by name — the third-party "free download" link that used to sit here was a rip site
+  and is gone.
 
 - [ ] **Ambient Sounds - Interactive Soundscapes for Unity 6** — ~$45.
   [Asset Store](https://assetstore.unity.com/packages/tools/audio/ambient-sounds-interactive-soundscapes-for-unity-6-142132)
 
   Global, 1D, 2D and 3D zones, which maps straight onto what the map already is: downtown, the
-  suburb ring, the country frame, and the individual places inside them.
+  suburb ring, the country frame, and the individual places inside them. But the three
+  home-made beds are already on disk and silenced pending a listen — settle what each bed
+  contains before buying layers to put on top.
 
 - [ ] **City Ambience Sound** — ~$20. Raw material for the above.
   [Asset Store](https://assetstore.unity.com/packages/audio/ambient/urban/city-ambience-sound-309820)
@@ -315,18 +294,11 @@ else whatever we buy.
   below. Buy this if the Slavic and Steampunk register bothers you once there are figures on
   screen and you want ordinary modern clothes: suits, overalls, shop coats.
 
-**Variety is already solved and needs no purchase.** `Universal_A_Alb` is a labelled swatch grid,
-and the grid is **32 x 32 cells of 128 px on a 4,096 px sheet** — measured off the file on
-2026-08-09, because this paragraph, `docs/IDEAS.md` and four comments in `AgentBody.cs` all said
-sixteen or sixty-four and a safety argument was built on top of it. Each ROW is a role, labelled on
-the sheet: 1 skin, 2 hide, 3 hair, 9 stone, 13 tertiary, 14 secondary, 15 primary, and so on.
-**Along a row, columns 0–19 are a twenty-step ramp** from near-black to white; **columns 20–29 are
-one flat colour repeated ten times**; column 30 is the only non-black column in
-`Universal_A_Emit.png`; column 31 is an accent. Measured, `Man_Slavic_Summer_Hair` puts 2,841
-vertices on 27 distinct atlas cells across 10 roles. So a person's coat colour is a UV coordinate,
-not a texture, and moving it along its own row recolours that garment and nothing else — **but only
-inside columns 0–19.** Wrap past 19 and the garment lands on the flat block or on the emission key,
-which is why the shift has to be bounded rather than a modulo. Four roles at twenty steps is 160,000
+**Variety is already solved and needs no purchase.** `Universal_A_Alb` is a labelled swatch grid:
+each ROW is a role - primary, secondary, tertiary, hair, skin, hide - and each row is a ramp of
+about sixteen shades. Measured, `Man_Slavic_Summer_Hair` puts 2,841 vertices on 27 distinct atlas
+cells across 10 roles. So a person's coat colour is a UV coordinate, not a texture, and moving it
+along its own row recolours that garment and nothing else. Four roles at sixteen shades is 65,536
 looks from ONE prefab, against a population of 365. Clone the mesh per citizen, seed the shades off
 the citizen id so a person looks the same every run, and no two people ever match.
 
@@ -363,12 +335,13 @@ picked - so what a witness reports is what is actually on screen.
 
 ## If you only buy three
 
-**HAZE** for the light under the new lamps, **Footsteps Pack** because the terrain data to drive it
-already exists, and **COZY 3** for weather that does not fight the art style. Comfortably under
+**HAZE** for the light under the new lamps, **Ambient Sounds** now that the footsteps this list
+used to nominate got built by hand (see the Audio section), and **COZY 3** for weather that does
+not fight the art style. Comfortably under
 $150 together, and every one of them drops in without authoring anything in a scene - which matters
 here, because content authored in an editor window is content `MapAudit` and the PlayMode tests
 cannot see.
 
-And before any of it: **Unity Starter Assets, free.** Walk around Rossville at eye height with a
+And before any of it: **Unity Starter Assets, free.** Walk around Northgate at eye height with a
 real body first. Half of what looks worth buying from a spreadsheet stops looking worth buying once
 you have stood in the street.
