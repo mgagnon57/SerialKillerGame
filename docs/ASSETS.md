@@ -37,8 +37,13 @@ corridor, where the real Rossville depot stood — an owner placement decision o
 layer, not the prop seam. Sixth: **BrickChurch** (same day) —
 central bell tower with spire, stone water tables, corner turret, apse; 50 x 55 ft, tower
 52 ft, 5,020 tris, foundation deliberately a foot below grade (right for the elevation grid).
-One stray floating disc beside the tower awaits a re-export. None of the six is placed yet;
-props want the placement seam, the depot and church want parcel rulings.
+One stray floating disc beside the tower awaits a re-export. Seventh: **VictorianHouse**
+(same day) — a Second-Empire mansion: mansard roof, widow's walk between twin chimneys,
+bracketed cornice, wraparound porch; 5,160 tris. SIZE FLAG, deliberate: 84 ft of frontage —
+two and a half ordinary lots — which fails as a house and passes as the town's ONE grand
+house (and every 1991 town's grand house is usually the funeral home). Scale at placement if
+it should be merely the biggest house on a corner lot. None of the seven is placed yet; props
+want the placement seam, the buildings want parcel rulings.
 
 ---
 
