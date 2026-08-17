@@ -1231,14 +1231,29 @@ namespace Noir.Unity
         /// answer is taken, so the testimony handed back never contains the ask that produced it.
         /// The county's own canvass does not come through here and is neither remembered nor
         /// double-filed — CountyReachedDoor already files it.
+        ///
+        /// IDEMPOTENT WITHIN A MINUTE: the same witness asked again before the clock ticks
+        /// skips both consequence arms below, though the testimony is still handed back every
+        /// press. The case file is the permanent record and the ask-event tile is a fact about
+        /// a doorstep, not about a keypress — a witness questioned twice in the same minute
+        /// said the same thing once, and T-key spam should not file it twice or plant two
+        /// sightings of the same visit.
         /// </summary>
         public string[] PlayerAsks(CitizenId who, int day)
         {
             string[] lines = AskWhatTheySaw(who, day);
             if (Sim == null || People == null) return lines;
 
+            int minute = NowMinute();
+            bool alreadyAsked = minute == _lastAskMinute && who.Equals(_lastAskWho);
+            _lastAskMinute = minute;
+            _lastAskWho = who;
+            if (alreadyAsked) return lines;
+
             if (Badge)
             {
+                // A badge ask when no case is known-open files nothing and records nothing —
+                // deliberate today, a Phase 3 seam (see docs/IDEAS.md).
                 for (int i = 0; i < _cases.Count; i++)
                 {
                     CaseState s = _cases.StateOf(i);
@@ -1248,7 +1263,7 @@ namespace Noir.Unity
             }
             else
             {
-                _askEvents.Record(NowMinute(), Sim.GetAgent(who).Position.ToTile());
+                _askEvents.Record(minute, Sim.GetAgent(who).Position.ToTile());
             }
             return lines;
         }
@@ -1290,6 +1305,12 @@ namespace Noir.Unity
 
         /// <summary>Every ask a witness was ever put, so a doorstep canvass can itself be seen.</summary>
         private readonly AskEvents _askEvents = new AskEvents();
+
+        /// <summary>The witness and minute PlayerAsks last acted on, so T-key spam does not
+        /// re-file or re-record the same doorstep visit. The case file is the permanent
+        /// record; a witness asked twice in the same minute said the same thing once.</summary>
+        private int _lastAskMinute = -1;
+        private CitizenId _lastAskWho;
 
         /// <summary>Which minute each downed citizen went down, whether it killed them, and when
         /// they came back — the sim knows WHO, this knows WHEN. Phase 2's police consume it, and

@@ -958,6 +958,19 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   before coding: who volunteers, where the rig lives (the FD building), what a page sounds
   like at 300x. — *2026-08-17*
 
+- [ ] **Three Phase 3 seams the witness-voices final review left open.** (a) "Somebody asking
+  questions" is a civilian-player fingerprint the town never checks for its own hand: a badge
+  ask and the county's own canvass are the same observable event — somebody going door to
+  door — and neither is remembered by a bystander who watched the county do it, only the
+  player's own doorstep visits reach `AskEvents` (`VillageHost.PlayerAsks`,
+  Assets/Noir/Unity/VillageHost.cs). (b) A badge ask with no case known-open files nothing and
+  records nothing — it vanishes without trace, a gap the badge arm's own comment now names
+  where it happens. (c) `AskEvents` (Assets/Noir/Core/Witness/AskEvents.cs) is a THIRD
+  genuine, underivable history alongside `PlayerTrack` and `HitEvents` — player-caused facts
+  the seed cannot replay — and a future save/replay system has to serialise all three
+  together or a reloaded game's witnesses start disagreeing about what they said happened.
+  — *2026-08-17*
+
 - [ ] **The response rigs "arrive" far from the scene, and the gate cannot see it.** Watched
   live 2026-08-16 (dusk hit at village (679,760), editor Play, 60×): the county car parked
   1,700 ft short at (649,-1276) — plausibly the documented Patience park-and-walk, and the

@@ -27,7 +27,9 @@ namespace Noir.Core.Witness
         public void Record(int minute, Tile where)
         {
             if (_asks.Count > 0 && minute < _asks[_asks.Count - 1].Minute)
-                throw new ArgumentException("A history runs forwards.");
+                throw new ArgumentException(
+                    "A history runs forwards. Tried to record minute " + minute +
+                    " after minute " + _asks[_asks.Count - 1].Minute + ".", nameof(minute));
             _asks.Add(new Ask(minute, where));
         }
 
