@@ -78,6 +78,84 @@ namespace Noir.Core.Tests
             Assert.That(file.Any(l => l.Contains("dark pickup")), "the canvass answer is in the file");
         }
 
+        /// <summary>
+        /// Phase 2 of witness voices: a badge-on ask lands the witness's words in the file
+        /// through a sibling of the canvass's own seam — verbatim, prefixed so a reader can
+        /// tell a volunteered county answer from one the player's badge collected.
+        /// </summary>
+        [Test]
+        public void ABadgeAskLandsTheWordsInTheFile()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            int id = cases.Open(new CitizenId(7), 1000, new Tile(50, 50),
+                                CarTone.Dark, CarShape.Pickup, fatal: false);
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders);
+
+            cases.BadgeAsked(id, new CitizenId(41), new[] { "16:30, I saw a dark van hit somebody." });
+
+            var file = cases.FileOf(id);
+            Assert.That(file.Any(l => l.Contains("citizen 41 told the badge: 16:30, I saw a dark van hit somebody.")),
+                "the badge ask should be in the file verbatim: " + string.Join(" | ", file));
+        }
+
+        [Test]
+        public void ABadgeAskOnAnUndiscoveredCaseThrows()
+        {
+            var cases = new ResponseCases();
+            int id = cases.Open(new CitizenId(7), 1000, new Tile(50, 50),
+                                CarTone.Dark, CarShape.Pickup, fatal: false);
+            Assert.Throws<InvalidOperationException>(() =>
+                cases.BadgeAsked(id, new CitizenId(41), new[] { "anything" }),
+                "the town cannot file what it does not know exists");
+        }
+
+        [Test]
+        public void ABadgeAskOnAClosedCaseThrows()
+        {
+            var cases = new ResponseCases();
+            int id = cases.Open(new CitizenId(7), 1000, new Tile(50, 50),
+                                CarTone.Dark, CarShape.Pickup, fatal: false);
+            cases.CloseLoudly(id, "test: shutting the file");
+            Assert.Throws<InvalidOperationException>(() =>
+                cases.BadgeAsked(id, new CitizenId(41), new[] { "anything" }));
+        }
+
+        /// <summary>
+        /// The badge writer must be a BYSTANDER to the canvass state machine: after a badge ask
+        /// mid-canvass, the outstanding CanvassNext witness is still the one CountyReachedDoor
+        /// expects, and the next door comes due on the county's own clock, unmoved.
+        /// </summary>
+        [Test]
+        public void ABadgeAskDoesNotAdvanceTheCanvass()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            int id = cases.Open(new CitizenId(7), 1000, new Tile(50, 50),
+                                CarTone.Dark, CarShape.Pickup, fatal: false);
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders); orders.Clear();
+            cases.OfficerDispatched(id, new CitizenId(12));
+            cases.OfficerArrived(id, 1010);
+            cases.Tick(1028, orders); orders.Clear();
+            cases.CountyArrived(id, 1033);
+            cases.CanvassBegins(id, new[] { new CitizenId(3), new CitizenId(9) });
+            cases.Tick(1033, orders);
+            Assert.That(orders[0].Who, Is.EqualTo(new CitizenId(3)));
+            orders.Clear();
+
+            cases.BadgeAsked(id, new CitizenId(41), new[] { "Nothing. I never saw anybody." });
+
+            // The canvass neither skipped citizen 3 nor reset its clock: their answer still lands,
+            // and citizen 9 comes due exactly CanvassMinutesPerDoor after it, as ever.
+            cases.CountyReachedDoor(id, 1036, new CitizenId(3), new[] { "Nothing. I never saw anybody." });
+            cases.Tick(1040, orders);
+            Assert.That(orders, Is.Empty, "the door clock must be the county's own, unmoved by the badge");
+            cases.Tick(1041, orders);
+            Assert.That(orders[0].Who, Is.EqualTo(new CitizenId(9)));
+        }
+
         [Test]
         public void AFatalCaseNeverReturns()
         {

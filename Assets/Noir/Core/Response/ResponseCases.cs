@@ -297,6 +297,28 @@ namespace Noir.Core.Response
             c.NextDoorReadyAt = minute + CanvassMinutesPerDoor;
         }
 
+        /// <summary>
+        /// A badge-on ask, filed. The second and only other place a witness's own words land in
+        /// the file, beside <see cref="CountyReachedDoor"/> — but a BYSTANDER to the canvass:
+        /// no outstanding-order check, no witness index, no door clock. The county's procedure
+        /// is not the player's, and a badge ask mid-canvass must not move the county's feet.
+        /// Undiscovered throws — the town cannot file what it does not know exists — and Closed
+        /// throws — the file is shut.
+        /// </summary>
+        public void BadgeAsked(int caseId, CitizenId witness, string[] lines)
+        {
+            Case c = _cases[caseId];
+            if (c.State == CaseState.Undiscovered)
+                throw new InvalidOperationException(
+                    "case " + caseId + " is undiscovered; the town cannot file what it does not know exists.");
+            if (c.State == CaseState.Closed)
+                throw new InvalidOperationException("case " + caseId + " is closed; the file is shut.");
+
+            if (lines == null) return;
+            for (int i = 0; i < lines.Length; i++)
+                c.File.Add("case " + caseId + ": citizen " + witness.Value + " told the badge: " + lines[i]);
+        }
+
         public void AmbulanceArrived(int caseId, int minute)
         {
             Case c = _cases[caseId];
