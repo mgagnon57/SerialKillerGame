@@ -60,8 +60,13 @@ Doors also open on their own when you walk right up to them; **E** is for doing 
 a door you close stays closed for a few seconds even with someone at it.
 
 A car is not a costume: witnesses see a car, not you, and a car that hits somebody is a recorded
-event the town can be asked about (**T**, near a witness — "about half past four, I saw a dark
-car hit somebody"). The victim stays where they fell — until the town notices: hit somebody
+event the town can be asked about (**T** — asks whoever you're facing at street level, or the
+nearest neighbour; "about half past four, I saw a dark car hit somebody"). **B** toggles the
+badge: shown, you get the witness's full account; as a passer-by you get the short version and
+a hedge — the town holds more than it hands a stranger. The street also thinks out loud now:
+the discoverer cries out for help, gawkers wonder aloud as they gather, the officer tells the
+ring to step back, and a canvassed witness closes her door on a last word — short lines floating
+over exactly the heads the case touches. The victim stays where they fell — until the town notices: hit somebody
 where a window can see it and the town responds. On watch, the Rossville officer arrives in
 his **cruiser, light bar going** (overnight, the on-call man comes on foot from his bed), holds
 the scene while **neighbours gather in a loose ring to watch**, then the county car drives in

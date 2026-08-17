@@ -58,6 +58,27 @@ namespace Noir.Unity
         /// been, so it has to know where that is.</summary>
         public Player Player => _player;
 
+        /// <summary>
+        /// Whether the player is asking questions with a badge or as a passer-by. A TOGGLE
+        /// (B) rather than a character, deliberately: how the badge is EARNED is a story
+        /// decision the spec leaves open. Badge on = full testimony; off = the thinned
+        /// stranger's version. Phase 2 makes the difference cut deeper — a civilian who asks
+        /// gets REMEMBERED. Spec: docs/superpowers/specs/2026-08-17-witness-voices-design.md.
+        /// </summary>
+        public bool Badge;
+
+        /// <summary>The street's floating one-liners; created in Awake beside the UI.</summary>
+        private StreetVoices _voices;
+
+        /// <summary>A gawker's line, keyed on the citizen id — the response path consumes no
+        /// RNG, so the same person wonders the same thing every run of the same seed.</summary>
+        private static string GawkLine(int who) => (who % 3) switch
+        {
+            0 => "what happened here?",
+            1 => "is that— oh no.",
+            _ => "who is it? can you see?",
+        };
+
         /// <summary>The verb-menu framework that offers doors (and, later, whatever else)
         /// while the player is walking. Was write-only from here until now - nothing outside
         /// this file needed to read it yet, but a field nothing exposes is a field nothing can
@@ -470,6 +491,11 @@ namespace Noir.Unity
             // if loading throws — added afterwards, a failure would be invisible and the screen
             // would just be empty, which is exactly the least useful thing it could do.
             gameObject.AddComponent<VillageUI>();
+
+            // The street's own voice — floating lines over the heads the response path points
+            // at. Created beside the UI because it is UI, just world-anchored; its OnGUI guards
+            // against the world not existing yet the same way VillageUI does.
+            _voices = StreetVoices.Create(this, transform);
 
             // A camera has to exist even in the failure case, or there is nothing to draw the
             // error onto. An empty scene has none.
@@ -1415,7 +1441,13 @@ namespace Noir.Unity
                 _interruptions ??= new SimInterruptions(this);
                 CitizenId saw = _discovery.WhoSees(World, People, Sim.Clock.Day, minuteOfDay,
                                                    _cases.SceneOf(c), Seed, null, _interruptions, null);
-                if (saw.IsValid) _cases.BodySeen(c, minute, saw);
+                if (saw.IsValid)
+                {
+                    _cases.BodySeen(c, minute, saw);
+                    _voices?.Say(saw, _cases.FatalOf(c)
+                        ? "oh god — somebody get help!"
+                        : "hey! are you alright?! somebody call it in!", 6f);
+                }
             }
 
             // ---- 2. Is the officer there yet? ----
@@ -1447,7 +1479,11 @@ namespace Noir.Unity
                     && a.Position.ToTile() == _cases.SceneOf(c))
                 {
                     _officerWalking.Remove(c);
-                    if (_cases.StateOf(c) == CaseState.OfficerEnRoute) _cases.OfficerArrived(c, minute);
+                    if (_cases.StateOf(c) == CaseState.OfficerEnRoute)
+                    {
+                        _cases.OfficerArrived(c, minute);
+                        _voices?.Say(officer, "step back, please — all of you.");
+                    }
                 }
             }
 
@@ -1505,6 +1541,7 @@ namespace Noir.Unity
                 var who = new CitizenId(best);
                 Sim.Respond(who, spot.Value, Activity.Gawking);
                 ring.Add(who);
+                _voices?.Say(who, GawkLine(best));
                 Debug.Log($"[case] case {c}: citizen {best} drifts over");
             }
 
@@ -1603,11 +1640,15 @@ namespace Noir.Unity
                         Debug.Log($"[case] case {id}: citizen {who.Value} has no door to knock "
                                 + "on - their answer is taken at the kerb");
                         _cases.CountyReachedDoor(id, minute, who, AskWhatTheySaw(who, day));
+                        _voices?.Say(who, "…and that's everything I saw.");
                         return;
                     }
 
                     Response.WalkCountyTo(door, onArrived: () =>
-                        _cases.CountyReachedDoor(id, NowMinute(), who, AskWhatTheySaw(who, day)));
+                    {
+                        _cases.CountyReachedDoor(id, NowMinute(), who, AskWhatTheySaw(who, day));
+                        _voices?.Say(who, "…and that's everything I saw.");
+                    });
                     return;
                 }
 

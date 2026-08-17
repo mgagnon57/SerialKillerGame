@@ -554,6 +554,13 @@ namespace Noir.Unity
             GUI.Label(new Rect(S(182f), S(6f), S(90f), S(18f)), "<color=#8a8a86>speed</color>", _small);
             GUI.Label(new Rect(S(182f), S(22f), S(90f), S(22f)), speedText, _label);
 
+            // ---- who you are when you ask (B toggles; see VillageHost.Badge). Anchored to
+            // the bar's right edge: the speed buttons own everything from x=250 rightward.
+            GUI.Label(new Rect(Screen.width - S(150f), S(6f), S(130f), S(18f)),
+                "<color=#8a8a86>asking as  <b>B</b></color>", _small);
+            GUI.Label(new Rect(Screen.width - S(150f), S(22f), S(140f), S(22f)),
+                _host.Badge ? "<color=#7fb4ff><b>THE BADGE</b></color>" : "<b>a civilian</b>", _label);
+
             if (_host.Skipping)
                 GUI.Label(new Rect(S(182f), S(22f), S(200f), S(22f)), "<color=#ff8a5c><b>skipping…</b></color>", _label);
 
@@ -659,6 +666,8 @@ namespace Noir.Unity
         private void DrawTestimony()
         {
             var keys = Keyboard.current;
+            if (keys != null && keys.bKey.wasPressedThisFrame && !KeyboardCaptured)
+                _host.Badge = !_host.Badge;
             if (keys != null && keys.tKey.wasPressedThisFrame)
             {
                 _showTestimony = !_showTestimony;
@@ -719,13 +728,65 @@ namespace Noir.Unity
             if (at == null) { _asked = null; return; }
 
             var tile = Space3D.TileAt(at.Value);
-            var who = _host.NearestNeighbour(tile);
+
+            // THE ONE YOU ARE LOOKING AT, not merely the one nearest your shoes. Among
+            // everybody within arm's-length-of-a-conversation range, the best facing-dot from
+            // the walking camera wins; with nobody in front, nearest keeps working — turning
+            // your back on someone should not make them unaskable, just not the default.
+            var who = AimedNeighbour(at.Value);
+            if (!who.IsValid) who = _host.NearestNeighbour(tile);
+
             int day = _host.Sim != null ? _host.Sim.Clock.Day : 0;
 
             var citizen = _host.People.Get(who);
             _said = _host.AskWhatTheySaw(who, day);
             _askedDay = day;
-            _asked = $"<b>{citizen.FullName}</b>, asked about day {day}:";
+            _asked = $"<b>{citizen.FullName}</b>, asked about day {day} — "
+                   + (_host.Badge ? "<color=#7fb4ff>with the badge shown</color>:"
+                                  : "<color=#8a8a86>as a passer-by</color>:");
+
+            // A STRANGER GETS THE SHORT VERSION. Thinning only ever REMOVES lines — the
+            // witness layer's vagueness is a standing rule and truncation cannot sharpen
+            // anything. The hedge is the town telling you it holds more than it hands out.
+            if (!_host.Badge && _said != null && _said.Length > 2)
+            {
+                _said = new[]
+                {
+                    _said[_said.Length - 2],
+                    _said[_said.Length - 1],
+                    "<color=#8a8a86><i>…that's about all I'd tell a stranger. "
+                        + "you'd want to ask around.</i></color>",
+                };
+            }
+        }
+
+        /// <summary>
+        /// The citizen the walking camera is most looking at, within conversation range.
+        /// Returns None when nobody is in front — the caller falls back to nearest. Runs only
+        /// on a T press, so the walk over the whole population costs nothing per frame.
+        /// </summary>
+        private CitizenId AimedNeighbour(Vector3 playerAt)
+        {
+            var cam = Camera.main;
+            if (cam == null || _host.Sim == null) return CitizenId.None;
+
+            var forward = cam.transform.forward; forward.y = 0f; forward.Normalize();
+            var best = CitizenId.None;
+            float bestScore = 0.35f;   // the minimum "actually in front of you"
+
+            for (int i = 0; i < _host.People.Count; i++)
+            {
+                var id = new CitizenId(i);
+                var agent = _host.Sim.GetAgent(id);
+                var world = Space3D.ToWorld(agent.Position, 0f);
+                var to = world - playerAt; to.y = 0f;
+                float dist = to.magnitude;
+                if (dist > 6f || dist < 0.1f) continue;
+
+                float score = Vector3.Dot(forward, to / dist);
+                if (score > bestScore) { bestScore = score; best = id; }
+            }
+            return best;
         }
 
         private bool _showHelp;
@@ -767,7 +828,8 @@ namespace Noir.Unity
             Row("wheel", "zoom");
             GUILayout.Space(S(10f));
 
-            Row("T", "<b>ask the nearest neighbour what they saw</b>");
+            Row("T", "<b>ask what they saw</b> — whoever you're facing, else the nearest");
+            Row("B", "badge on / off — a stranger gets the short version");
             GUILayout.Space(S(10f));
 
             Row("click", "select somebody");
