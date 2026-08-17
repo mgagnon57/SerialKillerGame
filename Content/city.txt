@@ -1610,14 +1610,27 @@ place house 826,993 13x7 "106 E Green Ave"
   door 832,993
 # THE ESTATE. Owner's ruling 2026-08-16: the grand house stands on Perry's south side
 # just west of Route 1 — confirmed against the street itself (red brick, mansard roof,
-# carriage drive, the whole block face of grounds). The two modest houses the county
-# generator guessed at 102 and 104 never existed; 106 stays as the western neighbour.
+# carriage drive, the whole block face of grounds). Walked from all four sides by
+# Street View and satellite the same day: the grounds run as ONE UNBROKEN LAWN from
+# the mansion to Route 1's verge (Chicago St passes x=840 at this latitude) — mature
+# trees, a bench, no fence, no garage, no outbuilding of any kind. The three modest
+# houses the county generator guessed at 102, 104 and 106 never existed; "106"
+# (county parcel 430) stood in this front lawn with its east wall in the highway,
+# and the first lot EAST of Route 1 is open ground too, so it moves nowhere.
+# The terrain rows below are the carriage drive the satellite shows: both mouths on
+# Perry, sweeping through the northeast lawn, around the porch corner and past the
+# front door.
 # The address keeps the town's own name for the street — Perry, not Gilbert (line 21).
 # The building is the owner's hand-made model, stood by Content/models.txt.
 place house 782,1617 26x13 "101 Perry St"
   door 795,1617
-place house 826,1619 13x7 "106 Gilbert Ave"
-  door 832,1619
+terrain path 827,1608 3x3
+terrain path 824,1611 3x3
+terrain path 820,1614 4x3
+terrain path 808,1616 12x3
+terrain path 790,1614 18x3
+terrain path 785,1611 5x3
+terrain path 781,1608 4x3
 place house 774,1705 13x7 "101 Stewart Ave"
   door 780,1711
 place house 800,1705 13x7 "103 Stewart Ave"
