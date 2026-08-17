@@ -1,0 +1,30 @@
+newmtl body_black_plastic
+Kd 0.0116 0.0123 0.0137
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_silver
+Kd 0.5711 0.5906 0.6105
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl speaker_mesh_dark
+Kd 0.0044 0.0048 0.0052
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl dial_cream
+Kd 0.6867 0.6514 0.5520
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl accent_steel_blue
+Kd 0.0999 0.2159 0.3813
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl smoked_plastic
+Kd 0.0176 0.0194 0.0242
+Ks 0.05 0.05 0.05
+Ns 10
+

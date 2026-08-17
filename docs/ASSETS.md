@@ -48,7 +48,13 @@ county's guessed 102/104 Gilbert Ave with one grand lot (verified against the re
 the actual red-brick mansard estate stands exactly there), and Content/models.txt +
 CityBuildings.OwnerModels() stand any hand-made model on any addressed lot from now on. The
 place is fully real: door, household, witnesses. Props (PC, phone, soda machine) still want
-the desk/interior placement seam.
+the desk/interior placement seam. Eighth: **CrtTelevision** (2026-08-17) — 1,028 tris,
+13 material groups; 22.8"W x 28.5"H x 19.4"D, which is tall for a tabletop set and right for
+a floor-standing CONSOLE TV, the 1991 living-room anchor. Ninth: **Boombox1990s** (same day)
+— 4,724 tris, 6 materials; 21.3"W x 20.7"H x 7.5"D. SIZE FLAG, unreviewed by the owner: 20.7"
+tall is ghetto-blaster-with-the-handle-up territory — if the handle is down in the model, it
+is oversized and wants a scale ruling at placement. Both are interior props and join the PC,
+phone and soda machine in the queue for the desk/interior placement seam.
 
 ---
 
