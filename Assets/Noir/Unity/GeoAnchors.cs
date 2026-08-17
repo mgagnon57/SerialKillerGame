@@ -71,6 +71,17 @@ namespace Noir.Unity
             // Perry/Gilbert neighbourhood, not as gospel about the mansion.
             new Anchor { Name = "101 Perry St",
                          Lat = 40.3773085, Lng = -87.6680301, X = 795.0, Y = 1623.5 },
+            // Intersection anchors from the 2026-08-16 calibration pass: county-survey
+            // crossing tiles paired with Google intersection geocodes, residual-gated at
+            // 50m with adversarial rechecks. The pass validated the frame first: the
+            // Chicago x Attica control geocoded back within 2.3m E / 1.4m S of its
+            // survey crossing. Two candidates were REJECTED, not force-fitted - the
+            // geocoder has no route data at the town's east edge. Full table and the
+            // rejects' post-mortems: docs/research/GEO-CALIBRATION.md.
+            new Anchor { Name = "Harrison x York",
+                         Lat = 40.3847284, Lng = -87.6682433, X = 832.0, Y = 724.0 },
+            new Anchor { Name = "Abner x Park Place",
+                         Lat = 40.3780110, Lng = -87.6714849, X = 509.0, Y = 1483.0 },
         };
 
         /// <summary>The frame transform alone - true scale, no anchor correction.</summary>
