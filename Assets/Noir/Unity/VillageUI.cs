@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
 using Noir.Core.People;
+using Noir.Core.Response;
 using Noir.Core.World;
 using Noir.Core.Survey;
 
@@ -322,6 +323,7 @@ namespace Noir.Unity
                          || (legend.HasValue && legend.Value.Contains(mouse));
 
             DrawTopBar();
+            DrawCaseTicker();
             DrawInspector();
             DrawHelp();
             DrawTestimony();
@@ -475,6 +477,58 @@ namespace Noir.Unity
         /// Escape releases it.
         /// </summary>
         public static bool KeyboardCaptured { get; private set; }
+
+        /// <summary>
+        /// WHAT THE TOWN IS DOING ABOUT IT, one line under the clock per open case.
+        ///
+        /// The response machine already narrates every transition — ResponseCases.Emit writes
+        /// the case file and RunResponse prints each line to the console as `[case]` — but the
+        /// first evening anybody actually played a hit-and-run he stood over the victim for
+        /// three sim minutes asking where the law was, while the answer scrolled through a
+        /// console he was not looking at (2026-08-17). This is that answer where the player is
+        /// looking. Undiscovered cases are shown too, deliberately: the player SAW the hit —
+        /// what their eyes cannot see is the town's machinery turning, and "nobody has found
+        /// her yet" is that machinery reported honestly, not an omniscience leak. Closed cases
+        /// draw nothing; the street emptying out says it.
+        /// </summary>
+        private void DrawCaseTicker()
+        {
+            var cases = _host.Cases;
+            if (cases == null || cases.Count == 0) return;
+
+            var clock = _host.Sim.Clock;
+            int now = clock.Day * (GameClock.TicksPerDay / GameClock.TicksPerMinute) + clock.MinuteOfDay;
+
+            float y = BarHeight + S(6f);
+            for (int c = 0; c < cases.Count; c++)
+            {
+                var state = cases.StateOf(c);
+                if (state == CaseState.Closed) continue;
+
+                bool fatal = cases.FatalOf(c);
+                string them = fatal ? "the body" : "the victim";
+                string line = state switch
+                {
+                    CaseState.Undiscovered     => fatal ? "a body lies in the street — nobody has found it yet"
+                                                        : "somebody is down in the street — nobody has found them yet",
+                    CaseState.Alarm            => "somebody has seen it — the alarm is going out",
+                    CaseState.OfficerEnRoute   => "the call is in — an officer is on his way",
+                    CaseState.SceneHeld        => "an officer holds the scene, waiting on the county car",
+                    CaseState.CountyEnRoute    => "the county car is on the road in",
+                    CaseState.Canvassing       => "the county officer is going door to door",
+                    CaseState.AmbulanceEnRoute => "an ambulance is coming for " + them,
+                    CaseState.Loading          => "they are loading " + them,
+                    _                          => state.ToString(),
+                };
+                int mins = now - cases.MinuteOf(c);
+                string text = $"<color=#ff8a5c><b>case {c}</b></color>"
+                            + $" <color=#8a8a86>· {mins} min</color>  {line}";
+
+                GUI.Box(new Rect(S(12f), y, S(560f), S(26f)), GUIContent.none, _panel);
+                GUI.Label(new Rect(S(22f), y + S(4f), S(544f), S(20f)), text, _label);
+                y += S(30f);
+            }
+        }
 
         private void DrawTopBar()
         {

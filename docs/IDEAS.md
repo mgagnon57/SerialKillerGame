@@ -948,6 +948,16 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   `docs/superpowers/specs/2026-08-15-police-response-design.md`, both gates green
   (Core 561/0, PlayMode 31 of 31).
 
+- [ ] **The ambulance is a county unit and Rossville's was a volunteer service.** Owner
+  testimony 2026-08-17, now standing fact 6 in `SOURCES-OF-TRUTH.md`: *"We did have a
+  volunteer FD and EMS."* The machine sends one ambulance 10 sim-minutes off-map, after the
+  canvass — county timing in the county's slot. For a LIVING casualty the town's own
+  volunteer EMS should be paged at alarm time and crewed by named citizens who get up from
+  their own tables (the pharmacist is also the EMT — a witness-layer gift); the off-map
+  unit and the late slot may stay right for a body. Wants the owner's ruling on the split
+  before coding: who volunteers, where the rig lives (the FD building), what a page sounds
+  like at 300x. — *2026-08-17*
+
 - [ ] **The response rigs "arrive" far from the scene, and the gate cannot see it.** Watched
   live 2026-08-16 (dusk hit at village (679,760), editor Play, 60×): the county car parked
   1,700 ft short at (649,-1276) — plausibly the documented Patience park-and-walk, and the

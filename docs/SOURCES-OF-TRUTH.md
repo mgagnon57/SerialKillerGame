@@ -268,6 +268,20 @@ owner says otherwise.
    depth is short and the house looks less deep-set than it was. The medians are dominated by
    lots that were never split, but the figure is a floor rather than a centre.
 
+6. **Rossville had a VOLUNTEER fire department and EMS.** Owner, 2026-08-17, watching his
+   first live hit-and-run response and asking where the ambulance was:
+
+   > *"in a small town in rossville. We did have a volunteer FD and EMS"*
+
+   This bears directly on `ResponseCases`: the machine currently sends ONE ambulance,
+   10 sim-minutes off-map, and only after the canvass — which is a county unit's timing and
+   a county unit's place in the ladder. A volunteer service is IN TOWN: a page goes out and
+   named citizens get up from their own tables. For a **living casualty** the town's own
+   EMS should roll at alarm time, not after the paperwork; the off-map unit and the late
+   slot may still be right for a body (the coroner does not hurry). The design change is
+   filed in `docs/IDEAS.md` (Story) and wants the owner's ruling on specifics before
+   anybody codes it.
+
 ---
 
 ### The drawn road and its survey line — re-affirmed 2026-08-10
