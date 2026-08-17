@@ -283,9 +283,11 @@ This header said "currently there is none at all" until 2026-08-17, three commit
 Measured against the tree that day: `VillageAudio.cs` rings `bell.wav` on the hour at the
 church's own belfry height, plays terrain-driven footsteps, carries three ambience beds, and
 is silent in batch mode always. What actually exists in `Content/audio/` — fourteen loose
-WAVs: the bell, three ambience beds (dawn/day/night, ~1 MB each, loaded and DELIBERATELY
-silenced until somebody listens to all three and decides what each is for — the war story is
-in `VillageAudio.cs`), and ten step samples.
+WAVs: the bell, three ambience beds (dawn/day/night, ~1 MB each — RUNNING as of 2026-08-17:
+the owner listened to each bed solo and ruled all three back on. The census: night is wind
+only, dawn is birdsong, day is birds again — two of three carry birds, which is why the old
+"silence the dawn chorus" fix never worked; the full story is on `AmbienceEnabled` in
+`VillageAudio.cs`), and ten step samples.
 
 - [ ] **Footsteps Pack** — ~$30, 3,011 samples. **No longer the way to GET footsteps — the
   game has them, wired exactly the way this item predicted would be nearly free**:
@@ -301,9 +303,10 @@ in `VillageAudio.cs`), and ten step samples.
   [Asset Store](https://assetstore.unity.com/packages/tools/audio/ambient-sounds-interactive-soundscapes-for-unity-6-142132)
 
   Global, 1D, 2D and 3D zones, which maps straight onto what the map already is: downtown, the
-  suburb ring, the country frame, and the individual places inside them. But the three
-  home-made beds are already on disk and silenced pending a listen — settle what each bed
-  contains before buying layers to put on top.
+  suburb ring, the country frame, and the individual places inside them. The listen that gated
+  this purchase happened 2026-08-17 and the three home-made beds are running — so the question
+  is now a real comparison: what would zoned soundscapes add over wind, chorus and day birds
+  that already follow the clock? Judge it against the running town, not against silence.
 
 - [ ] **City Ambience Sound** — ~$20. Raw material for the above.
   [Asset Store](https://assetstore.unity.com/packages/audio/ambient/urban/city-ambience-sound-309820)
