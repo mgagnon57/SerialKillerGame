@@ -42,7 +42,7 @@ answers and gets REMEMBERED for asking.
    around"). Thinning only ever REMOVES — the vagueness rule forbids adding precision, and
    truncation cannot. `Testimony.SawNothing` passes through untrimmed either way.
 
-## Phase 2 — Core, tested, NOT tonight
+## Phase 2 — Core, tested, landed 2026-08-17
 
 - **Being asked is an event.** A civilian who questions a witness is REMEMBERED: the
   witness can later testify "somebody was around asking questions about her" — through the
@@ -52,6 +52,8 @@ answers and gets REMEMBERED for asking.
   case file via the same seam the county canvass uses.
 - Wants its own plan; both features change testimony content and must go through the
   Core gate.
+- Landed 2026-08-17 via `docs/superpowers/plans/2026-08-17-witness-voices-phase2.md`; Core
+  gate measured 580 pass, 0 fail, 580 total, 8 skipped (CLAUDE.md's own baseline).
 
 ## Out of scope, named so nobody wonders
 

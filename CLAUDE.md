@@ -68,6 +68,13 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
+> **580 pass, 0 fail, 580 total, 8 skipped, 2 m 09 s.** Measured 2026-08-17 (night), after
+> witness voices Phase 2 landed (+11: `AskEventsTests`, `EventTestimonyTests`' ask-sighting and
+> merge additions, `ResponseCasesTests`' `BadgeAsked` quartet). Being asked is an event
+> (`AskEvents` → `Recollection` → "somebody going around asking questions") and a badge ask lands
+> in the case file (`ResponseCases.BadgeAsked`). Plan:
+> `docs/superpowers/plans/2026-08-17-witness-voices-phase2.md`.
+>
 > **569 pass, 0 fail, 569 total, 8 skipped, 2 m 13 s.** Measured 2026-08-16 (evening), after
 > the police-look branch's Core tasks landed (+8: `BoardTests` — the officer rides the
 > cruiser, present in the town and absent from the street — and `RespondTests`' stand-as
