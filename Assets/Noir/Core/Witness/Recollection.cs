@@ -147,10 +147,11 @@ namespace Noir.Core.Witness
         public static EventSighting[] WhatTheySawOfEvents(WorldModel world, Population population,
             Citizen who, int day, HitEvents hits, ulong seed,
             INightWitnesses nightWitnesses = null,
-            IInterruptions interruptions = null, ISightBlocked blocked = null)
+            IInterruptions interruptions = null, ISightBlocked blocked = null,
+            AskEvents asks = null)
         {
-            var found = new List<EventSighting>();
-            if (hits == null || hits.Count == 0) return System.Array.Empty<EventSighting>();
+            if ((hits == null || hits.Count == 0) && (asks == null || asks.Count == 0))
+                return System.Array.Empty<EventSighting>();
 
             DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
             int downedFrom = interruptions?.DownedFromMinute(who.Id) ?? int.MaxValue;
@@ -159,29 +160,64 @@ namespace Noir.Core.Witness
             // ASKED ONCE, not per event: see the identical comment on WhatTheySaw.
             bool seesWhileAsleep = nightWitnesses != null && nightWitnesses.AwakeEnough(who.Id);
 
-            hits.ForEach((minute, where, tone, shape) =>
+            // The witness arithmetic, shared by every KIND of event: null means "never saw it".
+            // One extraction rather than two copies, because the rules gating a hit and gating an
+            // ask are the same rules by design — an event is witnessed by exactly the people who
+            // could see that tile at that minute, whatever happened on it.
+            (SightingClarity clarity, Tile watcher)? Look(int minute, Tile where)
             {
                 int minuteOfDay = minute % MinutesPerDay;
-                if (minute / MinutesPerDay != day) return;
-                if (minute >= downedFrom && minute < backFrom) return;   // silenced while down or away
+                if (minute / MinutesPerDay != day) return null;
+                if (minute >= downedFrom && minute < backFrom) return null;   // silenced while down or away
 
                 Block block = plan.At(minuteOfDay);
-                if (block.What == Activity.TravellingTo) return;
-                if (block.What == Activity.Asleep && !seesWhileAsleep) return;
-                if (!block.Where.IsValid) return;
+                if (block.What == Activity.TravellingTo) return null;
+                if (block.What == Activity.Asleep && !seesWhileAsleep) return null;
+                if (!block.Where.IsValid) return null;
 
                 Tile watcher = world.GetPlace(block.Where).Door;
                 var when = new GameClock(GameClock.TickAt(day, minuteOfDay));
                 SightingClarity clarity = Sightlines.HowGoodALook(watcher, where, when, who);
-                if (!Sightlines.SawAnythingAtAll(clarity, watcher, where, when, blocked)) return;
+                if (!Sightlines.SawAnythingAtAll(clarity, watcher, where, when, blocked)) return null;
+                return (clarity, watcher);
+            }
 
-                var car = Degradation.CarRegistered(clarity, tone, shape, who.Key, minute, seed);
-                found.Add(new EventSighting(new ObserverId(found.Count),
-                                            BlurredMinute(minute, clarity),
-                                            watcher, clarity,
-                                            EventAct.CarStruckSomebody, car));
+            var hitSeen = new List<EventSighting>(); var hitTrue = new List<int>();
+            var askSeen = new List<EventSighting>(); var askTrue = new List<int>();
+
+            hits?.ForEach((minute, where, tone, shape) =>
+            {
+                var look = Look(minute, where);
+                if (look == null) return;
+                var car = Degradation.CarRegistered(look.Value.clarity, tone, shape, who.Key, minute, seed);
+                hitSeen.Add(new EventSighting(default, BlurredMinute(minute, look.Value.clarity),
+                                              look.Value.watcher, look.Value.clarity,
+                                              EventAct.CarStruckSomebody, car));
+                hitTrue.Add(minute);
             });
 
+            asks?.ForEach((minute, where) =>
+            {
+                var look = Look(minute, where);
+                if (look == null) return;
+                askSeen.Add(new EventSighting(default, BlurredMinute(minute, look.Value.clarity),
+                                              look.Value.watcher, look.Value.clarity,
+                                              EventAct.SomebodyAskedQuestions,
+                                              new CarDescription(CarTone.Unnoticed, CarShape.Unnoticed)));
+                askTrue.Add(minute);
+            });
+
+            // TRUE-minute order across BOTH kinds — AskInEnglish's merge documents and relies on
+            // it. Two sorted runs (each store is forward-only), ties go to the hit: the graver
+            // thing is what a witness reports first. ObserverId is stamped by final position.
+            var found = new List<EventSighting>(hitSeen.Count + askSeen.Count);
+            EventSighting Stamp(EventSighting s) =>
+                new EventSighting(new ObserverId(found.Count), s.Minute, s.Where, s.Clarity, s.Act, s.Car);
+            int i = 0, j = 0;
+            while (i < hitSeen.Count && j < askSeen.Count)
+                found.Add(hitTrue[i] <= askTrue[j] ? Stamp(hitSeen[i++]) : Stamp(askSeen[j++]));
+            while (i < hitSeen.Count) found.Add(Stamp(hitSeen[i++]));
+            while (j < askSeen.Count) found.Add(Stamp(askSeen[j++]));
             return found.ToArray();
         }
 
@@ -203,12 +239,14 @@ namespace Noir.Core.Witness
                                             INightWitnesses nightWitnesses = null,
                                             ISightBlocked blocked = null,
                                             HitEvents hits = null,
-                                            IInterruptions interruptions = null)
+                                            IInterruptions interruptions = null,
+                                            AskEvents asks = null)
         {
             Sighting[] saw = WhatTheySaw(world, population, who, day, track, seed,
                                          nightWitnesses, blocked, interruptions);
             EventSighting[] events = WhatTheySawOfEvents(world, population, who, day, hits,
-                                                         seed, nightWitnesses, interruptions, blocked);
+                                                         seed, nightWitnesses, interruptions, blocked,
+                                                         asks);
 
             // A SENTENCE, NOT AN EMPTY ARRAY. "I saw nobody" and "nobody asked me" are the same
             // value to a caller holding an empty list and completely different answers to a

@@ -492,5 +492,93 @@ namespace Noir.Core.Tests
             Assert.That(windowed[0].Minute, Is.EqualTo(undisturbed[0].Minute));
             Assert.That(windowed[1].Minute, Is.EqualTo(undisturbed[2].Minute));
         }
+
+        /// <summary>
+        /// Phase 2's core promise: a witness remembers being asked, through the SAME sighting
+        /// arithmetic hits use. Distance zero on purpose (the ask happens at the witness's own
+        /// door), the same trick the merge test above uses: what is under test is that the ask
+        /// arrives in testimony at all, not the lighting model.
+        /// </summary>
+        [Test]
+        public void AWitnessRemembersSomebodyAskingQuestions()
+        {
+            const int day = 3;
+            var v = VillageContext.Load();
+
+            Citizen who = null;
+            int minuteOfDay = -1;
+            foreach (Citizen candidate in v.People.Citizens)
+            {
+                DayPlan plan = DayPlanner.Plan(v.World, v.People, candidate, day, v.Seed);
+                for (int m = 0; m < Sighting.MinutesPerDay; m++)
+                {
+                    if (!IsStationary(plan.At(m))) continue;
+                    who = candidate; minuteOfDay = m; break;
+                }
+                if (who != null) break;
+            }
+            Assert.That(who, Is.Not.Null, "no citizen in the fixture village is ever stationary");
+
+            DayPlan whosPlan = DayPlanner.Plan(v.World, v.People, who, day, v.Seed);
+            Tile spot = v.World.GetPlace(whosPlan.At(minuteOfDay).Where).Door;
+
+            var asks = new AskEvents();
+            asks.Record(day * Sighting.MinutesPerDay + minuteOfDay, spot);
+
+            string[] said = Recollection.AskInEnglish(v.World, v.People, who, day,
+                                                      new PlayerTrack(), v.Seed, asks: asks);
+
+            Assert.That(said.Length, Is.EqualTo(1), string.Join(" | ", said));
+            Assert.That(said[0].ToLowerInvariant(), Does.Contain("asking questions"),
+                "the ask should surface as testimony: " + string.Join(" | ", said));
+        }
+
+        /// <summary>
+        /// A hit and an ask an hour apart must come out in the order they happened - the merge
+        /// promise holds ACROSS all three kinds of line (person, hit, ask), not just two. Sixty
+        /// minutes, not ten, for the same blur-proofing reason as the person/event merge test.
+        /// </summary>
+        [Test]
+        public void HitsAndAsksMergeInMinuteOrder()
+        {
+            const int day = 3;
+            const int gap = 60;
+            var v = VillageContext.Load();
+
+            Citizen who = null;
+            int hitMinuteOfDay = -1, askMinuteOfDay = -1;
+            foreach (Citizen candidate in v.People.Citizens)
+            {
+                DayPlan plan = DayPlanner.Plan(v.World, v.People, candidate, day, v.Seed);
+                for (int m = 0; m + gap < Sighting.MinutesPerDay; m++)
+                {
+                    if (!IsStationary(plan.At(m)) || !IsStationary(plan.At(m + gap))) continue;
+                    who = candidate; hitMinuteOfDay = m; askMinuteOfDay = m + gap; break;
+                }
+                if (who != null) break;
+            }
+            Assert.That(who, Is.Not.Null,
+                "no citizen in the fixture village is ever stationary twice, an hour apart");
+
+            DayPlan whosPlan = DayPlanner.Plan(v.World, v.People, who, day, v.Seed);
+            Tile hitSpot = v.World.GetPlace(whosPlan.At(hitMinuteOfDay).Where).Door;
+            Tile askSpot = v.World.GetPlace(whosPlan.At(askMinuteOfDay).Where).Door;
+
+            var hits = new HitEvents();
+            hits.Record(day * Sighting.MinutesPerDay + hitMinuteOfDay, hitSpot,
+                        CarTone.Dark, CarShape.Van);
+            var asks = new AskEvents();
+            asks.Record(day * Sighting.MinutesPerDay + askMinuteOfDay, askSpot);
+
+            string[] said = Recollection.AskInEnglish(v.World, v.People, who, day,
+                                                      new PlayerTrack(), v.Seed,
+                                                      hits: hits, asks: asks);
+
+            Assert.That(said.Length, Is.EqualTo(2), string.Join(" | ", said));
+            Assert.That(said[0].ToLowerInvariant(), Does.Contain("hit"),
+                "the hit happened first and should be told first: " + string.Join(" | ", said));
+            Assert.That(said[1].ToLowerInvariant(), Does.Contain("asking questions"),
+                "the ask came an hour later and should be told second: " + string.Join(" | ", said));
+        }
     }
 }
