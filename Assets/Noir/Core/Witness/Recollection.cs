@@ -148,9 +148,10 @@ namespace Noir.Core.Witness
             Citizen who, int day, HitEvents hits, ulong seed,
             INightWitnesses nightWitnesses = null,
             IInterruptions interruptions = null, ISightBlocked blocked = null,
-            AskEvents asks = null)
+            AskEvents asks = null, CrashEvents crashes = null)
         {
-            if ((hits == null || hits.Count == 0) && (asks == null || asks.Count == 0))
+            if ((hits == null || hits.Count == 0) && (asks == null || asks.Count == 0) &&
+                (crashes == null || crashes.Count == 0))
                 return System.Array.Empty<EventSighting>();
 
             DayPlan plan = DayPlanner.Plan(world, population, who, day, seed);
@@ -184,6 +185,7 @@ namespace Noir.Core.Witness
 
             var hitSeen = new List<EventSighting>(); var hitTrue = new List<int>();
             var askSeen = new List<EventSighting>(); var askTrue = new List<int>();
+            var crashSeen = new List<EventSighting>(); var crashTrue = new List<int>();
 
             hits?.ForEach((minute, where, tone, shape) =>
             {
@@ -207,17 +209,50 @@ namespace Noir.Core.Witness
                 askTrue.Add(minute);
             });
 
-            // TRUE-minute order across BOTH kinds — AskInEnglish's merge documents and relies on
-            // it. Two sorted runs (each store is forward-only), ties go to the hit: the graver
-            // thing is what a witness reports first. ObserverId is stamped by final position.
-            var found = new List<EventSighting>(hitSeen.Count + askSeen.Count);
-            EventSighting Stamp(EventSighting s) =>
-                new EventSighting(new ObserverId(found.Count), s.Minute, s.Where, s.Clarity, s.Act, s.Car);
+            // SAME Look GATE, SAME Degradation.CarRegistered CALL THE HIT PASS USES - a crash's
+            // at-fault car degrades exactly like a hit's car, same purpose constant and the same
+            // memory-is-the-seed property, deliberately: the street does not distinguish the car
+            // that hit somebody from the car that hit another car.
+            crashes?.ForEach((minute, where, tone, shape) =>
+            {
+                var look = Look(minute, where);
+                if (look == null) return;
+                var car = Degradation.CarRegistered(look.Value.clarity, tone, shape, who.Key, minute, seed);
+                crashSeen.Add(new EventSighting(default, BlurredMinute(minute, look.Value.clarity),
+                                                look.Value.watcher, look.Value.clarity,
+                                                EventAct.CarsCollided, car));
+                crashTrue.Add(minute);
+            });
+
+            // TRUE-minute order across ALL THREE kinds — AskInEnglish's merge documents and relies
+            // on it. Two successive two-run merges (hits+asks first, exactly as before crashes
+            // existed; that result merged with crashes second) rather than one three-way merge,
+            // so the existing hit/ask behaviour is provably untouched. Ties go to the graver thing
+            // first: hits before asks before crashes. ObserverId is stamped by final position -
+            // stamping only happens in the SECOND merge, once a sighting's true final slot is
+            // known, so the property holds across both passes rather than being disturbed by a
+            // renumber-then-renumber.
+            var hitsAndAsks = new List<EventSighting>(hitSeen.Count + askSeen.Count);
+            var hitsAndAsksTrue = new List<int>(hitSeen.Count + askSeen.Count);
             int i = 0, j = 0;
             while (i < hitSeen.Count && j < askSeen.Count)
-                found.Add(hitTrue[i] <= askTrue[j] ? Stamp(hitSeen[i++]) : Stamp(askSeen[j++]));
-            while (i < hitSeen.Count) found.Add(Stamp(hitSeen[i++]));
-            while (j < askSeen.Count) found.Add(Stamp(askSeen[j++]));
+            {
+                bool hitFirst = hitTrue[i] <= askTrue[j];
+                hitsAndAsks.Add(hitFirst ? hitSeen[i] : askSeen[j]);
+                hitsAndAsksTrue.Add(hitFirst ? hitTrue[i] : askTrue[j]);
+                if (hitFirst) i++; else j++;
+            }
+            while (i < hitSeen.Count) { hitsAndAsks.Add(hitSeen[i]); hitsAndAsksTrue.Add(hitTrue[i]); i++; }
+            while (j < askSeen.Count) { hitsAndAsks.Add(askSeen[j]); hitsAndAsksTrue.Add(askTrue[j]); j++; }
+
+            var found = new List<EventSighting>(hitsAndAsks.Count + crashSeen.Count);
+            EventSighting Stamp(EventSighting s) =>
+                new EventSighting(new ObserverId(found.Count), s.Minute, s.Where, s.Clarity, s.Act, s.Car);
+            int k = 0, c = 0;
+            while (k < hitsAndAsks.Count && c < crashSeen.Count)
+                found.Add(hitsAndAsksTrue[k] <= crashTrue[c] ? Stamp(hitsAndAsks[k++]) : Stamp(crashSeen[c++]));
+            while (k < hitsAndAsks.Count) found.Add(Stamp(hitsAndAsks[k++]));
+            while (c < crashSeen.Count) found.Add(Stamp(crashSeen[c++]));
             return found.ToArray();
         }
 
@@ -240,13 +275,14 @@ namespace Noir.Core.Witness
                                             ISightBlocked blocked = null,
                                             HitEvents hits = null,
                                             IInterruptions interruptions = null,
-                                            AskEvents asks = null)
+                                            AskEvents asks = null,
+                                            CrashEvents crashes = null)
         {
             Sighting[] saw = WhatTheySaw(world, population, who, day, track, seed,
                                          nightWitnesses, blocked, interruptions);
             EventSighting[] events = WhatTheySawOfEvents(world, population, who, day, hits,
                                                          seed, nightWitnesses, interruptions, blocked,
-                                                         asks);
+                                                         asks, crashes);
 
             // A SENTENCE, NOT AN EMPTY ARRAY. "I saw nobody" and "nobody asked me" are the same
             // value to a caller holding an empty list and completely different answers to a
