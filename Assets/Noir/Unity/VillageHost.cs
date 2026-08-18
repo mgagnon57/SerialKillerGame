@@ -1230,7 +1230,8 @@ namespace Noir.Unity
             if (People == null || World == null) return System.Array.Empty<string>();
             _interruptions ??= new SimInterruptions(this);
             return Recollection.AskInEnglish(World, People, People.Get(who), day, Track, Seed,
-                                             null, null, _hitEvents, _interruptions, _askEvents);
+                                             null, null, _hitEvents, _interruptions, _askEvents,
+                                             _crashEvents);
         }
 
         /// <summary>
@@ -1318,6 +1319,10 @@ namespace Noir.Unity
         /// <summary>Every ask a witness was ever put, so a doorstep canvass can itself be seen.</summary>
         private readonly AskEvents _askEvents = new AskEvents();
 
+        /// <summary>The third genuine history: every crash the town staged, so a witness can say
+        /// two cars came together. Written by <see cref="StageCollision"/> alone.</summary>
+        private readonly CrashEvents _crashEvents = new CrashEvents();
+
         /// <summary>The witness and minute PlayerAsks last acted on, so T-key spam does not
         /// re-file or re-record the same doorstep visit. The case file is the permanent
         /// record; a witness asked twice in the same minute said the same thing once.</summary>
@@ -1394,6 +1399,134 @@ namespace Noir.Unity
             _victims.TryGetValue(who.Value, out var r);
             r.BackFrom = minute;
             _victims[who.Value] = r;
+        }
+
+        // ---- the day's crash --------------------------------------------------------------
+
+        /// <summary>The day <see cref="_crashPlan"/> was computed for. The planner is pure and
+        /// cheap enough to call, but not once a minute over 1,300 day plans — the plan is
+        /// computed once when the day turns and read thereafter.</summary>
+        private int _crashPlanDay = -1;
+        private CrashPlan? _crashPlan;
+
+        /// <summary>The day whose crash has already been staged, so a plan fires once however
+        /// many minutes RunResponse sees at or past its minute.</summary>
+        private int _crashStagedForDay = -1;
+
+        /// <summary>What StageCollision physically put in the street for one case, so the tow
+        /// and the close can take it back out. The machine never hears of any of this.</summary>
+        private sealed class StagedCrash
+        {
+            public GameObject AtFaultCar;
+            public GameObject OtherCar;
+            public CitizenId AtFault;
+            public CitizenId Other;
+        }
+        private readonly Dictionary<int, StagedCrash> _stagedCrashes = new Dictionary<int, StagedCrash>();
+
+        /// <summary>
+        /// Two of Rossville's own drivers come together, per the planner's ruling. PUBLIC so the
+        /// PlayMode scenario can stage a manufactured plan; the game's own caller is RunResponse,
+        /// once on the planned minute.
+        ///
+        /// The cars are the drivers' real parked cars when they still stand at home
+        /// (<see cref="CityDriveways.Take"/> — the slot goes permanently empty, which is true:
+        /// the car left and, one way or another, is not coming back tonight), and the at-fault
+        /// car's REAL tone and shape override the plan's guess in the event record — witnesses
+        /// degrade from what actually stood in the street. The drivers ride the
+        /// Respond/Board/Alight composition to the scene — they arrived with their cars, not on
+        /// foot — and stand there, Responding, until the verdict releases them or takes them away.
+        /// </summary>
+        public void StageCollision(CrashPlan plan)
+        {
+            if (Sim == null || World == null || People == null) return;
+
+            // A driver the day already spent — downed by the player, away in the ambulance —
+            // cannot crash a car tonight. No crash that day is the honest outcome.
+            AgentState af = Sim.GetAgent(plan.AtFault);
+            AgentState ot = Sim.GetAgent(plan.Other);
+            if (af.Downed || af.AwayUntilMinute != 0 || ot.Downed || ot.AwayUntilMinute != 0)
+            {
+                Debug.Log("[crash] the day's crash is called off — a driver is already down or away");
+                return;
+            }
+
+            int minute = NowMinute();
+            Vector3 sceneWorld = Space3D.ToWorld(plan.Scene);
+
+            // The at-fault car stands angled off the road axis; the other nose-to-fender against
+            // it, angled the opposite way, one car length along the first one's own heading.
+            CarTone tone = plan.Tone;
+            CarShape shape = plan.Shape;
+            var staged = new StagedCrash { AtFault = plan.AtFault, Other = plan.Other };
+            staged.AtFaultCar = TakeCarOf(plan.AtFault, sceneWorld, yaw: 30f, ref tone, ref shape);
+
+            Vector3 otherAt = sceneWorld + Quaternion.Euler(0f, 30f, 0f) * Vector3.forward * 4.6f;
+            otherAt.y = ElevationGrid.HeightAt(otherAt.x, -otherAt.z);
+            CarTone otherTone = CarTone.Unnoticed; CarShape otherShape = CarShape.Unnoticed;
+            staged.OtherCar = TakeCarOf(plan.Other, otherAt, yaw: 205f, ref otherTone, ref otherShape);
+
+            // The event the witnesses may remember, stamped with what actually stood there.
+            _crashEvents.Record(minute, plan.Scene, tone, shape);
+
+            // Both drivers arrive with their cars. The at-fault driver goes down where he
+            // stands on the rare bad one — the same interruption window CarStruckSomebody
+            // writes, or the downed driver keeps testifying.
+            PutDriverAtScene(plan.AtFault, plan.Scene);
+            PutDriverAtScene(plan.Other, KerbTileNear(otherAt, plan.Scene));
+            if (plan.Injury)
+            {
+                Sim.Down(plan.AtFault);
+                _victims.TryGetValue(plan.AtFault.Value, out var was);
+                _victims[plan.AtFault.Value] = new VictimRecord
+                {
+                    DownedFrom = _victims.ContainsKey(plan.AtFault.Value)
+                        ? Math.Min(was.DownedFrom, minute) : minute,
+                    BackFrom = int.MaxValue,
+                    Fatal   = false,   // a collision injury is never fatal in phase 1
+                };
+            }
+
+            int caseId = _cases.OpenCollision(plan.AtFault, plan.Other, minute, plan.Scene,
+                                              tone, shape, plan.Injury, plan.Verdict);
+            _stagedCrashes[caseId] = staged;
+
+            Debug.Log($"[crash] two cars came together at {plan.Scene} minute {minute}: "
+                    + $"citizen {plan.AtFault.Value} into citizen {plan.Other.Value}, "
+                    + $"injury={plan.Injury}, verdict={plan.Verdict}. "
+                    + $"Case {caseId} is open, and the town can be asked about it.");
+            if (!plan.Injury) _voices?.Say(plan.AtFault, "he came out of nowhere—");
+            _voices?.Say(plan.Other, (plan.Other.Value & 1) == 0
+                ? "my fender— look at my fender."
+                : "you alright? that was a hell of a bang.");
+        }
+
+        /// <summary>One driver's parked car, taken from its driveway slot and stood at the
+        /// scene — or null when they have no door, no car within 20 m of it, or the town has no
+        /// driveways at all, in which case the plan's guessed tone stands. On success the ref
+        /// tone/shape become the car's real ones.</summary>
+        private GameObject TakeCarOf(CitizenId owner, Vector3 to, float yaw,
+                                     ref CarTone tone, ref CarShape shape)
+        {
+            if (_driveways == null) return null;
+            if (!TryDoorOf(owner, out Tile door)) return null;
+            int index = _driveways.NearestCar(Space3D.ToWorld(door), 20f);
+            if (index < 0) return null;
+
+            var (car, realTone, realShape) = _driveways.Take(index);
+            car.transform.SetPositionAndRotation(to, Quaternion.Euler(0f, yaw, 0f));
+            tone = realTone; shape = realShape;
+            return car;
+        }
+
+        /// <summary>The Respond/Board/Alight composition the cruiser already rides: the driver
+        /// is at the scene NOW, because they drove there — a crash whose drivers spend twenty
+        /// minutes walking across town to their own accident is not a crash.</summary>
+        private void PutDriverAtScene(CitizenId who, Tile at)
+        {
+            Sim.Respond(who, at);
+            Sim.Board(who);
+            Sim.Alight(who, at);
         }
 
         // ---- the response -----------------------------------------------------------------
@@ -1496,6 +1629,22 @@ namespace Noir.Unity
         {
             int minuteOfDay = Sim.Clock.MinuteOfDay;
             int minute = NowMinute();
+
+            // ---- 0. The day's planned crash ----
+            //
+            // Computed once when the day turns, staged once when the clock reaches its minute.
+            // >= not ==, the loop's own idiom: a skipped minute still crashes.
+            if (_crashPlanDay != Sim.Clock.Day)
+            {
+                _crashPlanDay = Sim.Clock.Day;
+                _crashPlan = CrashPlanner.PlanFor(World, People, Sim.Clock.Day, Seed);
+            }
+            if (_crashPlan.HasValue && _crashStagedForDay != Sim.Clock.Day
+                && minuteOfDay >= _crashPlan.Value.MinuteOfDay)
+            {
+                _crashStagedForDay = Sim.Clock.Day;
+                StageCollision(_crashPlan.Value);
+            }
 
             // ---- 1. Somebody looks out of a window ----
             //
@@ -1602,6 +1751,18 @@ namespace Noir.Unity
                         _traffic?.LowerCordon();
                         _cordonCase = -1;
                         Debug.Log($"[case] case {c}: the cordon comes down");
+                    }
+                    if (_stagedCrashes.TryGetValue(c, out var wreck))
+                    {
+                        // Whatever the verdict left in the street goes with the case: the
+                        // remaining cars (their drivers drove off, or the hook came for the
+                        // rest) and any driver still standing at the scene.
+                        if (wreck.AtFaultCar != null) Destroy(wreck.AtFaultCar);
+                        if (wreck.OtherCar != null) Destroy(wreck.OtherCar);
+                        Sim.Release(wreck.AtFault);
+                        Sim.Release(wreck.Other);
+                        _stagedCrashes.Remove(c);
+                        Debug.Log($"[case] case {c}: the street is clear again");
                     }
                     continue;
                 }
@@ -1794,6 +1955,61 @@ namespace Noir.Unity
                     Response.Depart(CityResponse.Rig.Ambulance, edgeSouth: false);
                     return;
                 }
+
+                case OrderKind.InterviewDriver:
+                {
+                    // The driver is standing in the same street the county car is parked in —
+                    // no door, no walk: the statement is taken at the kerb, filed through the
+                    // same seam and with the same pacing as a canvass answer.
+                    int id = order.Case;
+                    CitizenId who = order.Who;
+                    _cases.CountyReachedDoor(id, minute, who, AskWhatTheySaw(who, DayOfHit(id)));
+                    _voices?.Say(who, "…and that's how it happened.");
+                    return;
+                }
+
+                case OrderKind.ArrestDriver:
+                {
+                    // Down-then-TakeAway is the sanctioned composition for a body leaving town,
+                    // and both halves no-op when the ambulance already has him (an injury DUI
+                    // was carried off by TakeBodyAway moments before this order). No
+                    // VictimReturned here: an arrested man was never a silenced witness.
+                    _voices?.Say(order.Who, "ah, hell.");
+                    int back = _cases.ReturnMinuteOf(order.Case);
+                    Sim.Down(order.Who);
+                    Sim.TakeAway(order.Who, back);
+                    Debug.Log($"[case] case {order.Case}: citizen {order.Who.Value} rides to "
+                            + "the county lockup");
+                    return;
+                }
+
+                case OrderKind.TicketDriver:
+                {
+                    _voices?.Say(order.Who, "a ticket. wonderful.");
+                    Sim.Release(order.Who);
+                    return;
+                }
+
+                case OrderKind.ReleaseDrivers:
+                {
+                    // Who is CitizenId.None by design — both drivers go. Release no-ops on
+                    // anybody not Responding, so a driver already taken away is safe to name.
+                    Sim.Release(_cases.VictimOf(order.Case));
+                    Sim.Release(_cases.OtherOf(order.Case));
+                    _voices?.Say(_cases.VictimOf(order.Case), "insurance. we'll let the insurance sort it.");
+                    return;
+                }
+
+                case OrderKind.TowVehicle:
+                {
+                    if (_stagedCrashes.TryGetValue(order.Case, out var sc) && sc.AtFaultCar != null)
+                    {
+                        Destroy(sc.AtFaultCar);
+                        sc.AtFaultCar = null;
+                        Debug.Log($"[case] case {order.Case}: the car goes on the hook");
+                    }
+                    return;
+                }
             }
         }
 
@@ -1804,6 +2020,11 @@ namespace Noir.Unity
         private void CountyIsHere(int caseId, int minute)
         {
             _cases.CountyArrived(caseId, minute);
+
+            // A collision's witness list is the two drivers, and the machine set it itself
+            // inside CountyArrived — CanvassBegins would throw, and rightly.
+            if (_cases.KindOf(caseId) == CaseKind.Collision) return;
+
             _cases.CanvassBegins(caseId, CanvassListFor(caseId));
         }
 

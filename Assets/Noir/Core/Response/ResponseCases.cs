@@ -212,6 +212,10 @@ namespace Noir.Core.Response
         public CaseState StateOf(int caseId) => _cases[caseId].State;
         public CaseKind KindOf(int caseId) => _cases[caseId].Kind;
         public CitizenId VictimOf(int caseId) => _cases[caseId].Victim;
+
+        /// <summary>The second driver of a Collision; CitizenId.None for PersonDown — the host's
+        /// ReleaseDrivers arm has to name both drivers and the order deliberately names neither.</summary>
+        public CitizenId OtherOf(int caseId) => _cases[caseId].Other;
         public Tile SceneOf(int caseId) => _cases[caseId].Scene;
 
         /// <summary>The hit's own absolute minute, fixed at Open — not the minute it was
