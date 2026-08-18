@@ -9,6 +9,9 @@ re-route-around and queue-at-the-tape. Props are **generated simple** (striped s
 tape line, flat-color style) so the feature does not wait on modeling; owner models replace
 them later with no code change, the cruiser's own precedent.
 
+**Landed 2026-08-18** via `docs/superpowers/plans/2026-08-17-scene-cordon.md`; Core gate
+582 pass, 0 fail, 8 skipped.
+
 ## What exists already, and is kept
 
 - `ResponseCases` broadcasts every moment the cordon needs: `OfficerArrived` (cordon up),

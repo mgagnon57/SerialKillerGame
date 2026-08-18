@@ -68,6 +68,13 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
+> **582 pass, 0 fail, 582 total, 8 skipped, 2 m 16 s.** Measured 2026-08-18, after the scene
+> cordon landed (+2: `RespondTests`' DirectingTraffic pair,
+> `AStandAsOfDirectingTrafficIsWornOnArrival` and
+> `DirectingTrafficHasARowInTheRealFileUsingOnlyCarriedClips`, backing the scene cordon — the
+> officer directs one lane through a held scene). Plan:
+> `docs/superpowers/plans/2026-08-17-scene-cordon.md`.
+>
 > **580 pass, 0 fail, 580 total, 8 skipped, 2 m 09 s.** Measured 2026-08-17 (night), after
 > witness voices Phase 2 landed (+11: `AskEventsTests`, `EventTestimonyTests`' ask-sighting and
 > merge additions, `ResponseCasesTests`' `BadgeAsked` quartet). Being asked is an event
