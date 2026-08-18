@@ -88,7 +88,20 @@ at the real station's address swaps this in. Eighteenth: **RossvillePostOffice**
 2,328 tris; 85.3 x 78.3 ft, 69.4 ft to its top — a THREE-STORY block (the owner's own count,
 correcting this file's "five-story" guess from dividing by modern floor heights; a 19th-century
 civic block runs tall floors, and the peak includes whatever crowns it). RULED BY THE OWNER
-2026-08-17: "It is right" — stands at modeled size, no scale at placement.
+2026-08-17: "It is right" — stands at modeled size, no scale at placement. Twentieth through
+twenty-fourth (same night — AND A SCALE SHIFT: he models whole LOTS now, building plus
+grounds; the church carries lawn_grass and walk_concrete materials, which is why these
+footprints read big for bare buildings and right for parcels): **RossvilleMethodistChurch**
+— 3,566 tris, 137.8 x 99.4 ft site, 64 ft to the top, his second TEXTURED export (one PNG,
+wired as `RossvilleMethodistChurch_mat_0.mat` through the importer remap, the soda machine's
+pattern). **RossvilleQueenAnneHome** — 4,016 tris, 111.6 x 78.7 ft site, 40.4 ft.
+**RossvilleFireStation** — 9,420 tris, 137.8 x 85.3 ft site, 54.7 ft (a hose tower's
+height); the town draws `Fire_Station_City.prefab` on the firestation kind, so a models.txt
+row swaps this in like the service station's. **RossvilleDowntown** — 28,392 tris across 44
+materials, a 252.6 ft two-to-three-story block face, 131 ft deep. **RossvilleDowntown2** —
+11,452 tris, a 196.9 ft companion face. The two downtown blocks and the earlier
+DowntownStorefronts now cover most of a real Chicago Street frontage between them — the
+downtown placement ruling is becoming THE open question of the model estate.
 
 ---
 

@@ -1,0 +1,110 @@
+newmtl grass
+Kd 0.1095 0.2016 0.0612
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl concrete_apron
+Kd 0.4621 0.4397 0.3813
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl metal_siding_cream
+Kd 0.7379 0.6867 0.5395
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding_shadowline
+Kd 0.5395 0.4910 0.3467
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl metal_roof_maroon
+Kd 0.1470 0.0176 0.0296
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_white
+Kd 0.8632 0.8388 0.7605
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bay_door_white
+Kd 0.8070 0.7913 0.7379
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bay_door_seam
+Kd 0.5520 0.5333 0.4678
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass
+Kd 0.2747 0.3916 0.4342
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl steel_gray
+Kd 0.2664 0.2789 0.2961
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bay_interior_dark
+Kd 0.0130 0.0116 0.0091
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bollard_yellow
+Kd 0.6939 0.3712 0.0091
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl hydrant_red
+Kd 0.3916 0.0137 0.0080
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl splitface_block
+Kd 0.3231 0.3005 0.2542
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl block_shadow
+Kd 0.2051 0.1912 0.1620
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl entry_glass_frame
+Kd 0.0423 0.0423 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flagpole_metal
+Kd 0.6308 0.6445 0.6514
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flag_red
+Kd 0.4452 0.0160 0.0343
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flag_white
+Kd 0.8879 0.8879 0.8879
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flag_blue
+Kd 0.0452 0.0437 0.1559
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sign_panel_white
+Kd 0.9047 0.8879 0.8228
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sign_text_red
+Kd 0.4452 0.0152 0.0103
+Ks 0.05 0.05 0.05
+Ns 10
+

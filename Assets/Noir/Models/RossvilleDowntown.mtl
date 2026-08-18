@@ -1,0 +1,220 @@
+newmtl grass
+Kd 0.1022 0.1946 0.0578
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl road_asphalt
+Kd 0.0452 0.0452 0.0482
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sidewalk_concrete
+Kd 0.4735 0.4508 0.3916
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl curb_stone
+Kd 0.3372 0.3231 0.2747
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl road_line
+Kd 0.7157 0.6867 0.6038
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_tan
+Kd 0.4793 0.2918 0.1144
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_tan_shadow
+Kd 0.2918 0.1746 0.0685
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl stone_light
+Kd 0.7011 0.6514 0.5333
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl frame_dark
+Kd 0.0232 0.0176 0.0130
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl storefront_glass
+Kd 0.0423 0.0742 0.0908
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bank_entry_green
+Kd 0.0273 0.0578 0.0369
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bank_door_tan
+Kd 0.5776 0.3712 0.1022
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl stone_incised
+Kd 0.4508 0.4020 0.3050
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_red_shadow
+Kd 0.1329 0.0296 0.0137
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl planter_flowers
+Kd 0.4793 0.0685 0.0844
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl hydrant_red
+Kd 0.3515 0.0212 0.0091
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_tar_flat
+Kd 0.0630 0.0578 0.0513
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_red_small
+Kd 0.2542 0.0595 0.0356
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl awning_green
+Kd 0.0284 0.0685 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl tree_trunk
+Kd 0.0685 0.0369 0.0194
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl tree_foliage
+Kd 0.0452 0.1022 0.0343
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paint_white
+Kd 0.7913 0.7605 0.6724
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paint_white_shadow
+Kd 0.5711 0.5395 0.4452
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl cornice_cream
+Kd 0.7605 0.7231 0.6172
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paint_tan
+Kd 0.5972 0.5271 0.3763
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paint_tan_shadow
+Kd 0.4233 0.3613 0.2159
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_maroon
+Kd 0.1559 0.0284 0.0273
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_maroon_shadow
+Kd 0.0782 0.0137 0.0137
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sign_text_gold
+Kd 0.6867 0.5776 0.3050
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_dark
+Kd 0.0176 0.0137 0.0103
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl lamp_post
+Kd 0.0232 0.0232 0.0232
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl signal_housing
+Kd 0.0116 0.0116 0.0116
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl signal_red
+Kd 0.6584 0.0232 0.0130
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl signal_off
+Kd 0.0075 0.0075 0.0075
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gravel_lot
+Kd 0.3231 0.2961 0.2542
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_gray_shingle
+Kd 0.0999 0.0844 0.0742
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl interior_dark
+Kd 0.0130 0.0103 0.0080
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl garage_door_green
+Kd 0.1274 0.2051 0.1559
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl rust_iron
+Kd 0.1559 0.0685 0.0273
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl wagon_wood_dark
+Kd 0.1329 0.0666 0.0284
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl shed_metal_gray
+Kd 0.3231 0.3515 0.3613
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl wagon_wood
+Kd 0.2542 0.1441 0.0685
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sign_yellow
+Kd 0.6939 0.4564 0.0137
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl utility_pole
+Kd 0.1470 0.0823 0.0395
+Ks 0.05 0.05 0.05
+Ns 10
+

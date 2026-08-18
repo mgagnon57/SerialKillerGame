@@ -1,0 +1,55 @@
+newmtl foundation_brick
+Kd 0.1946 0.0578 0.0395
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding_pale_blue
+Kd 0.7157 0.7758 0.8070
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_shingle_gray
+Kd 0.1441 0.1529 0.1620
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl white_trim
+Kd 0.9047 0.9047 0.8714
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl window_glass
+Kd 0.0137 0.0212 0.0331
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl black_metal
+Kd 0.0103 0.0103 0.0116
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl porch_lattice
+Kd 0.0685 0.0423 0.0296
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_dark
+Kd 0.0423 0.0296 0.0212
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl walk_concrete
+Kd 0.4735 0.4508 0.3916
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl lawn_grass
+Kd 0.1070 0.1946 0.0545
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl shrub_green
+Kd 0.0742 0.1470 0.0369
+Ks 0.05 0.05 0.05
+Ns 10
+
