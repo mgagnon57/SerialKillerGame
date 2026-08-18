@@ -536,18 +536,22 @@ namespace Noir.Unity
                 if (state == CaseState.Closed) continue;
 
                 bool fatal = cases.FatalOf(c);
-                string them = fatal ? "the body" : "the victim";
+                bool crash = cases.KindOf(c) == CaseKind.Collision;
+                string them = crash ? "the driver" : fatal ? "the body" : "the victim";
                 string line = state switch
                 {
-                    CaseState.Undiscovered     => fatal ? "a body lies in the street — nobody has found it yet"
+                    CaseState.Undiscovered     => crash ? "two cars sit tangled in the street — nobody has called it in"
+                                                : fatal ? "a body lies in the street — nobody has found it yet"
                                                         : "somebody is down in the street — nobody has found them yet",
                     CaseState.Alarm            => "somebody has seen it — the alarm is going out",
                     CaseState.OfficerEnRoute   => "the call is in — an officer is on his way",
                     CaseState.SceneHeld        => "an officer holds the scene, waiting on the county car",
                     CaseState.CountyEnRoute    => "the county car is on the road in",
-                    CaseState.Canvassing       => "the county officer is going door to door",
+                    CaseState.Canvassing       => crash ? "the county officer is taking the drivers' statements"
+                                                        : "the county officer is going door to door",
                     CaseState.AmbulanceEnRoute => "an ambulance is coming for " + them,
                     CaseState.Loading          => "they are loading " + them,
+                    CaseState.Adjudicating     => "the verdict is coming",
                     _                          => state.ToString(),
                 };
                 int mins = now - cases.MinuteOf(c);
