@@ -108,6 +108,29 @@ namespace Noir.PlayTests
                             { host.Sim.Tick(); guard++; }
                             yield return null;
                         }
+
+                        // THE WIND CROSSES A WHOLE DAY, AND EACH DAY THE TOWN STAGES ITS OWN
+                        // CRASH - a mid-wind case opens, a cordon rises and pinches a lane,
+                        // wrecks stand in the street. The cleanup above ran BEFORE the wind
+                        // and cannot have seen any of it, so it runs AGAIN here - measured
+                        // 2026-08-18: a mid-wind cordon at chicago x benton starved the
+                        // traffic gate to a 54.8s p90. Then a few sim minutes tick by so
+                        // RunResponse's own Closed arm drains what a close leaves standing
+                        // (the cordon, the wrecks, the crowd) before the next fixture measures.
+                        for (int i = 0; i < host.Sim.AgentCount; i++)
+                            host.Sim.Return(new CitizenId(i));
+                        for (int i = 0; i < host.Sim.AgentCount; i++)
+                            if (host.Sim.GetAgent(i).Downed) host.Sim.Revive(new CitizenId(i));
+                        for (int i = 0; i < host.Sim.AgentCount; i++)
+                            if (host.Sim.GetAgent(i).Responding) host.Sim.Release(new CitizenId(i));
+                        for (int c = 0; c < host.Cases.Count; c++)
+                            if (host.Cases.StateOf(c) != CaseState.Closed)
+                                host.Cases.CloseLoudly(c, "test residue: staged mid-wind, wound past its day");
+                        for (int m = 0; m < 3; m++)
+                        {
+                            for (int t = 0; t < GameClock.TicksPerMinute; t++) host.Sim.Tick();
+                            yield return null;
+                        }
                     }
                 }
             }
@@ -223,7 +246,11 @@ namespace Noir.PlayTests
 
                 yield return null;
             }
-            host.SpeedIndex = _wasSpeed; _wasSpeed = -1;
+            // The speed stays at 300x through the dispersal and cordon polls below: both wait
+            // on RunResponse's Closed arm, which runs once a SIM minute - at the suite's
+            // default 10x a sim minute is ~6 real seconds and the 5-second windows below
+            // cannot contain one (measured failing exactly that way, 2026-08-18). Restored
+            // after the last poll.
             Debug.Log($"[response-test] officer rode the cruiser: {rode}");
 
             Assert.That(gawked, Is.True,
@@ -254,6 +281,7 @@ namespace Noir.PlayTests
                 standing = GameObject.Find("Scene Cordon " + _caseId) != null;
                 if (standing) yield return null;
             }
+            host.SpeedIndex = _wasSpeed; _wasSpeed = -1;
             Assert.That(standing, Is.False,
                 "the cordon outlived its case - the barricades are still standing after Closed");
 
