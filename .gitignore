@@ -179,3 +179,4 @@ GeneratedAssets/
 # drives a browser (first appeared 2026-08-16, the streetview reference session). Transient
 # debugging artifacts, regenerated every session, never read back.
 .playwright-mcp/
+/nightly/

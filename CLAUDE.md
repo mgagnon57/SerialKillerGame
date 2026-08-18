@@ -61,6 +61,13 @@ a build "just for this tool".
 > who presses Play — so check for `Unity.exe` first, and if he left it open deliberately, say so
 > rather than killing his work. Unity **6000.3.20f1**.
 
+**Both gates also run themselves every night.** The Windows Scheduled Task `Rossville Nightly
+Gate` (2:47 AM, registered 2026-08-18) runs `tools/nightly-gate.ps1`: Core in Release, then the
+PlayMode gate — SKIPPED, never forced, if the editor is open. The morning read is
+`nightly/LATEST.md` (gitignored), one line per night in `nightly/history.log`. The script
+carries its own copy of the two baseline numbers — **move them in the same commit that moves
+this file's.**
+
 **1. Core tests — the standing gate.** Run in **Release**: it is four times faster and it is the
 configuration the baseline is stated for.
 
