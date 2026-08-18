@@ -74,7 +74,12 @@ NOT EXIST YET: an outbuilding belongs to a YARD, not to a lot address — `model
 model on the whole lot, replacing the house. The grammars already draw a `RearOutbuilding` as
 baked roof extras (see the CLAUDE.md trap about silhouettes vs `Place.Bounds`); standing these
 real models behind houses needs either a models.txt extension (address + `outbuilding` slot)
-or a yard-prop seam. Owner decision, queued beside the props' desk seam.
+or a yard-prop seam. Owner decision, queued beside the props' desk seam. Sixteenth:
+**WelcomeToRossvilleSign** (same day) — 12,208 tris (the weight is modeled LETTERING — fine,
+it is a one-of-a-kind), 3 materials; 10.3 ft wide, 8.8 ft tall on posts, face toward +Z.
+Belongs on the Route 1 shoulder at the town limits, where the real one stands — a ROADSIDE
+placement, neither a lot nor a yard: `CitySigns` already owns the roadside-furniture seam and
+is its natural home, or a one-off world-position ruling. Owner decision.
 
 ---
 
