@@ -1,0 +1,190 @@
+newmtl oxygen_green
+Kd 0.0273 0.1470 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl valve_chrome
+Kd 0.5841 0.6038 0.6105
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl regulator_brass
+Kd 0.4342 0.2664 0.0482
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gauge_face
+Kd 0.8714 0.8469 0.7605
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl oxygen_tubing
+Kd 0.6867 0.7758 0.7913
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl decal_white
+Kd 0.8879 0.8714 0.8228
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl backboard_orange
+Kd 0.6939 0.1274 0.0130
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl handhold_dark
+Kd 0.0176 0.0103 0.0060
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl backboard_recess
+Kd 0.2542 0.0452 0.0044
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl strap_black
+Kd 0.0116 0.0116 0.0130
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl buckle_metal
+Kd 0.3763 0.3916 0.4020
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl case_orange
+Kd 0.6584 0.0976 0.0103
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl case_lid
+Kd 0.5395 0.0742 0.0060
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl handle_black
+Kd 0.0130 0.0130 0.0144
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl latch_steel
+Kd 0.4851 0.5029 0.5149
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl decal_white_0
+Kd 0.8879 0.8714 0.8228
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl decal_blue
+Kd 0.0232 0.0742 0.2747
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl collar_plastic
+Kd 0.7305 0.7084 0.6445
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl collar_foam
+Kd 0.4793 0.4564 0.3916
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl velcro_gray
+Kd 0.1441 0.1441 0.1559
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl suction_case
+Kd 0.7011 0.6724 0.5906
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl suction_panel
+Kd 0.0723 0.0782 0.0844
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gauge_chrome
+Kd 0.5841 0.6038 0.6105
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gauge_face_2
+Kd 0.8714 0.8469 0.7605
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl switch_blue
+Kd 0.0232 0.0742 0.2747
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl suction_canister
+Kd 0.6240 0.7454 0.7605
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl suction_hose
+Kd 0.8070 0.7758 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl defib_case
+Kd 0.5841 0.0865 0.0137
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paddle_cable
+Kd 0.0080 0.0080 0.0091
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl defib_panel_dark
+Kd 0.0423 0.0467 0.0513
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl crt_screen
+Kd 0.0044 0.0137 0.0070
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl crt_trace_green
+Kd 0.0423 1.0000 0.1441
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl knob_white
+Kd 0.8070 0.7835 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paddle_body
+Kd 0.0252 0.0273 0.0296
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paddle_plate
+Kd 0.4851 0.5029 0.5149
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl splint_tube_steel
+Kd 0.4564 0.4735 0.4851
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl splint_pad
+Kd 0.2542 0.0685 0.0232
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl splint_strap
+Kd 0.0232 0.0423 0.1119
+Ks 0.05 0.05 0.05
+Ns 10
+

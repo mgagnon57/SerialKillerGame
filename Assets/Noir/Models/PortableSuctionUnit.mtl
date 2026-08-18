@@ -1,0 +1,40 @@
+newmtl suction_body_gray
+Kd 0.4793 0.5029 0.4564
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl handle_black
+Kd 0.0130 0.0130 0.0144
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl suction_panel
+Kd 0.2747 0.2961 0.2623
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gauge_face
+Kd 0.8714 0.8469 0.7605
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl switch_red
+Kd 0.4342 0.0296 0.0176
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl collection_canister
+Kd 0.6939 0.7605 0.7758
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl canister_lid
+Kd 0.8070 0.7835 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl suction_hose
+Kd 0.6240 0.6867 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+

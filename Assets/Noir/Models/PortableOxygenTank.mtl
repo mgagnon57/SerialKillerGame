@@ -1,0 +1,55 @@
+newmtl tank_green_dark
+Kd 0.0152 0.0742 0.0343
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl tank_green
+Kd 0.0273 0.1470 0.0648
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl label_white
+Kd 0.9047 0.8879 0.8388
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl label_text_green
+Kd 0.0130 0.1070 0.0395
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl chrome_valve
+Kd 0.5841 0.6105 0.6376
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brass_fitting
+Kd 0.4342 0.2664 0.0482
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl rubber_dark
+Kd 0.0160 0.0160 0.0137
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gauge_face
+Kd 0.8879 0.8714 0.8070
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gauge_needle
+Kd 0.3916 0.0176 0.0103
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flow_knob_green
+Kd 0.0467 0.2542 0.1070
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl tubing_clear
+Kd 0.4851 0.6867 0.5647
+Ks 0.05 0.05 0.05
+Ns 10
+

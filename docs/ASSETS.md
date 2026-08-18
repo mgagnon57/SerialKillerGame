@@ -101,7 +101,17 @@ row swaps this in like the service station's. **RossvilleDowntown** — 28,392 t
 materials, a 252.6 ft two-to-three-story block face, 131 ft deep. **RossvilleDowntown2** —
 11,452 tris, a 196.9 ft companion face. The two downtown blocks and the earlier
 DowntownStorefronts now cover most of a real Chicago Street frontage between them — the
-downtown placement ruling is becoming THE open question of the model estate.
+downtown placement ruling is becoming THE open question of the model estate. Twenty-fifth
+through thirtieth (2026-08-18, small hours — THE EMS KIT, gear for the volunteer ambulance
+service that standing fact 6 in SOURCES-OF-TRUTH.md remembers): **SpinalBackboard** (408
+tris, 79 x 16.5 in — a textbook 72-inch board with handles), **OxygenTank1991** (2,000 tris,
+a 30.8 in E-cylinder), **PortableOxygenTank** (4,620 tris, 32 in with carry rig),
+**PortableSuctionUnit** (2,380 tris, 27.5 in cased), **InflatableAirSplints** (6,360 tris, a
+38 x 22 in kit spread), and **EmsEquipment1991** (7,096 tris, 38 materials — the WHOLE
+loadout laid out as an 8.8 x 8.3 ft set: a diorama piece that wants either splitting into
+props or posing whole as ambulance-scene dressing). All grounded, all dimensionally right.
+They queue on the interior/prop seam beside the desk props — natural home: the ambulance
+rig's dressing and the response scene.
 
 ---
 
