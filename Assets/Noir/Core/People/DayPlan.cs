@@ -72,6 +72,14 @@ namespace Noir.Core.People
         /// end of the enum — values are positional.
         /// </summary>
         Gawking,
+
+        /// <summary>
+        /// Standing at the pinch of a cordoned scene, waving one direction of traffic
+        /// through at a time. Live state set only by Simulation.Respond's standAs
+        /// parameter, the same as Gawking; the tick loop never writes it. At the end of the
+        /// enum — values are positional.
+        /// </summary>
+        DirectingTraffic,
     }
 
     /// <summary>One stretch of a person's day: be at this place, from this minute to that one.</summary>

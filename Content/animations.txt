@@ -183,6 +183,10 @@ responding      Standing Idle, Looking Around, Weight Shift
 # every clip here is carried by another row, so no controller rebuild.
 gawking         Standing Idle, Looking Around, Weight Shift, Bored, Talking
 
+# directingtraffic: the scene cordon's officer, waving one direction through at a time.
+# Every clip here is carried by the talking row, so no controller rebuild.
+directingtraffic Arm Gesture, Hands Forward Gesture, Strong Gesture, Acknowledging
+
 # ---- the fallback --------------------------------------------------------
 # Every situation with nothing else to say. This row is worth more variety than
 # it looks: it is what anybody unaccounted for is doing, so a thin one is a

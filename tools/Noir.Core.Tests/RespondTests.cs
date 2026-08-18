@@ -54,6 +54,31 @@ namespace Noir.Core.Tests
                 "a stand-as of Gawking must be what they wear on arrival, not Responding");
         }
 
+        /// <summary>
+        /// The scene cordon's officer: Respond with a stand-as of DirectingTraffic must dress
+        /// him in it on arrival, the same contract Gawking proved. The spec is
+        /// docs/superpowers/specs/2026-08-17-scene-cordon-design.md.
+        /// </summary>
+        [Test]
+        public void AStandAsOfDirectingTrafficIsWornOnArrival()
+        {
+            var sim = new Simulation(Queueham.World, Queueham.People, Queueham.Seed, 8 * 60);
+            var who = new CitizenId(1);
+
+            sim.Respond(who, Scene, Activity.DirectingTraffic);
+
+            bool arrived = false;
+            for (int t = 0; t < 20 * 60 * 20 && !arrived; t++)
+            {
+                sim.Tick();
+                arrived = !sim.GetAgent(who).Travelling
+                       && sim.GetAgent(who).Position.ToTile() == Scene;
+            }
+            Assert.That(arrived, Is.True, "the officer never reached the scene tile");
+            Assert.That(sim.GetAgent(who).Doing, Is.EqualTo(Activity.DirectingTraffic),
+                "a stand-as of DirectingTraffic must be what they wear on arrival, not Responding");
+        }
+
         [Test]
         public void TheDefaultStandAsIsRespondingUnchanged()
         {
@@ -100,6 +125,43 @@ namespace Noir.Core.Tests
                 bool carried = others.Exists(o => o.Contains(name));
                 Assert.That(carried, Is.True,
                     $"the gawking row names '{name}', which no other row carries - "
+                  + "that clip would need a controller rebuild");
+            }
+        }
+
+        /// <summary>
+        /// The directingtraffic row may only name clips other rows already carry, the same
+        /// no-controller-rebuild gate Gawking's row passes. A clip nothing else carries would
+        /// resolve to nothing until somebody reruns Build The Townsfolk Animator.
+        /// </summary>
+        [Test]
+        public void DirectingTrafficHasARowInTheRealFileUsingOnlyCarriedClips()
+        {
+            // EveryActivityHasARowInTheRealFile covers existence globally; this pins the
+            // no-controller-rebuild guarantee: every clip the directingtraffic row names must
+            // appear on some OTHER row too, or the row needs a Townsfolk controller rebuild
+            // nobody ran.
+            string path = System.IO.Path.Combine(RepoRoot(), "Content", "animations.txt");
+            var lines = System.IO.File.ReadAllLines(path);
+            string directingTraffic = null;
+            var others = new System.Collections.Generic.List<string>();
+            foreach (var line in lines)
+            {
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("#") || trimmed.Length == 0) continue;
+                if (trimmed.StartsWith("directingtraffic")) directingTraffic = trimmed;
+                else others.Add(trimmed);
+            }
+            Assert.That(directingTraffic, Is.Not.Null,
+                "no directingtraffic row in Content/animations.txt");
+
+            string clipsPart = directingTraffic.Substring("directingtraffic".Length).Trim();
+            foreach (var clip in clipsPart.Split(','))
+            {
+                string name = clip.Trim();
+                bool carried = others.Exists(o => o.Contains(name));
+                Assert.That(carried, Is.True,
+                    $"the directingtraffic row names '{name}', which no other row carries - "
                   + "that clip would need a controller rebuild");
             }
         }
