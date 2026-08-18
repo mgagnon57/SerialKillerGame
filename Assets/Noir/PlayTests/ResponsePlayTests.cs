@@ -184,9 +184,12 @@ namespace Noir.PlayTests
                     if (officer.IsValid
                         && sim.GetAgent(officer).Doing == Activity.AwayFromTown) rode = true;
                 }
+                // Scoped to THIS case's ring (Chebyshev ≤ 6 of the scene: RingSpots reach 3),
+                // because the town's own daily crash can open a second case mid-scenario and
+                // gather its own crowd two streets over - first seen 2026-08-18, case 5 at
+                // 17:15, and the town-wide scan blamed this case for that crowd.
                 if (s == CaseState.Canvassing && !gawked)
-                    for (int i = 0; i < sim.AgentCount && !gawked; i++)
-                        gawked = sim.GetAgent(i).Doing == Activity.Gawking;
+                    gawked = AnyGawkerNear(sim, host.Cases.SceneOf(_caseId));
 
                 if (!cordoned && s >= CaseState.SceneHeld && s < CaseState.Closed)
                     cordoned = GameObject.Find("Scene Cordon " + _caseId) != null;
@@ -200,14 +203,14 @@ namespace Noir.PlayTests
                 "nobody ever stood watching during the canvass - the crowd never gathered");
 
             // And the crowd goes home: within a few real seconds of the close, nobody is
-            // still Gawking (dispersal keys on Closed in RunResponse's own minute).
+            // still Gawking AT THIS SCENE (dispersal keys on Closed in RunResponse's own
+            // minute). Scoped like the gather check above: another case's crowd standing at
+            // another scene is that case's business, not a dispersal failure here.
             float dispersed = Time.time + 5f;
             bool anybody = true;
             while (Time.time < dispersed && anybody)
             {
-                anybody = false;
-                for (int i = 0; i < sim.AgentCount && !anybody; i++)
-                    anybody = sim.GetAgent(i).Doing == Activity.Gawking;
+                anybody = AnyGawkerNear(sim, host.Cases.SceneOf(_caseId));
                 if (anybody) yield return null;
             }
             Assert.That(anybody, Is.False, "the crowd never dispersed after the case closed");
@@ -254,16 +257,24 @@ namespace Noir.PlayTests
             var sim = host.Sim;
             _startMinuteOfDay = sim.Clock.MinuteOfDay;   // the hour the teardown hands back
 
-            // The scene must be discoverable: a road tile within testimony range of an occupied
-            // door. Walk the census for a citizen standing outdoors near one - the hit test's
-            // own search - then ring outward from them to the nearest road tile, the planner's
-            // own idiom.
+            // The scene must be discoverable: a road tile within testimony range of an OCCUPIED
+            // door. Both conditions are required of the same candidate at once - the first
+            // gate run picked the first citizen near a door and only then looked for a road,
+            // and that citizen stood in a deep block with no road inside 12 tiles (the
+            // planner's own reach), so the test died before staging anything. Now: for each
+            // outdoor citizen, find their nearest road first, then demand an occupied door
+            // within sight of THE SCENE, which is the tile discovery will actually scan.
             int anchor = -1;
+            Tile? scene = null;
             for (int i = 0; i < sim.AgentCount && anchor < 0; i++)
             {
                 var a = sim.GetAgent(i);
                 if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
                 if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+
+                Tile? road = RoadNear(host, a.Position.ToTile());
+                if (!road.HasValue) continue;
+
                 for (int j = 0; j < sim.AgentCount; j++)
                 {
                     if (j == i) continue;
@@ -271,23 +282,12 @@ namespace Noir.PlayTests
                     if (b.Travelling || !b.At.IsValid) continue;
                     if (b.Doing == Activity.Asleep) continue;
                     var door = host.World.GetPlace(b.At).Door;
-                    if (Tile.ChebyshevDistance(door, a.Position.ToTile()) < 40) { anchor = i; break; }
+                    if (Tile.ChebyshevDistance(door, road.Value) < 45)
+                    { anchor = i; scene = road; break; }
                 }
             }
-            Assert.That(anchor, Is.GreaterThanOrEqualTo(0), "no witnessable anchor in the noon town");
-
-            Tile around = sim.GetAgent(anchor).Position.ToTile();
-            Tile? scene = null;
-            for (int r = 0; r <= 12 && !scene.HasValue; r++)
-                for (int dy = -r; dy <= r && !scene.HasValue; dy++)
-                    for (int dx = -r; dx <= r && !scene.HasValue; dx++)
-                    {
-                        if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != r) continue;
-                        var t = new Tile(around.X + dx, around.Y + dy);
-                        if (host.World.Grid.InBounds(t)
-                            && host.World.Grid.TerrainAt(t) == Noir.Core.World.Terrain.Road) scene = t;
-                    }
-            Assert.That(scene.HasValue, "no road tile within 12 tiles of the anchor");
+            Assert.That(anchor, Is.GreaterThanOrEqualTo(0),
+                "no citizen in the noon town stands near both a road and an occupied door");
 
             // Two adult drivers, neither down nor away. The anchor drives if they are an adult;
             // otherwise the first two eligible strangers do - StageCollision brings the drivers
@@ -353,6 +353,38 @@ namespace Noir.PlayTests
                 "the other driver was never released after the close");
             Assert.That(sim.GetAgent(atFault).Doing, Is.EqualTo(Activity.AwayFromTown),
                 "the arrested driver should be off in the county lockup");
+        }
+
+        /// <summary>Anybody standing Gawking within Chebyshev 6 of this scene - the ring's own
+        /// reach (RingSpots tops out at radius 3) with margin. Scoped on purpose: the town's
+        /// own daily crash can open a second case mid-test and gather its own crowd two
+        /// streets over, and a town-wide scan reads that crowd as this case's.</summary>
+        private static bool AnyGawkerNear(Noir.Core.Sim.Simulation sim, Tile scene)
+        {
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var a = sim.GetAgent(i);
+                if (a.Doing != Activity.Gawking) continue;
+                if (Tile.ChebyshevDistance(a.Position.ToTile(), scene) <= 6) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The nearest road tile within 12 of a point (the planner's own reach),
+        /// walking rings outward - or null, which disqualifies the candidate rather than
+        /// failing the test.</summary>
+        private static Tile? RoadNear(VillageHost host, Tile around)
+        {
+            for (int r = 0; r <= 12; r++)
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++)
+                    {
+                        if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != r) continue;
+                        var t = new Tile(around.X + dx, around.Y + dy);
+                        if (host.World.Grid.InBounds(t)
+                            && host.World.Grid.TerrainAt(t) == Noir.Core.World.Terrain.Road) return t;
+                    }
+            return null;
         }
     }
 }
