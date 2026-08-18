@@ -1791,10 +1791,17 @@ namespace Noir.Unity
                 var segment = Graph.Segments[me.Segment];
                 // The scene cordon's borrowed lane: zero except through a closed-half
                 // pinch, where it eases the car sideways toward the open lane and back.
-                // Render-side only — me.S never lies, and rotation still reads off the
-                // unshifted PointOn(segment, me.S + 1f) below.
+                // Render-side only — me.S never lies. BOTH points are shifted, not just
+                // `at`: shifting one and not the other put ~3.5m of lateral offset against
+                // ~1m of longitudinal in the SAME `forward` vector that feeds
+                // Quaternion.LookRotation and every following/give-way dot-and-cross test
+                // downstream — a ~74 degree rotation error, not a subtle skew, for most of
+                // the pinch. Shifting both means `forward` is the true tangent wherever the
+                // shift is constant (the flat middle of the borrow) and only swings during
+                // the 4m ease in/out, which is the honest look: the nose actually turns
+                // into the borrowed lane and back out.
                 at = PointOn(segment, me.S) + CordonShift(me.Segment, me.S);
-                ahead = PointOn(segment, me.S + 1f);
+                ahead = PointOn(segment, me.S + 1f) + CordonShift(me.Segment, me.S + 1f);
             }
 
             var forward = ahead - at;
