@@ -79,7 +79,16 @@ or a yard-prop seam. Owner decision, queued beside the props' desk seam. Sixteen
 it is a one-of-a-kind), 3 materials; 10.3 ft wide, 8.8 ft tall on posts, face toward +Z.
 Belongs on the Route 1 shoulder at the town limits, where the real one stands — a ROADSIDE
 placement, neither a lot nor a yard: `CitySigns` already owns the roadside-furniture seam and
-is its natural home, or a one-off world-position ruling. Owner decision.
+is its natural home, or a one-off world-position ruling. Owner decision. Seventeenth:
+**ServiceStation** (same day) — 736 tris; 52.5 x 67.3 ft with pump canopy, 22.1 ft tall.
+The town already draws `Gas_Station_City.prefab` on the gasstation kind — a `models.txt` row
+at the real station's address swaps this in. Eighteenth: **RossvillePostOffice** (same day) —
+8,480 tris across 24 materials (signage detail, one-off civic weight); 48.6 x 46.8 ft,
+21.7 ft tall, dead-on for the type. Nineteenth: **RossvilleHistoricalSociety** (same day) —
+2,328 tris; ⚠ SIZE FLAG, UNRULED: 85.3 x 78.3 ft and 69.4 FT TALL — five-story height where
+the real society is a storefront museum on Chicago St. Either it carries a deliberate tower
+or the export is ~2x scale; the owner rules before it stands anywhere (Landmark would
+squeeze it to a lot, but a 69 ft civic block changes a whole streetscape).
 
 ---
 

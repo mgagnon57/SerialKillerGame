@@ -1,0 +1,60 @@
+newmtl lawn_grass
+Kd 0.1070 0.1946 0.0545
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sandstone
+Kd 0.6105 0.5089 0.3325
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_body
+Kd 0.2542 0.0685 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl white_trim
+Kd 0.8963 0.8796 0.8070
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_shingle
+Kd 0.1144 0.0578 0.0369
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl black_metal
+Kd 0.0116 0.0116 0.0130
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl window_glass
+Kd 0.0152 0.0252 0.0369
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl recess_shadow
+Kd 0.0423 0.0252 0.0160
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl walk_concrete
+Kd 0.4735 0.4508 0.3916
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flag_fabric
+Kd 0.2623 0.0123 0.0242
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl fence_wood
+Kd 0.1470 0.0685 0.0296
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl shrub_foliage
+Kd 0.0742 0.1470 0.0369
+Ks 0.05 0.05 0.05
+Ns 10
+

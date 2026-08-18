@@ -1,0 +1,120 @@
+newmtl siding_white
+Kd 0.6867 0.6654 0.5841
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding_shadowline
+Kd 0.5356 0.5190 0.4556
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_membrane
+Kd 0.0423 0.0467 0.0497
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass
+Kd 0.3467 0.5520 0.6308
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl coping_trim
+Kd 0.7157 0.6724 0.5520
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl mortar_dark
+Kd 0.0685 0.0545 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl stone_tan
+Kd 0.3325 0.2232 0.1274
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl stone_brown
+Kd 0.2270 0.1356 0.0723
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl stone_light
+Kd 0.4342 0.3231 0.1878
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl stone_surround
+Kd 0.5395 0.4125 0.2502
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl hardware_black
+Kd 0.0103 0.0103 0.0103
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl aluminum_frame
+Kd 0.2582 0.2664 0.2747
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass_door
+Kd 0.1070 0.1746 0.2159
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sign_plaque
+Kd 0.7758 0.7157 0.5647
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sign_text_dark
+Kd 0.0252 0.0232 0.0176
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl cmu_block
+Kd 0.3916 0.3712 0.3325
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flagpole_metal
+Kd 0.6795 0.6939 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flag_red
+Kd 0.4452 0.0160 0.0343
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flag_white
+Kd 0.8879 0.8879 0.8879
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flag_blue
+Kd 0.0452 0.0437 0.1559
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl mailbox_blue
+Kd 0.0116 0.0497 0.1559
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl mailbox_trim_dark
+Kd 0.0070 0.0212 0.0497
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl concrete_walk
+Kd 0.3968 0.3712 0.3231
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl dock_door
+Kd 0.0685 0.0802 0.0648
+Ks 0.05 0.05 0.05
+Ns 10
+
