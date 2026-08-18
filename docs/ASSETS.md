@@ -85,9 +85,10 @@ The town already draws `Gas_Station_City.prefab` on the gasstation kind — a `m
 at the real station's address swaps this in. Eighteenth: **RossvillePostOffice** (same day) —
 8,480 tris across 24 materials (signage detail, one-off civic weight); 48.6 x 46.8 ft,
 21.7 ft tall, dead-on for the type. Nineteenth: **RossvilleHistoricalSociety** (same day) —
-2,328 tris; 85.3 x 78.3 ft and 69.4 ft tall — flagged as five-story height for a storefront
-museum, and RULED BY THE OWNER 2026-08-17: "It is right." The building stands at its modeled
-size; do not scale it at placement. (He would know — it is his town.)
+2,328 tris; 85.3 x 78.3 ft, 69.4 ft to its top — a THREE-STORY block (the owner's own count,
+correcting this file's "five-story" guess from dividing by modern floor heights; a 19th-century
+civic block runs tall floors, and the peak includes whatever crowns it). RULED BY THE OWNER
+2026-08-17: "It is right" — stands at modeled size, no scale at placement.
 
 ---
 
