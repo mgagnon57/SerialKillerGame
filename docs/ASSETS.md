@@ -54,7 +54,18 @@ a floor-standing CONSOLE TV, the 1991 living-room anchor. Ninth: **Boombox1990s*
 — 4,724 tris, 6 materials; 21.3"W x 20.7"H x 7.5"D. SIZE FLAG, unreviewed by the owner: 20.7"
 tall is ghetto-blaster-with-the-handle-up territory — if the handle is down in the model, it
 is oversized and wants a scale ruling at placement. Both are interior props and join the PC,
-phone and soda machine in the queue for the desk/interior placement seam.
+phone and soda machine in the queue for the desk/interior placement seam. Tenth:
+**FreestyleBmx90s** (same day) — 20,264 tris, 5 materials; 4.9 ft nose to tail, faces +Z
+(authored +X like the cruiser; the converter baked the same -90 quarter-turn, front found by
+the handlebar mesh's x-extent). MID-HEAVY for a yard prop — the phone's lesson at half the
+weight: fine leaned against a handful of porches, not in every yard. Eleventh: **FrameHouse**
+(same day) — 564 tris, 8 materials; 48.1 x 36.6 ft footprint, 24.1 ft tall, foundation 1 ft
+below grade (the church's deliberate pattern). Bigger than the town's ordinary 24-30 ft
+cottages — reads as a corner foursquare. Origin is off-centre (x +8 ft, z +7 ft), harmless on
+a lot because Landmark fits by bounds, but a prop-seam placement would inherit it. Twelfth:
+**DowntownStorefronts** (same day) — 1,004 tris, 8 materials; a 60.4 ft two-story commercial
+row, 27.6 ft tall, 29.1 ft deep. Like the depot, a building wants a LOT: its natural home is
+a downtown Chicago Street block face, an owner placement ruling on the parcel layer.
 
 ---
 
