@@ -220,7 +220,12 @@ namespace Noir.PlayTests
             // (Doing == AwayFromTown mid-OfficerEnRoute — the noon watch drives, but an on-call
             // fallback walking is not a failure, so it is logged, not asserted) and whether the
             // crowd gathered (somebody Gawking during the canvass — that one IS the contract).
-            float deadline = Time.time + 240f;
+            // 480 real seconds, not 240: the alone-standing victim rule (above, 2026-08-18)
+            // steers the pick toward quieter spots beside DENSE blocks, and citizen 2's
+            // canvass ran past a dozen doors - the county walks each one on real seconds, and
+            // 240s ran out mid-canvass with the machine working correctly the whole way. The
+            // poll exits on Closed, so a fast case never pays the headroom.
+            float deadline = Time.time + 480f;
             var seen = new List<CaseState>();
             bool rode = false, gawked = false, cordoned = false;
             while (Time.time < deadline && host.Cases.StateOf(_caseId) != CaseState.Closed)
@@ -246,6 +251,14 @@ namespace Noir.PlayTests
 
                 yield return null;
             }
+            // CLOSED IS ASSERTED FIRST, before any crowd or cordon claim: every check below
+            // presumes a finished case, and a case that merely ran out of deadline used to
+            // fail on "the crowd never dispersed" - true, misleading, and measured costing a
+            // whole diagnosis pass (2026-08-18, run six: the case was mid-canvass and healthy).
+            Assert.That(host.Cases.StateOf(_caseId), Is.EqualTo(CaseState.Closed),
+                "the case never closed; states seen: " + string.Join(" → ", seen));
+            CollectionAssert.IsOrdered(seen.Select(s => (int)s), "states ran out of order");
+
             // The speed stays at 300x through the dispersal and cordon polls below: both wait
             // on RunResponse's Closed arm, which runs once a SIM minute - at the suite's
             // default 10x a sim minute is ~6 real seconds and the 5-second windows below
@@ -284,11 +297,6 @@ namespace Noir.PlayTests
             host.SpeedIndex = _wasSpeed; _wasSpeed = -1;
             Assert.That(standing, Is.False,
                 "the cordon outlived its case - the barricades are still standing after Closed");
-
-            Assert.That(host.Cases.StateOf(_caseId), Is.EqualTo(CaseState.Closed),
-                "the case never closed; states seen: " + string.Join(" → ", seen));
-            // The order of what we saw is the order the machine promises.
-            CollectionAssert.IsOrdered(seen.Select(s => (int)s), "states ran out of order");
 
             // The body is gone: the victim is away, not downed, and their figure is not drawn.
             var after = sim.GetAgent(victim);
