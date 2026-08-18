@@ -288,6 +288,27 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-18 (night): 34 of 34 PASS, 0 fail, 1 skipped, 2497 s.** First green
+> gate over car collisions phase 1 — the new one is `AStagedCollisionRunsToItsVerdict`
+> (a staged DUI bender: kerb interviews, arrest, tow, clean close — it passed from its
+> second run onward and every run since). It took SEVEN runs to get here and every red
+> along the way was a TEST assumption meeting a town that now stages its own crash daily
+> (`CrashPlanner` fired at 17:15 in every single run, deterministic to the tile): the
+> witnessable-victim search now also requires standing ALONE (a walking foursome ate the
+> ±3m sweep) judged by the Indoor tile flag, not `At.IsValid` (travelling agents carry a
+> valid At); the teardown wind-back threshold dropped 60 → 10 minutes (38 min of drift
+> put the drives gate at 17:41, where the commuters are home) and the teardown now
+> RE-CLEANS after the wind (each wound day stages a crash — a mid-wind cordon starved
+> the traffic gate to a 54.8s p90); crowd asserts are scoped to the case's own scene and
+> read `Responding` (a released-but-stranded gawker keeps Doing == Gawking BY DESIGN);
+> and Closed is asserted before any crowd claim (a mid-canvass timeout used to read as
+> "the crowd never dispersed"). ⚠ **The +1650 s over the 820 s baseline is the two
+> response scenarios each paying a full ~23 h clock wind-back, the evening one crossing
+> the 17:00 peak (~15 min alone)** — the durable fix is the documented one (hour-
+> sensitive tests set their own hour), an owner decision, not a regression to chase.
+> Fix-wave commits `a85f299`..`cfe55bf`; plan
+> `docs/superpowers/plans/2026-08-18-car-collisions-phase1.md`.
+>
 > **BASELINE, 2026-08-17 (evening): 33 of 33 PASS, 0 fail, 1 skipped, 820 s.** First gate
 > over witness voices (`6e8ec27`), the re-enabled ambience beds (`d4fde78` — invisible to
 > the suite by construction: batch mode builds no audio sources) and the reverted shadow

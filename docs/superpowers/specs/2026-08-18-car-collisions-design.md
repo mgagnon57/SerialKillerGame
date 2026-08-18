@@ -12,8 +12,12 @@ phase 2 is the street spectacle (wrecker rig, crumpled wreck models, the cuffed 
 
 > **Landed 2026-08-18**, plan `docs/superpowers/plans/2026-08-18-car-collisions-phase1.md`.
 > Core gate measured **596 pass, 0 fail, 8 skipped, 2 m 12 s** (+14 over the 582 baseline).
-> The PlayMode scenario (`AStagedCollisionRunsToItsVerdict`) is written and compiles; its
-> gate run waits on the next editor-closed window, as does the live look.
+> PlayMode gate measured the same night: **34 of 34 PASS, 1 skipped, 2497 s** —
+> `AStagedCollisionRunsToItsVerdict` ran the whole arc live (kerb interviews, arrest, tow,
+> clean close), and the ambient daily crash fired deterministically at 17:15 in all seven
+> runs it took to re-harden the older response scenario against a town that now crashes on
+> its own (see CLAUDE.md's 34-of-34 baseline for the five test assumptions that fell).
+> Still open: the live look — stand at the tavern at closing on a crash day.
 
 ## What exists already, and is kept
 
