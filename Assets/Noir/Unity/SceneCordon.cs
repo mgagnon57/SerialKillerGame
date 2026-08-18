@@ -21,7 +21,7 @@ namespace Noir.Unity
 
         public bool IsUp(int caseId) => _roots.ContainsKey(caseId);
 
-        public void Raise(int caseId, Vector3 sceneWorld, CityTraffic.CordonLayout layout)
+        public void Raise(int caseId, Vector3 sceneWorld, CordonLayout layout)
         {
             if (_roots.ContainsKey(caseId)) return;
             var root = new GameObject("Scene Cordon " + caseId);
