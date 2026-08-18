@@ -10,6 +10,11 @@ one downs a driver and the existing ambulance arc joins the scene. Split ruled 2
 **phase 1 is the crash, the case, and the adjudication** (Core-heavy, playable outcome);
 phase 2 is the street spectacle (wrecker rig, crumpled wreck models, the cuffed walk).
 
+> **Landed 2026-08-18**, plan `docs/superpowers/plans/2026-08-18-car-collisions-phase1.md`.
+> Core gate measured **596 pass, 0 fail, 8 skipped, 2 m 12 s** (+14 over the 582 baseline).
+> The PlayMode scenario (`AStagedCollisionRunsToItsVerdict`) is written and compiles; its
+> gate run waits on the next editor-closed window, as does the live look.
+
 ## What exists already, and is kept
 
 - **The response machine** (`ResponseCases`, Contracts-only, RNG-free, minute-driven) runs

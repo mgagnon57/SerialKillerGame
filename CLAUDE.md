@@ -68,6 +68,17 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
+> **596 pass, 0 fail, 596 total, 8 skipped, 2 m 12 s.** Measured 2026-08-18 (evening), after
+> car collisions phase 1 landed (+14: `CrashEventsTests` (3), `EventTestimonyTests`' collision
+> sentence, ask-merge and crash-merge additions (3), `CrashPlannerTests` (4), and
+> `ResponseCasesTests`' collision quartet (4)). The town crashes on its own about once a day —
+> `CrashPlanner` is pure in (seed, day, world, population) and the day plan is the
+> breathalyzer — witnesses can say two cars came together (`CrashEvents`, the third event
+> kind), and `ResponseCases` runs a `CaseKind.Collision` arc: roadside interviews instead of a
+> canvass, and a verdict stamped at plan time (DUI arrest and tow / ticket / let go) that the
+> machine only ever carries as data. Plan:
+> `docs/superpowers/plans/2026-08-18-car-collisions-phase1.md`.
+>
 > **582 pass, 0 fail, 582 total, 8 skipped, 2 m 16 s.** Measured 2026-08-18, after the scene
 > cordon landed (+2: `RespondTests`' DirectingTraffic pair,
 > `AStandAsOfDirectingTrafficIsWornOnArrival` and
