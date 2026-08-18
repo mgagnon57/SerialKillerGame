@@ -9,6 +9,26 @@ using UnityEditor;
 namespace Noir.Unity
 {
     /// <summary>
+    /// What <see cref="CityTraffic.RaiseCordon"/> found at the scene: where the closed
+    /// half's barricade sits, and which way the road runs there. Tasks 3-5 read this to
+    /// place tape and stand the officer.
+    /// </summary>
+    public struct CordonLayout
+    {
+        /// <summary>False when no lane passes near the scene — tape only, nobody to wave.</summary>
+        public bool TrafficControlled;
+
+        /// <summary>The closed-lane hold point, one end of the pinch.</summary>
+        public Vector3 BarricadeNear;
+
+        /// <summary>...and the other end.</summary>
+        public Vector3 BarricadeFar;
+
+        /// <summary>Unit vector along the road at the scene.</summary>
+        public Vector3 RoadAxis;
+    }
+
+    /// <summary>
     /// Cars that drive the streets, turn at junctions, keep to their lane and stop at red lights.
     ///
     /// THEY FOLLOW THE LANE GRAPH. Until now a car owned one lane from one edge of the map to the
@@ -271,6 +291,7 @@ namespace Noir.Unity
         public enum Hold
         {
             None, Following, Signal, GiveWay, Oncoming, TurnBusy, NoRoomBeyond, NoLegalTurn, Arriving,
+            Cordon,
         }
 
         /// <summary>A tally of what is holding the traffic up right now, for the diagnostics.</summary>
@@ -316,6 +337,29 @@ namespace Noir.Unity
         /// heading-blind: a box test against a bare Transform, which carries no travel
         /// direction to judge by.</summary>
         public readonly List<Transform> Obstacles = new List<Transform>();
+
+        // ---- the scene cordon ----
+        //
+        // One cordon at a time — Rossville has one response team, and the officer who
+        // raises it is the same man who directs the pinch. State lives HERE, beside the
+        // fleet, never on Mover: nine loops walk _movers and a held car must remain an
+        // ordinary member of all of them. See the spec:
+        // docs/superpowers/specs/2026-08-17-scene-cordon-design.md
+        private struct CordonLine
+        {
+            public int Segment;      // index into Graph.Segments
+            public float HoldS;      // cars stop short of this travel coordinate...
+            public float ClearS;     // ...and are through the pinch past this one
+            public bool SideA;       // which alternation group this approach belongs to
+            public bool Closed;      // the body's half: cars here borrow laterally
+        }
+        private readonly List<CordonLine> _cordon = new List<CordonLine>();
+        private bool _cordonUp;
+        private Vector3 _cordonCentre;
+        private Vector3 _cordonOffsetDir;          // unit lateral, toward the OPEN half
+        private const float CordonReach = 10f;     // metres of lane held either side of the scene
+        private const float CordonCrawl = 2.5f;    // m/s through the pinch
+        private const double CordonCycle = 36.0;   // the signal cycle's proportions: A 0-14, hold 14-18, B 18-32, hold 32-36
 
         private int _households;
         private int _retimedAt = -1;
@@ -367,6 +411,177 @@ namespace Noir.Unity
                 Seat(out_);
             }
         }
+
+        /// <summary>
+        /// Surveys the lane graph and builds the cordon: a hold line and a clear line on
+        /// every approach within <see cref="CordonReach"/> of the scene, grouped by
+        /// direction so the officer waves one side through while the other holds, and
+        /// split into the body's closed half and the open half the traffic borrows
+        /// through in <see cref="CordonShift"/>.
+        ///
+        /// DETERMINISTIC — a pure function of <see cref="Graph"/>'s segment data and
+        /// <paramref name="sceneWorld"/>. No RNG, no frame state: called once when a scene
+        /// is raised, and the same inputs always rebuild the same cordon.
+        ///
+        /// One cordon at a time: replaces any prior one, and if nothing qualifies (no lane
+        /// within reach — a scene set back from the road) leaves the cordon down, tape-only.
+        /// </summary>
+        public CordonLayout RaiseCordon(Vector3 sceneWorld)
+        {
+            _cordon.Clear();
+            _cordonUp = false;
+
+            // Pass 1: walk every segment at 2m steps — plus its own far end, so a short
+            // segment between two steps is never missed — and keep its closest approach
+            // to the scene. HORIZONTAL distance only: the scene point's own height need
+            // not agree with the road's crown for "how close is this lane" to mean
+            // anything, and a mismatch there must not exclude a lane that is plainly the
+            // one running past the body.
+            var candidates = new List<(int seg, float s, float dist, Vector3 point)>();
+            for (int i = 0; i < Graph.Segments.Count; i++)
+            {
+                var segment = Graph.Segments[i];
+                float bestS = segment.FromS, bestDist = float.MaxValue;
+                Vector3 bestPoint = default;
+
+                float s = segment.FromS;
+                bool atEnd = false;
+                while (true)
+                {
+                    var p = PointOn(i, s);
+                    var flat = p - sceneWorld; flat.y = 0f;
+                    float d = flat.magnitude;
+                    if (d < bestDist) { bestDist = d; bestS = s; bestPoint = p; }
+
+                    if (atEnd) break;
+                    s += 2f;
+                    if (s >= segment.ToS) { s = segment.ToS; atEnd = true; }
+                }
+
+                if (bestDist < CordonReach) candidates.Add((i, bestS, bestDist, bestPoint));
+            }
+
+            if (candidates.Count == 0) return default;
+
+            // The physically nearest lane sets the reference frame: its own travel
+            // direction, and which side of it the scene sits on. Every other candidate's
+            // side is read against this SAME axis and point, so the comparison is
+            // apples-to-apples regardless of which direction that lane itself travels.
+            int nearIdx = 0;
+            for (int i = 1; i < candidates.Count; i++)
+                if (candidates[i].dist < candidates[nearIdx].dist) nearIdx = i;
+
+            var near = candidates[nearIdx];
+            Vector3 refAxis = (PointOn(near.seg, near.s + 1f) - PointOn(near.seg, near.s)).normalized;
+
+            // A horizontal perpendicular to refAxis, chosen so Cross(refAxis, perp).y > 0
+            // by construction (A x (up x A) = up, for a unit, near-horizontal A) — the
+            // fixed sign convention every side test below is read against.
+            Vector3 perp = Vector3.Cross(Vector3.up, refAxis).normalized;
+            bool bodyPositive = Vector3.Cross(refAxis, sceneWorld - near.point).y >= 0f;
+            _cordonOffsetDir = bodyPositive ? -perp : perp;    // away from the body: the open half
+
+            int closedIdx = -1;
+            float closedDist = float.MaxValue;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                var c = candidates[i];
+                var segment = Graph.Segments[c.seg];
+                bool laneSidePositive = Vector3.Cross(refAxis, c.point - near.point).y >= 0f;
+                bool closed = laneSidePositive == bodyPositive;
+
+                _cordon.Add(new CordonLine
+                {
+                    Segment = c.seg,
+                    HoldS = Mathf.Clamp(c.s - CordonReach, segment.FromS, segment.ToS),
+                    ClearS = Mathf.Clamp(c.s + CordonReach, segment.FromS, segment.ToS),
+                    // Heading is North=0, South=1, East=2, West=3 (LaneGraph.cs): opposing
+                    // directions on the same road always differ by exactly one, so this
+                    // always lands them in opposite alternation groups, on any road.
+                    SideA = ((int)segment.Way & 1) == 0,
+                    Closed = closed,
+                });
+
+                if (closed && c.dist < closedDist) { closedDist = c.dist; closedIdx = i; }
+            }
+
+            _cordonUp = true;
+            _cordonCentre = sceneWorld;
+
+            // The closed-side segment nearest the scene, or — when nothing qualified as
+            // closed (a one-way approach, say) — the nearest cordoned segment of any kind.
+            // candidates and _cordon were built in lockstep above, so the same index
+            // reaches the matching line in both.
+            int barricadeIdx = closedIdx >= 0 ? closedIdx : nearIdx;
+            var barricadeLine = _cordon[barricadeIdx];
+
+            return new CordonLayout
+            {
+                TrafficControlled = true,
+                BarricadeNear = PointOn(barricadeLine.Segment, barricadeLine.HoldS),
+                BarricadeFar = PointOn(barricadeLine.Segment, barricadeLine.ClearS),
+                RoadAxis = refAxis,
+            };
+        }
+
+        /// <summary>
+        /// Is the alternation currently waving THIS side through? Phase in double seconds
+        /// off the town tick — the same arithmetic the signals are fed
+        /// (VillageHost.cs:2039) — never float: a `double` gives the cordon the same
+        /// determinism against a long-running clock that the signals already have.
+        /// </summary>
+        private bool CordonOpenFor(bool sideA)
+        {
+            double t = TownTick / (double)GameClock.TicksPerSecond % CordonCycle;
+            return sideA ? t < 14.0 : (t >= 18.0 && t < 32.0);
+        }
+
+        public bool CordonActive => _cordonUp;
+
+        public void LowerCordon()
+        {
+            _cordon.Clear();
+            _cordonUp = false;
+        }
+
+        /// <summary>The player's car asks the same question the fleet answers in
+        /// RunSegment: is there a hold line within braking distance ahead of this pose,
+        /// on an approach the officer has NOT waved through?</summary>
+        public bool CordonHolds(Vector3 position, Vector3 forward)
+        {
+            if (!_cordonUp) return false;
+            for (int c = 0; c < _cordon.Count; c++)
+            {
+                var line = _cordon[c];
+                if (CordonOpenFor(line.SideA)) continue;
+                Vector3 hold = PointOn(line.Segment, line.HoldS);
+                Vector3 gap = hold - position;
+                float ahead = Vector3.Dot(gap, forward.normalized);
+                if (ahead <= 0f || ahead > 7f) continue;                       // behind, or far
+                if (Vector3.Cross(forward.normalized, gap).magnitude > 3.0f) continue;  // not my lane
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Zero except through a cordon's pinch on the closed half, where a car
+        /// borrows toward the open lane and back — a render-side shift; S never lies.</summary>
+        private Vector3 CordonShift(int segment, float s)
+        {
+            if (!_cordonUp) return Vector3.zero;
+            for (int c = 0; c < _cordon.Count; c++)
+            {
+                var line = _cordon[c];
+                if (line.Segment != segment || !line.Closed) continue;
+                if (s < line.HoldS || s > line.ClearS) return Vector3.zero;
+                // ease in and out of the borrow over the first and last 4 metres
+                float into = Mathf.Min(s - line.HoldS, line.ClearS - s);
+                return _cordonOffsetDir * (3.5f * Mathf.Clamp01(into / 4f));
+            }
+            return Vector3.zero;
+        }
+
         private CitySignals _signals;
         private WorldModel _world;
 
@@ -1073,6 +1288,31 @@ namespace Noir.Unity
                 else { me.Waited = 0f; me.Held = 0f; }
             }
 
+            // The scene cordon: a hold line short of the pinch, and a crawl through it
+            // when this approach has the officer's wave. Waited/Choices are deliberately
+            // untouched — a held car waits for the wave; it does not re-plan around a
+            // crime scene.
+            if (_cordonUp)
+            {
+                for (int c = 0; c < _cordon.Count; c++)
+                {
+                    if (_cordon[c].Segment != me.Segment) continue;
+                    var line = _cordon[c];
+                    if (me.S > line.ClearS) break;                     // already past
+                    if (!CordonOpenFor(line.SideA) && me.S < line.HoldS)
+                    {
+                        float allowed = Mathf.Max(0f, line.HoldS - me.S - me.Reach - 0.4f);
+                        step = Mathf.Min(step, allowed);
+                        if (allowed <= 0.01f) me.Why = Hold.Cordon;
+                    }
+                    else
+                    {
+                        step = Mathf.Min(step, CordonCrawl * dt);      // waved through, at a crawl
+                    }
+                    break;
+                }
+            }
+
             if (Blocked(index)) { step = 0f; me.Why = Hold.Following; }
 
             me.S += step;
@@ -1549,7 +1789,11 @@ namespace Noir.Unity
             else
             {
                 var segment = Graph.Segments[me.Segment];
-                at = PointOn(segment, me.S);
+                // The scene cordon's borrowed lane: zero except through a closed-half
+                // pinch, where it eases the car sideways toward the open lane and back.
+                // Render-side only — me.S never lies, and rotation still reads off the
+                // unshifted PointOn(segment, me.S + 1f) below.
+                at = PointOn(segment, me.S) + CordonShift(me.Segment, me.S);
                 ahead = PointOn(segment, me.S + 1f);
             }
 
