@@ -256,8 +256,11 @@ namespace Noir.Unity
             // The officer's hold line binds the player exactly as it binds the fleet —
             // the barricade collider stops the closed half physically; this stops the
             // open lane until the wave. Traffic answers the same question RunSegment
-            // asks for the ambient cars.
-            if (_host != null && _host.Traffic != null
+            // asks for the ambient cars. Only FORWARD motion is held: `_carSpeed > 0f`
+            // keeps this from also zeroing reverse and steering (which scales with
+            // |speed|) — without it a held player was trapped, unable to back off the
+            // line they were stopped at.
+            if (_carSpeed > 0f && _host != null && _host.Traffic != null
                 && _host.Traffic.CordonHolds(_car.transform.position, _car.transform.forward))
             {
                 _carSpeed = 0f;

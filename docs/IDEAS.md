@@ -1014,6 +1014,12 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 - [ ] Deduction as recipes: a corkboard where pinning evidence in a *shape* produces a lead. The Crafting System's `TableRecipe` is already position-aware rather than only contents-aware, and `ISatisfier` is the "do these inputs match this pattern" abstraction. Build it in Core against `particulars.txt`. — *2026-07-30*
 
+- [ ] An officer struck down AFTER re-standing as `DirectingTraffic` at a scene cordon could
+  leave the cordon standing indefinitely if the case machine stalls short of `Closed` — the
+  struck-down check only runs while he is in `_officerWalking`, so a hit landing after he has
+  taken up the traffic post is never seen by that arm. `CloseLoudly` is today's safety valve;
+  pre-existing case-machine behavior, surfaced by the scene-cordon final review. — *2026-08-18*
+
 ## Tech
 
 - [x] ~~`-quit` and `-runTests` MUST NOT be combined~~ FIXED: `Assets/Noir/Editor/TestInvocationGuard.cs` now catches the combination in batchmode and exits 1 with a clear error instead of letting Unity exit 0 silently. CONFIRMED by direct reproduction: the raw combo logs "Batchmode quit successfully invoked" before any test callback fires and writes no results file (exit 0); with the guard it now exits 1 before that race even starts; the correct invocation (no `-quit`) is untouched — reran the PlayMode suite and got 7/7 passing. Root cause: `-quit` and the test runner's start-up both hang off `EditorApplication.update`, and `-quit` wins the race. — *2026-07-30*

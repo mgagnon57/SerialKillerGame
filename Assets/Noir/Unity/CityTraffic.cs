@@ -1288,10 +1288,13 @@ namespace Noir.Unity
                 else { me.Waited = 0f; me.Held = 0f; }
             }
 
-            // The scene cordon: a hold line short of the pinch, and a crawl through it
-            // when this approach has the officer's wave. Waited/Choices are deliberately
-            // untouched — a held car waits for the wave; it does not re-plan around a
-            // crime scene.
+            // The scene cordon: a hold line short of the pinch, and a crawl through the
+            // pinch itself, once a car reaches it. The crawl is scoped to the pinch, not
+            // the whole cordoned segment — a car short of HoldS approaches at normal
+            // speed; the hold clamp above already stops the held side AT the line, so an
+            // open-side car simply drives up to the pinch and only crawls from HoldS to
+            // ClearS. Waited/Choices are deliberately untouched — a held car waits for the
+            // wave; it does not re-plan around a crime scene.
             if (_cordonUp)
             {
                 for (int c = 0; c < _cordon.Count; c++)
@@ -1305,9 +1308,9 @@ namespace Noir.Unity
                         step = Mathf.Min(step, allowed);
                         if (allowed <= 0.01f) me.Why = Hold.Cordon;
                     }
-                    else
+                    else if (me.S >= line.HoldS)
                     {
-                        step = Mathf.Min(step, CordonCrawl * dt);      // waved through, at a crawl
+                        step = Mathf.Min(step, CordonCrawl * dt);      // through the pinch, at a crawl
                     }
                     break;
                 }
