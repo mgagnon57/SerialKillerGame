@@ -88,6 +88,35 @@ namespace Noir.Unity
             Scale = Mathf.Clamp(PlayerPrefs.GetFloat(ScaleKey, DefaultScale), MinScale, MaxScale);
 
         /// <summary>
+        /// EVERY KEY THIS PANEL LAYER READS IS READ HERE, ONCE PER FRAME — never in OnGUI.
+        /// OnGUI runs at least twice a frame (Layout + Repaint; more with input events), and
+        /// Keyboard.current's wasPressedThisFrame stays true for the WHOLE frame, so a toggle
+        /// handled in OnGUI fires an even number of times and cancels itself. That is why T, B
+        /// and H all "did nothing" on 2026-08-17 while the badge provably never flipped: each
+        /// press toggled twice. The scale keys survived only because a double STEP is merely a
+        /// bigger step. PlayerInteraction's measured lesson, now applied here too: IMGUI is
+        /// display-only; input lives on the frame clock.
+        /// </summary>
+        private void Update()
+        {
+            if (!_scaleLoaded) { LoadScale(); _scaleLoaded = true; }
+            ReadScaleKeys();
+
+            var keys = Keyboard.current;
+            if (keys == null) return;
+
+            if (keys.bKey.wasPressedThisFrame && !KeyboardCaptured)
+                _host.Badge = !_host.Badge;
+            if (keys.tKey.wasPressedThisFrame && !KeyboardCaptured)
+            {
+                _showTestimony = !_showTestimony;
+                if (_showTestimony) Ask();
+            }
+            if (keys.hKey.wasPressedThisFrame && !KeyboardCaptured)
+                _showHelp = !_showHelp;
+        }
+
+        /// <summary>
         /// Ctrl+= larger, Ctrl+- smaller, Ctrl+0 back to default. Held on Ctrl so it cannot
         /// collide with the single-key game shortcuts (Tab, H, F, the digits).
         /// </summary>
@@ -271,7 +300,8 @@ namespace Noir.Unity
         private void OnGUI()
         {
             if (!_scaleLoaded) { LoadScale(); _scaleLoaded = true; }
-            ReadScaleKeys();
+            // Keys are read in Update(), once per frame — see its header for the double-toggle
+            // trap that reading them here caused. OnGUI draws; it does not listen.
             if (!_stylesReady) BuildStyles();
 
             if (_host.LoadError != null)
@@ -665,14 +695,8 @@ namespace Noir.Unity
         /// </summary>
         private void DrawTestimony()
         {
-            var keys = Keyboard.current;
-            if (keys != null && keys.bKey.wasPressedThisFrame && !KeyboardCaptured)
-                _host.Badge = !_host.Badge;
-            if (keys != null && keys.tKey.wasPressedThisFrame)
-            {
-                _showTestimony = !_showTestimony;
-                if (_showTestimony) Ask();
-            }
+            // B and T are handled in Update() — reading them here ran twice a frame and
+            // cancelled every toggle. See Update()'s header.
             if (!_showTestimony) return;
 
             float w = S(660f), h = S(420f);
@@ -799,8 +823,7 @@ namespace Noir.Unity
         /// </summary>
         private void DrawHelp()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.hKey.wasPressedThisFrame) _showHelp = !_showHelp;
+            // H is handled in Update() — see its header for the OnGUI double-toggle trap.
             if (!_showHelp) return;
 
             float w = S(620f), h = S(470f);
