@@ -1,5 +1,6 @@
 using UnityEngine;
 using Noir.Core.Contracts;
+using Noir.Core.People;
 
 namespace Noir.Unity
 {
@@ -72,6 +73,10 @@ namespace Noir.Unity
             _bubbles[slot < 0 ? 0 : slot] = new Bubble { Who = who, Line = line, Until = until };
         }
 
+        private const float BadgeHeight = 2.7f;     // a notch above the bubbles, so the two never collide
+        private const string BadgeLine = "★ OFFICER";
+        private GUIStyle _badgeStyle;
+
         private void OnGUI()
         {
             if (Application.isBatchMode) return;
@@ -86,6 +91,16 @@ namespace Noir.Unity
                     fontStyle = FontStyle.Italic,
                     wordWrap = false,
                 };
+            if (_badgeStyle == null)
+                _badgeStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 12,
+                    fontStyle = FontStyle.Bold,
+                    wordWrap = false,
+                };
+
+            DrawBadges(cam);
 
             float now = Time.unscaledTime;
             var oldColor = GUI.color;
@@ -110,6 +125,44 @@ namespace Noir.Unity
                 GUI.DrawTexture(rect, Texture2D.whiteTexture);
                 GUI.color = new Color(0.96f, 0.94f, 0.86f, alpha);
                 GUI.Label(rect, _bubbles[i].Line, _style);
+            }
+            GUI.color = oldColor;
+        }
+
+        /// <summary>
+        /// A gold tag over every police-active head, so the player can tell the officer
+        /// from the crowd at a glance (owner request 2026-08-18: "a cop badge or something
+        /// over their head so we know who they are"). Reads what the sim already says —
+        /// Responding, or standing as DirectingTraffic at a cordon pinch — so it appears
+        /// with the dispatch and vanishes with the release, no state of its own. Distance
+        /// fade over the far half of the bubble range rather than a hard pop.
+        /// </summary>
+        private void DrawBadges(Camera cam)
+        {
+            var oldColor = GUI.color;
+            int count = _host.Sim.AgentCount;
+            for (int i = 0; i < count; i++)
+            {
+                var agent = _host.Sim.GetAgent(i);
+                if (!agent.Responding && agent.Doing != Activity.DirectingTraffic) continue;
+
+                var world = Space3D.ToWorld(agent.Position, BadgeHeight);
+                float distance = (world - cam.transform.position).magnitude;
+                if (distance > MaxDistance) continue;
+
+                var screen = cam.WorldToScreenPoint(world);
+                if (screen.z <= 0f) continue;
+
+                float alpha = Mathf.Clamp01((MaxDistance - distance) / (MaxDistance * 0.5f));
+                var size = _badgeStyle.CalcSize(new GUIContent(BadgeLine));
+                var rect = new Rect(screen.x - size.x / 2f - 6f,
+                                    Screen.height - screen.y - size.y - 4f,
+                                    size.x + 12f, size.y + 6f);
+
+                GUI.color = new Color(0f, 0f, 0f, 0.6f * alpha);
+                GUI.DrawTexture(rect, Texture2D.whiteTexture);
+                GUI.color = new Color(0.94f, 0.78f, 0.2f, alpha);   // badge gold
+                GUI.Label(rect, BadgeLine, _badgeStyle);
             }
             GUI.color = oldColor;
         }
