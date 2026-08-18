@@ -580,5 +580,19 @@ namespace Noir.Core.Tests
             Assert.That(said[1].ToLowerInvariant(), Does.Contain("asking questions"),
                 "the ask came an hour later and should be told second: " + string.Join(" | ", said));
         }
+
+        /// <summary>
+        /// The collision spec's sentence: the at-fault car described through the same degradation
+        /// the hit line uses, the other car nameless — a witness saw an accident, not a report.
+        /// </summary>
+        [Test]
+        public void ACollisionSightingReadsLikeAWitness()
+        {
+            var s = new EventSighting(new ObserverId(0), 990, new Tile(4, 4),
+                SightingClarity.Partial, EventAct.CarsCollided,
+                new CarDescription(CarTone.Dark, CarShape.Van));
+            Assert.That(Testimony.InEnglish(s),
+                Is.EqualTo("16:30, I saw a dark van and another car come together."));
+        }
     }
 }

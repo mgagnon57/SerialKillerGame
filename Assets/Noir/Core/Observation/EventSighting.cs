@@ -11,6 +11,7 @@ namespace Noir.Core.Observation
     {
         CarStruckSomebody = 0,
         SomebodyAskedQuestions = 1,
+        CarsCollided = 2,
     }
 
     /// <summary>

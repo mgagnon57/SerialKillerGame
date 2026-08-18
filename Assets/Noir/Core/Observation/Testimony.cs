@@ -72,11 +72,13 @@ namespace Noir.Core.Observation
                 _ => "I think I saw",
             });
             sb.Append(' ');
-            sb.Append(e.Act == EventAct.CarStruckSomebody ? Car(e.Car) : "somebody");
+            sb.Append(e.Act == EventAct.CarStruckSomebody || e.Act == EventAct.CarsCollided
+                ? Car(e.Car) : "somebody");
             sb.Append(e.Act switch
             {
                 EventAct.CarStruckSomebody      => " hit somebody",
                 EventAct.SomebodyAskedQuestions => " going around asking questions",
+                EventAct.CarsCollided           => " and another car come together",
                 _                               => " do something",
             });
             sb.Append('.');
