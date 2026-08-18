@@ -398,6 +398,14 @@ namespace Noir.Unity
         /// may be.</summary>
         public CityResponse Response { get; private set; }
 
+        /// <summary>The cordon's props — sawhorses and tape — raised when an officer arrives
+        /// at a scene and lowered when the case closes. See <see cref="SceneCordon"/>.</summary>
+        private SceneCordon _cordons;
+
+        /// <summary>Which case currently has the cordon up, or -1. There is only ever one:
+        /// the Closed arm reads this to know whether to lower it.</summary>
+        private int _cordonCase = -1;
+
         /// <summary>The town's front doors, and the one thing that swings them.</summary>
         private CityDoors _doors;
 
@@ -1031,6 +1039,10 @@ namespace Noir.Unity
             VillageAudio.Create(this, transform);
             profile.Done("VillageAudio");
 
+            // The cordon's props stand nowhere until an officer arrives at a scene - see
+            // Step 2 in the OfficerArrived arm below.
+            _cordons = SceneCordon.Create(_village.transform);
+
             // AFTER EVERY LAYER, NOT DURING ONE. VillageMesh calls SurfaceTextures.ReportOnce
             // partway through its own build, before the lazily-registered Massing, Trees and Farm
             // layers have realised, so that line can only ever say "so far". This one runs when
@@ -1539,6 +1551,23 @@ namespace Noir.Unity
                     {
                         _cases.OfficerArrived(c, minute);
                         _voices?.Say(officer, "step back, please — all of you.");
+
+                        // THE CORDON GOES UP. Traffic first (it computes the geometry),
+                        // then the props stand at the points it chose, then the officer
+                        // walks to the pinch and starts waving — re-stood AFTER
+                        // OfficerArrived is reported, because the arrival detector above
+                        // keys on Doing == Responding and must fire exactly once.
+                        var sceneWorld = Space3D.ToWorld(_cases.SceneOf(c));
+                        var layout = _traffic != null ? _traffic.RaiseCordon(sceneWorld)
+                                                      : default;
+                        _cordons.Raise(c, sceneWorld, layout);
+                        _cordonCase = c;
+                        if (layout.TrafficControlled)
+                        {
+                            Tile pinch = KerbTileNear(layout.BarricadeNear, _cases.SceneOf(c));
+                            Sim.Respond(officer, pinch, Activity.DirectingTraffic);
+                            _voices?.Say(officer, "keep it moving — one at a time.");
+                        }
                     }
                 }
             }
@@ -1566,6 +1595,13 @@ namespace Noir.Unity
                         for (int g = 0; g < crowd.Count; g++) Sim.Release(crowd[g]);
                         _gawkers.Remove(c);
                         Debug.Log($"[case] case {c}: the crowd loses interest");
+                    }
+                    if (_cordonCase == c)
+                    {
+                        _cordons.Lower(c);
+                        _traffic?.LowerCordon();
+                        _cordonCase = -1;
+                        Debug.Log($"[case] case {c}: the cordon comes down");
                     }
                     continue;
                 }

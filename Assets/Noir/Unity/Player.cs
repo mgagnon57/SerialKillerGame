@@ -252,6 +252,18 @@ namespace Noir.Unity
             CarTravelledFrom = _car.transform.position;
             Vector3 step = _car.transform.forward * _carSpeed * dt;
             float distance = step.magnitude;
+
+            // The officer's hold line binds the player exactly as it binds the fleet —
+            // the barricade collider stops the closed half physically; this stops the
+            // open lane until the wave. Traffic answers the same question RunSegment
+            // asks for the ambient cars.
+            if (_host != null && _host.Traffic != null
+                && _host.Traffic.CordonHolds(_car.transform.position, _car.transform.forward))
+            {
+                _carSpeed = 0f;
+                distance = 0f;
+            }
+
             if (distance > 0f)
             {
                 // The box floats above the road - bottom at +0.4m, raised from an earlier
