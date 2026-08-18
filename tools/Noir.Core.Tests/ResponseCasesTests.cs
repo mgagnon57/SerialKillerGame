@@ -272,6 +272,180 @@ namespace Noir.Core.Tests
             Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.DispatchOfficer));
         }
 
+        /// <summary>
+        /// A bender: neither driver hurt. The interview queue is [Victim, Other] — the at-fault
+        /// driver first, then the one hit into — paced exactly like the canvass's own
+        /// once-per-index/NextDoorReadyAt clock. With LetGo as the verdict, once both have
+        /// answered the case skips straight to a verdict and closes: no ambulance ever runs.
+        /// </summary>
+        [Test]
+        public void ABenderRunsInterviewsAndAVerdictAndNoAmbulance()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            var allOrders = new List<CaseOrder>();
+            var atFault = new CitizenId(7);
+            var other = new CitizenId(8);
+            int id = cases.OpenCollision(atFault, other, 1000, new Tile(50, 50),
+                                         CarTone.Dark, CarShape.Pickup, injury: false, verdict: CrashVerdict.LetGo);
+
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders);   // 1000 + AlarmDelayMinutes
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.DispatchOfficer));
+            allOrders.AddRange(orders); orders.Clear();
+
+            cases.OfficerDispatched(id, new CitizenId(12));
+            cases.OfficerArrived(id, 1010);
+            cases.Tick(1028, orders);   // 1010 + CountyOffMapMinutes
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.CountyCarIn));
+            allOrders.AddRange(orders); orders.Clear();
+
+            cases.CountyArrived(id, 1033);
+            cases.Tick(1033, orders);
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.InterviewDriver));
+            Assert.That(orders[0].Who, Is.EqualTo(atFault), "the at-fault driver is interviewed first");
+            allOrders.AddRange(orders); orders.Clear();
+
+            cases.CountyReachedDoor(id, 1036, atFault, new[] { "It was my fault, I ran the light." });
+            cases.Tick(1040, orders);   // 1036 + CanvassMinutesPerDoor(5) = 1041: still dwelling
+            Assert.That(orders, Is.Empty);
+            cases.Tick(1041, orders);
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.InterviewDriver));
+            Assert.That(orders[0].Who, Is.EqualTo(other), "the other driver is interviewed second");
+            allOrders.AddRange(orders); orders.Clear();
+
+            cases.CountyReachedDoor(id, 1044, other, new[] { "He ran the light and hit me." });
+            cases.Tick(1048, orders);   // 1044 + 5 = 1049: still dwelling
+            Assert.That(orders, Is.Empty);
+            cases.Tick(1049, orders);
+            Assert.That(orders.Select(o => o.Kind), Is.EqualTo(new[]
+                { OrderKind.ReleaseDrivers, OrderKind.VehiclesLeave, OrderKind.ReleaseOfficer }));
+            Assert.That(orders[0].Who, Is.EqualTo(CitizenId.None));
+            Assert.That(orders[2].Who, Is.EqualTo(new CitizenId(12)), "the release order names the officer");
+            Assert.That(cases.StateOf(id), Is.EqualTo(CaseState.Closed));
+            allOrders.AddRange(orders);
+
+            Assert.That(allOrders.Any(o => o.Kind == OrderKind.AmbulanceIn), Is.False,
+                "a bender never calls an ambulance");
+            Assert.That(allOrders.Any(o => o.Kind == OrderKind.TakeBodyAway), Is.False,
+                "nobody was hurt, so nobody is carried away");
+        }
+
+        /// <summary>
+        /// A DUI verdict ends in an arrest and a tow, in that order, before the case's ordinary
+        /// close.
+        /// </summary>
+        [Test]
+        public void DrinkEndsInArrestAndATow()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            var atFault = new CitizenId(7);
+            var other = new CitizenId(8);
+            int id = cases.OpenCollision(atFault, other, 1000, new Tile(50, 50),
+                                         CarTone.Dark, CarShape.Pickup, injury: false, verdict: CrashVerdict.Dui);
+
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders); orders.Clear();
+            cases.OfficerDispatched(id, new CitizenId(12));
+            cases.OfficerArrived(id, 1010);
+            cases.Tick(1028, orders); orders.Clear();
+            cases.CountyArrived(id, 1033);
+
+            cases.Tick(1033, orders);   // InterviewDriver(atFault)
+            orders.Clear();
+            cases.CountyReachedDoor(id, 1036, atFault, new[] { "I might've had a couple." });
+            cases.Tick(1041, orders);   // InterviewDriver(other)
+            orders.Clear();
+            cases.CountyReachedDoor(id, 1044, other, new[] { "He swerved right into me." });
+
+            cases.Tick(1049, orders);   // interviews done -> verdict -> close, all in one tick
+            Assert.That(orders.Select(o => o.Kind), Is.EqualTo(new[]
+                { OrderKind.ArrestDriver, OrderKind.TowVehicle, OrderKind.VehiclesLeave, OrderKind.ReleaseOfficer }));
+            Assert.That(orders[0].Who, Is.EqualTo(atFault), "the arrest names the at-fault driver");
+            Assert.That(orders[1].Who, Is.EqualTo(atFault), "the tow follows the arrested driver's own car");
+            Assert.That(cases.StateOf(id), Is.EqualTo(CaseState.Closed));
+            Assert.That(cases.ReturnMinuteOf(id), Is.EqualTo(1000 + 3 * 1440),
+                "the lockup costs the same days as the hospital, in phase 1");
+
+            var file = cases.FileOf(id);
+            Assert.That(file.Any(l => l.Contains("under arrest")),
+                "the file should say the driver is under arrest: " + string.Join(" | ", file));
+            Assert.That(file.Any(l => l.Contains("tow")),
+                "the file should mention the tow: " + string.Join(" | ", file));
+        }
+
+        /// <summary>
+        /// The at-fault driver was hurt badly enough that the roadside interview skips him
+        /// entirely — only the other driver answers — and he goes off in the ambulance instead,
+        /// the same arc a person-hit gets, before the case still reaches a verdict.
+        /// </summary>
+        [Test]
+        public void AnInjuredDriverIsNotInterviewedButIsTakenAway()
+        {
+            var cases = new ResponseCases();
+            var orders = new List<CaseOrder>();
+            var allOrders = new List<CaseOrder>();
+            var atFault = new CitizenId(7);
+            var other = new CitizenId(8);
+            int id = cases.OpenCollision(atFault, other, 1000, new Tile(50, 50),
+                                         CarTone.Dark, CarShape.Pickup, injury: true, verdict: CrashVerdict.Ticket);
+
+            cases.BodySeen(id, 1000, new CitizenId(3));
+            cases.Tick(1004, orders); allOrders.AddRange(orders); orders.Clear();
+            cases.OfficerDispatched(id, new CitizenId(12));
+            cases.OfficerArrived(id, 1010);
+            cases.Tick(1028, orders); allOrders.AddRange(orders); orders.Clear();
+            cases.CountyArrived(id, 1033);
+
+            cases.Tick(1033, orders);
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.InterviewDriver));
+            Assert.That(orders[0].Who, Is.EqualTo(other),
+                "the injured at-fault driver cannot be interviewed at the roadside");
+            allOrders.AddRange(orders); orders.Clear();
+
+            cases.CountyReachedDoor(id, 1036, other, new[] { "The other car ran the stop sign." });
+
+            // interview exhausted at 1041 (1036+5); ambulance due 1041+10=1051
+            cases.Tick(1040, orders);
+            Assert.That(orders, Is.Empty);
+            cases.Tick(1050, orders);
+            Assert.That(orders, Is.Empty, "not a minute before the ambulance is due");
+            cases.Tick(1051, orders);
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].Kind, Is.EqualTo(OrderKind.AmbulanceIn));
+            allOrders.AddRange(orders); orders.Clear();
+
+            cases.AmbulanceArrived(id, 1057);
+            cases.Tick(1060, orders);   // 1057 + LoadingMinutes(3)
+            Assert.That(orders.Select(o => o.Kind), Is.EqualTo(new[]
+                { OrderKind.TakeBodyAway, OrderKind.TicketDriver, OrderKind.VehiclesLeave, OrderKind.ReleaseOfficer }));
+            Assert.That(orders[0].Who, Is.EqualTo(atFault), "the ambulance carries off the at-fault driver");
+            Assert.That(orders[1].Who, Is.EqualTo(atFault), "the ticket still names the at-fault driver");
+            Assert.That(cases.StateOf(id), Is.EqualTo(CaseState.Closed));
+            allOrders.AddRange(orders);
+
+            Assert.That(allOrders.Count(o => o.Kind == OrderKind.InterviewDriver), Is.EqualTo(1),
+                "exactly one interview: the at-fault driver was too hurt to answer questions");
+        }
+
+        [Test]
+        public void KindOfTellsTheTwoCasesApart()
+        {
+            var cases = new ResponseCases();
+            int personHit = cases.Open(new CitizenId(1), 100, new Tile(1, 1),
+                                       CarTone.Mid, CarShape.Car, fatal: false);
+            int collision = cases.OpenCollision(new CitizenId(2), new CitizenId(3), 200, new Tile(2, 2),
+                                                CarTone.Dark, CarShape.Van, injury: false, verdict: CrashVerdict.LetGo);
+
+            Assert.That(cases.KindOf(personHit), Is.EqualTo(CaseKind.PersonDown));
+            Assert.That(cases.KindOf(collision), Is.EqualTo(CaseKind.Collision));
+            Assert.That(cases.FatalOf(collision), Is.False, "a collision injury is never fatal in phase 1");
+        }
+
         [Test]
         public void AWrongStateArrivalCallThrows()
         {

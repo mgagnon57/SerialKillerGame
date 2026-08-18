@@ -4,11 +4,14 @@ using Noir.Core.Contracts;
 
 namespace Noir.Core.Response
 {
-    /// <summary>Where a case sits in the response, minute by minute.</summary>
+    /// <summary>Where a case sits in the response, minute by minute. Adjudicating is the
+    /// collision arc's verdict moment — entered and left within a single Tick, so no case is
+    /// ever OBSERVED sitting in it, but the state exists so the machine's walk to Closed is
+    /// honest about passing through a judgment.</summary>
     public enum CaseState : byte
     {
         Undiscovered, Alarm, OfficerEnRoute, SceneHeld, CountyEnRoute, Canvassing,
-        AmbulanceEnRoute, Loading, Closed
+        AmbulanceEnRoute, Loading, Adjudicating, Closed
     }
 
     /// <summary>
@@ -20,7 +23,11 @@ namespace Noir.Core.Response
     public enum OrderKind : byte
     {
         DispatchOfficer, CountyCarIn, CanvassNext, AmbulanceIn, TakeBodyAway,
-        ReleaseOfficer, VehiclesLeave
+        ReleaseOfficer, VehiclesLeave,
+
+        // The collision arc's orders. APPEND ONLY from here down — nothing persists these
+        // values, but nothing should ever have to wonder whether they moved either.
+        InterviewDriver, ArrestDriver, TicketDriver, ReleaseDrivers, TowVehicle
     }
 
     /// <summary>One instruction out of the machine. See <see cref="OrderKind"/> for who Who is.</summary>
@@ -31,7 +38,9 @@ namespace Noir.Core.Response
         public readonly Tile Scene;
 
         /// <summary>Witness for CanvassNext, officer for ReleaseOfficer, victim for
-        /// TakeBodyAway; CitizenId.None otherwise.</summary>
+        /// TakeBodyAway; the driver in question for InterviewDriver, ArrestDriver,
+        /// TicketDriver and TowVehicle; CitizenId.None otherwise (ReleaseDrivers frees
+        /// both drivers, so it names nobody).</summary>
         public readonly CitizenId Who;
 
         public CaseOrder(OrderKind kind, int caseId, Tile scene, CitizenId who)
@@ -84,12 +93,27 @@ namespace Noir.Core.Response
         {
             public CaseState State = CaseState.Undiscovered;
 
+            public readonly CaseKind Kind;
+
+            /// <summary>The person the case is ABOUT: the struck pedestrian for a PersonDown
+            /// case, the at-fault driver for a Collision.</summary>
             public readonly CitizenId Victim;
             public readonly int HitMinute;
             public readonly Tile Scene;
             public readonly CarTone Tone;
             public readonly CarShape Shape;
             public readonly bool Fatal;
+
+            /// <summary>The second driver of a Collision; CitizenId.None for PersonDown.</summary>
+            public readonly CitizenId Other;
+
+            /// <summary>Collision only: the at-fault driver went down and rides the ambulance
+            /// out. A collision injury is never fatal in phase 1.</summary>
+            public readonly bool Injury;
+
+            /// <summary>Collision only: decided by the planner at plan time, carried here as
+            /// data — the machine never computes it. LetGo for PersonDown.</summary>
+            public readonly CrashVerdict Verdict;
 
             public int DiscoveredAt = -1;
             public int ClosedAt;               // 0 until Closed
@@ -112,11 +136,25 @@ namespace Noir.Core.Response
 
             public int LoadingDoneAt = -1;
             public bool ClosingEmitted;
+            public bool AdjudicationEmitted;
 
             public readonly List<string> File = new List<string>();
 
             public Case(CitizenId victim, int hitMinute, Tile scene, CarTone tone, CarShape shape, bool fatal)
-            { Victim = victim; HitMinute = hitMinute; Scene = scene; Tone = tone; Shape = shape; Fatal = fatal; }
+            {
+                Kind = CaseKind.PersonDown;
+                Victim = victim; HitMinute = hitMinute; Scene = scene; Tone = tone; Shape = shape; Fatal = fatal;
+                Other = CitizenId.None; Injury = false; Verdict = CrashVerdict.LetGo;
+            }
+
+            public Case(CitizenId atFault, CitizenId other, int hitMinute, Tile scene,
+                        CarTone tone, CarShape shape, bool injury, CrashVerdict verdict)
+            {
+                Kind = CaseKind.Collision;
+                Victim = atFault; Other = other; HitMinute = hitMinute; Scene = scene;
+                Tone = tone; Shape = shape; Injury = injury; Verdict = verdict;
+                Fatal = false;   // a collision injury is never fatal in phase 1
+            }
         }
 
         private readonly List<Case> _cases = new List<Case>();
@@ -147,6 +185,17 @@ namespace Noir.Core.Response
             return _cases.Count - 1;
         }
 
+        /// <summary>Appends a Collision case in Undiscovered and returns its index. The verdict
+        /// arrives here as data, stamped by the planner at plan time — the machine only ever
+        /// carries it to the kerb and emits the order it implies. The at-fault driver rides the
+        /// Victim slot; see that field's comment.</summary>
+        public int OpenCollision(CitizenId atFault, CitizenId other, int minute, Tile scene,
+                                 CarTone tone, CarShape shape, bool injury, CrashVerdict verdict)
+        {
+            _cases.Add(new Case(atFault, other, minute, scene, tone, shape, injury, verdict));
+            return _cases.Count - 1;
+        }
+
         public int Count => _cases.Count;
 
         public int ClosedCount
@@ -161,6 +210,7 @@ namespace Noir.Core.Response
         }
 
         public CaseState StateOf(int caseId) => _cases[caseId].State;
+        public CaseKind KindOf(int caseId) => _cases[caseId].Kind;
         public CitizenId VictimOf(int caseId) => _cases[caseId].Victim;
         public Tile SceneOf(int caseId) => _cases[caseId].Scene;
 
@@ -171,7 +221,8 @@ namespace Noir.Core.Response
         public bool FatalOf(int caseId) => _cases[caseId].Fatal;
 
         /// <summary>Hit minute plus SurvivorAwayDays, or int.MaxValue when fatal — a fatal case
-        /// has nobody to come back.</summary>
+        /// has nobody to come back. Serves collisions too: the county lockup and the hospital
+        /// cost the same days in phase 1.</summary>
         public int ReturnMinuteOf(int caseId)
         {
             Case c = _cases[caseId];
@@ -243,6 +294,24 @@ namespace Noir.Core.Response
                     "case " + caseId + " has no county car en route; it is in state " + c.State + ".");
             c.State = CaseState.Canvassing;
             c.CountyArrivedAt = minute;
+
+            if (c.Kind == CaseKind.Collision)
+            {
+                // A collision's "witness list" is not the host's to hand over: it is exactly the
+                // two drivers, and the machine already knows who they are. The at-fault driver
+                // answers first — unless he is the one on the ground, in which case the roadside
+                // interview skips him entirely and the ambulance speaks for him.
+                c.Witnesses = c.Injury
+                    ? new[] { c.Other }
+                    : new[] { c.Victim, c.Other };
+                c.WitnessIndex = 0;
+                c.CanvassNextEmittedForIndex = false;
+                c.AmbulanceDueAt = -1;
+                c.NextDoorReadyAt = minute;
+                Emit(caseId, "case " + caseId + ": county car on scene at minute " + minute + ", taking the drivers' statements");
+                return;
+            }
+
             Emit(caseId, "case " + caseId + ": county car on scene at minute " + minute + ", canvass beginning");
         }
 
@@ -255,6 +324,9 @@ namespace Noir.Core.Response
             if (c.State != CaseState.Canvassing)
                 throw new InvalidOperationException(
                     "case " + caseId + " is not ready to canvass; it is in state " + c.State + ".");
+            if (c.Kind == CaseKind.Collision)
+                throw new InvalidOperationException(
+                    "case " + caseId + " is a collision; the drivers are the witness list and the machine set it itself.");
             c.Witnesses = witnesses ?? Array.Empty<CitizenId>();
             c.WitnessIndex = 0;
             c.CanvassNextEmittedForIndex = false;
@@ -404,6 +476,9 @@ namespace Noir.Core.Response
                 case CaseState.SceneHeld: TickSceneHeld(active, c, minute, orders); break;
                 case CaseState.Canvassing: TickCanvassing(active, c, minute, orders); break;
                 case CaseState.Loading: TickLoading(active, c, minute, orders); break;
+                case CaseState.Adjudicating: TickAdjudicating(active, c, minute, orders); break;
+                    // Adjudicating is transient — entered and closed within one tick — so that
+                    // arm should never actually fire; it is here so a case could never wedge.
                     // OfficerEnRoute, CountyEnRoute and AmbulanceEnRoute wait on a host call;
                     // Undiscovered and Closed are never the active case.
             }
@@ -473,13 +548,33 @@ namespace Noir.Core.Response
 
                     c.CanvassNextEmittedForIndex = true;
                     CitizenId witness = c.Witnesses[c.WitnessIndex];
-                    orders.Add(new CaseOrder(OrderKind.CanvassNext, id, c.Scene, witness));
-                    Emit(id, "case " + id + ": canvassing citizen " + witness.Value + " at minute " + minute);
+                    if (c.Kind == CaseKind.Collision)
+                    {
+                        orders.Add(new CaseOrder(OrderKind.InterviewDriver, id, c.Scene, witness));
+                        Emit(id, "case " + id + ": interviewing driver " + witness.Value + " at minute " + minute);
+                    }
+                    else
+                    {
+                        orders.Add(new CaseOrder(OrderKind.CanvassNext, id, c.Scene, witness));
+                        Emit(id, "case " + id + ": canvassing citizen " + witness.Value + " at minute " + minute);
+                    }
                     return;   // the next witness needs its own CountyReachedDoor first
                 }
                 else
                 {
                     if (minute < c.NextDoorReadyAt) return;
+
+                    // A bender's interviews end the scene work outright: nobody is hurt, so
+                    // there is no ambulance to wait for — the case goes straight to its verdict,
+                    // in this same tick. An injury collision keeps the ambulance arc below and
+                    // gets its verdict after the loading, from TickLoading.
+                    if (c.Kind == CaseKind.Collision && !c.Injury)
+                    {
+                        c.State = CaseState.Adjudicating;
+                        TickAdjudicating(id, c, minute, orders);
+                        return;
+                    }
+
                     c.AmbulanceDueAt = c.NextDoorReadyAt + AmbulanceOffMapMinutes;
                 }
 
@@ -502,15 +597,65 @@ namespace Noir.Core.Response
             if (minute < c.LoadingDoneAt) return;
 
             c.ClosingEmitted = true;
+            orders.Add(new CaseOrder(OrderKind.TakeBodyAway, id, c.Scene, c.Victim));
+
+            // An injury collision's ambulance leaves with the at-fault driver, but the case is
+            // not over: the law still owes its verdict, in this same tick.
+            if (c.Kind == CaseKind.Collision)
+            {
+                c.State = CaseState.Adjudicating;
+                TickAdjudicating(id, c, minute, orders);
+                return;
+            }
+
             c.State = CaseState.Closed;
             c.ClosedAt = minute;
-            orders.Add(new CaseOrder(OrderKind.TakeBodyAway, id, c.Scene, c.Victim));
             orders.Add(new CaseOrder(OrderKind.VehiclesLeave, id, c.Scene, CitizenId.None));
             orders.Add(new CaseOrder(OrderKind.ReleaseOfficer, id, c.Scene, c.Officer));
             Emit(id, "case " + id + ": scene cleared at minute " + minute + ", case closed");
 
             // Hand the slot on. Whoever is queued longest (by discovery minute, not id) gets it;
             // their own alarm clock reads this same minute as its floor, via _lastActiveClosedAt.
+            _lastActiveClosedAt = minute;
+            _activeCaseId = -1;
+            ActivateNextIfNeeded();
+        }
+
+        /// <summary>The verdict moment: the planner's judgment, already riding the case as
+        /// data, becomes orders — the verdict order first, then the tow (an arrested man's car
+        /// goes on the hook; ticketed and released drivers drive their own cars off), then the
+        /// ordinary scene-clearing pair, and the case closes with TickLoading's own
+        /// bookkeeping. All in one tick, on purpose: a roadside verdict takes no extra
+        /// minutes in phase 1, so no case is ever observed sitting in Adjudicating.</summary>
+        private void TickAdjudicating(int id, Case c, int minute, List<CaseOrder> orders)
+        {
+            if (c.AdjudicationEmitted) return;
+            c.AdjudicationEmitted = true;
+
+            switch (c.Verdict)
+            {
+                case CrashVerdict.Dui:
+                    orders.Add(new CaseOrder(OrderKind.ArrestDriver, id, c.Scene, c.Victim));
+                    Emit(id, "case " + id + ": citizen " + c.Victim.Value + " is under arrest — the drink decided it");
+                    orders.Add(new CaseOrder(OrderKind.TowVehicle, id, c.Scene, c.Victim));
+                    Emit(id, "case " + id + ": the car is called in for tow");
+                    break;
+                case CrashVerdict.Ticket:
+                    orders.Add(new CaseOrder(OrderKind.TicketDriver, id, c.Scene, c.Victim));
+                    Emit(id, "case " + id + ": citizen " + c.Victim.Value + " is ticketed at the roadside");
+                    break;
+                default:
+                    orders.Add(new CaseOrder(OrderKind.ReleaseDrivers, id, c.Scene, CitizenId.None));
+                    Emit(id, "case " + id + ": both drivers released");
+                    break;
+            }
+
+            c.State = CaseState.Closed;
+            c.ClosedAt = minute;
+            orders.Add(new CaseOrder(OrderKind.VehiclesLeave, id, c.Scene, CitizenId.None));
+            orders.Add(new CaseOrder(OrderKind.ReleaseOfficer, id, c.Scene, c.Officer));
+            Emit(id, "case " + id + ": scene cleared at minute " + minute + ", case closed");
+
             _lastActiveClosedAt = minute;
             _activeCaseId = -1;
             ActivateNextIfNeeded();
