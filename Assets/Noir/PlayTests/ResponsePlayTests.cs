@@ -63,6 +63,13 @@ namespace Noir.PlayTests
                 // hit opens a case now - both are shared-town state a later test would inherit
                 // as bodies in the street and responses firing mid-measurement. Stand everyone
                 // back up and close every case, whatever this test's exit path was.
+                //
+                // Anybody the town's own machinery took AWAY comes back first - the collision
+                // scenario's DUI arrest, or an ambient crash's, holds a citizen off-map for
+                // three sim days otherwise. Return no-ops on AwayUntilMinute == 0, so
+                // plan-away commuters are untouched.
+                for (int i = 0; i < host.Sim.AgentCount; i++)
+                    host.Sim.Return(new CitizenId(i));
                 for (int i = 0; i < host.Sim.AgentCount; i++)
                     if (host.Sim.GetAgent(i).Downed) host.Sim.Revive(new CitizenId(i));
                 // Officers AND gawkers alike: anyone still off-plan goes back to their day,
@@ -234,6 +241,118 @@ namespace Noir.PlayTests
             Assert.That(host.Cases.FileOf(_caseId).Count, Is.GreaterThan(3),
                 "a worked case files its transitions and its canvass");
             foreach (var line in host.Cases.FileOf(_caseId)) Debug.Log("[case-file] " + line);
+        }
+
+        /// <summary>The collision arc, staged with a manufactured plan and ridden to its
+        /// verdict: two of the town's own drivers stand at a wreck, the county takes their
+        /// statements at the kerb, the drink decides it, and the at-fault driver leaves in
+        /// custody with his car on the hook.</summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator AStagedCollisionRunsToItsVerdict()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var sim = host.Sim;
+            _startMinuteOfDay = sim.Clock.MinuteOfDay;   // the hour the teardown hands back
+
+            // The scene must be discoverable: a road tile within testimony range of an occupied
+            // door. Walk the census for a citizen standing outdoors near one - the hit test's
+            // own search - then ring outward from them to the nearest road tile, the planner's
+            // own idiom.
+            int anchor = -1;
+            for (int i = 0; i < sim.AgentCount && anchor < 0; i++)
+            {
+                var a = sim.GetAgent(i);
+                if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
+                if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+                for (int j = 0; j < sim.AgentCount; j++)
+                {
+                    if (j == i) continue;
+                    var b = sim.GetAgent(j);
+                    if (b.Travelling || !b.At.IsValid) continue;
+                    if (b.Doing == Activity.Asleep) continue;
+                    var door = host.World.GetPlace(b.At).Door;
+                    if (Tile.ChebyshevDistance(door, a.Position.ToTile()) < 40) { anchor = i; break; }
+                }
+            }
+            Assert.That(anchor, Is.GreaterThanOrEqualTo(0), "no witnessable anchor in the noon town");
+
+            Tile around = sim.GetAgent(anchor).Position.ToTile();
+            Tile? scene = null;
+            for (int r = 0; r <= 12 && !scene.HasValue; r++)
+                for (int dy = -r; dy <= r && !scene.HasValue; dy++)
+                    for (int dx = -r; dx <= r && !scene.HasValue; dx++)
+                    {
+                        if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != r) continue;
+                        var t = new Tile(around.X + dx, around.Y + dy);
+                        if (host.World.Grid.InBounds(t)
+                            && host.World.Grid.TerrainAt(t) == Noir.Core.World.Terrain.Road) scene = t;
+                    }
+            Assert.That(scene.HasValue, "no road tile within 12 tiles of the anchor");
+
+            // Two adult drivers, neither down nor away. The anchor drives if they are an adult;
+            // otherwise the first two eligible strangers do - StageCollision brings the drivers
+            // to the scene itself, so where they stand now does not matter.
+            var drivers = new List<int>();
+            if (!host.People.Get(new CitizenId(anchor)).IsChildIn(1991)) drivers.Add(anchor);
+            for (int i = 0; i < sim.AgentCount && drivers.Count < 2; i++)
+            {
+                if (drivers.Contains(i)) continue;
+                var a = sim.GetAgent(i);
+                if (a.Downed || a.Doing == Activity.AwayFromTown || a.Responding) continue;
+                if (host.People.Get(new CitizenId(i)).IsChildIn(1991)) continue;
+                drivers.Add(i);
+            }
+            Assert.That(drivers.Count, Is.EqualTo(2), "the noon town could not seat two drivers");
+            var atFault = new CitizenId(drivers[0]);
+            var other = new CitizenId(drivers[1]);
+
+            int casesBefore = host.Cases.Count;
+            var plan = new CrashPlan(sim.Clock.MinuteOfDay, scene.Value, atFault, other,
+                                     injury: false, CrashVerdict.Dui, CarTone.Dark, CarShape.Pickup);
+            host.StageCollision(plan);
+
+            Assert.That(host.Cases.Count, Is.EqualTo(casesBefore + 1), "the crash opened a case");
+            _caseId = casesBefore;
+            _victim = atFault.Value;   // the teardown's Return/Revive pair covers the arrest
+            Assert.That(host.Cases.KindOf(_caseId), Is.EqualTo(CaseKind.Collision));
+
+            _wasSpeed = host.SpeedIndex;
+            host.SpeedIndex = VillageHost.Speeds.Length - 1;   // 300x
+
+            // Ride it to Closed, latching each state once - the hit test's own poll shape.
+            float deadline = Time.time + 240f;
+            var seen = new List<CaseState>();
+            while (Time.time < deadline && host.Cases.StateOf(_caseId) != CaseState.Closed)
+            {
+                var s = host.Cases.StateOf(_caseId);
+                if (seen.Count == 0 || seen[seen.Count - 1] != s) seen.Add(s);
+                yield return null;
+            }
+            host.SpeedIndex = _wasSpeed; _wasSpeed = -1;
+
+            Assert.That(host.Cases.StateOf(_caseId), Is.EqualTo(CaseState.Closed),
+                "the collision case never closed; states seen: " + string.Join(" → ", seen));
+
+            var file = host.Cases.FileOf(_caseId);
+            foreach (var line in file) Debug.Log("[case-file] " + line);
+            Assert.That(file.Any(l => l.Contains("under arrest")),
+                "the file never recorded the arrest");
+            Assert.That(file.Any(l => l.Contains("tow")),
+                "the file never recorded the tow");
+
+            // The verdict's aftermath reaches the street within a few real seconds of the
+            // close: the arrested man is away, and neither driver still stands at the scene
+            // (the other is released by RunResponse's own Closed arm, on its minute).
+            float settled = Time.time + 10f;
+            while (Time.time < settled
+                   && (sim.GetAgent(atFault).Responding || sim.GetAgent(other).Responding))
+                yield return null;
+            Assert.That(sim.GetAgent(atFault).Responding, Is.False,
+                "the at-fault driver is still standing at the scene");
+            Assert.That(sim.GetAgent(other).Responding, Is.False,
+                "the other driver was never released after the close");
+            Assert.That(sim.GetAgent(atFault).Doing, Is.EqualTo(Activity.AwayFromTown),
+                "the arrested driver should be off in the county lockup");
         }
     }
 }
