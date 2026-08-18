@@ -165,7 +165,7 @@ namespace Noir.PlayTests
             // crowd gathered (somebody Gawking during the canvass — that one IS the contract).
             float deadline = Time.time + 240f;
             var seen = new List<CaseState>();
-            bool rode = false, gawked = false;
+            bool rode = false, gawked = false, cordoned = false;
             while (Time.time < deadline && host.Cases.StateOf(_caseId) != CaseState.Closed)
             {
                 var s = host.Cases.StateOf(_caseId);
@@ -180,6 +180,9 @@ namespace Noir.PlayTests
                 if (s == CaseState.Canvassing && !gawked)
                     for (int i = 0; i < sim.AgentCount && !gawked; i++)
                         gawked = sim.GetAgent(i).Doing == Activity.Gawking;
+
+                if (!cordoned && s >= CaseState.SceneHeld && s < CaseState.Closed)
+                    cordoned = GameObject.Find("Scene Cordon " + _caseId) != null;
 
                 yield return null;
             }
@@ -201,6 +204,21 @@ namespace Noir.PlayTests
                 if (anybody) yield return null;
             }
             Assert.That(anybody, Is.False, "the crowd never dispersed after the case closed");
+
+            Assert.That(cordoned, Is.True,
+                "the cordon never went up while the scene was held - no 'Scene Cordon " + _caseId + "' object appeared");
+
+            // And it comes down with the case: RunResponse lowers it in the same Closed
+            // arm that disperses the crowd, so the same few-real-seconds window applies.
+            float lowered = Time.time + 5f;
+            bool standing = true;
+            while (Time.time < lowered && standing)
+            {
+                standing = GameObject.Find("Scene Cordon " + _caseId) != null;
+                if (standing) yield return null;
+            }
+            Assert.That(standing, Is.False,
+                "the cordon outlived its case - the barricades are still standing after Closed");
 
             Assert.That(host.Cases.StateOf(_caseId), Is.EqualTo(CaseState.Closed),
                 "the case never closed; states seen: " + string.Join(" → ", seen));
