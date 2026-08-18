@@ -89,12 +89,16 @@ namespace Noir.PlayTests
                 // garaged, "no car ever reached a signalised junction", four reds, none of them
                 // real. A clock only goes forward, so restoring it means winding to the SAME
                 // minute-of-day next day - PeopleDiagnostics' own busy-wind, chunked so the
-                // runner keeps breathing. Skipped when the test barely moved the clock (an hour
-                // of drift is what the suite already tolerated before this test existed).
+                // runner keeps breathing. Skipped only when the test BARELY moved the clock:
+                // the threshold was an hour until 2026-08-18, when the collision scenario's
+                // ~40-minute ride pushed the suite from 17:03 to 17:41 and two hour-sensitive
+                // gates flipped - the commuters had come home (0 households away where 17:03
+                // measures 185) and the traffic gate's p90 was a single car. Ten minutes keeps
+                // every later test inside the regime its greens were measured in.
                 if (_startMinuteOfDay >= 0)
                 {
                     int past = (host.Sim.Clock.MinuteOfDay - _startMinuteOfDay + 1440) % 1440;
-                    if (past > 60)
+                    if (past > 10)
                     {
                         long guard = 0;
                         while (host.Sim.Clock.MinuteOfDay != _startMinuteOfDay && guard < 1_800_000)
@@ -131,18 +135,37 @@ namespace Noir.PlayTests
                 var a = sim.GetAgent(i);
                 if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
                 if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+
                 // near an occupied door: any OTHER agent At a place whose door is close.
-                for (int j = 0; j < sim.AgentCount; j++)
+                bool nearDoor = false;
+                for (int j = 0; j < sim.AgentCount && !nearDoor; j++)
                 {
                     if (j == i) continue;
                     var b = sim.GetAgent(j);
                     if (b.Travelling || !b.At.IsValid) continue;
                     if (b.Doing == Activity.Asleep) continue;
                     var door = host.World.GetPlace(b.At).Door;
-                    if (Tile.ChebyshevDistance(door, a.Position.ToTile()) < 55) { victim = i; break; }
+                    nearDoor = Tile.ChebyshevDistance(door, a.Position.ToTile()) < 55;
                 }
+                if (!nearDoor) continue;
+
+                // ...and standing ALONE: nobody else outdoors within the sweep's reach, or the
+                // ±3m segment downs a bystander too and opens a second case - the count assert
+                // below is exact on purpose, and this gate has been here before (citizens 490
+                // and 206, 2026-08-16; and again 2026-08-18 on a 17:41 street). Indoor agents
+                // are safe: the sweep cannot reach through a wall.
+                bool alone = true;
+                for (int j = 0; j < sim.AgentCount && alone; j++)
+                {
+                    if (j == i) continue;
+                    var b = sim.GetAgent(j);
+                    if (b.At.IsValid || b.Downed || b.Doing == Activity.AwayFromTown) continue;
+                    alone = Tile.ChebyshevDistance(b.Position.ToTile(), a.Position.ToTile()) > 4;
+                }
+                if (alone) victim = i;
             }
-            Assert.That(victim, Is.GreaterThanOrEqualTo(0), "no witnessable victim in the noon town");
+            Assert.That(victim, Is.GreaterThanOrEqualTo(0),
+                "nobody stands both witnessable and alone - no victim the sweep can down cleanly");
 
             int casesBefore = host.Cases.Count;
             player.Toggle();
