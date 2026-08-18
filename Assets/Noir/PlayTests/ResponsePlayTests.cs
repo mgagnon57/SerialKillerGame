@@ -410,16 +410,22 @@ namespace Noir.PlayTests
                 "the arrested driver should be off in the county lockup");
         }
 
-        /// <summary>Anybody standing Gawking within Chebyshev 6 of this scene - the ring's own
+        /// <summary>Anybody ACTIVELY gawking within Chebyshev 6 of this scene - the ring's own
         /// reach (RingSpots tops out at radius 3) with margin. Scoped on purpose: the town's
         /// own daily crash can open a second case mid-test and gather its own crowd two
-        /// streets over, and a town-wide scan reads that crowd as this case's.</summary>
+        /// streets over, and a town-wide scan reads that crowd as this case's. Responding is
+        /// required as well as Doing, because dispersal's contract is Release - which clears
+        /// Responding at once - while a RELEASED gawker whose walk home strands keeps standing
+        /// at the ring with Doing still Gawking, by the ring's own documented design ("reads
+        /// as somebody craning from a distance and costs nothing"). Asserting on Doing alone
+        /// asserts something the town never promised - measured failing exactly that way,
+        /// 2026-08-18, run five.</summary>
         private static bool AnyGawkerNear(Noir.Core.Sim.Simulation sim, Tile scene)
         {
             for (int i = 0; i < sim.AgentCount; i++)
             {
                 var a = sim.GetAgent(i);
-                if (a.Doing != Activity.Gawking) continue;
+                if (!a.Responding || a.Doing != Activity.Gawking) continue;
                 if (Tile.ChebyshevDistance(a.Position.ToTile(), scene) <= 6) return true;
             }
             return false;
