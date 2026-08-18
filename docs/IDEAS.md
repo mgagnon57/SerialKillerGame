@@ -940,6 +940,10 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Story
 
+- [ ] The B badge toggle needs louder feedback — a flash or banner when the role changes;
+  its only sign today is the small top-bar label, and the owner pressed it repeatedly
+  believing it was broken (2026-08-17, right after the T/B/H double-toggle fix) — *2026-08-17*
+
 - [x] Drivable-car Phase 2, owner's scope 2026-08-15: the police respond to a vehicular
   accident, and an ambulance takes the body away after the investigation completes. Phase 1
   (in design the same day) is the car, the hit, the body staying, and witnesses recording it —
