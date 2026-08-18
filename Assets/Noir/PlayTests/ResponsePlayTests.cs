@@ -152,15 +152,19 @@ namespace Noir.PlayTests
                 // ...and standing ALONE: nobody else outdoors within the sweep's reach, or the
                 // ±3m segment downs a bystander too and opens a second case - the count assert
                 // below is exact on purpose, and this gate has been here before (citizens 490
-                // and 206, 2026-08-16; and again 2026-08-18 on a 17:41 street). Indoor agents
-                // are safe: the sweep cannot reach through a wall.
+                // and 206, 2026-08-16; then a walking GROUP of four on 2026-08-18, because the
+                // first version of this check read At.IsValid as "indoors" and travelling
+                // agents carry a valid At - the Indoor tile flag is the honest test, the same
+                // one the victim himself passed above). Indoor agents are safe: the sweep
+                // cannot reach through a wall.
                 bool alone = true;
                 for (int j = 0; j < sim.AgentCount && alone; j++)
                 {
                     if (j == i) continue;
                     var b = sim.GetAgent(j);
-                    if (b.At.IsValid || b.Downed || b.Doing == Activity.AwayFromTown) continue;
-                    alone = Tile.ChebyshevDistance(b.Position.ToTile(), a.Position.ToTile()) > 4;
+                    if (b.Downed || b.Doing == Activity.AwayFromTown) continue;
+                    if ((host.World.Grid.FlagsAt(b.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+                    alone = Tile.ChebyshevDistance(b.Position.ToTile(), a.Position.ToTile()) > 5;
                 }
                 if (alone) victim = i;
             }
