@@ -66,6 +66,15 @@ a lot because Landmark fits by bounds, but a prop-seam placement would inherit i
 **DowntownStorefronts** (same day) — 1,004 tris, 8 materials; a 60.4 ft two-story commercial
 row, 27.6 ft tall, 29.1 ft deep. Like the depot, a building wants a LOT: its natural home is
 a downtown Chicago Street block face, an owner placement ruling on the parcel layer.
+Thirteenth through fifteenth (same day, a matched outbuilding set): **AlleyGarage** —
+772 tris, 14.5 x 21.7 ft, 11.4 ft tall, a single-car garage with the car axis on Z;
+**BackyardShed** — 880 tris, a classic 9.9 x 11.4 ft shed; **Workshop** — 1,308 tris,
+12.0 x 15.5 ft. All dimensionally dead-on, centred, grounded. ⚠ THESE WANT A SEAM THAT DOES
+NOT EXIST YET: an outbuilding belongs to a YARD, not to a lot address — `models.txt` stands a
+model on the whole lot, replacing the house. The grammars already draw a `RearOutbuilding` as
+baked roof extras (see the CLAUDE.md trap about silhouettes vs `Place.Bounds`); standing these
+real models behind houses needs either a models.txt extension (address + `outbuilding` slot)
+or a yard-prop seam. Owner decision, queued beside the props' desk seam.
 
 ---
 

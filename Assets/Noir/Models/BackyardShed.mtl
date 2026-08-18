@@ -1,0 +1,45 @@
+newmtl concrete
+Kd 0.2961 0.2747 0.2384
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl board_barnred
+Kd 0.2542 0.0423 0.0273
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl batten_barnred_dk
+Kd 0.1470 0.0242 0.0160
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass
+Kd 0.4287 0.6584 0.7157
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_white
+Kd 0.8070 0.7913 0.7157
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_wood
+Kd 0.1470 0.0685 0.0356
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_brace_wood
+Kd 0.0666 0.0307 0.0137
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl hardware_black
+Kd 0.0097 0.0097 0.0097
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl asphalt_shingle
+Kd 0.0343 0.0395 0.0437
+Ks 0.05 0.05 0.05
+Ns 10
+
