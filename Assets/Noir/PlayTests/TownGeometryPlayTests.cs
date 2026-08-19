@@ -694,5 +694,97 @@ namespace Noir.PlayTests
                 "the drawn ground bows off the surface everything is placed on - things standing "
               + "there sink into it or float above it");
         }
+
+        /// <summary>The owner's hinges exist and none lost its leaf to the bake - the exact
+        /// fault the town-wide Leafless gate was built for, scoped to 408's four doors
+        /// (front, rear, garage service, garage overhead panel).</summary>
+        [UnityTest]
+        public IEnumerator TheOwnersDoorsSurviveTheBake()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            Assert.That(doors, Is.Not.Null);
+
+            Place home = null;
+            foreach (var p in host.World.AllPlaces)
+                if (p != null && p.Name == "408 Holmes Street") home = p;
+            Assert.That(home, Is.Not.Null, "the survey lost 408 Holmes Street");
+
+            var centre = Space3D.ToWorld(home.Door);
+            int nearby = 0;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                var d = doors.PositionOf(i) - centre;
+                if (d.x * d.x + d.z * d.z < 40f * 40f) nearby++;
+            }
+            Assert.That(nearby, Is.GreaterThanOrEqualTo(4),
+                "408 should hinge front, rear, garage service and the overhead panel");
+            Assert.That(doors.Leafless(), Is.EqualTo(0),
+                "a hinge with no renderer is a door the bake ate");
+        }
+
+        /// <summary>The front doorway is a hole a body fits through, and the floor inside is
+        /// real: a capsule cast crosses the threshold untouched, and a ray straight down
+        /// inside the hall lands on a collider.</summary>
+        [UnityTest]
+        public IEnumerator TheFrontDoorOfHolmesAdmitsThePlayer()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            Place home = null;
+            foreach (var p in host.World.AllPlaces)
+                if (p != null && p.Name == "408 Holmes Street") home = p;
+            Assert.That(home, Is.Not.Null);
+
+            var doorW = Space3D.ToWorld(home.Door);
+            // Outside is toward Holmes (world -z, Player.Standing's own arithmetic);
+            // inside is +z, into the hall.
+            var outside = new Vector3(doorW.x, doorW.y + 0.9f, doorW.z - 1.5f);
+            var inside = new Vector3(doorW.x, doorW.y + 0.9f, doorW.z + 2.0f);
+            var dir = (inside - outside).normalized;
+            float len = (inside - outside).magnitude;
+
+            bool blocked = Physics.CapsuleCast(
+                outside + Vector3.up * 0.3f, outside + Vector3.up * 1.2f, 0.25f, dir, len);
+            Assert.That(blocked, Is.False,
+                "the doorway is sealed - the box is back, or a wall crosses the threshold");
+
+            bool floor = Physics.Raycast(inside + Vector3.up * 1.5f, Vector3.down, 3f);
+            Assert.That(floor, Is.True, "no floor inside the hall - nothing to stand on");
+        }
+
+        /// <summary>P stands you at 408's front walk when the address exists - within a few
+        /// strides of the door, not out on Route 1.</summary>
+        [UnityTest]
+        public IEnumerator ThePlayerSpawnsAtHolmesFrontDoor()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            var player = Object.FindFirstObjectByType<Player>();
+            Assert.That(player, Is.Not.Null);
+
+            Place home = null;
+            foreach (var p in host.World.AllPlaces)
+                if (p != null && p.Name == "408 Holmes Street") home = p;
+            Assert.That(home, Is.Not.Null);
+
+            bool wasWalking = player.Walking;
+            if (!wasWalking) player.Toggle();
+            for (int f = 0; f < 5; f++) yield return null;
+            try
+            {
+                var at = player.Where;
+                Assert.That(at.HasValue, "the body never stood up");
+                var door = Space3D.ToWorld(home.Door);
+                var d = at.Value - door;
+                Assert.That(new Vector2(d.x, d.z).magnitude, Is.LessThan(6f),
+                    "P put the player " + d.magnitude.ToString("0.0") + "m from his own door");
+            }
+            finally
+            {
+                if (player.Walking && !wasWalking) player.Toggle();
+            }
+        }
     }
 }
