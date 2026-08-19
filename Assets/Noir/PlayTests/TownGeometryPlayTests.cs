@@ -810,15 +810,17 @@ namespace Noir.PlayTests
                 if (p != null && p.Name == "408 Holmes Street") home = p;
             Assert.That(home, Is.Not.Null);
 
-            // A FRESH SPAWN, not an inherited body: the response suite toggles the player
-            // at its own hit scene and the body KEEPS that position across toggles - this
-            // test measured 25.9m of somebody else's parking before it destroyed the
-            // stale armature first (2026-08-19).
-            var stale = GameObject.Find("PlayerArmature");
-            if (stale != null && !player.Walking) Object.DestroyImmediate(stale);
-
+            // A FRESH SPAWN, UNCONDITIONALLY: the body keeps its position across toggles,
+            // so any earlier test's parking spot becomes this test's measurement - 25.9m
+            // of response-scene parking on the first run, 531m of Route 1 on the second,
+            // because the destroy was guarded on not-Walking and a suite can leave the
+            // player either way. Step out if needed, destroy whatever body exists, spawn
+            // fresh: Player.Spawn only runs Standing() when there is no body at all.
             bool wasWalking = player.Walking;
-            if (!wasWalking) player.Toggle();
+            if (player.Walking) { player.Toggle(); yield return null; }
+            var stale = GameObject.Find("PlayerArmature");
+            if (stale != null) Object.DestroyImmediate(stale);
+            player.Toggle();
             for (int f = 0; f < 5; f++) yield return null;
             try
             {

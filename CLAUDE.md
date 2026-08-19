@@ -295,6 +295,25 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-19 (midday): 35 pass, 1 fail, 3 skipped of 39, 2421 s — and the
+> expected standing number is 36 pass, 3 skipped.** The owner-model doors feature added
+> three gates (`TheOwnersDoorsSurviveTheBake`, `TheFrontDoorOfHolmesAdmitsThePlayer` — which
+> DRIVES the actual CharacterController out the front door and back, the only probe that
+> ever agreed with the owner's feet — and `ThePlayerSpawnsAtHolmesFrontDoor`). **The plan
+> gate town stands NO owner models** ("anything this run does not build, it has not
+> tested"), so the two door gates `Assert.Ignore` there by design and measure only the
+> dressed town (live editor, or `NOIR_BUILT_TOWN=1`); before they learned to skip, one
+> found a single hinge (the neighbour's) and the other drove the neighbour's generated
+> door and called it green. The one red in this run was the spawn test measuring an
+> INHERITED body — the armature keeps its position across P-toggles, so any earlier test's
+> parking becomes the measurement (25.9 m of response-scene parking one run, 531 m of
+> Route 1 the next) — fixed the same hour: the test destroys any existing armature and
+> spawns fresh, unverified in a full run yet; the nightly validates it. Live in the
+> dressed town the same day, all green: 4 hinges leafed, tilt-up panel, controller driven
+> out and back through the front door after the owner's carpentry re-export (sills on
+> floors, stock 6'8" doors — see the spec's doorway-war note for the two rules that
+> ended a night of being stuck in his own hall).
+>
 > **BASELINE, 2026-08-18 (late night): 35 of 35 PASS, 0 fail, 1 skipped, 2391 s.** The new
 > one is `TheDrawnGroundFollowsTheMeasuredSurface`, the saddle gate: everything in Rossville
 > is PLACED on `ElevationGrid.HeightAt` — bilinear, a SADDLE inside every 30 m cell — but the

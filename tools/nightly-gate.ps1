@@ -27,10 +27,11 @@ $started = Get-Date
 # The baselines this run is judged against. When a landing moves them, CLAUDE.md is
 # the authority - update these two numbers in the same commit that updates it.
 $coreBaselinePass     = 596
-# 37, not 38+: the standing gate builds the survey-plan town, which stands no owner
+# 36, not 38+: the standing gate builds the survey-plan town, which stands no owner
 # models, so the two 408-door gates Assert.Ignore there by design - they measure the
-# dressed town (live editor, or NOIR_BUILT_TOWN=1).
-$playmodeBaselinePass = 37
+# dressed town (live editor, or NOIR_BUILT_TOWN=1). Measured 2026-08-19: 35 pass with
+# the spawn test red on an inherited body; 36 with that test spawning fresh.
+$playmodeBaselinePass = 36
 
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out-Null }
 
