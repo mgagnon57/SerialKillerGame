@@ -172,7 +172,13 @@ namespace Noir.Unity
 
                             var ramp = new GameObject(child.name + ":threshold-ramp");
                             ramp.transform.SetParent(root.transform, false);
-                            ramp.transform.position = new Vector3(hp.x, (hin.point.y + hout.point.y) / 2f, hp.z);
+                            // 13 cm LOWER than the midpoint: the corridor under the door
+                            // header measured 1.79 m against a 1.80 m controller with the
+                            // ramp at the midpoint (2026-08-19, one centimetre from
+                            // walkable). Sinking the ramp buys ~1.92 m under the header;
+                            // the inside end becomes a 13 cm step down off the floor,
+                            // half the controller's stride.
+                            ramp.transform.position = new Vector3(hp.x, (hin.point.y + hout.point.y) / 2f - 0.13f, hp.z);
                             float tilt = Mathf.Atan2(dH, 1.2f) * Mathf.Rad2Deg;
                             ramp.transform.rotation = Quaternion.LookRotation(inward) * Quaternion.Euler(-tilt, 0f, 0f);
                             var bc = ramp.AddComponent<BoxCollider>();
