@@ -737,21 +737,46 @@ namespace Noir.PlayTests
                 if (p != null && p.Name == "408 Holmes Street") home = p;
             Assert.That(home, Is.Not.Null);
 
-            var doorW = Space3D.ToWorld(home.Door);
-            // Outside is toward Holmes (world -z, Player.Standing's own arithmetic);
-            // inside is +z, into the hall.
-            var outside = new Vector3(doorW.x, doorW.y + 0.9f, doorW.z - 1.5f);
-            var inside = new Vector3(doorW.x, doorW.y + 0.9f, doorW.z + 2.0f);
-            var dir = (inside - outside).normalized;
-            float len = (inside - outside).magnitude;
+            // The probe goes through the MODEL's front door, not the survey's door tile -
+            // the survey seated 408's tile on the rear (track) side, and the first run of
+            // this gate walked a capsule into the back wall and called the house sealed.
+            // The front door is the southernmost hinge on the lot (Holmes is south), and
+            // the doorway is where its leaf hangs.
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            Assert.That(doors, Is.Not.Null);
+            var lotCentre = Space3D.ToWorld(new Tile(
+                home.Bounds.X + home.Bounds.W / 2, home.Bounds.Y + home.Bounds.H / 2));
+            int front = -1; float southmost = float.MaxValue;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                var d = doors.PositionOf(i) - lotCentre;
+                if (d.x * d.x + d.z * d.z > 40f * 40f) continue;
+                if (doors.PositionOf(i).z < southmost) { southmost = doors.PositionOf(i).z; front = i; }
+            }
+            Assert.That(front, Is.GreaterThanOrEqualTo(0), "no hinge on the lot at all");
 
-            bool blocked = Physics.CapsuleCast(
-                outside + Vector3.up * 0.3f, outside + Vector3.up * 1.2f, 0.25f, dir, len);
-            Assert.That(blocked, Is.False,
-                "the doorway is sealed - the box is back, or a wall crosses the threshold");
-
-            bool floor = Physics.Raycast(inside + Vector3.up * 1.5f, Vector3.down, 3f);
-            Assert.That(floor, Is.True, "no floor inside the hall - nothing to stand on");
+            var hingeAt = doors.PositionOf(front);
+            // The leaf hangs beside the hinge; probe through a point half a door-width along
+            // the house's width axis (x), at knee-to-chest height, south to north.
+            var mid = new Vector3(hingeAt.x, hingeAt.y + 0.9f, hingeAt.z);
+            for (float dx = -0.6f; dx <= 0.6f && front >= 0; dx += 1.2f)
+            {
+                var outside = new Vector3(mid.x + dx, mid.y, mid.z - 1.2f);
+                var inside = new Vector3(mid.x + dx, mid.y, mid.z + 1.2f);
+                var dir = (inside - outside).normalized;
+                bool blocked = Physics.CapsuleCast(
+                    outside + Vector3.up * 0.2f, outside + Vector3.up * 0.9f, 0.22f,
+                    dir, (inside - outside).magnitude);
+                if (!blocked)
+                {
+                    bool floor = Physics.Raycast(inside + Vector3.up * 1.5f, Vector3.down, 3f);
+                    Assert.That(floor, Is.True, "through the door but no floor inside");
+                    front = -2;   // success flag
+                }
+            }
+            Assert.That(front, Is.EqualTo(-2),
+                "the front doorway is sealed on both probe lines - the box is back, or a "
+              + "wall crosses the threshold");
         }
 
         /// <summary>P stands you at 408's front walk when the address exists - within a few
@@ -776,10 +801,13 @@ namespace Noir.PlayTests
             {
                 var at = player.Where;
                 Assert.That(at.HasValue, "the body never stood up");
-                var door = Space3D.ToWorld(home.Door);
-                var d = at.Value - door;
+                // The front walk: the lot's south edge, centred - Player.Standing's own
+                // arithmetic, because the survey's door tile is on the rear side.
+                var b = home.Bounds;
+                var walk = Space3D.ToWorld(new Tile(b.X + b.W / 2, b.Y + b.H - 1));
+                var d = at.Value - new Vector3(walk.x, walk.y, walk.z - 3f);
                 Assert.That(new Vector2(d.x, d.z).magnitude, Is.LessThan(6f),
-                    "P put the player " + d.magnitude.ToString("0.0") + "m from his own door");
+                    "P put the player " + d.magnitude.ToString("0.0") + "m from his own front walk");
             }
             finally
             {

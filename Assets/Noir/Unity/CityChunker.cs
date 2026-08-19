@@ -276,7 +276,14 @@ namespace Noir.Unity
             // the same kind of signal the material names below are: nothing else in the town is
             // called "hinge", and CityDoors.Leafless() plus a PlayMode gate now fail loudly if
             // this exemption ever stops matching.
-            if (r.transform.parent != null && r.transform.parent.name == "hinge") return false;
+            //
+            // ANCESTORS, NOT JUST THE PARENT, since 2026-08-18: an owner model's OBJ import
+            // can put the renderer a level below the named group (hinge -> door_front_slab ->
+            // mesh), and the direct-parent check baked three of 408's four leaves on the
+            // fix's very first run. Bounded walk - a leaf is never more than a few levels
+            // under its pivot.
+            for (var up = r.transform.parent; up != null; up = up.parent)
+                if (up.name == "hinge") return false;
 
             // ANYTHING THAT LIGHTS UP STAYS ADDRESSABLE.
             //

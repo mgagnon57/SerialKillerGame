@@ -826,8 +826,12 @@ namespace Noir.Unity
             foreach (var place in world.AllPlaces)
                 if (place != null && place.Name == HomeAddress)
                 {
-                    var w = Space3D.ToWorld(place.Door);
-                    return new Vector3(w.x, w.y, w.z - 2f);   // village +y is toward Holmes
+                    // The FRONT walk: the survey seated this lot's door tile on the REAR
+                    // (track) side, but the owner's house faces Holmes - the lot's south
+                    // edge. Stand two strides south of that edge, centred on the lot.
+                    var b = place.Bounds;
+                    var w = Space3D.ToWorld(new Tile(b.X + b.W / 2, b.Y + b.H - 1));
+                    return new Vector3(w.x, w.y, w.z - 3f);   // village +y is toward Holmes
                 }
 
             float middle = world.Width * 0.5f;
