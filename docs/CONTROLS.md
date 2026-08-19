@@ -72,7 +72,9 @@ his **cruiser, light bar going** (overnight, the on-call man comes on foot from 
 the scene while **neighbours gather in a loose ring to watch**, then the county car drives in
 and knocks on the witnesses' doors, and an ambulance takes the victim away — dead above
 ~18 mph, back on their own doorstep three days later below it. The precinct wears navy.
-Stepping out of third person (P or Tab) keeps the camera over the scene you just left. The
+Stepping out of third person (P or Tab) keeps the camera over the scene you just left. **P
+spawns you at 408 Holmes Street's front walk** — your own house, hand-made, whose front and
+rear doors, garage service door and overhead panel all answer to **E**. The
 police never look for **you** (yet). NPC traffic cannot see your car — it will drive through
 you — and only driveway cars can be entered (the lot cars are baked into the town's chunks).
 

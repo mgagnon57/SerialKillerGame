@@ -27,7 +27,7 @@ $started = Get-Date
 # The baselines this run is judged against. When a landing moves them, CLAUDE.md is
 # the authority - update these two numbers in the same commit that updates it.
 $coreBaselinePass     = 596
-$playmodeBaselinePass = 35
+$playmodeBaselinePass = 38
 
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out-Null }
 

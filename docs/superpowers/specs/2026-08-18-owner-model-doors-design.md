@@ -1,5 +1,14 @@
 # Owner-model doors and interiors — design
 
+> **Landed 2026-08-18 (night)**, plan `docs/superpowers/plans/2026-08-18-owner-model-doors.md`.
+> Live-verified in the owner's own session: 4 hinges at 408 (front, rear, garage service,
+> overhead panel), leafless 0 town-wide, front doorway capsule-passable with real floor
+> inside, house at authored grade, P spawning on the front walk. Three PlayMode gates added
+> (baseline 35 → 38); the first full-gate measure is tonight's nightly run. Two lessons the
+> first hour taught: a prefab instance must be UNPACKED before its doors can be rehung
+> (Unity logs a per-piece error and every hinge stands empty), and the survey's door tile
+> for 408 is on the REAR of the lot - the front walk is the lot's south edge.
+
 **Ruled by the owner, 2026-08-18 (late), in chat.** His hand-made houses open their doors and
 let the player in, starting with 408 Holmes Street; P spawns him at that front door. Approved
 scope, his words: all doors including the garage overhead panel; interiors bare, as authored;
