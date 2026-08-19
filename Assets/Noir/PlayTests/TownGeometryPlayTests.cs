@@ -628,5 +628,71 @@ namespace Noir.PlayTests
 
             Debug.Log($"[player] the shipped body is at Resources/PlayerArmature: {armature.name}");
         }
+
+        /// <summary>
+        /// THE DRAWN GROUND FOLLOWS THE MEASURED SURFACE. Everything in Rossville is placed on
+        /// ElevationGrid.HeightAt - the bilinear blend of the USGS samples, which is a SADDLE
+        /// inside every 30 m cell - while the ground mesher merges same-look tiles into runs
+        /// drawn as two flat triangles. A flat triangle across a curved cell bows off the
+        /// saddle. Measured 2026-08-18, the night the owner said "things sink into the ground,
+        /// almost like there is a layer that sits on top": 917 cells bowed over 10 cm, 325 over
+        /// 20 cm, 1.98 m in the creek ravine - and correctly-placed cars stood buried to their
+        /// axles under ground that was drawn, not measured.
+        ///
+        /// The metric is immune to the deliberate flat lifts (water's channel, a road's wear):
+        /// a planar triangle's centroid height is the mean of its vertex heights, so
+        /// mean(HeightAt at the vertices) minus HeightAt at the centroid is exactly the bow,
+        /// whatever constant the run's terrain adds. Risers are vertical and are skipped by the
+        /// normal test; the countryside skirt is not the town and is skipped by bounds.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheDrawnGroundFollowsTheMeasuredSurface()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            Assert.That(host, Is.Not.Null);
+
+            float worst = 0f;
+            Vector3 at = default;
+            long sampled = 0;
+            foreach (var mf in Object.FindObjectsByType<MeshFilter>(FindObjectsSortMode.None))
+            {
+                if (!mf.gameObject.name.StartsWith("Ground")) continue;
+                var mesh = mf.sharedMesh;
+                if (mesh == null) continue;
+                var verts = mesh.vertices;
+                var tris = mesh.triangles;
+                var l2w = mf.transform.localToWorldMatrix;
+                for (int i = 0; i < tris.Length; i += 3)
+                {
+                    Vector3 a = l2w.MultiplyPoint3x4(verts[tris[i]]);
+                    Vector3 b = l2w.MultiplyPoint3x4(verts[tris[i + 1]]);
+                    Vector3 c = l2w.MultiplyPoint3x4(verts[tris[i + 2]]);
+
+                    Vector3 n = Vector3.Cross(b - a, c - a);
+                    if (n.sqrMagnitude < 1e-10f) continue;
+                    if (n.normalized.y < 0.7f) continue;   // a riser, not ground
+
+                    Vector3 g = (a + b + c) / 3f;
+                    if (g.x < 1f || g.x > host.World.Width - 1f
+                        || -g.z < 1f || -g.z > host.World.Height - 1f) continue;   // the skirt
+
+                    float bow = (ElevationGrid.HeightAt(a.x, -a.z)
+                               + ElevationGrid.HeightAt(b.x, -b.z)
+                               + ElevationGrid.HeightAt(c.x, -c.z)) / 3f
+                              - ElevationGrid.HeightAt(g.x, -g.z);
+                    sampled++;
+                    if (Mathf.Abs(bow) > Mathf.Abs(worst)) { worst = bow; at = g; }
+                }
+            }
+            Debug.Log($"[ground] {sampled:N0} horizontal ground triangles in the town; "
+                    + $"worst bow off the measured surface {worst:0.000} m at ({at.x:0},{-at.z:0})");
+
+            Assert.That(sampled, Is.GreaterThan(10000),
+                "the ground scan found almost nothing - the chunk naming moved out from under it");
+            Assert.That(Mathf.Abs(worst), Is.LessThan(0.05f),
+                "the drawn ground bows off the surface everything is placed on - things standing "
+              + "there sink into it or float above it");
+        }
     }
 }

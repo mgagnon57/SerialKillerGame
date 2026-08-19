@@ -718,15 +718,17 @@ namespace Noir.Unity
             //
             //  - it may not cross an ELEVATION GRID line. Content/elevation.txt resolves the
             //    real ground at 30 m (ElevationGrid.Step) and HeightAt bilinearly interpolates
-            //    WITHIN each 30 m cell - so a quad whose four corners sit on one cell's own four
-            //    sample points reproduces that cell's real surface exactly, the same as the old
-            //    one-quad-per-tile mesh always did at 1 m, because both are just the two
-            //    triangles a bilinear cell has always been drawn as. A quad spanning MORE than
-            //    one cell would not: the true surface bends differently in the next cell over,
-            //    and one flat quad across the seam would silently average the two rather than
-            //    following either. Capping runs at the data's own resolution is not a loss of
-            //    detail the data had - a run that stays inside one cell was already flat or a
-            //    single tilted plane as far as the USGS grid actually measured it.
+            //    WITHIN each 30 m cell. A quad spanning MORE than one cell would silently
+            //    average two cells that bend differently rather than following either. ⚠ This
+            //    cap alone is NOT enough, and for months this comment claimed it was: a
+            //    bilinear patch is a SADDLE, not a plane, so even a quad whose corners sit on
+            //    one cell's own sample points bows off the real surface between them - by a
+            //    quarter of the corner cross-difference at worst, measured 2026-08-18 at 917
+            //    cells over 10 cm and 0.44 m inside the town, with correctly-placed cars
+            //    buried to their axles under ground that was drawn, not measured. The repair
+            //    is at EMISSION, below: a run over a curved patch is drawn as a lattice of
+            //    sub-quads sized from its own curvature, and
+            //    TheDrawnGroundFollowsTheMeasuredSurface fails the gate if the bow comes back.
             //
             // BANK never merges at all, whatever these two bounds would otherwise allow, and is
             // the one exception carved out ahead of them. It is the one look that exists BECAUSE
@@ -740,6 +742,11 @@ namespace Noir.Unity
                 elevStep = Mathf.Max(world.Width, world.Height);   // no elevation.txt loaded -
                                                                     // flat everywhere, so nothing
                                                                     // real to preserve by capping
+
+            // How far a drawn triangle may bow off the bilinear surface everything is PLACED
+            // on. Three centimetres is under anything the eye reads as "sunk" and above the
+            // float noise a lattice this size would chase for nothing.
+            const float SaddleTolerance = 0.03f;
             int bankSubmesh = Materials3D.GroundOrder.Length + (int)Materials3D.ZonedGround.Bank;
 
             var claimed = new bool[world.Height, world.Width];
@@ -790,33 +797,66 @@ namespace Noir.Unity
                 float z0 = -gy, z1 = -(gy + h);
 
                 var into = chunks.At(gx, gy);
+
+                float h00 = corner[gy, gx],     h10 = corner[gy, gx + w];
+                float h01 = corner[gy + h, gx], h11 = corner[gy + h, gx + w];
+
+                // THE SADDLE REPAIR (2026-08-18; see the cell-line bound's own comment above).
+                // A run never crosses a cell line, and a bilinear function restricted to an
+                // axis-aligned rectangle is exactly the bilinear blend of that rectangle's own
+                // corners - so every lattice vertex below sits ON HeightAt's real surface
+                // without another grid lookup. The sub-quad size comes from the run's own
+                // curvature: cross/(w*h) is the saddle coefficient, a flat sub-quad of side s
+                // bows c*s²/4 off it at worst, so s = 2*sqrt(tol/c) keeps every triangle
+                // inside SaddleTolerance. A flat or singly-tilted run has cross ~ 0, keeps
+                // nx = ny = 1, and is emitted byte-for-byte as it always was. Seams stay
+                // closed: bilinear along an edge is LINEAR, so a sub-vertex lies exactly on
+                // the neighbouring run's straight edge, the same T-junction the 1 m tiles
+                // beside a merged run have always made.
+                float cross = Mathf.Abs(h00 + h11 - h10 - h01);
+                int nx = 1, ny = 1;
+                if (cross > 4f * SaddleTolerance)
+                {
+                    float s = 2f * Mathf.Sqrt(SaddleTolerance * (w * (float)h) / cross);
+                    nx = Mathf.Clamp(Mathf.CeilToInt(w / s), 1, w);
+                    ny = Mathf.Clamp(Mathf.CeilToInt(h / s), 1, h);
+                }
+
                 int v0 = into.Verts.Count;
+                for (int iy = 0; iy <= ny; iy++)
+                for (int ix = 0; ix <= nx; ix++)
+                {
+                    float tx = (float)ix / nx, ty = (float)iy / ny;
+                    float x = Mathf.Lerp(x0, x1, tx);
+                    float z = Mathf.Lerp(z0, z1, ty);
+                    float hh = Mathf.Lerp(Mathf.Lerp(h00, h10, tx), Mathf.Lerp(h01, h11, tx), ty);
+                    into.Verts.Add(new Vector3(x, flat + hh, z));
+                    into.Normals.Add(Vector3.up);
 
-                into.Verts.Add(new Vector3(x0, flat + corner[gy, gx], z0));
-                into.Verts.Add(new Vector3(x1, flat + corner[gy, gx + w], z0));
-                into.Verts.Add(new Vector3(x1, flat + corner[gy + h, gx + w], z1));
-                into.Verts.Add(new Vector3(x0, flat + corner[gy + h, gx], z1));
-
-                for (int i = 0; i < 4; i++) into.Normals.Add(Vector3.up);
-
-                // UVs in world units so a tiling texture runs continuously across the village
-                // instead of restarting at every tile - and, now, so it runs continuously
-                // across a chunk boundary, and across a run boundary, too. This is why the UVs
-                // are in absolute metres and not relative to anything: split the mesh, or merge
-                // several tiles into one quad, and nothing about the texture moves.
-                into.Uvs.Add(new Vector2(x0, -z0));
-                into.Uvs.Add(new Vector2(x1, -z0));
-                into.Uvs.Add(new Vector2(x1, -z1));
-                into.Uvs.Add(new Vector2(x0, -z1));
+                    // UVs in world units so a tiling texture runs continuously across the
+                    // village instead of restarting at every tile - and across a chunk
+                    // boundary, a run boundary, and now a sub-quad, too. This is why the UVs
+                    // are absolute metres and not relative to anything: split the mesh, or
+                    // merge several tiles into one quad, and nothing about the texture moves.
+                    into.Uvs.Add(new Vector2(x, -z));
+                }
 
                 // Winding matters more than the normals do. Unity takes a triangle's facing
                 // from Cross(v1-v0, v2-v0), and culls the back. Wound the other way round,
                 // these quads face straight down: lit correctly, shaded correctly, and
                 // invisible from every camera above the ground - which is all of them.
                 var tris = into.Tris[sm];
-                tris.Add(v0); tris.Add(v0 + 1); tris.Add(v0 + 2);
-                tris.Add(v0); tris.Add(v0 + 2); tris.Add(v0 + 3);
-                quads++;
+                for (int iy = 0; iy < ny; iy++)
+                for (int ix = 0; ix < nx; ix++)
+                {
+                    int a = v0 + iy * (nx + 1) + ix;
+                    int b = a + 1;
+                    int c = a + (nx + 1) + 1;
+                    int d = a + (nx + 1);
+                    tris.Add(a); tris.Add(b); tris.Add(c);
+                    tris.Add(a); tris.Add(c); tris.Add(d);
+                }
+                quads += nx * ny;
             }
 
             // Land beyond the last tile.

@@ -295,6 +295,20 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-18 (late night): 35 of 35 PASS, 0 fail, 1 skipped, 2391 s.** The new
+> one is `TheDrawnGroundFollowsTheMeasuredSurface`, the saddle gate: everything in Rossville
+> is PLACED on `ElevationGrid.HeightAt` — bilinear, a SADDLE inside every 30 m cell — but the
+> ground mesher's merged runs and `CityCollision`'s 30 m cells were drawn as flat triangle
+> pairs, which bow off that surface by a quarter of the corner cross-difference. The owner
+> saw it first ("things sink into the ground, almost like there is a layer that sits on
+> top"): measured, 917 cells bowed over 10 cm and the worst IN TOWN was 0.44 m — axle-deep
+> cars on ground that was drawn, not measured. Both meshers now emit curvature-sized
+> sub-quad lattices (3 cm drawn / 5 cm collision tolerance; a flat run stays one quad and
+> costs nothing), and the worst bow measured after: **-0.013 m** over 134,375 triangles
+> (+20% ground triangles, build 8.3 → 11.8 s). The gate's metric is offset-immune — a planar
+> triangle's centroid height is the mean of its vertices', so mean-vs-centroid `HeightAt`
+> reads the bow exactly whatever flat lift the terrain carries.
+>
 > **BASELINE, 2026-08-18 (night): 34 of 34 PASS, 0 fail, 1 skipped, 2497 s.** First green
 > gate over car collisions phase 1 — the new one is `AStagedCollisionRunsToItsVerdict`
 > (a staged DUI bender: kerb interviews, arrest, tow, clean close — it passed from its
