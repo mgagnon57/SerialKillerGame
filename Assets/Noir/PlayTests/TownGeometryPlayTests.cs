@@ -737,11 +737,14 @@ namespace Noir.PlayTests
                 if (p != null && p.Name == "408 Holmes Street") home = p;
             Assert.That(home, Is.Not.Null);
 
-            // The probe goes through the MODEL's front door, not the survey's door tile -
-            // the survey seated 408's tile on the rear (track) side, and the first run of
-            // this gate walked a capsule into the back wall and called the house sealed.
-            // The front door is the southernmost hinge on the lot (Holmes is south), and
-            // the doorway is where its leaf hangs.
+            // THE REAL CONTROLLER WALKS THE DOOR, both ways - not a ray, not a crouched
+            // capsule. The first version of this gate probed a knee-to-chest band and
+            // PASSED while the full 1.8 m controller wedged under the door header (the
+            // owner spent a night stuck on his own doorsill, 2026-08-19); a gate that
+            // approves a duck-height door is worse than none. The front door is the
+            // southernmost hinge on the lot (Holmes is south) - the survey's own door
+            // tile sits on the rear, and trusting it walked the first probe into the
+            // back wall.
             var doors = Object.FindFirstObjectByType<CityDoors>();
             Assert.That(doors, Is.Not.Null);
             var lotCentre = Space3D.ToWorld(new Tile(
@@ -754,29 +757,32 @@ namespace Noir.PlayTests
                 if (doors.PositionOf(i).z < southmost) { southmost = doors.PositionOf(i).z; front = i; }
             }
             Assert.That(front, Is.GreaterThanOrEqualTo(0), "no hinge on the lot at all");
+            var hp = doors.PositionOf(front);
 
-            var hingeAt = doors.PositionOf(front);
-            // The leaf hangs beside the hinge; probe through a point half a door-width along
-            // the house's width axis (x), at knee-to-chest height, south to north.
-            var mid = new Vector3(hingeAt.x, hingeAt.y + 0.9f, hingeAt.z);
-            for (float dx = -0.6f; dx <= 0.6f && front >= 0; dx += 1.2f)
+            var player = Object.FindFirstObjectByType<Player>();
+            Assert.That(player, Is.Not.Null);
+            bool wasWalking = player.Walking;
+            if (!wasWalking) player.Toggle();
+            for (int f = 0; f < 5; f++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+            Assert.That(body, Is.Not.Null, "the body never stood up");
+            var cc = body.GetComponent<CharacterController>();
+            try
             {
-                var outside = new Vector3(mid.x + dx, mid.y, mid.z - 1.2f);
-                var inside = new Vector3(mid.x + dx, mid.y, mid.z + 1.2f);
-                var dir = (inside - outside).normalized;
-                bool blocked = Physics.CapsuleCast(
-                    outside + Vector3.up * 0.2f, outside + Vector3.up * 0.9f, 0.22f,
-                    dir, (inside - outside).magnitude);
-                if (!blocked)
-                {
-                    bool floor = Physics.Raycast(inside + Vector3.up * 1.5f, Vector3.down, 3f);
-                    Assert.That(floor, Is.True, "through the door but no floor inside");
-                    front = -2;   // success flag
-                }
+                cc.enabled = false;
+                body.transform.position = new Vector3(hp.x + 0.35f, hp.y + 1.2f, hp.z + 1.5f);
+                cc.enabled = true;
+                for (int i = 0; i < 240; i++) cc.Move(new Vector3(0f, -0.03f, -0.025f));
+                Assert.That(body.transform.position.z, Is.LessThan(hp.z - 1.4f),
+                    "the controller stalled walking OUT at z=" + body.transform.position.z.ToString("F2"));
+                for (int i = 0; i < 240; i++) cc.Move(new Vector3(0f, -0.03f, +0.025f));
+                Assert.That(body.transform.position.z, Is.GreaterThan(hp.z + 1.0f),
+                    "the controller stalled walking back IN at z=" + body.transform.position.z.ToString("F2"));
             }
-            Assert.That(front, Is.EqualTo(-2),
-                "the front doorway is sealed on both probe lines - the box is back, or a "
-              + "wall crosses the threshold");
+            finally
+            {
+                if (player.Walking && !wasWalking) player.Toggle();
+            }
         }
 
         /// <summary>P stands you at 408's front walk when the address exists - within a few
