@@ -114,9 +114,11 @@ They queue on the interior/prop seam beside the desk props — natural home: the
 rig's dressing and the response scene.
 
 Thirty-first through thirty-third (2026-08-18, evening — THE BUILDINGS WAVE, all three
-standing on lots the same night): **Residence408** (19,048 tris, 59 x 100 ft x 17 ft with an
-8-inch below-grade foundation — 408 Holmes Ave, HIS house, standing alone on a block the
-county's decline emptied), **PubRow** (7,684 tris, 91 x 45 ft two-storey terrace — Rossville
+standing on lots the same night): **Residence408** (19,288 tris after the 2026-08-19
+carpentry re-export — sills on floors, stock 6'8" doors, 7'0" x 9'0" overhead; 59 x 100 ft
+x 17 ft with an 8-inch below-grade foundation — 408 Holmes Street, HIS house, the first
+model in the game you can walk into, standing alone on a block the county's decline
+emptied), **PubRow** (7,684 tris, 91 x 45 ft two-storey terrace — Rossville
 unit 7, the Livingood House lot), and **RossvilleStorefront** (12,332 tris, 53 x 50 ft,
 three storeys — the whole 112 S Chicago terrace via the new terrace ruling: one models.txt
 row naming the terrace address stands one model over every unit the split minted, and the
