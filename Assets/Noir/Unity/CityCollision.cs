@@ -252,7 +252,13 @@ namespace Noir.Unity
             || n == "meters_east" || n == "crawl_vent" || n == "service_mast"
             || n.StartsWith("vent_") || n == "roof_vents" || n.EndsWith("_gutter")
             || n.EndsWith("_fascia") || n.EndsWith("_bars") || n.StartsWith("satellite")
-            || n.StartsWith("dish_");
+            || n.StartsWith("dish_")
+            // The FOUNDATION never carries a footstep - floors, porches and threshold
+            // ramps do - and its collider poking up through the threshold slot pinched
+            // the front doorway to 1.74 m against a 1.8 m controller (measured at the
+            // door plane, 2026-08-19: floor foundation@8.59, header wall@10.33). The
+            // crawl-space band it leaves open is 0.7 m tall; no capsule fits in it.
+            || n.StartsWith("foundation");
 
         private static Mesh GroundMesh(WorldModel world, float beyond)
         {
