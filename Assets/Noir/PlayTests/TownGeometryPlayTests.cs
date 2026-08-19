@@ -703,6 +703,11 @@ namespace Noir.PlayTests
         {
             yield return CityUnderTest.WaitUntilBuilt();
             var host = CityUnderTest.Host;
+            // The standing gate builds the SURVEY PLAN, which stands no owner models -
+            // "anything this run does not build, it has not tested," the gate's own words.
+            // This gate measures the dressed town: the live editor, or NOIR_BUILT_TOWN=1.
+            if (Object.FindFirstObjectByType<OwnerModel>() == null)
+                Assert.Ignore("no owner models in this town - the plan gate cannot see 408's doors");
             var doors = Object.FindFirstObjectByType<CityDoors>();
             Assert.That(doors, Is.Not.Null);
 
@@ -732,6 +737,11 @@ namespace Noir.PlayTests
         {
             yield return CityUnderTest.WaitUntilBuilt();
             var host = CityUnderTest.Host;
+            // Plan gate town stands no owner models; without 408's model this test would
+            // drive the controller through the NEIGHBOUR's generated door and call it
+            // green - measured doing exactly that, 2026-08-19. Skip rather than lie.
+            if (Object.FindFirstObjectByType<OwnerModel>() == null)
+                Assert.Ignore("no owner models in this town - the plan gate cannot walk 408's door");
             Place home = null;
             foreach (var p in host.World.AllPlaces)
                 if (p != null && p.Name == "408 Holmes Street") home = p;
@@ -799,6 +809,13 @@ namespace Noir.PlayTests
             foreach (var p in host.World.AllPlaces)
                 if (p != null && p.Name == "408 Holmes Street") home = p;
             Assert.That(home, Is.Not.Null);
+
+            // A FRESH SPAWN, not an inherited body: the response suite toggles the player
+            // at its own hit scene and the body KEEPS that position across toggles - this
+            // test measured 25.9m of somebody else's parking before it destroyed the
+            // stale armature first (2026-08-19).
+            var stale = GameObject.Find("PlayerArmature");
+            if (stale != null && !player.Walking) Object.DestroyImmediate(stale);
 
             bool wasWalking = player.Walking;
             if (!wasWalking) player.Toggle();
