@@ -378,6 +378,20 @@ namespace Noir.Unity
             var doors = Object.FindFirstObjectByType<CityDoors>();
             if (doors == null) return;
 
+#if UNITY_EDITOR
+            // UNPACK FIRST, OR NOTHING BELOW HAPPENS. Landmark instantiates with
+            // PrefabUtility, and Unity refuses to reparent a transform inside a linked
+            // prefab instance - it logs "Setting the parent of a transform which resides
+            // in a Prefab instance is not possible", one line per piece, and every hinge
+            // stands empty. Caught live on this feature's first night: three childless
+            // hinges, every leaf still welded to the model root. The player armature
+            // already unpacks for the same reason (Player.Spawn's own comment).
+            if (UnityEditor.PrefabUtility.IsPartOfPrefabInstance(stood))
+                UnityEditor.PrefabUtility.UnpackPrefabInstance(stood,
+                    UnityEditor.PrefabUnpackMode.Completely,
+                    UnityEditor.InteractionMode.AutomatedAction);
+#endif
+
             Bounds model = default; bool has = false;
             foreach (var r in stood.GetComponentsInChildren<Renderer>(true))
             { if (!has) { model = r.bounds; has = true; } else model.Encapsulate(r.bounds); }
@@ -389,7 +403,11 @@ namespace Noir.Unity
             foreach (var slabT in kids)
             {
                 string n = slabT.name;
-                if (!n.StartsWith("door_") || !n.EndsWith("_slab")) continue;
+                // Any *_slab with "door" in its name: door_front_slab, door_rear_slab, AND
+                // garage_service_door_slab - the owner's naming puts the family first for
+                // house doors and last for the garage's person-door, and the first run of
+                // this pass missed the service door entirely by demanding the prefix.
+                if (!n.EndsWith("_slab") || !n.Contains("door")) continue;
                 string family = n.Substring(0, n.Length - "_slab".Length);   // "door_front"
 
                 var slabR = slabT.GetComponent<Renderer>();
