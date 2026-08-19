@@ -109,6 +109,39 @@ namespace Noir.Unity
 
                 foreach (Transform child in node.transform)
                 {
+                    // AN OWNER MODEL IS ENTERED, NOT BOXED (2026-08-18). The bounds box that
+                    // is right for a bought prefab seals a hand-made house's doorway shut -
+                    // the owner's own report: "I am blocked from approaching doors", against
+                    // a box that wrapped his whole modeled yard. His models carry real
+                    // interiors - floors, partitions, ceilings - so the collision IS the
+                    // model: one static MeshCollider per structural piece, on collider-only
+                    // copies under this root, because CityChunker's bake destroys the render
+                    // originals. Door leaves (under a "hinge" pivot) and soft dressing never
+                    // collide. A FLATTENED model (one welded MeshFilter - every conversion
+                    // before 2026-08-18) keeps the box below: its interior was never
+                    // separable, so a box costs nothing it had.
+                    if (child.GetComponent<OwnerModel>() != null
+                        && child.GetComponentsInChildren<MeshFilter>(true).Length > 1)
+                    {
+                        int meshed = 0;
+                        foreach (var mf in child.GetComponentsInChildren<MeshFilter>(true))
+                        {
+                            if (mf.sharedMesh == null) continue;
+                            if (mf.transform.parent != null && mf.transform.parent.name == "hinge") continue;
+                            if (SoftDressing(mf.name)) continue;
+
+                            var cc = new GameObject(child.name + ":" + mf.name);
+                            cc.transform.SetParent(root.transform, false);
+                            cc.transform.SetPositionAndRotation(mf.transform.position, mf.transform.rotation);
+                            cc.transform.localScale = mf.transform.lossyScale;
+                            cc.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+                            meshed++;
+                        }
+                        Debug.Log($"[collision] owner model '{child.name}': {meshed} piece "
+                                + "collider(s), no box - the doorway is a real hole");
+                        continue;
+                    }
+
                     // INCLUDE INACTIVE, or a layer switch silently deletes the walls.
                     //
                     // These roots are the Buildings, Districts and Houses layers, and VillageHost
@@ -159,6 +192,14 @@ namespace Noir.Unity
         /// ground you can walk on stays flush with the mapped town instead of stepping flat at
         /// the boundary the way the old box did.
         /// </summary>
+        /// <summary>The owner-model pieces a body passes through: planting, hose, string
+        /// lights, painted joints. Names are the owner's own convention (see the spec at
+        /// docs/superpowers/specs/2026-08-18-owner-model-doors-design.md).</summary>
+        private static bool SoftDressing(string n) =>
+            n.StartsWith("shrub_") || n.StartsWith("grass_") || n.StartsWith("bed_")
+            || n == "garden_hose" || n == "hose_reel" || n == "porch_string_lights"
+            || n == "paving_joints" || n == "foliage" || n.StartsWith("planters");
+
         private static Mesh GroundMesh(WorldModel world, float beyond)
         {
             float x0 = -beyond, x1 = world.Width + beyond;
