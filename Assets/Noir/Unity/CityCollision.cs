@@ -193,12 +193,23 @@ namespace Noir.Unity
         /// the boundary the way the old box did.
         /// </summary>
         /// <summary>The owner-model pieces a body passes through: planting, hose, string
-        /// lights, painted joints. Names are the owner's own convention (see the spec at
+        /// lights, painted joints - and, learned the night the owner got stuck in his own
+        /// front doorway, the SNAG TRIM: brick course bands an inch proud of the wall, the
+        /// entry lamp, porch battens, downspouts, vents, gutters. A doorway is a 3-foot
+        /// opening and the player capsule is 22 inches wide; every centimetre of decorative
+        /// collider beside it is a shoulder-catch. Structure collides; detail does not.
+        /// Names are the owner's own convention (see the spec at
         /// docs/superpowers/specs/2026-08-18-owner-model-doors-design.md).</summary>
         private static bool SoftDressing(string n) =>
             n.StartsWith("shrub_") || n.StartsWith("grass_") || n.StartsWith("bed_")
             || n == "garden_hose" || n == "hose_reel" || n == "porch_string_lights"
-            || n == "paving_joints" || n == "foliage" || n.StartsWith("planters");
+            || n == "paving_joints" || n == "foliage" || n.StartsWith("planters")
+            || n.StartsWith("course_") || n.EndsWith("_battens") || n.EndsWith("_joints")
+            || n == "entry_lamp" || n == "porch_light_cord" || n.StartsWith("downspout")
+            || n == "meters_east" || n == "crawl_vent" || n == "service_mast"
+            || n.StartsWith("vent_") || n == "roof_vents" || n.EndsWith("_gutter")
+            || n.EndsWith("_fascia") || n.EndsWith("_bars") || n.StartsWith("satellite")
+            || n.StartsWith("dish_");
 
         private static Mesh GroundMesh(WorldModel world, float beyond)
         {
