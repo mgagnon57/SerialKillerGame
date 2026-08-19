@@ -1212,3 +1212,22 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   a model. Fixing this widens the blast radius from 17 buildings to however many `SeatOnSurvey`
   reports as "built to its real outline" - needs its own planned, verified pass, not a
   bolt-on. (Found by the final review of the angled-frontage plan, 2026-08-14.)
+
+- [ ] **Owner models must block the walkable grid.** `world.Grid` has never heard of a
+  models.txt building: citizens path straight through 408 Holmes' walls, and one stood
+  corking the owner's own front doorway (measured live, 2026-08-19 - `man-slavic-winter`
+  wedged in a 3-foot opening). The fix is Core-adjacent: stamp each owner model's structural
+  footprint (walls, not yard dressing) into the grid at build, with the door tiles as the
+  only crossings - the same trap `FrameHouseGrammars.Porch` is already documented for
+  (a silhouette bigger than `Place.Bounds` that the grid cannot see). Needs its own spec:
+  the stamp must come from the MODEL's real geometry, and citizens who LIVE there still
+  need to reach their own door. — *2026-08-19*
+
+- [ ] **Owner-model renderers do not bake: enable Read/Write for `Assets/Noir/Models`.**
+  The chunker leaves ~242 renderers per structured owner model unbaked ("NOT Read/Write
+  enabled"), so every hand-made house costs its full renderer count forever. Flipping
+  `isReadable` in the OBJ importers lets them bake - BUT check the window glass first: the
+  chunker keeps addressable glass by the PACK's material names, and the owner's `glass`
+  material is not among them, so a naive bake would weld his lit windows solid. Either
+  teach the chunker his glass name or exempt `win_*_glass` pieces the way hinge leaves are
+  exempt. — *2026-08-19*
