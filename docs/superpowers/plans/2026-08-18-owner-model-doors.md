@@ -62,7 +62,7 @@ colliders on collider-only copies (the bake destroys originals) instead of one s
   root — Task 3 finds children by these names (`door_front_slab`, `garage_door_panel`,
   `floor_west`, `shrub_1`, ...). Node names sanitised: spaces → `_`.
 
-- [ ] **Step 1: Restructure the grouping.** In `main()`, replace the material-keyed `groups`
+- [x] **Step 1: Restructure the grouping.** In `main()`, replace the material-keyed `groups`
   dict with a node-keyed ordered list. In `walk`, replace the `groups.setdefault(...)` body:
 
 ```python
@@ -124,7 +124,7 @@ colliders on collider-only copies (the bake destroys originals) instead of one s
   `shrub_*`/`grass_*` never do), one `g` per node, flattened models still import as one
   child.
 
-- [ ] **Step 2: Re-convert 408 and verify the groups.**
+- [x] **Step 2: Re-convert 408 and verify the groups.**
 
 Run: `python tools/glb-to-obj.py "C:\Users\mgagn\Downloads\408-residence.glb" Residence408`
 Then: `grep -c "^g " Assets/Noir/Models/Residence408.obj`
@@ -143,7 +143,7 @@ print(round(max(xs)-min(xs),1), round(max(ys)-min(ys),1), round(max(zs)-min(zs),
 EOF
 ```
 
-- [ ] **Step 3: Commit** (converter + regenerated obj/mtl):
+- [x] **Step 3: Commit** (converter + regenerated obj/mtl):
   `The converter keeps the owner's names, and 408 comes through in pieces`
 
 ---
@@ -162,7 +162,7 @@ EOF
   panel bottom up and in when local X runs along the panel's top edge). Task 3 calls it.
   `Add(...)` keeps its exact signature and behaviour.
 
-- [ ] **Step 1: Add the kind array and AddLift.** Beside the other lists:
+- [x] **Step 1: Add the kind array and AddLift.** Beside the other lists:
 
 ```csharp
         /// <summary>0 = swing (yaw about local Y, every door in town until 2026-08-18);
@@ -192,7 +192,7 @@ EOF
         }
 ```
 
-- [ ] **Step 2: Branch the two applications in Update.** Both places that write
+- [x] **Step 2: Branch the two applications in Update.** Both places that write
   `hinge.localEulerAngles` (the out-of-range snap-shut at ~line 293 and the swing at ~307)
   become:
 
@@ -209,7 +209,7 @@ EOF
   assignments. Nothing else in Update changes — proximity, overrides, Force, Leafless and
   NearestDoor are kind-blind by construction.
 
-- [ ] **Step 3: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, then commit:
+- [x] **Step 3: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, then commit:
   `CityDoors learns the tilt-up: one more kind, same clock`
 
 ---
@@ -228,15 +228,15 @@ EOF
   `private static void HingeOwnerDoors(GameObject stood)` — called from both arms right
   after a successful `Landmark`, before `Record`.
 
-- [ ] **Step 0: Verify order.** Read `VillageHost.Build` and confirm `CityBuildings` runs
+- [x] **Step 0: Verify order.** Read `VillageHost.Build` and confirm `CityBuildings` runs
   and `CityCollision.Build` is called BEFORE `CityChunker.Bake`. If not, STOP and report.
 
-- [ ] **Step 1: The marker and the call sites.** Add the marker class; in the exact-match
+- [x] **Step 1: The marker and the call sites.** Add the marker class; in the exact-match
   arm after `if (owned != null) {` add `owned.AddComponent<OwnerModel>();
   HingeOwnerDoors(owned);` (before `Record`), and likewise `stood.AddComponent<OwnerModel>();
   HingeOwnerDoors(stood);` in the terrace arm.
 
-- [ ] **Step 1b: Ground owner models at AUTHORED grade, not bounds-min.** Reported live by
+- [x] **Step 1b: Ground owner models at AUTHORED grade, not bounds-min.** Reported live by
   the owner 2026-08-18 ("the house is sitting above the terrain"): `Landmark` grounds with
   `go.transform.position.y + (groundY - b.min.y)`, which puts the model's LOWEST VERTEX at
   ground level - and his convention (the pipeline's own rule: "wheels/foundation on y=0")
@@ -254,7 +254,7 @@ EOF
             go.transform.position = new Vector3(want.x - drift.x, lift, want.z - drift.z);
 ```
 
-- [ ] **Step 2: HingeOwnerDoors.** After `TerraceKeyFor`:
+- [x] **Step 2: HingeOwnerDoors.** After `TerraceKeyFor`:
 
 ```csharp
         /// <summary>
@@ -363,7 +363,7 @@ EOF
         }
 ```
 
-- [ ] **Step 3: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, commit:
+- [x] **Step 3: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, commit:
   `The owner's doors get their hinges, and the garage panel tilts`
 
 ---
@@ -380,7 +380,7 @@ EOF
   (they must NOT live on the render pieces - the bake destroys those); everything else
   keeps its box.
 
-- [ ] **Step 1: The branch.** Inside the child loop, before the bounds-box logic:
+- [x] **Step 1: The branch.** Inside the child loop, before the bounds-box logic:
 
 ```csharp
                     // AN OWNER MODEL IS ENTERED, NOT BOXED (2026-08-18). The bounds box that
@@ -419,7 +419,7 @@ EOF
                     }
 ```
 
-- [ ] **Step 2: SoftDressing.** A private helper beside `GroundMesh`:
+- [x] **Step 2: SoftDressing.** A private helper beside `GroundMesh`:
 
 ```csharp
         /// <summary>The owner-model pieces a body passes through: planting, hose, string
@@ -430,7 +430,7 @@ EOF
             || n == "paving_joints" || n == "foliage" || n.StartsWith("planters");
 ```
 
-- [ ] **Step 3: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, commit:
+- [x] **Step 3: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, commit:
   `An owner model is entered, not boxed`
 
 ---
@@ -445,7 +445,7 @@ EOF
   `Space3D.ToWorld(Tile)`.
 - Produces: nothing later tasks use; behavioural only.
 
-- [ ] **Step 1: The preference.** At the top of `Standing(WorldModel world)`:
+- [x] **Step 1: The preference.** At the top of `Standing(WorldModel world)`:
 
 ```csharp
             // HOME FIRST (owner's ruling, 2026-08-18): when the town has 408 Holmes Street -
@@ -462,7 +462,7 @@ EOF
                 }
 ```
 
-- [ ] **Step 2: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, commit:
+- [x] **Step 2: Build.** `dotnet build Noir.Unity.csproj -c Debug` — exit 0, commit:
   `P stands you at your own front door`
 
 ---
@@ -477,7 +477,7 @@ EOF
   `PositionOf`, `NearestDoor`, `Force`), the world place `408 Holmes Street`,
   `Object.FindFirstObjectByType<Player>()`.
 
-- [ ] **Step 1: Write the three tests** (they FAIL until Tasks 1-5 are all in a built town,
+- [x] **Step 1: Write the three tests** (they FAIL until Tasks 1-5 are all in a built town,
   and pass together after — run order inside this plan means write-then-verify happens in
   one PlayMode run at Step 2):
 
@@ -578,10 +578,10 @@ EOF
   `Noir.Unity`); `CityDoors` is `Noir.Unity` too. `player.Walking`/`Where`/`Toggle` are the
   Player API the response suite already drives.
 
-- [ ] **Step 2: Build both.** `dotnet build Noir.Unity.csproj -c Debug` and
+- [x] **Step 2: Build both.** `dotnet build Noir.Unity.csproj -c Debug` and
   `dotnet build Noir.PlayTests.csproj -c Debug` — exit 0 both.
 
-- [ ] **Step 3: Run the three tests batch** (editor closed - CHECK for Unity.exe first;
+- [x] **Step 3: Run the three tests batch** (editor closed - CHECK for Unity.exe first;
   if the owner has it open, hand him the run instead of killing anything):
 
 ```
@@ -594,20 +594,20 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 Expected: 3 of 3 PASS. On a red, read the log's `[doors]`/`[collision]` lines before
 touching code - the failure names which layer lied.
 
-- [ ] **Step 4: Commit**: `Three gates on the owner's front door`
+- [x] **Step 4: Commit**: `Three gates on the owner's front door`
 
 ---
 
 ### Task 7: Land it
 
-- [ ] **Step 1:** Full PlayMode gate (`-testCategory "!Diagnostic"`, editor closed) OR, if
+- [x] **Step 1:** Full PlayMode gate (`-testCategory "!Diagnostic"`, editor closed) OR, if
   the owner is in the editor, leave the full gate to tonight's nightly run and say so in the
   report - the three new tests already ran in Task 6.
-- [ ] **Step 2:** Update `tools/nightly-gate.ps1` `$playmodeBaselinePass = 35` → `38`, and
+- [x] **Step 2:** Update `tools/nightly-gate.ps1` `$playmodeBaselinePass = 35` → `38`, and
   CLAUDE.md's PlayMode baseline entry (new entry above the 35-of-35 one, naming the three
   tests and this plan's path), in the same commit.
-- [ ] **Step 3:** The spec gets its Landed line (date + measured numbers). `docs/CONTROLS.md`
+- [x] **Step 3:** The spec gets its Landed line (date + measured numbers). `docs/CONTROLS.md`
   gains the door verb line if it still lacks one (the doors audit flagged it missing).
-- [ ] **Step 4:** Commit docs, push. Named leftovers: door leaves do not physically block
+- [x] **Step 4:** Commit docs, push. Named leftovers: door leaves do not physically block
   (town-wide parity); PubRow/RossvilleStorefront re-conversion under the new pipeline waits
   for the owner's eye; furnishing 408 is his, in Designer.

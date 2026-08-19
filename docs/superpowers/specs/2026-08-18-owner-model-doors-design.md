@@ -8,6 +8,18 @@
 > first hour taught: a prefab instance must be UNPACKED before its doors can be rehung
 > (Unity logs a per-piece error and every hinge stands empty), and the survey's door tile
 > for 408 is on the REAR of the lot - the front walk is the lot's south edge.
+>
+> **The doorway war, 2026-08-19 (morning), and the two rules it minted.** Getting IN was
+> the first night; getting OUT took: ghosting snag trim (entry lamp, battens, brick
+> courses), threshold ramps, ghosting foundations, sinking the ramps 13 cm - and the last
+> centimetre was never code: the owner's doors were BASED AT PORCH LEVEL with the interior
+> floor 13 inches higher, 5'7" of real headroom, which no ramp can fix. His re-export
+> (sills on floors, stock 6'8" doors, 7'0" x 9'0" overhead) ended it, verified by driving
+> the actual CharacterController out the door and back. Rule one: **a door's base sits on
+> the floor of the room it opens into** - the size review checks it per door now. Rule
+> two: **walkability is verified by driving the controller through the door** (cc.Move,
+> both ways) - rays and crouched capsules both approved doorways the real body could not
+> pass, and the PlayMode gate drives the real body now.
 
 **Ruled by the owner, 2026-08-18 (late), in chat.** His hand-made houses open their doors and
 let the player in, starting with 408 Holmes Street; P spawns him at that front door. Approved
