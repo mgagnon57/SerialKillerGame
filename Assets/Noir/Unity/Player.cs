@@ -817,6 +817,19 @@ namespace Noir.Unity
         /// </summary>
         private static Vector3 Standing(WorldModel world)
         {
+            // HOME FIRST (owner's ruling, 2026-08-18): when the town has 408 Holmes Street -
+            // the survey-seated lot, his own hand-made house since the same night - P stands
+            // you on its front walk, one stride out from the door, facing the house. The
+            // road-centre fallback below still serves every fixture town and any map without
+            // the address, so no test moves.
+            const string HomeAddress = "408 Holmes Street";
+            foreach (var place in world.AllPlaces)
+                if (place != null && place.Name == HomeAddress)
+                {
+                    var w = Space3D.ToWorld(place.Door);
+                    return new Vector3(w.x, w.y, w.z - 2f);   // village +y is toward Holmes
+                }
+
             float middle = world.Width * 0.5f;
             float x = middle, best = float.MaxValue;
 
