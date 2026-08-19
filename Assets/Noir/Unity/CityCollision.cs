@@ -64,11 +64,18 @@ namespace Noir.Unity
         private const float Floor = 0.06f;
 
         /// <summary>
-        /// The ground slab's own grid spacing, in metres - matches ElevationGrid's native
-        /// resolution, so this samples the real data at exactly the density it was measured at
-        /// rather than inventing detail between samples or throwing detail away.
+        /// The ground lattice's sample spacing - a QUARTER of ElevationGrid's native 30 m, and
+        /// ONE SHARED UNIFORM LATTICE, re-learned 2026-08-18 the hard way: the first saddle
+        /// repair subdivided each 30 m cell independently by its own curvature, and
+        /// neighbouring cells that chose different lattices disagreed along the edge they
+        /// shared - measured 338 seams with a lip over 10 cm, 15 cm at the worst - and the
+        /// owner's car found them within the hour, as invisible kerbs across open ground. A
+        /// uniform lattice shares every border vertex, so there is nothing to disagree; at
+        /// 7.5 m the flat-triangle bow off the bilinear surface is a sixty-fourth of a cell's
+        /// corner cross-difference - under 3 cm everywhere in town, ~12 cm only at the creek
+        /// ravine's corner of the countryside, all inside the CharacterController's step.
         /// </summary>
-        private const float Step = 30f;
+        private const float Step = 7.5f;
 
         public static GameObject Build(WorldModel world, Transform parent, params GameObject[] built)
         {
@@ -152,11 +159,6 @@ namespace Noir.Unity
         /// ground you can walk on stays flush with the mapped town instead of stepping flat at
         /// the boundary the way the old box did.
         /// </summary>
-        /// <summary>How far a collision triangle may bow off the bilinear surface everything
-        /// is placed on - VillageMesh's SaddleTolerance, relaxed to the CharacterController's
-        /// own skin: physics forgives more than the eye does.</summary>
-        private const float SaddleTolerance = 0.05f;
-
         private static Mesh GroundMesh(WorldModel world, float beyond)
         {
             float x0 = -beyond, x1 = world.Width + beyond;
@@ -165,48 +167,20 @@ namespace Noir.Unity
             int cols = Mathf.CeilToInt((x1 - x0) / Step) + 1;
             int rows = Mathf.CeilToInt((y1 - y0) / Step) + 1;
 
-            // PER CELL, NOT ONE SHARED LATTICE, SINCE 2026-08-18: a 30 m cell drawn as two
-            // flat triangles bows off ElevationGrid's bilinear saddle by up to a quarter of
-            // its corner cross-difference - the same fault, and the same repair, as
-            // VillageMesh's merged runs (see its SaddleTolerance comment). Each cell that
-            // curves past the tolerance is emitted as its own n x n lattice, HeightAt sampled
-            // at EVERY vertex rather than blended from the cell's corners, because this grid
-            // starts at -beyond and its cells straddle the elevation grid's own. A flat cell
-            // - most of the county - is still one quad. Border vertices are duplicated
-            // between cells but identical in position, so the surface stays watertight to a
-            // CharacterController.
-            var verts = new List<Vector3>(cols * rows);
-            var tris = new List<int>((cols - 1) * (rows - 1) * 6);
+            var verts = new Vector3[cols * rows];
+            for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                float wx = x0 + c * Step;
+                float wy = y0 + r * Step;
+                verts[r * cols + c] = new Vector3(wx, Floor + ElevationGrid.HeightAt(wx, wy), -wy);
+            }
 
+            var tris = new List<int>((cols - 1) * (rows - 1) * 6);
             for (int r = 0; r < rows - 1; r++)
             for (int c = 0; c < cols - 1; c++)
             {
-                float wx0 = x0 + c * Step, wy0 = y0 + r * Step;
-                float wx1 = wx0 + Step,    wy1 = wy0 + Step;
-
-                float h00 = ElevationGrid.HeightAt(wx0, wy0), h10 = ElevationGrid.HeightAt(wx1, wy0);
-                float h01 = ElevationGrid.HeightAt(wx0, wy1), h11 = ElevationGrid.HeightAt(wx1, wy1);
-                float cross = Mathf.Abs(h00 + h11 - h10 - h01);
-
-                int n = 1;
-                if (cross > 4f * SaddleTolerance)
-                {
-                    float s = 2f * Mathf.Sqrt(SaddleTolerance * Step * Step / cross);
-                    n = Mathf.Clamp(Mathf.CeilToInt(Step / s), 1, 30);
-                }
-
-                int b0 = verts.Count;
-                for (int iy = 0; iy <= n; iy++)
-                for (int ix = 0; ix <= n; ix++)
-                {
-                    float wx = Mathf.Lerp(wx0, wx1, (float)ix / n);
-                    float wy = Mathf.Lerp(wy0, wy1, (float)iy / n);
-                    verts.Add(new Vector3(wx, Floor + ElevationGrid.HeightAt(wx, wy), -wy));
-                }
-                for (int iy = 0; iy < n; iy++)
-                for (int ix = 0; ix < n; ix++)
-                {
-                    int v0 = b0 + iy * (n + 1) + ix, v1 = v0 + 1, v2 = v0 + (n + 1), v3 = v2 + 1;
+                int v0 = r * cols + c, v1 = v0 + 1, v2 = v0 + cols, v3 = v2 + 1;
 
                 // WOUND TO FACE UP, AND IT DID NOT. This read `v0,v2,v1 / v1,v2,v3` and said in a
                 // comment that it faced up. It faced DOWN, and the arithmetic says so plainly:
@@ -224,15 +198,14 @@ namespace Noir.Unity
                 // than simply broken, and why it was written off as flaky. Probed: spawn 6.90,
                 // ground 3.90, and the fall passes straight through 3.90 at 0.06 m a step. That is
                 // not tunnelling. That is a floor with no upward face.
-                    tris.Add(v0); tris.Add(v1); tris.Add(v2);
-                    tris.Add(v1); tris.Add(v3); tris.Add(v2);
-                }
+                tris.Add(v0); tris.Add(v1); tris.Add(v2);
+                tris.Add(v1); tris.Add(v3); tris.Add(v2);
             }
 
             var mesh = new Mesh
             {
                 name = "GroundCollision",
-                indexFormat = verts.Count > 65000
+                indexFormat = verts.Length > 65000
                     ? UnityEngine.Rendering.IndexFormat.UInt32
                     : UnityEngine.Rendering.IndexFormat.UInt16
             };
