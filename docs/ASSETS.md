@@ -113,6 +113,15 @@ props or posing whole as ambulance-scene dressing). All grounded, all dimensiona
 They queue on the interior/prop seam beside the desk props — natural home: the ambulance
 rig's dressing and the response scene.
 
+Thirty-first through thirty-third (2026-08-18, evening — THE BUILDINGS WAVE, all three
+standing on lots the same night): **Residence408** (19,048 tris, 59 x 100 ft x 17 ft with an
+8-inch below-grade foundation — 408 Holmes Ave, HIS house, standing alone on a block the
+county's decline emptied), **PubRow** (7,684 tris, 91 x 45 ft two-storey terrace — Rossville
+unit 7, the Livingood House lot), and **RossvilleStorefront** (12,332 tris, 53 x 50 ft,
+three storeys — the whole 112 S Chicago terrace via the new terrace ruling: one models.txt
+row naming the terrace address stands one model over every unit the split minted, and the
+units stay real places under the one roof the county's note says they shared).
+
 ---
 
 ## The four filters

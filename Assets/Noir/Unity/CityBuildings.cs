@@ -117,6 +117,13 @@ namespace Noir.Unity
                 if (Stacked(KindOf(place))) lots.Add(place);
 
             int pieces = 0;
+
+            // Terrace rulings already stood this build: a models.txt row naming a terrace
+            // address ("112 S Chicago", no "#N") stands ONE model over the whole row, and
+            // the first unit the walk meets does the standing - the rest find their key
+            // here and pass. Per build, not static: a rebuild starts over.
+            var terraceStood = new HashSet<string>();
+
             foreach (var place in lots)
             {
                 // A HOUSE IS NOT A SHORT TOWNHOUSE. Everything on `lots` used to go through
@@ -172,6 +179,48 @@ namespace Noir.Unity
                         + place.Name + "' - the lot falls back to the grammars");
                     // fall through: Handles() said true, so the grammars already stood down;
                     // better an empty lot logged loudly than a silent box inside a ghost.
+                }
+
+                // A TERRACE ADDRESS CLAIMS THE WHOLE ROW (2026-08-18, for the owner's
+                // 53-foot storefront over 112 S Chicago's several 22-foot units). The row's
+                // key is the terrace address the split minted the units FROM; the first unit
+                // this walk meets stands the one model over the union of every sibling's
+                // bounds, and the siblings pass through with their generated look already
+                // stood down by Handles(). The units stay real places - doors, businesses,
+                // witnesses - under the one roof the county's own note says they shared.
+                string terraceKey = TerraceKeyFor(place.Name);
+                if (terraceKey != null)
+                {
+                    if (!terraceStood.Add(terraceKey)) continue;   // a sibling stood it already
+
+                    var row = OwnerModels()[terraceKey];
+                    TileRect u = place.Bounds;
+                    foreach (var sib in world.AllPlaces)
+                        if (sib.Name != null
+                            && sib.Name.StartsWith(terraceKey + " #", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            int x0 = Mathf.Min(u.X, sib.Bounds.X), y0 = Mathf.Min(u.Y, sib.Bounds.Y);
+                            int x1 = Mathf.Max(u.X + u.W, sib.Bounds.X + sib.Bounds.W);
+                            int y1 = Mathf.Max(u.Y + u.H, sib.Bounds.Y + sib.Bounds.H);
+                            u = new TileRect(x0, y0, x1 - x0, y1 - y0);
+                        }
+
+                    var stood = Landmark(root.transform,
+                        "Assets/Noir/Models/" + row.model + ".obj", u);
+                    if (stood != null)
+                    {
+                        if (row.yaw != 0f)
+                        {
+                            var centre = new Vector3(u.X + u.W / 2f, 0f, -(u.Y + u.H / 2f));
+                            stood.transform.RotateAround(centre, Vector3.up, row.yaw);
+                        }
+                        Record(place, stood);
+                        pieces++;
+                    }
+                    else
+                        Debug.LogError("[models] terrace model '" + row.model + "' did not build "
+                            + "for '" + terraceKey + "' - the whole row stands empty and says so");
+                    continue;
                 }
 
                 string prefab = KindOf(place) switch
@@ -262,8 +311,10 @@ namespace Noir.Unity
         {
             // The owner's buildings first: a Content/models.txt ruling stands a hand-made
             // model on this lot, so the generated town stands down exactly as it does for
-            // the pack landmarks below.
+            // the pack landmarks below. A terrace ruling ("112 S Chicago", no "#N") stands
+            // down every unit the split minted from that address - one roof, one model.
             if (place != null && OwnerModels().ContainsKey(place.Name)) return true;
+            if (place != null && TerraceKeyFor(place.Name) != null) return true;
 
             switch (KindOf(place))
             {
@@ -285,6 +336,19 @@ namespace Noir.Unity
         // the street itself confirmed. An absent file means no rulings and costs nothing;
         // a malformed row or a missing model complains out loud and the lot falls back to
         // the grammars rather than standing empty.
+        /// <summary>The ruling key whose terrace this unit belongs to - "112 S Chicago" for
+        /// "112 S Chicago #3", per CommercialRow.HandleFor's own naming - or null. A ruling
+        /// that names one unit exactly ("112 S Chicago #1") is an EXACT match, not a
+        /// terrace, and never reaches this.</summary>
+        private static string TerraceKeyFor(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            foreach (var key in OwnerModels().Keys)
+                if (name.StartsWith(key + " #", System.StringComparison.OrdinalIgnoreCase))
+                    return key;
+            return null;
+        }
+
         private static Dictionary<string, (string model, float yaw)> _ownerModels;
 
         private static Dictionary<string, (string model, float yaw)> OwnerModels()

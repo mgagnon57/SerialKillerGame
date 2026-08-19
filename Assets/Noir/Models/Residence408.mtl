@@ -1,0 +1,60 @@
+newmtl brick
+Kd 0.2122 0.0685 0.0437
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding
+Kd 0.7758 0.7605 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl plaster
+Kd 0.6867 0.6584 0.5972
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl wood
+Kd 0.0685 0.0356 0.0222
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl mortar
+Kd 0.3813 0.3372 0.3005
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim
+Kd 0.9047 0.8963 0.8550
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl concrete
+Kd 0.4397 0.4179 0.3763
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass
+Kd 0.4233 0.5395 0.6105
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl iron
+Kd 0.0232 0.0252 0.0284
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl shingle
+Kd 0.0953 0.0423 0.0284
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gravel
+Kd 0.3864 0.3515 0.2961
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl foliage
+Kd 0.1095 0.1529 0.0704
+Ks 0.05 0.05 0.05
+Ns 10
+

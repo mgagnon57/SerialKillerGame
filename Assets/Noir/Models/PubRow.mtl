@@ -1,0 +1,110 @@
+newmtl brick_painted_red
+Kd 0.2918 0.0561 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_grey
+Kd 0.3278 0.3140 0.2831
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl concrete
+Kd 0.4678 0.4452 0.3968
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_stained_red
+Kd 0.1529 0.0284 0.0194
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass_dark
+Kd 0.0252 0.0331 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brass
+Kd 0.4793 0.2831 0.0497
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_membrane
+Kd 0.0887 0.0887 0.0782
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_grey_dark
+Kd 0.2542 0.2423 0.2159
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_buff
+Kd 0.4508 0.3231 0.1812
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl cast_stone
+Kd 0.5647 0.5271 0.4397
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding_barn_red
+Kd 0.3515 0.0578 0.0343
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding_batten
+Kd 0.2582 0.0369 0.0212
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_white
+Kd 0.8148 0.7991 0.7379
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass_amber
+Kd 0.5841 0.3613 0.0865
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brick_dark_red
+Kd 0.1470 0.0356 0.0252
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sign_blue
+Kd 0.0273 0.0723 0.1812
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl steel_rail
+Kd 0.3467 0.3763 0.3916
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bench_dark
+Kd 0.0331 0.0423 0.0343
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_steel
+Kd 0.6514 0.6724 0.6867
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl soil
+Kd 0.0685 0.0423 0.0273
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl foliage
+Kd 0.1095 0.1946 0.0595
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl flower_red
+Kd 0.3916 0.0331 0.0252
+Ks 0.05 0.05 0.05
+Ns 10
+

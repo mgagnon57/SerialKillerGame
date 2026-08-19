@@ -16,3 +16,13 @@
 # ==========================================================================
 
 101 Perry St | VictorianHouse | 0
+408 Holmes Ave | Residence408 | 0
+Rossville unit 7 | PubRow | 0
+
+# A TERRACE ADDRESS CLAIMS THE WHOLE ROW. A row whose address is a terrace's -
+# "112 S Chicago", no "#N" - stands ONE model over the union of every unit the
+# split minted from it ("112 S Chicago #1", "#2", ...), and every one of those
+# units' generated looks stands down. The units stay real places - doors,
+# businesses, witnesses - under the one roof the county's own note says they
+# always shared.
+112 S Chicago | RossvilleStorefront | 0
