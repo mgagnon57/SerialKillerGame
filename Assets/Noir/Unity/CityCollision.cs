@@ -137,8 +137,51 @@ namespace Noir.Unity
                             cc.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
                             meshed++;
                         }
+                        // THRESHOLD RAMPS (2026-08-19, the night the owner could not get out
+                        // of his own front door): his porch is authored a real 33 cm below
+                        // the interior floor - true to the house, taller than the
+                        // CharacterController's step. Each swing door gets an invisible
+                        // wedge spanning the measured floor heights either side of its
+                        // hinge, so the doorway walks like a doorway. The garage panel's
+                        // hinge rides the top edge (high y) and is skipped.
+                        // The piece colliders above were created THIS frame; the ramp
+                        // raycasts below cannot see them until the physics world syncs.
+                        Physics.SyncTransforms();
+
+                        foreach (var hingeT in child.GetComponentsInChildren<Transform>(true))
+                        {
+                            if (hingeT.name != "hinge") continue;
+                            Vector3 hp = hingeT.position;
+                            RaycastHit gr;
+                            if (!Physics.Raycast(hp + Vector3.up * 0.5f, Vector3.down, out gr, 4f)) continue;
+                            if (hp.y - gr.point.y > 1.5f) continue;   // top-edge hinge: the panel
+
+                            Bounds mb = default; bool mhas = false;
+                            foreach (var mr in child.GetComponentsInChildren<Renderer>(true))
+                            { if (!mhas) { mb = mr.bounds; mhas = true; } else mb.Encapsulate(mr.bounds); }
+                            Vector3 inward = mb.center - hp; inward.y = 0f;
+                            if (inward.sqrMagnitude < 0.01f) continue;
+                            inward.Normalize();
+
+                            RaycastHit hin, hout;
+                            bool okIn = Physics.Raycast(hp + inward * 0.6f + Vector3.up * 1f, Vector3.down, out hin, 4f);
+                            bool okOut = Physics.Raycast(hp - inward * 0.6f + Vector3.up * 1f, Vector3.down, out hout, 4f);
+                            if (!okIn || !okOut) continue;
+                            float dH = hin.point.y - hout.point.y;
+                            if (Mathf.Abs(dH) < 0.15f) continue;      // an honest sill, no ramp needed
+
+                            var ramp = new GameObject(child.name + ":threshold-ramp");
+                            ramp.transform.SetParent(root.transform, false);
+                            ramp.transform.position = new Vector3(hp.x, (hin.point.y + hout.point.y) / 2f, hp.z);
+                            float tilt = Mathf.Atan2(dH, 1.2f) * Mathf.Rad2Deg;
+                            ramp.transform.rotation = Quaternion.LookRotation(inward) * Quaternion.Euler(-tilt, 0f, 0f);
+                            var bc = ramp.AddComponent<BoxCollider>();
+                            bc.size = new Vector3(1.6f, 0.08f, 1.5f);
+                            meshed++;
+                        }
+
                         Debug.Log($"[collision] owner model '{child.name}': {meshed} piece "
-                                + "collider(s), no box - the doorway is a real hole");
+                                + "collider(s) incl. threshold ramps, no box - the doorway is a real hole");
                         continue;
                     }
 
