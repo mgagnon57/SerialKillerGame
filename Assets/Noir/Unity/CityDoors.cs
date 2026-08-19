@@ -84,6 +84,13 @@ namespace Noir.Unity
         private readonly List<float> _overrideUntil = new List<float>();
         private readonly List<float> _forceOpenUntil = new List<float>();
 
+        /// <summary>0 = swing (yaw about local Y - every door in town until 2026-08-18);
+        /// 1 = lift (pitch about local X - the one-piece tilt-up garage door of 1991, which
+        /// rotates about its own top edge). The angle arrays are degrees on whichever axis
+        /// the kind names; everything else here - proximity, overrides, Force, Leafless -
+        /// is kind-blind by construction.</summary>
+        private readonly List<byte> _kindOf = new List<byte>();
+
         private readonly Dictionary<long, List<Vector3>> _people = new Dictionary<long, List<Vector3>>();
         private int _sinceRehash = 999;
 
@@ -115,6 +122,33 @@ namespace Noir.Unity
             _at.Add(hinge.position);
             _overrideUntil.Add(0f);
             _forceOpenUntil.Add(0f);
+            _kindOf.Add(0);
+        }
+
+        /// <summary>Take a lift hinge - an overhead door rotating about its local X, which
+        /// the caller has aligned with the panel's top edge. Shut is pitch 0 (the pivot's
+        /// own rest pose); open is <paramref name="openPitch"/> degrees, negative when the
+        /// panel bottom should tilt up and into the building.</summary>
+        public void AddLift(Transform hinge, float openPitch)
+        {
+            if (hinge == null) return;
+            _hinges.Add(hinge);
+            _shut.Add(0f);
+            _open.Add(openPitch);
+            _angle.Add(0f);
+            _at.Add(hinge.position);
+            _overrideUntil.Add(0f);
+            _forceOpenUntil.Add(0f);
+            _kindOf.Add(1);
+        }
+
+        /// <summary>The one place an angle becomes a pose: yaw for a swing, pitch for a
+        /// lift. Both callers in Update write _angle[i] first and then ask this.</summary>
+        private void Apply(Transform hinge, int i)
+        {
+            hinge.localEulerAngles = _kindOf[i] == 0
+                ? new Vector3(0f, _angle[i], 0f)
+                : new Vector3(_angle[i], 0f, 0f);
         }
 
         /// <summary>The world position Update measures this door's own distance checks from.</summary>
@@ -290,7 +324,7 @@ namespace Noir.Unity
                 {
                     // Out of sight, shut, and not eased there - a door nobody can see does not
                     // need to be watched closing.
-                    if (_angle[i] != _shut[i]) { _angle[i] = _shut[i]; hinge.localEulerAngles = new Vector3(0f, _shut[i], 0f); }
+                    if (_angle[i] != _shut[i]) { _angle[i] = _shut[i]; Apply(hinge, i); }
                     continue;
                 }
 
@@ -304,7 +338,7 @@ namespace Noir.Unity
                 if (Mathf.Approximately(_angle[i], want)) continue;
 
                 _angle[i] = Mathf.MoveTowardsAngle(_angle[i], want, step);
-                hinge.localEulerAngles = new Vector3(0f, _angle[i], 0f);
+                Apply(hinge, i);
                 moving++;
             }
 
