@@ -8,12 +8,17 @@ carries losslessly. Usage:
     python tools/glb-to-obj.py "C:/Users/mgagn/Downloads/desktop-pc-1991.glb" DesktopPC1991
     python tools/glb-to-obj.py "C:/.../police-cruiser-1991.glb" PoliceCruiser1991 -90
 
-writes <Name>.obj + <Name>.mtl into Assets/Noir/Models/. Faces are grouped by
-material, so Unity imports ONE mesh with one submesh per material - a single
-renderer, ready for the chunker. Node transforms (TRS or matrix) are baked into
-world space. A textured GLB has its embedded images written out beside the OBJ as
-<Name>_tex<i>.png and referenced from the MTL via map_Kd, with UVs carried on the
-faces — extracted faithfully, never dropped.
+writes <Name>.obj + <Name>.mtl into Assets/Noir/Models/. Since 2026-08-18 the GLB's
+NODE NAMES survive: one OBJ group (`g <node>`) per named node, so Unity imports a
+named child object per part instead of one welded shell. The names are the contract
+(the owner's own first house set it): `door_<x>_slab/lite/knob` swing together and
+`door_<x>_casing` stays in the wall; `garage_door_panel` tilts up; `floor_*`,
+`wall_*`, `partition_*`, `ceiling_*` and the rest of the structure collide;
+`shrub_*`, `grass_*`, `bed_*`, `planters*`, `garden_hose`, `hose_reel`,
+`porch_string_lights`, `paving_joints` never do. Node transforms (TRS or matrix)
+are baked into world space. A textured GLB has its embedded images written out
+beside the OBJ as <Name>_tex<i>.png and referenced from the MTL via map_Kd, with
+UVs carried on the faces — extracted faithfully, never dropped.
 
 The optional third argument is a YAW in degrees about +Y, baked into the verts -
 for models authored facing the wrong axis. The game's vehicles must face +Z
@@ -77,12 +82,16 @@ def main():
     yaw = float(sys.argv[3]) if len(sys.argv) == 4 else 0.0
     doc, buf = load_glb(src)
 
-    groups = {}
+    # One entry per (node, primitive), IN SCENE ORDER, keeping the node's own name - the
+    # owner names his parts (door_front_slab, floor_west, shrub_1) and those names are the
+    # contract the game hinges, collides and spares by. See the docstring.
+    nodes_out = []   # [(node_name, material_index, world_verts, idx, uv)]
 
     def walk(ni, parent):
         n = doc['nodes'][ni]
         m = matmul(parent, node_matrix(n))
         if 'mesh' in n:
+            node_name = (n.get('name') or f'node{ni}').replace(' ', '_')
             for prim in doc['meshes'][n['mesh']]['primitives']:
                 pos = accessor(doc, buf, prim['attributes']['POSITION'])
                 idx = ([v[0] for v in accessor(doc, buf, prim['indices'])]
@@ -93,7 +102,7 @@ def main():
                           m[1][0] * p[0] + m[1][1] * p[1] + m[1][2] * p[2] + m[1][3],
                           m[2][0] * p[0] + m[2][1] * p[1] + m[2][2] * p[2] + m[2][3])
                          for p in pos]
-                groups.setdefault(prim.get('material', 0), []).append((world, idx, uv))
+                nodes_out.append((node_name, prim.get('material', 0), world, idx, uv))
         for c in n.get('children', []):
             walk(c, m)
 
@@ -141,31 +150,38 @@ def main():
 
     # v and vt are SEPARATE counters in OBJ: a primitive without UVs advances vbase but
     # not vtbase, so the face indices must track both or every later textured face lies.
+    # One `g <node>` per named node - Unity's importer stands each group up as a named
+    # child GameObject, which is what lets a door swing and a floor collide by name.
     vbase, vtbase, tris = 1, 1, 0
+    group_names = set()
     with open(os.path.join(outdir, name + '.obj'), 'w') as f:
         f.write(f"mtllib {name}.mtl\no {name}\n")
-        for mi in sorted(groups):
+        last_group = None
+        for node_name, mi, verts, idx, uv in nodes_out:
+            if node_name != last_group:
+                f.write(f"g {node_name}\n")
+                last_group = node_name
+                group_names.add(node_name)
             mat_name = mats[mi].get('name', 'mat' + str(mi)) if mi < len(mats) else 'default'
             f.write(f"usemtl {mat_name}\n")
-            for verts, idx, uv in groups[mi]:
-                for v in verts:
-                    f.write(f"v {v[0]:.5f} {v[1]:.5f} {v[2]:.5f}\n")
-                if uv is not None:
-                    for u in uv:
-                        f.write(f"vt {u[0]:.5f} {1.0 - u[1]:.5f}\n")   # glTF v runs down, OBJ up
-                    for t in range(0, len(idx), 3):
-                        f.write(f"f {idx[t] + vbase}/{idx[t] + vtbase} "
-                                f"{idx[t + 1] + vbase}/{idx[t + 1] + vtbase} "
-                                f"{idx[t + 2] + vbase}/{idx[t + 2] + vtbase}\n")
-                    vtbase += len(uv)
-                else:
-                    for t in range(0, len(idx), 3):
-                        f.write(f"f {idx[t] + vbase} {idx[t + 1] + vbase} {idx[t + 2] + vbase}\n")
-                tris += len(idx) // 3
-                vbase += len(verts)
+            for v in verts:
+                f.write(f"v {v[0]:.5f} {v[1]:.5f} {v[2]:.5f}\n")
+            if uv is not None:
+                for u in uv:
+                    f.write(f"vt {u[0]:.5f} {1.0 - u[1]:.5f}\n")   # glTF v runs down, OBJ up
+                for t in range(0, len(idx), 3):
+                    f.write(f"f {idx[t] + vbase}/{idx[t] + vtbase} "
+                            f"{idx[t + 1] + vbase}/{idx[t + 1] + vtbase} "
+                            f"{idx[t + 2] + vbase}/{idx[t + 2] + vtbase}\n")
+                vtbase += len(uv)
+            else:
+                for t in range(0, len(idx), 3):
+                    f.write(f"f {idx[t] + vbase} {idx[t + 1] + vbase} {idx[t + 2] + vbase}\n")
+            tris += len(idx) // 3
+            vbase += len(verts)
 
     tex_note = f", {len(image_files)} texture(s) extracted" if image_files else ""
-    print(f"{name}: {vbase - 1} verts, {tris} tris, {len(groups)} material group(s){tex_note} "
+    print(f"{name}: {vbase - 1} verts, {tris} tris, {len(group_names)} named group(s){tex_note} "
           f"-> Assets/Noir/Models/{name}.obj")
 
 
