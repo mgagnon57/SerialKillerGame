@@ -124,6 +124,13 @@ namespace Noir.Core.World
         public Tile[] Outline;
 
         /// <summary>
+        /// The interior the owner drew for this building, in tile space, or null for the
+        /// generated one. Filled by the Unity survey side from Content/floorplans/; nothing
+        /// in the map file writes it and nothing in Core computes it — the Outline pattern.
+        /// </summary>
+        public AuthoredInterior AuthoredInterior;
+
+        /// <summary>
         /// The same ring as <see cref="Outline"/>, in continuous metres rather than tiles - or
         /// null to say nothing more precise than the tile-rounded ring was ever computed, which is
         /// what every caller except <c>DowntownFromSanborn</c> does today. See

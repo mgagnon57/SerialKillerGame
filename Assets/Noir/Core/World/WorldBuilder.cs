@@ -195,7 +195,13 @@ namespace Noir.Core.World
             // with different things off it, so passing the name is what gets wards in one and
             // classrooms in the other without a second column saying so.
             var plan = PlaceKindTable.Current.Row(spec.Kind);
+            // ALWAYS generated, even when a plan will replace it: the generator's draws are
+            // consumed identically either way, so authoring one house cannot move a stick of
+            // furniture in any other. The result is also the fallback if the plan is bad.
             var interior = InteriorGenerator.Generate(bounds, frontDoor, rng, plan.Grammar, plan.Name);
+            bool authored = spec.AuthoredInterior != null && spec.Units == 1
+                            && spec.AuthoredInterior.Rooms.Count > 0;
+            if (authored) interior = Adopt(spec.AuthoredInterior, bounds, rng);
             if (interior.Rooms.Count == 0) return;
 
             int firstRoom = rooms.Count;
@@ -242,6 +248,105 @@ namespace Noir.Core.World
             for (int i = firstRoom; i < rooms.Count; i++)
                 FurniturePlacer.Place(rooms[i], doorKeys, grid.Width, furniture);
         }
+
+        /// <summary>
+        /// The authored plan as an Interior: rooms clamped inside the unit, the authored
+        /// doors kept, and any room the doors leave unreachable given a doorway to its
+        /// nearest neighbour - a plan with a missing door yields a walkable house and a
+        /// note, never a sealed room and never a refusal.
+        /// </summary>
+        private static Interior Adopt(AuthoredInterior authored, TileRect bounds, IRng rng)
+        {
+            var interior = new Interior();
+            var inner = new TileRect(bounds.X + 1, bounds.Y + 1,
+                                     Math.Max(1, bounds.W - 2), Math.Max(1, bounds.H - 2));
+            foreach (var room in authored.Rooms)
+            {
+                // Clamp room.Bounds to inner - TileRect has no Intersect, so inline it: max
+                // of the two origins, min of the two far edges, reject if that leaves nothing.
+                int x0 = Math.Max(room.Bounds.X, inner.X);
+                int y0 = Math.Max(room.Bounds.Y, inner.Y);
+                int x1 = Math.Min(room.Bounds.Right, inner.Right);
+                int y1 = Math.Min(room.Bounds.Bottom, inner.Bottom);
+                if (x1 < x0 || y1 < y0) continue;
+                var r = new TileRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+                interior.Rooms.Add((r, room.Kind));
+            }
+            foreach (var door in authored.Doors)
+                if (bounds.Contains(door)) interior.Doors.Add(door);
+
+            // Connectivity repair: reach room 0 from the authored doors first, then punch a
+            // doorway from a reached room to a stranded one for anything the plan left sealed.
+            ConnectAuthoredRooms(interior, rng);
+            return interior;
+        }
+
+        /// <summary>
+        /// A room is "reached" if it can be walked to from room 0 through the doors already in
+        /// <paramref name="interior"/>. Anything still unreached after that gets a fresh doorway
+        /// to whatever reached room it happens to share a wall with - the same geometry
+        /// <see cref="InteriorGeometry.Connect"/> uses for a generated building, run against an
+        /// authored one instead. A room touching nothing reached is left for the front-door
+        /// punch to find; Core has no logger, so nothing is said about it here.
+        /// </summary>
+        private static void ConnectAuthoredRooms(Interior interior, IRng rng)
+        {
+            int n = interior.Rooms.Count;
+            if (n == 0) return;
+
+            var reached = new bool[n];
+            reached[0] = true;
+
+            // Propagate through the doors the plan already drew: a door tile touching one
+            // reached room and one unreached room reaches the second.
+            bool progressed = true;
+            while (progressed)
+            {
+                progressed = false;
+                foreach (var door in interior.Doors)
+                {
+                    int a = -1, b = -1;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (!Touches(door, interior.Rooms[i].bounds)) continue;
+                        if (a < 0) a = i;
+                        else if (b < 0 && i != a) b = i;
+                    }
+                    if (a < 0 || b < 0) continue;
+                    if (reached[a] && !reached[b]) { reached[b] = true; progressed = true; }
+                    else if (reached[b] && !reached[a]) { reached[a] = true; progressed = true; }
+                }
+            }
+
+            // Repair: punch a doorway from a reached room to a stranded one, wherever the
+            // geometry allows it, and keep going until nothing more can be reached this way.
+            progressed = true;
+            while (progressed)
+            {
+                progressed = false;
+                for (int i = 0; i < n; i++)
+                {
+                    if (reached[i]) continue;
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (!reached[j] || j == i) continue;
+                        if (!InteriorGeometry.TryDoorBetween(interior.Rooms[j].bounds,
+                                                             interior.Rooms[i].bounds, rng, out var door))
+                            continue;
+                        interior.Doors.Add(door);
+                        reached[i] = true;
+                        progressed = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>Whether a tile sits immediately outside one edge of a room - the shape every
+        /// doorway this file ever cuts actually has.</summary>
+        private static bool Touches(Tile tile, TileRect room) =>
+            ((tile.X == room.X - 1 || tile.X == room.Right + 1) && tile.Y >= room.Y && tile.Y <= room.Bottom)
+         || ((tile.Y == room.Y - 1 || tile.Y == room.Bottom + 1) && tile.X >= room.X && tile.X <= room.Right);
 
         private static void ConnectFrontDoor(TileGrid grid, TileRect bounds, Tile door,
                                              TileFlags floorFlags)
