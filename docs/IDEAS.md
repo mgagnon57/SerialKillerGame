@@ -1020,6 +1020,18 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   taken up the traffic post is never seen by that arm. `CloseLoudly` is today's safety valve;
   pre-existing case-machine behavior, surfaced by the scene-cordon final review. — *2026-08-18*
 
+- [ ] **The county canvasses in citizen-id order, so the officer criss-crosses the town.**
+  `VillageHost.CanvassListFor` walks the census from 0 upwards and hands `ResponseCases` the
+  witnesses in that order; `TickCanvassing` knocks them in the order it was given. Citizen id is
+  not geography. Measured 2026-08-20 in the PlayMode response gate: 35 → 37 → 58 → 74 → 81 → 85 →
+  102 → 121 → 145 → 172 → 175 → 260 → 300 → …, with gaps between doors of **15 and 19 sim minutes**
+  of walking against a five-minute `CanvassMinutesPerDoor`. So a real canvass costs several times
+  what the machine's own timing says, and a door-to-door in a small town looks nothing like a man
+  criss-crossing it. Sorting the list by distance — from the scene, or nearest-next from the last
+  door — is a few lines in `CanvassListFor` (a Unity file, so not a Core change), but it moves what
+  the response gate observes and is the owner's call. Wants a ruling before anybody touches it.
+  — *2026-08-20*
+
 ## Tech
 
 - [x] ~~`-quit` and `-runTests` MUST NOT be combined~~ FIXED: `Assets/Noir/Editor/TestInvocationGuard.cs` now catches the combination in batchmode and exits 1 with a clear error instead of letting Unity exit 0 silently. CONFIRMED by direct reproduction: the raw combo logs "Batchmode quit successfully invoked" before any test callback fires and writes no results file (exit 0); with the guard it now exits 1 before that race even starts; the correct invocation (no `-quit`) is untouched — reran the PlayMode suite and got 7/7 passing. Root cause: `-quit` and the test runner's start-up both hang off `EditorApplication.update`, and `-quit` wins the race. — *2026-07-30*
