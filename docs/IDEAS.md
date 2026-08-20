@@ -1222,31 +1222,22 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   place before chunking) would let the exporter capture every house as the game truly
   draws it. — *2026-08-20*
 
-- [ ] **The game should consume `Content/floorplans/`.** Since 2026-08-19 the browser map's
-  building cards carry a floor-plan editor (click a lot, click the building, draw the rooms;
-  saved one JSON per building as `Content/floorplans/<parcel>-<index>.json` - shell in feet,
-  rooms, windows/doors/fireplaces, notes). `673-0.json` already holds 408 Holmes' draft,
-  reconstructed from the 2021 listing photos. Nothing in the game reads them yet. The obvious
-  consumers, cheapest first: interior partitions for generated buildings the player can enter;
-  a check that an owner model's authored rooms agree with the authored plan; and furniture
-  seeding by room name (a "Kitchen" gets a stove). The web tool is the source of truth - the
-  game must consume everything it can write. — *2026-08-19*
+- [ ] **Owner models without plans must still block the walkable grid.** LARGELY LANDED
+  2026-08-20 for the case that matters: an authored floor plan stamps its walls as
+  `Terrain.Wall` through `StampInterior`, so 408 (which has one) gets real interior walls
+  in the grid. What remains is the owner model with NO plan (101 Perry, PubRow, the
+  storefront): its place still stamps a generated interior that disagrees with the model's
+  walls, and its exterior silhouette is still only `Place.Bounds`. The durable fix is a
+  plan per owner model — the tool makes that cheap now — or the model-geometry stamp the
+  original item described. — *2026-08-19, narrowed 2026-08-20*
 
-- [ ] **Owner models must block the walkable grid.** `world.Grid` has never heard of a
-  models.txt building: citizens path straight through 408 Holmes' walls, and one stood
-  corking the owner's own front doorway (measured live, 2026-08-19 - `man-slavic-winter`
-  wedged in a 3-foot opening). The fix is Core-adjacent: stamp each owner model's structural
-  footprint (walls, not yard dressing) into the grid at build, with the door tiles as the
-  only crossings - the same trap `FrameHouseGrammars.Porch` is already documented for
-  (a silhouette bigger than `Place.Bounds` that the grid cannot see). Needs its own spec:
-  the stamp must come from the MODEL's real geometry, and citizens who LIVE there still
-  need to reach their own door. — *2026-08-19*
-
-- [ ] **Owner-model renderers do not bake: enable Read/Write for `Assets/Noir/Models`.**
-  The chunker leaves ~242 renderers per structured owner model unbaked ("NOT Read/Write
-  enabled"), so every hand-made house costs its full renderer count forever. Flipping
-  `isReadable` in the OBJ importers lets them bake - BUT check the window glass first: the
-  chunker keeps addressable glass by the PACK's material names, and the owner's `glass`
-  material is not among them, so a naive bake would weld his lit windows solid. Either
-  teach the chunker his glass name or exempt `win_*_glass` pieces the way hinge leaves are
-  exempt. — *2026-08-19*
+- [ ] **⚠ LIVE SINCE 2026-08-20: owner-model Read/Write is ON and the glass trap is armed.**
+  `Noir > Make City Meshes Readable` was run on 2026-08-20 (the house inspector's mesh
+  export needs readable meshes - it is what put 408 in the tool's 3D frame), which removes
+  the accident that kept owner models out of `CityChunker`'s bake. The original warning now
+  applies to the NEXT dressed build: the chunker keeps addressable glass by the PACK's
+  material names, the owner's `glass` material is not among them, and a naive bake welds
+  his lit windows solid. Fix before believing any owner-model window in a baked town:
+  exempt `win_*_glass` / his glass material the way hinge leaves are exempt. (The plan-gate
+  town stands no owner models, so the standing PlayMode gate cannot see this either way.)
+  — *2026-08-19, armed 2026-08-20*

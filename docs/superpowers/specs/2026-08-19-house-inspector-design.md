@@ -1,6 +1,15 @@
 # The house inspector — the tool shows the game's truth
 
-**Status: DESIGN, awaiting the owner's review.** Nothing here is built.
+> **LANDED 2026-08-20** (plan `docs/superpowers/plans/2026-08-20-house-inspector.md`,
+> commits `c519be1..e157932` + the same-day debug wave). Live-verified: 408's real model
+> turns in the 3D frame with the town's interiors reported around it. Known gaps, all
+> visible in the export's own census: ordinary massed houses have no per-building meshes
+> (extruded-footprint stand-ins; IDEAS item), the 112 S Chicago terrace cannot export
+> (Sanborn-minted units on a footprint-later lot — needs an owner ruling), and
+> `game-interiors.json` refreshes every BUILD while the mesh cache refreshes on
+> publish/export only. Outline points serialize as `{"x","y"}` objects (JsonUtility) and
+> outline editing operates on the PLACED ring — both ruled during execution and amended
+> below.
 
 ## The ruling this implements
 

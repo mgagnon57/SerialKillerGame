@@ -1,6 +1,14 @@
 # Authored interiors — the floor plan overrides the generated guess
 
-**Status: DESIGN, awaiting the owner's review.** Nothing here is built.
+> **LANDED 2026-08-20** (plan `docs/superpowers/plans/2026-08-19-authored-interiors.md`,
+> commits `75e85e3..963f26e` + the same-day debug wave). Two deviations worth knowing,
+> both ruled during execution: the plan is FITTED to the seated footprint by a monotonic
+> edge mapping (the survey wins on size, the plan wins on topology — corner-anchoring
+> crushed rooms when the two disagreed), and the plan-attach lives in BOTH build paths —
+> `SeatOnSurvey` for re-seated buildings AND `FillFromSurvey` for survey-raised ones,
+> because 408 itself turned out to be the latter and the first landing missed it. The
+> greppable gate is `[floorplans] N consumed, …`; Core gate 639/0/8; PlayMode gate
+> `TheOwnersFloorPlanIsTheHousesRealRooms`.
 
 ## The ruling this implements
 

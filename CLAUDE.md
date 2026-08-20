@@ -679,13 +679,22 @@ bare, or capture the exit code directly.
 `tools/group-terraces.py`, both of which back it up first. Neither should be re-run without
 reading what it would change. Everything else reads it.
 
-**The browser map is how the rulings are made — and the floor plans.** `docs/rossville-buildings.html`,
-built by `python tools/build-viewer-data.py`, served by `python tools/serve-viewer.py` on
-`http://127.0.0.1:8750`; the server owns every write path (`POST /__verdict`, `/__walk`,
-`/__place`, `/__floorplan`). Since 2026-08-19 a building's card carries **Floor plan…**: an
-editor seeded with the measured footprint, saving one JSON per building to
-`Content/floorplans/<parcel>-<index>.json` (tracked; authored; the game does not read them
-yet — see IDEAS). Export SVG/PNG hands Designer a to-scale reference. The HTML is
+**The browser map is how the rulings are made — and the floor plans, WHICH THE GAME BUILDS.**
+`docs/rossville-buildings.html`, built by `python tools/build-viewer-data.py`, served by
+`python tools/serve-viewer.py` on `http://127.0.0.1:8750`; the server owns every write path
+(`POST /__verdict`, `/__walk`, `/__place`, `/__floorplan`). A building's card carries
+**Floor plan…** (rooms, doors, furniture, an optional redrawn outline; one JSON per building
+in `Content/floorplans/<parcel>-<index>.json`, tracked) and a **3D frame** showing the house
+and its contents. Since 2026-08-20 the game CONSUMES the plans: an authored plan replaces
+the generated interior — rooms, doors, furniture — via `PlaceSpec.AuthoredInterior`
+(generate-then-replace, so a plan can never move anything in another house; spec
+`docs/superpowers/specs/2026-08-19-authored-interiors-design.md`), and reports back what it
+built (`tools/game-interiors.json`, every build) plus per-building meshes
+(`Noir > Export For The Map Tool`, or the publish verify run). The greppable gates are the
+`[floorplans] N consumed…` and `[interiors] N reported` lines. Owner-model OBJs must be
+Read/Write for the mesh export — `Noir > Make City Meshes Readable` covers them, and the
+export's own census says when they are not. Editing a floorplan JSON is STRUCTURAL to
+`tools/change_gate.py`. The HTML is
 gitignored and regenerable from `tools/viewer-template.html`. Lose this and the one file nothing
 can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
 
