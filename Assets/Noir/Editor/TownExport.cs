@@ -314,7 +314,8 @@ namespace Noir.Editor
             {
                 if (i > 0) sb.Append(',');
                 var y = yours[i];
-                sb.Append("{\"name\":\"").Append(Escape(y.name)).Append("\",\"kind\":\"")
+                sb.Append("{\"name\":\"").Append(Escape(y.name)).Append("\",\"model\":\"")
+                  .Append(Escape(y.model)).Append("\",\"kind\":\"")
                   .Append(Escape(y.kind)).Append("\",\"w_ft\":").Append(F(y.wMetres * MetresToFeet))
                   .Append(",\"d_ft\":").Append(F(y.dMetres * MetresToFeet)).Append('}');
             }
