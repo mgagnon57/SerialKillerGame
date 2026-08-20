@@ -161,7 +161,6 @@ def unverified():
 
             (structural if is_structural else cosmetic).append({"scope": scope, "what": what})
 
-    # Compare floor plan hashes - every change is structural
     now_plans = _floorplan_hashes(FLOORPLANS)
     then_plans = _floorplan_hashes(os.path.join(VERIFIED, "floorplans")) if not baseline else {}
 
@@ -193,29 +192,31 @@ def mark_verified():
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(VERIFIED, name))
 
-    # Copy floor plans and remove stale copies
+    # Take a snapshot of floor plans. Stale copies must be removed so a deleted plan does not
+    # read as a permanent diff.
     floorplans_verified = os.path.join(VERIFIED, "floorplans")
-    os.makedirs(floorplans_verified, exist_ok=True)
+    has_content = os.path.isdir(FLOORPLANS)
+    has_snapshot = os.path.isdir(floorplans_verified)
 
-    # Copy current floor plans
-    if os.path.isdir(FLOORPLANS):
-        for name in os.listdir(FLOORPLANS):
-            if name.endswith(".json"):
-                src = os.path.join(FLOORPLANS, name)
-                dst = os.path.join(floorplans_verified, name)
-                shutil.copy2(src, dst)
+    if has_content or has_snapshot:
+        os.makedirs(floorplans_verified, exist_ok=True)
 
-    # Remove stale copies - files that exist in VERIFIED but not in CONTENT
-    if os.path.isdir(floorplans_verified):
         current_files = set()
-        if os.path.isdir(FLOORPLANS):
-            current_files = {name for name in os.listdir(FLOORPLANS) if name.endswith(".json")}
+        if has_content:
+            for name in os.listdir(FLOORPLANS):
+                if name.endswith(".json"):
+                    src = os.path.join(FLOORPLANS, name)
+                    dst = os.path.join(floorplans_verified, name)
+                    shutil.copy2(src, dst)
+                    current_files.add(name)
 
-        for name in os.listdir(floorplans_verified):
-            if name not in current_files:
-                stale_path = os.path.join(floorplans_verified, name)
-                if os.path.isfile(stale_path):
-                    os.remove(stale_path)
+        # Remove stale snapshot entries
+        if has_snapshot:
+            for name in os.listdir(floorplans_verified):
+                if name not in current_files:
+                    stale_path = os.path.join(floorplans_verified, name)
+                    if os.path.isfile(stale_path):
+                        os.remove(stale_path)
 
 
 # ---- the audit ------------------------------------------------------------------------------
