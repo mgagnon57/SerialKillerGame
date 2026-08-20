@@ -3731,6 +3731,18 @@ function fpFurnKind(f) {
   const y = FURN_PALETTE.yours.find(x => x.name === f.name);
   return (y && y.kind) || f.name || "thing";
 }
+/// THE STORED w/h ARE THE PIECE'S CANONICAL, UN-ROTATED DIMS - never touched by Rotate.
+/// Assets/Noir/Unity/FloorPlans.cs:293-296 (FloorPlans.For) swaps them itself at consumption
+/// time whenever rot%180 != 0 to get the actual built footprint, and does not otherwise use
+/// rot (AuthoredFurniture never receives it). If this editor ALSO baked the swap into the
+/// stored fields the consumer would swap a second time and cancel the rotation out - a
+/// rotated 3x2 would stamp un-rotated in the game while the editor still showed it turned.
+/// This is the one function that derives the VISUAL extent (what is drawn, dragged and
+/// clamped) from the canonical dims, so that swap only ever happens once, here, matching
+/// the consumer's own math exactly.
+function fpFurnExtent(f) {
+  return (Math.round(f.rot || 0) % 180 !== 0) ? { w: f.h, h: f.w } : { w: f.w, h: f.h };
+}
 
 /// The building's measured footprint as width x depth in feet - the oriented box of its ring,
 /// longest edge first, metres to feet, snapped to the half foot. The seed for a fresh plan.
@@ -3882,7 +3894,8 @@ function fpSvgString(interactive) {
   // same reason it wins the pointer hit-test over a room's own move handle without any
   // extra ordering logic in fpWire.
   (p.furniture || []).forEach(f => {
-    const x = fpM + f.x * S, y = fpM + f.y * S, fw = Math.max(1, f.w * S), fh = Math.max(1, f.h * S);
+    const ext = fpFurnExtent(f);
+    const x = fpM + f.x * S, y = fpM + f.y * S, fw = Math.max(1, ext.w * S), fh = Math.max(1, ext.h * S);
     const seld = interactive && fpSel && fpSel.type === "furniture" && fpSel.id === f.id;
     const tint = f3Hex(f3FurnTint(fpFurnKind(f)));
     s += `<rect ${interactive ? `data-fpfurn="${f.id}"` : ""} x="${x}" y="${y}" width="${fw}" height="${fh}"
@@ -3892,7 +3905,7 @@ function fpSvgString(interactive) {
     s += `<text x="${cx}" y="${cy - 1}" font-size="${fsz}" font-weight="600" fill="#fff" text-anchor="middle"
       pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${esc(f.name || "furniture")}</text>`;
     s += `<text x="${cx}" y="${cy + fsz}" font-size="${Math.max(7, fsz * .8)}" fill="#fff" text-anchor="middle"
-      pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${f.w} × ${f.h} ft</text>`;
+      pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${ext.w} × ${ext.h} ft</text>`;
   });
   const ly = fpM + p.shell.d * S + 16;
   s += `<text x="${fpM}" y="${ly}" font-size="11" fill="#333">${esc(p.name || "")} — ${p.shell.w} × ${p.shell.d} ft — `
@@ -3940,6 +3953,12 @@ function fpPanel() {
     }
   } else if (fpSel && fpSel.type === "furniture") {
     const f = fpById(fpPlan.furniture, fpSel.id);
+    // Width/Depth here are the piece's CANONICAL (un-rotated) dims - what is saved, and what
+    // Assets/Noir/Unity/FloorPlans.cs's own footprint math is built on - not what is currently
+    // drawn. Turned 90, the drawn box is h-across-by-w-down, so the hint says so rather than
+    // silently relabelling the fields (the cheapest honest option: the numbers stay canonical
+    // and editable, the drawing and the game agree on what they mean).
+    const turned = f && Math.round(f.rot || 0) % 180 !== 0;
     if (f) h += `<h4>Furniture</h4>
       <label>Name</label><input id="fpfN" list="fpfNames" value="${esc(f.name)}">
       <datalist id="fpfNames">${fpPaletteOptionsHtml()}</datalist>
@@ -3948,7 +3967,8 @@ function fpPanel() {
       <div><label>Y ft</label><input id="fpfY" type="number" step="0.5" value="${f.y}"></div></div>
       <div class="duo"><div><label>Width ft</label><input id="fpfW" type="number" step="0.5" min="0.5" value="${f.w}"></div>
       <div><label>Depth ft</label><input id="fpfH" type="number" step="0.5" min="0.5" value="${f.h}"></div></div>
-      <div class="btns"><button id="fpfRot" title="Swaps width/depth and turns the piece 90°">Rotate</button>
+      ${turned ? `<div class="hint">rotated 90° - drawn ${f.h} × ${f.w} ft</div>` : ""}
+      <div class="btns"><button id="fpfRot" title="Turns the piece 90° - Width/Depth above stay canonical, the drawing swaps">Rotate</button>
       <button id="fpfDel" class="bad">Delete</button></div>`;
   } else {
     h += `<h4>Nothing selected</h4><div class="hint">Click a room to select; drag its middle to
@@ -4000,7 +4020,11 @@ function fpPanel() {
         f[k] = Math.max(k === "w" || k === "h" ? 0.5 : 0, parseFloat(e.target.value) || 0);
         fpClampFurniture(f); fpMarkDirty(); fpRender(); }));
     on("fpfRot", "click", () => { fpPushUndo();
-      const w0 = f.w, h0 = f.h; f.w = h0; f.h = w0; f.rot = f.rot === 90 ? 0 : 90;
+      // rot toggles ALONE - w/h are the canonical dims Assets/Noir/Unity/FloorPlans.cs builds
+      // the footprint from and must not change here, or its own rot%180 swap (FloorPlans.For,
+      // lines 293-296) doubles this one and cancels the rotation out in the built town. See
+      // fpFurnExtent's own comment for the full account.
+      f.rot = Math.round(f.rot || 0) % 360 === 90 ? 0 : 90;
       fpClampFurniture(f); fpMarkDirty(); fpRender(); });
     on("fpfDel", "click", () => { fpPushUndo();
       fpPlan.furniture = fpPlan.furniture.filter(x => x.id !== f.id); fpSel = null; fpMarkDirty(); fpRender(); });
@@ -4066,8 +4090,14 @@ function fpClampOpening(o) {
 function fpClampFurniture(f) {
   f.w = Math.min(Math.max(0.5, f.w), fpPlan.shell.w);
   f.h = Math.min(Math.max(0.5, f.h), fpPlan.shell.d);
-  f.x = Math.min(Math.max(0, f.x), fpPlan.shell.w - f.w);
-  f.y = Math.min(Math.max(0, f.y), fpPlan.shell.d - f.h);
+  // Position clamps against the VISUAL extent (fpFurnExtent), not the stored canonical w/h -
+  // a piece rotated 90 occupies f.h feet across and f.w feet down, and it is that occupied
+  // box, not the stored one, that must stay inside the shell. Math.max(0, ...) on the far
+  // side guards a piece whose rotated extent is itself bigger than the shell on that axis
+  // (e.g. a wide piece turned sideways into a narrow room) from going negative.
+  const ext = fpFurnExtent(f);
+  f.x = Math.max(0, Math.min(f.x, Math.max(0, fpPlan.shell.w - ext.w)));
+  f.y = Math.max(0, Math.min(f.y, Math.max(0, fpPlan.shell.d - ext.h)));
 }
 function fpFt(e) {
   const rect = document.getElementById("fpCv").getBoundingClientRect(), S = fpScale();
