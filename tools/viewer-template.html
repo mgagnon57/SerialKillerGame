@@ -3578,6 +3578,20 @@ async function loadPlans() {
   } catch (e) { /* server gone is a real state; badges just stay plain */ }
 }
 
+// WHAT THE GAME ACTUALLY BUILT, keyed the same "parcel|index" way as PLANS - so
+// openFloorPlan can fall back to the game's own generated rooms when the owner has not
+// drawn one yet. {"when":null} (no build since clone, or server gone) leaves this empty
+// and every lot falls through to the empty-shell behaviour that predates this store.
+const INTERIORS = new Map();
+async function loadInteriors() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__interiors", { cache: "no-store" });
+    const j = await r.json();
+    (j.buildings || []).forEach(b => INTERIORS.set(b.parcel + "|" + b.index, b));
+  } catch (e) { /* server gone is a real state; the fallback shell just stays the fallback */ }
+}
+
 document.body.insertAdjacentHTML("beforeend", `
 <style>
   #fpOv { position:fixed; inset:0; background:rgba(20,16,10,.55); z-index:60; display:none; }
@@ -3627,11 +3641,15 @@ document.body.insertAdjacentHTML("beforeend", `
     <span style="flex:1"></span>
     <button id="fpClose">Close</button>
   </div>
+  <div id="fpBanner" style="display:none; padding:7px 12px; font-size:12.5px; color:#664d03;
+       background:#fff3cd; border-bottom:2px solid #ffe28a;">This is the game's generated
+       layout. Save to make it yours — close without saving and the game keeps generating it.</div>
   <div id="fpMain"><div id="fpWrap"><svg id="fpCv"></svg></div><aside id="fpSide"></aside></div>
 </div></div>`);
 
 let fpPlan = null, fpSel = null, fpDirtyF = false, fpUndoStack = [], fpDrag = null;
 let fpWho = null;           // {pid, idx, addr}
+let fpGameDerived = false;  // true when fpPlan came from INTERIORS rather than an authored file
 const fpM = 44;
 const FP_PAL = ["#e8eef7","#eef4e6","#f7efe2","#f2e8ee","#e6f2f0","#f5f0df","#ece9f5","#f0e9e2","#e9f0e6","#f4e6e6"];
 const fpById = (a, id) => a.find(o => o.id === id);
@@ -3662,6 +3680,88 @@ function fpShellFromRing(ring) {
   const xs = ring.map(p => p[0] * c - p[1] * s), ys = ring.map(p => p[0] * s + p[1] * c);
   const w = (Math.max(...xs) - Math.min(...xs)) * 3.28084, d = (Math.max(...ys) - Math.min(...ys)) * 3.28084;
   return { w: fpSnap(Math.max(w, d)), d: fpSnap(Math.min(w, d)) };
+}
+
+// ---- the game's own layout, un-fitted back into editable plan feet -----------------------
+// This is the INVERSE of Assets/Noir/Unity/FloorPlans.cs's Fit/Assemble, which takes an
+// authored plan (feet, NW origin, south edge = street) and lands it on the seated building
+// oriented to the door (FloorPlans.RotationFor). The fit itself is lossy (FittedAxis hands
+// tiles out by proportion, flooring walls to a minimum of one) so there is no exact inverse -
+// what follows inverts only the RIGID part (which corner the plan's south edge landed on),
+// which is enough for a faithful, editable approximation: rooms in the right relative places,
+// street at the bottom, ready to nudge back to what the owner actually meant.
+const FP_M2FT = 3.28084;
+
+/// Mirrors FloorPlans.RotationFor exactly - same nearest-wall test on the same four
+/// distances, same tie precedence (south, north, east, west) - because getting this wrong
+/// un-rotates onto the wrong wall, silently, the same trap that function's own doc comment
+/// describes for the forward direction. A null door (contract: "door may be null") has
+/// nothing to orient by, so it takes rot 0 rather than refuse, per this task's brief.
+function fpRotFromDoor(bounds, door) {
+  if (!door) return 0;
+  const bottom = bounds.y + bounds.h - 1, right = bounds.x + bounds.w - 1;
+  const toBottom = Math.abs(door.y - bottom), toTop = Math.abs(door.y - bounds.y);
+  const toRight = Math.abs(door.x - right), toLeft = Math.abs(door.x - bounds.x);
+  let best = toBottom, rot = 0;
+  if (toTop < best) { best = toTop; rot = 2; }
+  if (toRight < best) { best = toRight; rot = 1; }
+  if (toLeft < best) { best = toLeft; rot = 3; }
+  return rot;
+}
+
+/// The inverse of FloorPlans.Fit.Assemble's swap/mirror, worked in continuous tile-local
+/// coordinates rather than Assemble's quantised band counts (there is no band structure left
+/// to invert - only the rigid turn RotationFor chose). rx,ry,rw,rh are already translated by
+/// the building's own bounds origin; W,H are the bounds' own width/height in tiles.
+/// rot0: identity. rot2: mirror both axes. rot1/rot3: swap x<->y, mirror one axis - these are
+/// two different turns, not mirrors of each other, exactly as Fit's own header explains.
+function fpUnrotateRect(rx, ry, rw, rh, W, H, rot) {
+  const lx0 = rx, ly0 = ry, lx1 = rx + rw, ly1 = ry + rh;
+  let x0, x1, y0, y1;
+  switch (rot) {
+    case 2: x0 = W - lx1; x1 = W - lx0; y0 = H - ly1; y1 = H - ly0; break;
+    case 1: x0 = H - ly1; x1 = H - ly0; y0 = lx0;      y1 = lx1;      break;
+    case 3: x0 = ly0;     x1 = ly1;     y0 = W - lx1;  y1 = W - lx0;  break;
+    default: x0 = lx0;    x1 = lx1;     y0 = ly0;       y1 = ly1;      break;
+  }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+/// The un-rotated bounds, in feet - shell = bounds (un-rotated) x3.28084. rot 1/3 swap which
+/// bounds side becomes the plan's width, same as the swap in fpUnrotateRect above.
+function fpGameShellFeet(W, H, rot) {
+  const w = (rot === 1 || rot === 3) ? H : W, d = (rot === 1 || rot === 3) ? W : H;
+  return { w: fpSnap(w * FP_M2FT), d: fpSnap(d * FP_M2FT) };
+}
+
+function fpGameRoomToFeet(r, bx, by, W, H, rot) {
+  const rel = fpUnrotateRect(r.x - bx, r.y - by, r.w, r.h, W, H, rot);
+  return { id: fpUid("r"), name: r.name || r.kind || "Room",
+    x: fpSnap(rel.x * FP_M2FT), y: fpSnap(rel.y * FP_M2FT),
+    w: fpSnap(Math.max(1, rel.w * FP_M2FT)), h: fpSnap(Math.max(1, rel.h * FP_M2FT)) };
+}
+
+// Furniture carries no rot in the interiors contract, so its footprint is un-rotated the
+// same way a room's is and dropped into the plan axis-aligned (rot: 0) - the fp editor has
+// no furniture UI yet (a later task's job); this only has to round-trip through Save.
+function fpGameFurnitureToFeet(f, bx, by, W, H, rot) {
+  const rel = fpUnrotateRect(f.x - bx, f.y - by, f.w, f.h, W, H, rot);
+  return { id: fpUid("f"), name: f.kind || "", model: f.model || "",
+    x: fpSnap(rel.x * FP_M2FT), y: fpSnap(rel.y * FP_M2FT),
+    w: fpSnap(Math.max(0.5, rel.w * FP_M2FT)), h: fpSnap(Math.max(0.5, rel.h * FP_M2FT)), rot: 0 };
+}
+
+function fpPlanFromInteriors(gb, addr) {
+  const bounds = gb.bounds, W = bounds.w, H = bounds.h;
+  const rot = fpRotFromDoor(bounds, gb.door);
+  return {
+    name: addr + " - as the game builds it",
+    shell: fpGameShellFeet(W, H, rot),
+    rooms: (gb.rooms || []).map(r => fpGameRoomToFeet(r, bounds.x, bounds.y, W, H, rot)),
+    openings: [],
+    furniture: (gb.furniture || []).map(f => fpGameFurnitureToFeet(f, bounds.x, bounds.y, W, H, rot)),
+    notes: ""
+  };
 }
 
 function fpSvgString(interactive) {
@@ -3941,20 +4041,29 @@ function fpWire(svg) {
 async function openFloorPlan(pid, idx) {
   const b = DATA.buildings.find(x => x.p === pid && x.i === idx);
   fpWho = { pid, idx, addr: (b && b.addr) || ("lot " + pid) };
-  fpPlan = null; fpSel = null; fpUndoStack = []; fpClearDirty();
+  fpPlan = null; fpSel = null; fpUndoStack = []; fpClearDirty(); fpGameDerived = false;
   if (LIVE) {
     try {
       const r = await fetch(`/__floorplan?parcel=${pid}&index=${idx}`, { cache: "no-store" });
       const j = await r.json();
-      if (j.exists) fpPlan = j.plan;
-    } catch (e) { /* fall through to a fresh sheet */ }
+      if (j.exists) fpPlan = j.plan;                 // (a) the owner's own authored plan
+    } catch (e) { /* fall through */ }
   }
   if (!fpPlan) {
+    const gb = INTERIORS.get(pid + "|" + idx);
+    if (gb && gb.bounds) {                            // (b) what the game actually built
+      fpPlan = fpPlanFromInteriors(gb, fpWho.addr);
+      fpPlan.rooms.forEach(fpClampRoom);              // guard against half-foot snap overshoot
+      fpGameDerived = true;
+    }
+  }
+  if (!fpPlan) {                                      // (c) no plan, no build - measured shell
     const shell = b ? fpShellFromRing(b.r) : { w: 30, d: 24 };
     fpPlan = { name: fpWho.addr + " - main floor", shell, rooms: [], openings: [], notes: "" };
   }
   document.getElementById("fpTitle").textContent =
     fpWho.addr.toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) + ` — lot ${pid}, building ${idx}`;
+  document.getElementById("fpBanner").style.display = fpGameDerived ? "block" : "none";
   document.getElementById("fpSave").disabled = !LIVE;
   document.getElementById("fpSave").title = LIVE ? "" : "open through serve-viewer.py to save";
   document.getElementById("fpOv").classList.add("on");
@@ -4044,4 +4153,5 @@ loadWalks();
 loadPlaces();
 loadVerdictFromGame();
 loadPlans();
+loadInteriors();
 </script>
