@@ -98,6 +98,10 @@ namespace Noir.Unity
             // noting and resolving happen on opposite sides of WorldBuilder.Build.
             InteriorsReport.Clear();
 
+            // And the floor-plan census is opened here and CLOSED BELOW, after FillFromSurvey -
+            // because two passes attach the owner's plans, not one. See FloorPlans._attached.
+            FloorPlans.ResetCensus();
+
             // The roads in city.txt are DERIVED, not authored - SOURCES-OF-TRUTH.md is explicit
             // that when they disagree with the parcels the parcels win and the road gets moved.
             // Content/roads.txt is that move, done from survey rather than by sliding a ruled line
@@ -120,6 +124,14 @@ namespace Noir.Unity
 
             // Last, so it can see everything already standing - including the terrace above.
             FillFromSurvey.Apply(layout);
+
+            // EVERY PASS THAT CAN ATTACH A FLOOR PLAN HAS NOW RUN, so the census can be closed
+            // and the plans nothing asked for can be named. Before 2026-08-20 SeatOnSurvey closed
+            // it at the end of its own pass, which is two passes too early: FillFromSurvey raises
+            // the 313 buildings the map never had - including 408 Holmes Street, the one building
+            // in Rossville the owner has actually drawn - and every one of them attached after
+            // the tally had already been printed.
+            FloorPlans.Finish();
 
             // AND THEN NOTHING IS LEFT STANDING IN A ROAD. This runs after every other pass on
             // purpose: FillFromSurvey refuses to RAISE a house in a road, but the fifty that were

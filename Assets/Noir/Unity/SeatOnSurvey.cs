@@ -160,11 +160,6 @@ namespace Noir.Unity
             var corridors = new RoadCorridor.Corridors(layout);
 
             seated.Sort((a, b) => b.Now.Area.CompareTo(a.Now.Area));
-            FloorPlans.ResetCensus();
-            // Every building that reaches the attach below, whether or not the owner drew it a
-            // plan. Anything Content/floorplans/ holds for a building NOT in here was refused or
-            // yielded before the plan was ever looked at, and the census must say so.
-            var attached = new HashSet<string>();
             int moved = 0, yielded = 0, shaped = 0, inTheRoad = 0;
             var nowhere = new TileRect(0, 0, 0, 0);   // an empty rect overlaps nothing
             foreach (var s in seated)
@@ -227,7 +222,6 @@ namespace Noir.Unity
                 // tiles here, where the parcel, the seated bounds and the door are all in
                 // hand, and handed to Core the same way the measured outline is.
                 bool ownerModel = CityBuildings.IsOwnerModel(s.Place.Name);
-                attached.Add(s.ParcelId + "-" + s.Index);
                 // s.Place.Door, not s.Door: the line above only overwrites the place's door when
                 // the MEASURED one came out valid, so a building whose measured door could not be
                 // derived still has a perfectly good authored one to orient the plan by. Passing
@@ -257,8 +251,6 @@ namespace Noir.Unity
                 if (s.Place.Outline != null) shaped++;
             }
 
-            FloorPlans.NoteUnseatedPlans(attached);
-            FloorPlans.LogCensus();
             Debug.Log($"[survey] {moved} buildings seated on their measured footprint, "
                     + $"{shaped} of them built to its real outline"
                     + (yielded > 0 ? $", {yielded} left alone to avoid overlapping one" : "")

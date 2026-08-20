@@ -135,28 +135,55 @@ namespace Noir.Unity
         private static int _consumed, _refused, _doorBlind, _unseated;
         private static int _outlineRedrawn, _outlineRejected;
 
+        /// <summary>
+        /// Every &lt;parcel&gt;-&lt;index&gt; tag that reached <see cref="For"/> this build,
+        /// whether or not the owner had drawn that building a plan.
+        ///
+        /// KEPT HERE RATHER THAN BY THE CALLER, and that is the whole of the 2026-08-20 fix.
+        /// <c>SeatOnSurvey</c> used to collect the tags into a local set and hand them to
+        /// <see cref="NoteUnseatedPlans"/> at the end of its own pass - which quietly made
+        /// "seated by SeatOnSurvey" the definition of "reached the attach". It is not:
+        /// <see cref="FillFromSurvey"/> RAISES a building on every surveyed lot the map never
+        /// had (313 of them, 408 Holmes Street among them), and those attach later, after
+        /// SeatOnSurvey has already logged its census. The ledger belongs to the thing doing
+        /// the attaching, and the census is closed once, by the pipeline, when every pass that
+        /// can attach has run - see <see cref="Finish"/>.
+        /// </summary>
+        private static readonly HashSet<string> _attached = new HashSet<string>();
+
         /// <summary>Zero the tallies. Called once, before a survey pass seats any building.</summary>
         public static void ResetCensus()
         {
             _consumed = 0; _refused = 0; _doorBlind = 0; _unseated = 0;
             _outlineRedrawn = 0; _outlineRejected = 0;
+            _attached.Clear();
+        }
+
+        /// <summary>Close the census: name every plan nothing ever asked for, then say the one
+        /// line. Called by <c>TownPipeline</c> after the LAST pass that can attach a plan, not by
+        /// any single pass - see <see cref="_attached"/>.</summary>
+        public static void Finish()
+        {
+            NoteUnseatedPlans();
+            LogCensus();
         }
 
         /// <summary>
-        /// Count every plan file whose building never reached the survey's attach point at all -
-        /// refused for standing in a street, yielded to a clash, or simply not among the measured
-        /// buildings. Such a plan is never read, so without this it is neither consumed nor
-        /// refused and the census says nothing about it: a lie by omission in exactly the case
-        /// the owner would ask about ("I drew one - where did it go?").
+        /// Count every plan file whose building never reached an attach point at all - refused
+        /// for standing in a street, yielded to a clash, an outbuilding no pass ever raises, or
+        /// simply not among the measured buildings. Such a plan is never read, so without this it
+        /// is neither consumed nor refused and the census says nothing about it: a lie by
+        /// omission in exactly the case the owner would ask about ("I drew one - where did it
+        /// go?").
         /// </summary>
-        public static void NoteUnseatedPlans(HashSet<string> attachedTags)
+        private static void NoteUnseatedPlans()
         {
             string dir = System.IO.Path.Combine(ContentLoader.Root, "floorplans");
             if (!System.IO.Directory.Exists(dir)) return;
             foreach (string file in System.IO.Directory.GetFiles(dir, "*.json"))
             {
                 string tag = System.IO.Path.GetFileNameWithoutExtension(file);
-                if (attachedTags.Contains(tag)) continue;
+                if (_attached.Contains(tag)) continue;
                 _unseated++;
                 Debug.LogWarning($"[floorplans] {tag}: the building this plan was drawn for was "
                                 + "never seated, so the plan was never read.");
@@ -164,7 +191,7 @@ namespace Noir.Unity
         }
 
         /// <summary>The one line for the whole build, in the survey passes' own bracket style.</summary>
-        public static void LogCensus() =>
+        private static void LogCensus() =>
             Debug.Log($"[floorplans] {_consumed} consumed, {_refused} refused, "
                     + $"{_doorBlind} door-blind, {_unseated} unseated, "
                     + $"{_outlineRedrawn} outline{(_outlineRedrawn == 1 ? "" : "s")} redrawn, "
@@ -191,6 +218,12 @@ namespace Noir.Unity
             outline = null;
             string tag = parcel + "-" + index;
             string relPath = "floorplans/" + tag + ".json";
+
+            // RECORDED BEFORE ANY DECISION, because what this ledger means is "a building stood
+            // here and was offered its plan" - not "the plan was any good". A plan refused below
+            // is counted refused; a building that never got this far is the only thing
+            // NoteUnseatedPlans has any business complaining about.
+            _attached.Add(tag);
 
             // NO PLAN DRAWN IS THE ORDINARY CASE. Hundreds of seated buildings have no
             // Content/floorplans/ file at all, and that is not worth a line in the log - only
