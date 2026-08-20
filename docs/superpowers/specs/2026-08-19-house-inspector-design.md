@@ -133,10 +133,20 @@ The plan's shell is a rectangle; the building's real outline is the measured rin
 `Content/parcel-buildings.txt`, which is 2016 imagery and can be wrong about 1991. So the
 editor gains an **optional outline**: a "Edit outline" toggle showing the building's ring
 in the plan (converted to feet), with draggable vertices. Saved into the plan JSON as
-`outline: [[x,y],…]`, and the Unity conversion hands it to Core as a `PlaceSpec.Outline`
-override — a field that already exists and already stamps. No outline in the file → the
-measured ring stands, untouched. This is an override on the measurement, never an edit to
-it — the `placement-1991.txt` stance.
+`outline: [{"x":…,"y":…},…]` — named-field objects, not `[[x,y],…]`, because `JsonUtility`
+cannot read a jagged array and every other array in this file is already objects — and the
+Unity conversion hands it to Core as a `PlaceSpec.Outline` override, a field that already
+exists and already stamps. No outline in the file → the measured ring stands, untouched. This
+is an override on the measurement, never an edit to it — the `placement-1991.txt` stance.
+
+**The ring the editor opens on is the PLACED one**, `placedRing(b)` — the measured footprint
+squared by its lot skew and moved by the owner's placement overlay, which is what
+`SeatOnSurvey` actually seats (`Placements.Apply(e.Squared(), …)`) — never the raw survey ring
+in `parcel-buildings.txt`. Rossville squares 740 of its 824 footprints and 37 more carry an
+overlay, so opening on the raw ring would show a polygon degrees off the rooms standing inside
+it, and the first nudge writes the whole polygon. The same rule governs the 3D frame's fallback
+shell, for the same reason: everything in that frame is drawn in the seated building's own
+frame.
 
 ## Failure modes, named
 

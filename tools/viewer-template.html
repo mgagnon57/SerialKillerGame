@@ -2674,7 +2674,7 @@ function show(i) {
           <div class="f3-body">
             <canvas class="f3-cv"></canvas>
             <div class="f3-bar">
-              <label><input type="checkbox" class="f3-roof"> Roof off</label>
+              <label title="hides everything drawn above 8.5 ft"><input type="checkbox" class="f3-roof"> Roof off</label>
               <span>drag to turn · wheel to zoom</span>
             </div>
             <p class="note f3-note"></p>
@@ -2773,6 +2773,9 @@ async function pollVerify() {
           ? "<b style='color:var(--agri)'>Checked and good — press Play.</b>"
           : "<b style='color:var(--flag)'>CHECK FAILED — do not trust this map yet.</b>")
         + (j.error ? "<br>" + j.error : "")
+        // The mesh export runs after the check and cannot fail it, so its line rides along
+        // beside the verdict rather than colouring it - see verify_run._export.
+        + (j.note ? "<br><span style='opacity:.7'>" + esc(j.note) + "</span>" : "")
         + (key.length ? "<br><span style='opacity:.7'>" + key.join("<br>") + "</span>" : "");
     }
     loadVerdictFromGame();
@@ -3622,11 +3625,17 @@ const FP_PLAIN_KINDS = ["bed", "wardrobe", "dresser", "table", "chair", "sofa", 
 // drawn one yet. {"when":null} (no build since clone, or server gone) leaves this empty
 // and every lot falls through to the empty-shell behaviour that predates this store.
 const INTERIORS = new Map();
+// WHEN THE GAME LAST SAID THIS. The export stamps the file and the tool shows the stamp -
+// otherwise a cache from three builds ago looks exactly like a fresh one, which is the whole
+// reason the spec's failure table has a row for it. Null before the first build, and then
+// the frame says "no interiors report yet" instead.
+let INTERIORS_WHEN = null;
 async function loadInteriors() {
   if (!LIVE) return;
   try {
     const r = await fetch("/__interiors", { cache: "no-store" });
     const j = await r.json();
+    INTERIORS_WHEN = j.when || null;
     (j.buildings || []).forEach(b => INTERIORS.set(b.parcel + "|" + b.index, b));
   } catch (e) { /* server gone is a real state; the fallback shell just stays the fallback */ }
 }
@@ -3706,6 +3715,11 @@ document.body.insertAdjacentHTML("beforeend", `
 let fpPlan = null, fpSel = null, fpDirtyF = false, fpUndoStack = [], fpDrag = null;
 let fpWho = null;           // {pid, idx, addr}
 let fpGameDerived = false;  // true when fpPlan came from INTERIORS rather than an authored file
+// HOW MANY FRONT DOORS THIS BUILDING HAS, when the game has said. FloorPlans.For refuses any
+// plan whose building has units != 1 (a terrace has no per-unit story in the plan format), so
+// a plan drawn here for one is a plan that saves cleanly and never takes effect. Known only
+// from the interiors report; 1 when nothing has said otherwise.
+let fpUnits = 1;
 // THE OUTLINE EDITOR'S OWN STATE. fpOutlineDraft is a working copy, separate from
 // fpPlan.outline, so that turning the toggle on to LOOK never authors anything by itself -
 // only an actual edit (drag, insert, delete) writes it into fpPlan.outline (fpCommitOutline).
@@ -3870,11 +3884,15 @@ function fpPlanFromInteriors(gb, addr) {
 // ---- outline editing: the owner redrawing a footprint the 2016 imagery got wrong ---------
 //
 // "Edit outline" draws the building's CURRENT ring - the plan's own authored override if it
-// already has one, else the measured ring (DATA.buildings' own b.r, in world village metres -
-// numerically the same units as tiles, per game-interiors.json's own contract) run through
-// the SAME reverse transform fpPlanFromInteriors already uses for rooms and furniture, so all
-// three agree on where the walls are. Only committed on an actual edit - see fpOutlineDraft's
-// own comment above for why that is what makes the brief's save rule true for free.
+// already has one, else THE RING THE GAME SEATS: placedRing(b), which is the measured footprint
+// squared by its lot skew and moved by the owner's own placement overlay, in world village
+// metres (numerically the same units as tiles, per game-interiors.json's own contract). Not
+// the raw b.r: the game builds nothing on the raw ring, so an editor opened on it would show a
+// polygon several degrees off the rooms standing inside it, and the first nudge writes the
+// whole draft. Run through the SAME reverse transform fpPlanFromInteriors already uses for
+// rooms and furniture, so all three agree on where the walls are. Only committed on an actual
+// edit - see fpOutlineDraft's own comment above for why that is what makes the brief's save
+// rule true for free.
 
 /// bounds+rot to un-rotate BY, for the currently open building. Prefers the exact numbers the
 /// game itself seated this building on (INTERIORS' bounds+door, the same source
@@ -3888,7 +3906,7 @@ function fpOutlineFrame() {
     return { bx: gb.bounds.x, by: gb.bounds.y, W: gb.bounds.w, H: gb.bounds.h,
              rot: fpRotFromDoor(gb.bounds, gb.door) };
   const b = DATA.buildings.find(x => x.p === fpWho.pid && x.i === fpWho.idx);
-  const ring = (b && b.r && b.r.length >= 3) ? b.r : [[0, 0], [1, 0], [1, 1], [0, 1]];
+  const ring = (b && b.r && b.r.length >= 3) ? placedRing(b) : [[0, 0], [1, 0], [1, 1], [0, 1]];
   const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]);
   const bx = Math.round(Math.min(...xs)), by = Math.round(Math.min(...ys));
   return { bx, by, W: Math.max(1, Math.round(Math.max(...xs) - bx)),
@@ -3904,8 +3922,16 @@ function fpOutlineSeed() {
     return fpPlan.outline.map(v => ({ x: v.x, y: v.y }));
   const { bx, by, W, H, rot } = fpOutlineFrame();
   const b = DATA.buildings.find(x => x.p === fpWho.pid && x.i === fpWho.idx);
-  const ring = (b && b.r && b.r.length >= 3) ? b.r : [[bx, by], [bx + W, by], [bx + W, by + H], [bx, by + H]];
-  // b.r CARRIES THE CLOSING REPEAT (its own last point equals its first - build-viewer-data.py
+  // placedRing, NOT b.r: the game seats the SQUARED and PLACED ring (SeatOnSurvey.BoxOf runs
+  // Placements.Apply(e.Squared(), ...)), so seeding from the raw measured one would open the
+  // editor on a polygon turned by the lot skew - and the first nudge writes the WHOLE draft,
+  // which would then un-square the building and discard the owner's own placement overlay.
+  // Measured over the 302 buildings the game gives an outline to: seeded from placedRing the
+  // round trip back through FloorPlans.OutlineFromPlan moves no vertex more than one tile
+  // (median 0); seeded from b.r it moved them up to 22.
+  const ring = (b && b.r && b.r.length >= 3) ? placedRing(b)
+             : [[bx, by], [bx + W, by], [bx + W, by + H], [bx, by + H]];
+  // the ring CARRIES THE CLOSING REPEAT (its own last point equals its first - build-viewer-data.py
   // writes it straight from the seated ring, unlike SeatOnSurvey.TilesOf, which drops it before
   // this ever becomes a Tile[]). Dropping it here too, the same way, keeps the editor from
   // handing the owner a phantom extra vertex sitting exactly on top of the first one.
@@ -4042,12 +4068,33 @@ function fpRender() {
 function fpPanel() {
   const side = document.getElementById("fpSide");
   let h = "";
+  // SAID BEFORE ANY OF THE WORK, because it is the one thing that makes all of it pointless:
+  // Assets/Noir/Unity/FloorPlans.cs refuses a plan outright when the building has more than
+  // one unit, so a terrace plan saves, sits in Content/floorplans/ and is never consumed.
+  if (fpUnits > 1)
+    h += `<div class="hint" style="color:#8a2a2a; background:#fdecec; border:1px solid #f3b6b6;
+      border-radius:4px; padding:6px 7px; margin-bottom:8px;">This building has ${fpUnits} units.
+      The game refuses whole-building plans for terraces - it keeps generating each unit's
+      interior - so anything drawn here will save but not take effect.</div>`;
   if (fpOutlineOn) {
     h += `<h4>Editing outline</h4><div class="hint">Drag a vertex to move it. Double-click an
       edge to add one. Select a vertex and press <b>Del</b> to remove it - at least 3 stay.
       This redraws the building's own footprint, not a room: the shell above and the rooms/
       furniture below still answer to the measured plan. Save writes the redrawn outline only
       if it was actually changed here.</div>`;
+    // WHAT SAVING AN OUTLINE COSTS, said out loud. The first nudge writes the WHOLE polygon,
+    // corners included that were never touched, and from then on this ring - not the measured
+    // one - is the building. Both numbers below are measured (see the branch's fix-wave
+    // report): the round trip back through FloorPlans.OutlineFromPlan moves an untouched
+    // corner by at most one tile, and a footprint the game currently treats as a plain
+    // rectangle (522 of Rossville's 824) starts being masked to this polygon instead, which
+    // costs a median 2.4% of its floor tiles and up to 21%.
+    h += `<div class="hint" style="color:#8a5a00; background:#fff8e6; border:1px solid #ffe28a;
+      border-radius:4px; padding:6px 7px;"><b>Saving an outline overrides the measurement for
+      the whole building.</b> The corners you did not move are written too, and land within one
+      tile (about 3 ft) of where the game squares them today. A footprint the game currently
+      builds as a plain rectangle becomes a masked polygon - typically a couple of percent of
+      its floor tiles, up to a fifth. Close without saving and nothing changes.</div>`;
     h += `<label style="margin-top:12px">Notes / answers</label><textarea id="fpNotes">${esc(fpPlan.notes || "")}</textarea>`;
     side.innerHTML = h;
     const onNotes = document.getElementById("fpNotes");
@@ -4407,6 +4454,8 @@ async function openFloorPlan(pid, idx) {
   fpWho = { pid, idx, addr: (b && b.addr) || ("lot " + pid) };
   fpPlan = null; fpSel = null; fpUndoStack = []; fpClearDirty(); fpGameDerived = false;
   fpOutlineOn = false; fpOutlineDraft = null; fpOutlineSel = null;
+  const gbUnits = INTERIORS.get(pid + "|" + idx);
+  fpUnits = (gbUnits && +gbUnits.units) || 1;
   document.getElementById("fpOutlineB").classList.remove("on");
   if (LIVE) {
     try {
@@ -4419,7 +4468,11 @@ async function openFloorPlan(pid, idx) {
     const gb = INTERIORS.get(pid + "|" + idx);
     if (gb && gb.bounds) {                            // (b) what the game actually built
       fpPlan = fpPlanFromInteriors(gb, fpWho.addr);
-      fpPlan.rooms.forEach(fpClampRoom);              // guard against half-foot snap overshoot
+      // Guard against half-foot snap overshoot - furniture the same way as rooms, or a piece
+      // the game stamped hard against the far wall arrives half a foot outside the shell and
+      // stays there until the owner happens to drag it.
+      fpPlan.rooms.forEach(fpClampRoom);
+      fpPlan.furniture.forEach(fpClampFurniture);
       fpGameDerived = true;
     }
   }
@@ -4450,6 +4503,14 @@ function fpDownload(blob, name) {
 document.getElementById("fpSave").onclick = async () => {
   const btn = document.getElementById("fpSave");
   btn.disabled = true;
+  // A SAVED PLAN IS NOT THE GAME'S ANY MORE. It is authored now - the next build consumes this
+  // file and stops generating - so the amber banner's "close without saving and the game keeps
+  // generating it" stops being true the moment this succeeds, and the name it was prefilled
+  // with stops being true one moment earlier: renamed BEFORE the post so the file on disk
+  // never carries "as the game builds it", and put back if the post fails.
+  const wasDerived = fpGameDerived, oldName = fpPlan.name;
+  if (wasDerived && typeof fpPlan.name === "string")
+    fpPlan.name = fpPlan.name.replace(/ - as the game builds it$/, " - main floor");
   try {
     const r = await fetch("/__floorplan", { method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4458,7 +4519,13 @@ document.getElementById("fpSave").onclick = async () => {
     if (!j.ok) throw new Error(j.error || "save refused");
     PLANS.clear(); (j.plans || []).forEach(k => PLANS.add(k));
     fpClearDirty();
+    if (wasDerived) {
+      fpGameDerived = false;
+      document.getElementById("fpBanner").style.display = "none";
+      fpRender();
+    }
   } catch (e) {
+    fpPlan.name = oldName;
     document.getElementById("fpDirty").textContent = "SAVE FAILED: " + e.message;
   }
   btn.disabled = false;
@@ -5044,7 +5111,12 @@ async function f3FetchMesh(p, i) {
 /// legend also answers "what am I looking at" for the pieces buried behind other pieces.
 function f3LegendHtml(gb) {
   if (!gb) return "";
-  let s = "";
+  // HOW OLD THIS IS, AND WHAT THE ROOF TOGGLE ACTUALLY DOES. Both are one line each and both
+  // answer a question the frame otherwise leaves the owner guessing at: a cache from three
+  // builds ago draws exactly like a fresh one, and "roof off" is a flat height cut, not a
+  // roof-finder - on a two-storey model it takes the upper floor with it.
+  let s = `<div class="g">${INTERIORS_WHEN ? "game data: " + esc(INTERIORS_WHEN) + " · " : ""}`
+        + `roof-off hides above 8.5 ft</div>`;
   const rooms = gb.rooms || [];
   if (rooms.length) {
     s += `<div class="g">rooms</div>` + rooms.map(r =>
@@ -5148,14 +5220,21 @@ async function f3OpenCard(card) {
   // rect and that is the frame TownExport wrote the OBJ in, so it wins wherever it
   // exists. Without it the ring's own bounding box is the same corner measured a
   // different way, which keeps the fallback shell in one frame rather than two.
-  const bounds = (gb && gb.bounds) ? gb.bounds : (b ? {
-    x: Math.floor(Math.min(...b.r.map(q => q[0]))),
-    y: Math.floor(Math.min(...b.r.map(q => q[1]))) } : { x: 0, y: 0 });
+  //
+  // THE RING IS placedRing, NEVER b.r. The game seats every building on
+  // Placements.Apply(Squared(...)) - 740 of Rossville's 824 footprints get turned by their
+  // lot skew and 37 more carry the owner's own move/turn - so the raw measured ring is a
+  // different shape from the one the rooms and furniture below were fitted into. Drawn from
+  // b.r, the shell stood up to 21 m off its own contents. See placedRing's own header.
+  const ring = b ? placedRing(b) : null;
+  const bounds = (gb && gb.bounds) ? gb.bounds : (ring ? {
+    x: Math.floor(Math.min(...ring.map(q => q[0]))),
+    y: Math.floor(Math.min(...ring.map(q => q[1]))) } : { x: 0, y: 0 });
 
   if (!mesh) {
-    notes.push(LIVE ? "no export yet — press Publish or Noir &gt; Export For The Map Tool"
+    notes.push(LIVE ? "no export yet — press Publish (editor closed), or Noir &gt; Export For The Map Tool"
                     : "opened off the disk — no server to fetch the exported mesh from");
-    if (!(b && f3AddShell(glassy, b.r, bounds)))
+    if (!(ring && f3AddShell(glassy, ring, bounds)))
       notes.push("no footprint to fall back on either");
   }
   if (gb) {
