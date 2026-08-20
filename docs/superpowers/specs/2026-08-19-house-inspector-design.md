@@ -38,13 +38,16 @@ publish button starts (the same run that writes `tools/game-verdict.json` via
 SurveyReport), and by hand as `Noir > Export For The Map Tool`. It builds the town through
 `TownPipeline.Build()` — no hand-rolled build, per CLAUDE.md — and writes:
 
-- **`tools/game-interiors.json`** — for every place the survey seated: the parcel and
-  building index it came from (the survey side owns that mapping already — the same one
-  the placement overlay and SurveyReport use), the place bounds and door tile, units, and
-  every room: bounds (tiles), `RoomKind`, name, plus whether the interior was GENERATED or
-  AUTHORED (consumed from `Content/floorplans/`). **Each room also lists its furniture**:
-  kind, footprint tiles, rotation, and which model resolved (pack path, owner model, or
-  generated fallback). Tile coordinates; the browser converts.
+- **`tools/game-interiors.json`** — WRITTEN EVERY BUILD, not by the exporter: it rides
+  the `SurveyReport` pattern (`TownPipeline.Build` clears at the top and writes at the
+  bottom, `TownPipeline.cs:94/138`), so the frame's contents can never be staler than the
+  last build. For every place the survey seated: the parcel and building index (recorded
+  at the `SeatOnSurvey` attach, which has both in hand since the authored-interiors
+  landing), the place bounds and door tile, units, and every room: bounds (tiles),
+  `RoomKind`, name, plus whether the interior was GENERATED or AUTHORED. **Each room also
+  lists its furniture**: kind, footprint tiles, height, and which model resolved. Tile
+  coordinates; the browser converts. Only the MESH CACHE below needs the explicit export
+  run.
 - **`tools/furniture-palette.json`** — what the tool may offer, written by the game so the
   palette can never promise a piece the game cannot build: every kind
   `InteriorFurnitureModels` curates from the pack (name, default footprint) plus every row
@@ -74,13 +77,26 @@ half-written cache is visible.
 
 ## 3. The tool
 
-### The 3D pane
+### The 3D frame (owner's refinement, 2026-08-20: "I want to see the house and all it
+### contains in the right window when I select it — in a 3D frame")
 
 A `<canvas>` WebGL viewer, **hand-rolled and dependency-free** (~200 lines: OBJ parse,
 computed flat normals, one shader, MTL diffuse colours, orbit/zoom/pan) — the page must
-keep working from the filesystem with no network, so no CDN and no vendored megalib. It
-appears in the floor-plan overlay beside the plan (and collapses on narrow windows).
-Missing cache file → a quiet "no export yet — press Publish" note, never an error.
+keep working from the filesystem with no network, so no CDN and no vendored megalib.
+
+It lives in the RIGHT PANEL: selecting a lot puts a 3D frame on each building card
+(collapsed to the primary by default), showing **the house and all it contains**:
+
+- the building's exported mesh (generated or Designer — whatever the game draws), and
+- its interior contents from `game-interiors.json`, rendered inside the shell as
+  **true-size labelled boxes** — each furniture piece at its real footprint, height from
+  `Furniture.Height`, tinted by kind, plus room floor-plates tinted by room kind. The
+  box IS the project's own furniture spec ("a box of the right size in the right place");
+  real furniture meshes can upgrade the frame later without changing the data.
+
+Orbit to look under the roof; a roof-off toggle hides everything above the wall plate so
+the contents read at a glance. Missing cache file → a quiet "no export yet — press
+Publish" note, never an error; the interiors boxes still draw without a mesh.
 
 ### The prefilled editor
 
