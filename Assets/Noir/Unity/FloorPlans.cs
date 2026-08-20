@@ -25,9 +25,14 @@ namespace Noir.Unity
     {
         private const float Feet = 0.3048f;
 
-        /// <summary>How wide a gap between two rooms is still "a wall" for the purpose of
-        /// matching an interior door opening to it, rather than two rooms on opposite sides
-        /// of the house that happen to share an x- or y-range.</summary>
+        /// <summary>
+        /// A safety cap on the FINAL (post-shrink) tile gap <see cref="WallGap"/> will accept
+        /// between two rooms already known - from <see cref="PlanNeighbourAcross"/>, decided in
+        /// the plan's own feet coordinates - to sit on either side of one wall. Rounding and
+        /// wall re-insertion should never open a multi-tile gap between two rooms that share a
+        /// real wall; if one somehow did, this is what stops a door being placed across it
+        /// anyway rather than skipped.
+        /// </summary>
         private const int MaxWallGap = 3;
 
         // ---- the JSON shape, matching the editor's own field names exactly ----------------
@@ -74,15 +79,15 @@ namespace Noir.Unity
             public float rot;
         }
 
-        /// <summary>A room mid-conversion: oriented tile rect, and whether wall re-insertion
-        /// shrank it away entirely.</summary>
+        /// <summary>A room mid-conversion: oriented tile rect. <see cref="ShrinkForWall"/>
+        /// floors every shrink at 1x1 on both sides of a pair, so nothing here is ever
+        /// dropped - there is no "did wall re-insertion kill this room" flag to carry.</summary>
         private struct Acc
         {
             public string Id;
             public string Name;
             public RoomKind Kind;
             public TileRect Rect;
-            public bool Dropped;
         }
 
         // ---- the census, one line for the whole build ---------------------------------
@@ -162,7 +167,6 @@ namespace Noir.Unity
                     Name = r.name ?? "",
                     Kind = RoomWords.KindFor(r.name),
                     Rect = Orient(r.x, r.y, r.w, r.h, plan.shell, bounds, rot),
-                    Dropped = false,
                 });
             }
 
@@ -173,37 +177,31 @@ namespace Noir.Unity
             // ordered pair, the LATER room in the plan's own list gives way, shrunk on the
             // side facing the earlier one by the overlap plus one.
             for (int i = 0; i < acc.Count; i++)
-            {
-                if (acc[i].Dropped) continue;
                 for (int j = i + 1; j < acc.Count; j++)
-                {
-                    if (acc[j].Dropped) continue;
                     ShrinkForWall(acc, i, j, tag);
-                }
-            }
 
             var result = new AuthoredInterior { Furnish = !ownerModel };
             var rectById = new Dictionary<string, TileRect>();
             foreach (var a in acc)
             {
-                if (a.Dropped) continue;
                 rectById[a.Id] = a.Rect;
                 result.Rooms.Add(new AuthoredRoom(a.Rect, a.Kind, a.Name));
             }
 
-            if (result.Rooms.Count == 0)
-            {
-                _refused++;
-                Debug.LogWarning($"[floorplans] {tag}: every room was shrunk away by wall "
-                                + "re-insertion, generated interior kept.");
-                return null;
-            }
-
-            // INTERIOR DOORS: the wall tile between the two rooms an opening actually
-            // connects, nearest the opening's own centre. An opening with no second room
-            // across it - the front door, the back door, and every window, none of which
-            // carry a facing room in the plan - is an exterior opening and is skipped;
-            // PlaceSpec.Door stays the one legal front door.
+            // INTERIOR DOORS. An opening's own room, side and offset already say exactly which
+            // wall segment it sits on, in the plan's own feet coordinates - so the neighbour
+            // across it is found THERE (PlanNeighbourAcross), not by scanning every other
+            // room's final tile rect for whichever one happens to be nearest in world space.
+            // Two real rooms can sit within a few tiles of an opening in completely different
+            // directions - 408 Holmes' front door (din, south, facing the street) sits a few
+            // tiles from both br1 and kit, neither of which is across the wall it is actually
+            // cut into - and a nearest-in-any-direction search matches whichever of them wins a
+            // tile-distance tie-break. That is how a front door facing the street and a back
+            // door facing the yard, both genuinely exterior, ended up punched through the
+            // br1/din and fam/liv walls instead. An opening with no plan room specifically
+            // across its own side - every exterior door, and every window - has nothing for
+            // PlanNeighbourAcross to find, and is correctly left unmatched: PlaceSpec.Door
+            // stays the one legal front door.
             if (plan.openings != null)
             {
                 var seenDoors = new HashSet<(int X, int Y)>();
@@ -214,29 +212,19 @@ namespace Noir.Unity
                     if (!rectById.TryGetValue(op.roomId, out var aRect)) continue;
                     if (!EdgePoint(room, op, out float fx, out float fy)) continue;
 
+                    var neighbour = PlanNeighbourAcross(room, op, plan.rooms);
+                    if (neighbour == null) continue;                        // exterior wall
+                    if (!rectById.TryGetValue(neighbour.id, out var bRect)) continue;
+                    if (!WallGap(aRect, bRect, out bool vertical, out int fixedLo, out int fixedHi,
+                                 out int bandLo, out int bandHi))
+                        continue;    // the two final rects no longer face each other at all
+
                     var pt = OrientPoint(fx, fy, plan.shell, bounds, rot);
+                    var doorTile = vertical
+                        ? new Tile(Mathf.Clamp(pt.X, bandLo, bandHi), Mathf.Clamp(pt.Y, fixedLo, fixedHi))
+                        : new Tile(Mathf.Clamp(pt.X, fixedLo, fixedHi), Mathf.Clamp(pt.Y, bandLo, bandHi));
 
-                    bool found = false;
-                    Tile bestTile = default;
-                    int bestDist = int.MaxValue;
-                    foreach (var kv in rectById)
-                    {
-                        if (kv.Key == op.roomId) continue;
-                        if (!WallGap(aRect, kv.Value, out bool vertical, out int fixedLo,
-                                     out int fixedHi, out int bandLo, out int bandHi))
-                            continue;
-
-                        var candidate = vertical
-                            ? new Tile(Mathf.Clamp(pt.X, bandLo, bandHi),
-                                       Mathf.Clamp(pt.Y, fixedLo, fixedHi))
-                            : new Tile(Mathf.Clamp(pt.X, fixedLo, fixedHi),
-                                       Mathf.Clamp(pt.Y, bandLo, bandHi));
-                        int dist = Tile.DistanceSquared(candidate, pt);
-                        if (dist < bestDist) { bestDist = dist; bestTile = candidate; found = true; }
-                    }
-
-                    if (!found) continue;
-                    if (seenDoors.Add((bestTile.X, bestTile.Y))) result.Doors.Add(bestTile);
+                    if (seenDoors.Add((doorTile.X, doorTile.Y))) result.Doors.Add(doorTile);
                 }
             }
 
@@ -290,10 +278,74 @@ namespace Noir.Unity
             }
         }
 
-        /// <summary>Shrinks room <paramref name="j"/> (the later of an ordered pair) on the
-        /// side facing room <paramref name="i"/> by the overlap between their oriented tile
-        /// rects, plus one - reinstating the wall the editor's real thickness rounded away.
-        /// Drops <paramref name="j"/>, with a warning, if that leaves it under 1x1.</summary>
+        /// <summary>
+        /// The one other plan room, if any, that sits directly across this opening's own wall -
+        /// decided entirely in the plan's own feet coordinates, before any rounding or
+        /// orientation, from the room the opening is cut into, which side of it (the JSON's own
+        /// <c>side</c>), and where along that side (<c>off</c>/<c>w</c>). A generous tolerance
+        /// allows for the real wall's own thickness; nothing farther than that is a candidate at
+        /// all, so a room that merely happens to sit a few tiles away in world space - on a
+        /// completely different wall - can never be matched to this opening. Null means the
+        /// opening's own wall has nothing on its far side: an exterior door or a window.
+        /// </summary>
+        private static PlanRoom PlanNeighbourAcross(PlanRoom room, PlanOpening op, List<PlanRoom> allRooms)
+        {
+            const float Tolerance = 2.0f;   // feet - generous against a real wall's own thickness
+
+            // The opening's own span along the wall - x for a N/S wall, y for an E/W one -
+            // measured from the room's own near edge, same as EdgePoint reads it.
+            bool ns = op.side == "S" || op.side == "N";
+            float segLo = (ns ? room.x : room.y) + op.off;
+            float segHi = segLo + op.w;
+
+            foreach (var other in allRooms)
+            {
+                if (other == room) continue;
+                switch (op.side)
+                {
+                    case "S":
+                        if (Mathf.Abs(other.y - (room.y + room.h)) <= Tolerance
+                            && Overlaps1D(other.x, other.x + other.w, segLo, segHi)) return other;
+                        break;
+                    case "N":
+                        if (Mathf.Abs((other.y + other.h) - room.y) <= Tolerance
+                            && Overlaps1D(other.x, other.x + other.w, segLo, segHi)) return other;
+                        break;
+                    case "E":
+                        if (Mathf.Abs(other.x - (room.x + room.w)) <= Tolerance
+                            && Overlaps1D(other.y, other.y + other.h, segLo, segHi)) return other;
+                        break;
+                    case "W":
+                        if (Mathf.Abs((other.x + other.w) - room.x) <= Tolerance
+                            && Overlaps1D(other.y, other.y + other.h, segLo, segHi)) return other;
+                        break;
+                }
+            }
+            return null;
+        }
+
+        private static bool Overlaps1D(float aLo, float aHi, float bLo, float bHi) => aLo < bHi && bLo < aHi;
+
+        /// <summary>
+        /// Reinstates the wall between rooms <paramref name="i"/> (earlier in the plan's own
+        /// list) and <paramref name="j"/> (later) by shrinking one or both of them on the side
+        /// facing the other, by the overlap between their oriented tile rects plus one.
+        ///
+        /// <paramref name="j"/> gives way first, same as always - but only down to 1x1, never
+        /// through it. A full one-tile wall can ask for more than a small, already-once-shrunk
+        /// room has left: 408 Holmes Street's "Dining / entry" is narrowed to one column by the
+        /// hall on one side, then asked for a second tile of height by the bathroom on the
+        /// other, which taking the whole amount from it alone would consume entirely. Whatever
+        /// <paramref name="j"/> cannot afford comes off <paramref name="i"/> instead, also
+        /// floored at 1x1 - safe, because <paramref name="i"/> is only ever the EARLIER room in
+        /// a pair here, so shrinking it now cannot reopen a wall already reinstated against some
+        /// even-earlier neighbour of its own (a room can only ever be "i" against a strictly
+        /// higher-indexed "j"; nothing that already leaned on it as "i" runs again). If even
+        /// that is not enough - both already at 1x1 - whatever fits is taken and the shortfall
+        /// is logged rather than dropping either room: a thinner wall than intended is still a
+        /// wall, and a real one drawn by the owner does not stop being a room because two of its
+        /// neighbours left it no floor to spare.
+        /// </summary>
         private static void ShrinkForWall(List<Acc> rooms, int i, int j, string tag)
         {
             var ri = rooms[i].Rect;
@@ -308,35 +360,43 @@ namespace Noir.Unity
             else if (xOverlap > 0) { if (yOverlap < 0) return; vertical = true; }
             else { if (xOverlap < 0) return; vertical = false; }
 
-            var r = rooms[j];
-            var rect = r.Rect;
-            if (vertical)
+            int required = (vertical ? Mathf.Max(yOverlap, 0) : Mathf.Max(xOverlap, 0)) + 1;
+            bool jBelow = (rj.Y * 2 + rj.H) > (ri.Y * 2 + ri.H);
+            bool jRight = (rj.X * 2 + rj.W) > (ri.X * 2 + ri.W);
+
+            int axisJ = vertical ? rj.H : rj.W;
+            int axisI = vertical ? ri.H : ri.W;
+            int takeJ = Mathf.Min(required, axisJ - 1);
+            int takeI = Mathf.Min(required - takeJ, axisI - 1);
+
+            if (takeJ + takeI < required)
+                Debug.LogWarning($"[floorplans] {tag}: '{rooms[j].Name}' and '{rooms[i].Name}' "
+                                + "are pinched to 1x1 on both sides and still overlap - the wall "
+                                + "between them is thinner than intended.");
+
+            if (takeJ > 0)
             {
-                int shrink = Mathf.Max(yOverlap, 0) + 1;
-                bool jBelow = (rj.Y * 2 + rj.H) > (ri.Y * 2 + ri.H);
-                rect = jBelow
-                    ? new TileRect(rect.X, rect.Y + shrink, rect.W, rect.H - shrink)
-                    : new TileRect(rect.X, rect.Y, rect.W, rect.H - shrink);
-            }
-            else
-            {
-                int shrink = Mathf.Max(xOverlap, 0) + 1;
-                bool jRight = (rj.X * 2 + rj.W) > (ri.X * 2 + ri.W);
-                rect = jRight
-                    ? new TileRect(rect.X + shrink, rect.Y, rect.W - shrink, rect.H)
-                    : new TileRect(rect.X, rect.Y, rect.W - shrink, rect.H);
+                var r = rooms[j];
+                r.Rect = vertical
+                    ? (jBelow ? new TileRect(rj.X, rj.Y + takeJ, rj.W, rj.H - takeJ)
+                              : new TileRect(rj.X, rj.Y, rj.W, rj.H - takeJ))
+                    : (jRight ? new TileRect(rj.X + takeJ, rj.Y, rj.W - takeJ, rj.H)
+                              : new TileRect(rj.X, rj.Y, rj.W - takeJ, rj.H));
+                rooms[j] = r;
             }
 
-            if (rect.W < 1 || rect.H < 1)
+            if (takeI > 0)
             {
-                Debug.LogWarning($"[floorplans] {tag}: room '{r.Name}' shrunk below 1x1 by the "
-                                + $"wall against '{rooms[i].Name}' - dropped.");
-                r.Dropped = true;
-                rooms[j] = r;
-                return;
+                // i shrinks on the side FACING j - the opposite edge from where j just gave
+                // ground, since now i is the one handing tiles over.
+                var r = rooms[i];
+                r.Rect = vertical
+                    ? (jBelow ? new TileRect(ri.X, ri.Y, ri.W, ri.H - takeI)
+                              : new TileRect(ri.X, ri.Y + takeI, ri.W, ri.H - takeI))
+                    : (jRight ? new TileRect(ri.X, ri.Y, ri.W - takeI, ri.H)
+                              : new TileRect(ri.X + takeI, ri.Y, ri.W - takeI, ri.H));
+                rooms[i] = r;
             }
-            r.Rect = rect;
-            rooms[j] = r;
         }
 
         /// <summary>
@@ -406,6 +466,25 @@ namespace Noir.Unity
         /// One rectangle, feet to oriented tiles. Plan coordinates: x from the west face, y
         /// from the north face, street at the bottom (south). Orientation: the plan's south
         /// edge maps onto the side of <paramref name="b"/> that carries the door.
+        ///
+        /// rot 1 and rot 3 are NOT mirror images of each other the way 0 and 2 are - they are
+        /// two different 90-degree turns, and a point's own x and y trade places between them
+        /// (case 1 reads the plan's y off world-X and its x off world-Y; the case-3/default
+        /// swap does the opposite pairing). Picking the wrong one of the two sends the plan's
+        /// south edge - the one that is supposed to land on the door - to the world wall
+        /// OPPOSITE the door instead, silently: it still compiles, still builds a full interior,
+        /// just mirrored onto the wrong side of the building. Verified against `bounds`/`shell`
+        /// by direct substitution before trusting either: at rot 1 (selected because the real
+        /// door sits on `bounds.Right`), plugging in a room's own south edge (y+h = sd, the
+        /// plan's own depth) into each candidate and checking which one reaches world-X = sd
+        /// (i.e. `bounds.Right`, relative to `b.X`) rather than world-X = 0 (the wall
+        /// opposite it) is what decided which formula belongs to which case here.
+        ///
+        /// NO CLAMP AGAINST `b`/`shell` HAPPENS HERE ON PURPOSE. `WorldBuilder.Adopt` clamps
+        /// every authored room to the unit's own 1-tile-inset interior before it ever reaches
+        /// the grid (`WorldBuilder.cs`), so a room whose independently-rounded edges overshoot
+        /// the shell by a tile is caught there, not here. Do not re-add a clamp in this file -
+        /// it would just be the same clamp twice, one of them stale the moment Core's changes.
         /// </summary>
         private static TileRect Orient(float fx, float fy, float fw, float fh,
                                         Shell shell, TileRect b, int rot)
@@ -419,14 +498,15 @@ namespace Noir.Unity
             {
                 case 0: return new TileRect(b.X + x,            b.Y + y,            w, h);
                 case 2: return new TileRect(b.X + (sw - x - w), b.Y + (sd - y - h), w, h);
-                case 1: return new TileRect(b.X + (sd - y - h), b.Y + x,            h, w);
-                default: return new TileRect(b.X + y,            b.Y + (sw - x - w), h, w);
+                case 1: return new TileRect(b.X + y,            b.Y + (sw - x - w), h, w);
+                default: return new TileRect(b.X + (sd - y - h), b.Y + x,            h, w);
             }
         }
 
         /// <summary>The same conversion as <see cref="Orient"/> for a single point - an
         /// opening's centre, not a room - so no width or height is clamped to a minimum of
-        /// one tile the way a room's is.</summary>
+        /// one tile the way a room's is. See <see cref="Orient"/>'s own header for why rot 1
+        /// and rot 3 use the formulas they do, not the other way round.</summary>
         private static Tile OrientPoint(float fx, float fy, Shell shell, TileRect b, int rot)
         {
             int x = Mathf.RoundToInt(fx * Feet), y = Mathf.RoundToInt(fy * Feet);
@@ -434,10 +514,10 @@ namespace Noir.Unity
             int sd = Mathf.Max(1, Mathf.RoundToInt(shell.d * Feet));
             switch (rot)
             {
-                case 0: return new Tile(b.X + x,          b.Y + y);
-                case 2: return new Tile(b.X + (sw - x),   b.Y + (sd - y));
-                case 1: return new Tile(b.X + (sd - y),   b.Y + x);
-                default: return new Tile(b.X + y,          b.Y + (sw - x));
+                case 0: return new Tile(b.X + x,        b.Y + y);
+                case 2: return new Tile(b.X + (sw - x), b.Y + (sd - y));
+                case 1: return new Tile(b.X + y,        b.Y + (sw - x));
+                default: return new Tile(b.X + (sd - y), b.Y + x);
             }
         }
     }
