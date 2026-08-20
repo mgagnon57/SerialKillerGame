@@ -3597,6 +3597,26 @@ async function loadPlans() {
   } catch (e) { /* server gone is a real state; badges just stay plain */ }
 }
 
+// THE FURNITURE CATALOGUE, same {"when":null} stance as INTERIORS: absent until the editor
+// export has run once. Fetched fresh every time the floor-plan editor opens (same as the
+// plan file itself just below) rather than cached at page load, so an export run mid-session
+// shows up the next time a lot is opened without a page reload.
+let FURN_PALETTE = { when: null, yours: [], pack: [] };
+async function loadPalette() {
+  if (!LIVE) { FURN_PALETTE = { when: null, yours: [], pack: [] }; return; }
+  try {
+    const r = await fetch("/__palette", { cache: "no-store" });
+    const j = await r.json();
+    FURN_PALETTE = { when: j.when || null, yours: j.yours || [], pack: j.pack || [] };
+  } catch (e) { FURN_PALETTE = { when: null, yours: [], pack: [] }; }
+}
+// THE PLAIN FALLBACK, for a clone where nobody has run the export yet: the domestic
+// FurnitureKind names (Assets/Noir/Core/World/Furniture.cs, the block above its own
+// "not a house" divider) at a generic 3x2 ft, so a plan can still get furniture on it
+// before the palette exists at all.
+const FP_PLAIN_KINDS = ["bed", "wardrobe", "dresser", "table", "chair", "sofa", "cooker",
+  "sink", "counter", "bath", "basin", "hearth", "desk"];
+
 // WHAT THE GAME ACTUALLY BUILT, keyed the same "parcel|index" way as PLANS - so
 // openFloorPlan can fall back to the game's own generated rooms when the owner has not
 // drawn one yet. {"when":null} (no build since clone, or server gone) leaves this empty
@@ -3615,7 +3635,7 @@ document.body.insertAdjacentHTML("beforeend", `
 <style>
   #fpOv { position:fixed; inset:0; background:rgba(20,16,10,.55); z-index:60; display:none; }
   #fpOv.on { display:flex; align-items:center; justify-content:center; }
-  #fpBox { background:#f7f4ee; color:#1c1c1c; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.5);
+  #fpBox { position:relative; background:#f7f4ee; color:#1c1c1c; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.5);
            width:min(96vw,1280px); height:min(94vh,860px); display:flex; flex-direction:column; overflow:hidden;
            font-family:"Segoe UI",Arial,sans-serif; }
   #fpHead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:9px 12px;
@@ -3643,6 +3663,19 @@ document.body.insertAdjacentHTML("beforeend", `
             border-radius:4px; cursor:pointer; color:#1c1c1c; width:auto; }
   #fpSide .btns .bad { border-color:#a33; color:#a33; }
   #fpSide .hint { color:#666; font-size:11.5px; line-height:1.45; margin-top:8px; }
+  /* THE FURNITURE PICKER, a small popup anchored under its button rather than a second
+     modal - opening one dialog on top of another (the "+ Room" pattern would suggest) makes
+     the plan itself, the thing being edited, disappear behind it. */
+  #fpFPick { position:absolute; top:44px; left:10px; z-index:70; background:#fff; border:1px solid #999;
+             border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.35); max-height:min(70vh,480px);
+             overflow-y:auto; min-width:230px; padding:4px; display:none; }
+  #fpFPick.on { display:block; }
+  #fpFPick .g { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.04em;
+                padding:6px 8px 2px; }
+  #fpFPick button { display:block; width:100%; text-align:left; font-size:12.5px; padding:5px 8px;
+                    border:none; background:none; cursor:pointer; border-radius:4px; color:#1c1c1c; }
+  #fpFPick button:hover { background:#eef2fb; }
+  #fpFPick .sz { color:#777; font-size:11px; float:right; }
 </style>
 <div id="fpOv"><div id="fpBox">
   <div id="fpHead">
@@ -3652,6 +3685,7 @@ document.body.insertAdjacentHTML("beforeend", `
     <button id="fpPngB">Export PNG</button>
     <button id="fpDims">Copy dims</button>
     <button id="fpRoomB">+ Room</button>
+    <button id="fpFurnB">+ Furniture</button>
     <button id="fpUndoB" title="Ctrl+Z">Undo</button>
     <span style="font-size:12px;color:#444">shell <input id="fpShW" type="number" step="0.5" min="6"
       style="width:52px;font-size:12px"> × <input id="fpShD" type="number" step="0.5" min="6"
@@ -3663,6 +3697,7 @@ document.body.insertAdjacentHTML("beforeend", `
   <div id="fpBanner" style="display:none; padding:7px 12px; font-size:12.5px; color:#664d03;
        background:#fff3cd; border-bottom:2px solid #ffe28a;">This is the game's generated
        layout. Save to make it yours — close without saving and the game keeps generating it.</div>
+  <div id="fpFPick"></div>
   <div id="fpMain"><div id="fpWrap"><svg id="fpCv"></svg></div><aside id="fpSide"></aside></div>
 </div></div>`);
 
@@ -3686,6 +3721,16 @@ function fpClearDirty() { fpDirtyF = false; document.getElementById("fpDirty").t
 function fpPushUndo() { fpUndoStack.push(JSON.stringify(fpPlan)); if (fpUndoStack.length > 150) fpUndoStack.shift(); }
 function fpUndo() { if (fpUndoStack.length) { fpPlan = JSON.parse(fpUndoStack.pop()); fpSel = null; fpMarkDirty(); fpRender(); } }
 const fpOpenColor = k => k === "window" ? "#1873c4" : k === "door" ? "#b0651a" : "#a04a2a";
+// A PLACED PIECE HAS NO "kind" FIELD OF ITS OWN - PlanFurniture is {id,name,model,x,y,w,h,rot},
+// matched exactly against Assets/Noir/Unity/FloorPlans.cs - so the tint has to be recovered the
+// same way the game legend recovers it (f3LegendHtml/f3Box, both keyed on kind): a piece placed
+// from the owner's own named catalogue looks its kind up in the palette; every other piece
+// (a pack kind picked by name, or a game-derived piece whose name IS its kind already, per
+// fpGameFurnitureToFeet above) already carries its kind as its name.
+function fpFurnKind(f) {
+  const y = FURN_PALETTE.yours.find(x => x.name === f.name);
+  return (y && y.kind) || f.name || "thing";
+}
 
 /// The building's measured footprint as width x depth in feet - the oriented box of its ring,
 /// longest edge first, metres to feet, snapped to the half foot. The seed for a fresh plan.
@@ -3761,8 +3806,8 @@ function fpGameRoomToFeet(r, bx, by, W, H, rot) {
 }
 
 // Furniture carries no rot in the interiors contract, so its footprint is un-rotated the
-// same way a room's is and dropped into the plan axis-aligned (rot: 0) - the fp editor has
-// no furniture UI yet (a later task's job); this only has to round-trip through Save.
+// same way a room's is and dropped into the plan axis-aligned (rot: 0) - from there it is
+// a piece like any other the owner placed himself, draggable and rotatable in the editor.
 function fpGameFurnitureToFeet(f, bx, by, W, H, rot) {
   const rel = fpUnrotateRect(f.x - bx, f.y - by, f.w, f.h, W, H, rot);
   return { id: fpUid("f"), name: f.kind || "", model: f.model || "",
@@ -3833,6 +3878,22 @@ function fpSvgString(interactive) {
     s += `<line ${interactive ? `data-fpopen="${o.id}"` : ""} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
       stroke="${fpOpenColor(o.kind)}" stroke-width="8" cursor="grab"/>`;
   });
+  // FURNITURE, drawn last so it always sits above the rooms and walls it stands in - the
+  // same reason it wins the pointer hit-test over a room's own move handle without any
+  // extra ordering logic in fpWire.
+  (p.furniture || []).forEach(f => {
+    const x = fpM + f.x * S, y = fpM + f.y * S, fw = Math.max(1, f.w * S), fh = Math.max(1, f.h * S);
+    const seld = interactive && fpSel && fpSel.type === "furniture" && fpSel.id === f.id;
+    const tint = f3Hex(f3FurnTint(fpFurnKind(f)));
+    s += `<rect ${interactive ? `data-fpfurn="${f.id}"` : ""} x="${x}" y="${y}" width="${fw}" height="${fh}"
+      fill="${tint}" fill-opacity="0.88" rx="2" stroke="${seld ? "#d97706" : "#2a2a2a"}"
+      stroke-width="${seld ? 3 : 1.25}" ${seld ? 'stroke-dasharray="6,3"' : ""} cursor="move"/>`;
+    const cx = x + fw / 2, cy = y + fh / 2, fsz = Math.max(8, Math.min(S * .6, 11));
+    s += `<text x="${cx}" y="${cy - 1}" font-size="${fsz}" font-weight="600" fill="#fff" text-anchor="middle"
+      pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${esc(f.name || "furniture")}</text>`;
+    s += `<text x="${cx}" y="${cy + fsz}" font-size="${Math.max(7, fsz * .8)}" fill="#fff" text-anchor="middle"
+      pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${f.w} × ${f.h} ft</text>`;
+  });
   const ly = fpM + p.shell.d * S + 16;
   s += `<text x="${fpM}" y="${ly}" font-size="11" fill="#333">${esc(p.name || "")} — ${p.shell.w} × ${p.shell.d} ft — `
     + `<tspan fill="#1873c4" font-weight="700">window</tspan> <tspan fill="#b0651a" font-weight="700">door</tspan> `
@@ -3877,11 +3938,24 @@ function fpPanel() {
       <div><label>Width ft</label><input id="fpoW" type="number" step="0.5" min="1" value="${o.w}"></div></div>
       <div class="btns"><button id="fpoDel" class="bad">Delete</button></div>`;
     }
+  } else if (fpSel && fpSel.type === "furniture") {
+    const f = fpById(fpPlan.furniture, fpSel.id);
+    if (f) h += `<h4>Furniture</h4>
+      <label>Name</label><input id="fpfN" list="fpfNames" value="${esc(f.name)}">
+      <datalist id="fpfNames">${fpPaletteOptionsHtml()}</datalist>
+      <label>Model</label><input id="fpfM" value="${esc(f.model || "")}">
+      <div class="duo"><div><label>X ft</label><input id="fpfX" type="number" step="0.5" value="${f.x}"></div>
+      <div><label>Y ft</label><input id="fpfY" type="number" step="0.5" value="${f.y}"></div></div>
+      <div class="duo"><div><label>Width ft</label><input id="fpfW" type="number" step="0.5" min="0.5" value="${f.w}"></div>
+      <div><label>Depth ft</label><input id="fpfH" type="number" step="0.5" min="0.5" value="${f.h}"></div></div>
+      <div class="btns"><button id="fpfRot" title="Swaps width/depth and turns the piece 90°">Rotate</button>
+      <button id="fpfDel" class="bad">Delete</button></div>`;
   } else {
     h += `<h4>Nothing selected</h4><div class="hint">Click a room to select; drag its middle to
       move it; <b>grab any wall and drag it</b> - a wall two rooms share moves both rooms.
       Drag the orange corner to resize freely. Click a coloured wall segment for a window or
-      door and slide it along its wall. Double-click a room to rename it. Del deletes,
+      door and slide it along its wall. Double-click a room to rename it. Furniture drags the
+      same way a room does, and + Furniture adds a piece from the palette. Del deletes,
       Ctrl+Z undoes.</div>`;
   }
   h += `<label style="margin-top:12px">Notes / answers</label><textarea id="fpNotes">${esc(fpPlan.notes || "")}</textarea>
@@ -3911,7 +3985,63 @@ function fpPanel() {
     on("fpoDel", "click", () => { fpPushUndo(); fpPlan.openings = fpPlan.openings.filter(x => x.id !== o.id);
       fpSel = null; fpMarkDirty(); fpRender(); });
   }
+  if (fpSel && fpSel.type === "furniture") {
+    const f = fpById(fpPlan.furniture, fpSel.id);
+    // Picking a name that matches one of the owner's OWN pieces exactly (typed or chosen off
+    // the datalist) pulls its model in behind it - free text otherwise, and the model box
+    // stays editable either way, per this task's brief.
+    on("fpfN", "change", e => { fpPushUndo(); f.name = e.target.value;
+      const y = FURN_PALETTE.yours.find(x => x.name === f.name);
+      if (y) f.model = y.model;
+      fpMarkDirty(); fpRender(); });
+    on("fpfM", "change", e => { fpPushUndo(); f.model = e.target.value; fpMarkDirty(); fpRender(); });
+    [["fpfX", "x"], ["fpfY", "y"], ["fpfW", "w"], ["fpfH", "h"]].forEach(([id, k]) =>
+      on(id, "change", e => { fpPushUndo();
+        f[k] = Math.max(k === "w" || k === "h" ? 0.5 : 0, parseFloat(e.target.value) || 0);
+        fpClampFurniture(f); fpMarkDirty(); fpRender(); }));
+    on("fpfRot", "click", () => { fpPushUndo();
+      const w0 = f.w, h0 = f.h; f.w = h0; f.h = w0; f.rot = f.rot === 90 ? 0 : 90;
+      fpClampFurniture(f); fpMarkDirty(); fpRender(); });
+    on("fpfDel", "click", () => { fpPushUndo();
+      fpPlan.furniture = fpPlan.furniture.filter(x => x.id !== f.id); fpSel = null; fpMarkDirty(); fpRender(); });
+  }
   on("fpNotes", "change", e => { fpPlan.notes = e.target.value; fpMarkDirty(); });
+}
+
+/// The name field's dropdown: the owner's own catalogue first (so a piece he has actually
+/// modelled is the easy pick), the pack's generic kinds after - grouped, per this task's
+/// brief, but the input still takes free text either way (it is a <input list>, not a
+/// <select>) so a name the palette has never heard of is not a wrong answer, just an unmatched
+/// one (fpFurnKind and the model auto-fill both fall through cleanly when nothing matches).
+function fpPaletteOptionsHtml() {
+  let h = "";
+  if (FURN_PALETTE.yours.length)
+    h += `<optgroup label="Yours">` + FURN_PALETTE.yours.map(y =>
+      `<option value="${esc(y.name)}">`).join("") + `</optgroup>`;
+  if (FURN_PALETTE.pack.length)
+    h += `<optgroup label="Pack">` + FURN_PALETTE.pack.map(k =>
+      `<option value="${esc(k.kind)}">`).join("") + `</optgroup>`;
+  if (!FURN_PALETTE.yours.length && !FURN_PALETTE.pack.length)
+    h += FP_PLAIN_KINDS.map(k => `<option value="${esc(k)}">`).join("");
+  return h;
+}
+
+/// The "+ Furniture" popup's own contents: the real palette when the export has run
+/// (FURN_PALETTE.when is set), grouped the same yours-first way as the name dropdown above;
+/// the plain kind list otherwise, every one of it at the brief's stated 3x2 ft default.
+function fpFurnPickerHtml() {
+  if (!FURN_PALETTE.when)
+    return `<div class="g">Kinds</div>` + FP_PLAIN_KINDS.map(k =>
+      `<button data-fppick="plain:${esc(k)}">${esc(k)} <span class="sz">3 × 2 ft</span></button>`).join("");
+  let h = "";
+  if (FURN_PALETTE.yours.length)
+    h += `<div class="g">Yours</div>` + FURN_PALETTE.yours.map((y, i) =>
+      `<button data-fppick="yours:${i}">${esc(y.name)} <span class="sz">${y.w_ft} × ${y.d_ft} ft</span></button>`).join("");
+  if (FURN_PALETTE.pack.length)
+    h += `<div class="g">Pack</div>` + FURN_PALETTE.pack.map((k, i) =>
+      `<button data-fppick="pack:${i}">${esc(k.kind)} <span class="sz">${k.w_ft} × ${k.d_ft} ft</span></button>`).join("");
+  return h || `<div class="g">Kinds</div>` + FP_PLAIN_KINDS.map(k =>
+    `<button data-fppick="plain:${esc(k)}">${esc(k)} <span class="sz">3 × 2 ft</span></button>`).join("");
 }
 
 function fpAddOpening(room, kind) {
@@ -3930,6 +4060,14 @@ function fpClampOpening(o) {
   const len = fpSideLen(r, o.side);
   o.w = Math.min(o.w, len);
   o.off = Math.min(Math.max(0, o.off), len - o.w);
+}
+/// A piece of furniture answers to the shell only - not to any room's walls, the same as a
+/// room answers only to the shell and not to its neighbours (fpClampRoom's own contract).
+function fpClampFurniture(f) {
+  f.w = Math.min(Math.max(0.5, f.w), fpPlan.shell.w);
+  f.h = Math.min(Math.max(0.5, f.h), fpPlan.shell.d);
+  f.x = Math.min(Math.max(0, f.x), fpPlan.shell.w - f.w);
+  f.y = Math.min(Math.max(0, f.y), fpPlan.shell.d - f.h);
 }
 function fpFt(e) {
   const rect = document.getElementById("fpCv").getBoundingClientRect(), S = fpScale();
@@ -4014,6 +4152,12 @@ function fpWire(svg) {
       fpPushUndo(); fpDrag = { mode: "move", r, start: p, x0: r.x, y0: r.y, moved: false };
       svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
     }
+    if (t.dataset.fpfurn) {
+      const f = fpById(fpPlan.furniture, t.dataset.fpfurn);
+      fpSel = { type: "furniture", id: f.id };
+      fpPushUndo(); fpDrag = { mode: "furn", f, start: p, x0: f.x, y0: f.y, moved: false };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+    }
     fpSel = null; fpRender();
   });
   svg.addEventListener("pointermove", e => {
@@ -4022,6 +4166,10 @@ function fpWire(svg) {
     if (fpDrag.mode === "move") {
       const nx = fpSnap(fpDrag.x0 + p.x - fpDrag.start.x), ny = fpSnap(fpDrag.y0 + p.y - fpDrag.start.y);
       if (nx !== fpDrag.r.x || ny !== fpDrag.r.y) { fpDrag.r.x = nx; fpDrag.r.y = ny; fpClampRoom(fpDrag.r);
+        fpDrag.moved = true; fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "furn") {
+      const nx = fpSnap(fpDrag.x0 + p.x - fpDrag.start.x), ny = fpSnap(fpDrag.y0 + p.y - fpDrag.start.y);
+      if (nx !== fpDrag.f.x || ny !== fpDrag.f.y) { fpDrag.f.x = nx; fpDrag.f.y = ny; fpClampFurniture(fpDrag.f);
         fpDrag.moved = true; fpMarkDirty(); fpRender(); }
     } else if (fpDrag.mode === "resize") {
       const nw = fpSnap(Math.max(1, p.x - fpDrag.r.x)), nh = fpSnap(Math.max(1, p.y - fpDrag.r.y));
@@ -4039,7 +4187,7 @@ function fpWire(svg) {
     }
   });
   const end = () => { if (!fpDrag) return;
-    if ((fpDrag.mode === "move" || fpDrag.mode === "wall") && !fpDrag.moved) fpUndoStack.pop();
+    if ((fpDrag.mode === "move" || fpDrag.mode === "wall" || fpDrag.mode === "furn") && !fpDrag.moved) fpUndoStack.pop();
     fpDrag = null; };
   svg.addEventListener("pointerup", end);
   svg.addEventListener("pointercancel", end);
@@ -4078,13 +4226,19 @@ async function openFloorPlan(pid, idx) {
   }
   if (!fpPlan) {                                      // (c) no plan, no build - measured shell
     const shell = b ? fpShellFromRing(b.r) : { w: 30, d: 24 };
-    fpPlan = { name: fpWho.addr + " - main floor", shell, rooms: [], openings: [], notes: "" };
+    fpPlan = { name: fpWho.addr + " - main floor", shell, rooms: [], openings: [], furniture: [], notes: "" };
   }
+  // AN AUTHORED PLAN FROM BEFORE THIS TASK CARRIES NO furniture ARRAY AT ALL - this is the
+  // one place every branch above funnels through, so it is the one place that has to cover
+  // that gap rather than three copies of the same guard.
+  if (!fpPlan.furniture) fpPlan.furniture = [];
+  await loadPalette();
   document.getElementById("fpTitle").textContent =
     fpWho.addr.toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) + ` — lot ${pid}, building ${idx}`;
   document.getElementById("fpBanner").style.display = fpGameDerived ? "block" : "none";
   document.getElementById("fpSave").disabled = !LIVE;
   document.getElementById("fpSave").title = LIVE ? "" : "open through serve-viewer.py to save";
+  document.getElementById("fpFPick").classList.remove("on");
   document.getElementById("fpOv").classList.add("on");
   fpRender();
 }
@@ -4136,6 +4290,37 @@ document.getElementById("fpRoomB").onclick = () => {
   const r = { id: fpUid("r"), name: "New room", x: 1, y: 1, w: 10, h: 10 };
   fpClampRoom(r); fpPlan.rooms.push(r); fpSel = { type: "room", id: r.id }; fpMarkDirty(); fpRender();
 };
+document.getElementById("fpFurnB").onclick = e => {
+  const pick = document.getElementById("fpFPick");
+  pick.innerHTML = fpFurnPickerHtml();
+  pick.classList.toggle("on");
+  e.stopPropagation();
+};
+// One picker for the whole box: place the chosen piece at (1,1) with the palette's own
+// footprint, per this task's brief - the owner nudges it into position afterward, same as a
+// fresh room starts at (1,1) too.
+document.getElementById("fpFPick").addEventListener("click", e => {
+  const btn = e.target.closest("[data-fppick]");
+  if (!btn) return;
+  const [kind, ref] = btn.dataset.fppick.split(":");
+  let name, model = "", w = 3, h = 2;
+  if (kind === "yours") { const y = FURN_PALETTE.yours[+ref]; name = y.name; model = y.model; w = y.w_ft; h = y.d_ft; }
+  else if (kind === "pack") { const k = FURN_PALETTE.pack[+ref]; name = k.kind; w = k.w_ft; h = k.d_ft; }
+  else { name = ref; }
+  fpPushUndo();
+  const f = { id: fpUid("f"), name, model, x: 1, y: 1, w, h, rot: 0 };
+  fpClampFurniture(f);
+  fpPlan.furniture.push(f);
+  fpSel = { type: "furniture", id: f.id };
+  document.getElementById("fpFPick").classList.remove("on");
+  fpMarkDirty(); fpRender();
+});
+// Click anywhere outside the popup (or its own button, which toggles it itself) closes it.
+document.addEventListener("click", e => {
+  const pick = document.getElementById("fpFPick");
+  if (pick.classList.contains("on") && !pick.contains(e.target) && e.target.id !== "fpFurnB")
+    pick.classList.remove("on");
+});
 document.getElementById("fpUndoB").onclick = fpUndo;
 document.getElementById("fpShW").onchange = e => { fpPushUndo();
   fpPlan.shell.w = Math.max(6, parseFloat(e.target.value) || fpPlan.shell.w);
@@ -4155,6 +4340,7 @@ document.addEventListener("keydown", e => {
     fpPushUndo();
     if (fpSel.type === "room") { fpPlan.openings = fpPlan.openings.filter(o => o.roomId !== fpSel.id);
       fpPlan.rooms = fpPlan.rooms.filter(r => r.id !== fpSel.id); }
+    else if (fpSel.type === "furniture") fpPlan.furniture = fpPlan.furniture.filter(f => f.id !== fpSel.id);
     else fpPlan.openings = fpPlan.openings.filter(o => o.id !== fpSel.id);
     fpSel = null; fpMarkDirty(); fpRender();
   }
