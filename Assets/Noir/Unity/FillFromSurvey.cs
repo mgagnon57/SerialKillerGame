@@ -119,10 +119,41 @@ namespace Noir.Unity
                 };
                 foreach (var window in row.Hours) spec.Hours.Add(window);
 
+                // THE OWNER'S FLOOR PLAN, ON THE BUILDINGS THIS PASS PUTS UP TOO.
+                //
+                // Until 2026-08-20 this attach existed in SeatOnSurvey alone, so a plan could
+                // only reach a building that city.txt had ALREADY put on the lot. 408 Holmes
+                // Street is the case that found it: no place in city.txt stands on parcel 673 at
+                // all (the town's other 408, "408 Holmes Ave", is a stale hand-guess on parcel
+                // 777 at a dead end), so the house is one of the 313 RAISED here - it builds, the
+                // owner's Residence408 model stands on it, and both of the plans he drew for it
+                // went unread every single build with the log saying only "never seated".
+                //
+                // Same three arguments as the other attach, from the same three facts this pass
+                // already has in hand: the measured entry's own parcel and index, so the tag
+                // matches Content/floorplans/<parcel>-<index>.json and the browser map's own key;
+                // the box it is about to stand on; and the door it just faced at the road. Units
+                // is 1 on everything raised here (VillageLayout's own default - this pass mints
+                // no terraces), and it is read off the spec rather than written as a literal so
+                // that stays true by construction if it ever stops being.
+                bool ownerModel = CityBuildings.IsOwnerModel(spec.Name);
+                spec.AuthoredInterior = FloorPlans.For(parcel.Id, primary.Index, box, door,
+                                                       ownerModel, spec.Units,
+                                                       out var authoredOutline);
+
+                // THE AUTHORED OUTLINE WINS, exactly as it does in SeatOnSurvey: the survey
+                // decides the size, the owner decides when he says otherwise.
+                if (authoredOutline != null) spec.Outline = authoredOutline;
+
                 layout.Places.Add(spec);
                 standing.Add(box);
                 built++;
                 SurveyReport.Say(parcel.Id, true, "raised from the survey");
+
+                // And what the map is told was built here - see InteriorsReport's own header for
+                // why this is a note now and a look-up after the world exists.
+                InteriorsReport.Note(parcel.Id, primary.Index, spec,
+                                     spec.AuthoredInterior != null);
             }
 
             Debug.Log($"[survey] {built} buildings put up from the survey"
