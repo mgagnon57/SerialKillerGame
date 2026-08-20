@@ -105,6 +105,45 @@ if (spec.AuthoredInterior != null && spec.Units == 1)
 - **`Units > 1` keeps the BSP.** A terrace is several homes in one building and the plan
   format has no per-unit story yet. Phase 2 if ever wanted.
 
+## Authored furniture (added 2026-08-19, owner's ruling: "see + place + override")
+
+The same override pattern, one layer further in. The plan JSON gains an optional
+`furniture` array:
+
+```
+"furniture": [ { "id": "f1", "name": "Bed", "model": "",        "x": 2, "y": 3,
+                 "w": 5, "h": 6.5, "rot": 0 },
+               { "id": "f2", "name": "Stove", "model": "Stove1991", "x": 11, "y": 1.5,
+                 "w": 2.5, "h": 2, "rot": 90 } ]
+```
+
+- **`name` resolves the KIND** (the same word-match stance as room names, onto the
+  `Furniture` kinds Core already places), which is what the sim knows and what decides the
+  footprint's meaning. **`model` optionally pins a specific mesh**: an owner model's name,
+  or empty for "whatever the pack resolver picks for this kind" — the existing
+  `InteriorFurnitureModels` behaviour.
+- `AuthoredInterior` gains `public List<AuthoredFurniture> Furniture` (position/rotation in
+  tiles by the time Core sees it, converted Unity-side like everything else).
+- **Generate-then-replace, again**: `FurniturePlacer` still runs and its draws are still
+  consumed; where the plan carries a furniture array, the result is discarded and the
+  authored pieces stamped instead. Same reason, same guarantee: furnishing one house moves
+  nothing in any other.
+- **The owner-model rule sharpens**: an owner-model place skips GENERATED furniture (as
+  before — nothing may double up inside his mesh) but ACCEPTS authored furniture. He can
+  now furnish 408 from the tool without Designer, piece by piece, and the sim knows the
+  bed is a bed.
+- **His own furniture models** enter by the established pipeline: Designer GLB →
+  `glb-to-obj.py` → `Assets/Noir/Models/<Name>.obj`, plus one row in a new hand-edited
+  `Content/furniture-models.txt` (`name | model | kind | width x depth in m`) — the
+  furniture analogue of `models.txt`. The Unity resolver tries that table first, the
+  curated pack list second, the generated fallback mesh third.
+- Failure modes: a piece outside its room is clamped in with a log; a piece blocking a
+  doorway tile is refused with a log (the placer's own standing rule — nothing may be
+  placed against a door); an unknown `model` falls back to the kind's pack resolution.
+- Tests join the Core gate: a fixture plan's furniture lands at exactly the authored
+  tiles; the RNG-neutrality test extends to furniture; a doorway-blocking piece is refused
+  without wrecking the room.
+
 ## Owner-model places (408 today)
 
 The plan is MORE valuable here, not less: the model is the visible geometry, and Core's
@@ -114,9 +153,10 @@ BSP rooms inside that place currently disagree with it. With the authored plan:
   idea of the inside finally matches the walls the player sees.** (This also advances the
   IDEAS item "owner models must block the walkable grid": the plan's walls stamp
   `Terrain.Wall` into the grid through the standard path.)
-- **Furniture stamping is skipped for owner-model places** — the owner furnishes in
-  Designer; generated furniture inside his model would double up. (Generated buildings
-  with plans still furnish normally, by room kind.)
+- **GENERATED furniture stamping is skipped for owner-model places** — generated pieces
+  inside his mesh would double up. AUTHORED furniture (see the section above) is accepted:
+  the plan is his hand either way. (Generated buildings with plans and no furniture array
+  still furnish normally, by room kind.)
 - The Unity drawing side must not raise generated interior wall meshes inside an owner
   model; verify current behaviour and keep it.
 

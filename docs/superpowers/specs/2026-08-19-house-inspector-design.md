@@ -42,7 +42,13 @@ SurveyReport), and by hand as `Noir > Export For The Map Tool`. It builds the to
   building index it came from (the survey side owns that mapping already — the same one
   the placement overlay and SurveyReport use), the place bounds and door tile, units, and
   every room: bounds (tiles), `RoomKind`, name, plus whether the interior was GENERATED or
-  AUTHORED (consumed from `Content/floorplans/`). Tile coordinates; the browser converts.
+  AUTHORED (consumed from `Content/floorplans/`). **Each room also lists its furniture**:
+  kind, footprint tiles, rotation, and which model resolved (pack path, owner model, or
+  generated fallback). Tile coordinates; the browser converts.
+- **`tools/furniture-palette.json`** — what the tool may offer, written by the game so the
+  palette can never promise a piece the game cannot build: every kind
+  `InteriorFurnitureModels` curates from the pack (name, default footprint) plus every row
+  of `Content/furniture-models.txt` (the owner's own pieces), grouped `yours` / `pack`.
 - **`tools/preview-cache/<parcel>-<index>.obj`** (+ `.mtl`) — one mesh per seated
   building, captured from the place's own GameObjects **before `CityChunker` bakes them** —
   building with the bake withheld if the pipeline offers no earlier seam (the layer opt-out
@@ -93,6 +99,18 @@ Save is unchanged: the file lands in `Content/floorplans/` and the authored-inte
 machinery consumes it on the next build. **Not saving changes nothing** — the owner's
 "if I don't know it, I will let it stay as is," implemented by doing nothing.
 
+### Furniture in the editor (owner's ruling: see + place + override)
+
+The plan draws each room's furniture as labelled footprint rectangles over the room fill —
+the generated pieces when the layout is generated, the authored pieces when it is authored.
+They edit like rooms do: drag to move, `R` (or a panel button) turns in 90° steps, Del
+removes, and an **Add furniture** picker offers the palette from `furniture-palette.json`,
+his own pieces listed first. A generated layout's furniture becomes part of the plan the
+moment he Saves, exactly like its walls do; pieces he never touches ride along unchanged.
+The palette's footprints come with each piece, so what he places is the size the game will
+stamp. New pieces of his own: Designer GLB → `glb-to-obj.py` → a row in
+`Content/furniture-models.txt`, and the next export offers it in the palette.
+
 ### Exterior walls
 
 The plan's shell is a rectangle; the building's real outline is the measured ring in
@@ -129,7 +147,8 @@ it — the `placement-1991.txt` stance.
 - **Editing the 3D mesh in the browser** — Designer is the modeller; the pane is a viewer.
 - **Live sync with a running editor** — the cache refreshes on publish/export, not per frame.
 - **Terrace/multi-unit interiors** (per the companion spec).
-- **People/furniture in the preview** — walls and roofs answer the layout question.
+- **People and furniture in the 3D pane** — walls and roofs answer the layout question
+  there; furniture lives on the PLAN, where it can be edited (see above).
 
 ## Build order (when approved)
 
