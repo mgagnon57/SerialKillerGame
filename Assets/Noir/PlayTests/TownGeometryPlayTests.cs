@@ -848,25 +848,58 @@ namespace Noir.PlayTests
             var player = Object.FindFirstObjectByType<Player>();
             Assert.That(player, Is.Not.Null);
 
+            // THE FIRST MATCH, BECAUSE THAT IS THE ONE Player.Standing STANDS YOU AT. This loop
+            // used to keep the LAST, and the name is not unique: parcel-buildings.txt files BOTH
+            // of parcel 673's buildings - the house and its outbuilding, 25 m up the lot - as
+            // "408 Holmes Street", so in any town that seats the second one this gate was
+            // measuring a building the game never aims at.
             Place home = null;
+            int named = 0;
             foreach (var p in host.World.AllPlaces)
-                if (p != null && p.Name == "408 Holmes Street") home = p;
+                if (p != null && p.Name == "408 Holmes Street")
+                {
+                    named++;
+                    if (home == null) home = p;
+                }
             Assert.That(home, Is.Not.Null);
 
             // A FRESH SPAWN, UNCONDITIONALLY: the body keeps its position across toggles,
             // so any earlier test's parking spot becomes this test's measurement - 25.9m
-            // of response-scene parking on the first run, 531m of Route 1 on the second,
-            // because the destroy was guarded on not-Walking and a suite can leave the
-            // player either way. Step out if needed, destroy whatever body exists, spawn
-            // fresh: Player.Spawn only runs Standing() when there is no body at all.
+            // of response-scene parking on one run, 531m of Route 1 on another. Step out
+            // if needed, destroy whatever body exists, spawn fresh: Player.Spawn only runs
+            // Standing() when there is no body at all.
+            //
+            // NOT GameObject.Find, WHICH IS WHY THE FIRST VERSION OF THIS FIX NEVER FIRED.
+            // Find returns only ACTIVE objects, and Player.Leave deactivates the armature -
+            // so the lookup came back null on both branches (walking, and toggled out by an
+            // earlier test), nothing was ever destroyed, and Toggle simply re-activated the
+            // old body where the last test parked it. Measured 2026-08-20: the gate log
+            // carried exactly ONE "[player] stood at ..." line for a whole run, from the
+            // very first Spawn, while this test read 531.07m - to the centimetre, the
+            // distance from 408's front walk to where ThePlayerCanStandInTheStreet had
+            // dropped him. The suite has been here before, from the other side:
+            // CityUnderTest's own header, "INACTIVE ONES COUNT".
+            //
+            // Transform.Find walks children whether they are active or not, and Spawn parents
+            // the armature to the Player and names it - so this is how Player itself holds it.
             bool wasWalking = player.Walking;
             if (player.Walking) { player.Toggle(); yield return null; }
-            var stale = GameObject.Find("PlayerArmature");
-            if (stale != null) Object.DestroyImmediate(stale);
+            var stale = player.transform.Find("PlayerArmature");
+            int staleId = stale != null ? stale.gameObject.GetInstanceID() : 0;
+            if (stale != null) Object.DestroyImmediate(stale.gameObject);
             player.Toggle();
             for (int f = 0; f < 5; f++) yield return null;
             try
             {
+                // AND THE SPAWN REALLY WAS FRESH. Without this the test passes for the wrong
+                // reason whenever the leftover body happens to be standing near home, which
+                // is exactly what an isolated re-run of the red did.
+                var fresh = player.transform.Find("PlayerArmature");
+                Assert.That(fresh, Is.Not.Null, "the body never stood up");
+                Assert.That(fresh.gameObject.GetInstanceID(), Is.Not.EqualTo(staleId),
+                    "P re-used the body an earlier test left standing instead of spawning a "
+                  + "new one, so this measures that test's parking spot and not Player.Standing");
+
                 var at = player.Where;
                 Assert.That(at.HasValue, "the body never stood up");
                 // The front walk: the lot's south edge, centred - Player.Standing's own
@@ -875,7 +908,10 @@ namespace Noir.PlayTests
                 var walk = Space3D.ToWorld(new Tile(b.X + b.W / 2, b.Y + b.H - 1));
                 var d = at.Value - new Vector3(walk.x, walk.y, walk.z - 3f);
                 Assert.That(new Vector2(d.x, d.z).magnitude, Is.LessThan(6f),
-                    "P put the player " + d.magnitude.ToString("0.0") + "m from his own front walk");
+                    "P put the player " + d.magnitude.ToString("0.0") + "m from his own front walk"
+                  + " - body at " + at.Value.ToString("F1") + ", the walk at "
+                  + new Vector3(walk.x, walk.y, walk.z - 3f).ToString("F1") + ", "
+                  + named + " place(s) in the town are called 408 Holmes Street");
             }
             finally
             {

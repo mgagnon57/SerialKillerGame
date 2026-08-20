@@ -593,7 +593,21 @@ namespace Noir.Unity
             _body = Object.Instantiate(prefab);
 #endif
             _body.transform.SetParent(transform, false);
+
+            // THROUGH THE CONTROLLER, NOT PAST IT. A CharacterController keeps its own position
+            // inside PhysX, and an assignment to `transform.position` while it is enabled is a
+            // suggestion: the next Move() puts the body back where the controller thinks it is,
+            // which for a prefab instance parented here is this transform's own origin — the
+            // corner of the map. `LeaveCar` has always known this and does the same dance for the
+            // same reason; Spawn did not, and it stood a freshly-spawned man at (0,0) instead of
+            // on his own front walk. Measured 2026-08-20 in the PlayMode gate, where it read as
+            // exactly sqrt(1425.5^2 + 1206.5^2) = 1867.5 m from 408 Holmes — the distance from
+            // that walk to the origin, to four decimal places.
+            var cc = _body.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
             _body.transform.position = Standing(_host.World);
+            if (cc != null) cc.enabled = true;
+
             _body.name = "PlayerArmature";
 
             // Somebody who lives here rather than Unity's grey mannequin. Editor-only, because the
