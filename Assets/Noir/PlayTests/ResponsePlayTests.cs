@@ -26,6 +26,7 @@ namespace Noir.PlayTests
         private static int _caseId = -1;
         private static int _wasSpeed = -1;
         private static int _startMinuteOfDay = -1;
+        private static double _wasSlice = -1;
 
         [UnitySetUp]
         public IEnumerator Ready()
@@ -81,6 +82,7 @@ namespace Noir.PlayTests
                         host.Cases.CloseLoudly(c, "test residue: the suite moves on");
 
                 if (_wasSpeed >= 0) host.SpeedIndex = _wasSpeed;
+                if (_wasSlice > 0) { host.SimSliceMs = _wasSlice; _wasSlice = -1; }
 
                 // GIVE BACK THE HOUR. This test runs the shared town at 300x while the county
                 // car and the ambulance drive on REAL seconds, so one pass burns ~9 sim HOURS -
@@ -214,18 +216,41 @@ namespace Noir.PlayTests
             _wasSpeed = host.SpeedIndex;
             host.SpeedIndex = VillageHost.Speeds.Length - 1;   // 300x
 
-            // The full sequence is ~50-70 sim minutes ≈ 15-25 real seconds at 300x plus
-            // walking/driving; poll state, not time. Give it four real minutes. Along the way,
-            // OBSERVE the new choreography rather than assume it: whether the officer ever rode
-            // (Doing == AwayFromTown mid-OfficerEnRoute — the noon watch drives, but an on-call
-            // fallback walking is not a failure, so it is logged, not asserted) and whether the
-            // crowd gathered (somebody Gawking during the canvass — that one IS the contract).
-            // 480 real seconds, not 240: the alone-standing victim rule (above, 2026-08-18)
-            // steers the pick toward quieter spots beside DENSE blocks, and citizen 2's
-            // canvass ran past a dozen doors - the county walks each one on real seconds, and
-            // 240s ran out mid-canvass with the machine working correctly the whole way. The
-            // poll exits on Closed, so a fast case never pays the headroom.
-            float deadline = Time.time + 480f;
+            // AND THE SLICE TO GO WITH IT, BECAUSE THE DIAL ALONE IS A FICTION. Everything this
+            // test waits on runs on the SIM clock — the one-clock ruling put the county car, the
+            // ambulance, the cruiser and the county officer's door-to-door walk on Sim.Clock — and
+            // VillageHost gives the simulation six milliseconds of each frame, which at ~0.35 ms a
+            // tick is ~16 ticks against the ~400 that 300x asks for. Measured 2026-08-20: the case
+            // advanced 101 sim minutes in the whole 480-second poll, about five REAL seconds per
+            // sim minute, and the deadline expired mid-canvass with the machine healthy - fifteen
+            // doors knocked five sim minutes apart, exactly CanvassMinutesPerDoor. Seventy
+            // milliseconds carries ~10 sim seconds a frame, comfortably inside CityResponse's own
+            // fifteen-second-a-frame tolerance, so the rigs still drive rather than fall behind.
+            // Handed back in EverythingBack beside the speed and the hour.
+            _wasSlice = host.SimSliceMs;
+            host.SimSliceMs = 70.0;
+
+            // The full sequence is a hundred-odd sim minutes plus a canvass whose length is DATA -
+            // one door per person who saw the hit, five sim minutes each, and a hit at the 17:00
+            // peak is seen by a crowd. So poll state, not time, and treat the number below as a
+            // ceiling on a hang rather than a budget for the town: with the slice above it covers
+            // several hundred sim minutes of case work. Along the way, OBSERVE the choreography
+            // rather than assume it: whether the officer ever rode (Doing == AwayFromTown
+            // mid-OfficerEnRoute — the noon watch drives, but an on-call fallback walking is not a
+            // failure, so it is logged, not asserted) and whether the crowd gathered (somebody
+            // Gawking during the canvass — that one IS the contract). The poll exits on Closed, so
+            // a fast case never pays the headroom.
+            //
+            // 780 REAL SECONDS, MEASURED, NOT GUESSED. On the same deterministic noon scenario:
+            // 24 doors and 261 sim minutes in 480 s before the slice above, 45 doors and 506 sim
+            // minutes in the same 480 s after it - a canvass of forty-five doors, because the
+            // victim stands among scattered witnesses and the county walks them in citizen-id
+            // order (docs/IDEAS.md, 2026-08-20), which costs ten sim minutes a door instead of
+            // the machine's five. It wanted about another hundred seconds. 780 leaves that with
+            // room and still sits 120 s inside this test's own Timeout(900000), which is a hard
+            // kill mid-scenario and must never be what stops the poll.
+            int hitMinute = host.Cases.MinuteOf(_caseId);
+            float deadline = Time.time + 780f;
             var seen = new List<CaseState>();
             bool rode = false, gawked = false, cordoned = false;
             while (Time.time < deadline && host.Cases.StateOf(_caseId) != CaseState.Closed)
@@ -255,8 +280,16 @@ namespace Noir.PlayTests
             // presumes a finished case, and a case that merely ran out of deadline used to
             // fail on "the crowd never dispersed" - true, misleading, and measured costing a
             // whole diagnosis pass (2026-08-18, run six: the case was mid-canvass and healthy).
+            // WITH THE NUMBERS, so a future red says which of the two things it is: a machine that
+            // stopped (few lines filed, the clock running) or a town that needed more case than the
+            // ceiling allowed (lines still arriving when time ran out). The 2026-08-20 red read as
+            // the first and was the second, and finding that out cost a whole run.
+            int minutesBurned = host.Sim.Clock.Day * 1440 + host.Sim.Clock.MinuteOfDay - hitMinute;
             Assert.That(host.Cases.StateOf(_caseId), Is.EqualTo(CaseState.Closed),
-                "the case never closed; states seen: " + string.Join(" → ", seen));
+                "the case never closed; states seen: " + string.Join(" → ", seen)
+              + "; " + host.Cases.FileOf(_caseId).Count + " lines filed over " + minutesBurned
+              + " sim minutes, and the last frame dropped " + host.TicksDropped
+              + " of the ticks it asked for");
             CollectionAssert.IsOrdered(seen.Select(s => (int)s), "states ran out of order");
 
             // The speed stays at 300x through the dispersal and cordon polls below: both wait

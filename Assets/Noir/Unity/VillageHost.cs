@@ -203,6 +203,34 @@ namespace Noir.Unity
         private const double SimBudgetMs = 6.0;
 
         /// <summary>
+        /// The slice the simulation actually gets this frame, in milliseconds. <see
+        /// cref="SimBudgetMs"/> unless something deliberately asks for more, and nothing in the
+        /// game ever does.
+        ///
+        /// WHY IT IS SETTABLE AT ALL: the speed dial does not do what its label says. A tick over
+        /// the built town costs about 0.35 ms, so six milliseconds buys ~16 of them a frame, while
+        /// at SpeedIndex 300x the accumulator above asks for ~400. The budget therefore starves the
+        /// dial by a factor of twenty-five and the town runs at about 12x however hard it is turned.
+        /// That is CORRECT for a game — see SimBudgetMs, a frame the simulation may eat is a frame
+        /// that stalls — and it is wrong for a headless scenario, where nobody is looking at the
+        /// frame and the whole police response is charged in SIM time: since the one-clock ruling
+        /// (2026-08-16) the county car, the ambulance, the cruiser and the county officer's walk
+        /// from door to door all advance off Sim.Clock, so real seconds buy them nothing.
+        ///
+        /// Measured 2026-08-20, and it is what this exists for: `AWitnessedHitBringsTheTownsWholeResponse`
+        /// gave a case 480 real seconds and the case got 101 sim minutes of them — mid-canvass when
+        /// the deadline expired, with the machine working perfectly the whole way.
+        ///
+        /// KEEP IT UNDER ABOUT 100 ms. CityResponse slices its driving fifteen sim seconds a frame
+        /// (`Step` x `MostSteps`); past that its rigs fall behind the clock instead of driving it.
+        /// Fifteen sim seconds is 300 ticks, which is about 105 ms of this slice.
+        ///
+        /// A property, not a public field: VillageHost bootstraps itself at runtime, and a
+        /// serialized knob on it is one an inspector could quietly set for everybody.
+        /// </summary>
+        public double SimSliceMs { get; set; } = SimBudgetMs;
+
+        /// <summary>
         /// Ticks between budget checks. The clock is not free to read, and checking it after
         /// every single tick would cost more than the tick. Eight is about 40 ms of overshoot
         /// in the worst case, which is a dropped frame rather than a freeze.
@@ -2387,7 +2415,7 @@ namespace Noir.Unity
                 Sim.Tick(chunk);
                 done += chunk;
             }
-            while (done < ticks && slice.Elapsed.TotalMilliseconds < SimBudgetMs);
+            while (done < ticks && slice.Elapsed.TotalMilliseconds < SimSliceMs);
 
             TicksDropped = ticks - done;
             TicksRun = done;
