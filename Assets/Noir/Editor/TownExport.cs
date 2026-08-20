@@ -87,6 +87,18 @@ namespace Noir.Editor
 
                 int meshed = 0, skipped = 0, unreadableTotal = 0;
 
+                // WHICH OF THE THINGS STANDING WERE NEVER ASKED ABOUT. On 2026-08-20 this run
+                // read "1 buildings meshed, 146 skipped" and the reason was not the export at
+                // all: InteriorsReport only knew about the buildings SeatOnSurvey had MOVED, so
+                // the walk below asked 147 questions and 24 pieces were standing, almost none of
+                // them on a moved building. The one that matched was parcel 225 - the fire
+                // station, a city.txt place that happened to be seated onto its measured
+                // footprint with a pack landmark on it. Both halves are fixed, and this counter
+                // is what stops the same blindness being invisible next time: a model standing in
+                // Rossville that no seated building claims is either a building out in the
+                // country, on no parcel at all, or a hole in the report.
+                var claimed = new HashSet<Transform>();
+
                 foreach (var note in noted)
                 {
                     var place = note.Place;
@@ -115,6 +127,7 @@ namespace Noir.Editor
                             continue;
 
                         parts.AddRange(rends);
+                        claimed.Add(child);
                     }
 
                     if (parts.Count == 0) { skipped++; continue; }
@@ -130,8 +143,10 @@ namespace Noir.Editor
 
                 WritePalette(cacheDir, out int yours, out int pack);
 
-                Debug.Log($"[export] {meshed} buildings meshed, {skipped} skipped, palette "
-                        + $"{yours} yours + {pack} pack."
+                Debug.Log($"[export] {meshed} buildings meshed, {skipped} skipped of "
+                        + $"{noted.Count} reported, {candidates.Count - claimed.Count} of "
+                        + $"{candidates.Count} models standing matched no reported building, "
+                        + $"palette {yours} yours + {pack} pack."
                         + (unreadableTotal > 0
                             ? $" {unreadableTotal} renderer(s) skipped for not being Read/Write "
                             + "enabled - run Noir/Make City Meshes Readable."

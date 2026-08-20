@@ -277,7 +277,13 @@ namespace Noir.Unity
                 pieces += Fleet(root.transform, place);
             }
 
-            Debug.Log($"[city] {lots.Count} townhouses + landmarks, {pieces} pieces, "
+            // {lots.Count} IS THE STACKED LOTS AND NOTHING ELSE, and saying "townhouses +
+            // landmarks" made it read as the whole of this pass's output - so "0 townhouses +
+            // landmarks, 24 pieces" looked like a pass that had failed and then built 24 things
+            // anyway. Stacked() returns false for every kind in Rossville on purpose (see its own
+            // header), so this number is permanently zero and the pieces are the whole story.
+            Debug.Log($"[city] {lots.Count} stacked lot(s), {pieces} pieces standing "
+                    + "(owner models, terraces and pack landmarks), "
                     + $"{root.GetComponentsInChildren<Renderer>().Length} renderers before chunking.");
 #endif
             return root;
