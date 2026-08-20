@@ -2639,6 +2639,11 @@ function show(i) {
     rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
 
   const host = document.getElementById("d-bldgs");
+  // Every 3D frame on the old lot goes first. Rewriting this host's innerHTML throws its
+  // canvases away, and a WebGL context whose canvas has been dropped is not collected on
+  // any schedule a browser will promise - it just sits in the dozen-odd the browser hands
+  // out until the map runs out of them and draws black rectangles instead of houses.
+  f3CloseAll();
   if (!bl.length) {
     const booked = (c.dwell || 0) > 0;
     host.innerHTML = `<p class="note" style="margin-top:12px">No footprint found on this lot.${
@@ -2663,8 +2668,21 @@ function show(i) {
           <dt>Role</dt><dd><span class="chip ${b.role}">${b.role}</span></dd>
         </dl>
         <button class="w" style="margin-top:7px" onclick="openFloorPlan(${b.p},${b.i})">${
-          PLANS.has(b.p + "|" + b.i) ? "Floor plan ✓ — edit" : "Floor plan…"}</button></div>`;
+          PLANS.has(b.p + "|" + b.i) ? "Floor plan ✓ — edit" : "Floor plan…"}</button>
+        <div class="f3" data-p="${b.p}" data-i="${b.i}" data-role="${b.role}">
+          <button class="w f3-btn" style="margin-top:6px">See it in 3D</button>
+          <div class="f3-body">
+            <canvas class="f3-cv"></canvas>
+            <div class="f3-bar">
+              <label><input type="checkbox" class="f3-roof"> Roof off</label>
+              <span>drag to turn · wheel to zoom</span>
+            </div>
+            <p class="note f3-note"></p>
+            <div class="f3-leg"></div>
+          </div>
+        </div></div>`;
     }).join("");
+  f3Wire(host);
   draw();
 }
 
@@ -3155,6 +3173,7 @@ document.getElementById("r-close").onclick = () => {
 };
 document.getElementById("close").onclick = () => {
   document.getElementById("detail").classList.remove("on"); sel = -1; draw();
+  f3CloseAll();     // a hidden frame still holds its GL context; see f3CloseAll's own note
 };
 
 // ---- interaction ---------------------------------------------------------------------
@@ -4147,11 +4166,638 @@ addEventListener("beforeunload", e => {
   e.returnValue = "";
 });
 
+// ===================================================================================
+// THE HOUSE IN A FRAME. Pick a lot and every building on it gets a small 3D window in
+// the right-hand panel: the mesh the editor exported if there is one, the building's
+// own measured footprint extruded into a plain shell if there is not, and standing
+// inside either of them the rooms and furniture the game last reported building.
+//
+// HAND-ROLLED WebGL, NO LIBRARY, for the same reason the floor-plan editor above draws
+// its own SVG: this page has to keep opening straight off the disk with no server and
+// no network behind it. Nothing here is loaded, generated or fetched from anywhere but
+// the local server, and with no server at all it degrades to the fallback shell.
+//
+// THE FRAME IS BUILDING-LOCAL METRES, Y UP, ORIGIN AT THE NW CORNER OF THE BUILDING'S
+// BOUNDS. Noir.Editor.TownExport writes the OBJ in exactly that frame, and it undoes
+// Space3D's Z negation on the way out so the OBJ's local Z runs the way the tile grid's
+// Y does - which is the way InteriorsReport already reports every room and every stick
+// of furniture. So a room at tile (x,y) stands at local (x - bounds.x, 0, y - bounds.y)
+// and needs no second sign flip. Getting that one negation wrong puts the kitchen
+// outside the house, and it looks like a plausible house either way.
+// ===================================================================================
+
+const F3_M2FT = 3.28084;
+const F3_WALL_H = 3.0;   // metres: the fallback shell's single storey, eaves height
+const F3_ROOF_Y = 2.6;   // metres: the roof-off cut. Above this and nothing but roof stands
+const F3_MAX = 4;        // open frames at once - see f3OpenCard on why a browser cares
+
+document.body.insertAdjacentHTML("beforeend", `
+<style>
+  .f3 { margin-top: 2px; }
+  .f3 .f3-body { display: none; }
+  .f3.on .f3-body { display: block; }
+  .f3-cv { width: 100%; height: 190px; display: block; margin-top: 7px; border-radius: 4px;
+           border: 1px solid var(--rule); background: var(--paper); touch-action: none; cursor: grab; }
+  .f3-cv.turning { cursor: grabbing; }
+  .f3-bar { display: flex; align-items: center; gap: 9px; margin-top: 5px;
+            font-size: 11px; color: var(--muted); }
+  .f3-bar label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .f3-bar input { accent-color: var(--ink); margin: 0; width: 13px; height: 13px; }
+  .f3-note { margin: 5px 0 0; }
+  .f3-leg { margin-top: 6px; font-size: 11px; line-height: 1.55; }
+  .f3-leg .g { color: var(--muted); font-size: 10px; letter-spacing: .06em;
+               text-transform: uppercase; margin-top: 5px; }
+  .f3-leg .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+                margin-right: 6px; vertical-align: -1px; border: 1px solid var(--rule); }
+  .f3-leg .sz { color: var(--muted); font-family: ui-monospace, Consolas, Menlo, monospace; }
+</style>`);
+
+// ---- small vector and matrix arithmetic, column-major the way WebGL wants it ----------
+const f3Cross = (a, b) => [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+function f3Norm(v) {
+  const l = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0]/l, v[1]/l, v[2]/l];
+}
+function f3Mul(a, b) {                       // a * b, both column-major
+  const o = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    let s = 0;
+    for (let k = 0; k < 4; k++) s += a[k*4 + r] * b[c*4 + k];
+    o[c*4 + r] = s;
+  }
+  return o;
+}
+function f3Perspective(fovy, aspect, near, far) {
+  const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+  return new Float32Array([f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0]);
+}
+function f3LookAt(eye, at, up) {
+  const z = f3Norm([eye[0]-at[0], eye[1]-at[1], eye[2]-at[2]]);
+  const x = f3Norm(f3Cross(up, z));
+  const y = f3Cross(z, x);
+  return new Float32Array([
+    x[0], y[0], z[0], 0,
+    x[1], y[1], z[1], 0,
+    x[2], y[2], z[2], 0,
+    -(x[0]*eye[0] + x[1]*eye[1] + x[2]*eye[2]),
+    -(y[0]*eye[0] + y[1]*eye[1] + y[2]*eye[2]),
+    -(z[0]*eye[0] + z[1]*eye[1] + z[2]*eye[2]), 1]);
+}
+
+// ---- one growing triangle soup -------------------------------------------------------
+// Position, normal and colour per vertex, three vertices per triangle, no index buffer.
+// Un-indexed on purpose: the roof-off toggle below sorts WHOLE TRIANGLES, and sorting is
+// trivial when a triangle is nine consecutive numbers and shares nothing with its
+// neighbours.
+function f3Soup() {
+  const s = { pos: [], nrm: [], col: [] };
+  s.tri = (a, b, c, col, na, nb, nc) => {
+    if (!na) na = nb = nc = f3Face(a, b, c);
+    const v = [a, b, c], n = [na, nb, nc];
+    for (let k = 0; k < 3; k++) {
+      s.pos.push(v[k][0], v[k][1], v[k][2]);
+      s.nrm.push(n[k][0], n[k][1], n[k][2]);
+      s.col.push(col[0], col[1], col[2]);
+    }
+  };
+  return s;
+}
+const f3Face = (a, b, c) => f3Norm(f3Cross(
+  [b[0]-a[0], b[1]-a[1], b[2]-a[2]], [c[0]-a[0], c[1]-a[1], c[2]-a[2]]));
+
+/// An axis-aligned box from its NW-bottom corner, in the local metres everything here
+/// uses: (x,z) is the tile-grid corner, y is up off the ground. Every room plate and
+/// every stick of furniture is one of these.
+function f3Box(soup, x, y, z, w, h, d, col) {
+  const X = x + w, Y = y + h, Z = z + d;
+  const quad = (a, b, c, e, n) => { soup.tri(a, b, c, col, n, n, n); soup.tri(a, c, e, col, n, n, n); };
+  quad([x,y,z], [X,y,z], [X,y,Z], [x,y,Z], [0,-1,0]);
+  quad([x,Y,z], [x,Y,Z], [X,Y,Z], [X,Y,z], [0,1,0]);
+  quad([x,y,z], [x,Y,z], [X,Y,z], [X,y,z], [0,0,-1]);
+  quad([x,y,Z], [X,y,Z], [X,Y,Z], [x,Y,Z], [0,0,1]);
+  quad([x,y,z], [x,y,Z], [x,Y,Z], [x,Y,z], [-1,0,0]);
+  quad([X,y,z], [X,Y,z], [X,Y,Z], [X,y,Z], [1,0,0]);
+}
+
+/// Ear clipping. A Rossville footprint is an L or a T as often as it is a rectangle, and
+/// a triangle fan turns those inside out - the porch comes out filled and the notch does
+/// not. O(n^2) over rings of a dozen points, which costs nothing here. A ring that
+/// crosses itself stops early with what it has rather than spinning: a half-drawn floor
+/// is a better answer than a hung tab.
+function f3EarClip(pts) {
+  const n = pts.length;
+  if (n < 3) return [];
+  const idx = [...Array(n).keys()];
+  let area2 = 0;
+  for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i+1) % n]; area2 += a[0]*b[1] - b[0]*a[1]; }
+  if (area2 < 0) idx.reverse();          // one winding, so "is this corner convex" has one answer
+  const out = [];
+  let guard = 0;
+  while (idx.length > 3 && guard++ < 4000) {
+    let clipped = false;
+    for (let k = 0; k < idx.length; k++) {
+      const ia = idx[(k + idx.length - 1) % idx.length], ib = idx[k], ic = idx[(k+1) % idx.length];
+      const a = pts[ia], b = pts[ib], c = pts[ic];
+      if ((b[0]-a[0]) * (c[1]-a[1]) - (b[1]-a[1]) * (c[0]-a[0]) <= 0) continue;   // reflex: no ear
+      let inside = false;
+      for (const io of idx) {
+        if (io === ia || io === ib || io === ic) continue;
+        if (f3InTri(pts[io], a, b, c)) { inside = true; break; }
+      }
+      if (inside) continue;
+      out.push([ia, ib, ic]);
+      idx.splice(k, 1);
+      clipped = true;
+      break;
+    }
+    if (!clipped) break;
+  }
+  if (idx.length === 3) out.push([idx[0], idx[1], idx[2]]);
+  return out;
+}
+function f3InTri(p, a, b, c) {
+  const d1 = (p[0]-b[0]) * (a[1]-b[1]) - (a[0]-b[0]) * (p[1]-b[1]);
+  const d2 = (p[0]-c[0]) * (b[1]-c[1]) - (b[0]-c[0]) * (p[1]-c[1]);
+  const d3 = (p[0]-a[0]) * (c[1]-a[1]) - (c[0]-a[0]) * (p[1]-a[1]);
+  return !(((d1 < 0) || (d2 < 0) || (d3 < 0)) && ((d1 > 0) || (d2 > 0) || (d3 > 0)));
+}
+
+/// THE FALLBACK HOUSE. Most of Rossville has no exported mesh - only the owner's own
+/// models and the landmarks are ever written to the cache - so when /preview 404s the
+/// frame extrudes the building's OWN measured footprint rather than showing bare boxes
+/// on nothing: floor plate, walls to 3 m, flat cap, drawn translucent so the rooms read
+/// through it. It is not the house the game draws. It is the house the survey measured,
+/// which is the shape the rooms were fitted into, and it is drawn in the same local
+/// frame as the contract so the two agree when the real mesh arrives.
+function f3AddShell(soup, ring, bounds) {
+  const pts = [];
+  for (const q of ring) {
+    const p = [q[0] - bounds.x, q[1] - bounds.y], last = pts[pts.length - 1];
+    if (last && Math.abs(last[0]-p[0]) < 1e-6 && Math.abs(last[1]-p[1]) < 1e-6) continue;
+    pts.push(p);
+  }
+  if (pts.length > 2) {                       // the ring closes on its own first point
+    const f = pts[0], l = pts[pts.length - 1];
+    if (Math.abs(f[0]-l[0]) < 1e-6 && Math.abs(f[1]-l[1]) < 1e-6) pts.pop();
+  }
+  if (pts.length < 3) return false;
+  const H = F3_WALL_H;
+  const wall = [.74,.71,.65], cap = [.56,.52,.47], floor = [.63,.61,.56];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i+1) % pts.length];
+    soup.tri([a[0],0,a[1]], [b[0],0,b[1]], [b[0],H,b[1]], wall);
+    soup.tri([a[0],0,a[1]], [b[0],H,b[1]], [a[0],H,a[1]], wall);
+  }
+  const up = [0,1,0], down = [0,-1,0];
+  for (const [i, j, k] of f3EarClip(pts)) {
+    soup.tri([pts[i][0],0,pts[i][1]], [pts[j][0],0,pts[j][1]], [pts[k][0],0,pts[k][1]], floor, up, up, up);
+    soup.tri([pts[i][0],H,pts[i][1]], [pts[j][0],H,pts[j][1]], [pts[k][0],H,pts[k][1]], cap, down, down, down);
+  }
+  return true;
+}
+
+/// THE ROOF-OFF TOGGLE IS AN ORDERING, NOT A SECOND BUFFER. Every triangle standing
+/// entirely above 2.6 m goes to the back of the soup, so "roof off" is the same buffer
+/// drawn short - one upload, nothing to keep in step, and it reads the same way on the
+/// exported mesh as it does on the fallback shell's flat cap. Returns how many VERTICES
+/// survive the cut.
+function f3RoofSort(soup) {
+  const tris = soup.pos.length / 9, low = [], high = [];
+  for (let t = 0; t < tris; t++)
+    (Math.min(soup.pos[t*9+1], soup.pos[t*9+4], soup.pos[t*9+7]) > F3_ROOF_Y ? high : low).push(t);
+  const pos = new Array(soup.pos.length), nrm = new Array(soup.pos.length), col = new Array(soup.pos.length);
+  let w = 0;
+  for (const t of low.concat(high)) {
+    for (let k = 0; k < 9; k++) { pos[w+k] = soup.pos[t*9+k]; nrm[w+k] = soup.nrm[t*9+k]; col[w+k] = soup.col[t*9+k]; }
+    w += 9;
+  }
+  soup.pos = pos; soup.nrm = nrm; soup.col = col;
+  return low.length * 3;
+}
+
+// ---- the two files the editor writes -------------------------------------------------
+function f3ParseMtl(text) {
+  const kd = new Map();
+  let cur = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const t = raw.trim().split(/\s+/);
+    if (t[0] === "newmtl") { cur = t.slice(1).join(" "); kd.set(cur, [.8,.8,.8]); }
+    else if (t[0] === "Kd" && cur) kd.set(cur, [+t[1] || 0, +t[2] || 0, +t[3] || 0]);
+  }
+  return kd;
+}
+
+/// OBJ, and only the statements TownExport writes - v, vn, usemtl and f - plus the two a
+/// hand-made or re-exported file is likely to carry anyway: a face of more than three
+/// corners is fanned, and a negative index counts back from the end as the format says.
+/// Everything else is skipped rather than refused. A mesh that draws is worth more here
+/// than a parser that is right about a statement nobody writes.
+function f3ParseObj(text, kd) {
+  const soup = f3Soup(), V = [], N = [];
+  let col = [.78,.76,.72];
+  const at = (a, arr) => { const i = +a; return arr[i < 0 ? arr.length + i : i - 1]; };
+  for (const raw of text.split(/\r?\n/)) {
+    if (!raw || raw[0] === "#") continue;
+    const t = raw.trim().split(/\s+/);
+    if (t[0] === "v") V.push([+t[1], +t[2], +t[3]]);
+    else if (t[0] === "vn") N.push([+t[1], +t[2], +t[3]]);
+    else if (t[0] === "usemtl") col = (kd && kd.get(t.slice(1).join(" "))) || col;
+    else if (t[0] === "f") {
+      const c = [];
+      for (let i = 1; i < t.length; i++) {
+        const bits = t[i].split("/"), v = at(bits[0], V);
+        if (v) c.push([v, bits[2] ? at(bits[2], N) : null]);
+      }
+      for (let i = 2; i < c.length; i++)
+        soup.tri(c[0][0], c[i-1][0], c[i][0], col, c[0][1], c[i-1][1], c[i][1]);
+    }
+  }
+  return soup;
+}
+
+// ---- colour --------------------------------------------------------------------------
+// The seven domestic room kinds by hand, because those are the ones the owner will be
+// looking at; the other eighteen RoomKinds take a hue off their own name, which is at
+// least stable from lot to lot and beats eighteen greys.
+const F3_ROOM = { hall: [.80,.78,.72], living: [.85,.74,.60], kitchen: [.68,.81,.71],
+  bedroom: [.74,.77,.88], bathroom: [.67,.83,.86], scullery: [.79,.83,.69],
+  workroom: [.86,.79,.65] };
+/// FNV over the name, then an avalanche step. THE AVALANCHE IS NOT DECORATION: without
+/// it, measured on the real furniture kinds, Stove, Sofa, Sink, Bed and Table all landed
+/// between hue 0.72 and 0.82 - five purple swatches and a legend nobody can read - because
+/// short similar strings leave FNV's low bits too close together to survive the modulus.
+function f3Hue(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return ((h >>> 0) % 3600) / 3600;
+}
+function f3Hsl(h, s, l) {
+  const f = n => { const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l);
+    return l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1))); };
+  return [f(0), f(8), f(4)];
+}
+const f3RoomTint = k => F3_ROOM[String(k || "").toLowerCase()] || f3Hsl(f3Hue(String(k || "room")), .30, .76);
+const f3FurnTint = k => f3Hsl(f3Hue(String(k || "thing")), .42, .52);
+const f3Hex = c => "#" + c.map(v => Math.round(Math.max(0, Math.min(1, v)) * 255)
+  .toString(16).padStart(2, "0")).join("");
+const f3Ft = m => { const v = m * F3_M2FT; return v < 10 ? v.toFixed(1) : String(Math.round(v)); };
+
+// ---- one live frame ------------------------------------------------------------------
+const F3_VS = `
+attribute vec3 aPos; attribute vec3 aNrm; attribute vec3 aCol;
+uniform mat4 uMVP;
+varying vec3 vCol; varying vec3 vNrm;
+void main() { vCol = aCol; vNrm = aNrm; gl_Position = uMVP * vec4(aPos, 1.0); }`;
+const F3_FS = `
+precision mediump float;
+uniform vec3 uLight; uniform float uAlpha;
+varying vec3 vCol; varying vec3 vNrm;
+void main() {
+  // Two-sided lambert. Nothing is culled here - the fallback shell is looked at from the
+  // inside as often as the outside, and a roofless mesh shows the back of every wall - so
+  // a face turned away from the light is lit as though it faced it rather than going black.
+  float lam = abs(dot(normalize(vNrm), uLight));
+  gl_FragColor = vec4(vCol * (0.34 + 0.66 * lam), uAlpha);
+}`;
+
+const f3Live = new Map();   // canvas -> the running frame. Insertion order IS the age order.
+
+/// The background the frame clears to, taken off the canvas's own CSS so the picture sits
+/// in the panel in whichever theme the page is wearing rather than in a fixed grey.
+function f3Bg(el) {
+  const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+  return m ? [m[0]/255, m[1]/255, m[2]/255] : [.1,.1,.1];
+}
+
+function f3Start(canvas, geom) {
+  // preserveDrawingBuffer, because this frame draws ON DEMAND and not on a rAF loop:
+  // without it the buffer may be thrown away the moment it has been composited, and the
+  // next repaint - or a screenshot - shows an empty rectangle over a perfectly good scene.
+  const gl = canvas.getContext("webgl", { antialias: true, alpha: false, preserveDrawingBuffer: true });
+  if (!gl) return null;
+
+  const compile = (type, src) => {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+    return sh;
+  };
+  const vs = compile(gl.VERTEX_SHADER, F3_VS), fs = compile(gl.FRAGMENT_SHADER, F3_FS);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+
+  const mk = arr => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+    return b;
+  };
+  const bufs = { pos: mk(geom.pos), nrm: mk(geom.nrm), col: mk(geom.col) };
+  const aPos = gl.getAttribLocation(prog, "aPos"), aNrm = gl.getAttribLocation(prog, "aNrm"),
+        aCol = gl.getAttribLocation(prog, "aCol");
+  const uMVP = gl.getUniformLocation(prog, "uMVP"), uLight = gl.getUniformLocation(prog, "uLight"),
+        uAlpha = gl.getUniformLocation(prog, "uAlpha");
+  const light = f3Norm([.42, .86, .28]);
+
+  const cam = { yaw: 0.72, pitch: 0.52, dist: Math.max(4, geom.radius * 3.0) };
+  let roofOff = false;
+
+  function render() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.max(60, Math.round(canvas.clientWidth * dpr));
+    const h = Math.max(60, Math.round(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    gl.viewport(0, 0, w, h);
+    const bg = f3Bg(canvas);
+    gl.clearColor(bg[0], bg[1], bg[2], 1);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    const cp = Math.cos(cam.pitch), eye = [
+      geom.centre[0] + cam.dist * cp * Math.sin(cam.yaw),
+      geom.centre[1] + cam.dist * Math.sin(cam.pitch),
+      geom.centre[2] + cam.dist * cp * Math.cos(cam.yaw)];
+    const mvp = f3Mul(f3Perspective(0.85, w / h, Math.max(0.05, cam.dist * .02), cam.dist * 6 + 200),
+                      f3LookAt(eye, geom.centre, [0,1,0]));
+
+    gl.useProgram(prog);
+    gl.uniformMatrix4fv(uMVP, false, mvp);
+    gl.uniform3f(uLight, light[0], light[1], light[2]);
+    for (const [loc, buf] of [[aPos, bufs.pos], [aNrm, bufs.nrm], [aCol, bufs.col]]) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+    }
+
+    gl.disable(gl.BLEND);
+    gl.uniform1f(uAlpha, 1);
+    const solid = roofOff ? geom.solidLow : geom.solidAll;
+    if (solid) gl.drawArrays(gl.TRIANGLES, 0, solid);
+
+    // The fallback shell goes last, blended, with the depth buffer read but not written -
+    // the standard way to look through a single translucent skin at opaque things inside
+    // it without sorting anything. There is only ever the one skin, so there is nothing
+    // for the missing sort to get wrong.
+    const glassy = roofOff ? geom.glassyLow : geom.glassyAll;
+    if (glassy) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+      gl.uniform1f(uAlpha, 0.42);
+      gl.drawArrays(gl.TRIANGLES, geom.solidAll, glassy);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
+  }
+
+  let drag = null;
+  const down = e => {
+    drag = { x: e.clientX, y: e.clientY };
+    canvas.classList.add("turning");
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* a mouse without capture still drags */ }
+  };
+  const move = e => {
+    if (!drag) return;
+    cam.yaw -= (e.clientX - drag.x) * 0.010;
+    cam.pitch = Math.max(-0.20, Math.min(1.45, cam.pitch + (e.clientY - drag.y) * 0.008));
+    drag = { x: e.clientX, y: e.clientY };
+    render();
+  };
+  const up = () => { drag = null; canvas.classList.remove("turning"); };
+  // preventDefault, because the panel this canvas sits in SCROLLS: without it a dolly
+  // scrolls the house out of the window it is being looked at in.
+  const wheel = e => {
+    e.preventDefault();
+    cam.dist = Math.max(geom.radius * 0.35, Math.min(geom.radius * 14,
+      cam.dist * Math.exp(e.deltaY * 0.0012)));
+    render();
+  };
+  canvas.addEventListener("pointerdown", down);
+  canvas.addEventListener("pointermove", move);
+  canvas.addEventListener("pointerup", up);
+  canvas.addEventListener("pointercancel", up);
+  canvas.addEventListener("wheel", wheel, { passive: false });
+
+  render();
+  return {
+    canvas, render,
+    setRoof(v) { roofOff = !!v; render(); },
+    dispose() {
+      canvas.removeEventListener("pointerdown", down);
+      canvas.removeEventListener("pointermove", move);
+      canvas.removeEventListener("pointerup", up);
+      canvas.removeEventListener("pointercancel", up);
+      canvas.removeEventListener("wheel", wheel);
+      gl.deleteBuffer(bufs.pos); gl.deleteBuffer(bufs.nrm); gl.deleteBuffer(bufs.col);
+      gl.deleteProgram(prog); gl.deleteShader(vs); gl.deleteShader(fs);
+      // Deleting the objects does not hand the CONTEXT back, and the context is the
+      // scarce thing. This is the only way a page can say "I am done with this one".
+      const lose = gl.getExtension("WEBGL_lose_context");
+      if (lose) lose.loseContext();
+    }
+  };
+}
+
+// ---- what the frame is made of -------------------------------------------------------
+/// The two soups laid end to end in one buffer, each with its roof triangles pushed to
+/// its own back, plus the bounding sphere the camera opens on.
+function f3Finish(solid, glassy) {
+  const solidLow = f3RoofSort(solid), glassyLow = f3RoofSort(glassy);
+  const pos = new Float32Array(solid.pos.concat(glassy.pos));
+  const geom = {
+    pos, nrm: new Float32Array(solid.nrm.concat(glassy.nrm)),
+    col: new Float32Array(solid.col.concat(glassy.col)),
+    solidLow, solidAll: solid.pos.length / 3,
+    glassyLow, glassyAll: glassy.pos.length / 3,
+  };
+  let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) {
+    if (pos[i+k] < lo[k]) lo[k] = pos[i+k];
+    if (pos[i+k] > hi[k]) hi[k] = pos[i+k];
+  }
+  if (!isFinite(lo[0])) { lo = [0,0,0]; hi = [1,1,1]; }
+  geom.centre = [(lo[0]+hi[0])/2, (lo[1]+hi[1])/2, (lo[2]+hi[2])/2];
+  geom.radius = Math.max(1.5, Math.hypot(hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2]) / 2);
+  return geom;
+}
+
+async function f3FetchMesh(p, i) {
+  if (!LIVE) return null;                       // off the disk there is no server to ask
+  try {
+    const r = await fetch(`/preview/${p}-${i}.obj`, { cache: "no-store" });
+    if (!r.ok) return null;                     // 404 is the ordinary case, not a fault
+    const objText = await r.text();
+    let kd = null;
+    try {
+      const m = await fetch(`/preview/${p}-${i}.mtl`, { cache: "no-store" });
+      if (m.ok) kd = f3ParseMtl(await m.text());
+    } catch (e) { /* colours are a nicety; the mesh is the point */ }
+    const soup = f3ParseObj(objText, kd);
+    return soup.pos.length ? soup : null;
+  } catch (e) { return null; }
+}
+
+/// Rooms and furniture, listed under the picture in the same colours they are drawn in.
+/// 3D text in a frame this size is unreadable, so the names live here instead - and a
+/// legend also answers "what am I looking at" for the pieces buried behind other pieces.
+function f3LegendHtml(gb) {
+  if (!gb) return "";
+  let s = "";
+  const rooms = gb.rooms || [];
+  if (rooms.length) {
+    s += `<div class="g">rooms</div>` + rooms.map(r =>
+      `<div><span class="sw" style="background:${f3Hex(f3RoomTint(r.kind))}"></span>`
+      + `${esc(r.name || r.kind || "room")} <span class="sz">${f3Ft(r.w)} × ${f3Ft(r.h)} ft</span></div>`
+    ).join("");
+  }
+  // Furniture is gathered by kind: eight chairs are eight rows of noise and one useful
+  // fact, which is that there are eight of them.
+  const by = new Map();
+  for (const f of (gb.furniture || [])) {
+    const k = f.kind || "thing";
+    const e = by.get(k) || { n: 0, w: f.w, h: f.h, y: +f.height || 0 };
+    e.n++; by.set(k, e);
+  }
+  if (by.size) {
+    s += `<div class="g">furniture</div>` + [...by].map(([k, e]) =>
+      `<div><span class="sw" style="background:${f3Hex(f3FurnTint(k))}"></span>`
+      + `${esc(k)}${e.n > 1 ? ` ×${e.n}` : ""} `
+      + `<span class="sz">${f3Ft(e.w)} × ${f3Ft(e.h)} ft${e.y ? `, ${f3Ft(e.y)} ft high` : ""}</span></div>`
+    ).join("");
+  }
+  return s;
+}
+
+function f3Close(card) {
+  const cv = card.querySelector(".f3-cv");
+  const frame = cv && f3Live.get(cv);
+  if (frame) {
+    frame.dispose();
+    f3Live.delete(cv);
+    // AND THE CANVAS GOES WITH IT. A context put down with loseContext() is gone for
+    // good: getContext() on that same canvas hands back the lost one rather than a new
+    // one, and every call on a lost context returns null - which surfaced as a card that
+    // could be opened once and then never again, complaining that a shader would not
+    // compile. A fresh canvas is the only way back.
+    const fresh = document.createElement("canvas");
+    fresh.className = "f3-cv";
+    cv.replaceWith(fresh);
+  }
+  card.classList.remove("on");
+  const btn = card.querySelector(".f3-btn");
+  if (btn) btn.textContent = "See it in 3D";
+  const roof = card.querySelector(".f3-roof");
+  if (roof) roof.checked = false;
+}
+
+/// Every open frame shut and every context handed back. Called before the panel's
+/// building list is rewritten and when the panel is closed - a canvas that has been
+/// dropped out of the document still holds its context until the browser feels like
+/// collecting it, and a browser only ever hands out a dozen or so.
+function f3CloseAll() {
+  for (const frame of [...f3Live.values()]) {
+    const card = frame.canvas.closest(".f3");
+    if (card) f3Close(card); else { frame.dispose(); f3Live.delete(frame.canvas); }
+  }
+}
+
+async function f3OpenCard(card) {
+  const p = +card.dataset.p, i = +card.dataset.i;
+  const noteEl = card.querySelector(".f3-note"), legEl = card.querySelector(".f3-leg");
+  card.classList.add("on");
+  card.querySelector(".f3-btn").textContent = "Hide the 3D frame";
+  noteEl.textContent = "looking…";
+  legEl.innerHTML = "";
+
+  await INTERIORS_READY;               // a click can beat the fetch this page fires at load
+  const gb = INTERIORS.get(p + "|" + i) || null;
+  const b = DATA.buildings.find(x => x.p === p && x.i === i);
+  const mesh = await f3FetchMesh(p, i);
+  if (!card.isConnected || !card.classList.contains("on")) return;   // lot changed under us
+
+  const notes = [];
+  const solid = mesh || f3Soup(), glassy = f3Soup();
+
+  // WHICH CORNER IS THE ORIGIN. The interiors report carries the building's own bounds
+  // rect and that is the frame TownExport wrote the OBJ in, so it wins wherever it
+  // exists. Without it the ring's own bounding box is the same corner measured a
+  // different way, which keeps the fallback shell in one frame rather than two.
+  const bounds = (gb && gb.bounds) ? gb.bounds : (b ? {
+    x: Math.floor(Math.min(...b.r.map(q => q[0]))),
+    y: Math.floor(Math.min(...b.r.map(q => q[1]))) } : { x: 0, y: 0 });
+
+  if (!mesh) {
+    notes.push(LIVE ? "no export yet — press Publish or Noir &gt; Export For The Map Tool"
+                    : "opened off the disk — no server to fetch the exported mesh from");
+    if (!(b && f3AddShell(glassy, b.r, bounds)))
+      notes.push("no footprint to fall back on either");
+  }
+  if (gb) {
+    for (const r of (gb.rooms || []))
+      f3Box(solid, r.x - bounds.x, 0.02, r.y - bounds.y, r.w, 0.05, r.h, f3RoomTint(r.kind));
+    for (const f of (gb.furniture || []))
+      f3Box(solid, f.x - bounds.x, 0.07, f.y - bounds.y, f.w,
+            Math.max(0.15, +f.height || 0.7), f.h, f3FurnTint(f.kind));
+  } else {
+    notes.push("no interiors report yet — build the town once");
+  }
+
+  const geom = f3Finish(solid, glassy);
+  legEl.innerHTML = f3LegendHtml(gb);
+  noteEl.innerHTML = notes.join("<br>");
+
+  if (!geom.pos.length) { noteEl.innerHTML = notes.concat("nothing to draw for this building").join("<br>"); return; }
+  // A browser hands out a dozen or so WebGL contexts and then starts killing the oldest by
+  // force - which looks like a black rectangle and logs nothing. Four at a time, oldest shut
+  // first, never reaches that. COUNTED HERE AND NOT AT THE TOP OF THIS FUNCTION, because
+  // this is the moment a context is actually taken: five cards opened together all await
+  // the same fetches, and a cap read before those awaits is five cards each seeing zero.
+  const cv = card.querySelector(".f3-cv");
+  while (f3Live.size >= F3_MAX) {
+    const oldest = f3Live.values().next().value;
+    const oc = oldest.canvas.closest(".f3");
+    if (oc && oldest.canvas !== cv) f3Close(oc); else { oldest.dispose(); f3Live.delete(oldest.canvas); }
+  }
+  let frame = null;
+  try { frame = f3Start(cv, geom); } catch (e) { frame = null; noteEl.innerHTML = "the 3D frame failed to start: " + esc(e.message); }
+  if (!frame) {
+    if (!noteEl.textContent) noteEl.textContent = "this browser gave no WebGL context — nothing can be drawn here";
+    return;
+  }
+  f3Live.set(cv, frame);
+  frame.setRoof(card.querySelector(".f3-roof").checked);
+}
+
+function f3Wire(host) {
+  for (const card of host.querySelectorAll(".f3")) {
+    card.querySelector(".f3-btn").onclick = () =>
+      card.classList.contains("on") ? f3Close(card) : f3OpenCard(card);
+    card.querySelector(".f3-roof").onchange = e => {
+      const frame = f3Live.get(card.querySelector(".f3-cv"));
+      if (frame) frame.setRoof(e.target.checked);
+    };
+  }
+  // The lot's main building opens by itself: the answer to "what does this house look
+  // like" belongs on screen when the house is, not one more click away. Outbuildings stay
+  // shut - a shed is rarely the question, and every open frame costs a context.
+  const first = host.querySelector('.f3[data-role="primary"]') || host.querySelector(".f3");
+  if (first) f3OpenCard(first);
+}
+
+// A frame draws on demand and never on a loop, so the one event it cannot see for itself
+// is the window changing size under it (a moved window can change devicePixelRatio too).
+addEventListener("resize", () => { for (const frame of f3Live.values()) frame.render(); });
+
 resize(); fitView(); draw();
 loadVerdicts();
 loadWalks();
 loadPlaces();
 loadVerdictFromGame();
 loadPlans();
-loadInteriors();
+// HELD AS A PROMISE, not just fired: the 3D frame can be opened before this fetch has
+// come back, and rooms that arrive a moment late look exactly like a house that has none.
+const INTERIORS_READY = loadInteriors();
 </script>
