@@ -4808,11 +4808,18 @@ function f3AddShell(soup, ring, bounds) {
   }
   if (pts.length < 3) return false;
   const H = F3_WALL_H;
-  const wall = [.74,.71,.65], cap = [.56,.52,.47], floor = [.63,.61,.56];
+  // The stand-in shell should still say "house" at a glance: pale clapboard walls, a dark
+  // fascia band under the roof line so the eave edge reads even in flat light, and a roof
+  // cap in the town's own dull shingle brown rather than the same grey as everything else.
+  // One grey box from above was the owner's first impression of this frame; never again.
+  const wall = [.80,.76,.68], fascia = [.33,.30,.27], cap = [.47,.38,.33], floor = [.63,.61,.56];
+  const FB = Math.min(0.22, H * 0.08);        // fascia band height
   for (let i = 0; i < pts.length; i++) {
     const a = pts[i], b = pts[(i+1) % pts.length];
-    soup.tri([a[0],0,a[1]], [b[0],0,b[1]], [b[0],H,b[1]], wall);
-    soup.tri([a[0],0,a[1]], [b[0],H,b[1]], [a[0],H,a[1]], wall);
+    soup.tri([a[0],0,a[1]], [b[0],0,b[1]], [b[0],H-FB,b[1]], wall);
+    soup.tri([a[0],0,a[1]], [b[0],H-FB,b[1]], [a[0],H-FB,a[1]], wall);
+    soup.tri([a[0],H-FB,a[1]], [b[0],H-FB,b[1]], [b[0],H,b[1]], fascia);
+    soup.tri([a[0],H-FB,a[1]], [b[0],H,b[1]], [a[0],H,a[1]], fascia);
   }
   const up = [0,1,0], down = [0,-1,0];
   for (const [i, j, k] of f3EarClip(pts)) {
@@ -4967,7 +4974,10 @@ function f3Start(canvas, geom) {
         uAlpha = gl.getUniformLocation(prog, "uAlpha");
   const light = f3Norm([.42, .86, .28]);
 
-  const cam = { yaw: 0.72, pitch: 0.52, dist: Math.max(4, geom.radius * 3.0) };
+  // Street height, not helicopter height: at pitch .52 a squat fallback shell is seen
+  // mostly cap-on and reads as "a grey square" - the owner's exact words. A low eye and a
+  // closer stand show two walls and the roof edge, which is what "a house" looks like.
+  const cam = { yaw: 0.72, pitch: 0.34, dist: Math.max(4, geom.radius * 2.1) };
   let roofOff = false;
 
   function render() {
@@ -5234,7 +5244,11 @@ async function f3OpenCard(card) {
   if (!mesh) {
     notes.push(LIVE ? "no export yet — press Publish (editor closed), or Noir &gt; Export For The Map Tool"
                     : "opened off the disk — no server to fetch the exported mesh from");
-    if (!(ring && f3AddShell(glassy, ring, bounds)))
+    // Glass is for seeing the contents through; an EMPTY shell drawn translucent is just
+    // a grey slab (the owner's first look at this frame, in his words: "I just see a
+    // square"). No contents, no glass — the stand-in renders as a solid little house.
+    const hasContents = !!(gb && ((gb.rooms || []).length || (gb.furniture || []).length));
+    if (!(ring && f3AddShell(hasContents ? glassy : solid, ring, bounds)))
       notes.push("no footprint to fall back on either");
   }
   if (gb) {
