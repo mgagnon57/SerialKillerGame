@@ -75,6 +75,18 @@ configuration the baseline is stated for.
 dotnet test -c Release tools/Noir.Core.Tests/Noir.Core.Tests.csproj
 ```
 
+> **639 pass, 0 fail, 639 total, 8 skipped, 4 m 57 s.** Measured 2026-08-19, after authored
+> interiors landed (+43 over the 596 below: `AuthoredInteriorTests` (+4) — an authored floor
+> plan overrides the generated interior for a single-unit building and moves nothing in any
+> other, a multi-unit building ignores the plan, and a sealed authored room gets a doorway
+> punched rather than left unreachable; +15 across `Room.Name`, `RoomWords` and their own test
+> file — a room remembers what the owner called it, and the name is what picks its `RoomKind`;
+> `AuthoredFurnitureTests` (+3) plus `FurnitureWordsTests` (+21) — the plan's furniture replaces
+> the generated pieces, and only inside an authored room). The game now consumes
+> `Content/floorplans/<parcel>-<index>.json`: `FloorPlans.For` (`Assets/Noir/Unity/FloorPlans.cs`)
+> converts a plan to `PlaceSpec.AuthoredInterior`, and 673-0.json authors 11 rooms for "408 Holmes
+> Street". Plan: `docs/superpowers/plans/2026-08-19-authored-interiors.md`.
+>
 > **596 pass, 0 fail, 596 total, 8 skipped, 2 m 12 s.** Measured 2026-08-18 (evening), after
 > car collisions phase 1 landed (+14: `CrashEventsTests` (3), `EventTestimonyTests`' collision
 > sentence, ask-merge and crash-merge additions (3), `CrashPlannerTests` (4), and
@@ -296,7 +308,10 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 ```
 
 > **BASELINE, 2026-08-19 (midday): 35 pass, 1 fail, 3 skipped of 39, 2421 s — and the
-> expected standing number is 36 pass, 3 skipped.** The owner-model doors feature added
+> expected standing number is 37 pass, 3 skipped**, now that `TheOwnersFloorPlanIsTheHousesRealRooms`
+> has joined the assembly (below) — unlike the two door gates, it runs unignored in the plan
+> town too, since the authored plan applies to the generated 408 there as well. The owner-model
+> doors feature added
 > three gates (`TheOwnersDoorsSurviveTheBake`, `TheFrontDoorOfHolmesAdmitsThePlayer` — which
 > DRIVES the actual CharacterController out the front door and back, the only probe that
 > ever agreed with the owner's feet — and `ThePlayerSpawnsAtHolmesFrontDoor`). **The plan

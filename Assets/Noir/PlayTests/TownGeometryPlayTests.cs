@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -727,6 +728,38 @@ namespace Noir.PlayTests
                 "408 should hinge front, rear, garage service and the overhead panel");
             Assert.That(doors.Leafless(), Is.EqualTo(0),
                 "a hinge with no renderer is a door the bake ate");
+        }
+
+        /// <summary>408's rooms come from the owner's authored plan, not the generated
+        /// interior grammar - and unlike the owner-door gates above, this needs no
+        /// Assert.Ignore in the plan town: FloorPlans.For/SeatOnSurvey apply the authored
+        /// plan to the GENERATED 408 there too, so the plan gate can see it just as the
+        /// dressed town can. 673-0.json authors 11 rooms (3 bedrooms, 1 kitchen, plus
+        /// hall/bath/living/dining/family/second bath); conversion may drop slivers and
+        /// the door-blind guard may repair a wall, so this is a floor on count and kind,
+        /// not an equality on either.</summary>
+        [UnityTest]
+        public IEnumerator TheOwnersFloorPlanIsTheHousesRealRooms()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var world = CityUnderTest.World;
+            Assert.That(world, Is.Not.Null, "the town did not build");
+
+            var place = world.AllPlaces.FirstOrDefault(p => p.Name == "408 Holmes Street");
+            if (place == null) { Assert.Ignore("no 408 Holmes Street in this town"); yield break; }
+
+            var rooms = world.AllRooms.Where(r => r.Building.Equals(place.Id)).ToList();
+
+            Debug.Log($"[floorplans] 408 Holmes Street: {rooms.Count} room(s), "
+                    + $"{rooms.Count(r => r.Kind == RoomKind.Bedroom)} bedroom(s), "
+                    + $"{rooms.Count(r => r.Kind == RoomKind.Kitchen)} kitchen(s)");
+
+            Assert.That(rooms.Count, Is.GreaterThanOrEqualTo(9),
+                "408's rooms are not the authored plan's");
+            Assert.That(rooms.Count(r => r.Kind == RoomKind.Bedroom), Is.GreaterThanOrEqualTo(3),
+                "the authored plan names three bedrooms");
+            Assert.That(rooms.Any(r => r.Kind == RoomKind.Kitchen),
+                "the authored plan names a kitchen");
         }
 
         /// <summary>The front doorway is a hole a body fits through, and the floor inside is
