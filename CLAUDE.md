@@ -664,9 +664,13 @@ bare, or capture the exit code directly.
 `tools/group-terraces.py`, both of which back it up first. Neither should be re-run without
 reading what it would change. Everything else reads it.
 
-**The browser map is how the rulings are made.** `docs/rossville-buildings.html`, built by
-`python tools/build-viewer-data.py`, served by `python tools/serve-viewer.py` on
-`http://127.0.0.1:8750`; the server owns the write path (`POST /__verdict`). The HTML is
+**The browser map is how the rulings are made — and the floor plans.** `docs/rossville-buildings.html`,
+built by `python tools/build-viewer-data.py`, served by `python tools/serve-viewer.py` on
+`http://127.0.0.1:8750`; the server owns every write path (`POST /__verdict`, `/__walk`,
+`/__place`, `/__floorplan`). Since 2026-08-19 a building's card carries **Floor plan…**: an
+editor seeded with the measured footprint, saving one JSON per building to
+`Content/floorplans/<parcel>-<index>.json` (tracked; authored; the game does not read them
+yet — see IDEAS). Export SVG/PNG hands Designer a to-scale reference. The HTML is
 gitignored and regenerable from `tools/viewer-template.html`. Lose this and the one file nothing
 can rebuild becomes unmaintainable. **Do not open it at the owner unasked.**
 

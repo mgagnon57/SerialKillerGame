@@ -1,0 +1,220 @@
+{
+ "name": "408 Holmes Street - main floor",
+ "shell": {
+  "w": 49,
+  "d": 41
+ },
+ "rooms": [
+  {
+   "id": "laundry",
+   "name": "Laundry",
+   "x": 0,
+   "y": 0,
+   "w": 16,
+   "h": 14
+  },
+  {
+   "id": "family",
+   "name": "Family room",
+   "x": 16,
+   "y": 0,
+   "w": 19,
+   "h": 14
+  },
+  {
+   "id": "halfbath",
+   "name": "Half bath",
+   "x": 35,
+   "y": 0,
+   "w": 14,
+   "h": 7
+  },
+  {
+   "id": "backhall",
+   "name": "Back hall",
+   "x": 35,
+   "y": 7,
+   "w": 14,
+   "h": 7
+  },
+  {
+   "id": "fullbath",
+   "name": "Full bath",
+   "x": 0,
+   "y": 14,
+   "w": 9.5,
+   "h": 11
+  },
+  {
+   "id": "kitchen",
+   "name": "Kitchen + dining",
+   "x": 9.5,
+   "y": 14,
+   "w": 14.5,
+   "h": 11
+  },
+  {
+   "id": "living",
+   "name": "Living room",
+   "x": 24,
+   "y": 14,
+   "w": 25,
+   "h": 27
+  },
+  {
+   "id": "hall",
+   "name": "Hall",
+   "x": 9.5,
+   "y": 25,
+   "w": 14.5,
+   "h": 4
+  },
+  {
+   "id": "bedpink",
+   "name": "Bedroom (pink)",
+   "x": 0,
+   "y": 29,
+   "w": 14,
+   "h": 12
+  },
+  {
+   "id": "bedred",
+   "name": "Bedroom (stripe)",
+   "x": 14,
+   "y": 29,
+   "w": 10,
+   "h": 12
+  }
+ ],
+ "openings": [
+  {
+   "id": "o1",
+   "roomId": "living",
+   "side": "S",
+   "off": 3.5,
+   "w": 11,
+   "kind": "window"
+  },
+  {
+   "id": "o2",
+   "roomId": "living",
+   "side": "S",
+   "off": 17,
+   "w": 3.5,
+   "kind": "door"
+  },
+  {
+   "id": "o3",
+   "roomId": "living",
+   "side": "N",
+   "off": 1,
+   "w": 4,
+   "kind": "door"
+  },
+  {
+   "id": "o4",
+   "roomId": "living",
+   "side": "N",
+   "off": 8.5,
+   "w": 8,
+   "kind": "fireplace"
+  },
+  {
+   "id": "o5",
+   "roomId": "living",
+   "side": "W",
+   "off": 11,
+   "w": 4,
+   "kind": "door"
+  },
+  {
+   "id": "o6",
+   "roomId": "kitchen",
+   "side": "N",
+   "off": 3,
+   "w": 6,
+   "kind": "window"
+  },
+  {
+   "id": "o7",
+   "roomId": "family",
+   "side": "N",
+   "off": 4,
+   "w": 6,
+   "kind": "window"
+  },
+  {
+   "id": "o8",
+   "roomId": "family",
+   "side": "N",
+   "off": 12,
+   "w": 4.5,
+   "kind": "door"
+  },
+  {
+   "id": "o9",
+   "roomId": "laundry",
+   "side": "W",
+   "off": 4,
+   "w": 5,
+   "kind": "window"
+  },
+  {
+   "id": "o10",
+   "roomId": "fullbath",
+   "side": "W",
+   "off": 3,
+   "w": 4.5,
+   "kind": "window"
+  },
+  {
+   "id": "o11",
+   "roomId": "bedpink",
+   "side": "W",
+   "off": 6,
+   "w": 5,
+   "kind": "window"
+  },
+  {
+   "id": "o12",
+   "roomId": "bedpink",
+   "side": "S",
+   "off": 3,
+   "w": 6,
+   "kind": "window"
+  },
+  {
+   "id": "o13",
+   "roomId": "bedpink",
+   "side": "N",
+   "off": 10,
+   "w": 3,
+   "kind": "door"
+  },
+  {
+   "id": "o14",
+   "roomId": "bedred",
+   "side": "S",
+   "off": 2,
+   "w": 6,
+   "kind": "window"
+  },
+  {
+   "id": "o15",
+   "roomId": "bedred",
+   "side": "N",
+   "off": 4,
+   "w": 3,
+   "kind": "door"
+  },
+  {
+   "id": "o16",
+   "roomId": "halfbath",
+   "side": "S",
+   "off": 5,
+   "w": 2.5,
+   "kind": "door"
+  }
+ ],
+ "notes": "DRAFT from the 2021 listing photos (Downloads\\Holmes Ave\\408 Holmes Ave\\listing-2021) - to be corrected by the owner, who grew up in the house.\nOpen questions:\n1. Where is the attic stair? (Finished attic room upstairs: sloped ceilings, gable window, dark hardwood.)\n2. Bedrooms west with the hall between - right?\n3. Family room: original 1954 or later rear addition?\n4. Half bath - off the back hall, or off a bedroom?\n5. Third bedroom = the attic room?\n6. Basement, or slab/crawl?\n7. Where does the kitchen really sit? Its windows imply an outside wall.\nSouth faces Holmes Ave; north is the alley and the 53x36 ft detached garage."
+}

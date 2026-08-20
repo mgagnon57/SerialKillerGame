@@ -2661,7 +2661,9 @@ function show(i) {
           <dt>Covers</dt><dd>${cover.toFixed(0)}% of lot</dd>
           ${perFt ? `<dt>Market ÷ footprint</dt><dd>$${perFt}/sq ft</dd>` : ""}
           <dt>Role</dt><dd><span class="chip ${b.role}">${b.role}</span></dd>
-        </dl></div>`;
+        </dl>
+        <button class="w" style="margin-top:7px" onclick="openFloorPlan(${b.p},${b.i})">${
+          PLANS.has(b.p + "|" + b.i) ? "Floor plan ✓ — edit" : "Floor plan…"}</button></div>`;
     }).join("");
   draw();
 }
@@ -3558,9 +3560,405 @@ addEventListener("beforeunload", e => {
   e.returnValue = "";
 });
 
+// ===================================================================================
+// THE FLOOR-PLAN EDITOR. Click a lot, click "Floor plan…" on one of its buildings, and
+// draw what the inside looked like - the same act as ruling the lot, one layer deeper.
+// The shell comes seeded from the building's own measured footprint (oriented box, in
+// feet); the drawing is saved through the server to Content/floorplans/<lot>-<i>.json,
+// one file per building so a save can only ever touch the plan it is about. Export SVG
+// or PNG hands Designer a to-scale reference to model against.
+// ===================================================================================
+
+const PLANS = new Set();
+async function loadPlans() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__floorplans", { cache: "no-store" });
+    (await r.json()).forEach(k => PLANS.add(k));
+  } catch (e) { /* server gone is a real state; badges just stay plain */ }
+}
+
+document.body.insertAdjacentHTML("beforeend", `
+<style>
+  #fpOv { position:fixed; inset:0; background:rgba(20,16,10,.55); z-index:60; display:none; }
+  #fpOv.on { display:flex; align-items:center; justify-content:center; }
+  #fpBox { background:#f7f4ee; color:#1c1c1c; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.5);
+           width:min(96vw,1280px); height:min(94vh,860px); display:flex; flex-direction:column; overflow:hidden;
+           font-family:"Segoe UI",Arial,sans-serif; }
+  #fpHead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:9px 12px;
+            background:#fff; border-bottom:2px solid #ddd; }
+  #fpHead h3 { margin:0 10px 0 0; font-size:15px; font-family:inherit; }
+  #fpHead button { font-size:12.5px; padding:5px 9px; border:1px solid #999; background:#fafafa;
+                   border-radius:5px; cursor:pointer; color:#1c1c1c; width:auto; }
+  #fpHead button:hover { background:#efe9dd; }
+  #fpHead button.go { background:#2e6b2e; border-color:#2e6b2e; color:#fff; font-weight:600; }
+  #fpHead button:disabled { opacity:.4; cursor:default; }
+  #fpDirty { color:#a22; font-weight:700; font-size:12.5px; }
+  #fpMain { display:flex; flex:1; min-height:0; }
+  #fpWrap { flex:1; overflow:auto; padding:8px; }
+  #fpWrap svg { background:#fff; border:1px solid #ccc; touch-action:none; }
+  #fpSide { width:270px; min-width:270px; padding:10px; border-left:2px solid #ddd; background:#fff;
+            overflow-y:auto; font-size:12.5px; }
+  #fpSide h4 { margin:2px 0 6px; font-size:13.5px; }
+  #fpSide label { display:block; margin:6px 0 2px; font-weight:600; font-size:11.5px; color:#333; }
+  #fpSide input, #fpSide select, #fpSide textarea { width:100%; font:inherit; font-size:12.5px;
+            padding:3px 5px; border:1px solid #bbb; border-radius:4px; background:#fff; color:#1c1c1c; }
+  #fpSide textarea { height:120px; resize:vertical; }
+  #fpSide .duo { display:flex; gap:6px; } #fpSide .duo>div { flex:1; }
+  #fpSide .btns { display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
+  #fpSide .btns button { font-size:12px; padding:4px 8px; border:1px solid #999; background:#fafafa;
+            border-radius:4px; cursor:pointer; color:#1c1c1c; width:auto; }
+  #fpSide .btns .bad { border-color:#a33; color:#a33; }
+  #fpSide .hint { color:#666; font-size:11.5px; line-height:1.45; margin-top:8px; }
+</style>
+<div id="fpOv"><div id="fpBox">
+  <div id="fpHead">
+    <h3 id="fpTitle">Floor plan</h3>
+    <button class="go" id="fpSave">Save</button>
+    <button id="fpSvgB">Export SVG</button>
+    <button id="fpPngB">Export PNG</button>
+    <button id="fpDims">Copy dims</button>
+    <button id="fpRoomB">+ Room</button>
+    <button id="fpUndoB" title="Ctrl+Z">Undo</button>
+    <span style="font-size:12px;color:#444">shell <input id="fpShW" type="number" step="0.5" min="6"
+      style="width:52px;font-size:12px"> × <input id="fpShD" type="number" step="0.5" min="6"
+      style="width:52px;font-size:12px"> ft</span>
+    <span id="fpDirty"></span>
+    <span style="flex:1"></span>
+    <button id="fpClose">Close</button>
+  </div>
+  <div id="fpMain"><div id="fpWrap"><svg id="fpCv"></svg></div><aside id="fpSide"></aside></div>
+</div></div>`);
+
+let fpPlan = null, fpSel = null, fpDirtyF = false, fpUndoStack = [], fpDrag = null;
+let fpWho = null;           // {pid, idx, addr}
+const fpM = 44;
+const FP_PAL = ["#e8eef7","#eef4e6","#f7efe2","#f2e8ee","#e6f2f0","#f5f0df","#ece9f5","#f0e9e2","#e9f0e6","#f4e6e6"];
+const fpById = (a, id) => a.find(o => o.id === id);
+const fpSnap = v => Math.round(v * 2) / 2;
+const fpUid = p => p + Math.random().toString(36).slice(2, 7);
+const fpSideLen = (r, s) => (s === "N" || s === "S") ? r.w : r.h;
+function fpScale() {
+  const el = document.getElementById("fpWrap");
+  const aw = Math.max(300, el.clientWidth - 24), ah = Math.max(300, el.clientHeight - 24);
+  return Math.max(5, Math.min(16, Math.floor(Math.min(
+    (aw - fpM * 2) / fpPlan.shell.w, (ah - fpM * 2 - 26) / fpPlan.shell.d))));
+}
+function fpMarkDirty() { fpDirtyF = true; document.getElementById("fpDirty").textContent = "unsaved"; }
+function fpClearDirty() { fpDirtyF = false; document.getElementById("fpDirty").textContent = ""; }
+function fpPushUndo() { fpUndoStack.push(JSON.stringify(fpPlan)); if (fpUndoStack.length > 150) fpUndoStack.shift(); }
+function fpUndo() { if (fpUndoStack.length) { fpPlan = JSON.parse(fpUndoStack.pop()); fpSel = null; fpMarkDirty(); fpRender(); } }
+const fpOpenColor = k => k === "window" ? "#1873c4" : k === "door" ? "#b0651a" : "#a04a2a";
+
+/// The building's measured footprint as width x depth in feet - the oriented box of its ring,
+/// longest edge first, metres to feet, snapped to the half foot. The seed for a fresh plan.
+function fpShellFromRing(ring) {
+  let best = 0, ang = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const dx = ring[i + 1][0] - ring[i][0], dy = ring[i + 1][1] - ring[i][1], l = dx * dx + dy * dy;
+    if (l > best) { best = l; ang = Math.atan2(dy, dx); }
+  }
+  const c = Math.cos(-ang), s = Math.sin(-ang);
+  const xs = ring.map(p => p[0] * c - p[1] * s), ys = ring.map(p => p[0] * s + p[1] * c);
+  const w = (Math.max(...xs) - Math.min(...xs)) * 3.28084, d = (Math.max(...ys) - Math.min(...ys)) * 3.28084;
+  return { w: fpSnap(Math.max(w, d)), d: fpSnap(Math.min(w, d)) };
+}
+
+function fpSvgString(interactive) {
+  const S = fpScale(), p = fpPlan;
+  const W = p.shell.w * S + fpM * 2, H = p.shell.d * S + fpM * 2 + 24;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Segoe UI, Arial, sans-serif">`;
+  s += `<rect width="${W}" height="${H}" fill="#ffffff"/>`;
+  for (let f = 0; f <= p.shell.w; f++) {
+    const x = fpM + f * S, mj = f % 5 === 0;
+    s += `<line x1="${x}" y1="${fpM}" x2="${x}" y2="${fpM + p.shell.d * S}" stroke="${mj ? "#d8d2c4" : "#efece4"}"/>`;
+    if (mj) s += `<text x="${x}" y="${fpM - 7}" font-size="9" fill="#999" text-anchor="middle">${f}</text>`;
+  }
+  for (let f = 0; f <= p.shell.d; f++) {
+    const y = fpM + f * S, mj = f % 5 === 0;
+    s += `<line x1="${fpM}" y1="${y}" x2="${fpM + p.shell.w * S}" y2="${y}" stroke="${mj ? "#d8d2c4" : "#efece4"}"/>`;
+    if (mj) s += `<text x="${fpM - 6}" y="${y + 3}" font-size="9" fill="#999" text-anchor="end">${f}</text>`;
+  }
+  p.rooms.forEach((r, i) => {
+    const x = fpM + r.x * S, y = fpM + r.y * S;
+    const seld = interactive && fpSel && fpSel.type === "room" && fpSel.id === r.id;
+    s += `<rect ${interactive ? `data-fproom="${r.id}"` : ""} x="${x}" y="${y}" width="${r.w * S}" height="${r.h * S}"
+      fill="${FP_PAL[i % FP_PAL.length]}" stroke="${seld ? "#d97706" : "#333"}" stroke-width="${seld ? 3 : 2}"
+      ${seld ? 'stroke-dasharray="7,4"' : ""}/>`;
+    const cx = x + r.w * S / 2, cy = y + r.h * S / 2;
+    s += `<text x="${cx}" y="${cy - 2}" font-size="${Math.max(10, S * .8)}" font-weight="600" fill="#222" text-anchor="middle" pointer-events="none">${esc(r.name)}</text>`;
+    s += `<text x="${cx}" y="${cy + Math.max(10, S * .8) + 1}" font-size="${Math.max(9, S * .65)}" fill="#555" text-anchor="middle" pointer-events="none">${r.w} × ${r.h} ft</text>`;
+    if (seld) s += `<rect data-fphandle="${r.id}" x="${x + r.w * S - 6}" y="${y + r.h * S - 6}" width="13" height="13" fill="#d97706" stroke="#7a4a04" cursor="nwse-resize"/>`;
+  });
+  s += `<rect x="${fpM}" y="${fpM}" width="${p.shell.w * S}" height="${p.shell.d * S}" fill="none" stroke="#111" stroke-width="4" pointer-events="none"/>`;
+  p.openings.forEach(o => {
+    const r = fpById(p.rooms, o.roomId); if (!r) return;
+    let x1, y1, x2, y2;
+    if (o.side === "N") { x1 = fpM + (r.x + o.off) * S; y1 = fpM + r.y * S; x2 = x1 + o.w * S; y2 = y1; }
+    if (o.side === "S") { x1 = fpM + (r.x + o.off) * S; y1 = fpM + (r.y + r.h) * S; x2 = x1 + o.w * S; y2 = y1; }
+    if (o.side === "W") { x1 = fpM + r.x * S; y1 = fpM + (r.y + o.off) * S; x2 = x1; y2 = y1 + o.w * S; }
+    if (o.side === "E") { x1 = fpM + (r.x + r.w) * S; y1 = fpM + (r.y + o.off) * S; x2 = x1; y2 = y1 + o.w * S; }
+    const seld = interactive && fpSel && fpSel.type === "opening" && fpSel.id === o.id;
+    if (seld) s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffd28a" stroke-width="15" stroke-linecap="round"/>`;
+    s += `<line ${interactive ? `data-fpopen="${o.id}"` : ""} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+      stroke="${fpOpenColor(o.kind)}" stroke-width="8" cursor="grab"/>`;
+  });
+  const ly = fpM + p.shell.d * S + 16;
+  s += `<text x="${fpM}" y="${ly}" font-size="11" fill="#333">${esc(p.name || "")} — ${p.shell.w} × ${p.shell.d} ft — `
+    + `<tspan fill="#1873c4" font-weight="700">window</tspan> <tspan fill="#b0651a" font-weight="700">door</tspan> `
+    + `<tspan fill="#a04a2a" font-weight="700">fireplace</tspan></text>`;
+  return s + `</svg>`;
+}
+
+function fpRender() {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = fpSvgString(true);
+  const fresh = tmp.firstElementChild;
+  document.getElementById("fpCv").replaceWith(fresh); fresh.id = "fpCv";
+  fpWire(fresh);
+  document.getElementById("fpShW").value = fpPlan.shell.w;
+  document.getElementById("fpShD").value = fpPlan.shell.d;
+  fpPanel();
+}
+
+function fpPanel() {
+  const side = document.getElementById("fpSide");
+  let h = "";
+  if (fpSel && fpSel.type === "room") {
+    const r = fpById(fpPlan.rooms, fpSel.id);
+    if (r) h += `<h4>Room</h4>
+      <label>Name</label><input id="fprN" value="${esc(r.name)}">
+      <div class="duo"><div><label>X ft</label><input id="fprX" type="number" step="0.5" value="${r.x}"></div>
+      <div><label>Y ft</label><input id="fprY" type="number" step="0.5" value="${r.y}"></div></div>
+      <div class="duo"><div><label>Width ft</label><input id="fprW" type="number" step="0.5" min="1" value="${r.w}"></div>
+      <div><label>Depth ft</label><input id="fprH" type="number" step="0.5" min="1" value="${r.h}"></div></div>
+      <div class="btns"><button id="fprWin">+ Window</button><button id="fprDoor">+ Door</button>
+      <button id="fprDel" class="bad">Delete room</button></div>`;
+  } else if (fpSel && fpSel.type === "opening") {
+    const o = fpById(fpPlan.openings, fpSel.id);
+    if (o) {
+      const r = fpById(fpPlan.rooms, o.roomId);
+      h += `<h4>${o.kind} <span style="font-weight:400">on ${esc(r ? r.name : "?")}</span></h4>
+      <label>Kind</label><select id="fpoK">${["window","door","fireplace"].map(k =>
+        `<option value="${k}"${o.kind === k ? " selected" : ""}>${k}</option>`).join("")}</select>
+      <label>Wall</label><select id="fpoS">${["N","S","E","W"].map(sd =>
+        `<option value="${sd}"${o.side === sd ? " selected" : ""}>${sd}</option>`).join("")}</select>
+      <div class="duo"><div><label>Offset ft</label><input id="fpoO" type="number" step="0.5" min="0" value="${o.off}"></div>
+      <div><label>Width ft</label><input id="fpoW" type="number" step="0.5" min="1" value="${o.w}"></div></div>
+      <div class="btns"><button id="fpoDel" class="bad">Delete</button></div>`;
+    }
+  } else {
+    h += `<h4>Nothing selected</h4><div class="hint">Click a room to select; drag to move; drag the
+      orange corner to resize. Click a coloured wall segment for a window or door and drag it along
+      its wall. Double-click a room to rename. Del deletes, Ctrl+Z undoes.</div>`;
+  }
+  h += `<label style="margin-top:12px">Notes / answers</label><textarea id="fpNotes">${esc(fpPlan.notes || "")}</textarea>
+  <div class="hint">Save writes Content/floorplans/${fpWho ? fpWho.pid + "-" + fpWho.idx : "?"}.json
+  through the server. Export SVG/PNG makes the to-scale reference for Designer. Nothing autosaves.</div>`;
+  side.innerHTML = h;
+
+  const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+  if (fpSel && fpSel.type === "room") {
+    const r = fpById(fpPlan.rooms, fpSel.id);
+    on("fprN", "change", e => { fpPushUndo(); r.name = e.target.value; fpMarkDirty(); fpRender(); });
+    [["fprX","x"],["fprY","y"],["fprW","w"],["fprH","h"]].forEach(([id, k]) =>
+      on(id, "change", e => { fpPushUndo(); r[k] = Math.max(k === "w" || k === "h" ? 1 : 0, parseFloat(e.target.value) || 0);
+        fpClampRoom(r); fpMarkDirty(); fpRender(); }));
+    on("fprWin", "click", () => fpAddOpening(r, "window"));
+    on("fprDoor", "click", () => fpAddOpening(r, "door"));
+    on("fprDel", "click", () => { fpPushUndo();
+      fpPlan.openings = fpPlan.openings.filter(o => o.roomId !== r.id);
+      fpPlan.rooms = fpPlan.rooms.filter(x => x.id !== r.id); fpSel = null; fpMarkDirty(); fpRender(); });
+  }
+  if (fpSel && fpSel.type === "opening") {
+    const o = fpById(fpPlan.openings, fpSel.id);
+    on("fpoK", "change", e => { fpPushUndo(); o.kind = e.target.value; fpMarkDirty(); fpRender(); });
+    on("fpoS", "change", e => { fpPushUndo(); o.side = e.target.value; fpClampOpening(o); fpMarkDirty(); fpRender(); });
+    on("fpoO", "change", e => { fpPushUndo(); o.off = Math.max(0, parseFloat(e.target.value) || 0); fpClampOpening(o); fpMarkDirty(); fpRender(); });
+    on("fpoW", "change", e => { fpPushUndo(); o.w = Math.max(1, parseFloat(e.target.value) || 1); fpClampOpening(o); fpMarkDirty(); fpRender(); });
+    on("fpoDel", "click", () => { fpPushUndo(); fpPlan.openings = fpPlan.openings.filter(x => x.id !== o.id);
+      fpSel = null; fpMarkDirty(); fpRender(); });
+  }
+  on("fpNotes", "change", e => { fpPlan.notes = e.target.value; fpMarkDirty(); });
+}
+
+function fpAddOpening(room, kind) {
+  fpPushUndo();
+  const o = { id: fpUid("o"), roomId: room.id, side: "S", off: 1, w: kind === "door" ? 3 : 4, kind };
+  fpPlan.openings.push(o); fpSel = { type: "opening", id: o.id }; fpMarkDirty(); fpRender();
+}
+function fpClampRoom(r) {
+  r.w = Math.min(r.w, fpPlan.shell.w); r.h = Math.min(r.h, fpPlan.shell.d);
+  r.x = Math.min(Math.max(0, r.x), fpPlan.shell.w - r.w);
+  r.y = Math.min(Math.max(0, r.y), fpPlan.shell.d - r.h);
+  fpPlan.openings.filter(o => o.roomId === r.id).forEach(fpClampOpening);
+}
+function fpClampOpening(o) {
+  const r = fpById(fpPlan.rooms, o.roomId); if (!r) return;
+  const len = fpSideLen(r, o.side);
+  o.w = Math.min(o.w, len);
+  o.off = Math.min(Math.max(0, o.off), len - o.w);
+}
+function fpFt(e) {
+  const rect = document.getElementById("fpCv").getBoundingClientRect(), S = fpScale();
+  return { x: (e.clientX - rect.left - fpM) / S, y: (e.clientY - rect.top - fpM) / S };
+}
+function fpWire(svg) {
+  svg.addEventListener("pointerdown", e => {
+    const t = e.target, p = fpFt(e);
+    if (t.dataset.fphandle) {
+      fpPushUndo(); fpDrag = { mode: "resize", r: fpById(fpPlan.rooms, t.dataset.fphandle) };
+      svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+    }
+    if (t.dataset.fpopen) {
+      const o = fpById(fpPlan.openings, t.dataset.fpopen);
+      fpSel = { type: "opening", id: o.id };
+      fpPushUndo(); fpDrag = { mode: "opening", o, start: p, off0: o.off };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+    }
+    if (t.dataset.fproom) {
+      const r = fpById(fpPlan.rooms, t.dataset.fproom);
+      fpSel = { type: "room", id: r.id };
+      fpPushUndo(); fpDrag = { mode: "move", r, start: p, x0: r.x, y0: r.y, moved: false };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+    }
+    fpSel = null; fpRender();
+  });
+  svg.addEventListener("pointermove", e => {
+    if (!fpDrag) return;
+    const p = fpFt(e);
+    if (fpDrag.mode === "move") {
+      const nx = fpSnap(fpDrag.x0 + p.x - fpDrag.start.x), ny = fpSnap(fpDrag.y0 + p.y - fpDrag.start.y);
+      if (nx !== fpDrag.r.x || ny !== fpDrag.r.y) { fpDrag.r.x = nx; fpDrag.r.y = ny; fpClampRoom(fpDrag.r);
+        fpDrag.moved = true; fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "resize") {
+      const nw = fpSnap(Math.max(1, p.x - fpDrag.r.x)), nh = fpSnap(Math.max(1, p.y - fpDrag.r.y));
+      if (nw !== fpDrag.r.w || nh !== fpDrag.r.h) { fpDrag.r.w = nw; fpDrag.r.h = nh; fpClampRoom(fpDrag.r);
+        fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "opening") {
+      const o = fpDrag.o, horiz = (o.side === "N" || o.side === "S");
+      const no = fpSnap(fpDrag.off0 + (horiz ? p.x - fpDrag.start.x : p.y - fpDrag.start.y));
+      if (no !== o.off) { o.off = no; fpClampOpening(o); fpMarkDirty(); fpRender(); }
+    }
+  });
+  const end = () => { if (!fpDrag) return;
+    if (fpDrag.mode === "move" && !fpDrag.moved) fpUndoStack.pop();
+    fpDrag = null; };
+  svg.addEventListener("pointerup", end);
+  svg.addEventListener("pointercancel", end);
+  svg.addEventListener("dblclick", e => {
+    if (e.target.dataset.fproom) {
+      const r = fpById(fpPlan.rooms, e.target.dataset.fproom);
+      const n = prompt("Room name:", r.name);
+      if (n !== null && n.trim()) { fpPushUndo(); r.name = n.trim(); fpMarkDirty(); fpRender(); }
+    }
+  });
+}
+
+async function openFloorPlan(pid, idx) {
+  const b = DATA.buildings.find(x => x.p === pid && x.i === idx);
+  fpWho = { pid, idx, addr: (b && b.addr) || ("lot " + pid) };
+  fpPlan = null; fpSel = null; fpUndoStack = []; fpClearDirty();
+  if (LIVE) {
+    try {
+      const r = await fetch(`/__floorplan?parcel=${pid}&index=${idx}`, { cache: "no-store" });
+      const j = await r.json();
+      if (j.exists) fpPlan = j.plan;
+    } catch (e) { /* fall through to a fresh sheet */ }
+  }
+  if (!fpPlan) {
+    const shell = b ? fpShellFromRing(b.r) : { w: 30, d: 24 };
+    fpPlan = { name: fpWho.addr + " - main floor", shell, rooms: [], openings: [], notes: "" };
+  }
+  document.getElementById("fpTitle").textContent =
+    fpWho.addr.toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) + ` — lot ${pid}, building ${idx}`;
+  document.getElementById("fpSave").disabled = !LIVE;
+  document.getElementById("fpSave").title = LIVE ? "" : "open through serve-viewer.py to save";
+  document.getElementById("fpOv").classList.add("on");
+  fpRender();
+}
+
+function fpDownload(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+document.getElementById("fpSave").onclick = async () => {
+  const btn = document.getElementById("fpSave");
+  btn.disabled = true;
+  try {
+    const r = await fetch("/__floorplan", { method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parcel: fpWho.pid, index: fpWho.idx, plan: fpPlan }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "save refused");
+    PLANS.clear(); (j.plans || []).forEach(k => PLANS.add(k));
+    fpClearDirty();
+  } catch (e) {
+    document.getElementById("fpDirty").textContent = "SAVE FAILED: " + e.message;
+  }
+  btn.disabled = false;
+};
+document.getElementById("fpSvgB").onclick = () =>
+  fpDownload(new Blob([fpSvgString(false)], { type: "image/svg+xml" }),
+    `${fpWho.pid}-${fpWho.idx}-floorplan.svg`);
+document.getElementById("fpPngB").onclick = () => {
+  const url = URL.createObjectURL(new Blob([fpSvgString(false)], { type: "image/svg+xml" }));
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = img.width * 3; c.height = img.height * 3;
+    const g = c.getContext("2d"); g.scale(3, 3); g.drawImage(img, 0, 0);
+    c.toBlob(b => { URL.revokeObjectURL(url); fpDownload(b, `${fpWho.pid}-${fpWho.idx}-floorplan.png`); }, "image/png");
+  };
+  img.src = url;
+};
+document.getElementById("fpDims").onclick = async () => {
+  const L = [`${fpPlan.name} - shell ${fpPlan.shell.w} x ${fpPlan.shell.d} ft`];
+  fpPlan.rooms.forEach(r => L.push(`${r.name}: ${r.w} x ${r.h} ft, at (${r.x}, ${r.y}) from the NW corner`));
+  fpPlan.openings.forEach(o => { const r = fpById(fpPlan.rooms, o.roomId);
+    L.push(`${o.kind} on ${r ? r.name : "?"} ${o.side} wall: ${o.w} ft wide, ${o.off} ft in`); });
+  try { await navigator.clipboard.writeText(L.join("\n")); } catch (e) { prompt("Copy:", L.join("\n")); }
+};
+document.getElementById("fpRoomB").onclick = () => {
+  fpPushUndo();
+  const r = { id: fpUid("r"), name: "New room", x: 1, y: 1, w: 10, h: 10 };
+  fpClampRoom(r); fpPlan.rooms.push(r); fpSel = { type: "room", id: r.id }; fpMarkDirty(); fpRender();
+};
+document.getElementById("fpUndoB").onclick = fpUndo;
+document.getElementById("fpShW").onchange = e => { fpPushUndo();
+  fpPlan.shell.w = Math.max(6, parseFloat(e.target.value) || fpPlan.shell.w);
+  fpPlan.rooms.forEach(fpClampRoom); fpMarkDirty(); fpRender(); };
+document.getElementById("fpShD").onchange = e => { fpPushUndo();
+  fpPlan.shell.d = Math.max(6, parseFloat(e.target.value) || fpPlan.shell.d);
+  fpPlan.rooms.forEach(fpClampRoom); fpMarkDirty(); fpRender(); };
+document.getElementById("fpClose").onclick = () => {
+  if (fpDirtyF && !confirm("Unsaved floor-plan changes - close anyway?")) return;
+  document.getElementById("fpOv").classList.remove("on");
+  if (typeof sel === "number" && sel >= 0) show(sel);   // re-render the panel so the ✓ badge is current
+};
+document.addEventListener("keydown", e => {
+  if (!document.getElementById("fpOv").classList.contains("on")) return;
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+  if (e.key === "Delete" && fpSel) {
+    fpPushUndo();
+    if (fpSel.type === "room") { fpPlan.openings = fpPlan.openings.filter(o => o.roomId !== fpSel.id);
+      fpPlan.rooms = fpPlan.rooms.filter(r => r.id !== fpSel.id); }
+    else fpPlan.openings = fpPlan.openings.filter(o => o.id !== fpSel.id);
+    fpSel = null; fpMarkDirty(); fpRender();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); fpUndo(); }
+});
+addEventListener("beforeunload", e => {
+  if (!fpDirtyF) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
 resize(); fitView(); draw();
 loadVerdicts();
 loadWalks();
 loadPlaces();
 loadVerdictFromGame();
+loadPlans();
 </script>

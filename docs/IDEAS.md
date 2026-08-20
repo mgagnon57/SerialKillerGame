@@ -1213,6 +1213,16 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   reports as "built to its real outline" - needs its own planned, verified pass, not a
   bolt-on. (Found by the final review of the angled-frontage plan, 2026-08-14.)
 
+- [ ] **The game should consume `Content/floorplans/`.** Since 2026-08-19 the browser map's
+  building cards carry a floor-plan editor (click a lot, click the building, draw the rooms;
+  saved one JSON per building as `Content/floorplans/<parcel>-<index>.json` - shell in feet,
+  rooms, windows/doors/fireplaces, notes). `673-0.json` already holds 408 Holmes' draft,
+  reconstructed from the 2021 listing photos. Nothing in the game reads them yet. The obvious
+  consumers, cheapest first: interior partitions for generated buildings the player can enter;
+  a check that an owner model's authored rooms agree with the authored plan; and furniture
+  seeding by room name (a "Kitchen" gets a stove). The web tool is the source of truth - the
+  game must consume everything it can write. — *2026-08-19*
+
 - [ ] **Owner models must block the walkable grid.** `world.Grid` has never heard of a
   models.txt building: citizens path straight through 408 Holmes' walls, and one stood
   corking the owner's own front doorway (measured live, 2026-08-19 - `man-slavic-winter`

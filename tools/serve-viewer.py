@@ -278,6 +278,62 @@ WALK_SIDES = {"none", "both", "north", "south", "east", "west"}
 #: Assets/Noir/Unity/Placements.cs. Keyed "<parcel>|<index>".
 PLACES = os.path.join(HERE, "..", "Content", "placement-1991.txt")
 
+#: What the inside of a building looked like - AUTHORED, the same kind of fact as the 1991
+#: rulings: no survey measured any interior in this town. One JSON file per building,
+#: Content/floorplans/<parcel>-<index>.json, drawn in the browser map's floor-plan editor
+#: (click a lot, click the building, draw the rooms). Per-building files rather than one big
+#: one so a save can only ever touch the plan it is about - the cliff-guard class of bug
+#: (write_verdicts' history) is impossible by construction.
+FLOORPLANS = os.path.join(HERE, "..", "Content", "floorplans")
+
+
+def _floorplan_path(pid, idx):
+    """The one legal path for a plan file. pid and idx are ints by the time they get here, so
+    the filename cannot carry a traversal - but the join is still checked, because 'cannot' has
+    been wrong in this project before."""
+    path = os.path.abspath(os.path.join(FLOORPLANS, "%d-%d.json" % (pid, idx)))
+    if not path.startswith(os.path.abspath(FLOORPLANS) + os.sep):
+        raise ValueError("bad floorplan path")
+    return path
+
+
+def read_floorplan(pid, idx):
+    """The stored plan, or None if nobody has drawn one. An unreadable file RAISES - the same
+    distinction read_verdicts documents: 'missing' is a real state, 'broken' must stop the show."""
+    try:
+        with open(_floorplan_path(pid, idx), encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        return None
+
+
+def write_floorplan(pid, idx, plan):
+    """One building's plan, written beside and swapped. The previous version is kept as .bak
+    (one step back; git carries the rest of the history - these files are committed)."""
+    os.makedirs(FLOORPLANS, exist_ok=True)
+    path = _floorplan_path(pid, idx)
+    if os.path.exists(path):
+        shutil.copy2(path, path + ".bak")
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(plan, fh, indent=1)
+        fh.write("\n")
+    os.replace(tmp, path)
+
+
+def list_floorplans():
+    """Every building that has a plan, as 'parcel|index' keys - so the map can badge them."""
+    out = []
+    try:
+        for name in os.listdir(FLOORPLANS):
+            if name.endswith(".json"):
+                stem = name[:-5].split("-")
+                if len(stem) == 2 and stem[0].isdigit() and stem[1].isdigit():
+                    out.append("%s|%s" % (stem[0], stem[1]))
+    except FileNotFoundError:
+        pass
+    return sorted(out)
+
 
 def read_places():
     out = {}
@@ -516,6 +572,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith("/__walk"):
             self._walk()
             return
+        if self.path.startswith("/__floorplan"):
+            self._floorplan()
+            return
         if not self.path.startswith("/__verdict"):
             self.send_error(404)
             return
@@ -692,6 +751,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                            else "put back where the survey had it"))
         self._json({"ok": True, "count": len(places), "moved": moved})
 
+    def _floorplan(self):
+        """One building's interior, saved - or deleted, when the plan comes in as null.
+
+        The plan itself is the editor's own JSON (shell, rooms, openings, notes) and is stored
+        as sent: the server checks the SHAPE, not the taste. Validation of meaning belongs to
+        whatever consumes the file, the same stance the rulings take."""
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            data = json.loads(self.rfile.read(n) or b"{}")
+            pid = int(data["parcel"])
+            idx = int(data["index"])
+            plan = data.get("plan", None)
+            if plan is not None:
+                if not isinstance(plan, dict):
+                    raise ValueError("plan must be an object or null")
+                shell = plan.get("shell") or {}
+                if not (isinstance(plan.get("rooms"), list)
+                        and isinstance(plan.get("openings"), list)
+                        and float(shell.get("w", 0)) > 0 and float(shell.get("d", 0)) > 0):
+                    raise ValueError("plan needs shell {w,d}, rooms[] and openings[]")
+        except Exception as e:
+            self._json({"ok": False, "error": str(e)}, 400)
+            return
+
+        if plan is None:
+            path = _floorplan_path(pid, idx)
+            if os.path.exists(path):
+                shutil.copy2(path, path + ".bak")   # deletion keeps one step back too
+                os.remove(path)
+            print("  [plan] lot %d building %d - plan removed" % (pid, idx))
+        else:
+            write_floorplan(pid, idx, plan)
+            print("  [plan] lot %d building %d - %d room(s), %d opening(s)"
+                  % (pid, idx, len(plan["rooms"]), len(plan["openings"])))
+        self._json({"ok": True, "plans": list_floorplans()})
+
     def _walk(self):
         """One street's sidewalk, saved. An empty side clears the road back to unruled, which is
         not the same as ruling it `none` - see the header of Content/roads-1991.txt."""
@@ -793,6 +888,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path.startswith("/__places"):
             self._json(read_places())
+            return
+        if self.path.startswith("/__floorplans"):
+            self._json(list_floorplans())
+            return
+        if self.path.startswith("/__floorplan"):
+            # /__floorplan?parcel=N&index=K - the stored plan, or exists:false. Order matters:
+            # the plural route above must be tested first or this would eat it.
+            try:
+                from urllib.parse import urlparse, parse_qs
+                q = parse_qs(urlparse(self.path).query)
+                pid = int(q["parcel"][0])
+                idx = int(q.get("index", ["0"])[0])
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, 400)
+                return
+            plan = read_floorplan(pid, idx)
+            self._json({"exists": plan is not None, "plan": plan})
             return
         if self.path.startswith("/__verify"):
             # How the check that publish set off is getting on. Polled, because it takes minutes
