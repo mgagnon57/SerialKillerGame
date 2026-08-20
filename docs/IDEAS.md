@@ -1213,6 +1213,15 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   reports as "built to its real outline" - needs its own planned, verified pass, not a
   bolt-on. (Found by the final review of the angled-frontage plan, 2026-08-14.)
 
+- [ ] **Per-building meshes for generated houses.** The house inspector's 3D frame shows
+  true meshes only for owner models and the seven landmarks — an ordinary massed house has
+  no per-building geometry: `VillageMesh` bakes its walls straight into shared 64 m chunk
+  meshes with no per-place identity (discovered 2026-08-20 by the mesh exporter,
+  `Noir.Editor.TownExport`). The frame currently extrudes the placed footprint ring as a
+  stand-in shell. Giving the massing per-place mesh identity (tag triangles or emit per
+  place before chunking) would let the exporter capture every house as the game truly
+  draws it. — *2026-08-20*
+
 - [ ] **The game should consume `Content/floorplans/`.** Since 2026-08-19 the browser map's
   building cards carry a floor-plan editor (click a lot, click the building, draw the rooms;
   saved one JSON per building as `Content/floorplans/<parcel>-<index>.json` - shell in feet,
