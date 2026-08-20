@@ -247,8 +247,45 @@ namespace Noir.Core.World
             foreach (var door in interior.Doors) doorKeys.Add(door.Y * grid.Width + door.X);
             if (frontDoor.IsValid) doorKeys.Add(frontDoor.Y * grid.Width + frontDoor.X);
 
+            var authoredPlan = authored ? spec.AuthoredInterior : null;
+            bool generatedFurnishing = authoredPlan == null
+                || (authoredPlan.Furnish && authoredPlan.Furniture.Count == 0);
+            if (generatedFurnishing)
+            {
+                for (int i = firstRoom; i < rooms.Count; i++)
+                    FurniturePlacer.Place(rooms[i], doorKeys, grid.Width, furniture);
+            }
+            else
+            {
+                // The placer still runs, for RNG neutrality - authoring one house must draw
+                // exactly what a generated one would have, so nothing downstream of the RNG in
+                // any OTHER house shifts. Its output here is discarded, not kept.
+                var discard = new List<Furniture>();
+                for (int i = firstRoom; i < rooms.Count; i++)
+                    FurniturePlacer.Place(rooms[i], doorKeys, grid.Width, discard);
+
+                foreach (var piece in authoredPlan.Furniture)
+                {
+                    bool onDoor = false;
+                    for (int y = piece.Footprint.Y; y <= piece.Footprint.Bottom && !onDoor; y++)
+                    for (int x = piece.Footprint.X; x <= piece.Footprint.Right; x++)
+                        if (doorKeys.Contains(y * grid.Width + x)) { onDoor = true; break; }
+                    if (onDoor) continue;          // nothing may be placed against a door
+
+                    var room = RoomAt(rooms, firstRoom, piece.Footprint.Centre);
+                    if (room == null) continue;    // outside every room: dropped
+                    furniture.Add(new Furniture(piece.Kind, piece.Footprint, room.Id, piece.Model));
+                }
+            }
+        }
+
+        /// <summary>The room among <paramref name="rooms"/>[<paramref name="firstRoom"/>..] whose
+        /// bounds contain <paramref name="tile"/>, or null if none does.</summary>
+        private static Room RoomAt(List<Room> rooms, int firstRoom, Tile tile)
+        {
             for (int i = firstRoom; i < rooms.Count; i++)
-                FurniturePlacer.Place(rooms[i], doorKeys, grid.Width, furniture);
+                if (rooms[i].Bounds.Contains(tile)) return rooms[i];
+            return null;
         }
 
         /// <summary>

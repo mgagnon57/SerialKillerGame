@@ -18,6 +18,23 @@ namespace Noir.Core.World
         }
     }
 
+    /// <summary>One piece of furniture the owner placed, already in tile space.</summary>
+    public readonly struct AuthoredFurniture
+    {
+        public readonly FurnitureKind Kind;
+        public readonly TileRect Footprint;
+
+        /// <summary>A model name for the Unity side to bind. "" resolves by kind.</summary>
+        public readonly string Model;
+
+        public AuthoredFurniture(FurnitureKind kind, TileRect footprint, string model = "")
+        {
+            Kind = kind;
+            Footprint = footprint;
+            Model = model ?? "";
+        }
+    }
+
     /// <summary>
     /// A floor plan the owner drew, overriding the generated interior of one building.
     ///
@@ -34,6 +51,13 @@ namespace Noir.Core.World
 
         /// <summary>Interior doorway tiles — each should sit in a wall between two rooms.</summary>
         public readonly List<Tile> Doors = new List<Tile>();
+
+        /// <summary>
+        /// Furniture the owner placed by hand. Empty by default. Any piece here replaces the
+        /// generated furnishing of this building wholesale - see <see cref="Furnish"/> for the
+        /// other half of that rule.
+        /// </summary>
+        public readonly List<AuthoredFurniture> Furniture = new List<AuthoredFurniture>();
 
         /// <summary>
         /// False when a hand-made model owns the visible inside (a Content/models.txt
