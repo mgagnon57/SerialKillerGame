@@ -57,6 +57,12 @@ namespace Noir.Unity
         /// </summary>
         private const float WallGapFeet = 0.2f;
 
+        /// <summary>1 ft in metres - the same 0.3048 this file used before the 2026-08-19 fit
+        /// rewrite (see this class's own header), needed again here because an outline override
+        /// is placed straight onto the full seated <see cref="TileRect"/>, not through
+        /// <see cref="Fit"/>'s room-band machinery - see <see cref="OutlineFromPlan"/>.</summary>
+        private const float FeetToMetres = 0.3048f;
+
         // ---- the JSON shape, matching the editor's own field names exactly ----------------
 
         [Serializable]
@@ -67,6 +73,7 @@ namespace Noir.Unity
             public List<PlanRoom> rooms;
             public List<PlanOpening> openings;
             public List<PlanFurniture> furniture;
+            public List<PlanPoint> outline;
         }
 
         [Serializable]
@@ -101,6 +108,21 @@ namespace Noir.Unity
             public float rot;
         }
 
+        /// <summary>
+        /// One vertex of an authored outline override, in plan feet - the owner redrawing a
+        /// footprint the 2016 imagery got wrong. The cross-task contract states this array as
+        /// bare <c>[x,y]</c> tuples, but <c>JsonUtility</c> - the only JSON reader this file (or
+        /// anything else in Noir.Unity) uses, deliberately, so nothing here depends on a second
+        /// parser - cannot deserialize a jagged array (an array of arrays) at all; it silently
+        /// drops the field rather than throwing, which is exactly the kind of silent failure this
+        /// project does not tolerate. Every other array in this same file (rooms, openings,
+        /// furniture) is already an array of named-field objects for the same reason, so the
+        /// editor writes <c>{"x":..,"y":..}</c> entries here too - same JSON meaning the contract
+        /// describes (plan feet, same frame as rooms), a shape that actually round-trips.
+        /// </summary>
+        [Serializable]
+        private class PlanPoint { public float x, y; }
+
         /// <summary>One room's or one piece's extent on one plan axis, in feet.</summary>
         private struct Span
         {
@@ -111,9 +133,14 @@ namespace Noir.Unity
         // ---- the census, one line for the whole build ---------------------------------
 
         private static int _consumed, _refused, _doorBlind, _unseated;
+        private static int _outlineRedrawn, _outlineRejected;
 
         /// <summary>Zero the tallies. Called once, before a survey pass seats any building.</summary>
-        public static void ResetCensus() { _consumed = 0; _refused = 0; _doorBlind = 0; _unseated = 0; }
+        public static void ResetCensus()
+        {
+            _consumed = 0; _refused = 0; _doorBlind = 0; _unseated = 0;
+            _outlineRedrawn = 0; _outlineRejected = 0;
+        }
 
         /// <summary>
         /// Count every plan file whose building never reached the survey's attach point at all -
@@ -139,7 +166,9 @@ namespace Noir.Unity
         /// <summary>The one line for the whole build, in the survey passes' own bracket style.</summary>
         public static void LogCensus() =>
             Debug.Log($"[floorplans] {_consumed} consumed, {_refused} refused, "
-                    + $"{_doorBlind} door-blind, {_unseated} unseated");
+                    + $"{_doorBlind} door-blind, {_unseated} unseated, "
+                    + $"{_outlineRedrawn} outline{(_outlineRedrawn == 1 ? "" : "s")} redrawn, "
+                    + $"{_outlineRejected} outline{(_outlineRejected == 1 ? "" : "s")} rejected");
 
         /// <summary>
         /// The owner's floor plan for this seated building, fitted to it and oriented to its
@@ -148,9 +177,18 @@ namespace Noir.Unity
         /// into a usable interior is REFUSED rather than silently dropped: named in the log and
         /// counted, same as a plan that opens its front door into a wall (door-blind).
         /// </summary>
+        /// <param name="outline">The owner's redrawn footprint, in the same <see cref="Tile"/>[]
+        /// ring shape and world frame as the measured one <see cref="SeatOnSurvey"/> already
+        /// assigns to <c>PlaceSpec.Outline</c> - null whenever this plan carries no valid
+        /// override, on every early-return path, and whenever <see cref="For"/> itself refuses
+        /// the whole plan. The caller's job, not this method's: SeatOnSurvey already set the
+        /// measured ring before calling here, and the authored one only OVERWRITES it when this
+        /// comes back non-null - see the call site's own comment for why that seam won over a
+        /// second file read.</param>
         public static AuthoredInterior For(int parcel, int index, TileRect bounds, Tile door,
-                                            bool ownerModel, int units)
+                                            bool ownerModel, int units, out Tile[] outline)
         {
+            outline = null;
             string tag = parcel + "-" + index;
             string relPath = "floorplans/" + tag + ".json";
 
@@ -200,6 +238,42 @@ namespace Noir.Unity
             }
 
             int rot = RotationFor(bounds, door, tag);
+
+            // THE OWNER'S REDRAWN OUTLINE, if he drew one - onto the FULL bounds, not the
+            // room-fitted interior. A wall drawn at the shell's own edge has to land on the
+            // shell's own edge: MaskToOutline (WorldBuilder) stamps the whole bounds rect and
+            // then masks it down to the ring, so an outline built through the rooms' inset Fit
+            // would eat the exterior wall it was meant to draw. RotationFor already found the
+            // one rigid turn this building's door puts it through; OutlineFromPlan applies that
+            // same turn algebraically (no room-band fitting to invert - a boundary is geometry,
+            // not a layout) and rounds to the nearest tile the same way SeatOnSurvey's own
+            // TilesOf does for the measured ring, so the two are the same kind of object.
+            if (plan.outline != null && plan.outline.Count > 0)
+            {
+                if (plan.outline.Count < 3)
+                {
+                    _outlineRejected++;
+                    Debug.LogWarning($"[floorplans] {tag}: the redrawn outline has fewer than 3 "
+                                    + "points - the measured footprint was kept.");
+                }
+                else
+                {
+                    var ring = OutlineFromPlan(plan.outline, bounds, rot);
+                    if (ring.Length < 3)
+                        Debug.LogWarning($"[floorplans] {tag}: the redrawn outline collapsed to "
+                                        + "fewer than 3 distinct tiles once rounded - the "
+                                        + "measured footprint was kept.");
+                    else if (SelfIntersects(ring))
+                        Debug.LogWarning($"[floorplans] {tag}: the redrawn outline crosses "
+                                        + "itself - the measured footprint was kept.");
+                    else
+                    {
+                        outline = ring;
+                    }
+
+                    if (outline != null) _outlineRedrawn++; else _outlineRejected++;
+                }
+            }
 
             // THE INTERIOR CORE WILL KEEP, computed the same way WorldBuilder.Adopt computes
             // it - the unit's one-tile inset, its perimeter being the shell wall. Fitting to
@@ -495,6 +569,92 @@ namespace Noir.Unity
             else return Tile.None;
             return new Tile(door.X + dx, door.Y + dy);
         }
+
+        // ---- the outline override ---------------------------------------------------------
+
+        /// <summary>
+        /// The owner's outline points, in plan feet against the full shell (NW origin, south
+        /// edge = street), turned onto the seated <paramref name="bounds"/> the same rigid way
+        /// <see cref="RotationFor"/>'s turn places everything else - algebraically, not through
+        /// <see cref="FittedAxis"/>'s band-fitting, because a polygon boundary has no rooms to
+        /// fit. This is the exact forward counterpart of the browser's own point-inverse
+        /// (tools/viewer-template.html's fpUnrotatePoint/fpUnrotateRect) - the same four turns,
+        /// run the other way: rot 0 identity, rot 2 mirrors both axes, rot 1 and rot 3 swap the
+        /// axes and mirror one of them, and are two different turns rather than mirror images of
+        /// each other (see <see cref="Fit"/>'s own header for why that distinction matters).
+        /// Rounded to the nearest tile the same way <c>SeatOnSurvey.TilesOf</c> rounds the
+        /// measured ring, and repeats collapsed the same way, so the two rings are the same kind
+        /// of object to everything downstream.
+        /// </summary>
+        private static Tile[] OutlineFromPlan(List<PlanPoint> pts, TileRect bounds, int rot)
+        {
+            var outp = new List<Tile>(pts.Count);
+            foreach (var pt in pts)
+            {
+                float mx = pt.x * FeetToMetres, my = pt.y * FeetToMetres;
+                float lx, ly;
+                switch (rot)
+                {
+                    case 1: lx = my; ly = bounds.H - mx; break;
+                    case 2: lx = bounds.W - mx; ly = bounds.H - my; break;
+                    case 3: lx = bounds.W - my; ly = mx; break;
+                    default: lx = mx; ly = my; break;
+                }
+                var t = new Tile(bounds.X + Mathf.RoundToInt(lx), bounds.Y + Mathf.RoundToInt(ly));
+                if (outp.Count == 0 || outp[outp.Count - 1].X != t.X || outp[outp.Count - 1].Y != t.Y)
+                    outp.Add(t);
+            }
+            while (outp.Count > 1 && outp[0].X == outp[outp.Count - 1].X
+                                  && outp[0].Y == outp[outp.Count - 1].Y)
+                outp.RemoveAt(outp.Count - 1);
+            return outp.ToArray();
+        }
+
+        /// <summary>
+        /// A simple O(n^2) segment-crossing test - nothing in Core tests polygon simplicity
+        /// (only <see cref="Polygon"/>'s convex overlap and even-odd containment, both of which
+        /// silently give a plausible-looking wrong answer on a self-crossing ring rather than
+        /// refusing it), so this is the whole check rather than a call to a shared one. Every
+        /// edge is tested against every other non-adjacent edge (adjacent edges share an
+        /// endpoint by construction and are never a crossing); a proper crossing OR one edge
+        /// merely touching the other's interior both count, which is the conservative reading
+        /// the brief calls for.
+        /// </summary>
+        private static bool SelfIntersects(Tile[] ring)
+        {
+            int n = ring.Length;
+            for (int i = 0; i < n; i++)
+            {
+                Tile a1 = ring[i], a2 = ring[(i + 1) % n];
+                for (int j = i + 1; j < n; j++)
+                {
+                    if (j == i + 1 || (i == 0 && j == n - 1)) continue;   // shares an endpoint
+                    if (SegmentsCross(a1, a2, ring[j], ring[(j + 1) % n])) return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool SegmentsCross(Tile a1, Tile a2, Tile b1, Tile b2)
+        {
+            long d1 = Cross(b1, b2, a1), d2 = Cross(b1, b2, a2);
+            long d3 = Cross(a1, a2, b1), d4 = Cross(a1, a2, b2);
+            if (((d1 > 0) != (d2 > 0)) && d1 != 0 && d2 != 0
+                && ((d3 > 0) != (d4 > 0)) && d3 != 0 && d4 != 0)
+                return true;
+            if (d1 == 0 && OnSegment(b1, b2, a1)) return true;
+            if (d2 == 0 && OnSegment(b1, b2, a2)) return true;
+            if (d3 == 0 && OnSegment(a1, a2, b1)) return true;
+            if (d4 == 0 && OnSegment(a1, a2, b2)) return true;
+            return false;
+        }
+
+        private static long Cross(Tile o, Tile a, Tile b) =>
+            (long)(a.X - o.X) * (b.Y - o.Y) - (long)(a.Y - o.Y) * (b.X - o.X);
+
+        private static bool OnSegment(Tile p, Tile q, Tile r) =>
+            Mathf.Min(p.X, q.X) <= r.X && r.X <= Mathf.Max(p.X, q.X)
+         && Mathf.Min(p.Y, q.Y) <= r.Y && r.Y <= Mathf.Max(p.Y, q.Y);
 
         // ---- the fit ---------------------------------------------------------------------
 

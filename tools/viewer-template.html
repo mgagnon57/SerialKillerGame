@@ -3645,6 +3645,7 @@ document.body.insertAdjacentHTML("beforeend", `
                    border-radius:5px; cursor:pointer; color:#1c1c1c; width:auto; }
   #fpHead button:hover { background:#efe9dd; }
   #fpHead button.go { background:#2e6b2e; border-color:#2e6b2e; color:#fff; font-weight:600; }
+  #fpHead button.on { background:#d97706; border-color:#a45a06; color:#fff; font-weight:600; }
   #fpHead button:disabled { opacity:.4; cursor:default; }
   #fpDirty { color:#a22; font-weight:700; font-size:12.5px; }
   #fpMain { display:flex; flex:1; min-height:0; }
@@ -3686,6 +3687,7 @@ document.body.insertAdjacentHTML("beforeend", `
     <button id="fpDims">Copy dims</button>
     <button id="fpRoomB">+ Room</button>
     <button id="fpFurnB">+ Furniture</button>
+    <button id="fpOutlineB" title="Redraw the footprint the imagery got wrong">Edit outline</button>
     <button id="fpUndoB" title="Ctrl+Z">Undo</button>
     <span style="font-size:12px;color:#444">shell <input id="fpShW" type="number" step="0.5" min="6"
       style="width:52px;font-size:12px"> × <input id="fpShD" type="number" step="0.5" min="6"
@@ -3704,6 +3706,12 @@ document.body.insertAdjacentHTML("beforeend", `
 let fpPlan = null, fpSel = null, fpDirtyF = false, fpUndoStack = [], fpDrag = null;
 let fpWho = null;           // {pid, idx, addr}
 let fpGameDerived = false;  // true when fpPlan came from INTERIORS rather than an authored file
+// THE OUTLINE EDITOR'S OWN STATE. fpOutlineDraft is a working copy, separate from
+// fpPlan.outline, so that turning the toggle on to LOOK never authors anything by itself -
+// only an actual edit (drag, insert, delete) writes it into fpPlan.outline (fpCommitOutline).
+// That is what makes "Save writes outline only if the user changed something" true without a
+// second dirty flag: fpPlan.outline simply stays whatever it already was until a commit happens.
+let fpOutlineOn = false, fpOutlineDraft = null, fpOutlineSel = null;
 const fpM = 44;
 const FP_PAL = ["#e8eef7","#eef4e6","#f7efe2","#f2e8ee","#e6f2f0","#f5f0df","#ece9f5","#f0e9e2","#e9f0e6","#f4e6e6"];
 const fpById = (a, id) => a.find(o => o.id === id);
@@ -3719,7 +3727,16 @@ function fpScale() {
 function fpMarkDirty() { fpDirtyF = true; document.getElementById("fpDirty").textContent = "unsaved"; }
 function fpClearDirty() { fpDirtyF = false; document.getElementById("fpDirty").textContent = ""; }
 function fpPushUndo() { fpUndoStack.push(JSON.stringify(fpPlan)); if (fpUndoStack.length > 150) fpUndoStack.shift(); }
-function fpUndo() { if (fpUndoStack.length) { fpPlan = JSON.parse(fpUndoStack.pop()); fpSel = null; fpMarkDirty(); fpRender(); } }
+function fpUndo() {
+  if (!fpUndoStack.length) return;
+  fpPlan = JSON.parse(fpUndoStack.pop());
+  fpSel = null;
+  // fpOutlineDraft is not part of fpPlan, so an undo that changes fpPlan.outline has to
+  // re-seed the working copy from it too, or the polygon on screen would keep showing the
+  // position from before the undo while fpPlan itself had already moved on.
+  if (fpOutlineOn) { fpOutlineDraft = fpOutlineSeed(); fpOutlineSel = null; }
+  fpMarkDirty(); fpRender();
+}
 const fpOpenColor = k => k === "window" ? "#1873c4" : k === "door" ? "#b0651a" : "#a04a2a";
 // A PLACED PIECE HAS NO "kind" FIELD OF ITS OWN - PlanFurniture is {id,name,model,x,y,w,h,rot},
 // matched exactly against Assets/Noir/Unity/FloorPlans.cs - so the tint has to be recovered the
@@ -3803,6 +3820,16 @@ function fpUnrotateRect(rx, ry, rw, rh, W, H, rot) {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
+/// The point form of fpUnrotateRect above. A single point is a zero-size rect (lx0=lx1,
+/// ly0=ly1), and every one of fpUnrotateRect's four cases reduces algebraically to exactly
+/// this under that substitution - verified by direct substitution the same way the class
+/// header's inversion table was - so this reuses that function's frame rather than re-deriving
+/// the rotation algebra a second time for outline vertices, which are points, not rects.
+function fpUnrotatePoint(lx, ly, W, H, rot) {
+  const r = fpUnrotateRect(lx, ly, 0, 0, W, H, rot);
+  return { x: r.x, y: r.y };
+}
+
 /// The un-rotated bounds, in feet - shell = bounds (un-rotated) x3.28084. rot 1/3 swap which
 /// bounds side becomes the plan's width, same as the swap in fpUnrotateRect above.
 function fpGameShellFeet(W, H, rot) {
@@ -3838,6 +3865,74 @@ function fpPlanFromInteriors(gb, addr) {
     furniture: (gb.furniture || []).map(f => fpGameFurnitureToFeet(f, bounds.x, bounds.y, W, H, rot)),
     notes: ""
   };
+}
+
+// ---- outline editing: the owner redrawing a footprint the 2016 imagery got wrong ---------
+//
+// "Edit outline" draws the building's CURRENT ring - the plan's own authored override if it
+// already has one, else the measured ring (DATA.buildings' own b.r, in world village metres -
+// numerically the same units as tiles, per game-interiors.json's own contract) run through
+// the SAME reverse transform fpPlanFromInteriors already uses for rooms and furniture, so all
+// three agree on where the walls are. Only committed on an actual edit - see fpOutlineDraft's
+// own comment above for why that is what makes the brief's save rule true for free.
+
+/// bounds+rot to un-rotate BY, for the currently open building. Prefers the exact numbers the
+/// game itself seated this building on (INTERIORS' bounds+door, the same source
+/// fpPlanFromInteriors uses) - falling back to the ring's own axis-aligned bounding box at
+/// rot 0 only when this building never reached InteriorsReport at all (yielded, refused, or
+/// standing in a street - see SeatOnSurvey), in which case there is no door to turn by and no
+/// seated frame to turn onto either.
+function fpOutlineFrame() {
+  const gb = INTERIORS.get(fpWho.pid + "|" + fpWho.idx);
+  if (gb && gb.bounds)
+    return { bx: gb.bounds.x, by: gb.bounds.y, W: gb.bounds.w, H: gb.bounds.h,
+             rot: fpRotFromDoor(gb.bounds, gb.door) };
+  const b = DATA.buildings.find(x => x.p === fpWho.pid && x.i === fpWho.idx);
+  const ring = (b && b.r && b.r.length >= 3) ? b.r : [[0, 0], [1, 0], [1, 1], [0, 1]];
+  const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]);
+  const bx = Math.round(Math.min(...xs)), by = Math.round(Math.min(...ys));
+  return { bx, by, W: Math.max(1, Math.round(Math.max(...xs) - bx)),
+           H: Math.max(1, Math.round(Math.max(...ys) - by)), rot: 0 };
+}
+
+/// The polygon fpOutlineB starts editing: the plan's own authored outline if it has one
+/// (converted back to the plain {x,y} feet the draft works in), else the measured ring
+/// un-rotated into the same frame - fpOutlineFrame's bx/by/W/H/rot, the point-inverse of the
+/// exact turn Assets/Noir/Unity/FloorPlans.cs's OutlineFromPlan applies going forward.
+function fpOutlineSeed() {
+  if (fpPlan.outline && fpPlan.outline.length >= 3)
+    return fpPlan.outline.map(v => ({ x: v.x, y: v.y }));
+  const { bx, by, W, H, rot } = fpOutlineFrame();
+  const b = DATA.buildings.find(x => x.p === fpWho.pid && x.i === fpWho.idx);
+  const ring = (b && b.r && b.r.length >= 3) ? b.r : [[bx, by], [bx + W, by], [bx + W, by + H], [bx, by + H]];
+  // b.r CARRIES THE CLOSING REPEAT (its own last point equals its first - build-viewer-data.py
+  // writes it straight from the seated ring, unlike SeatOnSurvey.TilesOf, which drops it before
+  // this ever becomes a Tile[]). Dropping it here too, the same way, keeps the editor from
+  // handing the owner a phantom extra vertex sitting exactly on top of the first one.
+  const closed = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0]
+                                  && ring[0][1] === ring[ring.length - 1][1]
+    ? ring.slice(0, -1) : ring;
+  return closed.map(pt => {
+    const rel = fpUnrotatePoint(pt[0] - bx, pt[1] - by, W, H, rot);
+    return { x: fpSnap(rel.x * FP_M2FT), y: fpSnap(rel.y * FP_M2FT) };
+  });
+}
+
+/// Writes the working draft into fpPlan.outline - the one place an edit actually "authors" an
+/// override, per this task's brief ("Save writes outline only if the user toggled AND changed
+/// something"). Called only from an edit action (vertex drag end, insert, delete), never from
+/// the toggle itself.
+function fpCommitOutline() {
+  fpPlan.outline = fpOutlineDraft.map(v => ({ x: fpSnap(v.x), y: fpSnap(v.y) }));
+  fpMarkDirty();
+}
+
+function fpToggleOutline() {
+  fpOutlineOn = !fpOutlineOn;
+  document.getElementById("fpOutlineB").classList.toggle("on", fpOutlineOn);
+  if (fpOutlineOn) { fpOutlineDraft = fpOutlineSeed(); fpSel = null; }
+  else { fpOutlineDraft = null; fpOutlineSel = null; }
+  fpRender();
 }
 
 function fpSvgString(interactive) {
@@ -3907,6 +4002,25 @@ function fpSvgString(interactive) {
     s += `<text x="${cx}" y="${cy + fsz}" font-size="${Math.max(7, fsz * .8)}" fill="#fff" text-anchor="middle"
       pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${ext.w} × ${ext.h} ft</text>`;
   });
+  // THE OUTLINE OVERLAY, drawn last of all so it always wins the pointer hit-test over
+  // whatever room or furniture happens to sit under an edge or a vertex - outline mode is
+  // exclusive (fpWire's pointerdown swallows every click while it is on), so nothing beneath
+  // needs to be dimmed or disabled to keep a drag from landing on the wrong thing.
+  if (interactive && fpOutlineOn && fpOutlineDraft) {
+    const pts = fpOutlineDraft.map(v => `${fpM + v.x * S},${fpM + v.y * S}`).join(" ");
+    s += `<polygon points="${pts}" fill="rgba(217,119,6,0.14)" stroke="#d97706" stroke-width="3"
+      stroke-dasharray="7,4" pointer-events="none"/>`;
+    for (let i = 0; i < fpOutlineDraft.length; i++) {
+      const a = fpOutlineDraft[i], b2 = fpOutlineDraft[(i + 1) % fpOutlineDraft.length];
+      s += `<line data-fpedge="${i}" x1="${fpM + a.x * S}" y1="${fpM + a.y * S}"
+        x2="${fpM + b2.x * S}" y2="${fpM + b2.y * S}" stroke="rgba(0,0,0,0)" stroke-width="12" cursor="copy"/>`;
+    }
+    fpOutlineDraft.forEach((v, i) => {
+      const seld = fpOutlineSel === i, cx = fpM + v.x * S, cy = fpM + v.y * S;
+      s += `<circle data-fpvert="${i}" cx="${cx}" cy="${cy}" r="${seld ? 8 : 6}"
+        fill="${seld ? "#d97706" : "#fff"}" stroke="#a45a06" stroke-width="2" cursor="move"/>`;
+    });
+  }
   const ly = fpM + p.shell.d * S + 16;
   s += `<text x="${fpM}" y="${ly}" font-size="11" fill="#333">${esc(p.name || "")} — ${p.shell.w} × ${p.shell.d} ft — `
     + `<tspan fill="#1873c4" font-weight="700">window</tspan> <tspan fill="#b0651a" font-weight="700">door</tspan> `
@@ -3928,6 +4042,18 @@ function fpRender() {
 function fpPanel() {
   const side = document.getElementById("fpSide");
   let h = "";
+  if (fpOutlineOn) {
+    h += `<h4>Editing outline</h4><div class="hint">Drag a vertex to move it. Double-click an
+      edge to add one. Select a vertex and press <b>Del</b> to remove it - at least 3 stay.
+      This redraws the building's own footprint, not a room: the shell above and the rooms/
+      furniture below still answer to the measured plan. Save writes the redrawn outline only
+      if it was actually changed here.</div>`;
+    h += `<label style="margin-top:12px">Notes / answers</label><textarea id="fpNotes">${esc(fpPlan.notes || "")}</textarea>`;
+    side.innerHTML = h;
+    const onNotes = document.getElementById("fpNotes");
+    if (onNotes) onNotes.addEventListener("change", e => { fpPlan.notes = e.target.value; fpMarkDirty(); });
+    return;
+  }
   if (fpSel && fpSel.type === "room") {
     const r = fpById(fpPlan.rooms, fpSel.id);
     if (r) h += `<h4>Room</h4>
@@ -4159,6 +4285,19 @@ function fpMoveWall(w, pos) {
 function fpWire(svg) {
   svg.addEventListener("pointerdown", e => {
     const t = e.target, p = fpFt(e);
+    // OUTLINE MODE IS EXCLUSIVE: only a vertex may be grabbed, and every other click - even
+    // one landing on a room or a wall drawn underneath - just deselects rather than falling
+    // through to that room's own drag, so the two editors can never fight over the same click.
+    if (fpOutlineOn) {
+      if (t.dataset.fpvert !== undefined) {
+        const i = +t.dataset.fpvert;
+        fpOutlineSel = i;
+        fpPushUndo();
+        fpDrag = { mode: "vert", i, start: p, x0: fpOutlineDraft[i].x, y0: fpOutlineDraft[i].y, moved: false };
+        svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+      }
+      fpOutlineSel = null; fpRender(); return;
+    }
     if (t.dataset.fphandle) {
       fpPushUndo(); fpDrag = { mode: "resize", r: fpById(fpPlan.rooms, t.dataset.fphandle) };
       svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
@@ -4214,14 +4353,42 @@ function fpWire(svg) {
       const o = fpDrag.o, horiz = (o.side === "N" || o.side === "S");
       const no = fpSnap(fpDrag.off0 + (horiz ? p.x - fpDrag.start.x : p.y - fpDrag.start.y));
       if (no !== o.off) { o.off = no; fpClampOpening(o); fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "vert") {
+      const nx = fpSnap(fpDrag.x0 + p.x - fpDrag.start.x), ny = fpSnap(fpDrag.y0 + p.y - fpDrag.start.y);
+      const cx = Math.min(Math.max(0, nx), fpPlan.shell.w), cy = Math.min(Math.max(0, ny), fpPlan.shell.d);
+      const v = fpOutlineDraft[fpDrag.i];
+      if (cx !== v.x || cy !== v.y) { v.x = cx; v.y = cy; fpDrag.moved = true; fpRender(); }
     }
   });
   const end = () => { if (!fpDrag) return;
     if ((fpDrag.mode === "move" || fpDrag.mode === "wall" || fpDrag.mode === "furn") && !fpDrag.moved) fpUndoStack.pop();
+    if (fpDrag.mode === "vert") {
+      // The outline is committed to fpPlan only here, at drag END, and only when a vertex
+      // actually moved - a click that selects a vertex and releases without dragging pops its
+      // own undo entry straight back off, same as every other drag mode above.
+      if (fpDrag.moved) fpCommitOutline(); else fpUndoStack.pop();
+      fpRender();
+    }
     fpDrag = null; };
   svg.addEventListener("pointerup", end);
   svg.addEventListener("pointercancel", end);
   svg.addEventListener("dblclick", e => {
+    if (fpOutlineOn) {
+      // Double-click an edge inserts a vertex at its midpoint - the same "grab a wall
+      // anywhere along its run" idea the room editor already uses, just for a boundary that
+      // has no rooms of its own to fit into.
+      const t = e.target;
+      if (t.dataset.fpedge !== undefined) {
+        const i = +t.dataset.fpedge, n = fpOutlineDraft.length;
+        const a = fpOutlineDraft[i], b2 = fpOutlineDraft[(i + 1) % n];
+        fpPushUndo();
+        fpOutlineDraft.splice(i + 1, 0, { x: fpSnap((a.x + b2.x) / 2), y: fpSnap((a.y + b2.y) / 2) });
+        fpOutlineSel = i + 1;
+        fpCommitOutline();
+        fpRender();
+      }
+      return;
+    }
     // Rename in place: select the room and put the caret straight in its name box - not a
     // prompt(), which a dialog-suppressing browser turns into a rename that silently never
     // opens (the same failure show() documents for confirm()).
@@ -4239,6 +4406,8 @@ async function openFloorPlan(pid, idx) {
   const b = DATA.buildings.find(x => x.p === pid && x.i === idx);
   fpWho = { pid, idx, addr: (b && b.addr) || ("lot " + pid) };
   fpPlan = null; fpSel = null; fpUndoStack = []; fpClearDirty(); fpGameDerived = false;
+  fpOutlineOn = false; fpOutlineDraft = null; fpOutlineSel = null;
+  document.getElementById("fpOutlineB").classList.remove("on");
   if (LIVE) {
     try {
       const r = await fetch(`/__floorplan?parcel=${pid}&index=${idx}`, { cache: "no-store" });
@@ -4352,6 +4521,7 @@ document.addEventListener("click", e => {
     pick.classList.remove("on");
 });
 document.getElementById("fpUndoB").onclick = fpUndo;
+document.getElementById("fpOutlineB").onclick = fpToggleOutline;
 document.getElementById("fpShW").onchange = e => { fpPushUndo();
   fpPlan.shell.w = Math.max(6, parseFloat(e.target.value) || fpPlan.shell.w);
   fpPlan.rooms.forEach(fpClampRoom); fpMarkDirty(); fpRender(); };
@@ -4366,6 +4536,19 @@ document.getElementById("fpClose").onclick = () => {
 document.addEventListener("keydown", e => {
   if (!document.getElementById("fpOv").classList.contains("on")) return;
   if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+  if (fpOutlineOn && e.key === "Delete" && fpOutlineSel !== null) {
+    // MIN 3 STAYS - a ring under 3 points is not a shape, and OutlineFromPlan/SelfIntersects
+    // on the FloorPlans.cs side would refuse it anyway; refusing the deletion here means the
+    // owner sees why immediately instead of losing the edit at save time.
+    if (fpOutlineDraft.length > 3) {
+      fpPushUndo();
+      fpOutlineDraft.splice(fpOutlineSel, 1);
+      fpOutlineSel = null;
+      fpCommitOutline();
+      fpRender();
+    }
+    return;
+  }
   if (e.key === "Delete" && fpSel) {
     fpPushUndo();
     if (fpSel.type === "room") { fpPlan.openings = fpPlan.openings.filter(o => o.roomId !== fpSel.id);

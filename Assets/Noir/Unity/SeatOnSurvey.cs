@@ -233,7 +233,15 @@ namespace Noir.Unity
                 // derived still has a perfectly good authored one to orient the plan by. Passing
                 // the measured Tile.None refused those plans for having no door at all.
                 s.Place.AuthoredInterior = FloorPlans.For(s.ParcelId, s.Index, s.Now,
-                                                          s.Place.Door, ownerModel, s.Place.Units);
+                                                          s.Place.Door, ownerModel, s.Place.Units,
+                                                          out var authoredOutline);
+
+                // THE AUTHORED OUTLINE WINS. s.Place.Outline already carries the measured ring
+                // (assigned above, before this call) - FloorPlans.For only hands one back when
+                // this plan carries a valid redrawn override, so overwriting here is exactly the
+                // "survey wins on size, the owner wins when he says otherwise" rule the measured
+                // ring itself follows for everything else this pass does.
+                if (authoredOutline != null) s.Place.Outline = authoredOutline;
 
                 // What Write() will need once the world exists to say what actually got built
                 // here - see InteriorsReport's own header for why this can only be a note now
@@ -241,7 +249,12 @@ namespace Noir.Unity
                 InteriorsReport.Note(s.ParcelId, s.Index, s.Place, s.Place.AuthoredInterior != null);
 
                 moved++;
-                if (s.Outline != null) shaped++;
+                // s.Place.Outline, not s.Outline: a rectangular measured footprint (s.Outline ==
+                // null) the owner then redrew a real shape for is just as "built to its real
+                // outline" as one the county's imagery already gave a ring - the override above
+                // is what s.Place actually carries into the world, and the census should count
+                // what got built, not what the survey alone would have built.
+                if (s.Place.Outline != null) shaped++;
             }
 
             FloorPlans.NoteUnseatedPlans(attached);
