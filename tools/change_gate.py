@@ -32,6 +32,7 @@ If the list above ever goes stale it fails in the expensive direction - somethin
 called cosmetic and ships unchecked. `python tools/change_gate.py --audit` greps Assets/ for the
 readers of each verb and complains if a verb has gained one this file does not know about.
 """
+import hashlib
 import io
 import os
 import re
@@ -47,6 +48,7 @@ CONTENT = os.path.join(ROOT, "Content")
 VERIFIED = os.path.join(HERE, ".verified")
 
 WATCHED = ("roads-1991.txt", "parcel-1991.txt", "placement-1991.txt")
+FLOORPLANS = os.path.join(CONTENT, "floorplans")
 
 #: verb -> (scope, structural?) for placement-1991.txt. Moving a building changes the overlap test
 #: in SeatOnSurvey and the on-a-road test in FillFromSurvey, and failing either is how a house
@@ -66,6 +68,22 @@ LOT_VERBS = {
     "kind": ("lot kind", True),
     "property": ("property grouping", True),
 }
+
+
+def _floorplan_hashes(root):
+    """filename -> content hash. Interior walls move the walkable grid, so every floorplan
+    change is structural; hashing the whole file keeps this honest without teaching the
+    gate to parse JSON."""
+    out = {}
+    try:
+        for name in sorted(os.listdir(root)):
+            if not name.endswith(".json"):
+                continue
+            with open(os.path.join(root, name), "rb") as fh:
+                out[name] = hashlib.sha1(fh.read()).hexdigest()
+    except FileNotFoundError:
+        pass
+    return out
 
 
 def _rulings(path):
@@ -143,6 +161,25 @@ def unverified():
 
             (structural if is_structural else cosmetic).append({"scope": scope, "what": what})
 
+    # Compare floor plan hashes - every change is structural
+    now_plans = _floorplan_hashes(FLOORPLANS)
+    then_plans = _floorplan_hashes(os.path.join(VERIFIED, "floorplans")) if not baseline else {}
+
+    for name in set(now_plans) | set(then_plans):
+        now_hash = now_plans.get(name)
+        then_hash = then_plans.get(name)
+        if now_hash == then_hash:
+            continue
+
+        if now_hash is None:
+            what = "floorplans/" + name + " removed"
+        elif then_hash is None:
+            what = "floorplans/" + name + " added"
+        else:
+            what = "floorplans/" + name + " changed"
+
+        structural.append({"scope": "floor plan", "what": what})
+
     structural.sort(key=lambda d: d["what"])
     cosmetic.sort(key=lambda d: d["what"])
     return {"structural": structural, "cosmetic": cosmetic, "baseline": baseline}
@@ -155,6 +192,30 @@ def mark_verified():
         src = os.path.join(CONTENT, name)
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(VERIFIED, name))
+
+    # Copy floor plans and remove stale copies
+    floorplans_verified = os.path.join(VERIFIED, "floorplans")
+    os.makedirs(floorplans_verified, exist_ok=True)
+
+    # Copy current floor plans
+    if os.path.isdir(FLOORPLANS):
+        for name in os.listdir(FLOORPLANS):
+            if name.endswith(".json"):
+                src = os.path.join(FLOORPLANS, name)
+                dst = os.path.join(floorplans_verified, name)
+                shutil.copy2(src, dst)
+
+    # Remove stale copies - files that exist in VERIFIED but not in CONTENT
+    if os.path.isdir(floorplans_verified):
+        current_files = set()
+        if os.path.isdir(FLOORPLANS):
+            current_files = {name for name in os.listdir(FLOORPLANS) if name.endswith(".json")}
+
+        for name in os.listdir(floorplans_verified):
+            if name not in current_files:
+                stale_path = os.path.join(floorplans_verified, name)
+                if os.path.isfile(stale_path):
+                    os.remove(stale_path)
 
 
 # ---- the audit ------------------------------------------------------------------------------
