@@ -3688,6 +3688,17 @@ function fpSvgString(interactive) {
     const cx = x + r.w * S / 2, cy = y + r.h * S / 2;
     s += `<text x="${cx}" y="${cy - 2}" font-size="${Math.max(10, S * .8)}" font-weight="600" fill="#222" text-anchor="middle" pointer-events="none">${esc(r.name)}</text>`;
     s += `<text x="${cx}" y="${cy + Math.max(10, S * .8) + 1}" font-size="${Math.max(9, S * .65)}" fill="#555" text-anchor="middle" pointer-events="none">${r.w} × ${r.h} ft</text>`;
+    if (interactive) {
+      // EVERY WALL IS A HANDLE. Invisible fat lines over each edge so a wall can be grabbed
+      // anywhere along its run and dragged - and a wall two rooms share moves both rooms,
+      // which is what dragging a wall MEANS. Drawn after the fill so the edge wins near the
+      // edge; openings and the corner handle come later still, so they win over the wall.
+      const x2 = x + r.w * S, y2 = y + r.h * S, grab = "rgba(0,0,0,0)";
+      s += `<line data-fpwall="${r.id}:N" x1="${x}" y1="${y}" x2="${x2}" y2="${y}" stroke="${grab}" stroke-width="9" cursor="ns-resize"/>`;
+      s += `<line data-fpwall="${r.id}:S" x1="${x}" y1="${y2}" x2="${x2}" y2="${y2}" stroke="${grab}" stroke-width="9" cursor="ns-resize"/>`;
+      s += `<line data-fpwall="${r.id}:W" x1="${x}" y1="${y}" x2="${x}" y2="${y2}" stroke="${grab}" stroke-width="9" cursor="ew-resize"/>`;
+      s += `<line data-fpwall="${r.id}:E" x1="${x2}" y1="${y}" x2="${x2}" y2="${y2}" stroke="${grab}" stroke-width="9" cursor="ew-resize"/>`;
+    }
     if (seld) s += `<rect data-fphandle="${r.id}" x="${x + r.w * S - 6}" y="${y + r.h * S - 6}" width="13" height="13" fill="#d97706" stroke="#7a4a04" cursor="nwse-resize"/>`;
   });
   s += `<rect x="${fpM}" y="${fpM}" width="${p.shell.w * S}" height="${p.shell.d * S}" fill="none" stroke="#111" stroke-width="4" pointer-events="none"/>`;
@@ -3748,9 +3759,11 @@ function fpPanel() {
       <div class="btns"><button id="fpoDel" class="bad">Delete</button></div>`;
     }
   } else {
-    h += `<h4>Nothing selected</h4><div class="hint">Click a room to select; drag to move; drag the
-      orange corner to resize. Click a coloured wall segment for a window or door and drag it along
-      its wall. Double-click a room to rename. Del deletes, Ctrl+Z undoes.</div>`;
+    h += `<h4>Nothing selected</h4><div class="hint">Click a room to select; drag its middle to
+      move it; <b>grab any wall and drag it</b> - a wall two rooms share moves both rooms.
+      Drag the orange corner to resize freely. Click a coloured wall segment for a window or
+      door and slide it along its wall. Double-click a room to rename it. Del deletes,
+      Ctrl+Z undoes.</div>`;
   }
   h += `<label style="margin-top:12px">Notes / answers</label><textarea id="fpNotes">${esc(fpPlan.notes || "")}</textarea>
   <div class="hint">Save writes Content/floorplans/${fpWho ? fpWho.pid + "-" + fpWho.idx : "?"}.json
@@ -3803,12 +3816,72 @@ function fpFt(e) {
   const rect = document.getElementById("fpCv").getBoundingClientRect(), S = fpScale();
   return { x: (e.clientX - rect.left - fpM) / S, y: (e.clientY - rect.top - fpM) / S };
 }
+
+/// Everyone standing on this wall. Grab room r's edge and the answer is every room with an
+/// edge on the same line whose span overlaps the grabbed room's - so the kitchen/living wall
+/// moves as ONE wall, while the hall's continuation of the same line, which does not touch
+/// the grabbed stretch, stays put. Each party remembers WHICH of its edges is on the wall.
+function fpWallParties(r, side) {
+  const vert = side === "E" || side === "W";                    // a vertical wall moves in x
+  const pos = side === "E" ? r.x + r.w : side === "W" ? r.x
+            : side === "S" ? r.y + r.h : r.y;
+  const lo0 = vert ? r.y : r.x, hi0 = vert ? r.y + r.h : r.x + r.w;
+  const out = [];
+  for (const o of fpPlan.rooms) {
+    const olo = vert ? o.y : o.x, ohi = vert ? o.y + o.h : o.x + o.w;
+    if (Math.min(hi0, ohi) - Math.max(lo0, olo) < 0.5 && o !== r) continue;   // no shared stretch
+    // WITHIN A WALL'S THICKNESS IS THE SAME WALL. Rooms drawn from a real model are interior
+    // rectangles, so the two faces of one stud wall sit half a foot or so apart and are never
+    // exactly coincident. Each party keeps its own offset `d` from the grabbed face, so the
+    // wall keeps its thickness while it travels instead of collapsing to a shared line.
+    const near = (a, b) => Math.abs(a - b) < 0.85;
+    if (vert) {
+      if (near(o.x, pos)) out.push({ o, s: "W", d: o.x - pos });
+      if (near(o.x + o.w, pos)) out.push({ o, s: "E", d: o.x + o.w - pos });
+    } else {
+      if (near(o.y, pos)) out.push({ o, s: "N", d: o.y - pos });
+      if (near(o.y + o.h, pos)) out.push({ o, s: "S", d: o.y + o.h - pos });
+    }
+  }
+  // The wall can only travel as far as its thinnest party allows: the range is decided once
+  // here, not re-litigated mid-drag.
+  let lo = 0, hi = vert ? fpPlan.shell.w : fpPlan.shell.d;
+  for (const p of out) {
+    if (p.s === "E") lo = Math.max(lo, p.o.x + 1 - p.d);
+    if (p.s === "W") hi = Math.min(hi, p.o.x + p.o.w - 1 - p.d);
+    if (p.s === "S") lo = Math.max(lo, p.o.y + 1 - p.d);
+    if (p.s === "N") hi = Math.min(hi, p.o.y + p.o.h - 1 - p.d);
+    lo = Math.max(lo, -p.d);
+    hi = Math.min(hi, (vert ? fpPlan.shell.w : fpPlan.shell.d) - p.d);
+  }
+  return { vert, parties: out, lo, hi };
+}
+
+function fpMoveWall(w, pos) {
+  pos = Math.min(Math.max(fpSnap(pos), w.lo), w.hi);
+  for (const p of w.parties) {
+    const o = p.o, at = pos + p.d;
+    if (p.s === "E") o.w = at - o.x;
+    if (p.s === "W") { o.w = o.x + o.w - at; o.x = at; }
+    if (p.s === "S") o.h = at - o.y;
+    if (p.s === "N") { o.h = o.y + o.h - at; o.y = at; }
+    fpPlan.openings.filter(x => x.roomId === o.id).forEach(fpClampOpening);
+  }
+  return pos;
+}
 function fpWire(svg) {
   svg.addEventListener("pointerdown", e => {
     const t = e.target, p = fpFt(e);
     if (t.dataset.fphandle) {
       fpPushUndo(); fpDrag = { mode: "resize", r: fpById(fpPlan.rooms, t.dataset.fphandle) };
       svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+    }
+    if (t.dataset.fpwall) {
+      const [rid, side] = t.dataset.fpwall.split(":");
+      const r = fpById(fpPlan.rooms, rid);
+      fpSel = { type: "room", id: r.id };
+      fpPushUndo(); fpDrag = { mode: "wall", wall: fpWallParties(r, side), moved: false };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
     }
     if (t.dataset.fpopen) {
       const o = fpById(fpPlan.openings, t.dataset.fpopen);
@@ -3835,6 +3908,11 @@ function fpWire(svg) {
       const nw = fpSnap(Math.max(1, p.x - fpDrag.r.x)), nh = fpSnap(Math.max(1, p.y - fpDrag.r.y));
       if (nw !== fpDrag.r.w || nh !== fpDrag.r.h) { fpDrag.r.w = nw; fpDrag.r.h = nh; fpClampRoom(fpDrag.r);
         fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "wall") {
+      const w = fpDrag.wall;
+      const before = w.last;
+      const now = fpMoveWall(w, w.vert ? p.x : p.y);
+      if (now !== before) { w.last = now; fpDrag.moved = true; fpMarkDirty(); fpRender(); }
     } else if (fpDrag.mode === "opening") {
       const o = fpDrag.o, horiz = (o.side === "N" || o.side === "S");
       const no = fpSnap(fpDrag.off0 + (horiz ? p.x - fpDrag.start.x : p.y - fpDrag.start.y));
@@ -3842,15 +3920,20 @@ function fpWire(svg) {
     }
   });
   const end = () => { if (!fpDrag) return;
-    if (fpDrag.mode === "move" && !fpDrag.moved) fpUndoStack.pop();
+    if ((fpDrag.mode === "move" || fpDrag.mode === "wall") && !fpDrag.moved) fpUndoStack.pop();
     fpDrag = null; };
   svg.addEventListener("pointerup", end);
   svg.addEventListener("pointercancel", end);
   svg.addEventListener("dblclick", e => {
-    if (e.target.dataset.fproom) {
-      const r = fpById(fpPlan.rooms, e.target.dataset.fproom);
-      const n = prompt("Room name:", r.name);
-      if (n !== null && n.trim()) { fpPushUndo(); r.name = n.trim(); fpMarkDirty(); fpRender(); }
+    // Rename in place: select the room and put the caret straight in its name box - not a
+    // prompt(), which a dialog-suppressing browser turns into a rename that silently never
+    // opens (the same failure show() documents for confirm()).
+    const rid = e.target.dataset.fproom || e.target.dataset.fpwall && e.target.dataset.fpwall.split(":")[0];
+    if (rid) {
+      fpSel = { type: "room", id: rid };
+      fpRender();
+      const inp = document.getElementById("fprN");
+      if (inp) { inp.focus(); inp.select(); }
     }
   });
 }
