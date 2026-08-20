@@ -286,6 +286,24 @@ PLACES = os.path.join(HERE, "..", "Content", "placement-1991.txt")
 #: (write_verdicts' history) is impossible by construction.
 FLOORPLANS = os.path.join(HERE, "..", "Content", "floorplans")
 
+#: What the GAME made of every interior, last time it built the town - furniture placed, room
+#: purposes decided. Written by the game, not by this tool; served read-only, same stance as
+#: game-verdict.json below. Absent until a build has run once, which is a real state, not a
+#: fault.
+INTERIORS = os.path.join(HERE, "game-interiors.json")
+
+#: The furniture catalogue exported by the editor - names, footprints, whatever the browser map
+#: needs to draw a legend for what it sees in a preview mesh. Also game output, also read-only
+#: here, also absent until somebody has run the export.
+PALETTE = os.path.join(HERE, "furniture-palette.json")
+
+#: Cached preview meshes, one per building - <parcel>-<index>.obj and its .mtl, exported by the
+#: same editor tool. Reachable straight off a URL rather than off a POST body, which is why the
+#: path discipline below checks harder than _floorplan_path needs to: an int from a query string
+#: is already safe, but an int PARSED OUT OF THE URL PATH ITSELF is the one place this project
+#: has not yet had to defend, so it gets the same "cannot has been wrong before" treatment.
+PREVIEWS = os.path.join(HERE, "preview-cache")
+
 
 def _floorplan_path(pid, idx):
     """The one legal path for a plan file. pid and idx are ints by the time they get here, so
@@ -294,6 +312,18 @@ def _floorplan_path(pid, idx):
     path = os.path.abspath(os.path.join(FLOORPLANS, "%d-%d.json" % (pid, idx)))
     if not path.startswith(os.path.abspath(FLOORPLANS) + os.sep):
         raise ValueError("bad floorplan path")
+    return path
+
+
+def _preview_path(pid, idx, ext):
+    """The one legal path for a cached preview mesh. pid and idx are ints and ext has already
+    been checked against a whitelist by the time this is called - same guarantee
+    _floorplan_path relies on - but the join is still checked, for the same reason: 'cannot'
+    has been wrong in this project before, and this one is reachable straight off a URL rather
+    than off a parsed POST body."""
+    path = os.path.abspath(os.path.join(PREVIEWS, "%d-%d.%s" % (pid, idx, ext)))
+    if not path.startswith(os.path.abspath(PREVIEWS) + os.sep):
+        raise ValueError("bad preview path")
     return path
 
 
@@ -787,6 +817,47 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                   % (pid, idx, len(plan["rooms"]), len(plan["openings"])))
         self._json({"ok": True, "plans": list_floorplans()})
 
+    def _preview(self):
+        """One cached preview mesh, handed back byte for byte - the .obj or .mtl the editor
+        export wrote to tools/preview-cache/<parcel>-<index>.<ext>.
+
+        The path arrives IN THE URL, not in a POST body, so parcel, index and extension are
+        each validated before any of them touch the filesystem: the regex admits only plain
+        digits for the two ids and only the two known extensions, matching the discipline
+        _floorplan_path uses for its own ids. Anything that does not match this shape is a 400,
+        not a guess at what was meant."""
+        import re
+        m = re.match(r"^/preview/(\d+)-(\d+)\.(obj|mtl)$", self.path)
+        if not m:
+            self._json({"ok": False, "error": "bad preview path"}, 400)
+            return
+        pid, idx, ext = int(m.group(1)), int(m.group(2)), m.group(3)
+        try:
+            path = _preview_path(pid, idx, ext)
+        except ValueError as e:
+            self._json({"ok": False, "error": str(e)}, 400)
+            return
+        try:
+            with open(path, "rb") as fh:
+                body = fh.read()
+        except FileNotFoundError:
+            # Not send_error(404): that logs through log_error, which never sees the path and
+            # so slips straight past the filter below - defeating the whole point of adding
+            # /preview to it. A hand-built response goes through log_request instead, which
+            # does carry the path.
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_response(200)
+        # text/plain is fine for both - OBJ and MTL are plain text formats and nothing here
+        # needs the browser to do anything with the Content-Type beyond not choke on it.
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
     def _walk(self):
         """One street's sidewalk, saved. An empty side clears the road back to unruled, which is
         not the same as ruling it `none` - see the header of Content/roads-1991.txt."""
@@ -855,6 +926,27 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "gone": len([k for k, v in w["was"].items() if v == 'absent'])})
 
     def do_GET(self):
+        if self.path.startswith("/preview/"):
+            self._preview()
+            return
+        if self.path.startswith("/__interiors"):
+            # WHAT THE GAME PUT IN EVERY BUILDING, last time it built the town - the same
+            # stance as /__game just below: absent until a build has written it, which is a
+            # real state on a fresh clone, not a fault to report.
+            try:
+                with open(INTERIORS, encoding="utf-8") as fh:
+                    self._json(json.load(fh))
+            except Exception:
+                self._json({"when": None})
+            return
+        if self.path.startswith("/__palette"):
+            # The furniture catalogue the editor export wrote, same fallback as /__interiors.
+            try:
+                with open(PALETTE, encoding="utf-8") as fh:
+                    self._json(json.load(fh))
+            except Exception:
+                self._json({"when": None})
+            return
         if self.path.startswith("/__game"):
             # WHAT THE GAME DID WITH EACH RULING, written by the survey passes themselves - see
             # SurveyReport. Absent until the game has been run once, which is honest: nothing can
@@ -952,7 +1044,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         # "verified" because the happy path answered, and caught by reading the server's own log.
         text = " ".join(str(a) for a in args)
         if ("__version" in text or "__verdicts" in text
-                or "__walks" in text or "__blocks" in text or "__game" in text):
+                or "__walks" in text or "__blocks" in text or "__game" in text
+                or "__interiors" in text or "/preview" in text):
             return                       # a poll every two seconds would bury everything else
         super().log_message(fmt, *args)
 
