@@ -339,6 +339,20 @@ namespace Noir.Unity
             }
         }
 
+        /// <summary>
+        /// Whether a hand-made Content/models.txt model owns the inside of the place with this
+        /// name - the narrower question <see cref="FloorPlans"/> needs to decide whether to
+        /// furnish it. Deliberately not the same test as <see cref="Handles"/>: the pack
+        /// landmarks (gas station, water tower, farm...) stand down there for a different
+        /// reason, over bought geometry that still wants the generated furniture inside it.
+        ///
+        /// Takes the name rather than a <see cref="Place"/> because SeatOnSurvey - its only
+        /// caller - runs on <c>PlaceSpec</c>, before WorldBuilder has made a <see cref="Place"/>
+        /// to ask; both carry the same <c>Name</c> this decides on.
+        /// </summary>
+        public static bool IsOwnerModel(string name) =>
+            !string.IsNullOrEmpty(name) && (OwnerModels().ContainsKey(name) || TerraceKeyFor(name) != null);
+
         // ---- the owner's buildings ----------------------------------------------------
         //
         // Content/models.txt: `address | model | yaw` - hand-made buildings standing on

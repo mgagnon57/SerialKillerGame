@@ -85,7 +85,7 @@ namespace Noir.Unity
             }
 
             var seated = new List<(PlaceSpec Place, TileRect Was, TileRect Now, Tile Door,
-                                  Tile[] Outline)>();
+                                  Tile[] Outline, int ParcelId, int Index)>();
             int skippedAsLater = 0;
             foreach (var pair in byLot)
             {
@@ -113,7 +113,8 @@ namespace Noir.Unity
                     if (box.W < Smallest || box.H < Smallest) continue;
                     var door = DoorFor(places[i], box, outline);
                     if (outline != null && !Covers(outline, door)) outline = null;
-                    seated.Add((places[i], places[i].Bounds, box, door, outline));
+                    seated.Add((places[i], places[i].Bounds, box, door, outline,
+                               measured[i].ParcelId, measured[i].Index));
                 }
             }
 
@@ -159,6 +160,7 @@ namespace Noir.Unity
             var corridors = new RoadCorridor.Corridors(layout);
 
             seated.Sort((a, b) => b.Now.Area.CompareTo(a.Now.Area));
+            FloorPlans.ResetCensus();
             int moved = 0, yielded = 0, shaped = 0, inTheRoad = 0;
             var nowhere = new TileRect(0, 0, 0, 0);   // an empty rect overlaps nothing
             foreach (var s in seated)
@@ -216,10 +218,19 @@ namespace Noir.Unity
                 s.Place.Bounds = s.Now;
                 if (s.Door.IsValid) s.Place.Door = s.Door;
                 s.Place.Outline = s.Outline;
+
+                // The owner's floor plan, if he drew one for this building - converted to
+                // tiles here, where the parcel, the seated bounds and the door are all in
+                // hand, and handed to Core the same way the measured outline is.
+                bool ownerModel = CityBuildings.IsOwnerModel(s.Place.Name);
+                s.Place.AuthoredInterior = FloorPlans.For(s.ParcelId, s.Index, s.Now, s.Door,
+                                                          ownerModel);
+
                 moved++;
                 if (s.Outline != null) shaped++;
             }
 
+            FloorPlans.LogCensus();
             Debug.Log($"[survey] {moved} buildings seated on their measured footprint, "
                     + $"{shaped} of them built to its real outline"
                     + (yielded > 0 ? $", {yielded} left alone to avoid overlapping one" : "")
