@@ -250,22 +250,35 @@ namespace Noir.Unity
             // TilesOf does for the measured ring, so the two are the same kind of object.
             if (plan.outline != null && plan.outline.Count > 0)
             {
+                // EVERY REJECTION ALSO GOES TO THE SURVEY REPORT, not just to the Unity log.
+                // The owner does this work in the browser, and the spec's own failure table
+                // promises the survey report says why; a Debug.LogWarning is invisible to him.
+                // The reason phrase is deliberately CONSTANT per branch - SurveyReport tallies
+                // on the string, so folding the tag into it would make every count a 1.
                 if (plan.outline.Count < 3)
                 {
                     _outlineRejected++;
                     Debug.LogWarning($"[floorplans] {tag}: the redrawn outline has fewer than 3 "
                                     + "points - the measured footprint was kept.");
+                    SurveyReport.Say(parcel, true, "authored outline rejected: fewer than 3 points");
                 }
                 else
                 {
                     var ring = OutlineFromPlan(plan.outline, bounds, rot);
                     if (ring.Length < 3)
+                    {
                         Debug.LogWarning($"[floorplans] {tag}: the redrawn outline collapsed to "
                                         + "fewer than 3 distinct tiles once rounded - the "
                                         + "measured footprint was kept.");
+                        SurveyReport.Say(parcel, true,
+                            "authored outline rejected: collapsed to fewer than 3 tiles");
+                    }
                     else if (SelfIntersects(ring))
+                    {
                         Debug.LogWarning($"[floorplans] {tag}: the redrawn outline crosses "
                                         + "itself - the measured footprint was kept.");
+                        SurveyReport.Say(parcel, true, "authored outline rejected: it crosses itself");
+                    }
                     else
                     {
                         outline = ring;

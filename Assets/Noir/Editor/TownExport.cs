@@ -136,6 +136,19 @@ namespace Noir.Editor
                             ? $" {unreadableTotal} renderer(s) skipped for not being Read/Write "
                             + "enabled - run Noir/Make City Meshes Readable."
                             : ""));
+
+                // A CACHE WITH NOTHING IN IT IS A FAILURE, not a quiet success. The spec's
+                // Testing section asks for a non-zero exit on zero buildings written, because
+                // the caller that matters (tools/verify_run.py, off the map's Publish button)
+                // can only see the exit code and a log it does not parse. Every path that gets
+                // here has just deleted the previous cache, so a silent zero would also leave
+                // the tool with nothing where it had something.
+                if (meshed == 0)
+                {
+                    Debug.LogError("[export] wrote ZERO buildings - the preview cache is empty. "
+                                 + "Nothing under CityBuildings overlapped a seated place.");
+                    code = 1;
+                }
             }
             catch (Exception ex)
             {
