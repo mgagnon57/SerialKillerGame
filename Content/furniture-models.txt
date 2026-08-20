@@ -1,0 +1,25 @@
+# ==========================================================================
+#  HAND-MADE FURNITURE, THE SAME WAY models.txt STANDS A HAND-MADE BUILDING.
+#
+#  Each row makes one owner-made model placeable in the browser map tool as a
+#  piece of furniture: Designer GLB -> tools/glb-to-obj.py ->
+#  Assets/Noir/Models/<model>.obj, the same pipeline models.txt's houses go
+#  through. A row here does not by itself put the model in the game - Core's
+#  FurniturePlans is what the simulation actually places, keyed on
+#  FurnitureKind, not on a model name - it only makes the model OFFERABLE to
+#  the tool that draws a floor plan, alongside the pack's own footprints.
+#
+#  name | model | kind | width_m x depth_m
+#
+#  name is whatever the tool should call it in its palette. model is the
+#  file under Assets/Noir/Models/, without the .obj extension. kind is a
+#  Noir.Core.World.FurnitureKind - Bed, Sofa, Chair, Table, Desk, Counter,
+#  Sink, Cooker, Basin, Bath, Dresser, Wardrobe, Hearth, and the rest of the
+#  enum - so the piece can stand in for the same footprint FurniturePlans
+#  would have generated. width_m x depth_m is the model's own measured
+#  footprint, floor-plan-flat: width along the piece's front, depth from
+#  front to back. An absent file, or no rows in it, costs nothing - the tool
+#  still offers Core's own generated footprints.
+# ==========================================================================
+
+# Grand Four-Poster | FourPosterBed | Bed | 1.6 x 2.1
