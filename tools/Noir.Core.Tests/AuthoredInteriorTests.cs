@@ -119,5 +119,14 @@ namespace Noir.Core.Tests
             layout.Places[0].Units = 4;
             Assert.DoesNotThrow(() => WorldBuilder.Build(layout, 1234UL));
         }
+
+        [Test]
+        public void TheAuthoredNameTravelsOnTheRoom()
+        {
+            var world = WorldBuilder.Build(TwoHouses(TwoRoomPlan()), 1234UL);
+            var place = world.AllPlaces.Single(p => p.Name == "authored house");
+            Assert.That(world.AllRooms.Any(r => r.Building.Equals(place.Id)
+                                             && r.Name == "Bedroom 1"));
+        }
     }
 }

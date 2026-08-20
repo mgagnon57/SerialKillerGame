@@ -220,8 +220,9 @@ namespace Noir.Core.World
             for (int x = bounds.X; x <= bounds.Right; x++)
                 grid.Set(x, y, Terrain.Wall, wallFlags);
 
-            foreach (var (roomBounds, kind) in interior.Rooms)
+            for (int ri = 0; ri < interior.Rooms.Count; ri++)
             {
+                var (roomBounds, kind) = interior.Rooms[ri];
                 var roomId = new RoomId(rooms.Count);
                 for (int y = roomBounds.Y; y <= roomBounds.Bottom; y++)
                 for (int x = roomBounds.X; x <= roomBounds.Right; x++)
@@ -229,7 +230,8 @@ namespace Noir.Core.World
                     grid.Set(x, y, Terrain.Floor, floorFlags);
                     grid.SetRoom(x, y, roomId);
                 }
-                rooms.Add(new Room(roomId, placeId, kind, roomBounds, roomBounds.Centre));
+                string name = ri < interior.Names.Count ? interior.Names[ri] : "";
+                rooms.Add(new Room(roomId, placeId, kind, roomBounds, roomBounds.Centre, name));
             }
 
             // Doorways between rooms.
@@ -271,6 +273,7 @@ namespace Noir.Core.World
                 if (x1 < x0 || y1 < y0) continue;
                 var r = new TileRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
                 interior.Rooms.Add((r, room.Kind));
+                interior.Names.Add(room.Name);
             }
             foreach (var door in authored.Doors)
                 if (bounds.Contains(door)) interior.Doors.Add(door);
