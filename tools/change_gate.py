@@ -210,7 +210,7 @@ def mark_verified():
                     shutil.copy2(src, dst)
                     current_files.add(name)
 
-        # Remove stale snapshot entries
+        # A deleted plan must leave the snapshot too, or it reads as an unverified diff forever.
         if has_snapshot:
             for name in os.listdir(floorplans_verified):
                 if name not in current_files:
