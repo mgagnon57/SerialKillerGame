@@ -201,7 +201,15 @@ namespace Noir.Core.World
             var interior = InteriorGenerator.Generate(bounds, frontDoor, rng, plan.Grammar, plan.Name);
             bool authored = spec.AuthoredInterior != null && spec.Units == 1
                             && spec.AuthoredInterior.Rooms.Count > 0;
-            if (authored) interior = Adopt(spec.AuthoredInterior, bounds, rng);
+            if (authored)
+            {
+                // THE GENERATED INTERIOR IS THE FALLBACK, and this is what makes that true.
+                // Overwriting unconditionally left a plan whose every room clamped away with
+                // NO interior at all - solid brick, not the guess the comment above promises.
+                var adopted = Adopt(spec.AuthoredInterior, bounds, rng);
+                if (adopted.Rooms.Count > 0) interior = adopted;
+                else authored = false;
+            }
             if (interior.Rooms.Count == 0) return;
 
             int firstRoom = rooms.Count;
@@ -274,9 +282,24 @@ namespace Noir.Core.World
 
                     var room = RoomAt(rooms, firstRoom, piece.Footprint.Centre);
                     if (room == null) continue;    // outside every room: dropped
-                    furniture.Add(new Furniture(piece.Kind, piece.Footprint, room.Id, piece.Model));
+                    // Standing in its room but overhanging the wall - a wardrobe drawn a few
+                    // inches proud - is clamped in rather than dropped, per the spec's own
+                    // failure table. The Unity side logs both cases; Core has no logger.
+                    furniture.Add(new Furniture(piece.Kind, Clamp(piece.Footprint, room.Bounds),
+                                                room.Id, piece.Model));
                 }
             }
+        }
+
+        /// <summary><paramref name="piece"/> moved - and, if it is bigger than the room, shrunk -
+        /// until it lies wholly inside <paramref name="room"/>.</summary>
+        private static TileRect Clamp(TileRect piece, TileRect room)
+        {
+            int w = Math.Min(piece.W, room.W);
+            int h = Math.Min(piece.H, room.H);
+            int x = Math.Min(Math.Max(piece.X, room.X), room.Right - w + 1);
+            int y = Math.Min(Math.Max(piece.Y, room.Y), room.Bottom - h + 1);
+            return new TileRect(x, y, w, h);
         }
 
         /// <summary>The room among <paramref name="rooms"/>[<paramref name="firstRoom"/>..] whose
@@ -312,8 +335,11 @@ namespace Noir.Core.World
                 interior.Rooms.Add((r, room.Kind));
                 interior.Names.Add(room.Name);
             }
+            // INNER, NOT BOUNDS. The perimeter ring is the unit's shell wall, and the only thing
+            // that may pierce it is PlaceSpec.Door - an authored door tile landing on it would
+            // punch a second hole straight through the outside of the house.
             foreach (var door in authored.Doors)
-                if (bounds.Contains(door)) interior.Doors.Add(door);
+                if (inner.Contains(door)) interior.Doors.Add(door);
 
             // Connectivity repair: reach room 0 from the authored doors first, then punch a
             // doorway from a reached room to a stranded one for anything the plan left sealed.
