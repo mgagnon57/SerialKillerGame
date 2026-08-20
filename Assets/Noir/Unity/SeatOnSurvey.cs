@@ -103,14 +103,26 @@ namespace Noir.Unity
                 // Skipping it here drops the lot through to FillFromSurvey, which raises a building
                 // by rule: the right era and the right posture even where it is not the right
                 // building. A rule is a better guess about 1991 than a photograph of 2016.
-                if (Rulings.For(pair.Key).FootprintIsLater) { skippedAsLater += places.Count; continue; }
+                if (Rulings.For(pair.Key).FootprintIsLater)
+                {
+                    skippedAsLater += places.Count;
+                    NoteUnmoved(pair.Key, places);
+                    continue;
+                }
 
                 var measured = ParcelBuildings.For(pair.Key);          // already largest first
 
                 for (int i = 0; i < places.Count && i < measured.Count; i++)
                 {
                     var box = BoxOf(measured[i], out var outline);
-                    if (box.W < Smallest || box.H < Smallest) continue;
+                    if (box.W < Smallest || box.H < Smallest)
+                    {
+                        // Too small to seat onto, so it stays on the generator's box - but it is
+                        // still a building the game stands on this lot, and the map asks what got
+                        // built here rather than what got MOVED here.
+                        InteriorsReport.Note(measured[i].ParcelId, measured[i].Index, places[i], false);
+                        continue;
+                    }
                     var door = DoorFor(places[i], box, outline);
                     if (outline != null && !Covers(outline, door)) outline = null;
                     seated.Add((places[i], places[i].Bounds, box, door, outline,
@@ -189,6 +201,7 @@ namespace Noir.Unity
                     if (at != null)
                         SurveyReport.Say(at.Value.Id, false,
                                          $"measured footprint stands {pen:0.0} m into {road} - not seated");
+                    InteriorsReport.Note(s.ParcelId, s.Index, s.Place, false);
                     continue;                         // keep the authored box, which is set back
                 }
 
@@ -210,6 +223,7 @@ namespace Noir.Unity
                     if (lot != null)
                         SurveyReport.Say(lot.Value.Id, true,
                                          "left where it was - the measured spot was taken");
+                    InteriorsReport.Note(s.ParcelId, s.Index, s.Place, false);
                     continue;
                 }
 
@@ -259,6 +273,23 @@ namespace Noir.Unity
                         ? $", {skippedAsLater} left to the rules because the owner dated the "
                         + "footprint later than 1991" : "") + ".");
             return moved;
+        }
+
+        /// <summary>
+        /// Tell <see cref="InteriorsReport"/> about buildings on a lot this pass is giving up on
+        /// wholesale, so the map still hears what got built there.
+        ///
+        /// Paired to the measured entries the same way the seating loop pairs them - both lists
+        /// are largest first - because <c>&lt;parcel&gt;-&lt;index&gt;</c> is the browser map's own
+        /// key for a building and an index that means anything else is worse than none. A place
+        /// past the end of the measured list has no footprint on the map to be keyed against at
+        /// all, and is deliberately left out rather than given an invented index.
+        /// </summary>
+        private static void NoteUnmoved(int lotId, List<PlaceSpec> places)
+        {
+            var measured = ParcelBuildings.For(lotId);
+            for (int i = 0; i < places.Count && i < measured.Count; i++)
+                InteriorsReport.Note(measured[i].ParcelId, measured[i].Index, places[i], false);
         }
 
         /// <summary>

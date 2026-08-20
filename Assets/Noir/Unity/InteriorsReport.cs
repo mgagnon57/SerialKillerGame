@@ -18,10 +18,22 @@ namespace Noir.Unity
     /// at 611,813, the game either stamps it there or quietly falls back to a generated one, and
     /// there is no symptom - the house still has a kitchen, just not necessarily his.
     ///
-    /// So SeatOnSurvey notes what it handed to FloorPlans.For, this resolves each note against
-    /// the finished world once WorldBuilder has stamped every room and every stick of furniture,
-    /// and the map can show a plan next to the one that built it. Same shape as SurveyReport: a
-    /// REPORT and not content - derived, rewritten on every build, safe to delete.
+    /// So the survey passes note what they built on each measured footprint, this resolves each
+    /// note against the finished world once WorldBuilder has stamped every room and every stick
+    /// of furniture, and the map can show a plan next to the one that built it. Same shape as
+    /// SurveyReport: a REPORT and not content - derived, rewritten on every build, safe to delete.
+    ///
+    /// WHAT A NOTE COVERS, AND WHY IT IS NOT "WHAT MOVED" (2026-08-20). Note() used to be called
+    /// from one place - the branch of SeatOnSurvey's loop where a building successfully moves onto
+    /// its measurement - so the report described 147 buildings out of a town that builds well over
+    /// four hundred on surveyed ground. Everything else was invisible to the map by construction:
+    /// a building refused for standing in a street, one that yielded a taken spot, one on a
+    /// footprint the owner dated later than 1991, and every one of the 313 FillFromSurvey raises
+    /// on lots city.txt never had. All of those BUILD. The map asks "what did the game build
+    /// here", not "what did it move here", so the note now covers every building the game stands
+    /// on a parcel that has a measured footprint for it to be keyed against - carrying that
+    /// footprint's own parcel and index, which is the browser map's key, and never an invented
+    /// one.
     ///
     /// THE TWO-STEP IS FORCED BY WHEN THE FACTS EXIST. SeatOnSurvey has the parcel, the index and
     /// the PlaceSpec while the layout is still just data - no rooms, no furniture, because those
@@ -75,8 +87,14 @@ namespace Noir.Unity
         public static void Clear() { _notes.Clear(); _resolved.Clear(); }
 
         /// <summary>
-        /// Called from SeatOnSurvey at the FloorPlans.For attach - the one place that has the
-        /// parcel, the index and the PlaceSpec together, before the spec is even seated.
+        /// Called from wherever a survey pass has the parcel, the index and the PlaceSpec
+        /// together - SeatOnSurvey at every exit of its own loop, and FillFromSurvey as it raises
+        /// a building - and always before the world exists.
+        ///
+        /// <paramref name="authored"/> is whether the owner's own floor plan actually took, so it
+        /// is only ever true where the caller ran the FloorPlans.For attach. A pass that leaves a
+        /// building on its generated interior says false, which is the truth about that building
+        /// rather than a missing answer.
         ///
         /// KEYED THE SAME WAY WorldBuilder KEYS A PLACE: <see cref="Keys.Of"/> over
         /// <c>spec.Key</c> if the owner set one, else <c>spec.Name</c> - see Place.KeySource and
@@ -94,10 +112,11 @@ namespace Noir.Unity
         /// <summary>
         /// Resolves every note against the built world and writes the interiors out.
         ///
-        /// A note with no matching Place did not fail silently - it was refused for standing in a
-        /// road, or it yielded its measured spot to a bigger neighbour (see SeatOnSurvey's own
-        /// account of both). Either way there is no building to report on, and SKIPPING is the
-        /// correct outcome, not a bug to chase.
+        /// A note with no matching Place did not fail silently - a LATER pass took that building
+        /// down. DowntownFromSanborn drops everything standing on a lot whose footprint the owner
+        /// dated later than 1991 and lays a 1913 terrace over it instead, and those units are new
+        /// places with new keys. There is no building left to report on, and SKIPPING is the
+        /// correct outcome, not a bug to chase - the count is said out loud below.
         /// </summary>
         public static void Write(WorldModel world)
         {
