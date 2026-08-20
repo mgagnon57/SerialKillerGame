@@ -737,7 +737,17 @@ namespace Noir.PlayTests
         /// dressed town can. 673-0.json authors 11 rooms (3 bedrooms, 1 kitchen, plus
         /// hall/bath/living/dining/family/second bath); conversion may drop slivers and
         /// the door-blind guard may repair a wall, so this is a floor on count and kind,
-        /// not an equality on either.</summary>
+        /// not an equality on either.
+        ///
+        /// THESE FLOORS NO LONGER DEPEND ON WHICH WALL THE DOOR IS IN. They did until
+        /// 2026-08-19: the plan was scaled at a flat 0.3048 and anchored in the seated
+        /// box's corner, so at rot 0 the Kitchen and Bath 2 fell outside the box entirely
+        /// and Core clamped them away - 9 rooms, ZERO kitchens, and this gate red for a
+        /// reason that reads as "the plan broke". FloorPlans FITS the plan to the seated
+        /// interior now, so all 11 rooms survive at all four rotations (replayed against
+        /// 408's real 12x15 seating: 11 rooms, 3 bedrooms, 1 kitchen, no room under one
+        /// tile, every rotation). A re-survey that moves 408's door is no longer a
+        /// reason for this to change colour.</summary>
         [UnityTest]
         public IEnumerator TheOwnersFloorPlanIsTheHousesRealRooms()
         {

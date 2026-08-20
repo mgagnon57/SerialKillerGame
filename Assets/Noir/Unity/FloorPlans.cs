@@ -12,28 +12,50 @@ namespace Noir.Unity
     /// consumes as <c>PlaceSpec.AuthoredInterior</c>.
     ///
     /// Core never reads Content/floorplans/ and never learns what a parcel is - see
-    /// AuthoredInterior's own header. This is the one place the conversion happens: feet to
-    /// tiles at one tile per metre, the plan (drawn street-side down, in the editor's own
-    /// frame) turned to face whichever way the seated building's real front door actually
-    /// faces, and the editor's real-thickness walls - which round to zero tiles between two
-    /// rooms drawn edge to edge at one metre per tile - reinstated as at least one tile so
-    /// adjacent rooms do not convert into a single open room.
+    /// AuthoredInterior's own header. This is the one place the conversion happens.
+    ///
+    /// THE PLAN IS FITTED TO THE SEATED FOOTPRINT, NOT SCALED INTO ITS CORNER. Until
+    /// 2026-08-19 this file multiplied feet by 0.3048, anchored the result at the building's
+    /// north-west corner, and let Core's clamp shear off whatever hung over the far side. It
+    /// hung over a long way: 673-0.json is 45.5 x 38.5 ft (14 x 12 tiles) and 408 Holmes
+    /// Street seats at 12 x 15 tiles, whose usable interior is 10 x 13 - no rotation of the
+    /// one fits inside the other. Measured, the result was a warren of closets covering 43%
+    /// of the floor with a ONE-TILE kitchen and two of the three bedrooms a single tile wide.
+    ///
+    /// So the two sources are reconciled the way this project reconciles every other pair:
+    /// the SURVEY wins on size and the PLAN wins on topology. <see cref="FittedAxis"/>
+    /// collects the plan's own room-edge coordinates on one axis, and maps them monotonically
+    /// onto the seated interior's tiles - every room keeps at least one tile on each axis,
+    /// every wall the plan draws between two rooms keeps at least one tile of its own, and
+    /// the whole plan spans the full interior. Rooms, interior doors and furniture all travel
+    /// through the same two fitted axes, so they cannot disagree with each other. What is
+    /// given up is exact proportion: at 408 the plan's 44 ft of width is fitted into 10 m,
+    /// so every room is about a quarter narrower than the owner drew it. That is the price of
+    /// a footprint the county measured at 12.4 x 14.8 m against a model the owner built at
+    /// 13.9 x 11.7 - a ruling for him, not a number this file may invent.
     ///
     /// Spec: docs/superpowers/specs/2026-08-19-authored-interiors-design.md.
     /// </summary>
     public static class FloorPlans
     {
-        private const float Feet = 0.3048f;
-
         /// <summary>
-        /// A safety cap on the FINAL (post-shrink) tile gap <see cref="WallGap"/> will accept
-        /// between two rooms already known - from <see cref="PlanNeighbourAcross"/>, decided in
-        /// the plan's own feet coordinates - to sit on either side of one wall. Rounding and
-        /// wall re-insertion should never open a multi-tile gap between two rooms that share a
-        /// real wall; if one somehow did, this is what stops a door being placed across it
-        /// anyway rather than skipped.
+        /// A safety cap on the FINAL tile gap <see cref="WallGap"/> will accept between two
+        /// rooms already known - from <see cref="PlanNeighbourAcross"/>, decided in the plan's
+        /// own feet coordinates - to sit on either side of one wall. The fitted mapping should
+        /// never open a multi-tile gap between two rooms that share a real wall; if one somehow
+        /// did, this is what stops a door being placed across it anyway rather than skipped.
         /// </summary>
         private const int MaxWallGap = 3;
+
+        /// <summary>Two plan coordinates closer than this are the same edge. The editor draws
+        /// to the half foot, so anything under it is float noise, not a wall.</summary>
+        private const float CoordEpsilon = 0.1f;
+
+        /// <summary>The narrowest gap between two rooms that counts as a wall worth a tile of
+        /// its own. Below it the two rooms were drawn sharing an edge - one wall centreline,
+        /// no space between them - and they convert to neighbouring tiles with no wall line.
+        /// </summary>
+        private const float WallGapFeet = 0.2f;
 
         // ---- the JSON shape, matching the editor's own field names exactly ----------------
 
@@ -79,38 +101,55 @@ namespace Noir.Unity
             public float rot;
         }
 
-        /// <summary>A room mid-conversion: oriented tile rect. <see cref="ShrinkForWall"/>
-        /// floors every shrink at 1x1 on both sides of a pair, so nothing here is ever
-        /// dropped - there is no "did wall re-insertion kill this room" flag to carry.</summary>
-        private struct Acc
+        /// <summary>One room's or one piece's extent on one plan axis, in feet.</summary>
+        private struct Span
         {
-            public string Id;
-            public string Name;
-            public RoomKind Kind;
-            public TileRect Rect;
+            public float Lo, Hi;
+            public Span(float lo, float hi) { Lo = lo; Hi = hi; }
         }
 
         // ---- the census, one line for the whole build ---------------------------------
 
-        private static int _consumed, _refused, _doorBlind;
+        private static int _consumed, _refused, _doorBlind, _unseated;
 
         /// <summary>Zero the tallies. Called once, before a survey pass seats any building.</summary>
-        public static void ResetCensus() { _consumed = 0; _refused = 0; _doorBlind = 0; }
+        public static void ResetCensus() { _consumed = 0; _refused = 0; _doorBlind = 0; _unseated = 0; }
+
+        /// <summary>
+        /// Count every plan file whose building never reached the survey's attach point at all -
+        /// refused for standing in a street, yielded to a clash, or simply not among the measured
+        /// buildings. Such a plan is never read, so without this it is neither consumed nor
+        /// refused and the census says nothing about it: a lie by omission in exactly the case
+        /// the owner would ask about ("I drew one - where did it go?").
+        /// </summary>
+        public static void NoteUnseatedPlans(HashSet<string> attachedTags)
+        {
+            string dir = System.IO.Path.Combine(ContentLoader.Root, "floorplans");
+            if (!System.IO.Directory.Exists(dir)) return;
+            foreach (string file in System.IO.Directory.GetFiles(dir, "*.json"))
+            {
+                string tag = System.IO.Path.GetFileNameWithoutExtension(file);
+                if (attachedTags.Contains(tag)) continue;
+                _unseated++;
+                Debug.LogWarning($"[floorplans] {tag}: the building this plan was drawn for was "
+                                + "never seated, so the plan was never read.");
+            }
+        }
 
         /// <summary>The one line for the whole build, in the survey passes' own bracket style.</summary>
         public static void LogCensus() =>
             Debug.Log($"[floorplans] {_consumed} consumed, {_refused} refused, "
-                    + $"{_doorBlind} door-blind");
+                    + $"{_doorBlind} door-blind, {_unseated} unseated");
 
         /// <summary>
-        /// The owner's floor plan for this seated building, oriented to its door - or null if
-        /// he never drew one, which is the ordinary case for every lot but the ones he has
-        /// actually opened the tool on. A plan file that exists and cannot be turned into a
-        /// usable interior is REFUSED rather than silently dropped: named in the log and
+        /// The owner's floor plan for this seated building, fitted to it and oriented to its
+        /// door - or null if he never drew one, which is the ordinary case for every lot but the
+        /// ones he has actually opened the tool on. A plan file that exists and cannot be turned
+        /// into a usable interior is REFUSED rather than silently dropped: named in the log and
         /// counted, same as a plan that opens its front door into a wall (door-blind).
         /// </summary>
         public static AuthoredInterior For(int parcel, int index, TileRect bounds, Tile door,
-                                            bool ownerModel)
+                                            bool ownerModel, int units)
         {
             string tag = parcel + "-" + index;
             string relPath = "floorplans/" + tag + ".json";
@@ -120,6 +159,18 @@ namespace Noir.Unity
             // a file that exists and still could not be used is.
             string fullPath = System.IO.Path.Combine(ContentLoader.Root, relPath);
             if (!System.IO.File.Exists(fullPath)) return null;
+
+            // A MULTI-UNIT BUILDING KEEPS ITS BSP, so the plan is refused HERE rather than
+            // converted, attached, counted consumed and then quietly ignored by Core's
+            // `Units == 1` guard - which is how the census came to over-count. The spec's own
+            // failure table says the survey report should say why.
+            if (units != 1)
+            {
+                _refused++;
+                Debug.LogWarning($"[floorplans] {tag}: a {units}-unit building keeps its "
+                                + "generated interior - the plan format has no per-unit story.");
+                return null;
+            }
 
             PlanFile plan;
             try
@@ -148,44 +199,47 @@ namespace Noir.Unity
                 return null;
             }
 
-            // rot 0: door on the south edge (door.Y == bounds.Bottom) - plan and world agree.
-            // rot 2: door north - flip both axes. rot 1/3: door east/west - swap axes.
-            int rot = door.Y == bounds.Bottom ? 0
-                    : door.Y == bounds.Y ? 2
-                    : door.X == bounds.Right ? 1 : 3;
+            int rot = RotationFor(bounds, door, tag);
 
-            var byId = new Dictionary<string, PlanRoom>();
-            foreach (var r in plan.rooms)
-                if (!string.IsNullOrEmpty(r.id)) byId[r.id] = r;
+            // THE INTERIOR CORE WILL KEEP, computed the same way WorldBuilder.Adopt computes
+            // it - the unit's one-tile inset, its perimeter being the shell wall. Fitting to
+            // anything wider would hand Core rooms it then clamps, which is the bug this whole
+            // pass exists to end.
+            var inner = new TileRect(bounds.X + 1, bounds.Y + 1,
+                                     Mathf.Max(1, bounds.W - 2), Mathf.Max(1, bounds.H - 2));
 
-            var acc = new List<Acc>(plan.rooms.Count);
+            var xs = new List<Span>(plan.rooms.Count);
+            var ys = new List<Span>(plan.rooms.Count);
             foreach (var r in plan.rooms)
             {
-                acc.Add(new Acc
-                {
-                    Id = r.id ?? "",
-                    Name = r.name ?? "",
-                    Kind = RoomWords.KindFor(r.name),
-                    Rect = Orient(r.x, r.y, r.w, r.h, plan.shell, bounds, rot),
-                });
+                xs.Add(new Span(r.x, r.x + Mathf.Max(0.01f, r.w)));
+                ys.Add(new Span(r.y, r.y + Mathf.Max(0.01f, r.h)));
             }
 
-            // WALL RE-INSERTION. The editor's rooms are interior rects separated by a real
-            // wall thickness - four to six inches, which rounds to zero tiles at one tile per
-            // metre - so two rooms drawn edge to edge convert to tile rects that touch, or
-            // even overlap by a tile. Left alone that is one open room, not two: for each
-            // ordered pair, the LATER room in the plan's own list gives way, shrunk on the
-            // side facing the earlier one by the overlap plus one.
-            for (int i = 0; i < acc.Count; i++)
-                for (int j = i + 1; j < acc.Count; j++)
-                    ShrinkForWall(acc, i, j, tag);
+            // THE SPEC'S OWN FAILURE TABLE promises a log for a room drawn outside the shell.
+            // The fit brings it back in by construction - it fits the ROOMS, so a stray one
+            // simply widens what everything else is squeezed into - but the owner is told,
+            // because a room outside the shell is a slip of the mouse, not a design.
+            for (int i = 0; i < plan.rooms.Count; i++)
+                if (xs[i].Lo < -CoordEpsilon || ys[i].Lo < -CoordEpsilon
+                    || xs[i].Hi > plan.shell.w + CoordEpsilon || ys[i].Hi > plan.shell.d + CoordEpsilon)
+                    Debug.LogWarning($"[floorplans] {tag}: '{plan.rooms[i].name}' is drawn outside "
+                                    + "the shell - fitted back inside it.");
+
+            var fit = new Fit(xs, ys, inner, rot, tag);
+
+            var byId = new Dictionary<string, PlanRoom>();
+            for (int i = 0; i < plan.rooms.Count; i++)
+                if (!string.IsNullOrEmpty(plan.rooms[i].id)) byId[plan.rooms[i].id] = plan.rooms[i];
 
             var result = new AuthoredInterior { Furnish = !ownerModel };
             var rectById = new Dictionary<string, TileRect>();
-            foreach (var a in acc)
+            for (int i = 0; i < plan.rooms.Count; i++)
             {
-                rectById[a.Id] = a.Rect;
-                result.Rooms.Add(new AuthoredRoom(a.Rect, a.Kind, a.Name));
+                var r = plan.rooms[i];
+                var rect = fit.RoomRect(i);
+                rectById[r.id ?? ""] = rect;
+                result.Rooms.Add(new AuthoredRoom(rect, RoomWords.KindFor(r.name), r.name ?? ""));
             }
 
             // INTERIOR DOORS. An opening's own room, side and offset already say exactly which
@@ -219,7 +273,7 @@ namespace Noir.Unity
                                  out int bandLo, out int bandHi))
                         continue;    // the two final rects no longer face each other at all
 
-                    var pt = OrientPoint(fx, fy, plan.shell, bounds, rot);
+                    var pt = fit.Point(fx, fy);
                     var doorTile = vertical
                         ? new Tile(Mathf.Clamp(pt.X, bandLo, bandHi), Mathf.Clamp(pt.Y, fixedLo, fixedHi))
                         : new Tile(Mathf.Clamp(pt.X, fixedLo, fixedHi), Mathf.Clamp(pt.Y, bandLo, bandHi));
@@ -228,18 +282,20 @@ namespace Noir.Unity
                 }
             }
 
-            // FURNITURE: the owner's own pieces, in tile space. Whether they replace the
-            // generated furnishing wholesale is AuthoredInterior.Furnish / WorldBuilder.Adopt's
-            // call, not this one - this only converts what he placed.
+            // FURNITURE: the owner's own pieces, through the same two fitted axes the rooms
+            // travelled, so a bed drawn against a wall stays against that wall. Whether they
+            // replace the generated furnishing wholesale is AuthoredInterior.Furnish /
+            // WorldBuilder.Adopt's call, not this one - this only converts what he placed.
             if (plan.furniture != null)
             {
                 foreach (var f in plan.furniture)
                 {
                     int yaw = ((Mathf.RoundToInt(f.rot) % 360) + 360) % 360;
                     bool swapped = yaw % 180 != 0;      // a piece's own rot swaps w/h first
-                    float fw = swapped ? f.h : f.w;
-                    float fh = swapped ? f.w : f.h;
-                    var footprint = Orient(f.x, f.y, fw, fh, plan.shell, bounds, rot);
+                    float fw = Mathf.Max(0.01f, swapped ? f.h : f.w);
+                    float fh = Mathf.Max(0.01f, swapped ? f.w : f.h);
+                    var footprint = fit.Rect(new Span(f.x, f.x + fw), new Span(f.y, f.y + fh));
+                    ReportFurnitureFit(tag, f.name, footprint, result.Rooms);
                     result.Furniture.Add(new AuthoredFurniture(FurnitureWords.KindFor(f.name),
                                                                 footprint, f.model));
                 }
@@ -262,6 +318,57 @@ namespace Noir.Unity
 
             _consumed++;
             return result;
+        }
+
+        /// <summary>
+        /// Which 90-degree turn puts the plan's south edge - the street side the editor always
+        /// draws downwards - on the wall this building's front door actually stands in.
+        ///
+        /// NEAREST EDGE, NOT AN EXACT MATCH. This used to be a chain of equality tests, which
+        /// is right for a rectangle and wrong for every shaped building: SeatOnSurvey.DoorFor
+        /// walks a shaped building's door INWARD from the box edge until it meets the outline,
+        /// so the door sits inside the box, matches no edge, and the chain fell through to its
+        /// last branch - stamping the whole plan mirrored onto the west wall, silently. No plan
+        /// hits that today (673 is rectangular, so no outline is kept) and it was armed for the
+        /// next plan the owner draws on a shaped lot.
+        /// </summary>
+        private static int RotationFor(TileRect bounds, Tile door, string tag)
+        {
+            int toBottom = Mathf.Abs(door.Y - bounds.Bottom);
+            int toTop = Mathf.Abs(door.Y - bounds.Y);
+            int toRight = Mathf.Abs(door.X - bounds.Right);
+            int toLeft = Mathf.Abs(door.X - bounds.X);
+
+            // Ties keep the old chain's precedence: south, then north, then east, then west.
+            int best = toBottom, rot = 0;
+            if (toTop < best) { best = toTop; rot = 2; }
+            if (toRight < best) { best = toRight; rot = 1; }
+            if (toLeft < best) { best = toLeft; rot = 3; }
+
+            if (best > 1)
+                Debug.LogWarning($"[floorplans] {tag}: the door at {door.X},{door.Y} is {best} "
+                                + $"tiles from the nearest wall of {bounds} - the plan is turned "
+                                + "to the nearest one, which may not be the street side.");
+            return rot;
+        }
+
+        /// <summary>The spec's failure row for furniture: a piece whose CENTRE is inside a room
+        /// but whose footprint pokes out is clamped in by Core; one whose centre is outside every
+        /// room is dropped. Core has no logger, so the owner hears about it here.</summary>
+        private static void ReportFurnitureFit(string tag, string name, TileRect footprint,
+                                                List<AuthoredRoom> rooms)
+        {
+            foreach (var room in rooms)
+            {
+                if (!room.Bounds.Contains(footprint.Centre)) continue;
+                if (footprint.X < room.Bounds.X || footprint.Y < room.Bounds.Y
+                    || footprint.Right > room.Bounds.Right || footprint.Bottom > room.Bounds.Bottom)
+                    Debug.LogWarning($"[floorplans] {tag}: '{name}' overhangs '{room.Name}' - "
+                                    + "clamped into the room.");
+                return;
+            }
+            Debug.LogWarning($"[floorplans] {tag}: '{name}' sits outside every authored room - "
+                            + "dropped.");
         }
 
         /// <summary>The feet-space centre of an opening, along the side of the room it is cut
@@ -327,83 +434,10 @@ namespace Noir.Unity
         private static bool Overlaps1D(float aLo, float aHi, float bLo, float bHi) => aLo < bHi && bLo < aHi;
 
         /// <summary>
-        /// Reinstates the wall between rooms <paramref name="i"/> (earlier in the plan's own
-        /// list) and <paramref name="j"/> (later) by shrinking one or both of them on the side
-        /// facing the other, by the overlap between their oriented tile rects plus one.
-        ///
-        /// <paramref name="j"/> gives way first, same as always - but only down to 1x1, never
-        /// through it. A full one-tile wall can ask for more than a small, already-once-shrunk
-        /// room has left: 408 Holmes Street's "Dining / entry" is narrowed to one column by the
-        /// hall on one side, then asked for a second tile of height by the bathroom on the
-        /// other, which taking the whole amount from it alone would consume entirely. Whatever
-        /// <paramref name="j"/> cannot afford comes off <paramref name="i"/> instead, also
-        /// floored at 1x1 - safe, because <paramref name="i"/> is only ever the EARLIER room in
-        /// a pair here, so shrinking it now cannot reopen a wall already reinstated against some
-        /// even-earlier neighbour of its own (a room can only ever be "i" against a strictly
-        /// higher-indexed "j"; nothing that already leaned on it as "i" runs again). If even
-        /// that is not enough - both already at 1x1 - whatever fits is taken and the shortfall
-        /// is logged rather than dropping either room: a thinner wall than intended is still a
-        /// wall, and a real one drawn by the owner does not stop being a room because two of its
-        /// neighbours left it no floor to spare.
-        /// </summary>
-        private static void ShrinkForWall(List<Acc> rooms, int i, int j, string tag)
-        {
-            var ri = rooms[i].Rect;
-            var rj = rooms[j].Rect;
-
-            int xOverlap = Mathf.Min(ri.Right, rj.Right) - Mathf.Max(ri.Left, rj.Left) + 1;
-            int yOverlap = Mathf.Min(ri.Bottom, rj.Bottom) - Mathf.Max(ri.Top, rj.Top) + 1;
-            if (xOverlap <= 0 && yOverlap <= 0) return;   // a gap on both axes, or a bare corner
-
-            bool vertical;
-            if (xOverlap > 0 && yOverlap > 0) vertical = yOverlap <= xOverlap;
-            else if (xOverlap > 0) { if (yOverlap < 0) return; vertical = true; }
-            else { if (xOverlap < 0) return; vertical = false; }
-
-            int required = (vertical ? Mathf.Max(yOverlap, 0) : Mathf.Max(xOverlap, 0)) + 1;
-            bool jBelow = (rj.Y * 2 + rj.H) > (ri.Y * 2 + ri.H);
-            bool jRight = (rj.X * 2 + rj.W) > (ri.X * 2 + ri.W);
-
-            int axisJ = vertical ? rj.H : rj.W;
-            int axisI = vertical ? ri.H : ri.W;
-            int takeJ = Mathf.Min(required, axisJ - 1);
-            int takeI = Mathf.Min(required - takeJ, axisI - 1);
-
-            if (takeJ + takeI < required)
-                Debug.LogWarning($"[floorplans] {tag}: '{rooms[j].Name}' and '{rooms[i].Name}' "
-                                + "are pinched to 1x1 on both sides and still overlap - the wall "
-                                + "between them is thinner than intended.");
-
-            if (takeJ > 0)
-            {
-                var r = rooms[j];
-                r.Rect = vertical
-                    ? (jBelow ? new TileRect(rj.X, rj.Y + takeJ, rj.W, rj.H - takeJ)
-                              : new TileRect(rj.X, rj.Y, rj.W, rj.H - takeJ))
-                    : (jRight ? new TileRect(rj.X + takeJ, rj.Y, rj.W - takeJ, rj.H)
-                              : new TileRect(rj.X, rj.Y, rj.W - takeJ, rj.H));
-                rooms[j] = r;
-            }
-
-            if (takeI > 0)
-            {
-                // i shrinks on the side FACING j - the opposite edge from where j just gave
-                // ground, since now i is the one handing tiles over.
-                var r = rooms[i];
-                r.Rect = vertical
-                    ? (jBelow ? new TileRect(ri.X, ri.Y, ri.W, ri.H - takeI)
-                              : new TileRect(ri.X, ri.Y + takeI, ri.W, ri.H - takeI))
-                    : (jRight ? new TileRect(ri.X, ri.Y, ri.W - takeI, ri.H)
-                              : new TileRect(ri.X + takeI, ri.Y, ri.W - takeI, ri.H));
-                rooms[i] = r;
-            }
-        }
-
-        /// <summary>
-        /// Whether two final (post-shrink) room rects face each other across a thin gap - the
-        /// wall a door opening between them would sit in - and if so, that gap's tile band:
-        /// a fixed [lo,hi] range on the axis the rects are stacked along, and the [lo,hi] range
-        /// of tiles available on the other axis where the two rects' ranges overlap.
+        /// Whether two final room rects face each other across a thin gap - the wall a door
+        /// opening between them would sit in - and if so, that gap's tile band: a fixed [lo,hi]
+        /// range on the axis the rects are stacked along, and the [lo,hi] range of tiles
+        /// available on the other axis where the two rects' ranges overlap.
         /// </summary>
         private static bool WallGap(TileRect a, TileRect b, out bool vertical,
                                      out int fixedLo, out int fixedHi,
@@ -462,62 +496,318 @@ namespace Noir.Unity
             return new Tile(door.X + dx, door.Y + dy);
         }
 
+        // ---- the fit ---------------------------------------------------------------------
+
         /// <summary>
-        /// One rectangle, feet to oriented tiles. Plan coordinates: x from the west face, y
-        /// from the north face, street at the bottom (south). Orientation: the plan's south
-        /// edge maps onto the side of <paramref name="b"/> that carries the door.
+        /// The plan's two axes fitted onto the seated interior's two, plus which world axis each
+        /// plan axis landed on and which way round it runs.
         ///
         /// rot 1 and rot 3 are NOT mirror images of each other the way 0 and 2 are - they are
-        /// two different 90-degree turns, and a point's own x and y trade places between them
-        /// (case 1 reads the plan's y off world-X and its x off world-Y; the case-3/default
-        /// swap does the opposite pairing). Picking the wrong one of the two sends the plan's
-        /// south edge - the one that is supposed to land on the door - to the world wall
-        /// OPPOSITE the door instead, silently: it still compiles, still builds a full interior,
-        /// just mirrored onto the wrong side of the building. Verified against `bounds`/`shell`
-        /// by direct substitution before trusting either: at rot 1 (selected because the real
-        /// door sits on `bounds.Right`), plugging in a room's own south edge (y+h = sd, the
-        /// plan's own depth) into each candidate and checking which one reaches world-X = sd
-        /// (i.e. `bounds.Right`, relative to `b.X`) rather than world-X = 0 (the wall
-        /// opposite it) is what decided which formula belongs to which case here.
+        /// two different 90-degree turns, and the plan's x and y trade places between them.
+        /// Picking the wrong one sends the plan's south edge - the one that is supposed to land
+        /// on the door - to the world wall OPPOSITE the door instead, silently: it still
+        /// compiles, still builds a full interior, just mirrored onto the wrong side of the
+        /// building. The four cases below are the same four the feet-to-tiles version was
+        /// verified into by direct substitution, restated as an axis and a direction:
+        /// at rot 1 the plan's y (its depth, street at the far end) runs along world X the right
+        /// way up, and its x runs backwards along world Y.
         ///
-        /// NO CLAMP AGAINST `b`/`shell` HAPPENS HERE ON PURPOSE. `WorldBuilder.Adopt` clamps
-        /// every authored room to the unit's own 1-tile-inset interior before it ever reaches
-        /// the grid (`WorldBuilder.cs`), so a room whose independently-rounded edges overshoot
-        /// the shell by a tile is caught there, not here. Do not re-add a clamp in this file -
-        /// it would just be the same clamp twice, one of them stale the moment Core's changes.
+        /// Because each axis SPANS the interior, the plan's south edge lands on the last tile
+        /// of the door's own wall at every rotation - which is what makes door alignment hold on
+        /// four rotations rather than the two the corner-anchored version managed.
         /// </summary>
-        private static TileRect Orient(float fx, float fy, float fw, float fh,
-                                        Shell shell, TileRect b, int rot)
+        private sealed class Fit
         {
-            int x = Mathf.RoundToInt(fx * Feet), y = Mathf.RoundToInt(fy * Feet);
-            int w = Mathf.Max(1, Mathf.RoundToInt(fw * Feet));
-            int h = Mathf.Max(1, Mathf.RoundToInt(fh * Feet));
-            int sw = Mathf.Max(1, Mathf.RoundToInt(shell.w * Feet));
-            int sd = Mathf.Max(1, Mathf.RoundToInt(shell.d * Feet));
-            switch (rot)
+            private readonly FittedAxis _planX, _planY;
+            private readonly bool _swap;      // world X takes the plan's y
+            private readonly bool _revX, _revY;
+            private readonly TileRect _inner;
+
+            public Fit(List<Span> xs, List<Span> ys, TileRect inner, int rot, string tag)
             {
-                case 0: return new TileRect(b.X + x,            b.Y + y,            w, h);
-                case 2: return new TileRect(b.X + (sw - x - w), b.Y + (sd - y - h), w, h);
-                case 1: return new TileRect(b.X + y,            b.Y + (sw - x - w), h, w);
-                default: return new TileRect(b.X + (sd - y - h), b.Y + x,            h, w);
+                _inner = inner;
+                _swap = rot == 1 || rot == 3;
+                _revX = rot == 2 || rot == 3;
+                _revY = rot == 2 || rot == 1;
+                int forPlanX = _swap ? inner.H : inner.W;
+                int forPlanY = _swap ? inner.W : inner.H;
+                _planX = new FittedAxis(xs, ys, forPlanX, "x", tag);
+                _planY = new FittedAxis(ys, xs, forPlanY, "y", tag);
+            }
+
+            public TileRect RoomRect(int i)
+            {
+                _planX.RoomSpan(i, out int px0, out int px1);
+                _planY.RoomSpan(i, out int py0, out int py1);
+                return Assemble(px0, px1, py0, py1);
+            }
+
+            public TileRect Rect(Span x, Span y)
+            {
+                _planX.Extent(x.Lo, x.Hi, out int px0, out int px1);
+                _planY.Extent(y.Lo, y.Hi, out int py0, out int py1);
+                return Assemble(px0, px1, py0, py1);
+            }
+
+            public Tile Point(float fx, float fy)
+            {
+                int px = _planX.Point(fx), py = _planY.Point(fy);
+                var r = Assemble(px, px, py, py);
+                return new Tile(r.X, r.Y);
+            }
+
+            private TileRect Assemble(int px0, int px1, int py0, int py1)
+            {
+                int x0 = _swap ? py0 : px0, x1 = _swap ? py1 : px1;
+                int y0 = _swap ? px0 : py0, y1 = _swap ? px1 : py1;
+                if (_revX) { int t = x0; x0 = _inner.W - 1 - x1; x1 = _inner.W - 1 - t; }
+                if (_revY) { int t = y0; y0 = _inner.H - 1 - y1; y1 = _inner.H - 1 - t; }
+                return new TileRect(_inner.X + x0, _inner.Y + y0, x1 - x0 + 1, y1 - y0 + 1);
             }
         }
 
-        /// <summary>The same conversion as <see cref="Orient"/> for a single point - an
-        /// opening's centre, not a room - so no width or height is clamped to a minimum of
-        /// one tile the way a room's is. See <see cref="Orient"/>'s own header for why rot 1
-        /// and rot 3 use the formulas they do, not the other way round.</summary>
-        private static Tile OrientPoint(float fx, float fy, Shell shell, TileRect b, int rot)
+        /// <summary>
+        /// One plan axis, fitted onto a run of tiles.
+        ///
+        /// Every coordinate any room's edge sits on is a BREAKPOINT; the stretches between two
+        /// consecutive breakpoints are BANDS, and the fit is a choice of how many tiles each
+        /// band gets. That decomposition is what makes a wall local rather than global: the half
+        /// foot between Bedroom 3 and Bedroom 2 is its own band, and the Living room - which
+        /// spans straight across it at a different x - simply includes that band's tile in its
+        /// own run. Give every band a tile and every wall the plan draws exists, everywhere it
+        /// is drawn, without anything having to hunt for pairs of rooms.
+        ///
+        /// Tiles are then handed out in proportion to each band's real width, EXCEPT that a band
+        /// which is some room's whole extent, or the only thing separating two rooms that would
+        /// otherwise touch, is floored at one tile however thin it is. That is the whole rule:
+        /// proportion where there is room for it, topology where there is not. When even the
+        /// floors do not fit - a plan with more distinct edges on one axis than the seated
+        /// building has tiles - the widest droppable bands survive, the narrowest are merged
+        /// away, and each merge is logged, because a wall the owner drew has just gone.
+        /// </summary>
+        private sealed class FittedAxis
         {
-            int x = Mathf.RoundToInt(fx * Feet), y = Mathf.RoundToInt(fy * Feet);
-            int sw = Mathf.Max(1, Mathf.RoundToInt(shell.w * Feet));
-            int sd = Mathf.Max(1, Mathf.RoundToInt(shell.d * Feet));
-            switch (rot)
+            private readonly List<float> _coords = new List<float>();
+            private readonly int[] _count;    // tiles per band
+            private readonly int[] _pos;      // tile offset of each breakpoint
+            private readonly int[] _lo, _hi;  // per room, the band range [lo, hi)
+            private readonly int _extent;
+
+            public FittedAxis(List<Span> spans, List<Span> others, int extent,
+                               string axis, string tag)
             {
-                case 0: return new Tile(b.X + x,        b.Y + y);
-                case 2: return new Tile(b.X + (sw - x), b.Y + (sd - y));
-                case 1: return new Tile(b.X + y,        b.Y + (sw - x));
-                default: return new Tile(b.X + (sd - y), b.Y + x);
+                _extent = Mathf.Max(1, extent);
+
+                var raw = new List<float>(spans.Count * 2);
+                foreach (var s in spans) { raw.Add(s.Lo); raw.Add(s.Hi); }
+                raw.Sort();
+                foreach (float c in raw)
+                    if (_coords.Count == 0 || c - _coords[_coords.Count - 1] > CoordEpsilon)
+                        _coords.Add(c);
+                if (_coords.Count < 2) _coords.Add(_coords[0] + 1f);   // one degenerate band
+                int n = _coords.Count - 1;
+
+                _lo = new int[spans.Count];
+                _hi = new int[spans.Count];
+                for (int i = 0; i < spans.Count; i++)
+                {
+                    _lo[i] = Nearest(spans[i].Lo);
+                    _hi[i] = Nearest(spans[i].Hi);
+                    if (_hi[i] <= _lo[i])
+                    {
+                        _lo[i] = Mathf.Min(_lo[i], n - 1);
+                        _hi[i] = _lo[i] + 1;
+                    }
+                }
+
+                var width = new float[n];
+                for (int k = 0; k < n; k++) width[k] = _coords[k + 1] - _coords[k];
+
+                // A band nothing but one room stands on cannot be merged away without that room
+                // losing its only tile on this axis.
+                var sole = new bool[n];
+                for (int i = 0; i < spans.Count; i++)
+                    if (_hi[i] - _lo[i] == 1) sole[_lo[i]] = true;
+
+                // A band with a room ending at its near edge and another starting at its far one
+                // is the wall between them - but only if the two really do face each other, which
+                // is decided on the OTHER axis, in feet, before any of this rounding.
+                var must = new bool[n];
+                for (int k = 0; k < n; k++)
+                {
+                    must[k] = sole[k];
+                    if (must[k] || width[k] < WallGapFeet) continue;
+                    for (int a = 0; a < spans.Count && !must[k]; a++)
+                    {
+                        if (_hi[a] != k) continue;
+                        for (int b = 0; b < spans.Count; b++)
+                        {
+                            if (_lo[b] != k + 1) continue;
+                            if (others[a].Lo < others[b].Hi - CoordEpsilon
+                                && others[b].Lo < others[a].Hi - CoordEpsilon)
+                            { must[k] = true; break; }
+                        }
+                    }
+                }
+
+                _count = new int[n];
+                var dropped = new bool[n];
+
+                int needed = 0;
+                for (int k = 0; k < n; k++) if (must[k]) needed++;
+                if (needed > _extent)
+                {
+                    // Merge the narrowest walls first, and a band carrying a whole room only
+                    // when nothing else is left. Both are losses; both are said out loud.
+                    var order = new List<int>();
+                    for (int k = 0; k < n; k++) if (must[k]) order.Add(k);
+                    order.Sort((p, q) =>
+                    {
+                        if (sole[p] != sole[q]) return sole[p] ? 1 : -1;
+                        int c = width[p].CompareTo(width[q]);
+                        return c != 0 ? c : p.CompareTo(q);
+                    });
+                    for (int i = 0; i < order.Count && needed > _extent; i++)
+                    {
+                        int k = order[i];
+                        dropped[k] = true; must[k] = false; needed--;
+                        Debug.LogWarning($"[floorplans] {tag}: the seated footprint is too small "
+                                        + $"for the plan - the {axis} band at {_coords[k]:0.0} ft "
+                                        + (sole[k] ? "carrying a whole room " : "carrying a wall ")
+                                        + "was merged away.");
+                    }
+                }
+
+                float total = 0f;
+                for (int k = 0; k < n; k++) total += width[k];
+                if (total <= 0f) total = 1f;
+
+                var ideal = new float[n];
+                int used = 0;
+                for (int k = 0; k < n; k++)
+                {
+                    ideal[k] = width[k] / total * _extent;
+                    _count[k] = dropped[k] ? 0
+                              : must[k] ? Mathf.Max(1, Mathf.FloorToInt(ideal[k]))
+                              : Mathf.FloorToInt(ideal[k]);
+                    used += _count[k];
+                }
+
+                // Hand out what is left, and take back what was over-spent, always at the band
+                // furthest from its own fair share - largest remainder, both directions.
+                while (used < _extent)
+                {
+                    int best = -1; float gap = float.NegativeInfinity;
+                    for (int k = 0; k < n; k++)
+                    {
+                        if (dropped[k]) continue;
+                        float g = ideal[k] - _count[k];
+                        if (g > gap) { gap = g; best = k; }
+                    }
+                    if (best < 0) break;
+                    _count[best]++; used++;
+                }
+                while (used > _extent)
+                {
+                    int best = -1; float over = float.NegativeInfinity;
+                    for (int k = 0; k < n; k++)
+                    {
+                        if (_count[k] <= (must[k] ? 1 : 0)) continue;
+                        float o = _count[k] - ideal[k];
+                        if (o > over) { over = o; best = k; }
+                    }
+                    if (best < 0) break;
+                    _count[best]--; used--;
+                }
+
+                // EVERY ROOM MUST END UP WITH A TILE, and a band being some room's ONLY band is
+                // not the whole of that: a room spanning two thin bands can have both rounded to
+                // nothing, and then its run collapses onto the boundary tile - which the room on
+                // the far side of that boundary already owns. Measured on a deliberately tiny
+                // 10x10 box: the Hall, the Bathroom and both Dinings landed on the same tiles.
+                // So any starved room's widest band is given a tile, taken from whichever band
+                // is furthest above its own fair share. Each repair protects one more band, so
+                // it cannot cycle; when there is no tile left to give, the owner is told.
+                var floors = new int[n];
+                for (int k = 0; k < n; k++) floors[k] = must[k] ? 1 : 0;
+                for (int guard = 0; guard <= n; guard++)
+                {
+                    int starved = -1;
+                    for (int i = 0; i < spans.Count && starved < 0; i++)
+                    {
+                        int have = 0;
+                        for (int k = _lo[i]; k < _hi[i]; k++) have += _count[k];
+                        if (have > 0) continue;
+                        starved = _lo[i];
+                        for (int k = _lo[i]; k < _hi[i]; k++)
+                            if (width[k] > width[starved]) starved = k;
+                    }
+                    if (starved < 0) break;
+
+                    int donor = -1; float spare = float.NegativeInfinity;
+                    for (int k = 0; k < n; k++)
+                    {
+                        if (k == starved || _count[k] <= floors[k]) continue;
+                        float o = _count[k] - ideal[k];
+                        if (o > spare) { spare = o; donor = k; }
+                    }
+                    if (donor < 0)
+                    {
+                        Debug.LogWarning($"[floorplans] {tag}: the seated footprint has no tile "
+                                        + $"left to give a room on the {axis} axis - two of the "
+                                        + "plan's rooms will share floor.");
+                        break;
+                    }
+                    _count[starved]++; _count[donor]--; floors[starved] = 1;
+                }
+
+                _pos = new int[n + 1];
+                for (int k = 0; k < n; k++) _pos[k + 1] = _pos[k] + _count[k];
+            }
+
+            private int Nearest(float v)
+            {
+                int best = 0; float bd = float.MaxValue;
+                for (int i = 0; i < _coords.Count; i++)
+                {
+                    float d = Mathf.Abs(_coords[i] - v);
+                    if (d < bd) { bd = d; best = i; }
+                }
+                return best;
+            }
+
+            /// <summary>Room <paramref name="i"/>'s tile run on this axis, at least one tile.</summary>
+            public void RoomSpan(int i, out int lo, out int hi)
+            {
+                lo = _pos[_lo[i]];
+                hi = _pos[_hi[i]] - 1;
+                if (hi < lo) hi = lo;
+                lo = Mathf.Clamp(lo, 0, _extent - 1);
+                hi = Mathf.Clamp(hi, lo, _extent - 1);
+            }
+
+            /// <summary>An arbitrary feet extent - a piece of furniture, not a room - through the
+            /// same mapping, at least one tile.</summary>
+            public void Extent(float lo, float hi, out int t0, out int t1)
+            {
+                t0 = Point(lo);
+                t1 = Point(hi);
+                if (t1 > t0) t1--;
+                if (t1 < t0) t1 = t0;
+            }
+
+            /// <summary>One feet coordinate as a tile, interpolated inside its own band.</summary>
+            public int Point(float f)
+            {
+                if (f <= _coords[0]) return 0;
+                if (f >= _coords[_coords.Count - 1]) return _extent - 1;
+                int k = 0;
+                while (k < _count.Length - 1 && f >= _coords[k + 1] - CoordEpsilon) k++;
+                float w = _coords[k + 1] - _coords[k];
+                int t = (w <= 0f || _count[k] == 0)
+                        ? _pos[k]
+                        : _pos[k] + Mathf.FloorToInt((f - _coords[k]) / w * _count[k]);
+                return Mathf.Clamp(t, 0, _extent - 1);
             }
         }
     }
