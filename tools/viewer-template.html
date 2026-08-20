@@ -4671,20 +4671,39 @@ function f3LegendHtml(gb) {
   return s;
 }
 
+// WHICH CALL OWNS THIS CARD. "Is the card still open" is not the same question as "am I
+// still the call that is opening it", and only the second one is safe to commit a context
+// on. Open a card, shut it while its fetches are still in flight, open it again: the stale
+// call comes back to a card that is connected AND marked open, takes the new canvas, and
+// writes its frame into f3Live over the newer one - which loses the newer frame without
+// ever disposing it, leaks a context the cap can no longer see, and leaves two sets of
+// drag handlers on one canvas. So every open and every close bumps the card's generation,
+// an open keeps the number it was given, and a call whose number has moved on abandons.
+const f3Gen = new WeakMap();
+function f3Bump(card) {
+  const g = (f3Gen.get(card) || 0) + 1;
+  f3Gen.set(card, g);
+  return g;
+}
+
+/// A context put down with loseContext() is gone for good: getContext() on that same
+/// canvas hands back the lost one rather than a new one, and every call on a lost context
+/// returns null - which surfaced as a card that could be opened once and then never again,
+/// complaining that a shader would not compile. A fresh canvas is the only way back.
+function f3FreshCanvas(cv) {
+  const fresh = document.createElement("canvas");
+  fresh.className = "f3-cv";
+  cv.replaceWith(fresh);
+}
+
 function f3Close(card) {
+  f3Bump(card);                     // any open still in flight for this card is now stale
   const cv = card.querySelector(".f3-cv");
   const frame = cv && f3Live.get(cv);
   if (frame) {
     frame.dispose();
     f3Live.delete(cv);
-    // AND THE CANVAS GOES WITH IT. A context put down with loseContext() is gone for
-    // good: getContext() on that same canvas hands back the lost one rather than a new
-    // one, and every call on a lost context returns null - which surfaced as a card that
-    // could be opened once and then never again, complaining that a shader would not
-    // compile. A fresh canvas is the only way back.
-    const fresh = document.createElement("canvas");
-    fresh.className = "f3-cv";
-    cv.replaceWith(fresh);
+    f3FreshCanvas(cv);
   }
   card.classList.remove("on");
   const btn = card.querySelector(".f3-btn");
@@ -4705,6 +4724,8 @@ function f3CloseAll() {
 }
 
 async function f3OpenCard(card) {
+  const gen = f3Bump(card);         // and any open still in flight for this card is stale
+  const mine = () => card.isConnected && f3Gen.get(card) === gen;
   const p = +card.dataset.p, i = +card.dataset.i;
   const noteEl = card.querySelector(".f3-note"), legEl = card.querySelector(".f3-leg");
   card.classList.add("on");
@@ -4716,7 +4737,10 @@ async function f3OpenCard(card) {
   const gb = INTERIORS.get(p + "|" + i) || null;
   const b = DATA.buildings.find(x => x.p === p && x.i === i);
   const mesh = await f3FetchMesh(p, i);
-  if (!card.isConnected || !card.classList.contains("on")) return;   // lot changed under us
+  // Nothing below this line touches the page until this call is sure it still owns the
+  // card: the lot may have changed under us, or the card may have been shut and opened
+  // again while these two fetches were out, and a stale call must leave without a trace.
+  if (!mine()) return;
 
   const notes = [];
   const solid = mesh || f3Soup(), glassy = f3Soup();
@@ -4767,6 +4791,11 @@ async function f3OpenCard(card) {
     if (!noteEl.textContent) noteEl.textContent = "this browser gave no WebGL context — nothing can be drawn here";
     return;
   }
+  // THE LAST GATE, and it should be unreachable: nothing between the check above and this
+  // line awaits, so no other call can have run in between. It stands because the cost of
+  // being wrong here is the leak this whole generation counter exists to stop, and because
+  // the day somebody puts an await in that stretch, this stays correct on its own.
+  if (!mine()) { frame.dispose(); f3FreshCanvas(cv); return; }
   f3Live.set(cv, frame);
   frame.setRoof(card.querySelector(".f3-roof").checked);
 }
