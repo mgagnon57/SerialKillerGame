@@ -127,9 +127,15 @@ docs/*.html
 # Working state, not history; the plans and specs under docs/superpowers/ are the record.
 .superpowers/
 
-# Written by the game every time it builds - what it did with each of the owner's rulings.
-# Derived, rewritten on every run, and meaningless without the run that produced it.
+# Written by the game every time it builds - what it did with each of the owner's rulings, and
+# (game-interiors.json) what it built inside every seated building. Both derived, rewritten on
+# every run, and meaningless without the run that produced them. furniture-palette.json and
+# preview-cache/ are the same house-inspector feature's other two derived outputs, kept beside
+# these two rather than scattered through the file.
 tools/game-verdict.json
+tools/game-interiors.json
+tools/furniture-palette.json
+tools/preview-cache/
 
 tools/.verified/
 

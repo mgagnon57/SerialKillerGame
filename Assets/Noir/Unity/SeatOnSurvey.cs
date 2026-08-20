@@ -235,6 +235,11 @@ namespace Noir.Unity
                 s.Place.AuthoredInterior = FloorPlans.For(s.ParcelId, s.Index, s.Now,
                                                           s.Place.Door, ownerModel, s.Place.Units);
 
+                // What Write() will need once the world exists to say what actually got built
+                // here - see InteriorsReport's own header for why this can only be a note now
+                // and a lookup later.
+                InteriorsReport.Note(s.ParcelId, s.Index, s.Place, s.Place.AuthoredInterior != null);
+
                 moved++;
                 if (s.Outline != null) shaped++;
             }

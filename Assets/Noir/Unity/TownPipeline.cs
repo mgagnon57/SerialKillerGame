@@ -93,6 +93,11 @@ namespace Noir.Unity
             // answer is written back where the browser map can read it - see SurveyReport.
             SurveyReport.Clear();
 
+            // SeatOnSurvey is about to note every building it seats, so InteriorsReport.Write can
+            // resolve them against the finished world further down - see its own header for why
+            // noting and resolving happen on opposite sides of WorldBuilder.Build.
+            InteriorsReport.Clear();
+
             // The roads in city.txt are DERIVED, not authored - SOURCES-OF-TRUTH.md is explicit
             // that when they disagree with the parcels the parcels win and the road gets moved.
             // Content/roads.txt is that move, done from survey rather than by sliding a ruled line
@@ -138,6 +143,11 @@ namespace Noir.Unity
             SurveyReport.Write();
 
             var built = Finish(layout, seed, mapFile);
+
+            // AFTER Finish, not beside SurveyReport.Write() above - unlike a verdict, an interior
+            // does not exist until WorldBuilder has stamped the rooms and the furniture into the
+            // world, so this is the earliest point the notes SeatOnSurvey took can be resolved.
+            InteriorsReport.Write(built.World);
 
             // AND THEN PEOPLE HAVE SOMEWHERE TO WALK, AND EVERY YARD BELONGS TO SOMEBODY.
             //
