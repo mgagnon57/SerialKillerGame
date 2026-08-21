@@ -85,6 +85,19 @@ namespace Noir.Unity
                 var laid = CommercialRow.Lay(front.Length, rng);
                 if (laid.Length == 0) continue;
 
+                // ONE GROUND HEIGHT FOR THE WHOLE ROW, sampled at its own middle rather than
+                // letting each unit measure under itself. DrawShapedPerimeters seats every wall
+                // at Space3D.GroundUnder(place.Bounds) - the elevation grid under the MIDDLE OF
+                // THAT UNIT'S OWN, narrow bounds - and neighbouring units on a terrace are close
+                // enough that this is usually the same few centimetres, but not always: a party
+                // wall seated a few centimetres apart from its own neighbour's copy of the same
+                // wall is invisible face-on and a visible sliver of sky between two storefronts
+                // the moment you look down the row instead of across it, for exactly the same
+                // reason the tile-rounded corners were - see Place.GroundHeight.
+                float rowGroundHeight = ElevationGrid.HeightAt(
+                    front.Start.x + alongDir.x * front.Length * 0.5f,
+                    front.Start.y + alongDir.y * front.Length * 0.5f);
+
                 // EVERYTHING ALREADY STANDING ON THIS LOT COMES OFF. The generator put a building
                 // here by its own rules before this pass ran, and the terrace replaces it rather
                 // than joining it - two buildings on one frontage is exactly the tangle the
@@ -120,6 +133,19 @@ namespace Noir.Unity
                     corners.Add(ToTile(b1));
                     corners.Add(ToTile(b0));
                     corners.Add(ToTile(a0));           // closed
+
+                    // THE SAME FOUR CORNERS, BEFORE ToTile TOUCHES THEM. A unit's front edge is
+                    // as short as four or five metres on this row, where rounding both its
+                    // corners to the nearest tile can swing the wall's own direction several
+                    // degrees off its neighbour's - invisible face-on, and a visible gap the
+                    // moment you look down the row instead of across it. DrawShapedPerimeters
+                    // (Assets/Noir/Unity/VillageMesh.cs) prefers this ring when it is present;
+                    // Outline above still exists and is still what the tile grid stamps from.
+                    var precise = new[]
+                    {
+                        new Vec2(a0.x, a0.y), new Vec2(a1.x, a1.y), new Vec2(b1.x, b1.y),
+                        new Vec2(b0.x, b0.y), new Vec2(a0.x, a0.y),   // closed, matching corners above
+                    };
 
                     int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
                     foreach (var t in corners)
@@ -163,6 +189,8 @@ namespace Noir.Unity
                         Kind = PlaceKind.Shop,
                         Bounds = new TileRect(minX, minY, w, h),
                         Outline = outline,
+                        OutlinePrecise = precise,
+                        GroundHeight = rowGroundHeight,
                         Door = door,
                         Name = CommercialRow.HandleFor(address, lot.Id, index),
                     };

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Noir.Core.Contracts;
 
 namespace Noir.Core.Observation
 {
@@ -55,6 +56,54 @@ namespace Noir.Core.Observation
             var lines = new string[sightings.Count];
             for (int i = 0; i < sightings.Count; i++) lines[i] = InEnglish(sightings[i]);
             return lines;
+        }
+
+        /// <summary>An event, said out loud. Same shape as a person sighting: time, then
+        /// certainty, then what was seen — and the certainty verb carries the hedge.</summary>
+        public static string InEnglish(EventSighting e)
+        {
+            var sb = new StringBuilder();
+            sb.Append(Clock(e.MinuteOfDay));
+            sb.Append(", ");
+            sb.Append(e.Clarity switch
+            {
+                SightingClarity.Clear => "I watched",
+                SightingClarity.Partial => "I saw",
+                _ => "I think I saw",
+            });
+            sb.Append(' ');
+            sb.Append(e.Act == EventAct.CarStruckSomebody || e.Act == EventAct.CarsCollided
+                ? Car(e.Car) : "somebody");
+            sb.Append(e.Act switch
+            {
+                EventAct.CarStruckSomebody      => " hit somebody",
+                EventAct.SomebodyAskedQuestions => " going around asking questions",
+                EventAct.CarsCollided           => " and another car come together",
+                _                               => " do something",
+            });
+            sb.Append('.');
+            return sb.ToString();
+        }
+
+        /// <summary>"a dark pickup", "an ordinary-looking van", "a car". Blank is still a car —
+        /// the witness saw the event; it is the DESCRIPTION that failed to register. Mid is NOT
+        /// the same silence as Unnoticed: a witness who registered Mid looked at the car and
+        /// found nothing about its colour worth remarking on, which is itself a fact — the same
+        /// distinction Clothing(Mid) and Build(Average) already draw for a person.</summary>
+        private static string Car(CarDescription c)
+        {
+            string tone = c.Tone switch
+            {
+                CarTone.Dark => "dark ",
+                CarTone.Light => "light-coloured ",
+                CarTone.Mid => "ordinary-looking ",
+                _ => "",
+            };
+            string shape = c.Shape switch
+            {
+                CarShape.Pickup => "pickup", CarShape.Van => "van", _ => "car",
+            };
+            return Article(tone.Length > 0 ? tone : shape) + " " + tone + shape;
         }
 
         /// <summary>

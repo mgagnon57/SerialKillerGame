@@ -70,5 +70,47 @@ namespace Noir.PlayTests
             player.Toggle();
             Assert.That(player.Walking, Is.False, "the player did not come back out");
         }
+
+        /// <summary>
+        /// Stepping out of third person stays over the scene: run somebody over, Tab out to
+        /// watch the response — and actually be over the body rather than wherever the overview
+        /// camera last sat, which was the measured complaint (owner, 2026-08-16). Asserts on
+        /// OrbitCamera.Target in the ground plane; ArriveOver zeroes the pivot's y on purpose.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator LeavingThirdPersonStaysOverTheScene()
+        {
+            var player = Object.FindFirstObjectByType<Player>();
+            var orbit = Object.FindFirstObjectByType<OrbitCamera>();
+            Assert.That(orbit, Is.Not.Null, "no OrbitCamera in the scene");
+
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+
+            // Somewhere well away from wherever the orbit was looking — the
+            // ForceCloseBeatsProximityUntilItExpires teleport pattern, controller disabled
+            // around the write or CharacterController.Move silently reverts it.
+            var far = orbit.Target + new Vector3(250f, 0f, -180f);
+            far.x = Mathf.Clamp(far.x, 30f, CityUnderTest.World.Width - 30f);
+            far.z = Mathf.Clamp(far.z, -(CityUnderTest.World.Height - 30f), -30f);
+            far.y = ElevationGrid.HeightAt(far.x, -far.z) + 0.6f;
+
+            var cc = body.GetComponent<CharacterController>();
+            cc.enabled = false;
+            body.transform.position = far;
+            cc.enabled = true;
+            yield return null;
+
+            var stood = body.transform.position;
+            player.Toggle();
+            yield return null;
+
+            float dx = orbit.Target.x - stood.x, dz = orbit.Target.z - stood.z;
+            float off = Mathf.Sqrt(dx * dx + dz * dz);
+            Assert.That(off, Is.LessThan(10f),
+                $"the orbit landed {off:0.0}m from where the player stepped out - "
+              + "Leave() did not hand the camera the scene");
+        }
     }
 }

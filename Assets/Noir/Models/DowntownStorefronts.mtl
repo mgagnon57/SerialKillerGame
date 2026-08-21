@@ -1,0 +1,40 @@
+newmtl storefront_brick
+Kd 0.3325 0.0685 0.0356
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_stone
+Kd 0.8070 0.7605 0.6654
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl window_glass
+Kd 0.0110 0.0185 0.0296
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_wood
+Kd 0.1470 0.0497 0.0194
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bulkhead_panel
+Kd 0.0284 0.0685 0.0467
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl awning_burgundy
+Kd 0.1470 0.0168 0.0331
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl awning_cream
+Kd 0.8070 0.7157 0.5776
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl canopy_metal
+Kd 0.0242 0.0242 0.0262
+Ks 0.05 0.05 0.05
+Ns 10
+

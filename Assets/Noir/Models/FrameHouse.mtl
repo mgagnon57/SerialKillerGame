@@ -1,0 +1,40 @@
+newmtl siding_painted_wood
+Kd 0.7157 0.6654 0.5520
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl roof_shingle
+Kd 0.0423 0.0423 0.0467
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gable_accent_steel_blue
+Kd 0.2016 0.2874 0.3663
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_white
+Kd 0.8879 0.8632 0.7913
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl window_glass
+Kd 0.0110 0.0185 0.0296
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_wood
+Kd 0.1470 0.0497 0.0194
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl foundation_stone
+Kd 0.2623 0.2623 0.2462
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl chimney_brick
+Kd 0.2542 0.0513 0.0296
+Ks 0.05 0.05 0.05
+Ns 10
+

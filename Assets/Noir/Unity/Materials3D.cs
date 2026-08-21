@@ -946,7 +946,7 @@ namespace Noir.Unity
         public static Material Bark =>
             _bark != null ? _bark : (_bark = Make("Bark", new Color32(0x4E, 0x3E, 0x2E, 0xFF), 0.03f));
 
-        private static Material _timber, _ballast, _railSteel, _sleeper;
+        private static Material _timber, _ballast, _railSteel, _sleeper, _cordonWood, _cordonStripe, _cordonTape;
 
         /// <summary>
         /// Crushed limestone under a railroad. PALER than Stone deliberately - Stone is a wall,
@@ -986,6 +986,16 @@ namespace Noir.Unity
 
         public static Material Postbox =>
             _postbox != null ? _postbox : (_postbox = Make("Postbox", new Color32(0x8E, 0x1F, 0x1C, 0xFF), 0.25f));
+
+        /// <summary>The white of a municipal sawhorse — a new thing, not a pack
+        /// measurement; judged against the flat-color style like the response bar's
+        /// lenses were.</summary>
+        public static Material CordonWood =>
+            _cordonWood != null ? _cordonWood : (_cordonWood = Make("CordonWood", new Color32(0xE8, 0xE4, 0xDC, 0xFF), 0.10f));
+        public static Material CordonStripe =>
+            _cordonStripe != null ? _cordonStripe : (_cordonStripe = Make("CordonStripe", new Color32(0xD8, 0x6A, 0x1E, 0xFF), 0.15f));
+        public static Material CordonTape =>
+            _cordonTape != null ? _cordonTape : (_cordonTape = Make("CordonTape", new Color32(0xE8, 0xC8, 0x1A, 0xFF), 0.20f));
 
         private static Material _furniture;
 

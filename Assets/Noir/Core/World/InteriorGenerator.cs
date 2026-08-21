@@ -9,6 +9,14 @@ namespace Noir.Core.World
         public readonly List<(TileRect bounds, RoomKind kind)> Rooms = new List<(TileRect, RoomKind)>();
         public readonly List<Tile> Doors = new List<Tile>();
         public readonly List<(Tile a, Tile b)> Walls = new List<(Tile, Tile)>();
+
+        /// <summary>
+        /// What the owner called each room in <see cref="Rooms"/>, index for index. Only
+        /// <see cref="WorldBuilder"/>'s authored branch fills this in ("" per adopted room
+        /// with no name of its own); a generated interior leaves it empty, and a lookup past
+        /// its end reads as "" - a generated room has none.
+        /// </summary>
+        public readonly List<string> Names = new List<string>();
     }
 
     /// <summary>

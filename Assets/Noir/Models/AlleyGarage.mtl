@@ -1,0 +1,45 @@
+newmtl concrete
+Kd 0.2961 0.2747 0.2384
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding_bluegray
+Kd 0.1529 0.2051 0.2159
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding_shadowline
+Kd 0.0545 0.0762 0.0782
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass
+Kd 0.4287 0.6584 0.7157
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_white
+Kd 0.8070 0.7913 0.7157
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_metal
+Kd 0.0242 0.0273 0.0307
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl door_seam
+Kd 0.0612 0.0666 0.0723
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl hardware_black
+Kd 0.0097 0.0097 0.0097
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl asphalt_shingle
+Kd 0.0343 0.0395 0.0437
+Ks 0.05 0.05 0.05
+Ns 10
+

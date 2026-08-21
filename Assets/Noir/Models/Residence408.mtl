@@ -1,0 +1,236 @@
+newmtl brick
+Kd 0.2122 0.0685 0.0437
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl siding
+Kd 0.7758 0.7605 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl mortar
+Kd 0.3813 0.3372 0.3005
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim
+Kd 0.9047 0.8963 0.8550
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl concrete
+Kd 0.4397 0.4179 0.3763
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl wood
+Kd 0.0685 0.0356 0.0222
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl glass
+Kd 0.4233 0.5395 0.6105
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl iron
+Kd 0.0232 0.0252 0.0284
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl deckdark
+Kd 0.0782 0.0630 0.0529
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl decklight
+Kd 0.4851 0.3916 0.2307
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl oxblood
+Kd 0.1529 0.0423 0.0319
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl metal
+Kd 0.7157 0.7379 0.6939
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl shedwood
+Kd 0.0630 0.0561 0.0497
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl corrugate
+Kd 0.2664 0.2582 0.2384
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl fence
+Kd 0.3278 0.3050 0.2664
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl label_dining
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex0.png
+
+newmtl label_kitchen
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex1.png
+
+newmtl label_living
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex2.png
+
+newmtl label_hall
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex3.png
+
+newmtl label_bath
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex4.png
+
+newmtl label_bedroom_1
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex5.png
+
+newmtl label_bedroom_2
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex6.png
+
+newmtl label_bedroom_3
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex7.png
+
+newmtl label_family_room
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex8.png
+
+newmtl label_bath_2
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex9.png
+
+newmtl label_garage
+Kd 0.8000 0.8000 0.8000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd Residence408_tex10.png
+
+newmtl gravel
+Kd 0.3864 0.3515 0.2961
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl foliage
+Kd 0.1095 0.1529 0.0704
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl gdoor
+Kd 0.2051 0.0723 0.0356
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl plaster
+Kd 0.6867 0.6584 0.5972
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl carpet
+Kd 0.3613 0.2789 0.2542
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl hardwood
+Kd 0.5776 0.3231 0.1070
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl tile
+Kd 0.6105 0.5395 0.4452
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl vinyl
+Kd 0.6172 0.5647 0.4508
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl paneling
+Kd 0.2542 0.1248 0.0513
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl oak
+Kd 0.4342 0.2232 0.0723
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl brass
+Kd 0.3916 0.2384 0.0497
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl sofa
+Kd 0.2582 0.2051 0.1714
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl screen
+Kd 0.0097 0.0110 0.0123
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl stone
+Kd 0.0437 0.0395 0.0356
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl appliance
+Kd 0.8070 0.7835 0.7157
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl porcelain
+Kd 0.8796 0.8714 0.8308
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl hunter
+Kd 0.0467 0.1022 0.0648
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl bluefix
+Kd 0.2747 0.4793 0.5841
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl counter
+Kd 0.7157 0.6584 0.5333
+Ks 0.05 0.05 0.05
+Ns 10
+

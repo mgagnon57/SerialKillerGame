@@ -78,7 +78,9 @@ namespace Noir.Core.World
                 var place = new Place(id, spec.Kind, spec.Name, spec.Human,
                                       spec.Bounds, spec.Door, spec.Hours.ToArray(),
                                       spec.JobSlots, spec.Units, spec.Key,
-                                      shaped ? spec.Outline : null);
+                                      shaped ? spec.Outline : null,
+                                      shaped ? spec.OutlinePrecise : null,
+                                      spec.GroundHeight);
                 places.Add(place);
 
                 if (keys.TryGetValue(place.Key, out int clash))
@@ -193,7 +195,21 @@ namespace Noir.Core.World
             // with different things off it, so passing the name is what gets wards in one and
             // classrooms in the other without a second column saying so.
             var plan = PlaceKindTable.Current.Row(spec.Kind);
+            // ALWAYS generated, even when a plan will replace it: the generator's draws are
+            // consumed identically either way, so authoring one house cannot move a stick of
+            // furniture in any other. The result is also the fallback if the plan is bad.
             var interior = InteriorGenerator.Generate(bounds, frontDoor, rng, plan.Grammar, plan.Name);
+            bool authored = spec.AuthoredInterior != null && spec.Units == 1
+                            && spec.AuthoredInterior.Rooms.Count > 0;
+            if (authored)
+            {
+                // THE GENERATED INTERIOR IS THE FALLBACK, and this is what makes that true.
+                // Overwriting unconditionally left a plan whose every room clamped away with
+                // NO interior at all - solid brick, not the guess the comment above promises.
+                var adopted = Adopt(spec.AuthoredInterior, bounds, rng);
+                if (adopted.Rooms.Count > 0) interior = adopted;
+                else authored = false;
+            }
             if (interior.Rooms.Count == 0) return;
 
             int firstRoom = rooms.Count;
@@ -212,8 +228,9 @@ namespace Noir.Core.World
             for (int x = bounds.X; x <= bounds.Right; x++)
                 grid.Set(x, y, Terrain.Wall, wallFlags);
 
-            foreach (var (roomBounds, kind) in interior.Rooms)
+            for (int ri = 0; ri < interior.Rooms.Count; ri++)
             {
+                var (roomBounds, kind) = interior.Rooms[ri];
                 var roomId = new RoomId(rooms.Count);
                 for (int y = roomBounds.Y; y <= roomBounds.Bottom; y++)
                 for (int x = roomBounds.X; x <= roomBounds.Right; x++)
@@ -221,7 +238,8 @@ namespace Noir.Core.World
                     grid.Set(x, y, Terrain.Floor, floorFlags);
                     grid.SetRoom(x, y, roomId);
                 }
-                rooms.Add(new Room(roomId, placeId, kind, roomBounds, roomBounds.Centre));
+                string name = ri < interior.Names.Count ? interior.Names[ri] : "";
+                rooms.Add(new Room(roomId, placeId, kind, roomBounds, roomBounds.Centre, name));
             }
 
             // Doorways between rooms.
@@ -237,9 +255,164 @@ namespace Noir.Core.World
             foreach (var door in interior.Doors) doorKeys.Add(door.Y * grid.Width + door.X);
             if (frontDoor.IsValid) doorKeys.Add(frontDoor.Y * grid.Width + frontDoor.X);
 
-            for (int i = firstRoom; i < rooms.Count; i++)
-                FurniturePlacer.Place(rooms[i], doorKeys, grid.Width, furniture);
+            var authoredPlan = authored ? spec.AuthoredInterior : null;
+            bool generatedFurnishing = authoredPlan == null
+                || (authoredPlan.Furnish && authoredPlan.Furniture.Count == 0);
+            if (generatedFurnishing)
+            {
+                for (int i = firstRoom; i < rooms.Count; i++)
+                    FurniturePlacer.Place(rooms[i], doorKeys, grid.Width, furniture);
+            }
+            else
+            {
+                // The placer still runs, for RNG neutrality - authoring one house must draw
+                // exactly what a generated one would have, so nothing downstream of the RNG in
+                // any OTHER house shifts. Its output here is discarded, not kept.
+                var discard = new List<Furniture>();
+                for (int i = firstRoom; i < rooms.Count; i++)
+                    FurniturePlacer.Place(rooms[i], doorKeys, grid.Width, discard);
+
+                foreach (var piece in authoredPlan.Furniture)
+                {
+                    bool onDoor = false;
+                    for (int y = piece.Footprint.Y; y <= piece.Footprint.Bottom && !onDoor; y++)
+                    for (int x = piece.Footprint.X; x <= piece.Footprint.Right; x++)
+                        if (doorKeys.Contains(y * grid.Width + x)) { onDoor = true; break; }
+                    if (onDoor) continue;          // nothing may be placed against a door
+
+                    var room = RoomAt(rooms, firstRoom, piece.Footprint.Centre);
+                    if (room == null) continue;    // outside every room: dropped
+                    // Standing in its room but overhanging the wall - a wardrobe drawn a few
+                    // inches proud - is clamped in rather than dropped, per the spec's own
+                    // failure table. The Unity side logs both cases; Core has no logger.
+                    furniture.Add(new Furniture(piece.Kind, Clamp(piece.Footprint, room.Bounds),
+                                                room.Id, piece.Model));
+                }
+            }
         }
+
+        /// <summary><paramref name="piece"/> moved - and, if it is bigger than the room, shrunk -
+        /// until it lies wholly inside <paramref name="room"/>.</summary>
+        private static TileRect Clamp(TileRect piece, TileRect room)
+        {
+            int w = Math.Min(piece.W, room.W);
+            int h = Math.Min(piece.H, room.H);
+            int x = Math.Min(Math.Max(piece.X, room.X), room.Right - w + 1);
+            int y = Math.Min(Math.Max(piece.Y, room.Y), room.Bottom - h + 1);
+            return new TileRect(x, y, w, h);
+        }
+
+        /// <summary>The room among <paramref name="rooms"/>[<paramref name="firstRoom"/>..] whose
+        /// bounds contain <paramref name="tile"/>, or null if none does.</summary>
+        private static Room RoomAt(List<Room> rooms, int firstRoom, Tile tile)
+        {
+            for (int i = firstRoom; i < rooms.Count; i++)
+                if (rooms[i].Bounds.Contains(tile)) return rooms[i];
+            return null;
+        }
+
+        /// <summary>
+        /// The authored plan as an Interior: rooms clamped inside the unit, the authored
+        /// doors kept, and any room the doors leave unreachable given a doorway to its
+        /// nearest neighbour - a plan with a missing door yields a walkable house and a
+        /// note, never a sealed room and never a refusal.
+        /// </summary>
+        private static Interior Adopt(AuthoredInterior authored, TileRect bounds, IRng rng)
+        {
+            var interior = new Interior();
+            var inner = new TileRect(bounds.X + 1, bounds.Y + 1,
+                                     Math.Max(1, bounds.W - 2), Math.Max(1, bounds.H - 2));
+            foreach (var room in authored.Rooms)
+            {
+                // Clamp room.Bounds to inner - TileRect has no Intersect, so inline it: max
+                // of the two origins, min of the two far edges, reject if that leaves nothing.
+                int x0 = Math.Max(room.Bounds.X, inner.X);
+                int y0 = Math.Max(room.Bounds.Y, inner.Y);
+                int x1 = Math.Min(room.Bounds.Right, inner.Right);
+                int y1 = Math.Min(room.Bounds.Bottom, inner.Bottom);
+                if (x1 < x0 || y1 < y0) continue;
+                var r = new TileRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+                interior.Rooms.Add((r, room.Kind));
+                interior.Names.Add(room.Name);
+            }
+            // INNER, NOT BOUNDS. The perimeter ring is the unit's shell wall, and the only thing
+            // that may pierce it is PlaceSpec.Door - an authored door tile landing on it would
+            // punch a second hole straight through the outside of the house.
+            foreach (var door in authored.Doors)
+                if (inner.Contains(door)) interior.Doors.Add(door);
+
+            // Connectivity repair: reach room 0 from the authored doors first, then punch a
+            // doorway from a reached room to a stranded one for anything the plan left sealed.
+            ConnectAuthoredRooms(interior, rng);
+            return interior;
+        }
+
+        /// <summary>
+        /// A room is "reached" if it can be walked to from room 0 through the doors already in
+        /// <paramref name="interior"/>. Anything still unreached after that gets a fresh doorway
+        /// to whatever reached room it happens to share a wall with - the same geometry
+        /// <see cref="InteriorGeometry.Connect"/> uses for a generated building, run against an
+        /// authored one instead. A room touching nothing reached is left for the front-door
+        /// punch to find; Core has no logger, so nothing is said about it here.
+        /// </summary>
+        private static void ConnectAuthoredRooms(Interior interior, IRng rng)
+        {
+            int n = interior.Rooms.Count;
+            if (n == 0) return;
+
+            var reached = new bool[n];
+            reached[0] = true;
+
+            // Propagate through the doors the plan already drew: a door tile touching one
+            // reached room and one unreached room reaches the second.
+            bool progressed = true;
+            while (progressed)
+            {
+                progressed = false;
+                foreach (var door in interior.Doors)
+                {
+                    int a = -1, b = -1;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (!Touches(door, interior.Rooms[i].bounds)) continue;
+                        if (a < 0) a = i;
+                        else if (b < 0 && i != a) b = i;
+                    }
+                    if (a < 0 || b < 0) continue;
+                    if (reached[a] && !reached[b]) { reached[b] = true; progressed = true; }
+                    else if (reached[b] && !reached[a]) { reached[a] = true; progressed = true; }
+                }
+            }
+
+            // Repair: punch a doorway from a reached room to a stranded one, wherever the
+            // geometry allows it, and keep going until nothing more can be reached this way.
+            progressed = true;
+            while (progressed)
+            {
+                progressed = false;
+                for (int i = 0; i < n; i++)
+                {
+                    if (reached[i]) continue;
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (!reached[j] || j == i) continue;
+                        if (!InteriorGeometry.TryDoorBetween(interior.Rooms[j].bounds,
+                                                             interior.Rooms[i].bounds, rng, out var door))
+                            continue;
+                        interior.Doors.Add(door);
+                        reached[i] = true;
+                        progressed = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>Whether a tile sits immediately outside one edge of a room - the shape every
+        /// doorway this file ever cuts actually has.</summary>
+        private static bool Touches(Tile tile, TileRect room) =>
+            ((tile.X == room.X - 1 || tile.X == room.Right + 1) && tile.Y >= room.Y && tile.Y <= room.Bottom)
+         || ((tile.Y == room.Y - 1 || tile.Y == room.Bottom + 1) && tile.X >= room.X && tile.X <= room.Right);
 
         private static void ConnectFrontDoor(TileGrid grid, TileRect bounds, Tile door,
                                              TileFlags floorFlags)

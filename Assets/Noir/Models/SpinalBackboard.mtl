@@ -1,0 +1,25 @@
+newmtl backboard_orange
+Kd 0.6939 0.1274 0.0130
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl handhold_dark
+Kd 0.0176 0.0103 0.0060
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl backboard_recess
+Kd 0.2542 0.0452 0.0044
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl strap_black
+Kd 0.0116 0.0116 0.0130
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl buckle_metal
+Kd 0.3763 0.3916 0.4020
+Ks 0.05 0.05 0.05
+Ns 10
+

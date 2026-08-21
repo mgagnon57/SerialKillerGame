@@ -25,6 +25,11 @@ namespace Noir.Unity
     /// Editor-only in practice: the pieces load through AssetDatabase because the pack is not
     /// under Resources. Prototype, not shipping code.
     /// </summary>
+    /// <summary>Marks a standing owner model - a hand-made building from Content/models.txt.
+    /// CityCollision keys on this to give the model per-piece mesh collision (a doorway you
+    /// can walk through) instead of the solid bounds box a bought prefab gets.</summary>
+    public sealed class OwnerModel : MonoBehaviour { }
+
     public static class CityBuildings
     {
         private const string City = "Assets/polyperfect/Poly Universal Pack/Prefabs/City/Buildings Modular City/";
@@ -117,6 +122,13 @@ namespace Noir.Unity
                 if (Stacked(KindOf(place))) lots.Add(place);
 
             int pieces = 0;
+
+            // Terrace rulings already stood this build: a models.txt row naming a terrace
+            // address ("112 S Chicago", no "#N") stands ONE model over the whole row, and
+            // the first unit the walk meets does the standing - the rest find their key
+            // here and pass. Per build, not static: a rebuild starts over.
+            var terraceStood = new HashSet<string>();
+
             foreach (var place in lots)
             {
                 // A HOUSE IS NOT A SHORT TOWNHOUSE. Everything on `lots` used to go through
@@ -149,6 +161,79 @@ namespace Noir.Unity
                 // What is left here is the handful of things that really do stand alone on their
                 // own ground in a farm town: the fire house, the water tower, the grain
                 // elevator, the filling station, and the farm buildings.
+                // The owner's buildings outrank the pack: a models.txt ruling stands his
+                // model here, Landmark's own fit-rotate-and-ground included, plus the row's
+                // yaw for a model whose front faces the wrong way after the automatic fit.
+                if (OwnerModels().TryGetValue(place.Name, out var ruling))
+                {
+                    var owned = Landmark(root.transform,
+                        "Assets/Noir/Models/" + ruling.model + ".obj", place.Bounds,
+                        authoredGrade: true);
+                    if (owned != null)
+                    {
+                        if (ruling.yaw != 0f)
+                        {
+                            var centre = new Vector3(place.Bounds.X + place.Bounds.W / 2f, 0f,
+                                                     -(place.Bounds.Y + place.Bounds.H / 2f));
+                            owned.transform.RotateAround(centre, Vector3.up, ruling.yaw);
+                        }
+                        owned.AddComponent<OwnerModel>();
+                        HingeOwnerDoors(owned);
+                        Record(place, owned);
+                        pieces++;
+                        continue;
+                    }
+                    Debug.LogError("[models] '" + ruling.model + "' did not build for '"
+                        + place.Name + "' - the lot falls back to the grammars");
+                    // fall through: Handles() said true, so the grammars already stood down;
+                    // better an empty lot logged loudly than a silent box inside a ghost.
+                }
+
+                // A TERRACE ADDRESS CLAIMS THE WHOLE ROW (2026-08-18, for the owner's
+                // 53-foot storefront over 112 S Chicago's several 22-foot units). The row's
+                // key is the terrace address the split minted the units FROM; the first unit
+                // this walk meets stands the one model over the union of every sibling's
+                // bounds, and the siblings pass through with their generated look already
+                // stood down by Handles(). The units stay real places - doors, businesses,
+                // witnesses - under the one roof the county's own note says they shared.
+                string terraceKey = TerraceKeyFor(place.Name);
+                if (terraceKey != null)
+                {
+                    if (!terraceStood.Add(terraceKey)) continue;   // a sibling stood it already
+
+                    var row = OwnerModels()[terraceKey];
+                    TileRect u = place.Bounds;
+                    foreach (var sib in world.AllPlaces)
+                        if (sib.Name != null
+                            && sib.Name.StartsWith(terraceKey + " #", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            int x0 = Mathf.Min(u.X, sib.Bounds.X), y0 = Mathf.Min(u.Y, sib.Bounds.Y);
+                            int x1 = Mathf.Max(u.X + u.W, sib.Bounds.X + sib.Bounds.W);
+                            int y1 = Mathf.Max(u.Y + u.H, sib.Bounds.Y + sib.Bounds.H);
+                            u = new TileRect(x0, y0, x1 - x0, y1 - y0);
+                        }
+
+                    var stood = Landmark(root.transform,
+                        "Assets/Noir/Models/" + row.model + ".obj", u,
+                        authoredGrade: true);
+                    if (stood != null)
+                    {
+                        if (row.yaw != 0f)
+                        {
+                            var centre = new Vector3(u.X + u.W / 2f, 0f, -(u.Y + u.H / 2f));
+                            stood.transform.RotateAround(centre, Vector3.up, row.yaw);
+                        }
+                        stood.AddComponent<OwnerModel>();
+                        HingeOwnerDoors(stood);
+                        Record(place, stood);
+                        pieces++;
+                    }
+                    else
+                        Debug.LogError("[models] terrace model '" + row.model + "' did not build "
+                            + "for '" + terraceKey + "' - the whole row stands empty and says so");
+                    continue;
+                }
+
                 string prefab = KindOf(place) switch
                 {
                     // THE SCHOOL LEFT THIS SWITCH ON 2026-08-11, ruled by the owner off the
@@ -192,7 +277,13 @@ namespace Noir.Unity
                 pieces += Fleet(root.transform, place);
             }
 
-            Debug.Log($"[city] {lots.Count} townhouses + landmarks, {pieces} pieces, "
+            // {lots.Count} IS THE STACKED LOTS AND NOTHING ELSE, and saying "townhouses +
+            // landmarks" made it read as the whole of this pass's output - so "0 townhouses +
+            // landmarks, 24 pieces" looked like a pass that had failed and then built 24 things
+            // anyway. Stacked() returns false for every kind in Rossville on purpose (see its own
+            // header), so this number is permanently zero and the pieces are the whole story.
+            Debug.Log($"[city] {lots.Count} stacked lot(s), {pieces} pieces standing "
+                    + "(owner models, terraces and pack landmarks), "
                     + $"{root.GetComponentsInChildren<Renderer>().Length} renderers before chunking.");
 #endif
             return root;
@@ -235,6 +326,13 @@ namespace Noir.Unity
 
         public static bool Handles(Place place)
         {
+            // The owner's buildings first: a Content/models.txt ruling stands a hand-made
+            // model on this lot, so the generated town stands down exactly as it does for
+            // the pack landmarks below. A terrace ruling ("112 S Chicago", no "#N") stands
+            // down every unit the split minted from that address - one roof, one model.
+            if (place != null && OwnerModels().ContainsKey(place.Name)) return true;
+            if (place != null && TerraceKeyFor(place.Name) != null) return true;
+
             switch (KindOf(place))
             {
                 // the school generates with the town's own massing - see the prefab switch
@@ -245,6 +343,202 @@ namespace Noir.Unity
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Whether a hand-made Content/models.txt model owns the inside of the place with this
+        /// name - the narrower question <see cref="FloorPlans"/> needs to decide whether to
+        /// furnish it. Deliberately not the same test as <see cref="Handles"/>: the pack
+        /// landmarks (gas station, water tower, farm...) stand down there for a different
+        /// reason, over bought geometry that still wants the generated furniture inside it.
+        ///
+        /// Takes the name rather than a <see cref="Place"/> because SeatOnSurvey - its only
+        /// caller - runs on <c>PlaceSpec</c>, before WorldBuilder has made a <see cref="Place"/>
+        /// to ask; both carry the same <c>Name</c> this decides on.
+        /// </summary>
+        public static bool IsOwnerModel(string name) =>
+            !string.IsNullOrEmpty(name) && (OwnerModels().ContainsKey(name) || TerraceKeyFor(name) != null);
+
+        // ---- the owner's buildings ----------------------------------------------------
+        //
+        // Content/models.txt: `address | model | yaw` - hand-made buildings standing on
+        // surveyed lots (spec docs/superpowers/specs/... none; the ruling is the row).
+        // The first was the grand house at 101 Perry St, 2026-08-16, stood on the block
+        // the street itself confirmed. An absent file means no rulings and costs nothing;
+        // a malformed row or a missing model complains out loud and the lot falls back to
+        // the grammars rather than standing empty.
+        /// <summary>The ruling key whose terrace this unit belongs to - "112 S Chicago" for
+        /// "112 S Chicago #3", per CommercialRow.HandleFor's own naming - or null. A ruling
+        /// that names one unit exactly ("112 S Chicago #1") is an EXACT match, not a
+        /// terrace, and never reaches this.</summary>
+        private static string TerraceKeyFor(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            foreach (var key in OwnerModels().Keys)
+                if (name.StartsWith(key + " #", System.StringComparison.OrdinalIgnoreCase))
+                    return key;
+            return null;
+        }
+
+        /// <summary>
+        /// THE OWNER'S DOORS SWING (2026-08-18). His GLBs name their parts, and the convention
+        /// is his own first house's: door_&lt;name&gt;_slab/lite/knob move together, the casing
+        /// stays in the wall, garage_door_panel (+ribs/lites) tilts up about its top edge. Each
+        /// family gets an empty pivot named "hinge" - EXACTLY that, lowercase: CityChunker's
+        /// bake exemption keys on the parent being called "hinge" - placed on the slab's hinge
+        /// edge. The hinge edge is the vertical edge FARTHER from the knob (the latch is where
+        /// the knob is; the hinge is the other side), falling back to the far edge when a door
+        /// has no knob. Swing direction: into the building - the sign whose 85-degree turn
+        /// carries the leaf's centre toward the model's own bounds centre, decided
+        /// arithmetically before committing. A family with no renderer on its slab is logged
+        /// loudly and left decorative.
+        /// </summary>
+        private static void HingeOwnerDoors(GameObject stood)
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            if (doors == null) return;
+
+#if UNITY_EDITOR
+            // UNPACK FIRST, OR NOTHING BELOW HAPPENS. Landmark instantiates with
+            // PrefabUtility, and Unity refuses to reparent a transform inside a linked
+            // prefab instance - it logs "Setting the parent of a transform which resides
+            // in a Prefab instance is not possible", one line per piece, and every hinge
+            // stands empty. Caught live on this feature's first night: three childless
+            // hinges, every leaf still welded to the model root. The player armature
+            // already unpacks for the same reason (Player.Spawn's own comment).
+            if (UnityEditor.PrefabUtility.IsPartOfPrefabInstance(stood))
+                UnityEditor.PrefabUtility.UnpackPrefabInstance(stood,
+                    UnityEditor.PrefabUnpackMode.Completely,
+                    UnityEditor.InteractionMode.AutomatedAction);
+#endif
+
+            Bounds model = default; bool has = false;
+            foreach (var r in stood.GetComponentsInChildren<Renderer>(true))
+            { if (!has) { model = r.bounds; has = true; } else model.Encapsulate(r.bounds); }
+            if (!has) return;
+
+            var kids = stood.GetComponentsInChildren<Transform>(true);
+
+            // ---- the swing families: door_<name>_slab (+_lite/_knob) ----
+            foreach (var slabT in kids)
+            {
+                string n = slabT.name;
+                // Any *_slab with "door" in its name: door_front_slab, door_rear_slab, AND
+                // garage_service_door_slab - the owner's naming puts the family first for
+                // house doors and last for the garage's person-door, and the first run of
+                // this pass missed the service door entirely by demanding the prefix.
+                if (!n.EndsWith("_slab") || !n.Contains("door")) continue;
+                string family = n.Substring(0, n.Length - "_slab".Length);   // "door_front"
+
+                var slabR = slabT.GetComponent<Renderer>();
+                if (slabR == null)
+                {
+                    Debug.LogError("[doors] owner door '" + n + "' has no renderer - left decorative");
+                    continue;
+                }
+                Bounds slab = slabR.bounds;
+
+                Transform knob = null, lite = null;
+                foreach (var k in kids)
+                {
+                    if (k.name == family + "_knob") knob = k;
+                    if (k.name == family + "_lite") lite = k;
+                }
+
+                // The slab is a thin box: its width axis is the larger of world X/Z extents,
+                // and the hinge lives on one of the two vertical edges.
+                bool wideX = slab.size.x >= slab.size.z;
+                Vector3 edgeA = slab.center + (wideX ? new Vector3(-slab.extents.x, 0, 0)
+                                                     : new Vector3(0, 0, -slab.extents.z));
+                Vector3 edgeB = slab.center + (wideX ? new Vector3(+slab.extents.x, 0, 0)
+                                                     : new Vector3(0, 0, +slab.extents.z));
+                var knobR = knob != null ? knob.GetComponent<Renderer>() : null;
+                Vector3 knobAt = knobR != null ? knobR.bounds.center : edgeB;
+                Vector3 hingeAt = (knobAt - edgeA).sqrMagnitude >= (knobAt - edgeB).sqrMagnitude
+                    ? edgeA : edgeB;                          // farther from the knob
+                hingeAt.y = slab.min.y;
+
+                var hinge = new GameObject("hinge").transform;
+                hinge.SetParent(slabT.parent, false);
+                hinge.position = hingeAt;
+                slabT.SetParent(hinge, true);
+                if (lite != null) lite.SetParent(hinge, true);
+                if (knob != null) knob.SetParent(hinge, true);
+
+                // Swing INWARD: the sign whose quarter-turn carries the leaf centre toward
+                // the model's own centre.
+                Vector3 arm = slab.center - hingeAt;
+                Vector3 plus = Quaternion.Euler(0f, 85f, 0f) * arm;
+                Vector3 minus = Quaternion.Euler(0f, -85f, 0f) * arm;
+                Vector3 toCentre = model.center - hingeAt;
+                float open = Vector3.Dot(plus, toCentre) >= Vector3.Dot(minus, toCentre) ? 85f : -85f;
+                doors.Add(hinge, 0f, open);
+            }
+
+            // ---- the overhead panel: garage_door_panel (+_ribs/_lites) tilts up ----
+            foreach (var panelT in kids)
+            {
+                if (panelT.name != "garage_door_panel") continue;
+                var panelR = panelT.GetComponent<Renderer>();
+                if (panelR == null) continue;
+                Bounds panel = panelR.bounds;
+
+                bool wideX = panel.size.x >= panel.size.z;
+                var hinge = new GameObject("hinge").transform;
+                hinge.SetParent(panelT.parent, false);
+                hinge.position = new Vector3(panel.center.x, panel.max.y, panel.center.z);
+                // Local X must run along the panel's width for the pitch to be the tilt.
+                if (!wideX) hinge.rotation = Quaternion.Euler(0f, 90f, 0f);
+                panelT.SetParent(hinge, true);
+                foreach (var k in kids)
+                    if (k.name == "garage_door_ribs" || k.name == "garage_door_lites")
+                        k.SetParent(hinge, true);
+
+                // Tilt so the panel swings toward the garage's inside: try -80 about the
+                // hinge's local X, and if that carries the panel centre AWAY from the model
+                // centre, use +80.
+                Vector3 arm = panel.center - hinge.position;
+                Vector3 tiltA = hinge.rotation * (Quaternion.Euler(-80f, 0f, 0f)
+                              * (Quaternion.Inverse(hinge.rotation) * arm));
+                Vector3 toCentre = model.center - hinge.position;
+                float openPitch = Vector3.Dot(tiltA, toCentre) >= Vector3.Dot(arm, toCentre)
+                    ? -80f : 80f;
+                doors.AddLift(hinge, openPitch);
+            }
+        }
+
+        private static Dictionary<string, (string model, float yaw)> _ownerModels;
+
+        private static Dictionary<string, (string model, float yaw)> OwnerModels()
+        {
+            if (_ownerModels != null) return _ownerModels;
+            _ownerModels = new Dictionary<string, (string, float)>(
+                System.StringComparer.OrdinalIgnoreCase);
+
+            string path = System.IO.Path.Combine("Content", "models.txt");
+            if (!System.IO.File.Exists(path)) return _ownerModels;
+
+            foreach (var raw in System.IO.File.ReadAllLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                var parts = line.Split('|');
+                if (parts.Length < 2)
+                {
+                    Debug.LogError("[models] unreadable row in Content/models.txt: " + raw);
+                    continue;
+                }
+                float yaw = 0f;
+                if (parts.Length >= 3 && !float.TryParse(parts[2].Trim(), out yaw))
+                {
+                    Debug.LogError("[models] yaw is not a number in: " + raw);
+                    continue;
+                }
+                _ownerModels[parts[0].Trim()] = (parts[1].Trim(), yaw);
+            }
+            if (_ownerModels.Count > 0)
+                Debug.Log($"[models] {_ownerModels.Count} owner building(s) ruled in Content/models.txt");
+            return _ownerModels;
         }
 
         /// <summary>
@@ -942,8 +1236,16 @@ namespace Noir.Unity
             return best;
         }
 
-        /// <summary>A whole building, centred on its lot and turned to face the long way.</summary>
-        private static GameObject Landmark(Transform parent, string path, TileRect lot)
+        /// <summary>A whole building, centred on its lot and turned to face the long way.
+        /// <paramref name="authoredGrade"/> (owner models only): ground the model's AUTHORED
+        /// y=0 at terrain height instead of its lowest vertex - the owner's convention puts
+        /// grade at y=0 with the foundation deliberately BELOW it, and bounds-min grounding
+        /// was lifting that foundation out of the earth and floating the whole house by
+        /// exactly the burial he modeled (his own report, 2026-08-18: "the house is sitting
+        /// above the terrain"). Pack prefabs keep bounds-min; their origins are not
+        /// trustworthy.</summary>
+        private static GameObject Landmark(Transform parent, string path, TileRect lot,
+                                           bool authoredGrade = false)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) { Debug.LogWarning("[city] missing " + path); return null; }
@@ -974,9 +1276,11 @@ namespace Noir.Unity
             float groundY = ElevationGrid.HeightAt(lot.X + lot.W / 2f, lot.Y + lot.H / 2f);
             var want = new Vector3(lot.X + lot.W / 2f, groundY, -(lot.Y + lot.H / 2f));
             var drift = b.center - go.transform.position;
-            go.transform.position = new Vector3(want.x - drift.x,
-                                                go.transform.position.y + (groundY - b.min.y),
-                                                want.z - drift.z);
+            float lift = authoredGrade
+                ? groundY                                    // authored y=0 sits AT grade;
+                                                             // below-grade parts stay below
+                : go.transform.position.y + (groundY - b.min.y);
+            go.transform.position = new Vector3(want.x - drift.x, lift, want.z - drift.z);
             return go;
         }
 #endif

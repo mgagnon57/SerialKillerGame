@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -627,6 +628,295 @@ namespace Noir.PlayTests
               + "armature - somebody saved the wrong object into the variant.");
 
             Debug.Log($"[player] the shipped body is at Resources/PlayerArmature: {armature.name}");
+        }
+
+        /// <summary>
+        /// THE DRAWN GROUND FOLLOWS THE MEASURED SURFACE. Everything in Rossville is placed on
+        /// ElevationGrid.HeightAt - the bilinear blend of the USGS samples, which is a SADDLE
+        /// inside every 30 m cell - while the ground mesher merges same-look tiles into runs
+        /// drawn as two flat triangles. A flat triangle across a curved cell bows off the
+        /// saddle. Measured 2026-08-18, the night the owner said "things sink into the ground,
+        /// almost like there is a layer that sits on top": 917 cells bowed over 10 cm, 325 over
+        /// 20 cm, 1.98 m in the creek ravine - and correctly-placed cars stood buried to their
+        /// axles under ground that was drawn, not measured.
+        ///
+        /// The metric is immune to the deliberate flat lifts (water's channel, a road's wear):
+        /// a planar triangle's centroid height is the mean of its vertex heights, so
+        /// mean(HeightAt at the vertices) minus HeightAt at the centroid is exactly the bow,
+        /// whatever constant the run's terrain adds. Risers are vertical and are skipped by the
+        /// normal test; the countryside skirt is not the town and is skipped by bounds.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheDrawnGroundFollowsTheMeasuredSurface()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            Assert.That(host, Is.Not.Null);
+
+            float worst = 0f;
+            Vector3 at = default;
+            long sampled = 0;
+            foreach (var mf in Object.FindObjectsByType<MeshFilter>(FindObjectsSortMode.None))
+            {
+                if (!mf.gameObject.name.StartsWith("Ground")) continue;
+                var mesh = mf.sharedMesh;
+                if (mesh == null) continue;
+                var verts = mesh.vertices;
+                var tris = mesh.triangles;
+                var l2w = mf.transform.localToWorldMatrix;
+                for (int i = 0; i < tris.Length; i += 3)
+                {
+                    Vector3 a = l2w.MultiplyPoint3x4(verts[tris[i]]);
+                    Vector3 b = l2w.MultiplyPoint3x4(verts[tris[i + 1]]);
+                    Vector3 c = l2w.MultiplyPoint3x4(verts[tris[i + 2]]);
+
+                    Vector3 n = Vector3.Cross(b - a, c - a);
+                    if (n.sqrMagnitude < 1e-10f) continue;
+                    if (n.normalized.y < 0.7f) continue;   // a riser, not ground
+
+                    Vector3 g = (a + b + c) / 3f;
+                    if (g.x < 1f || g.x > host.World.Width - 1f
+                        || -g.z < 1f || -g.z > host.World.Height - 1f) continue;   // the skirt
+
+                    float bow = (ElevationGrid.HeightAt(a.x, -a.z)
+                               + ElevationGrid.HeightAt(b.x, -b.z)
+                               + ElevationGrid.HeightAt(c.x, -c.z)) / 3f
+                              - ElevationGrid.HeightAt(g.x, -g.z);
+                    sampled++;
+                    if (Mathf.Abs(bow) > Mathf.Abs(worst)) { worst = bow; at = g; }
+                }
+            }
+            Debug.Log($"[ground] {sampled:N0} horizontal ground triangles in the town; "
+                    + $"worst bow off the measured surface {worst:0.000} m at ({at.x:0},{-at.z:0})");
+
+            Assert.That(sampled, Is.GreaterThan(10000),
+                "the ground scan found almost nothing - the chunk naming moved out from under it");
+            Assert.That(Mathf.Abs(worst), Is.LessThan(0.05f),
+                "the drawn ground bows off the surface everything is placed on - things standing "
+              + "there sink into it or float above it");
+        }
+
+        /// <summary>The owner's hinges exist and none lost its leaf to the bake - the exact
+        /// fault the town-wide Leafless gate was built for, scoped to 408's four doors
+        /// (front, rear, garage service, garage overhead panel).</summary>
+        [UnityTest]
+        public IEnumerator TheOwnersDoorsSurviveTheBake()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            // The standing gate builds the SURVEY PLAN, which stands no owner models -
+            // "anything this run does not build, it has not tested," the gate's own words.
+            // This gate measures the dressed town: the live editor, or NOIR_BUILT_TOWN=1.
+            if (Object.FindFirstObjectByType<OwnerModel>() == null)
+                Assert.Ignore("no owner models in this town - the plan gate cannot see 408's doors");
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            Assert.That(doors, Is.Not.Null);
+
+            Place home = null;
+            foreach (var p in host.World.AllPlaces)
+                if (p != null && p.Name == "408 Holmes Street") home = p;
+            Assert.That(home, Is.Not.Null, "the survey lost 408 Holmes Street");
+
+            var centre = Space3D.ToWorld(home.Door);
+            int nearby = 0;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                var d = doors.PositionOf(i) - centre;
+                if (d.x * d.x + d.z * d.z < 40f * 40f) nearby++;
+            }
+            Assert.That(nearby, Is.GreaterThanOrEqualTo(4),
+                "408 should hinge front, rear, garage service and the overhead panel");
+            Assert.That(doors.Leafless(), Is.EqualTo(0),
+                "a hinge with no renderer is a door the bake ate");
+        }
+
+        /// <summary>408's rooms come from the owner's authored plan, not the generated
+        /// interior grammar - and unlike the owner-door gates above, this needs no
+        /// Assert.Ignore in the plan town: FloorPlans.For/SeatOnSurvey apply the authored
+        /// plan to the GENERATED 408 there too, so the plan gate can see it just as the
+        /// dressed town can. 673-0.json authors 11 rooms (3 bedrooms, 1 kitchen, plus
+        /// hall/bath/living/dining/family/second bath); conversion may drop slivers and
+        /// the door-blind guard may repair a wall, so this is a floor on count and kind,
+        /// not an equality on either.
+        ///
+        /// THESE FLOORS NO LONGER DEPEND ON WHICH WALL THE DOOR IS IN. They did until
+        /// 2026-08-19: the plan was scaled at a flat 0.3048 and anchored in the seated
+        /// box's corner, so at rot 0 the Kitchen and Bath 2 fell outside the box entirely
+        /// and Core clamped them away - 9 rooms, ZERO kitchens, and this gate red for a
+        /// reason that reads as "the plan broke". FloorPlans FITS the plan to the seated
+        /// interior now, so all 11 rooms survive at all four rotations (replayed against
+        /// 408's real 12x15 seating: 11 rooms, 3 bedrooms, 1 kitchen, no room under one
+        /// tile, every rotation). A re-survey that moves 408's door is no longer a
+        /// reason for this to change colour.</summary>
+        [UnityTest]
+        public IEnumerator TheOwnersFloorPlanIsTheHousesRealRooms()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var world = CityUnderTest.World;
+            Assert.That(world, Is.Not.Null, "the town did not build");
+
+            var place = world.AllPlaces.FirstOrDefault(p => p.Name == "408 Holmes Street");
+            if (place == null) { Assert.Ignore("no 408 Holmes Street in this town"); yield break; }
+
+            var rooms = world.AllRooms.Where(r => r.Building.Equals(place.Id)).ToList();
+
+            Debug.Log($"[floorplans] 408 Holmes Street: {rooms.Count} room(s), "
+                    + $"{rooms.Count(r => r.Kind == RoomKind.Bedroom)} bedroom(s), "
+                    + $"{rooms.Count(r => r.Kind == RoomKind.Kitchen)} kitchen(s)");
+
+            Assert.That(rooms.Count, Is.GreaterThanOrEqualTo(9),
+                "408's rooms are not the authored plan's");
+            Assert.That(rooms.Count(r => r.Kind == RoomKind.Bedroom), Is.GreaterThanOrEqualTo(3),
+                "the authored plan names three bedrooms");
+            Assert.That(rooms.Any(r => r.Kind == RoomKind.Kitchen),
+                "the authored plan names a kitchen");
+        }
+
+        /// <summary>The front doorway is a hole a body fits through, and the floor inside is
+        /// real: a capsule cast crosses the threshold untouched, and a ray straight down
+        /// inside the hall lands on a collider.</summary>
+        [UnityTest]
+        public IEnumerator TheFrontDoorOfHolmesAdmitsThePlayer()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            // Plan gate town stands no owner models; without 408's model this test would
+            // drive the controller through the NEIGHBOUR's generated door and call it
+            // green - measured doing exactly that, 2026-08-19. Skip rather than lie.
+            if (Object.FindFirstObjectByType<OwnerModel>() == null)
+                Assert.Ignore("no owner models in this town - the plan gate cannot walk 408's door");
+            Place home = null;
+            foreach (var p in host.World.AllPlaces)
+                if (p != null && p.Name == "408 Holmes Street") home = p;
+            Assert.That(home, Is.Not.Null);
+
+            // THE REAL CONTROLLER WALKS THE DOOR, both ways - not a ray, not a crouched
+            // capsule. The first version of this gate probed a knee-to-chest band and
+            // PASSED while the full 1.8 m controller wedged under the door header (the
+            // owner spent a night stuck on his own doorsill, 2026-08-19); a gate that
+            // approves a duck-height door is worse than none. The front door is the
+            // southernmost hinge on the lot (Holmes is south) - the survey's own door
+            // tile sits on the rear, and trusting it walked the first probe into the
+            // back wall.
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            Assert.That(doors, Is.Not.Null);
+            var lotCentre = Space3D.ToWorld(new Tile(
+                home.Bounds.X + home.Bounds.W / 2, home.Bounds.Y + home.Bounds.H / 2));
+            int front = -1; float southmost = float.MaxValue;
+            for (int i = 0; i < doors.Count; i++)
+            {
+                var d = doors.PositionOf(i) - lotCentre;
+                if (d.x * d.x + d.z * d.z > 40f * 40f) continue;
+                if (doors.PositionOf(i).z < southmost) { southmost = doors.PositionOf(i).z; front = i; }
+            }
+            Assert.That(front, Is.GreaterThanOrEqualTo(0), "no hinge on the lot at all");
+            var hp = doors.PositionOf(front);
+
+            var player = Object.FindFirstObjectByType<Player>();
+            Assert.That(player, Is.Not.Null);
+            bool wasWalking = player.Walking;
+            if (!wasWalking) player.Toggle();
+            for (int f = 0; f < 5; f++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+            Assert.That(body, Is.Not.Null, "the body never stood up");
+            var cc = body.GetComponent<CharacterController>();
+            try
+            {
+                cc.enabled = false;
+                body.transform.position = new Vector3(hp.x + 0.35f, hp.y + 1.2f, hp.z + 1.5f);
+                cc.enabled = true;
+                for (int i = 0; i < 240; i++) cc.Move(new Vector3(0f, -0.03f, -0.025f));
+                Assert.That(body.transform.position.z, Is.LessThan(hp.z - 1.4f),
+                    "the controller stalled walking OUT at z=" + body.transform.position.z.ToString("F2"));
+                for (int i = 0; i < 240; i++) cc.Move(new Vector3(0f, -0.03f, +0.025f));
+                Assert.That(body.transform.position.z, Is.GreaterThan(hp.z + 1.0f),
+                    "the controller stalled walking back IN at z=" + body.transform.position.z.ToString("F2"));
+            }
+            finally
+            {
+                if (player.Walking && !wasWalking) player.Toggle();
+            }
+        }
+
+        /// <summary>P stands you at 408's front walk when the address exists - within a few
+        /// strides of the door, not out on Route 1.</summary>
+        [UnityTest]
+        public IEnumerator ThePlayerSpawnsAtHolmesFrontDoor()
+        {
+            yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            var player = Object.FindFirstObjectByType<Player>();
+            Assert.That(player, Is.Not.Null);
+
+            // THE FIRST MATCH, BECAUSE THAT IS THE ONE Player.Standing STANDS YOU AT. This loop
+            // used to keep the LAST, and the name is not unique: parcel-buildings.txt files BOTH
+            // of parcel 673's buildings - the house and its outbuilding, 25 m up the lot - as
+            // "408 Holmes Street", so in any town that seats the second one this gate was
+            // measuring a building the game never aims at.
+            Place home = null;
+            int named = 0;
+            foreach (var p in host.World.AllPlaces)
+                if (p != null && p.Name == "408 Holmes Street")
+                {
+                    named++;
+                    if (home == null) home = p;
+                }
+            Assert.That(home, Is.Not.Null);
+
+            // A FRESH SPAWN, UNCONDITIONALLY: the body keeps its position across toggles,
+            // so any earlier test's parking spot becomes this test's measurement - 25.9m
+            // of response-scene parking on one run, 531m of Route 1 on another. Step out
+            // if needed, destroy whatever body exists, spawn fresh: Player.Spawn only runs
+            // Standing() when there is no body at all.
+            //
+            // NOT GameObject.Find, WHICH IS WHY THE FIRST VERSION OF THIS FIX NEVER FIRED.
+            // Find returns only ACTIVE objects, and Player.Leave deactivates the armature -
+            // so the lookup came back null on both branches (walking, and toggled out by an
+            // earlier test), nothing was ever destroyed, and Toggle simply re-activated the
+            // old body where the last test parked it. Measured 2026-08-20: the gate log
+            // carried exactly ONE "[player] stood at ..." line for a whole run, from the
+            // very first Spawn, while this test read 531.07m - to the centimetre, the
+            // distance from 408's front walk to where ThePlayerCanStandInTheStreet had
+            // dropped him. The suite has been here before, from the other side:
+            // CityUnderTest's own header, "INACTIVE ONES COUNT".
+            //
+            // Transform.Find walks children whether they are active or not, and Spawn parents
+            // the armature to the Player and names it - so this is how Player itself holds it.
+            bool wasWalking = player.Walking;
+            if (player.Walking) { player.Toggle(); yield return null; }
+            var stale = player.transform.Find("PlayerArmature");
+            int staleId = stale != null ? stale.gameObject.GetInstanceID() : 0;
+            if (stale != null) Object.DestroyImmediate(stale.gameObject);
+            player.Toggle();
+            for (int f = 0; f < 5; f++) yield return null;
+            try
+            {
+                // AND THE SPAWN REALLY WAS FRESH. Without this the test passes for the wrong
+                // reason whenever the leftover body happens to be standing near home, which
+                // is exactly what an isolated re-run of the red did.
+                var fresh = player.transform.Find("PlayerArmature");
+                Assert.That(fresh, Is.Not.Null, "the body never stood up");
+                Assert.That(fresh.gameObject.GetInstanceID(), Is.Not.EqualTo(staleId),
+                    "P re-used the body an earlier test left standing instead of spawning a "
+                  + "new one, so this measures that test's parking spot and not Player.Standing");
+
+                var at = player.Where;
+                Assert.That(at.HasValue, "the body never stood up");
+                // The front walk: the lot's south edge, centred - Player.Standing's own
+                // arithmetic, because the survey's door tile is on the rear side.
+                var b = home.Bounds;
+                var walk = Space3D.ToWorld(new Tile(b.X + b.W / 2, b.Y + b.H - 1));
+                var d = at.Value - new Vector3(walk.x, walk.y, walk.z - 3f);
+                Assert.That(new Vector2(d.x, d.z).magnitude, Is.LessThan(6f),
+                    "P put the player " + d.magnitude.ToString("0.0") + "m from his own front walk"
+                  + " - body at " + at.Value.ToString("F1") + ", the walk at "
+                  + new Vector3(walk.x, walk.y, walk.z - 3f).ToString("F1") + ", "
+                  + named + " place(s) in the town are called 408 Holmes Street");
+            }
+            finally
+            {
+                if (player.Walking && !wasWalking) player.Toggle();
+            }
         }
     }
 }

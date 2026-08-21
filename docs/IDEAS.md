@@ -51,6 +51,14 @@ against a standing project rule rather than being merely large or risky. Both ne
   bracket) for exactly this reason - it is real without being a photograph of someone's actual
   front door. If this is wanted anyway, it wants a decision from a person, in daylight, not a
   default "the agent was told to keep going." Not attempted.
+  — **Decided in daylight, 2026-08-16, and narrower than the ask:** the owner set up a Google
+  Maps API key himself and directed Street View + satellite use to verify HIS OWN placement
+  rulings (`tools/streetview.py`; first use confirmed the 101 Perry estate against the real
+  street and removed the county's phantom "106 Gilbert" from its front lawn). What stands
+  authorized is reference imagery for geography and architecture, fetched to untracked scratch
+  space and never committed. The thing this item was written to head off — scoring a real,
+  occupied home's upkeep into per-address game data — was not asked for and remains not done;
+  `ParcelNotes`/`CountyRecord` stay the source for housing quality.
 
 - **Newspaper/archive research per real parcel, 1995-2006, to inform character notes.** This one
   is not a grey area - it is the EXACT thing the design spec's "NO REAL RESIDENTS" section
@@ -764,6 +772,18 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## City
 
+- [ ] **`CityChunker` leaves 14,901 renderers unbaked, first name `Table`, and `MeshReadable`
+  cannot see them.** Measured 2026-08-16 in the live town build: `[chunker] 14901 renderer(s) are
+  NOT Read/Write enabled and were left unbaked - first: 'Table'` (plus 1 'default'). This is NOT
+  the fresh-clone city-tile state the error message assumes — `MeshReadable.Enable` ran the same
+  night and found only **1** model to fix (351 already had it), because it walks the city tile set
+  and the 25 figure prefabs and nothing else. `Table` is interior furniture: a whole population of
+  prop meshes (probably in with the doors/interiors work of 2026-08-15) reaches the chunker
+  without ever having been walked by the tool. The town draws fine — unbaked means uncombined,
+  which is renderer count, which is frame time nobody has measured (`PerfCensus`, editor closed).
+  The fix wants `MeshReadable` to derive its asset list from the renderers `CityChunker` actually
+  bakes, rather than from a hand-kept list of directories. — *2026-08-16*
+
 - [x] ~~Two buildings standing on the same ground, at every block corner.~~ FIXED, and it was the
   same arithmetic slip in two files. A block's end runs take the full width and are `Depth` deep;
   its side runs have to begin past that. `CityDistrict` began them exactly AT `lot.Y + Depth`,
@@ -826,6 +846,13 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   a shop empties, a roof goes, a lot clears, but the school building stays up with something
   else in it. The owner: *"For now I want it as close to 1991 as possible. Add deterioration
   later."* — *2026-08-04*
+
+- [ ] A door the player deliberately closes swings back open in their face 5 seconds later if
+  they are still standing within reach — `CityDoors.OverrideHold` expires and hands control
+  straight back to proximity, which the PlayMode test `ForceCloseBeatsProximityUntilItExpires`
+  asserts as intended. Design call: should a player's explicit Close outlast proximity for as
+  long as they stand still at the door (refresh the override while the closer remains within
+  Hold), or is the reopen the wanted behavior? — *2026-08-15*
 
 ## People
 
@@ -913,6 +940,65 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
 
 ## Story
 
+- [ ] The B badge toggle needs louder feedback — a flash or banner when the role changes;
+  its only sign today is the small top-bar label, and the owner pressed it repeatedly
+  believing it was broken (2026-08-17, right after the T/B/H double-toggle fix) — *2026-08-17*
+
+- [x] Drivable-car Phase 2, owner's scope 2026-08-15: the police respond to a vehicular
+  accident, and an ambulance takes the body away after the investigation completes. Phase 1
+  (in design the same day) is the car, the hit, the body staying, and witnesses recording it —
+  its harm-event record must carry victim, place, minute and car identity so this response can
+  consume it later. — *2026-08-15* **Delivered 2026-08-16**: spec
+  `docs/superpowers/specs/2026-08-15-police-response-design.md`, both gates green
+  (Core 561/0, PlayMode 31 of 31).
+
+- [ ] **The ambulance is a county unit and Rossville's was a volunteer service.** Owner
+  testimony 2026-08-17, now standing fact 6 in `SOURCES-OF-TRUTH.md`: *"We did have a
+  volunteer FD and EMS."* The machine sends one ambulance 10 sim-minutes off-map, after the
+  canvass — county timing in the county's slot. For a LIVING casualty the town's own
+  volunteer EMS should be paged at alarm time and crewed by named citizens who get up from
+  their own tables (the pharmacist is also the EMT — a witness-layer gift); the off-map
+  unit and the late slot may stay right for a body. Wants the owner's ruling on the split
+  before coding: who volunteers, where the rig lives (the FD building), what a page sounds
+  like at 300x. — *2026-08-17*
+
+- [ ] **Three Phase 3 seams the witness-voices final review left open.** (a) "Somebody asking
+  questions" is a civilian-player fingerprint the town never checks for its own hand: a badge
+  ask and the county's own canvass are the same observable event — somebody going door to
+  door — and neither is remembered by a bystander who watched the county do it, only the
+  player's own doorstep visits reach `AskEvents` (`VillageHost.PlayerAsks`,
+  Assets/Noir/Unity/VillageHost.cs). (b) A badge ask with no case known-open files nothing and
+  records nothing — it vanishes without trace, a gap the badge arm's own comment now names
+  where it happens. (c) `AskEvents` (Assets/Noir/Core/Witness/AskEvents.cs) is a THIRD
+  genuine, underivable history alongside `PlayerTrack` and `HitEvents` — player-caused facts
+  the seed cannot replay — and a future save/replay system has to serialise all three
+  together or a reloaded game's witnesses start disagreeing about what they said happened.
+  — *2026-08-17*
+
+- [ ] **The response rigs "arrive" far from the scene, and the gate cannot see it.** Watched
+  live 2026-08-16 (dusk hit at village (679,760), editor Play, 60×): the county car parked
+  1,700 ft short at (649,-1276) — plausibly the documented Patience park-and-walk, and the
+  county officer did walk the rest, canvassed ~10 doors, case file correct — but the AMBULANCE
+  was seen MOVING at 500 ft out, then drove AWAY and declared Loading at (377,-195), 2,100 ft
+  from the body, which matches neither the park-and-walk nor a genuine block. The machine
+  closes cleanly either way because arrival can come from `CityResponse`'s held deadline, and
+  `ResponsePlayTests` asserts case-state only — nothing anywhere asserts where a rig STANDS
+  when it reports arrival. Suspects, in order: `LaneRoutes.NearestSegment`'s travel-window
+  filter near the scene (its own doc warns about the arc→axis conversion), the 15 m
+  candidate-lane list in `CityResponse.PlanRoute`, or the deadline firing while genuinely en
+  route. Fix wants a PlayMode assertion that a rig reporting geometric arrival is within ~20 m
+  of the scene's nearest lane, and a probe of `NearestSegment((679.5, 760.5))` against the
+  real graph. Stills: `docs/snapshots/response-*.png`. — *2026-08-16*
+  **Reproduced same day, evening, with a signature:** the CRUISER (the police-look branch's
+  third rig) drove a visibly wandering route from the precinct — east to x=823, two full
+  east-west sweeps of the southern ring roads — and stopped at **(649,-1276), the exact spot
+  the county car ended at in the morning look**, 1,700 ft from the same scene (679,-760).
+  The park-and-walk kept the case honest (SceneHeld 10 min after dispatch; the officer
+  alighted at the far kerb and walked a third of a mile), so the machine is fine and the
+  ROUTE/HOLD is the defect: either that junction starves rigs until Patience parks them, or
+  the plan itself terminates there. (649,-1276) twice from two different starts is where to
+  put the probe first.
+
 - [x] ~~`Survival` is 174 prefabs and nothing has ever placed one.~~ DONE - `Assets/Noir/Unity/CityStory.cs`,
   six sites and nineteen pieces. AUTHORED, NOT SCATTERED, which is the whole of it: the note above
   was right that where a bear trap goes is a story decision, so each site is a `place` in city.txt
@@ -927,6 +1013,24 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   none of which have a story yet. — *2026-07-31*
 
 - [ ] Deduction as recipes: a corkboard where pinning evidence in a *shape* produces a lead. The Crafting System's `TableRecipe` is already position-aware rather than only contents-aware, and `ISatisfier` is the "do these inputs match this pattern" abstraction. Build it in Core against `particulars.txt`. — *2026-07-30*
+
+- [ ] An officer struck down AFTER re-standing as `DirectingTraffic` at a scene cordon could
+  leave the cordon standing indefinitely if the case machine stalls short of `Closed` — the
+  struck-down check only runs while he is in `_officerWalking`, so a hit landing after he has
+  taken up the traffic post is never seen by that arm. `CloseLoudly` is today's safety valve;
+  pre-existing case-machine behavior, surfaced by the scene-cordon final review. — *2026-08-18*
+
+- [ ] **The county canvasses in citizen-id order, so the officer criss-crosses the town.**
+  `VillageHost.CanvassListFor` walks the census from 0 upwards and hands `ResponseCases` the
+  witnesses in that order; `TickCanvassing` knocks them in the order it was given. Citizen id is
+  not geography. Measured 2026-08-20 in the PlayMode response gate: 35 → 37 → 58 → 74 → 81 → 85 →
+  102 → 121 → 145 → 172 → 175 → 260 → 300 → …, with gaps between doors of **15 and 19 sim minutes**
+  of walking against a five-minute `CanvassMinutesPerDoor`. So a real canvass costs several times
+  what the machine's own timing says, and a door-to-door in a small town looks nothing like a man
+  criss-crossing it. Sorting the list by distance — from the scene, or nearest-next from the last
+  door — is a few lines in `CanvassListFor` (a Unity file, so not a Core change), but it moves what
+  the response gate observes and is the owner's call. Wants a ruling before anybody touches it.
+  — *2026-08-20*
 
 ## Tech
 
@@ -1096,3 +1200,56 @@ fire** — the year is decided in `docs/research/THE-ERA.md` and nowhere else.
   browser map ever puts a freestanding fence hard against a shaped building's real footprint - the
   fix is genuine per-tile `PlaceAt` sampling (or re-splitting a run wherever `PlaceAt` changes)
   instead of one sample standing in for the whole run. — *2026-08-13*
+
+- **`CityOutlines`'s plan-line overlay draws a downtown terrace's footprint from the tile-rounded
+  outline, and now visibly disagrees with the walls it is supposed to be tracing.** `Place.OutlinePrecise`
+  (this session) fixed the WALLS' several-degree party-wall kink by drawing from the true corner
+  instead of the one rounded to the nearest tile - but `CityOutlines.Footprints` (`CityOutlines.cs:162`,
+  `var ring = place.Outline;`) was never told about it, so the plan-line layer - on by default -
+  still carries the full sawtooth on the same buildings whose walls are now dead straight. Up to
+  ~0.7 m of disagreement on 112 S Chicago. Not a regression (that overlay's own behaviour is
+  unchanged) and out of scope for the plan that just landed, but the next full snapshot re-render
+  will bake it into `docs/snapshots/layers/03-house-outlines-alone.png`, where it could easily read
+  as "the fix didn't work" to a session that doesn't know to check which layer it's looking at. Fix
+  is the same shape as `DrawShapedPerimeters`'s own fix: prefer `OutlinePrecise` when present, fall
+  back to `Outline`. Worth a shared helper (e.g. `Place.Ring`) once a second consumer needs this,
+  rather than a third copy of the same fallback logic. — *2026-08-13*
+
+- [ ] `SeatOnSurvey`/`FillFromSurvey`-sourced shaped buildings (not just DowntownFromSanborn's
+  terrace) have the same door/sign-misalignment bug the angled-frontage plan fixed for 112 S
+  Chicago - `Frontage.PreciseEdgeAt` only reads `Place.OutlinePrecise`, which only
+  `DowntownFromSanborn` populates; `Outline` (which those two DO set, for genuinely non-rectangular
+  footprints like the L-shaped high school) is never consulted. `DrawShapedPerimeters` already
+  falls back Outline→OutlinePrecise the other way (Assets/Noir/Unity/VillageMesh.cs:1721-1729) as
+  a model. Fixing this widens the blast radius from 17 buildings to however many `SeatOnSurvey`
+  reports as "built to its real outline" - needs its own planned, verified pass, not a
+  bolt-on. (Found by the final review of the angled-frontage plan, 2026-08-14.)
+
+- [ ] **Per-building meshes for generated houses.** The house inspector's 3D frame shows
+  true meshes only for owner models and the seven landmarks — an ordinary massed house has
+  no per-building geometry: `VillageMesh` bakes its walls straight into shared 64 m chunk
+  meshes with no per-place identity (discovered 2026-08-20 by the mesh exporter,
+  `Noir.Editor.TownExport`). The frame currently extrudes the placed footprint ring as a
+  stand-in shell. Giving the massing per-place mesh identity (tag triangles or emit per
+  place before chunking) would let the exporter capture every house as the game truly
+  draws it. — *2026-08-20*
+
+- [ ] **Owner models without plans must still block the walkable grid.** LARGELY LANDED
+  2026-08-20 for the case that matters: an authored floor plan stamps its walls as
+  `Terrain.Wall` through `StampInterior`, so 408 (which has one) gets real interior walls
+  in the grid. What remains is the owner model with NO plan (101 Perry, PubRow, the
+  storefront): its place still stamps a generated interior that disagrees with the model's
+  walls, and its exterior silhouette is still only `Place.Bounds`. The durable fix is a
+  plan per owner model — the tool makes that cheap now — or the model-geometry stamp the
+  original item described. — *2026-08-19, narrowed 2026-08-20*
+
+- [ ] **⚠ LIVE SINCE 2026-08-20: owner-model Read/Write is ON and the glass trap is armed.**
+  `Noir > Make City Meshes Readable` was run on 2026-08-20 (the house inspector's mesh
+  export needs readable meshes - it is what put 408 in the tool's 3D frame), which removes
+  the accident that kept owner models out of `CityChunker`'s bake. The original warning now
+  applies to the NEXT dressed build: the chunker keeps addressable glass by the PACK's
+  material names, the owner's `glass` material is not among them, and a naive bake welds
+  his lit windows solid. Fix before believing any owner-model window in a baked town:
+  exempt `win_*_glass` / his glass material the way hinge leaves are exempt. (The plan-gate
+  town stands no owner models, so the standing PlayMode gate cannot see this either way.)
+  — *2026-08-19, armed 2026-08-20*

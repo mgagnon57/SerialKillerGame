@@ -1,0 +1,3 @@
+[mcp_servers.unity-mcp]
+command = 'C:\Users\mgagn\.unity\relay\relay_win.exe'
+args = ["--mcp"]

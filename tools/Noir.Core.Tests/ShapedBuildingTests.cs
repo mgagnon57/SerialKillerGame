@@ -22,11 +22,13 @@ namespace Noir.Core.Tests
         private const string OneHouse =
             "place house 20,20 20x20 \"the test house\"\n  door 30,39\n";
 
-        private static WorldModel Build(Tile[] outline)
+        private static WorldModel Build(Tile[] outline, Vec2[] outlinePrecise = null, float? groundHeight = null)
         {
             TestContent.EnsureKinds();
             var layout = VillageParser.Parse(Header + OneHouse);
             layout.Places[0].Outline = outline;
+            layout.Places[0].OutlinePrecise = outlinePrecise;
+            layout.Places[0].GroundHeight = groundHeight;
             return WorldBuilder.Build(layout, 1234UL);
         }
 
@@ -135,6 +137,66 @@ namespace Noir.Core.Tests
                         "the door has to survive an outline that does not contain it");
             Assert.That(FloorIn(world, world.AllPlaces[0].Bounds).Count, Is.GreaterThan(20),
                         "declining the outline should leave the ordinary rectangular house");
+        }
+
+        [Test]
+        public void OutlinePreciseIsNullWhenNeverSet()
+        {
+            var world = Build(Ell());
+            Assert.That(world.AllPlaces[0].OutlinePrecise, Is.Null,
+                        "nothing set a precise ring, so the built Place should not invent one");
+        }
+
+        [Test]
+        public void OutlinePreciseSurvivesToTheBuiltPlaceUnchanged()
+        {
+            var precise = new[]
+            {
+                new Vec2(20.3f, 20.7f), new Vec2(30.1f, 20.4f), new Vec2(30.6f, 30.2f),
+                new Vec2(40.4f, 30.9f), new Vec2(40.2f, 40.1f), new Vec2(20.8f, 40.3f),
+            };
+            var world = Build(Ell(), precise);
+
+            Assert.That(world.AllPlaces[0].OutlinePrecise, Is.EqualTo(precise),
+                        "the precise ring is carried through PlaceSpec -> Place unchanged - it is "
+                      + "not rounded, resized or reordered anywhere in WorldBuilder");
+        }
+
+        [Test]
+        public void ADeclinedOutlineTakesItsPreciseRingWithIt()
+        {
+            var world = Build(new[] { new Tile(20,20), new Tile(40,20), new Tile(40,28), new Tile(20,28) },
+                              new[] { new Vec2(20.3f,20.7f), new Vec2(40.1f,20.4f),
+                                      new Vec2(40.6f,28.2f), new Vec2(20.4f,28.9f) });
+            Assert.That(world.AllPlaces[0].OutlinePrecise, Is.Null,
+                        "both rings are gated on the same boolean - dropping one must drop the other");
+        }
+
+        [Test]
+        public void GroundHeightIsNullWhenNeverSet()
+        {
+            var world = Build(Ell());
+            Assert.That(world.AllPlaces[0].GroundHeight, Is.Null,
+                        "nothing set a shared ground height, so the built Place should not invent one");
+        }
+
+        [Test]
+        public void GroundHeightSurvivesToTheBuiltPlaceUnchanged()
+        {
+            var world = Build(Ell(), groundHeight: 12.375f);
+            Assert.That(world.AllPlaces[0].GroundHeight, Is.EqualTo(12.375f),
+                        "the shared ground height is carried through PlaceSpec -> Place unchanged");
+        }
+
+        [Test]
+        public void GroundHeightSurvivesEvenWhenTheOutlineIsDeclined()
+        {
+            // Unlike OutlinePrecise, GroundHeight is not gated on the outline being accepted -
+            // an ordinary rectangular building can still be told to share its row's floor level.
+            var world = Build(new[] { new Tile(20,20), new Tile(40,20), new Tile(40,28), new Tile(20,28) },
+                              groundHeight: 9.5f);
+            Assert.That(world.AllPlaces[0].GroundHeight, Is.EqualTo(9.5f),
+                        "a declined outline drops Outline and OutlinePrecise, not GroundHeight");
         }
     }
 }

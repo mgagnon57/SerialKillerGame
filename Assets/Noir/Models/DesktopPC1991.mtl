@@ -1,0 +1,30 @@
+newmtl beige_plastic
+Kd 0.6939 0.6308 0.4910
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl beige_plastic_dark
+Kd 0.5271 0.4564 0.3231
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl dark_plastic
+Kd 0.0252 0.0262 0.0284
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl led_green
+Kd 0.2747 0.7682 0.3231
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl crt_glass
+Kd 0.0160 0.0212 0.0232
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl cable
+Kd 0.0437 0.0452 0.0482
+Ks 0.05 0.05 0.05
+Ns 10
+

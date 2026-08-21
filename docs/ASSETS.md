@@ -6,6 +6,124 @@ wrong for us and say why, so nobody researches it twice.
 
 Prices are indicative and were correct when this was written.
 
+**And a third source now: the owner makes models.** House-made props live in
+`Assets/Noir/Models/` as OBJ+MTL, converted from Designer's GLB exports by
+`python tools/glb-to-obj.py <file.glb> <Name>` — flat-color materials only (the tool refuses
+textured GLBs rather than dropping their textures silently), node transforms baked, one mesh
+with a submesh per material. First one in: **DesktopPC1991** (2026-08-16, his first model) —
+a complete beige 1991 desktop, CRT, keyboard with modeled keys, mouse and cables, 10,072 tris,
+6 flat materials, real-world metres, and it sits in register with the pack. Preview:
+`docs/snapshots/pc-preview-front.png`. Second: **RotaryDeskPhone** (same day) — handset in
+the cradle, rotary dial, a coiled cord spiralling onto the desk; 44,408 tris, most of them in
+the coil and dial. That is HERO-PROP weight: fine for a handful of desks, but a phone is an
+every-house object in 1991, and 500 households of 44k tris is another whole town of triangles
+— the everywhere version wants a lower-segment re-export from Designer. Preview:
+`docs/snapshots/phone-preview.png`. Third: **PoliceCruiser1991** (same
+day) — a boxy Caprice-shaped white-and-blue cruiser with a modeled light bar (separate red and
+blue lens materials), A-pillar spotlight, door roundel and wipers; 10,012 tris. Size-reviewed
+against the real 1991 Caprice (17.9 ft) and the pack police car (17.6 ft): his is 18.5 ft,
+wheels on y=0 to the millimetre, origin centred — authored facing +X, so the converter grew a
+yaw argument and bakes the quarter-turn to the +Z drive convention. The natural next step is
+swapping it in as CityResponse's cruiser. Fourth: **SodaVendingMachine** (same day)
+— his first TEXTURED export: 622 tris, three flat-graphic textures (red body, a SODA marquee,
+wood trim), 3.2 ft x 6.0 ft footprint dead on the real thing. The converter learned to extract
+embedded GLB textures to PNGs with map_Kd + UVs — and since Unity's OBJ importer ignores
+map_Kd, the textured materials are wired through the ModelImporter's remap table as real .mat
+assets beside the model (the pattern for every textured model after it). Fifth: **DerelictFreightDepot**
+(same day) — his first BUILDING: 75 ft x 37 ft x 23 ft on pier footings, 1,816 tris, five flat
+materials (weathered wood, railroad red, rust, concrete, dark void), one freight door hanging
+off its hinges. A building wants a LOT, not a shelf: its natural anchor is the railroad
+corridor, where the real Rossville depot stood — an owner placement decision on the parcel
+layer, not the prop seam. Sixth: **BrickChurch** (same day) —
+central bell tower with spire, stone water tables, corner turret, apse; 50 x 55 ft, tower
+52 ft, 5,020 tris, foundation deliberately a foot below grade (right for the elevation grid).
+One stray floating disc beside the tower awaits a re-export. Seventh: **VictorianHouse**
+(same day) — a Second-Empire mansion: mansard roof, widow's walk between twin chimneys,
+bracketed cornice, wraparound porch; 5,160 tris. SIZE FLAG, deliberate: 84 ft of frontage —
+two and a half ordinary lots — which fails as a house and passes as the town's ONE grand
+house (and every 1991 town's grand house is usually the funeral home). Scale at placement if
+it should be merely the biggest house on a corner lot. THE FIRST PLACEMENT LANDED
+2026-08-16 night: **the mansion stands at 101 Perry St** — a city.txt ruling replaced the
+county's guessed 102/104 Gilbert Ave with one grand lot (verified against the real street:
+the actual red-brick mansard estate stands exactly there), and Content/models.txt +
+CityBuildings.OwnerModels() stand any hand-made model on any addressed lot from now on. The
+place is fully real: door, household, witnesses. Props (PC, phone, soda machine) still want
+the desk/interior placement seam. Eighth: **CrtTelevision** (2026-08-17) — 1,028 tris,
+13 material groups; 22.8"W x 28.5"H x 19.4"D, which is tall for a tabletop set and right for
+a floor-standing CONSOLE TV, the 1991 living-room anchor. Ninth: **Boombox1990s** (same day)
+— 4,724 tris, 6 materials; 21.3"W x 20.7"H x 7.5"D. SIZE FLAG, unreviewed by the owner: 20.7"
+tall is ghetto-blaster-with-the-handle-up territory — if the handle is down in the model, it
+is oversized and wants a scale ruling at placement. Both are interior props and join the PC,
+phone and soda machine in the queue for the desk/interior placement seam. Tenth:
+**FreestyleBmx90s** (same day) — 20,264 tris, 5 materials; 4.9 ft nose to tail, faces +Z
+(authored +X like the cruiser; the converter baked the same -90 quarter-turn, front found by
+the handlebar mesh's x-extent). MID-HEAVY for a yard prop — the phone's lesson at half the
+weight: fine leaned against a handful of porches, not in every yard. Eleventh: **FrameHouse**
+(same day) — 564 tris, 8 materials; 48.1 x 36.6 ft footprint, 24.1 ft tall, foundation 1 ft
+below grade (the church's deliberate pattern). Bigger than the town's ordinary 24-30 ft
+cottages — reads as a corner foursquare. Origin is off-centre (x +8 ft, z +7 ft), harmless on
+a lot because Landmark fits by bounds, but a prop-seam placement would inherit it. Twelfth:
+**DowntownStorefronts** (same day) — 1,004 tris, 8 materials; a 60.4 ft two-story commercial
+row, 27.6 ft tall, 29.1 ft deep. Like the depot, a building wants a LOT: its natural home is
+a downtown Chicago Street block face, an owner placement ruling on the parcel layer.
+Thirteenth through fifteenth (same day, a matched outbuilding set): **AlleyGarage** —
+772 tris, 14.5 x 21.7 ft, 11.4 ft tall, a single-car garage with the car axis on Z;
+**BackyardShed** — 880 tris, a classic 9.9 x 11.4 ft shed; **Workshop** — 1,308 tris,
+12.0 x 15.5 ft. All dimensionally dead-on, centred, grounded. ⚠ THESE WANT A SEAM THAT DOES
+NOT EXIST YET: an outbuilding belongs to a YARD, not to a lot address — `models.txt` stands a
+model on the whole lot, replacing the house. The grammars already draw a `RearOutbuilding` as
+baked roof extras (see the CLAUDE.md trap about silhouettes vs `Place.Bounds`); standing these
+real models behind houses needs either a models.txt extension (address + `outbuilding` slot)
+or a yard-prop seam. Owner decision, queued beside the props' desk seam. Sixteenth:
+**WelcomeToRossvilleSign** (same day) — 12,208 tris (the weight is modeled LETTERING — fine,
+it is a one-of-a-kind), 3 materials; 10.3 ft wide, 8.8 ft tall on posts, face toward +Z.
+Belongs on the Route 1 shoulder at the town limits, where the real one stands — a ROADSIDE
+placement, neither a lot nor a yard: `CitySigns` already owns the roadside-furniture seam and
+is its natural home, or a one-off world-position ruling. Owner decision. Seventeenth:
+**ServiceStation** (same day) — 736 tris; 52.5 x 67.3 ft with pump canopy, 22.1 ft tall.
+The town already draws `Gas_Station_City.prefab` on the gasstation kind — a `models.txt` row
+at the real station's address swaps this in. Eighteenth: **RossvillePostOffice** (same day) —
+8,480 tris across 24 materials (signage detail, one-off civic weight); 48.6 x 46.8 ft,
+21.7 ft tall, dead-on for the type. Nineteenth: **RossvilleHistoricalSociety** (same day) —
+2,328 tris; 85.3 x 78.3 ft, 69.4 ft to its top — a THREE-STORY block (the owner's own count,
+correcting this file's "five-story" guess from dividing by modern floor heights; a 19th-century
+civic block runs tall floors, and the peak includes whatever crowns it). RULED BY THE OWNER
+2026-08-17: "It is right" — stands at modeled size, no scale at placement. Twentieth through
+twenty-fourth (same night — AND A SCALE SHIFT: he models whole LOTS now, building plus
+grounds; the church carries lawn_grass and walk_concrete materials, which is why these
+footprints read big for bare buildings and right for parcels): **RossvilleMethodistChurch**
+— 3,566 tris, 137.8 x 99.4 ft site, 64 ft to the top, his second TEXTURED export (one PNG,
+wired as `RossvilleMethodistChurch_mat_0.mat` through the importer remap, the soda machine's
+pattern). **RossvilleQueenAnneHome** — 4,016 tris, 111.6 x 78.7 ft site, 40.4 ft.
+**RossvilleFireStation** — 9,420 tris, 137.8 x 85.3 ft site, 54.7 ft (a hose tower's
+height); the town draws `Fire_Station_City.prefab` on the firestation kind, so a models.txt
+row swaps this in like the service station's. **RossvilleDowntown** — 28,392 tris across 44
+materials, a 252.6 ft two-to-three-story block face, 131 ft deep. **RossvilleDowntown2** —
+11,452 tris, a 196.9 ft companion face. The two downtown blocks and the earlier
+DowntownStorefronts now cover most of a real Chicago Street frontage between them — the
+downtown placement ruling is becoming THE open question of the model estate. Twenty-fifth
+through thirtieth (2026-08-18, small hours — THE EMS KIT, gear for the volunteer ambulance
+service that standing fact 6 in SOURCES-OF-TRUTH.md remembers): **SpinalBackboard** (408
+tris, 79 x 16.5 in — a textbook 72-inch board with handles), **OxygenTank1991** (2,000 tris,
+a 30.8 in E-cylinder), **PortableOxygenTank** (4,620 tris, 32 in with carry rig),
+**PortableSuctionUnit** (2,380 tris, 27.5 in cased), **InflatableAirSplints** (6,360 tris, a
+38 x 22 in kit spread), and **EmsEquipment1991** (7,096 tris, 38 materials — the WHOLE
+loadout laid out as an 8.8 x 8.3 ft set: a diorama piece that wants either splitting into
+props or posing whole as ambulance-scene dressing). All grounded, all dimensionally right.
+They queue on the interior/prop seam beside the desk props — natural home: the ambulance
+rig's dressing and the response scene.
+
+Thirty-first through thirty-third (2026-08-18, evening — THE BUILDINGS WAVE, all three
+standing on lots the same night): **Residence408** (19,288 tris after the 2026-08-19
+carpentry re-export — sills on floors, stock 6'8" doors, 7'0" x 9'0" overhead; 59 x 100 ft
+x 17 ft with an 8-inch below-grade foundation — 408 Holmes Street, HIS house, the first
+model in the game you can walk into, standing alone on a block the county's decline
+emptied), **PubRow** (7,684 tris, 91 x 45 ft two-storey terrace — Rossville
+unit 7, the Livingood House lot), and **RossvilleStorefront** (12,332 tris, 53 x 50 ft,
+three storeys — the whole 112 S Chicago terrace via the new terrace ruling: one models.txt
+row naming the terrace address stands one model over every unit the split minted, and the
+units stay real places under the one roof the county's note says they shared).
+
 ---
 
 ## The four filters
@@ -233,23 +351,36 @@ AND SOUND, not surface detail.
 
 ---
 
-## Audio — currently there is none at all
+## Audio — a working layer, no longer none
 
-`OVERNIGHT.md` has said "No audio at all" since the beginning. This is the cheapest large gain
-after the lighting.
+This header said "currently there is none at all" until 2026-08-17, three commits stale.
+Measured against the tree that day: `VillageAudio.cs` rings `bell.wav` on the hour at the
+church's own belfry height, plays terrain-driven footsteps, carries three ambience beds, and
+is silent in batch mode always. What actually exists in `Content/audio/` — fourteen loose
+WAVs: the bell, three ambience beds (dawn/day/night, ~1 MB each — RUNNING as of 2026-08-17:
+the owner listened to each bed solo and ruled all three back on. The census: night is wind
+only, dawn is birdsong, day is birds again — two of three carry birds, which is why the old
+"silence the dawn chorus" fix never worked; the full story is on `AmbienceEnabled` in
+`VillageAudio.cs`), and ten step samples.
 
-- [ ] **Footsteps Pack** — ~$30. 3,011 samples: concrete, grass, mud, gravel, water, metal, snow.
-  [Listing](https://unityassetcollection.com/footsteps-pack-free-download/)
-
-  NEARLY FREE TO WIRE, which is the point: the map already knows the terrain of every tile, so
-  `world.Grid.TerrainAt` picks the surface and the sample follows. Every other game has to author
-  that mapping by hand.
+- [ ] **Footsteps Pack** — ~$30, 3,011 samples. **No longer the way to GET footsteps — the
+  game has them, wired exactly the way this item predicted would be nearly free**:
+  `step_<surface>_a/b` pairs for grass, road, path, floor and churchyard, chosen by
+  `world.Grid.TerrainAt` under the camera, stride 1.25–2.0 m by speed, alternating feet,
+  player-only in Street mode. What the pack would still add is SURFACES the ten home-made
+  WAVs do not cover (mud, gravel, water, metal, snow) and per-step variety. Worth it the day
+  the player walks a gravel alley or a wet ditch and hears grass. Buy it from the Asset
+  Store by name — the third-party "free download" link that used to sit here was a rip site
+  and is gone.
 
 - [ ] **Ambient Sounds - Interactive Soundscapes for Unity 6** — ~$45.
   [Asset Store](https://assetstore.unity.com/packages/tools/audio/ambient-sounds-interactive-soundscapes-for-unity-6-142132)
 
   Global, 1D, 2D and 3D zones, which maps straight onto what the map already is: downtown, the
-  suburb ring, the country frame, and the individual places inside them.
+  suburb ring, the country frame, and the individual places inside them. The listen that gated
+  this purchase happened 2026-08-17 and the three home-made beds are running — so the question
+  is now a real comparison: what would zoned soundscapes add over wind, chorus and day birds
+  that already follow the clock? Judge it against the running town, not against silence.
 
 - [ ] **City Ambience Sound** — ~$20. Raw material for the above.
   [Asset Store](https://assetstore.unity.com/packages/audio/ambient/urban/city-ambience-sound-309820)
@@ -319,8 +450,9 @@ picked - so what a witness reports is what is actually on screen.
 
 ## If you only buy three
 
-**HAZE** for the light under the new lamps, **Footsteps Pack** because the terrain data to drive it
-already exists, and **COZY 3** for weather that does not fight the art style. Comfortably under
+**HAZE** for the light under the new lamps, **Ambient Sounds** now that the footsteps this list
+used to nominate got built by hand (see the Audio section), and **COZY 3** for weather that does
+not fight the art style. Comfortably under
 $150 together, and every one of them drops in without authoring anything in a scene - which matters
 here, because content authored in an editor window is content `MapAudit` and the PlayMode tests
 cannot see.

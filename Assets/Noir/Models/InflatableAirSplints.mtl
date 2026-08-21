@@ -1,0 +1,25 @@
+newmtl splint_vinyl_clear
+Kd 0.7157 0.8070 0.8228
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl splint_seam_weld
+Kd 0.4233 0.5210 0.5395
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl splint_zipper
+Kd 0.2542 0.2874 0.3050
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl inflation_valve
+Kd 0.8070 0.7835 0.7011
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl switch_red
+Kd 0.4342 0.0296 0.0176
+Ks 0.05 0.05 0.05
+Ns 10
+

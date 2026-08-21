@@ -70,13 +70,17 @@ namespace Noir.Core.World
         /// <summary>Where somebody stands when they are "in" this room.</summary>
         public readonly Tile Anchor;
 
-        public Room(RoomId id, PlaceId building, RoomKind kind, TileRect bounds, Tile anchor)
+        /// <summary>What the owner called this room on the authored plan. "" for a generated room.</summary>
+        public readonly string Name;
+
+        public Room(RoomId id, PlaceId building, RoomKind kind, TileRect bounds, Tile anchor, string name = "")
         {
             Id = id;
             Building = building;
             Kind = kind;
             Bounds = bounds;
             Anchor = anchor;
+            Name = name ?? "";
         }
 
         public int Area => Bounds.W * Bounds.H;
@@ -115,5 +119,30 @@ namespace Noir.Core.World
         }
 
         public override string ToString() => $"{Kind} {Bounds}";
+    }
+
+    /// <summary>
+    /// The word-match from an authored room's name to the <see cref="RoomKind"/> the sim
+    /// understands. Deliberately small: the enum's own header forbids synonym kinds, so
+    /// "dining" and "family room" both furnish as the front room. First match wins, in the
+    /// order below; an unmatched name defaults to the front room rather than refusing.
+    /// </summary>
+    public static class RoomWords
+    {
+        public static RoomKind KindFor(string name)
+        {
+            string s = (name ?? "").ToLowerInvariant();
+            if (Has(s, "bath")) return RoomKind.Bathroom;
+            if (Has(s, "bed")) return RoomKind.Bedroom;
+            if (Has(s, "kit")) return RoomKind.Kitchen;
+            if (Has(s, "din") || Has(s, "liv") || Has(s, "family") || Has(s, "lounge"))
+                return RoomKind.Living;
+            if (Has(s, "laundry") || Has(s, "utilit") || Has(s, "scull")) return RoomKind.Scullery;
+            if (Has(s, "office") || Has(s, "work") || Has(s, "study")) return RoomKind.Workroom;
+            if (Has(s, "hall") || Has(s, "entry") || Has(s, "foyer")) return RoomKind.Hall;
+            return RoomKind.Living;
+        }
+
+        private static bool Has(string s, string word) => s.IndexOf(word, StringComparison.Ordinal) >= 0;
     }
 }

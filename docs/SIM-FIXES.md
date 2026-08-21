@@ -438,7 +438,10 @@ school by a habit.
 ### Also answered 2026-08-09, second round
 
 **THE PRECINCT — four officers, TWO watches, and one on call from home overnight.** Not three
-watches. Nobody is *at* the precinct at 3 a.m.; somebody can be **woken**.
+watches. Nobody is *at* the precinct at 3 a.m.; somebody can be **woken**. **Landed 2026-08-16**
+(`kinds.txt` precinct: `jobs 4`, two watch windows so `ShiftFor`'s split branch fires;
+`PrecinctRotaTests` reads the real file and holds it; `Sim.Respond` wakes the on-call man —
+`RespondWorksFromAsleep` proves it).
 
 > ⚠ **This revises the night mix recorded above.** Police no longer contribute 1–2 awake bodies
 > overnight — they contribute **zero at the precinct and one asleep-but-wakeable officer at home**.

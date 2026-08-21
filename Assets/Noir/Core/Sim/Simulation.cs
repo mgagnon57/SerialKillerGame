@@ -96,6 +96,44 @@ namespace Noir.Core.Sim
 
         /// <summary>When they first failed to set off. Zero when not stranded.</summary>
         public long StrandedSinceTick;
+
+        /// <summary>Struck down and staying down. Live state that outranks the plan while it
+        /// holds — see Activity.Downed. Only Simulation.Down sets it, and only
+        /// Simulation.Revive clears it.</summary>
+        public bool Downed;
+
+        /// <summary>
+        /// The absolute minute (day * 1440 + minuteOfDay) the ambulance brings them back, or
+        /// zero when nobody has been taken away. Outranks the plan the same way Downed does —
+        /// see Activity.AwayFromTown — while it holds; only Simulation.TakeAway sets it, and
+        /// only Simulation.Return, whether called by a hand or by the tick loop reaching this
+        /// minute, clears it. int.MaxValue is how "never" is spelled: no clock reaches it.
+        /// </summary>
+        public int AwayUntilMinute;
+
+        /// <summary>
+        /// On their way to, or standing over, a scene nobody's plan sent them to — the first
+        /// off-plan walk in the game. Outranks the plan the same way Downed does while it holds:
+        /// the tick loop runs RespondTick for them instead of the ordinary journey/Doing logic,
+        /// and Arrive is taught to write Activity.Responding rather than whatever the plan's
+        /// current block says. Only Simulation.Respond sets it; only Simulation.Release or
+        /// Simulation.Down clears it.
+        /// </summary>
+        public bool Responding;
+
+        /// <summary>Where a Responding agent is walking to, or already standing over. Meaningless
+        /// unless Responding is true.</summary>
+        public Tile RespondTarget;
+
+        /// <summary>Riding a response vehicle: present in the population, absent from the
+        /// world, exactly as AwayFromTown draws — set only by Simulation.Board, cleared by
+        /// Alight or Release. Meaningless unless Responding.</summary>
+        public bool Aboard;
+
+        /// <summary>What a Responding agent wears once they stand at RespondTarget —
+        /// Activity.Responding for the officer, Gawking for the ring around him. Set only
+        /// by Simulation.Respond. Meaningless unless Responding.</summary>
+        public Activity StandAs;
     }
 
     /// <summary>
@@ -373,6 +411,198 @@ namespace Noir.Core.Sim
         public AgentState GetAgent(int index) => _agents[index];
         public AgentState GetAgent(CitizenId id) => _agents[id.Value];
 
+        /// <summary>
+        /// Put one person down where they stand, until <see cref="Revive"/> says otherwise. One
+        /// of the sim's five external mutation pairs (Down/Revive, TakeAway/Return,
+        /// Respond/Release, Board/Alight), because a player's car is genuine history the plan
+        /// cannot know about. Entry cleanup mirrors Arrive + StandStill so every derived system
+        /// — queues, conversations, the renderer — lets go of them on its own. Consumes no RNG,
+        /// so every other agent's day is byte-identical to the un-downed run.
+        /// </summary>
+        public void Down(CitizenId who)
+        {
+            int i = who.Value;
+            if (_agents[i].AwayUntilMinute != 0) return;  // a body off-map cannot be hit again
+            if (_agents[i].Aboard) return;                // inside a car is not on the street
+            if (_agents[i].Downed) return;
+
+            _agents[i].Downed = true;
+            _agents[i].Doing = Activity.Downed;
+            _agents[i].Travelling = false;
+            ReleasePath(i);
+            StandStill(i);
+            _agents[i].WalkingWith = CitizenId.None;
+            _agents[i].Carrying = false;
+            _agents[i].TalkTicks = 0;
+            _agents[i].TalkingTo = CitizenId.None;
+            _agents[i].TalkCooldown = 0;
+            _agents[i].DoorPauseTicks = 0;
+            _agents[i].QueueSlot = -1;
+
+            // A responding officer struck down mid-walk has to lose the assignment here, or
+            // RespondTick would keep running for a body: the host sees Responding drop and
+            // Downed rise on the same tick and reports the officer lost.
+            _agents[i].Responding = false;
+
+            // Safe unconditionally - it only decrements StrandedCount when the flag is set.
+            // Without this, downing somebody who was mid-retry left StrandedCount permanently
+            // one too high: nobody would ever clear a flag whose owner stopped taking journeys.
+            ClearStranded(i);
+        }
+
+        /// <summary>
+        /// Undo <see cref="Down"/>. Clears Downed and hands the citizen back to their plan -
+        /// WITHIN THE MINUTE, not whenever the plan's current block next happens to change.
+        /// Not literally the very next tick: <see cref="Tick"/>'s wants-check also gates on
+        /// DepartureOffset's own per-citizen jitter within the minute, so a revive can still
+        /// wait up to that long before the departure fires. <see cref="Tick"/>'s wants-check
+        /// fires on `block.Where != Destination`, and Down never touched Destination - it is
+        /// left frozen at whatever block was active the moment they went down. For a PROMPT
+        /// revive (this method's whole reason to exist: the ambulance, a test's own teardown)
+        /// that is very likely STILL the current block, so without more, block.Where would
+        /// still equal Destination, wants would stay false, and the citizen would stand exactly
+        /// where they were hit - Doing correct, feet wrong - until the plan moved on by itself,
+        /// which could be a long wait. Resetting Destination to PlaceId.None makes that
+        /// mismatch true immediately, so the departure fires within the minute rather than
+        /// waiting for the plan's next scheduled change.
+        /// StartJourney overwrites Destination with the real block.Where the moment it starts
+        /// (before Travelling is ever set true), so the invalid value never survives past the
+        /// one departure it exists to trigger. Consumes no RNG, so reviving somebody disturbs
+        /// nobody else's day.
+        ///
+        /// Exists for two consumers, neither built yet when this was written: the ambulance that
+        /// will one day take the body away, and a test that has to hand a shared town back
+        /// exactly as it found it after proving a hit works.
+        /// </summary>
+        public void Revive(CitizenId who)
+        {
+            int i = who.Value;
+            if (!_agents[i].Downed) return;
+
+            _agents[i].Downed = false;
+            _agents[i].Destination = PlaceId.None;
+        }
+
+        /// <summary>
+        /// The ambulance leaves with them. Requires Downed (Phase 2's ambulance only ever
+        /// collects a body) — clears it and replaces it with an absent state the renderer
+        /// already knows how to not-draw: Doing becomes AwayFromTown, the same value the
+        /// out-of-town commuters carry, so no display site needed teaching. int.MaxValue
+        /// never returns — dead, and still in the population: 1,300 is load-bearing and
+        /// nobody is ever removed, they are frozen out of the world. Consumes no RNG.
+        /// </summary>
+        public void TakeAway(CitizenId who, int returnAbsoluteMinute)
+        {
+            int i = who.Value;
+            if (!_agents[i].Downed) return;
+            _agents[i].Downed = false;
+            _agents[i].Doing = Activity.AwayFromTown;
+            _agents[i].AwayUntilMinute = returnAbsoluteMinute;
+        }
+
+        /// <summary>
+        /// Back from the hospital, at their own front door, and the plan takes them from
+        /// there — Destination = None is Revive's own trick to fire the departure within
+        /// the minute. Public for the same second consumer Revive has: a test handing a
+        /// shared town back the way it found it.
+        /// </summary>
+        public void Return(CitizenId who)
+        {
+            int i = who.Value;
+            if (_agents[i].AwayUntilMinute == 0) return;
+            _agents[i].AwayUntilMinute = 0;
+
+            var home = World.GetPlace(People.Get(who).Home);
+            if (home != null)
+            {
+                _agents[i].Position = Vec2.CentreOf(home.Door);
+                _agents[i].PreviousPosition = _agents[i].Position;
+                _agents[i].At = People.Get(who).Home;
+            }
+            _agents[i].Destination = PlaceId.None;
+        }
+
+        /// <summary>
+        /// Send one citizen off their plan entirely and toward a scene nobody staged for them —
+        /// the first walk in the game with no Block behind it. Mirrors Down's own entry cleanup
+        /// (the same reasons: queues, conversations, the renderer all have to let go of them),
+        /// then leaves them to RespondTick, which is the tick loop's whole handling for anyone
+        /// with Responding set. Works from Asleep, because the plan is simply not consulted
+        /// while Responding holds — the same relationship Downed already has to it. Consumes no
+        /// RNG, so nobody else's day moves when an officer is called out.
+        ///
+        /// No-op if already Responding, or Downed, or the ambulance already has them
+        /// (AwayUntilMinute != 0) — a body cannot be dispatched to a scene.
+        /// </summary>
+        public void Respond(CitizenId who, Tile scene, Activity standAs = Activity.Responding)
+        {
+            int i = who.Value;
+            if (_agents[i].Responding) return;
+            if (_agents[i].Downed) return;
+            if (_agents[i].AwayUntilMinute != 0) return;
+
+            _agents[i].Travelling = false;
+            ReleasePath(i);
+            StandStill(i);
+            _agents[i].WalkingWith = CitizenId.None;
+            _agents[i].Carrying = false;
+            _agents[i].TalkTicks = 0;
+            _agents[i].TalkingTo = CitizenId.None;
+            _agents[i].TalkCooldown = 0;
+            _agents[i].DoorPauseTicks = 0;
+            _agents[i].QueueSlot = -1;
+            ClearStranded(i);
+
+            _agents[i].Responding = true;
+            _agents[i].RespondTarget = scene;
+            _agents[i].StandAs = standAs;
+            _agents[i].Destination = PlaceId.None;
+        }
+
+        /// <summary>
+        /// Undo <see cref="Respond"/>. Clears Responding and resets Destination — Revive's own
+        /// trick — so the wants-check picks the citizen back up onto their plan within the
+        /// minute rather than waiting for the plan's current block to change on its own. No-op
+        /// if not Responding.
+        /// </summary>
+        public void Release(CitizenId who)
+        {
+            int i = who.Value;
+            if (!_agents[i].Responding) return;
+            _agents[i].Aboard = false;           // a released rider reappears where boarded
+            _agents[i].Responding = false;
+            _agents[i].Destination = PlaceId.None;
+        }
+
+        /// <summary>Into the cruiser. Requires Responding (only a dispatched officer ever
+        /// rides) — the walk stops where it stands and the agent presents as AwayFromTown,
+        /// reusing every not-drawn/census/sweep-skip arm the commuters already exercise.
+        /// Consumes no RNG.</summary>
+        public void Board(CitizenId who)
+        {
+            int i = who.Value;
+            if (!_agents[i].Responding || _agents[i].Aboard) return;
+            _agents[i].Travelling = false;
+            ReleasePath(i);
+            StandStill(i);
+            _agents[i].Aboard = true;
+            _agents[i].Doing = Activity.AwayFromTown;
+        }
+
+        /// <summary>Out at the kerb. Places them at the tile (Return's own re-entry
+        /// precedent) and hands them back to RespondTick, which walks the last stretch to
+        /// RespondTarget. Consumes no RNG.</summary>
+        public void Alight(CitizenId who, Tile at)
+        {
+            int i = who.Value;
+            if (!_agents[i].Aboard) return;
+            _agents[i].Aboard = false;
+            _agents[i].Position = Vec2.CentreOf(at);
+            _agents[i].PreviousPosition = _agents[i].Position;
+            _agents[i].At = PlaceId.None;
+            _agents[i].Doing = _agents[i].StandAs;
+        }
+
         /// <summary>Forces this one plan up to date first: the tick loop is content to run a few
         /// hundred ticks behind at midnight, and anybody asking from outside is not.</summary>
         public DayPlan PlanFor(CitizenId id)
@@ -399,6 +629,34 @@ namespace Noir.Core.Sim
             {
                 var citizen = People.Get(new CitizenId(i));
                 var block = _plans[i].At(minute);
+
+                // A downed agent has left the plan for good: no journeys, no talk, no queue,
+                // no Doing overwrite. One branch, taken by nobody in a healthy town — the
+                // byte-identical replays behind watched.floor depend on this being a no-op
+                // when the flag is never set.
+                if (_agents[i].Downed) continue;
+
+                // The ambulance has them, and the plan stays frozen out until the clock reaches
+                // the return minute — same shape as the Downed skip above, same no-op guarantee
+                // when AwayUntilMinute is never set. `minute` here IS minuteOfDay (see above),
+                // so `_clock.Day * 1440 + minute` is the same absolute-minute unit TakeAway was
+                // handed.
+                if (_agents[i].AwayUntilMinute != 0)
+                {
+                    int now = _clock.Day * 1440 + minute;
+                    if (now < _agents[i].AwayUntilMinute) continue;
+                    Return(new CitizenId(i));      // falls through: they rejoin the plan this tick
+                }
+
+                // Riding a response vehicle: the car moves, they do not. Before the Responding
+                // gate on purpose — a boarded officer must not path toward the scene from inside
+                // the cruiser. Same no-op guarantee as every gate above when Aboard is never set.
+                if (_agents[i].Aboard) continue;
+
+                // Sent to a scene by nobody's plan: no journeys, no talk, no queue, and Doing is
+                // Simulation's to write, not the plan's — RespondTick is this agent's whole tick.
+                // Same no-op guarantee as the two gates above when Responding is never set.
+                if (_agents[i].Responding) { RespondTick(i, citizen, dt); continue; }
 
                 // Somewhere new to be, and their own moment within this minute to leave for it —
                 // or a failed attempt whose backoff has run out, which is not a departure and is
@@ -919,6 +1177,71 @@ namespace Noir.Core.Sim
         }
 
         /// <summary>
+        /// The tick loop's whole handling for a Responding agent — a trimmed StartJourney with
+        /// no companions, no Carrying, no TargetIn, because there is no Block behind this walk
+        /// to read any of that from. Standing at the target is itself the "arrived" state; there
+        /// is no place to enter and nothing to queue for.
+        ///
+        /// A failed respond-path goes through the same Strand/backoff machinery every other
+        /// failed journey does, and NOT because retrying every tick would otherwise be free:
+        /// Regions answers <see cref="PathOutcome.NoRouteExists"/> in O(1), but
+        /// <see cref="PathOutcome.GaveUp"/> means a real search ran and spent its whole budget
+        /// before giving up, and re-spending that at 20 ticks/second is exactly what Strand's
+        /// exponential backoff exists to stop paying for. The two are not told apart here, same
+        /// as StartJourney isn't: Strand only doubles the delay when `_retryDelay` is already
+        /// set from a previous failure AT THIS SAME TARGET, so a first failure of either kind
+        /// still costs one search and backs off at FirstRetryTicks either way.
+        /// </summary>
+        private void RespondTick(int index, Citizen citizen, float dt)
+        {
+            if (_agents[index].Travelling) { Advance(index, citizen, dt); return; }
+
+            var from = _agents[index].Position.ToTile();
+            if (from == _agents[index].RespondTarget)
+            {
+                if (_agents[index].Doing != _agents[index].StandAs)
+                { _agents[index].Doing = _agents[index].StandAs; StandStill(index); }
+                return;
+            }
+
+            // Backed off from a failed attempt at this same target: stand and wait out
+            // _retryAtTick rather than spending another search this tick. RespondTarget cannot
+            // change without going through Respond() again, and Respond()'s own entry cleanup
+            // calls ClearStranded — so this can never be reading a delay left over from some
+            // OTHER target.
+            if (_agents[index].Stranded && _clock.Tick < _retryAtTick[index])
+            {
+                if (_agents[index].Doing != _agents[index].StandAs)
+                { _agents[index].Doing = _agents[index].StandAs; StandStill(index); }
+                return;
+            }
+
+            if (!CanAffordAPath()) return;
+            _scratchPath.Clear();
+            var outcome = _pathfinder.FindPath(from, _agents[index].RespondTarget, _scratchPath);
+            _pathNodesThisTick += _pathfinder.LastNodesExamined;
+            _pathsThisTick++;
+            if (outcome != PathOutcome.Found || _scratchPath.Count == 0)
+            {
+                // Stranded is already true only if this is a repeat failure at this same
+                // target (see the comment above) — exactly the condition Strand's own doubling
+                // wants, and false on a first failure gives it FirstRetryTicks instead.
+                Strand(index, _agents[index].Stranded);
+                if (_agents[index].Doing != _agents[index].StandAs)
+                { _agents[index].Doing = _agents[index].StandAs; StandStill(index); }
+                return;   // stand where they are; the host's per-minute poll sees no arrival and waits
+            }
+            ClearStranded(index);
+            var route = RentPath(index);
+            route.Clear();
+            route.AddRange(_scratchPath);
+            _agents[index].PathIndex = 0;
+            _agents[index].Travelling = true;
+            _agents[index].At = PlaceId.None;
+            _agents[index].Doing = Activity.TravellingTo;
+        }
+
+        /// <summary>
         /// They are not moving. The single place that is recorded, so that no stop can forget.
         ///
         /// <see cref="AgentState.Heading"/> is doing double duty — a direction and an is-walking
@@ -1059,7 +1382,9 @@ namespace Noir.Core.Sim
             _agents[index].Carrying = false;
             _agents[index].TalkTicks = 0;
             _agents[index].TalkingTo = CitizenId.None;
-            _agents[index].Doing = _plans[index].At(_clock.MinuteOfDay).What;
+            _agents[index].Doing = _agents[index].Responding
+                ? _agents[index].StandAs
+                : _plans[index].At(_clock.MinuteOfDay).What;
         }
 
         // ---- doorways ----

@@ -20,6 +20,8 @@ Speeds, slowest to fastest:
 
 Starts at **10×**. At 60× a day passes in about 24 seconds; at 300× in about five.
 Drop to **¼×** to watch a single thing happen — someone arriving, stopping, going in.
+The whole town scales together — traffic, lights and the response included (one clock,
+2026-08-16) — so a paused town is actually paused. Only you move on real time.
 
 Skipping is queued rather than instant. A full day is 1.7 million simulation ticks, so it
 drains over a few frames instead of freezing the window.
@@ -50,8 +52,31 @@ there's nothing to toggle.
 | Right-drag | look around |
 | **WASD** or arrows | walk |
 | **Shift** | jog |
+| **E** | open or close the door you're standing at — an "E — Open" / "E — Close" prompt appears under the crosshair when you're close enough |
+| **E** at a parked car | get in — then **WASD** drive, **E** get out. The car stays where you leave it |
 
 Eye height is 1.7 m. Roofs stay on at street level — you're outside looking at buildings.
+Doors also open on their own when you walk right up to them; **E** is for doing it deliberately —
+a door you close stays closed for a few seconds even with someone at it.
+
+A car is not a costume: witnesses see a car, not you, and a car that hits somebody is a recorded
+event the town can be asked about (**T** — asks whoever you're facing at street level, or the
+nearest neighbour; "about half past four, I saw a dark car hit somebody"). **B** toggles the
+badge: shown, you get the witness's full account; as a passer-by you get the short version and
+a hedge — the town holds more than it hands a stranger. The street also thinks out loud now:
+the discoverer cries out for help, gawkers wonder aloud as they gather, the officer tells the
+ring to step back, and a canvassed witness closes her door on a last word — short lines floating
+over exactly the heads the case touches. The victim stays where they fell — until the town notices: hit somebody
+where a window can see it and the town responds. On watch, the Rossville officer arrives in
+his **cruiser, light bar going** (overnight, the on-call man comes on foot from his bed), holds
+the scene while **neighbours gather in a loose ring to watch**, then the county car drives in
+and knocks on the witnesses' doors, and an ambulance takes the victim away — dead above
+~18 mph, back on their own doorstep three days later below it. The precinct wears navy.
+Stepping out of third person (P or Tab) keeps the camera over the scene you just left. **P
+spawns you at 408 Holmes Street's front walk** — your own house, hand-made, whose front and
+rear doors, garage service door and overhead panel all answer to **E**. The
+police never look for **you** (yet). NPC traffic cannot see your car — it will drive through
+you — and only driveway cars can be entered (the lot cars are baked into the town's chunks).
 
 ---
 

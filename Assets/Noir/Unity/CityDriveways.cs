@@ -54,6 +54,8 @@ namespace Noir.Unity
 
         private readonly List<GameObject> _cars = new List<GameObject>();
         private readonly List<PlaceId> _homeOf = new List<PlaceId>();
+        private readonly List<CarTone> _tone = new List<CarTone>();
+        private readonly List<CarShape> _shape = new List<CarShape>();
         private readonly Dictionary<int, List<int>> _byHome = new Dictionary<int, List<int>>();
 
         /// <summary>How many cars were drawn, standing or not.</summary>
@@ -114,10 +116,21 @@ namespace Noir.Unity
                 float yaw = d.AlongX ? 90f : 0f;
                 if (rng.Chance(0.5f)) yaw += 180f;        // nose in or nose out, both are normal
 
-                var car = Put(go.transform, fleet[rng.NextInt(fleet.Count)], vx, vy, yaw);
+                string path = fleet[rng.NextInt(fleet.Count)];
+                var car = Put(go.transform, path, vx, vy, yaw);
                 if (car == null) continue;
 
                 CarMesh.Flatten(car);
+
+                // Shape and tone both come off the PREFAB ASSET's own name, not the instantiated
+                // clone's: Object.Instantiate names its clone "<assetName>(Clone)", and reading
+                // car.name here would feed ToneOf's tail-anchored '_' check a trailing ')' every
+                // time, silently defaulting every car to the same band. The asset name has no
+                // such suffix - structurally immune, not patched around. Captured here because
+                // once the rename below runs there is nothing left to read either from.
+                string prefabName = System.IO.Path.GetFileNameWithoutExtension(path);
+                it._shape.Add(ShapeOf(prefabName));
+                it._tone.Add(ToneOf(prefabName));
 
                 car.name = $"Parked_{d.Home.Value}_{d.Unit}";
                 it._homeOf.Add(d.Home);
@@ -175,6 +188,81 @@ namespace Noir.Unity
             }
 
             return Standing;
+        }
+
+        private static CarShape ShapeOf(string prefabName) =>
+            prefabName.IndexOf("Pickup", System.StringComparison.OrdinalIgnoreCase) >= 0
+                ? CarShape.Pickup
+          : prefabName.IndexOf("Van", System.StringComparison.OrdinalIgnoreCase) >= 0
+                ? CarShape.Van
+          : CarShape.Car;
+
+        /// <summary>
+        /// The paint, banded the way a witness would band it. The pack's materials all
+        /// serialize a white _Color - the paint lives in the Universal palette atlas - so this
+        /// is a MEASURED map, not a computed one: the six sheets' "primary painted metal"
+        /// slot (the car body), read off the atlas textures on 2026-08-15. A = deep red,
+        /// B = dark navy, C = dark green, D = amber, E = black, F = silver. Re-measure if the
+        /// pack's palettes ever change - same rule as Materials3D's measured fallbacks.
+        /// </summary>
+        private static CarTone ToneOf(string prefabName)
+        {
+            char variant = 'A';
+            int tail = prefabName.Length - 2;
+            if (tail >= 0 && prefabName[tail] == '_') variant = prefabName[tail + 1];
+            switch (variant)
+            {
+                case 'D': return CarTone.Mid;      // amber
+                case 'F': return CarTone.Light;    // silver
+                default: return CarTone.Dark;      // deep red, navy, dark green, black
+            }
+        }
+
+        /// <summary>
+        /// Where car <paramref name="index"/> stands right now. Only defined for an index
+        /// <see cref="NearestCar"/> actually returned: a taken slot is null and this will NRE
+        /// against it, on purpose — NearestCar already skips null and inactive cars, and never
+        /// hands back an index it would not be safe to call this on.
+        /// </summary>
+        public Vector3 PositionOf(int index) => _cars[index].transform.position;
+
+        /// <summary>
+        /// The nearest standing car to <paramref name="from"/> within <paramref name="within"/>
+        /// metres, or -1. CityDoors.NearestDoor's XZ scan, on wheels. Skips inactive cars —
+        /// their owners drove them to work — and taken ones (null slots).
+        /// </summary>
+        public int NearestCar(Vector3 from, float within)
+        {
+            int best = -1;
+            float bestD2 = within * within;
+            for (int i = 0; i < _cars.Count; i++)
+            {
+                var car = _cars[i];
+                if (car == null || !car.activeSelf) continue;
+                var d = car.transform.position - from;
+                float d2 = d.x * d.x + d.z * d.z;
+                if (d2 > bestD2) continue;
+                bestD2 = d2; best = i;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Hand car <paramref name="index"/> over and stop owning it: the slot goes null so
+        /// Refresh's absence schedule and the layer switch never touch it again — Refresh
+        /// already tolerates a null slot by construction. The car is also detached from the
+        /// Driveways hierarchy (world position kept), because the layer toggle walks
+        /// GetComponentsInChildren&lt;Renderer&gt; under this root — a taken car left parented
+        /// here would still have its renderer flipped by that walk even with its slot null.
+        /// Once taken, a car is loose for good; whether it ever goes home again is a later
+        /// feature, recorded in IDEAS.
+        /// </summary>
+        public (GameObject car, CarTone tone, CarShape shape) Take(int index)
+        {
+            var car = _cars[index];
+            _cars[index] = null;
+            car.transform.SetParent(null, true);
+            return (car, _tone[index], _shape[index]);
         }
 
         // ---------- the prefabs ----------

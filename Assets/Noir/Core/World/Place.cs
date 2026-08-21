@@ -108,6 +108,39 @@ namespace Noir.Core.World
         public readonly Tile[] Outline;
 
         /// <summary>
+        /// The same corners as <see cref="Outline"/>, before they were rounded to the nearest
+        /// tile - or null when nothing more precise than the tile-rounded ring was ever computed.
+        /// Rendering the wrong precision costs nothing in the grid: pathfinding, room stamping and
+        /// every other tile-based system still reads <see cref="Outline"/>, unchanged. It costs a
+        /// visible kink between two adjacent buildings' walls once a unit is narrow enough that a
+        /// single tile of rounding on nearby corners swings its own edge several degrees off its
+        /// neighbour's - see <c>DrawShapedPerimeters</c> (Assets/Noir/Unity/VillageMesh.cs) for
+        /// where this actually gets used, and <c>DowntownFromSanborn</c> for the one caller that
+        /// populates it today.
+        ///
+        /// Must be the same length as <see cref="Outline"/>, corner for corner in the same order
+        /// and winding, including the same closing repeat — a mismatch is silently discarded
+        /// (see <c>DrawShapedPerimeters</c>, which now logs when that happens).
+        /// </summary>
+        public readonly Vec2[] OutlinePrecise;
+
+        /// <summary>
+        /// The wall's base height in metres, or null when nothing more than the per-place
+        /// default (<c>Space3D.GroundUnder</c>, sampled at the middle of THIS place's own
+        /// <see cref="Bounds"/>) was ever computed.
+        ///
+        /// A terrace row's units are narrow enough that neighbouring bounds centres land on
+        /// measurably different points of the elevation grid, so two adjacent units seated
+        /// independently can differ by a few centimetres at the party wall they are meant to
+        /// share - invisible face-on, and a visible sliver of sky between two storefronts once
+        /// you look down the row at a raking angle, for the same reason a few degrees of
+        /// direction error was: see <see cref="OutlinePrecise"/>. This field lets a generator
+        /// that knows it is laying out several attached units say so once, for the whole row,
+        /// instead of leaving each unit to measure its own ground independently.
+        /// </summary>
+        public readonly float? GroundHeight;
+
+        /// <summary>
         /// What this building is called, in the only sense the generators care about: a stable
         /// 64-bit name that does not move when the file around it does.
         ///
@@ -154,9 +187,12 @@ namespace Noir.Core.World
 
         public Place(PlaceId id, PlaceKind kind, string name, string human,
                      TileRect bounds, Tile door, OpenWindow[] hours, int jobSlots, int units,
-                     string keySource, Tile[] outline)
+                     string keySource, Tile[] outline, Vec2[] outlinePrecise = null,
+                     float? groundHeight = null)
         {
             Outline = outline;
+            OutlinePrecise = outlinePrecise;
+            GroundHeight = groundHeight;
             Units = units < 1 ? 1 : units;
             Id = id;
             Kind = kind;

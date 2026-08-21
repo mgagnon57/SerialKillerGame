@@ -1,0 +1,617 @@
+using System.Collections;
+using System.Collections.Generic;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using Noir.Core.Contracts;
+using Noir.Core.People;
+using Noir.Core.Response;
+using Noir.Core.World;
+using Noir.Unity;
+
+namespace Noir.PlayTests
+{
+    /// <summary>
+    /// CityDoors' player-facing API: finding the nearest door, and the timed override that lets
+    /// a deliberate Close beat automatic proximity for a while.
+    /// </summary>
+    public class PlayerInteractionPlayTests
+    {
+        [UnitySetUp]
+        public IEnumerator Ready()
+        {
+            Time.timeScale = 1f;
+            yield return CityUnderTest.WaitUntilBuilt();
+        }
+
+        /// <summary>
+        /// Set by AHitDownsSomebodyAndTheBodyStays the moment it confirms a hit, and consumed by
+        /// BackToTheOverview below - static because a UnityTearDown method runs against a fresh
+        /// instance of this class, not the one the test body ran on, so an instance field would
+        /// not survive between them. -1 means nobody is owed a revive.
+        /// </summary>
+        private static int _downedVictim = -1;
+
+        /// <summary>
+        /// THE CITY IS BUILT ONCE AND SHARED BY EVERY TEST IN A RUN (CLAUDE.md names this trap,
+        /// and both historic "flaky" tests were this shape). The trailing player.Toggle() at the
+        /// end of each walking test never runs when an assertion fails mid-test, which would
+        /// leave Walking=true, OrbitCamera disabled and the body parked at a door - and the NEXT
+        /// test's Toggle() would then Leave() instead of Enter(), deactivate the body, and die on
+        /// GameObject.Find returning null, hiding the original red behind an NRE. This runs on
+        /// every exit path and puts the player back on the overview camera.
+        ///
+        /// ALSO STANDS THE TOWN'S VICTIM BACK UP, same reasoning: AHitDownsSomebodyAndTheBodyStays
+        /// downs a real citizen in the shared town, and leaving them down would corrupt every
+        /// test that runs after it for the rest of the suite. Reviving here, not at the end of
+        /// that test's own body, means it happens on every exit path including an assertion
+        /// failure partway through - the PlayMode equivalent of a try/finally.
+        /// </summary>
+        [UnityTearDown]
+        public IEnumerator BackToTheOverview()
+        {
+            var player = Object.FindFirstObjectByType<Player>();
+            if (player != null && player.Driving) player.LeaveCar();
+            if (player != null && player.Walking) player.Toggle();
+
+            if (_downedVictim >= 0)
+            {
+                var host = Object.FindFirstObjectByType<VillageHost>();
+                if (host != null && host.Sim != null) host.Sim.Revive(new CitizenId(_downedVictim));
+                _downedVictim = -1;
+            }
+
+            // THE SWEEP HITS MORE THAN THE CHOSEN VICTIM, AND EVERY HIT OPENS A CASE NOW. The
+            // ±3m segment catches whoever else stood in it - measured 2026-08-16: citizens 490
+            // and 206 lay in the street for the whole suite because only _downedVictim was ever
+            // revived - and since Phase 2, each of those hits also opened a ResponseCases case
+            // that sits live in the shared town, one line of sight away from dispatching an
+            // officer into the middle of a traffic measurement. Stand everyone back up and close
+            // every case this test left open, on every exit path.
+            {
+                var host = Object.FindFirstObjectByType<VillageHost>();
+                if (host != null && host.Sim != null)
+                {
+                    for (int i = 0; i < host.Sim.AgentCount; i++)
+                        if (host.Sim.GetAgent(i).Downed) host.Sim.Revive(new CitizenId(i));
+                    for (int c = 0; c < host.Cases.Count; c++)
+                        if (host.Cases.StateOf(c) != CaseState.Closed)
+                            host.Cases.CloseLoudly(c, "test residue: the suite moves on");
+                }
+            }
+            yield break;
+        }
+
+        [UnityTest, Timeout(900000)]
+        public IEnumerator NearestDoorFindsTheClosestOneInRange()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            Assert.That(doors, Is.Not.Null, "no CityDoors was created by the host");
+            Assert.That(doors.Count, Is.GreaterThan(0), "no doors in this town");
+
+            var at = doors.PositionOf(0);
+
+            int nearest = doors.NearestDoor(at, CityDoors.Reach);
+            Assert.That(nearest, Is.EqualTo(0), "the door's own position did not find itself");
+
+            int tooFar = doors.NearestDoor(at + new Vector3(10_000f, 0f, 0f), CityDoors.Reach);
+            Assert.That(tooFar, Is.EqualTo(-1), "a point 10km away found a door within range");
+
+            yield break;
+        }
+
+        [UnityTest, Timeout(900000)]
+        public IEnumerator ForceCloseBeatsProximityUntilItExpires()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            var at = doors.PositionOf(0);
+
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+
+            // A CharacterController owns its transform's position each frame through its own
+            // internal collision state, not through whatever the Transform last had written to
+            // it - ThirdPersonController.Update() calls CharacterController.Move() every frame
+            // (for gravity alone, even with no input), and Move() recomputes from the
+            // controller's own cached capsule position. Writing body.transform.position directly
+            // while the controller is enabled gets silently overwritten back to roughly where it
+            // already was on the very next frame - confirmed by instrumenting this test: the body
+            // stayed ~342m from the door, at its original spawn point, for the whole 60-frame
+            // wait. Disabling the controller around the assignment forces it to re-acquire its
+            // position from the Transform when it comes back on, which is the standard way to
+            // teleport one.
+            var cc = body.GetComponent<CharacterController>();
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+
+            // A SWING-COMPLETION WAIT MUST BE TIME-BASED, NOT FRAME-COUNTED. IsOpen() on the way
+            // shut is an exact-equality check against _shut (it only reads false once the swing
+            // has FULLY finished), unlike the way open, which is satisfied by any nonzero
+            // movement - so a fixed frame count that happens to cover the open case can still be
+            // too little accumulated Time.deltaTime to finish a close. Frontage.cs swings a door
+            // 85 degrees at CityDoors' 150 deg/s, ~0.57s; 1.5s is comfortable margin and still
+            // well inside the 5s override window used below.
+            const float SwingWait = 1.5f;
+
+            float openUntil = Time.time + SwingWait;
+            while (Time.time < openUntil) yield return null;   // let it swing open
+            Assert.That(doors.IsOpen(0), Is.True, "the door never opened for a standing player");
+
+            doors.Force(0, false);
+            float forcedAt = Time.time;
+            float shutUntil = Time.time + SwingWait;
+            while (Time.time < shutUntil) yield return null;   // let it swing shut
+            Assert.That(doors.IsOpen(0), Is.False, "Force(false) did not shut the door");
+
+            // Still well inside the override window - proximity alone would reopen it.
+            while (Time.time < forcedAt + 2f) yield return null;
+            Assert.That(doors.IsOpen(0), Is.False,
+                        "the door reopened while the override should still be active");
+
+            // Past the window - proximity should take control back, and the player is still
+            // standing right there, so it should swing open again on its own.
+            while (Time.time < forcedAt + 5.5f) yield return null;
+            float reopenUntil = Time.time + SwingWait;
+            while (Time.time < reopenUntil) yield return null;   // let it swing back open
+            Assert.That(doors.IsOpen(0), Is.True,
+                        "proximity never took control back after the override expired");
+
+            player.Toggle();
+        }
+
+        [UnityTest, Timeout(900000)]
+        public IEnumerator ForceOpenMidOverrideOpensImmediately()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            var at = doors.PositionOf(0);
+
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+
+            // See ForceCloseBeatsProximityUntilItExpires for why the controller has to be
+            // disabled around a raw teleport.
+            var cc = body.GetComponent<CharacterController>();
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+
+            const float SwingWait = 1.5f;   // see ForceCloseBeatsProximityUntilItExpires
+
+            float openUntil = Time.time + SwingWait;
+            while (Time.time < openUntil) yield return null;   // let it swing open
+            Assert.That(doors.IsOpen(0), Is.True, "the door never opened for a standing player");
+
+            doors.Force(0, false);
+            float forcedAt = Time.time;
+            float shutUntil = Time.time + SwingWait;
+            while (Time.time < shutUntil) yield return null;   // let it swing shut
+            Assert.That(doors.IsOpen(0), Is.False, "Force(false) did not shut the door");
+
+            // WALK AWAY BEFORE FORCING IT BACK OPEN - BUT ONLY 25 m, NOT OUT OF LIVERANGE. This
+            // is the point of the test: with the player standing right at the door,
+            // SomebodyWithin would already agree the moment the close-override lapses, so a test
+            // that force-opens from right there would pass even against the old, buggy
+            // Force(true) (which only cleared the override and left reopening to ambient
+            // proximity) - proximity alone would happen to produce the same result. Moving away
+            // first means proximity says "shut" for as long as the player is gone, so only an
+            // explicit force-open mechanism can be the reason the door opens. 25 m clears
+            // Hold/Reach (2.9 m / 1.9 m) and CellSize's 3x3 neighbourhood (8 m cells) by a wide
+            // margin, while staying well inside CityDoors' own LiveRange (55 m) - go further, as
+            // the "no menu" case in OffersTheNearestDoorsMenuAndSwitchesVerbOnState does with
+            // 1000 m, and the door drops out of Update's own "near" gate entirely and never eases
+            // its swing at all, which would make this test fail for the wrong reason.
+            cc.enabled = false;
+            body.transform.position = at + new Vector3(25f, 0f, 0f);
+            cc.enabled = true;
+
+            // TIME-BASED, NOT FRAME-COUNTED, same reasoning as SwingWait above: long enough for
+            // Rehash (every RehashFrames = 12 frames) to run at least once even on a slow frame
+            // rate and record the player's new, distant position, so SomebodyWithin(_at[0], ...)
+            // reliably reads false from here on rather than stale data from when the player still
+            // stood there.
+            float settledAt = Time.time + SwingWait;
+            while (Time.time < settledAt) yield return null;
+            Assert.That(doors.IsOpen(0), Is.False, "door should still be shut with nobody near it");
+
+            // Still well inside the close override's 5s window - proximity alone could not have
+            // reopened it, and now genuinely cannot (nobody is near). Force(true) here must open
+            // it anyway, promptly, not by waiting out the override or the next rehash.
+            Assert.That(Time.time, Is.LessThan(forcedAt + 4.5f),
+                        "test took too long to reach the mid-override Force(true) - window may "
+                      + "have already lapsed, which would make this assertion meaningless");
+            doors.Force(0, true);
+
+            // A small, generous, time-based wait - not a frame count and not the override window
+            // itself - so this fails if Force(true) merely cleared the close-override and left
+            // the door to be picked up by ambient proximity/rehash timing (which, with nobody
+            // near it, would never happen at all) instead of opening it directly.
+            float reopenUntil = Time.time + SwingWait + 1f;
+            bool reopened = false;
+            while (Time.time < reopenUntil)
+            {
+                if (doors.IsOpen(0)) { reopened = true; break; }
+                yield return null;
+            }
+            Assert.That(reopened, Is.True,
+                        "Force(0, true) mid-override, with nobody near the door, did not open it "
+                      + "promptly - it must not depend on proximity");
+
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+            player.Toggle();
+        }
+
+        [UnityTest, Timeout(900000)]
+        public IEnumerator OffersTheNearestDoorsMenuAndSwitchesVerbOnState()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            var interaction = Object.FindFirstObjectByType<PlayerInteraction>();
+            Assert.That(interaction, Is.Not.Null, "no PlayerInteraction was created by the host");
+
+            var at = doors.PositionOf(0);
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+
+            var body = GameObject.Find("PlayerArmature");
+
+            // See ForceCloseBeatsProximityUntilItExpires for why: a CharacterController owns its
+            // transform every frame through CharacterController.Move(), so a raw teleport while
+            // it is enabled is silently reverted on the next frame. Disable it around the write,
+            // same as that test.
+            var cc = body.GetComponent<CharacterController>();
+
+            cc.enabled = false;
+            body.transform.position = at + new Vector3(1000f, 0f, 0f);   // far from every door
+            cc.enabled = true;
+            yield return null;
+            Assert.That(interaction.Current, Is.Null, "offered a menu with nobody near a door");
+
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+            yield return null;
+            Assert.That(interaction.Current, Is.Not.Null, "no menu offered standing at a door");
+            Assert.That(interaction.Current.Verbs,
+                        Is.EqualTo(doors.IsOpen(0) ? new[] { "Close" } : new[] { "Open" }));
+
+            player.Toggle();
+        }
+
+        /// <summary>
+        /// THE GATE THIS FILE WAS MISSING, and the reason it was missing an entire bug class:
+        /// every test above asserts on CityDoors' ANGLE BOOKKEEPING (IsOpen), which is blind to
+        /// whether anything on screen moves. On 2026-08-15 the whole suite was green while all
+        /// 589 door leaves in Rossville had been destroyed at startup - CityChunker.Bake combined
+        /// each leaf into a static chunk at its shut pose and DestroyImmediated it, leaving
+        /// CityDoors swinging childless hinge transforms. Invisible in every log, count and test.
+        /// This asks the town that is RUNNING whether each registered hinge still has a renderer
+        /// to swing.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator EveryDoorHingeKeepsItsLeafThroughTheBake()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            Assert.That(doors, Is.Not.Null, "no CityDoors was created by the host");
+            Assert.That(doors.Count, Is.GreaterThan(0), "no doors in this town");
+            Assert.That(doors.Leafless(), Is.Zero,
+                        "hinges with no door leaf renderer beneath them - CityChunker.Bake ate "
+                      + "the leaves again, so every swing in town (Force and proximity alike) is "
+                      + "invisible. It was 589 of 589 when this was first measured.");
+            yield break;
+        }
+
+        /// <summary>
+        /// The action half of the E-key seam: PerformOffered() is exactly what pressing E does,
+        /// minus the literal Keyboard.current read (three lines that cannot meaningfully be
+        /// tested without forging a keyboard). Standing at a door that proximity has opened, the
+        /// offered verb is Close, and performing it must actually shut the door.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator PerformingTheOfferedVerbForcesTheDoor()
+        {
+            var doors = Object.FindFirstObjectByType<CityDoors>();
+            var interaction = Object.FindFirstObjectByType<PlayerInteraction>();
+            var at = doors.PositionOf(0);
+
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+
+            // See ForceCloseBeatsProximityUntilItExpires for why the controller must be
+            // disabled around a raw teleport.
+            var cc = body.GetComponent<CharacterController>();
+            cc.enabled = false;
+            body.transform.position = at;
+            cc.enabled = true;
+
+            const float SwingWait = 1.5f;   // see ForceCloseBeatsProximityUntilItExpires
+
+            float openUntil = Time.time + SwingWait;
+            while (Time.time < openUntil) yield return null;   // let proximity swing it open
+            Assert.That(doors.IsOpen(0), Is.True, "the door never opened for a standing player");
+            Assert.That(interaction.Current, Is.Not.Null, "no verb offered standing at the door");
+            Assert.That(interaction.Current.Verbs[0], Is.EqualTo("Close"),
+                        "an open door should offer Close");
+
+            interaction.PerformOffered();                      // what pressing E does
+
+            float shutUntil = Time.time + SwingWait;
+            while (Time.time < shutUntil) yield return null;   // let it swing shut
+            Assert.That(doors.IsOpen(0), Is.False,
+                        "performing the offered verb (Close) did not shut the door");
+
+            player.Toggle();
+        }
+
+        /// <summary>
+        /// The registry's whole point: standing beside a car rather than a door, the offer is
+        /// Drive, not Open/Close, and the closer provider wins. Position-flaky in principle - if
+        /// a house door ever sits nearer than the car at this teleport offset, the test would
+        /// see the door's verb instead - but a door would have to be within ~1.5 m of the car to
+        /// win, which is not this town's layout today; if this ever reds, fix the teleport
+        /// offset, not the registry.
+        ///
+        /// PICKS A STANDING CAR RATHER THAN ASSUMING SLOT 0 - the gate town runs at noon, and
+        /// CityDriveways.Refresh deactivates a car whose owner is away at work; car 0 specifically
+        /// may be one of them, and NearestCar correctly skips inactive cars, so hardcoding 0 fights
+        /// the absence system instead of testing the registry (first measured red, gate run
+        /// 2026-08-15). Only an active car finds itself via NearestCar, so the self-find loop
+        /// below doubles as the pick.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator ACarOffersDriveAndTheClosestProviderWins()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var driveways = host.Driveways;
+            Assert.That(driveways, Is.Not.Null.And.Property("Count").GreaterThan(0),
+                "no driveway cars in this town - the provider has nothing to offer");
+
+            int standing = -1;
+            for (int i = 0; i < driveways.Count; i++)
+            {
+                if (driveways.NearestCar(driveways.PositionOf(i), 0.5f) == i) { standing = i; break; }
+            }
+            Assert.That(standing, Is.GreaterThanOrEqualTo(0),
+                "no car is standing - at noon some owners drive to work, but not all 500+");
+            int car = standing;
+
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+            var cc = body.GetComponent<CharacterController>();
+
+            cc.enabled = false;
+            body.transform.position = driveways.PositionOf(car) + new Vector3(1.5f, 0.5f, 0f);
+            cc.enabled = true;
+            yield return null;
+
+            var interaction = host.Interaction;
+            Assert.That(interaction.Current, Is.Not.Null, "no verb offered beside a car");
+            Assert.That(interaction.Current.Verbs[0], Is.EqualTo("Drive"));
+        }
+
+        [UnityTest, Timeout(900000)]
+        public IEnumerator EnterDriveExitRoundTrip()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var driveways = host.Driveways;
+            var player = Object.FindFirstObjectByType<Player>();
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var body = GameObject.Find("PlayerArmature");
+            var cc = body.GetComponent<CharacterController>();
+
+            int car = driveways.NearestCar(body.transform.position, 100000f);
+            Assert.That(car, Is.GreaterThanOrEqualTo(0), "no standing car anywhere");
+            var carPos = driveways.PositionOf(car);
+
+            cc.enabled = false;
+            body.transform.position = carPos + new Vector3(1.5f, 0.5f, 0f);
+            cc.enabled = true;
+            yield return null;
+
+            host.Interaction.PerformOffered();                 // E - Drive
+            yield return null;
+            Assert.That(player.Driving, Is.True, "Perform(Drive) did not enter the car");
+            Assert.That(player.Where, Is.Not.Null, "Where went null while driving");
+            Assert.That(host.Interaction.Current.Verbs[0], Is.EqualTo("Get out"));
+
+            host.Interaction.PerformOffered();                 // E - Get out
+            yield return null;
+            Assert.That(player.Driving, Is.False);
+            Assert.That(player.Walking, Is.True, "leaving the car did not restore walking");
+            Assert.That(host.Interaction.Current, Is.Not.InstanceOf<GetOutInteractable>(),
+                        "the Get out prompt survived leaving the car - the cache key aliased");
+
+            // THE ROUND TRIP'S OTHER HALF - CityDriveways.Take() drops the car from its own
+            // registry the moment EnterCar takes it, so without a separate own-car candidate
+            // nothing would ever offer Drive again and a car, once entered, could never be
+            // re-entered. LeaveCar's own exit spot is 1.6 m off the driver's door - well inside
+            // CarOffer's 3.0 m - so the abandoned car should be back on offer as soon as the
+            // next Update runs.
+            yield return null;
+            Assert.That(host.Interaction.Current, Is.Not.Null,
+                        "no prompt offered beside the car just left");
+            Assert.That(host.Interaction.Current.Verbs[0], Is.EqualTo("Drive"),
+                        "the abandoned car did not offer Drive again after LeaveCar");
+
+            host.Interaction.PerformOffered();                 // E - Drive, back into the same car
+            yield return null;
+            Assert.That(player.Driving, Is.True,
+                        "re-entering the car just stepped out of did not work");
+
+            player.LeaveCar();                                 // hand teardown a clean state
+        }
+
+        /// <summary>
+        /// The other half of Task 8: a car driven through a person downs them in the sim, and
+        /// the body stays exactly where it fell. Drives SweepForVictims directly - the same
+        /// method DriveStep calls at the end of every drive frame - rather than scripting
+        /// throttle input, so a refusal from the driving physics can never make this test flaky.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator AHitDownsSomebodyAndTheBodyStays()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var sim = host.Sim;
+            var player = Object.FindFirstObjectByType<Player>();
+
+            // Find somebody outdoors to be the victim - the sweep's own filters, inverted.
+            int victim = -1;
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var a = sim.GetAgent(i);
+                if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
+                if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+                victim = i; break;
+            }
+            Assert.That(victim, Is.GreaterThanOrEqualTo(0), "nobody is outdoors to test with");
+
+            // Drive the sweep straight through them - the exact method the car calls. Two calls,
+            // not one: SweepForVictims' first-ever call only seeds its per-agent motion cache and
+            // reports no hits by design (there is no "last sweep" yet to compare against), so it
+            // never counts as evidence here - the second call is the real sweep, comparing the
+            // seeded (unmoved, since no frame passed between the two calls) position against the
+            // same segment.
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+            var p = Space3D.ToWorld(sim.GetAgent(victim).Position);
+            player.SweepForVictims(p + new Vector3(-3f, 0f, 0f), p + new Vector3(3f, 0f, 0f));
+            player.SweepForVictims(p + new Vector3(-3f, 0f, 0f), p + new Vector3(3f, 0f, 0f));
+            yield return null;
+
+            Assert.That(sim.GetAgent(victim).Doing, Is.EqualTo(Activity.Downed),
+                "the sweep passed through a person and nobody went down");
+
+            // Owed a revive from here on, whatever happens for the rest of this test -
+            // BackToTheOverview picks this up on every exit path, assertion failure included, so
+            // a shared-town test after this one never inherits a permanently downed citizen.
+            _downedVictim = victim;
+
+            var at = sim.GetAgent(victim).Position;
+
+            float until = Time.time + 3f;
+            while (Time.time < until) yield return null;
+            Assert.That(sim.GetAgent(victim).Position, Is.EqualTo(at), "the body moved");
+
+            player.Toggle();
+        }
+
+        /// <summary>
+        /// The moving half of SweepForVictims' own design, which AHitDownsSomebodyAndTheBodyStays
+        /// never exercises: that test's two calls happen on the same frame with nothing yielded
+        /// between them, so the victim never moves and the closest-approach math's own
+        /// relative-motion term - (p - prev), the agent's OWN travel across the frame - is zero
+        /// throughout ("the degenerate b ≈ -segCar path", finding I4 of the whole-branch review).
+        /// A sign error in that term would down nobody, silently, and nothing in the suite would
+        /// notice. This lets real frames pass so the sim genuinely relocates somebody, then sweeps
+        /// a segment that crosses the path they actually walked.
+        ///
+        /// PICKS THE VICTIM BY OBSERVED MOTION, NOT BY PREDICTING IT. The first version filtered
+        /// on Heading nonzero and bet that agent would still be moving 60 frames later - it
+        /// wasn't: a Travelling agent can be paused mid-frame (a talker frozen in conversation, a
+        /// walker who has just arrived), and Heading nonzero only means "intends to move", not
+        /// "is moving right now" (first measured red, gate run 2026-08-15). This snapshots every
+        /// outdoor, non-Downed, non-AwayFromTown agent before the wait and, after it, picks
+        /// whichever one's position actually changed - proof of motion instead of a bet on it.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator AMovingVictimCrossingThePathIsHit()
+        {
+            var host = Object.FindFirstObjectByType<VillageHost>();
+            var sim = host.Sim;
+            var player = Object.FindFirstObjectByType<Player>();
+
+            player.Toggle();
+            for (int frame = 0; frame < 5; frame++) yield return null;
+
+            // (a) Snapshot every candidate - the hit test's own filters, minus Heading, since we
+            // no longer predict who will move and instead observe who did. Taken on the SAME
+            // frame as the seed call right below, with nothing yielded between them, so this is
+            // exactly what SweepForVictims itself caches as "last sweep" for each agent - not an
+            // earlier guess that could have drifted from it.
+            var candidates = new List<int>();
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var a = sim.GetAgent(i);
+                if (a.Downed || a.Doing == Activity.AwayFromTown) continue;
+                if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+                candidates.Add(i);
+            }
+            Assert.That(candidates.Count, Is.GreaterThan(0), "nobody is outdoors to test with");
+
+            var before = new Vector3[candidates.Count];
+            for (int c = 0; c < candidates.Count; c++)
+                before[c] = Space3D.ToWorld(sim.GetAgent(candidates[c]).Position);
+
+            // (b) SEED THE CACHE - the first call's own job (SweepForVictims' own header), so the
+            // real sweep below compares against an actual "last sweep" position for every agent
+            // rather than treating each of them as having always stood wherever they end up. The
+            // segment plays no part in seeding - SweepForVictims records every agent's position
+            // into its cache regardless of (from, to) on this call; only the real sweep below
+            // uses the segment for the hit test.
+            player.SweepForVictims(before[0] + new Vector3(-3f, 0f, 0f), before[0] + new Vector3(3f, 0f, 0f));
+
+            // (c) LET THE SIM GENUINELY ADVANCE - real frames at whatever clock speed the town is
+            // already running at (VillageHost.SpeedIndex, untouched by this test), not a second
+            // call on the same frame - so anybody actually travelling covers ground between the
+            // seed and the real sweep below.
+            for (int frame = 0; frame < 60; frame++) yield return null;
+
+            // (d) Choose a victim from the candidates whose position ACTUALLY CHANGED by a
+            // meaningful amount, and who is still outdoors and not already Downed - observed
+            // motion, not the Heading guess this test used to make.
+            int victim = -1;
+            Vector3 start = default, now = default;
+            for (int c = 0; c < candidates.Count; c++)
+            {
+                int i = candidates[c];
+                var a = sim.GetAgent(i);
+                if (a.Downed) continue;
+                if ((host.World.Grid.FlagsAt(a.Position.ToTile()) & TileFlags.Indoor) != 0) continue;
+
+                var p = Space3D.ToWorld(a.Position);
+                Vector3 delta = p - before[c]; delta.y = 0f;
+                if (delta.sqrMagnitude <= 0.5f * 0.5f) continue;   // not a meaningful move
+
+                victim = i; start = before[c]; now = p; break;
+            }
+            Assert.That(victim, Is.GreaterThanOrEqualTo(0),
+                "nobody moved in 60 frames - the town is frozen, which is a bigger bug than this test's");
+
+            // (e) A SEGMENT ACROSS THEIR TRAVEL, CENTRED ON ITS MIDPOINT - perpendicular to the
+            // line from where they started to where they ended up, and symmetric about the point
+            // they pass through exactly halfway across the frame (t=0.5 in the same
+            // closest-approach parametrisation SweepForVictims itself uses for both moving
+            // points). That symmetry is what makes the intersection exact and the span irrelevant
+            // to whether it hits: at t=0.5 the victim's own interpolated position is the midpoint
+            // of start->now, and a segment built symmetric about that same midpoint is AT that
+            // midpoint too at t=0.5, so the two coincide - a real crossing, not a near miss tuned
+            // to HitRadius. start->now is exactly the OBSERVED pair the production sweep itself
+            // compares - the cache seeded in (b) against the position read in (d) - so this is
+            // the same geometry SweepForVictims uses internally, not a re-derivation of it.
+            Vector3 travel = now - start; travel.y = 0f;
+            Vector3 mid = (start + now) * 0.5f;
+            Vector3 across = new Vector3(-travel.z, 0f, travel.x).normalized;
+            player.SweepForVictims(mid - across * 4f, mid + across * 4f);
+
+            Assert.That(sim.GetAgent(victim).Doing, Is.EqualTo(Activity.Downed),
+                "a segment crossing a moving victim's own path did not down them");
+
+            // Owed a revive, same slot AHitDownsSomebodyAndTheBodyStays uses - BackToTheOverview
+            // picks this up on every exit path.
+            _downedVictim = victim;
+
+            player.Toggle();
+        }
+    }
+}

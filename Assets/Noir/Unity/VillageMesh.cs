@@ -471,19 +471,26 @@ namespace Noir.Unity
             {
                 if (BoughtBuildingOwns(f.Footprint)) { indoors++; continue; }
 
+                var fp = f.Footprint;
+                float height = f.Height;
+                var centre = new Vector3(fp.X + fp.W * 0.5f, 0f, -(fp.Y + fp.H * 0.5f));
+                float floor = FloorUnder(fp);
+
+                // The plan is data and these models are merely its visible expression.  When
+                // there is no suitable asset (a cooker is deliberately not replaced by a camp
+                // stove, for example), retain the precise procedural stand-in below.
+                if (InteriorFurnitureModels.TryBuild(f, root.transform, centre, floor)) continue;
+
                 var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 box.name = f.Kind.ToString();
                 box.transform.SetParent(root.transform, false);
-
-                var fp = f.Footprint;
-                float height = f.Height;
 
                 // Slightly inset so adjacent pieces read as separate objects rather than one
                 // continuous slab running round the room.
                 box.transform.localScale = new Vector3(fp.W - 0.12f, height, fp.H - 0.12f);
                 box.transform.position = new Vector3(
                     fp.X + fp.W * 0.5f,
-                    FloorUnder(fp) + height * 0.5f + 0.02f,   // on the raised interior floor
+                    floor + height * 0.5f + 0.02f,             // on the raised interior floor
                     -(fp.Y + fp.H * 0.5f));
 
                 Discard(box.GetComponent<BoxCollider>());
@@ -711,15 +718,17 @@ namespace Noir.Unity
             //
             //  - it may not cross an ELEVATION GRID line. Content/elevation.txt resolves the
             //    real ground at 30 m (ElevationGrid.Step) and HeightAt bilinearly interpolates
-            //    WITHIN each 30 m cell - so a quad whose four corners sit on one cell's own four
-            //    sample points reproduces that cell's real surface exactly, the same as the old
-            //    one-quad-per-tile mesh always did at 1 m, because both are just the two
-            //    triangles a bilinear cell has always been drawn as. A quad spanning MORE than
-            //    one cell would not: the true surface bends differently in the next cell over,
-            //    and one flat quad across the seam would silently average the two rather than
-            //    following either. Capping runs at the data's own resolution is not a loss of
-            //    detail the data had - a run that stays inside one cell was already flat or a
-            //    single tilted plane as far as the USGS grid actually measured it.
+            //    WITHIN each 30 m cell. A quad spanning MORE than one cell would silently
+            //    average two cells that bend differently rather than following either. ⚠ This
+            //    cap alone is NOT enough, and for months this comment claimed it was: a
+            //    bilinear patch is a SADDLE, not a plane, so even a quad whose corners sit on
+            //    one cell's own sample points bows off the real surface between them - by a
+            //    quarter of the corner cross-difference at worst, measured 2026-08-18 at 917
+            //    cells over 10 cm and 0.44 m inside the town, with correctly-placed cars
+            //    buried to their axles under ground that was drawn, not measured. The repair
+            //    is at EMISSION, below: a run over a curved patch is drawn as a lattice of
+            //    sub-quads sized from its own curvature, and
+            //    TheDrawnGroundFollowsTheMeasuredSurface fails the gate if the bow comes back.
             //
             // BANK never merges at all, whatever these two bounds would otherwise allow, and is
             // the one exception carved out ahead of them. It is the one look that exists BECAUSE
@@ -733,6 +742,11 @@ namespace Noir.Unity
                 elevStep = Mathf.Max(world.Width, world.Height);   // no elevation.txt loaded -
                                                                     // flat everywhere, so nothing
                                                                     // real to preserve by capping
+
+            // How far a drawn triangle may bow off the bilinear surface everything is PLACED
+            // on. Three centimetres is under anything the eye reads as "sunk" and above the
+            // float noise a lattice this size would chase for nothing.
+            const float SaddleTolerance = 0.03f;
             int bankSubmesh = Materials3D.GroundOrder.Length + (int)Materials3D.ZonedGround.Bank;
 
             var claimed = new bool[world.Height, world.Width];
@@ -783,33 +797,66 @@ namespace Noir.Unity
                 float z0 = -gy, z1 = -(gy + h);
 
                 var into = chunks.At(gx, gy);
+
+                float h00 = corner[gy, gx],     h10 = corner[gy, gx + w];
+                float h01 = corner[gy + h, gx], h11 = corner[gy + h, gx + w];
+
+                // THE SADDLE REPAIR (2026-08-18; see the cell-line bound's own comment above).
+                // A run never crosses a cell line, and a bilinear function restricted to an
+                // axis-aligned rectangle is exactly the bilinear blend of that rectangle's own
+                // corners - so every lattice vertex below sits ON HeightAt's real surface
+                // without another grid lookup. The sub-quad size comes from the run's own
+                // curvature: cross/(w*h) is the saddle coefficient, a flat sub-quad of side s
+                // bows c*s²/4 off it at worst, so s = 2*sqrt(tol/c) keeps every triangle
+                // inside SaddleTolerance. A flat or singly-tilted run has cross ~ 0, keeps
+                // nx = ny = 1, and is emitted byte-for-byte as it always was. Seams stay
+                // closed: bilinear along an edge is LINEAR, so a sub-vertex lies exactly on
+                // the neighbouring run's straight edge, the same T-junction the 1 m tiles
+                // beside a merged run have always made.
+                float cross = Mathf.Abs(h00 + h11 - h10 - h01);
+                int nx = 1, ny = 1;
+                if (cross > 4f * SaddleTolerance)
+                {
+                    float s = 2f * Mathf.Sqrt(SaddleTolerance * (w * (float)h) / cross);
+                    nx = Mathf.Clamp(Mathf.CeilToInt(w / s), 1, w);
+                    ny = Mathf.Clamp(Mathf.CeilToInt(h / s), 1, h);
+                }
+
                 int v0 = into.Verts.Count;
+                for (int iy = 0; iy <= ny; iy++)
+                for (int ix = 0; ix <= nx; ix++)
+                {
+                    float tx = (float)ix / nx, ty = (float)iy / ny;
+                    float x = Mathf.Lerp(x0, x1, tx);
+                    float z = Mathf.Lerp(z0, z1, ty);
+                    float hh = Mathf.Lerp(Mathf.Lerp(h00, h10, tx), Mathf.Lerp(h01, h11, tx), ty);
+                    into.Verts.Add(new Vector3(x, flat + hh, z));
+                    into.Normals.Add(Vector3.up);
 
-                into.Verts.Add(new Vector3(x0, flat + corner[gy, gx], z0));
-                into.Verts.Add(new Vector3(x1, flat + corner[gy, gx + w], z0));
-                into.Verts.Add(new Vector3(x1, flat + corner[gy + h, gx + w], z1));
-                into.Verts.Add(new Vector3(x0, flat + corner[gy + h, gx], z1));
-
-                for (int i = 0; i < 4; i++) into.Normals.Add(Vector3.up);
-
-                // UVs in world units so a tiling texture runs continuously across the village
-                // instead of restarting at every tile - and, now, so it runs continuously
-                // across a chunk boundary, and across a run boundary, too. This is why the UVs
-                // are in absolute metres and not relative to anything: split the mesh, or merge
-                // several tiles into one quad, and nothing about the texture moves.
-                into.Uvs.Add(new Vector2(x0, -z0));
-                into.Uvs.Add(new Vector2(x1, -z0));
-                into.Uvs.Add(new Vector2(x1, -z1));
-                into.Uvs.Add(new Vector2(x0, -z1));
+                    // UVs in world units so a tiling texture runs continuously across the
+                    // village instead of restarting at every tile - and across a chunk
+                    // boundary, a run boundary, and now a sub-quad, too. This is why the UVs
+                    // are absolute metres and not relative to anything: split the mesh, or
+                    // merge several tiles into one quad, and nothing about the texture moves.
+                    into.Uvs.Add(new Vector2(x, -z));
+                }
 
                 // Winding matters more than the normals do. Unity takes a triangle's facing
                 // from Cross(v1-v0, v2-v0), and culls the back. Wound the other way round,
                 // these quads face straight down: lit correctly, shaded correctly, and
                 // invisible from every camera above the ground - which is all of them.
                 var tris = into.Tris[sm];
-                tris.Add(v0); tris.Add(v0 + 1); tris.Add(v0 + 2);
-                tris.Add(v0); tris.Add(v0 + 2); tris.Add(v0 + 3);
-                quads++;
+                for (int iy = 0; iy < ny; iy++)
+                for (int ix = 0; ix < nx; ix++)
+                {
+                    int a = v0 + iy * (nx + 1) + ix;
+                    int b = a + 1;
+                    int c = a + (nx + 1) + 1;
+                    int d = a + (nx + 1);
+                    tris.Add(a); tris.Add(b); tris.Add(c);
+                    tris.Add(a); tris.Add(c); tris.Add(d);
+                }
+                quads += nx * ny;
             }
 
             // Land beyond the last tile.
@@ -1685,11 +1732,41 @@ namespace Noir.Unity
 
                 float depth = Materials3D.WallDepthFor(place);
                 int submesh = Materials3D.WallingFor(place);
-                float bottom = Space3D.GroundUnder(place.Bounds);
+
+                // THE ROW'S SHARED HEIGHT WHEN ONE WAS MEASURED, this unit's own otherwise.
+                // Space3D.GroundUnder samples the elevation grid under THIS PLACE'S OWN bounds -
+                // fine for a freestanding building, but two neighbouring terrace units each
+                // measuring under their own narrow footprint can land on different points of the
+                // grid and seat their shared party wall a few centimetres apart. Invisible
+                // face-on; a visible sliver of sky between two storefronts once you look down the
+                // row instead of across it. See Place.GroundHeight.
+                float bottom = place.GroundHeight ?? Space3D.GroundUnder(place.Bounds);
                 float top = bottom + MassingGrammars.Of(place).Eaves;
 
-                var outline = place.Outline;
-                int n = outline.Length;
+                // THE TRUE CORNER WHEN ONE WAS MEASURED, the tile-rounded one otherwise. Rounding
+                // every corner to the nearest metre is fine for a wide unit - the direction error
+                // it introduces is a fraction of a degree - but a downtown storefront can be four
+                // or five metres across, where the SAME one-tile rounding on two corners just a
+                // few metres apart can swing the wall's own direction several degrees off its
+                // neighbour's. Two flat panels meeting at that angle look solid face-on and open
+                // up the moment you look down the row rather than across it. See
+                // Place.OutlinePrecise for where this comes from and who populates it.
+                int n = place.Outline.Length;
+                var pts = new Vector2[n];
+                if (place.OutlinePrecise != null && place.OutlinePrecise.Length == n)
+                {
+                    for (int i = 0; i < n; i++)
+                        pts[i] = new Vector2(place.OutlinePrecise[i].X, place.OutlinePrecise[i].Y);
+                }
+                else
+                {
+                    if (place.OutlinePrecise != null)
+                        Debug.LogWarning($"[walls] '{place.Name}' has OutlinePrecise of length "
+                                        + $"{place.OutlinePrecise.Length}, but Outline has length "
+                                        + $"{n} - falling back to the tile-rounded ring.");
+                    for (int i = 0; i < n; i++)
+                        pts[i] = new Vector2(place.Outline[i].X, place.Outline[i].Y);
+                }
 
                 // Signed area, shoelace formula: sum of (x_i * y_(i+1) - x_(i+1) * y_i) over
                 // every edge (the formula's usual halving does not matter here - only the sign
@@ -1702,16 +1779,16 @@ namespace Noir.Unity
                 float signedArea = 0f;
                 for (int i = 0; i < n; i++)
                 {
-                    var a = outline[i];
-                    var b = outline[(i + 1) % n];
-                    signedArea += (float)a.X * b.Y - (float)b.X * a.Y;
+                    var a = pts[i];
+                    var b = pts[(i + 1) % n];
+                    signedArea += a.x * b.y - b.x * a.y;
                 }
 
-                var ring = outline;
+                var ring = pts;
                 if (signedArea < 0f)
                 {
-                    ring = new Tile[n];
-                    for (int i = 0; i < n; i++) ring[i] = outline[n - 1 - i];
+                    ring = new Vector2[n];
+                    for (int i = 0; i < n; i++) ring[i] = pts[n - 1 - i];
                 }
 
                 Vector2? door = place.Door.IsValid
@@ -1730,8 +1807,8 @@ namespace Noir.Unity
                     float bestDist = float.MaxValue;
                     for (int i = 0; i < n; i++)
                     {
-                        var p0 = new Vector2(ring[i].X, ring[i].Y);
-                        var p1 = new Vector2(ring[(i + 1) % n].X, ring[(i + 1) % n].Y);
+                        var p0 = ring[i];
+                        var p1 = ring[(i + 1) % n];
                         float len = Vector2.Distance(p0, p1);
                         if (len < 0.01f) continue;
                         var dir = (p1 - p0) / len;
@@ -1743,8 +1820,8 @@ namespace Noir.Unity
 
                 for (int i = 0; i < n; i++)
                 {
-                    var p0 = new Vector2(ring[i].X, ring[i].Y);
-                    var p1 = new Vector2(ring[(i + 1) % n].X, ring[(i + 1) % n].Y);
+                    var p0 = ring[i];
+                    var p1 = ring[(i + 1) % n];
                     var edge = p1 - p0;
                     float len = edge.magnitude;
                     if (len < 0.01f) continue;

@@ -1,0 +1,15 @@
+newmtl panel_red
+Kd 0.3712 0.0343 0.0232
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl trim_gold
+Kd 0.5841 0.3564 0.1144
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl post_wood
+Kd 0.2542 0.1441 0.0685
+Ks 0.05 0.05 0.05
+Ns 10
+

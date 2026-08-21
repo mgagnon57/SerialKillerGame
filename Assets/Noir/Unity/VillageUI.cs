@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
 using Noir.Core.People;
+using Noir.Core.Response;
 using Noir.Core.World;
 using Noir.Core.Survey;
 
@@ -70,17 +71,50 @@ namespace Noir.Unity
         private const float MinScale = 0.8f, MaxScale = 3.0f;
         private const string ScaleKey = "noir.ui.scale";
 
-        /// <summary>Scale a pixel measurement. `S(24)` is "24 pixels at the default size".</summary>
-        private static float S(float px) => px * Scale;
+        /// <summary>Scale a pixel measurement. `S(24)` is "24 pixels at the default size". Public
+        /// so anything drawing IMGUI outside this file - PlayerInteraction's verb menu is the
+        /// first - can follow the same display-scale convention without a second, duplicated
+        /// formula.</summary>
+        public static float S(float px) => px * Scale;
 
-        /// <summary>Scale a font size. Rounded, because a fractional point size renders muddy.</summary>
-        private static int F(float px) => Mathf.Max(1, Mathf.RoundToInt(px * Scale));
+        /// <summary>Scale a font size. Rounded, because a fractional point size renders muddy.
+        /// Public for the same reason as <see cref="S"/>.</summary>
+        public static int F(float px) => Mathf.Max(1, Mathf.RoundToInt(px * Scale));
 
         private static void LoadScale() =>
             // THE DEFAULT LIVES IN ONE PLACE. This read its own 1.6 while the field above said
             // 1.6 too, so lowering the default meant finding both - and missing one would leave
             // a fresh profile on the old size with nothing to explain why.
             Scale = Mathf.Clamp(PlayerPrefs.GetFloat(ScaleKey, DefaultScale), MinScale, MaxScale);
+
+        /// <summary>
+        /// EVERY KEY THIS PANEL LAYER READS IS READ HERE, ONCE PER FRAME — never in OnGUI.
+        /// OnGUI runs at least twice a frame (Layout + Repaint; more with input events), and
+        /// Keyboard.current's wasPressedThisFrame stays true for the WHOLE frame, so a toggle
+        /// handled in OnGUI fires an even number of times and cancels itself. That is why T, B
+        /// and H all "did nothing" on 2026-08-17 while the badge provably never flipped: each
+        /// press toggled twice. The scale keys survived only because a double STEP is merely a
+        /// bigger step. PlayerInteraction's measured lesson, now applied here too: IMGUI is
+        /// display-only; input lives on the frame clock.
+        /// </summary>
+        private void Update()
+        {
+            if (!_scaleLoaded) { LoadScale(); _scaleLoaded = true; }
+            ReadScaleKeys();
+
+            var keys = Keyboard.current;
+            if (keys == null) return;
+
+            if (keys.bKey.wasPressedThisFrame && !KeyboardCaptured)
+                _host.Badge = !_host.Badge;
+            if (keys.tKey.wasPressedThisFrame && !KeyboardCaptured)
+            {
+                _showTestimony = !_showTestimony;
+                if (_showTestimony) Ask();
+            }
+            if (keys.hKey.wasPressedThisFrame && !KeyboardCaptured)
+                _showHelp = !_showHelp;
+        }
 
         /// <summary>
         /// Ctrl+= larger, Ctrl+- smaller, Ctrl+0 back to default. Held on Ctrl so it cannot
@@ -266,7 +300,8 @@ namespace Noir.Unity
         private void OnGUI()
         {
             if (!_scaleLoaded) { LoadScale(); _scaleLoaded = true; }
-            ReadScaleKeys();
+            // Keys are read in Update(), once per frame — see its header for the double-toggle
+            // trap that reading them here caused. OnGUI draws; it does not listen.
             if (!_stylesReady) BuildStyles();
 
             if (_host.LoadError != null)
@@ -318,6 +353,7 @@ namespace Noir.Unity
                          || (legend.HasValue && legend.Value.Contains(mouse));
 
             DrawTopBar();
+            DrawCaseTicker();
             DrawInspector();
             DrawHelp();
             DrawTestimony();
@@ -472,6 +508,62 @@ namespace Noir.Unity
         /// </summary>
         public static bool KeyboardCaptured { get; private set; }
 
+        /// <summary>
+        /// WHAT THE TOWN IS DOING ABOUT IT, one line under the clock per open case.
+        ///
+        /// The response machine already narrates every transition — ResponseCases.Emit writes
+        /// the case file and RunResponse prints each line to the console as `[case]` — but the
+        /// first evening anybody actually played a hit-and-run he stood over the victim for
+        /// three sim minutes asking where the law was, while the answer scrolled through a
+        /// console he was not looking at (2026-08-17). This is that answer where the player is
+        /// looking. Undiscovered cases are shown too, deliberately: the player SAW the hit —
+        /// what their eyes cannot see is the town's machinery turning, and "nobody has found
+        /// her yet" is that machinery reported honestly, not an omniscience leak. Closed cases
+        /// draw nothing; the street emptying out says it.
+        /// </summary>
+        private void DrawCaseTicker()
+        {
+            var cases = _host.Cases;
+            if (cases == null || cases.Count == 0) return;
+
+            var clock = _host.Sim.Clock;
+            int now = clock.Day * (GameClock.TicksPerDay / GameClock.TicksPerMinute) + clock.MinuteOfDay;
+
+            float y = BarHeight + S(6f);
+            for (int c = 0; c < cases.Count; c++)
+            {
+                var state = cases.StateOf(c);
+                if (state == CaseState.Closed) continue;
+
+                bool fatal = cases.FatalOf(c);
+                bool crash = cases.KindOf(c) == CaseKind.Collision;
+                string them = crash ? "the driver" : fatal ? "the body" : "the victim";
+                string line = state switch
+                {
+                    CaseState.Undiscovered     => crash ? "two cars sit tangled in the street — nobody has called it in"
+                                                : fatal ? "a body lies in the street — nobody has found it yet"
+                                                        : "somebody is down in the street — nobody has found them yet",
+                    CaseState.Alarm            => "somebody has seen it — the alarm is going out",
+                    CaseState.OfficerEnRoute   => "the call is in — an officer is on his way",
+                    CaseState.SceneHeld        => "an officer holds the scene, waiting on the county car",
+                    CaseState.CountyEnRoute    => "the county car is on the road in",
+                    CaseState.Canvassing       => crash ? "the county officer is taking the drivers' statements"
+                                                        : "the county officer is going door to door",
+                    CaseState.AmbulanceEnRoute => "an ambulance is coming for " + them,
+                    CaseState.Loading          => "they are loading " + them,
+                    CaseState.Adjudicating     => "the verdict is coming",
+                    _                          => state.ToString(),
+                };
+                int mins = now - cases.MinuteOf(c);
+                string text = $"<color=#ff8a5c><b>case {c}</b></color>"
+                            + $" <color=#8a8a86>· {mins} min</color>  {line}";
+
+                GUI.Box(new Rect(S(12f), y, S(560f), S(26f)), GUIContent.none, _panel);
+                GUI.Label(new Rect(S(22f), y + S(4f), S(544f), S(20f)), text, _label);
+                y += S(30f);
+            }
+        }
+
         private void DrawTopBar()
         {
             GUI.Box(new Rect(S(0f), S(0f), Screen.width, BarHeight), GUIContent.none, _panel);
@@ -495,6 +587,13 @@ namespace Noir.Unity
 
             GUI.Label(new Rect(S(182f), S(6f), S(90f), S(18f)), "<color=#8a8a86>speed</color>", _small);
             GUI.Label(new Rect(S(182f), S(22f), S(90f), S(22f)), speedText, _label);
+
+            // ---- who you are when you ask (B toggles; see VillageHost.Badge). Anchored to
+            // the bar's right edge: the speed buttons own everything from x=250 rightward.
+            GUI.Label(new Rect(Screen.width - S(150f), S(6f), S(130f), S(18f)),
+                "<color=#8a8a86>asking as  <b>B</b></color>", _small);
+            GUI.Label(new Rect(Screen.width - S(150f), S(22f), S(140f), S(22f)),
+                _host.Badge ? "<color=#7fb4ff><b>THE BADGE</b></color>" : "<b>a civilian</b>", _label);
 
             if (_host.Skipping)
                 GUI.Label(new Rect(S(182f), S(22f), S(200f), S(22f)), "<color=#ff8a5c><b>skipping…</b></color>", _label);
@@ -539,6 +638,7 @@ namespace Noir.Unity
         private string Census()
         {
             int asleep = 0, walking = 0, work = 0, school = 0, pub = 0, outside = 0, talking = 0;
+            int down = 0;
             var sim = _host.Sim;
             for (int i = 0; i < sim.AgentCount; i++)
             {
@@ -557,12 +657,14 @@ namespace Noir.Unity
                     case Activity.AtSchool: school++; break;
                     case Activity.AtThePub: pub++; break;
                     case Activity.AtHome: break;
+                    case Activity.Downed: down++; break;
                     default: outside++; break;
                 }
             }
             return $"{_host.People.Count} souls   ·   asleep {asleep}   walking {walking}   "
                  + $"talking {talking}   at work {work}   school {school}   pub {pub}   "
-                 + $"out {outside}";
+                 + $"out {outside}"
+                 + (down > 0 ? $"   down {down}" : "");
         }
 
         private bool _showTestimony;
@@ -597,12 +699,8 @@ namespace Noir.Unity
         /// </summary>
         private void DrawTestimony()
         {
-            var keys = Keyboard.current;
-            if (keys != null && keys.tKey.wasPressedThisFrame)
-            {
-                _showTestimony = !_showTestimony;
-                if (_showTestimony) Ask();
-            }
+            // B and T are handled in Update() — reading them here ran twice a frame and
+            // cancelled every toggle. See Update()'s header.
             if (!_showTestimony) return;
 
             float w = S(660f), h = S(420f);
@@ -658,13 +756,65 @@ namespace Noir.Unity
             if (at == null) { _asked = null; return; }
 
             var tile = Space3D.TileAt(at.Value);
-            var who = _host.NearestNeighbour(tile);
+
+            // THE ONE YOU ARE LOOKING AT, not merely the one nearest your shoes. Among
+            // everybody within arm's-length-of-a-conversation range, the best facing-dot from
+            // the walking camera wins; with nobody in front, nearest keeps working — turning
+            // your back on someone should not make them unaskable, just not the default.
+            var who = AimedNeighbour(at.Value);
+            if (!who.IsValid) who = _host.NearestNeighbour(tile);
+
             int day = _host.Sim != null ? _host.Sim.Clock.Day : 0;
 
             var citizen = _host.People.Get(who);
-            _said = _host.AskWhatTheySaw(who, day);
+            _said = _host.PlayerAsks(who, day);
             _askedDay = day;
-            _asked = $"<b>{citizen.FullName}</b>, asked about day {day}:";
+            _asked = $"<b>{citizen.FullName}</b>, asked about day {day} — "
+                   + (_host.Badge ? "<color=#7fb4ff>with the badge shown</color>:"
+                                  : "<color=#8a8a86>as a passer-by</color>:");
+
+            // A STRANGER GETS THE SHORT VERSION. Thinning only ever REMOVES lines — the
+            // witness layer's vagueness is a standing rule and truncation cannot sharpen
+            // anything. The hedge is the town telling you it holds more than it hands out.
+            if (!_host.Badge && _said != null && _said.Length > 2)
+            {
+                _said = new[]
+                {
+                    _said[_said.Length - 2],
+                    _said[_said.Length - 1],
+                    "<color=#8a8a86><i>…that's about all I'd tell a stranger. "
+                        + "you'd want to ask around.</i></color>",
+                };
+            }
+        }
+
+        /// <summary>
+        /// The citizen the walking camera is most looking at, within conversation range.
+        /// Returns None when nobody is in front — the caller falls back to nearest. Runs only
+        /// on a T press, so the walk over the whole population costs nothing per frame.
+        /// </summary>
+        private CitizenId AimedNeighbour(Vector3 playerAt)
+        {
+            var cam = Camera.main;
+            if (cam == null || _host.Sim == null) return CitizenId.None;
+
+            var forward = cam.transform.forward; forward.y = 0f; forward.Normalize();
+            var best = CitizenId.None;
+            float bestScore = 0.35f;   // the minimum "actually in front of you"
+
+            for (int i = 0; i < _host.People.Count; i++)
+            {
+                var id = new CitizenId(i);
+                var agent = _host.Sim.GetAgent(id);
+                var world = Space3D.ToWorld(agent.Position, 0f);
+                var to = world - playerAt; to.y = 0f;
+                float dist = to.magnitude;
+                if (dist > 6f || dist < 0.1f) continue;
+
+                float score = Vector3.Dot(forward, to / dist);
+                if (score > bestScore) { bestScore = score; best = id; }
+            }
+            return best;
         }
 
         private bool _showHelp;
@@ -677,8 +827,7 @@ namespace Noir.Unity
         /// </summary>
         private void DrawHelp()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.hKey.wasPressedThisFrame) _showHelp = !_showHelp;
+            // H is handled in Update() — see its header for the OnGUI double-toggle trap.
             if (!_showHelp) return;
 
             float w = S(620f), h = S(470f);
@@ -699,13 +848,15 @@ namespace Noir.Unity
             Row("Tab", "<b>overview ⇄ street level</b>");
             Row("WASD", "pan, or walk when at street level");
             Row("Shift", "jog");
+            Row("E", "open / close the door - or get in / out of the car - you're at (street level)");
             Row("right-drag", "orbit, or look around in the street");
             Row("Q  E", "rotate");
             Row("R  Shift+F", "tilt up / down");
             Row("wheel", "zoom");
             GUILayout.Space(S(10f));
 
-            Row("T", "<b>ask the nearest neighbour what they saw</b>");
+            Row("T", "<b>ask what they saw</b> — whoever you're facing, else the nearest");
+            Row("B", "badge on / off — a stranger gets the short version");
             GUILayout.Space(S(10f));
 
             Row("click", "select somebody");
@@ -2421,6 +2572,9 @@ namespace Noir.Unity
                 case Activity.InTheGarden: return "digging at";
                 case Activity.TravellingTo: return "on the way to";
                 case Activity.Talking: return "stopped to talk on";
+                case Activity.Downed: return "lying hurt at";
+                case Activity.Responding: return "standing over";
+                case Activity.Gawking: return "watching";
                 default: return "at";
             }
         }

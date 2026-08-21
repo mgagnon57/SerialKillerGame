@@ -2639,6 +2639,11 @@ function show(i) {
     rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
 
   const host = document.getElementById("d-bldgs");
+  // Every 3D frame on the old lot goes first. Rewriting this host's innerHTML throws its
+  // canvases away, and a WebGL context whose canvas has been dropped is not collected on
+  // any schedule a browser will promise - it just sits in the dozen-odd the browser hands
+  // out until the map runs out of them and draws black rectangles instead of houses.
+  f3CloseAll();
   if (!bl.length) {
     const booked = (c.dwell || 0) > 0;
     host.innerHTML = `<p class="note" style="margin-top:12px">No footprint found on this lot.${
@@ -2661,8 +2666,23 @@ function show(i) {
           <dt>Covers</dt><dd>${cover.toFixed(0)}% of lot</dd>
           ${perFt ? `<dt>Market ÷ footprint</dt><dd>$${perFt}/sq ft</dd>` : ""}
           <dt>Role</dt><dd><span class="chip ${b.role}">${b.role}</span></dd>
-        </dl></div>`;
+        </dl>
+        <button class="w" style="margin-top:7px" onclick="openFloorPlan(${b.p},${b.i})">${
+          PLANS.has(b.p + "|" + b.i) ? "Floor plan ✓ — edit" : "Floor plan…"}</button>
+        <div class="f3" data-p="${b.p}" data-i="${b.i}" data-role="${b.role}">
+          <button class="w f3-btn" style="margin-top:6px">See it in 3D</button>
+          <div class="f3-body">
+            <canvas class="f3-cv"></canvas>
+            <div class="f3-bar">
+              <label title="hides everything drawn above 8.5 ft"><input type="checkbox" class="f3-roof"> Roof off</label>
+              <span>drag to turn · wheel to zoom</span>
+            </div>
+            <p class="note f3-note"></p>
+            <div class="f3-leg"></div>
+          </div>
+        </div></div>`;
     }).join("");
+  f3Wire(host);
   draw();
 }
 
@@ -2753,6 +2773,9 @@ async function pollVerify() {
           ? "<b style='color:var(--agri)'>Checked and good — press Play.</b>"
           : "<b style='color:var(--flag)'>CHECK FAILED — do not trust this map yet.</b>")
         + (j.error ? "<br>" + j.error : "")
+        // The mesh export runs after the check and cannot fail it, so its line rides along
+        // beside the verdict rather than colouring it - see verify_run._export.
+        + (j.note ? "<br><span style='opacity:.7'>" + esc(j.note) + "</span>" : "")
         + (key.length ? "<br><span style='opacity:.7'>" + key.join("<br>") + "</span>" : "");
     }
     loadVerdictFromGame();
@@ -3153,6 +3176,7 @@ document.getElementById("r-close").onclick = () => {
 };
 document.getElementById("close").onclick = () => {
   document.getElementById("detail").classList.remove("on"); sel = -1; draw();
+  f3CloseAll();     // a hidden frame still holds its GL context; see f3CloseAll's own note
 };
 
 // ---- interaction ---------------------------------------------------------------------
@@ -3558,9 +3582,1743 @@ addEventListener("beforeunload", e => {
   e.returnValue = "";
 });
 
+// ===================================================================================
+// THE FLOOR-PLAN EDITOR. Click a lot, click "Floor plan…" on one of its buildings, and
+// draw what the inside looked like - the same act as ruling the lot, one layer deeper.
+// The shell comes seeded from the building's own measured footprint (oriented box, in
+// feet); the drawing is saved through the server to Content/floorplans/<lot>-<i>.json,
+// one file per building so a save can only ever touch the plan it is about. Export SVG
+// or PNG hands Designer a to-scale reference to model against.
+// ===================================================================================
+
+const PLANS = new Set();
+async function loadPlans() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__floorplans", { cache: "no-store" });
+    (await r.json()).forEach(k => PLANS.add(k));
+  } catch (e) { /* server gone is a real state; badges just stay plain */ }
+}
+
+// THE FURNITURE CATALOGUE, same {"when":null} stance as INTERIORS: absent until the editor
+// export has run once. Fetched fresh every time the floor-plan editor opens (same as the
+// plan file itself just below) rather than cached at page load, so an export run mid-session
+// shows up the next time a lot is opened without a page reload.
+let FURN_PALETTE = { when: null, yours: [], pack: [] };
+async function loadPalette() {
+  if (!LIVE) { FURN_PALETTE = { when: null, yours: [], pack: [] }; return; }
+  try {
+    const r = await fetch("/__palette", { cache: "no-store" });
+    const j = await r.json();
+    FURN_PALETTE = { when: j.when || null, yours: j.yours || [], pack: j.pack || [] };
+  } catch (e) { FURN_PALETTE = { when: null, yours: [], pack: [] }; }
+}
+// THE PLAIN FALLBACK, for a clone where nobody has run the export yet: the domestic
+// FurnitureKind names (Assets/Noir/Core/World/Furniture.cs, the block above its own
+// "not a house" divider) at a generic 3x2 ft, so a plan can still get furniture on it
+// before the palette exists at all.
+const FP_PLAIN_KINDS = ["bed", "wardrobe", "dresser", "table", "chair", "sofa", "cooker",
+  "sink", "counter", "bath", "basin", "hearth", "desk"];
+
+// WHAT THE GAME ACTUALLY BUILT, keyed the same "parcel|index" way as PLANS - so
+// openFloorPlan can fall back to the game's own generated rooms when the owner has not
+// drawn one yet. {"when":null} (no build since clone, or server gone) leaves this empty
+// and every lot falls through to the empty-shell behaviour that predates this store.
+const INTERIORS = new Map();
+// WHEN THE GAME LAST SAID THIS. The export stamps the file and the tool shows the stamp -
+// otherwise a cache from three builds ago looks exactly like a fresh one, which is the whole
+// reason the spec's failure table has a row for it. Null before the first build, and then
+// the frame says "no interiors report yet" instead.
+let INTERIORS_WHEN = null;
+async function loadInteriors() {
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/__interiors", { cache: "no-store" });
+    const j = await r.json();
+    INTERIORS_WHEN = j.when || null;
+    (j.buildings || []).forEach(b => INTERIORS.set(b.parcel + "|" + b.index, b));
+  } catch (e) { /* server gone is a real state; the fallback shell just stays the fallback */ }
+}
+
+document.body.insertAdjacentHTML("beforeend", `
+<style>
+  #fpOv { position:fixed; inset:0; background:rgba(20,16,10,.55); z-index:60; display:none; }
+  #fpOv.on { display:flex; align-items:center; justify-content:center; }
+  #fpBox { position:relative; background:#f7f4ee; color:#1c1c1c; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.5);
+           width:min(96vw,1280px); height:min(94vh,860px); display:flex; flex-direction:column; overflow:hidden;
+           font-family:"Segoe UI",Arial,sans-serif; }
+  #fpHead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:9px 12px;
+            background:#fff; border-bottom:2px solid #ddd; }
+  #fpHead h3 { margin:0 10px 0 0; font-size:15px; font-family:inherit; }
+  #fpHead button { font-size:12.5px; padding:5px 9px; border:1px solid #999; background:#fafafa;
+                   border-radius:5px; cursor:pointer; color:#1c1c1c; width:auto; }
+  #fpHead button:hover { background:#efe9dd; }
+  #fpHead button.go { background:#2e6b2e; border-color:#2e6b2e; color:#fff; font-weight:600; }
+  #fpHead button.on { background:#d97706; border-color:#a45a06; color:#fff; font-weight:600; }
+  #fpHead button:disabled { opacity:.4; cursor:default; }
+  #fpDirty { color:#a22; font-weight:700; font-size:12.5px; }
+  #fpMain { display:flex; flex:1; min-height:0; }
+  #fpWrap { flex:1; overflow:auto; padding:8px; }
+  #fpWrap svg { background:#fff; border:1px solid #ccc; touch-action:none; }
+  #fpSide { width:270px; min-width:270px; padding:10px; border-left:2px solid #ddd; background:#fff;
+            overflow-y:auto; font-size:12.5px; }
+  #fpSide h4 { margin:2px 0 6px; font-size:13.5px; }
+  #fpSide label { display:block; margin:6px 0 2px; font-weight:600; font-size:11.5px; color:#333; }
+  #fpSide input, #fpSide select, #fpSide textarea { width:100%; font:inherit; font-size:12.5px;
+            padding:3px 5px; border:1px solid #bbb; border-radius:4px; background:#fff; color:#1c1c1c; }
+  #fpSide textarea { height:120px; resize:vertical; }
+  #fpSide .duo { display:flex; gap:6px; } #fpSide .duo>div { flex:1; }
+  #fpSide .btns { display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
+  #fpSide .btns button { font-size:12px; padding:4px 8px; border:1px solid #999; background:#fafafa;
+            border-radius:4px; cursor:pointer; color:#1c1c1c; width:auto; }
+  #fpSide .btns .bad { border-color:#a33; color:#a33; }
+  #fpSide .hint { color:#666; font-size:11.5px; line-height:1.45; margin-top:8px; }
+  /* THE FURNITURE PICKER, a small popup anchored under its button rather than a second
+     modal - opening one dialog on top of another (the "+ Room" pattern would suggest) makes
+     the plan itself, the thing being edited, disappear behind it. */
+  #fpFPick { position:absolute; top:44px; left:10px; z-index:70; background:#fff; border:1px solid #999;
+             border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.35); max-height:min(70vh,480px);
+             overflow-y:auto; min-width:230px; padding:4px; display:none; }
+  #fpFPick.on { display:block; }
+  #fpFPick .g { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.04em;
+                padding:6px 8px 2px; }
+  #fpFPick button { display:block; width:100%; text-align:left; font-size:12.5px; padding:5px 8px;
+                    border:none; background:none; cursor:pointer; border-radius:4px; color:#1c1c1c; }
+  #fpFPick button:hover { background:#eef2fb; }
+  #fpFPick .sz { color:#777; font-size:11px; float:right; }
+</style>
+<div id="fpOv"><div id="fpBox">
+  <div id="fpHead">
+    <h3 id="fpTitle">Floor plan</h3>
+    <button class="go" id="fpSave">Save</button>
+    <button id="fpSvgB">Export SVG</button>
+    <button id="fpPngB">Export PNG</button>
+    <button id="fpDims">Copy dims</button>
+    <button id="fpRoomB">+ Room</button>
+    <button id="fpFurnB">+ Furniture</button>
+    <button id="fpOutlineB" title="Redraw the footprint the imagery got wrong">Edit outline</button>
+    <button id="fpUndoB" title="Ctrl+Z">Undo</button>
+    <span style="font-size:12px;color:#444">shell <input id="fpShW" type="number" step="0.5" min="6"
+      style="width:52px;font-size:12px"> × <input id="fpShD" type="number" step="0.5" min="6"
+      style="width:52px;font-size:12px"> ft</span>
+    <span id="fpDirty"></span>
+    <span style="flex:1"></span>
+    <button id="fpClose">Close</button>
+  </div>
+  <div id="fpBanner" style="display:none; padding:7px 12px; font-size:12.5px; color:#664d03;
+       background:#fff3cd; border-bottom:2px solid #ffe28a;">This is the game's generated
+       layout. Save to make it yours — close without saving and the game keeps generating it.</div>
+  <div id="fpFPick"></div>
+  <div id="fpMain"><div id="fpWrap"><svg id="fpCv"></svg></div><aside id="fpSide"></aside></div>
+</div></div>`);
+
+let fpPlan = null, fpSel = null, fpDirtyF = false, fpUndoStack = [], fpDrag = null;
+let fpWho = null;           // {pid, idx, addr}
+let fpGameDerived = false;  // true when fpPlan came from INTERIORS rather than an authored file
+// HOW MANY FRONT DOORS THIS BUILDING HAS, when the game has said. FloorPlans.For refuses any
+// plan whose building has units != 1 (a terrace has no per-unit story in the plan format), so
+// a plan drawn here for one is a plan that saves cleanly and never takes effect. Known only
+// from the interiors report; 1 when nothing has said otherwise.
+let fpUnits = 1;
+// THE OUTLINE EDITOR'S OWN STATE. fpOutlineDraft is a working copy, separate from
+// fpPlan.outline, so that turning the toggle on to LOOK never authors anything by itself -
+// only an actual edit (drag, insert, delete) writes it into fpPlan.outline (fpCommitOutline).
+// That is what makes "Save writes outline only if the user changed something" true without a
+// second dirty flag: fpPlan.outline simply stays whatever it already was until a commit happens.
+let fpOutlineOn = false, fpOutlineDraft = null, fpOutlineSel = null;
+const fpM = 44;
+const FP_PAL = ["#e8eef7","#eef4e6","#f7efe2","#f2e8ee","#e6f2f0","#f5f0df","#ece9f5","#f0e9e2","#e9f0e6","#f4e6e6"];
+const fpById = (a, id) => a.find(o => o.id === id);
+const fpSnap = v => Math.round(v * 2) / 2;
+const fpUid = p => p + Math.random().toString(36).slice(2, 7);
+const fpSideLen = (r, s) => (s === "N" || s === "S") ? r.w : r.h;
+function fpScale() {
+  const el = document.getElementById("fpWrap");
+  const aw = Math.max(300, el.clientWidth - 24), ah = Math.max(300, el.clientHeight - 24);
+  return Math.max(5, Math.min(16, Math.floor(Math.min(
+    (aw - fpM * 2) / fpPlan.shell.w, (ah - fpM * 2 - 26) / fpPlan.shell.d))));
+}
+function fpMarkDirty() { fpDirtyF = true; document.getElementById("fpDirty").textContent = "unsaved"; }
+function fpClearDirty() { fpDirtyF = false; document.getElementById("fpDirty").textContent = ""; }
+function fpPushUndo() { fpUndoStack.push(JSON.stringify(fpPlan)); if (fpUndoStack.length > 150) fpUndoStack.shift(); }
+function fpUndo() {
+  if (!fpUndoStack.length) return;
+  fpPlan = JSON.parse(fpUndoStack.pop());
+  fpSel = null;
+  // fpOutlineDraft is not part of fpPlan, so an undo that changes fpPlan.outline has to
+  // re-seed the working copy from it too, or the polygon on screen would keep showing the
+  // position from before the undo while fpPlan itself had already moved on.
+  if (fpOutlineOn) { fpOutlineDraft = fpOutlineSeed(); fpOutlineSel = null; }
+  fpMarkDirty(); fpRender();
+}
+const fpOpenColor = k => k === "window" ? "#1873c4" : k === "door" ? "#b0651a" : "#a04a2a";
+// A PLACED PIECE HAS NO "kind" FIELD OF ITS OWN - PlanFurniture is {id,name,model,x,y,w,h,rot},
+// matched exactly against Assets/Noir/Unity/FloorPlans.cs - so the tint has to be recovered the
+// same way the game legend recovers it (f3LegendHtml/f3Box, both keyed on kind): a piece placed
+// from the owner's own named catalogue looks its kind up in the palette; every other piece
+// (a pack kind picked by name, or a game-derived piece whose name IS its kind already, per
+// fpGameFurnitureToFeet above) already carries its kind as its name.
+function fpFurnKind(f) {
+  const y = FURN_PALETTE.yours.find(x => x.name === f.name);
+  return (y && y.kind) || f.name || "thing";
+}
+/// THE STORED w/h ARE THE PIECE'S CANONICAL, UN-ROTATED DIMS - never touched by Rotate.
+/// Assets/Noir/Unity/FloorPlans.cs:293-296 (FloorPlans.For) swaps them itself at consumption
+/// time whenever rot%180 != 0 to get the actual built footprint, and does not otherwise use
+/// rot (AuthoredFurniture never receives it). If this editor ALSO baked the swap into the
+/// stored fields the consumer would swap a second time and cancel the rotation out - a
+/// rotated 3x2 would stamp un-rotated in the game while the editor still showed it turned.
+/// This is the one function that derives the VISUAL extent (what is drawn, dragged and
+/// clamped) from the canonical dims, so that swap only ever happens once, here, matching
+/// the consumer's own math exactly.
+function fpFurnExtent(f) {
+  return (Math.round(f.rot || 0) % 180 !== 0) ? { w: f.h, h: f.w } : { w: f.w, h: f.h };
+}
+
+/// The building's measured footprint as width x depth in feet - the oriented box of its ring,
+/// longest edge first, metres to feet, snapped to the half foot. The seed for a fresh plan.
+function fpShellFromRing(ring) {
+  let best = 0, ang = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const dx = ring[i + 1][0] - ring[i][0], dy = ring[i + 1][1] - ring[i][1], l = dx * dx + dy * dy;
+    if (l > best) { best = l; ang = Math.atan2(dy, dx); }
+  }
+  const c = Math.cos(-ang), s = Math.sin(-ang);
+  const xs = ring.map(p => p[0] * c - p[1] * s), ys = ring.map(p => p[0] * s + p[1] * c);
+  const w = (Math.max(...xs) - Math.min(...xs)) * 3.28084, d = (Math.max(...ys) - Math.min(...ys)) * 3.28084;
+  return { w: fpSnap(Math.max(w, d)), d: fpSnap(Math.min(w, d)) };
+}
+
+// ---- the game's own layout, un-fitted back into editable plan feet -----------------------
+// This is the INVERSE of Assets/Noir/Unity/FloorPlans.cs's Fit/Assemble, which takes an
+// authored plan (feet, NW origin, south edge = street) and lands it on the seated building
+// oriented to the door (FloorPlans.RotationFor). The fit itself is lossy (FittedAxis hands
+// tiles out by proportion, flooring walls to a minimum of one) so there is no exact inverse -
+// what follows inverts only the RIGID part (which corner the plan's south edge landed on),
+// which is enough for a faithful, editable approximation: rooms in the right relative places,
+// street at the bottom, ready to nudge back to what the owner actually meant.
+const FP_M2FT = 3.28084;
+
+/// Mirrors FloorPlans.RotationFor exactly - same nearest-wall test on the same four
+/// distances, same tie precedence (south, north, east, west) - because getting this wrong
+/// un-rotates onto the wrong wall, silently, the same trap that function's own doc comment
+/// describes for the forward direction. A null door (contract: "door may be null") has
+/// nothing to orient by, so it takes rot 0 rather than refuse, per this task's brief.
+function fpRotFromDoor(bounds, door) {
+  if (!door) return 0;
+  const bottom = bounds.y + bounds.h - 1, right = bounds.x + bounds.w - 1;
+  const toBottom = Math.abs(door.y - bottom), toTop = Math.abs(door.y - bounds.y);
+  const toRight = Math.abs(door.x - right), toLeft = Math.abs(door.x - bounds.x);
+  let best = toBottom, rot = 0;
+  if (toTop < best) { best = toTop; rot = 2; }
+  if (toRight < best) { best = toRight; rot = 1; }
+  if (toLeft < best) { best = toLeft; rot = 3; }
+  return rot;
+}
+
+/// The inverse of FloorPlans.Fit.Assemble's swap/mirror, worked in continuous tile-local
+/// coordinates rather than Assemble's quantised band counts (there is no band structure left
+/// to invert - only the rigid turn RotationFor chose). rx,ry,rw,rh are already translated by
+/// the building's own bounds origin; W,H are the bounds' own width/height in tiles.
+/// rot0: identity. rot2: mirror both axes. rot1/rot3: swap x<->y, mirror one axis - these are
+/// two different turns, not mirrors of each other, exactly as Fit's own header explains.
+function fpUnrotateRect(rx, ry, rw, rh, W, H, rot) {
+  const lx0 = rx, ly0 = ry, lx1 = rx + rw, ly1 = ry + rh;
+  let x0, x1, y0, y1;
+  switch (rot) {
+    case 2: x0 = W - lx1; x1 = W - lx0; y0 = H - ly1; y1 = H - ly0; break;
+    case 1: x0 = H - ly1; x1 = H - ly0; y0 = lx0;      y1 = lx1;      break;
+    case 3: x0 = ly0;     x1 = ly1;     y0 = W - lx1;  y1 = W - lx0;  break;
+    default: x0 = lx0;    x1 = lx1;     y0 = ly0;       y1 = ly1;      break;
+  }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+/// The point form of fpUnrotateRect above. A single point is a zero-size rect (lx0=lx1,
+/// ly0=ly1), and every one of fpUnrotateRect's four cases reduces algebraically to exactly
+/// this under that substitution - verified by direct substitution the same way the class
+/// header's inversion table was - so this reuses that function's frame rather than re-deriving
+/// the rotation algebra a second time for outline vertices, which are points, not rects.
+function fpUnrotatePoint(lx, ly, W, H, rot) {
+  const r = fpUnrotateRect(lx, ly, 0, 0, W, H, rot);
+  return { x: r.x, y: r.y };
+}
+
+/// The un-rotated bounds, in feet - shell = bounds (un-rotated) x3.28084. rot 1/3 swap which
+/// bounds side becomes the plan's width, same as the swap in fpUnrotateRect above.
+function fpGameShellFeet(W, H, rot) {
+  const w = (rot === 1 || rot === 3) ? H : W, d = (rot === 1 || rot === 3) ? W : H;
+  return { w: fpSnap(w * FP_M2FT), d: fpSnap(d * FP_M2FT) };
+}
+
+function fpGameRoomToFeet(r, bx, by, W, H, rot) {
+  const rel = fpUnrotateRect(r.x - bx, r.y - by, r.w, r.h, W, H, rot);
+  return { id: fpUid("r"), name: r.name || r.kind || "Room",
+    x: fpSnap(rel.x * FP_M2FT), y: fpSnap(rel.y * FP_M2FT),
+    w: fpSnap(Math.max(1, rel.w * FP_M2FT)), h: fpSnap(Math.max(1, rel.h * FP_M2FT)) };
+}
+
+// Furniture carries no rot in the interiors contract, so its footprint is un-rotated the
+// same way a room's is and dropped into the plan axis-aligned (rot: 0) - from there it is
+// a piece like any other the owner placed himself, draggable and rotatable in the editor.
+function fpGameFurnitureToFeet(f, bx, by, W, H, rot) {
+  const rel = fpUnrotateRect(f.x - bx, f.y - by, f.w, f.h, W, H, rot);
+  return { id: fpUid("f"), name: f.kind || "", model: f.model || "",
+    x: fpSnap(rel.x * FP_M2FT), y: fpSnap(rel.y * FP_M2FT),
+    w: fpSnap(Math.max(0.5, rel.w * FP_M2FT)), h: fpSnap(Math.max(0.5, rel.h * FP_M2FT)), rot: 0 };
+}
+
+function fpPlanFromInteriors(gb, addr) {
+  const bounds = gb.bounds, W = bounds.w, H = bounds.h;
+  const rot = fpRotFromDoor(bounds, gb.door);
+  return {
+    name: addr + " - as the game builds it",
+    shell: fpGameShellFeet(W, H, rot),
+    rooms: (gb.rooms || []).map(r => fpGameRoomToFeet(r, bounds.x, bounds.y, W, H, rot)),
+    openings: [],
+    furniture: (gb.furniture || []).map(f => fpGameFurnitureToFeet(f, bounds.x, bounds.y, W, H, rot)),
+    notes: ""
+  };
+}
+
+// ---- outline editing: the owner redrawing a footprint the 2016 imagery got wrong ---------
+//
+// "Edit outline" draws the building's CURRENT ring - the plan's own authored override if it
+// already has one, else THE RING THE GAME SEATS: placedRing(b), which is the measured footprint
+// squared by its lot skew and moved by the owner's own placement overlay, in world village
+// metres (numerically the same units as tiles, per game-interiors.json's own contract). Not
+// the raw b.r: the game builds nothing on the raw ring, so an editor opened on it would show a
+// polygon several degrees off the rooms standing inside it, and the first nudge writes the
+// whole draft. Run through the SAME reverse transform fpPlanFromInteriors already uses for
+// rooms and furniture, so all three agree on where the walls are. Only committed on an actual
+// edit - see fpOutlineDraft's own comment above for why that is what makes the brief's save
+// rule true for free.
+
+/// bounds+rot to un-rotate BY, for the currently open building. Prefers the exact numbers the
+/// game itself seated this building on (INTERIORS' bounds+door, the same source
+/// fpPlanFromInteriors uses) - falling back to the ring's own axis-aligned bounding box at
+/// rot 0 only when this building never reached InteriorsReport at all (yielded, refused, or
+/// standing in a street - see SeatOnSurvey), in which case there is no door to turn by and no
+/// seated frame to turn onto either.
+function fpOutlineFrame() {
+  const gb = INTERIORS.get(fpWho.pid + "|" + fpWho.idx);
+  if (gb && gb.bounds)
+    return { bx: gb.bounds.x, by: gb.bounds.y, W: gb.bounds.w, H: gb.bounds.h,
+             rot: fpRotFromDoor(gb.bounds, gb.door) };
+  const b = DATA.buildings.find(x => x.p === fpWho.pid && x.i === fpWho.idx);
+  const ring = (b && b.r && b.r.length >= 3) ? placedRing(b) : [[0, 0], [1, 0], [1, 1], [0, 1]];
+  const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]);
+  const bx = Math.round(Math.min(...xs)), by = Math.round(Math.min(...ys));
+  return { bx, by, W: Math.max(1, Math.round(Math.max(...xs) - bx)),
+           H: Math.max(1, Math.round(Math.max(...ys) - by)), rot: 0 };
+}
+
+/// The polygon fpOutlineB starts editing: the plan's own authored outline if it has one
+/// (converted back to the plain {x,y} feet the draft works in), else the measured ring
+/// un-rotated into the same frame - fpOutlineFrame's bx/by/W/H/rot, the point-inverse of the
+/// exact turn Assets/Noir/Unity/FloorPlans.cs's OutlineFromPlan applies going forward.
+function fpOutlineSeed() {
+  if (fpPlan.outline && fpPlan.outline.length >= 3)
+    return fpPlan.outline.map(v => ({ x: v.x, y: v.y }));
+  const { bx, by, W, H, rot } = fpOutlineFrame();
+  const b = DATA.buildings.find(x => x.p === fpWho.pid && x.i === fpWho.idx);
+  // placedRing, NOT b.r: the game seats the SQUARED and PLACED ring (SeatOnSurvey.BoxOf runs
+  // Placements.Apply(e.Squared(), ...)), so seeding from the raw measured one would open the
+  // editor on a polygon turned by the lot skew - and the first nudge writes the WHOLE draft,
+  // which would then un-square the building and discard the owner's own placement overlay.
+  // Measured over the 302 buildings the game gives an outline to: seeded from placedRing the
+  // round trip back through FloorPlans.OutlineFromPlan moves no vertex more than one tile
+  // (median 0); seeded from b.r it moved them up to 22.
+  const ring = (b && b.r && b.r.length >= 3) ? placedRing(b)
+             : [[bx, by], [bx + W, by], [bx + W, by + H], [bx, by + H]];
+  // the ring CARRIES THE CLOSING REPEAT (its own last point equals its first - build-viewer-data.py
+  // writes it straight from the seated ring, unlike SeatOnSurvey.TilesOf, which drops it before
+  // this ever becomes a Tile[]). Dropping it here too, the same way, keeps the editor from
+  // handing the owner a phantom extra vertex sitting exactly on top of the first one.
+  const closed = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0]
+                                  && ring[0][1] === ring[ring.length - 1][1]
+    ? ring.slice(0, -1) : ring;
+  return closed.map(pt => {
+    const rel = fpUnrotatePoint(pt[0] - bx, pt[1] - by, W, H, rot);
+    return { x: fpSnap(rel.x * FP_M2FT), y: fpSnap(rel.y * FP_M2FT) };
+  });
+}
+
+/// Writes the working draft into fpPlan.outline - the one place an edit actually "authors" an
+/// override, per this task's brief ("Save writes outline only if the user toggled AND changed
+/// something"). Called only from an edit action (vertex drag end, insert, delete), never from
+/// the toggle itself.
+function fpCommitOutline() {
+  fpPlan.outline = fpOutlineDraft.map(v => ({ x: fpSnap(v.x), y: fpSnap(v.y) }));
+  fpMarkDirty();
+}
+
+function fpToggleOutline() {
+  fpOutlineOn = !fpOutlineOn;
+  document.getElementById("fpOutlineB").classList.toggle("on", fpOutlineOn);
+  if (fpOutlineOn) { fpOutlineDraft = fpOutlineSeed(); fpSel = null; }
+  else { fpOutlineDraft = null; fpOutlineSel = null; }
+  fpRender();
+}
+
+function fpSvgString(interactive) {
+  const S = fpScale(), p = fpPlan;
+  const W = p.shell.w * S + fpM * 2, H = p.shell.d * S + fpM * 2 + 24;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Segoe UI, Arial, sans-serif">`;
+  s += `<rect width="${W}" height="${H}" fill="#ffffff"/>`;
+  for (let f = 0; f <= p.shell.w; f++) {
+    const x = fpM + f * S, mj = f % 5 === 0;
+    s += `<line x1="${x}" y1="${fpM}" x2="${x}" y2="${fpM + p.shell.d * S}" stroke="${mj ? "#d8d2c4" : "#efece4"}"/>`;
+    if (mj) s += `<text x="${x}" y="${fpM - 7}" font-size="9" fill="#999" text-anchor="middle">${f}</text>`;
+  }
+  for (let f = 0; f <= p.shell.d; f++) {
+    const y = fpM + f * S, mj = f % 5 === 0;
+    s += `<line x1="${fpM}" y1="${y}" x2="${fpM + p.shell.w * S}" y2="${y}" stroke="${mj ? "#d8d2c4" : "#efece4"}"/>`;
+    if (mj) s += `<text x="${fpM - 6}" y="${y + 3}" font-size="9" fill="#999" text-anchor="end">${f}</text>`;
+  }
+  p.rooms.forEach((r, i) => {
+    const x = fpM + r.x * S, y = fpM + r.y * S;
+    const seld = interactive && fpSel && fpSel.type === "room" && fpSel.id === r.id;
+    s += `<rect ${interactive ? `data-fproom="${r.id}"` : ""} x="${x}" y="${y}" width="${r.w * S}" height="${r.h * S}"
+      fill="${FP_PAL[i % FP_PAL.length]}" stroke="${seld ? "#d97706" : "#333"}" stroke-width="${seld ? 3 : 2}"
+      ${seld ? 'stroke-dasharray="7,4"' : ""}/>`;
+    const cx = x + r.w * S / 2, cy = y + r.h * S / 2;
+    s += `<text x="${cx}" y="${cy - 2}" font-size="${Math.max(10, S * .8)}" font-weight="600" fill="#222" text-anchor="middle" pointer-events="none">${esc(r.name)}</text>`;
+    s += `<text x="${cx}" y="${cy + Math.max(10, S * .8) + 1}" font-size="${Math.max(9, S * .65)}" fill="#555" text-anchor="middle" pointer-events="none">${r.w} × ${r.h} ft</text>`;
+    if (interactive) {
+      // EVERY WALL IS A HANDLE. Invisible fat lines over each edge so a wall can be grabbed
+      // anywhere along its run and dragged - and a wall two rooms share moves both rooms,
+      // which is what dragging a wall MEANS. Drawn after the fill so the edge wins near the
+      // edge; openings and the corner handle come later still, so they win over the wall.
+      const x2 = x + r.w * S, y2 = y + r.h * S, grab = "rgba(0,0,0,0)";
+      s += `<line data-fpwall="${r.id}:N" x1="${x}" y1="${y}" x2="${x2}" y2="${y}" stroke="${grab}" stroke-width="9" cursor="ns-resize"/>`;
+      s += `<line data-fpwall="${r.id}:S" x1="${x}" y1="${y2}" x2="${x2}" y2="${y2}" stroke="${grab}" stroke-width="9" cursor="ns-resize"/>`;
+      s += `<line data-fpwall="${r.id}:W" x1="${x}" y1="${y}" x2="${x}" y2="${y2}" stroke="${grab}" stroke-width="9" cursor="ew-resize"/>`;
+      s += `<line data-fpwall="${r.id}:E" x1="${x2}" y1="${y}" x2="${x2}" y2="${y2}" stroke="${grab}" stroke-width="9" cursor="ew-resize"/>`;
+    }
+    if (seld) s += `<rect data-fphandle="${r.id}" x="${x + r.w * S - 6}" y="${y + r.h * S - 6}" width="13" height="13" fill="#d97706" stroke="#7a4a04" cursor="nwse-resize"/>`;
+  });
+  s += `<rect x="${fpM}" y="${fpM}" width="${p.shell.w * S}" height="${p.shell.d * S}" fill="none" stroke="#111" stroke-width="4" pointer-events="none"/>`;
+  p.openings.forEach(o => {
+    const r = fpById(p.rooms, o.roomId); if (!r) return;
+    let x1, y1, x2, y2;
+    if (o.side === "N") { x1 = fpM + (r.x + o.off) * S; y1 = fpM + r.y * S; x2 = x1 + o.w * S; y2 = y1; }
+    if (o.side === "S") { x1 = fpM + (r.x + o.off) * S; y1 = fpM + (r.y + r.h) * S; x2 = x1 + o.w * S; y2 = y1; }
+    if (o.side === "W") { x1 = fpM + r.x * S; y1 = fpM + (r.y + o.off) * S; x2 = x1; y2 = y1 + o.w * S; }
+    if (o.side === "E") { x1 = fpM + (r.x + r.w) * S; y1 = fpM + (r.y + o.off) * S; x2 = x1; y2 = y1 + o.w * S; }
+    const seld = interactive && fpSel && fpSel.type === "opening" && fpSel.id === o.id;
+    if (seld) s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffd28a" stroke-width="15" stroke-linecap="round"/>`;
+    s += `<line ${interactive ? `data-fpopen="${o.id}"` : ""} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+      stroke="${fpOpenColor(o.kind)}" stroke-width="8" cursor="grab"/>`;
+  });
+  // FURNITURE, drawn last so it always sits above the rooms and walls it stands in - the
+  // same reason it wins the pointer hit-test over a room's own move handle without any
+  // extra ordering logic in fpWire.
+  (p.furniture || []).forEach(f => {
+    const ext = fpFurnExtent(f);
+    const x = fpM + f.x * S, y = fpM + f.y * S, fw = Math.max(1, ext.w * S), fh = Math.max(1, ext.h * S);
+    const seld = interactive && fpSel && fpSel.type === "furniture" && fpSel.id === f.id;
+    const tint = f3Hex(f3FurnTint(fpFurnKind(f)));
+    s += `<rect ${interactive ? `data-fpfurn="${f.id}"` : ""} x="${x}" y="${y}" width="${fw}" height="${fh}"
+      fill="${tint}" fill-opacity="0.88" rx="2" stroke="${seld ? "#d97706" : "#2a2a2a"}"
+      stroke-width="${seld ? 3 : 1.25}" ${seld ? 'stroke-dasharray="6,3"' : ""} cursor="move"/>`;
+    const cx = x + fw / 2, cy = y + fh / 2, fsz = Math.max(8, Math.min(S * .6, 11));
+    s += `<text x="${cx}" y="${cy - 1}" font-size="${fsz}" font-weight="600" fill="#fff" text-anchor="middle"
+      pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${esc(f.name || "furniture")}</text>`;
+    s += `<text x="${cx}" y="${cy + fsz}" font-size="${Math.max(7, fsz * .8)}" fill="#fff" text-anchor="middle"
+      pointer-events="none" style="paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2px">${ext.w} × ${ext.h} ft</text>`;
+  });
+  // THE OUTLINE OVERLAY, drawn last of all so it always wins the pointer hit-test over
+  // whatever room or furniture happens to sit under an edge or a vertex - outline mode is
+  // exclusive (fpWire's pointerdown swallows every click while it is on), so nothing beneath
+  // needs to be dimmed or disabled to keep a drag from landing on the wrong thing.
+  if (interactive && fpOutlineOn && fpOutlineDraft) {
+    const pts = fpOutlineDraft.map(v => `${fpM + v.x * S},${fpM + v.y * S}`).join(" ");
+    s += `<polygon points="${pts}" fill="rgba(217,119,6,0.14)" stroke="#d97706" stroke-width="3"
+      stroke-dasharray="7,4" pointer-events="none"/>`;
+    for (let i = 0; i < fpOutlineDraft.length; i++) {
+      const a = fpOutlineDraft[i], b2 = fpOutlineDraft[(i + 1) % fpOutlineDraft.length];
+      s += `<line data-fpedge="${i}" x1="${fpM + a.x * S}" y1="${fpM + a.y * S}"
+        x2="${fpM + b2.x * S}" y2="${fpM + b2.y * S}" stroke="rgba(0,0,0,0)" stroke-width="12" cursor="copy"/>`;
+    }
+    fpOutlineDraft.forEach((v, i) => {
+      const seld = fpOutlineSel === i, cx = fpM + v.x * S, cy = fpM + v.y * S;
+      s += `<circle data-fpvert="${i}" cx="${cx}" cy="${cy}" r="${seld ? 8 : 6}"
+        fill="${seld ? "#d97706" : "#fff"}" stroke="#a45a06" stroke-width="2" cursor="move"/>`;
+    });
+  }
+  const ly = fpM + p.shell.d * S + 16;
+  s += `<text x="${fpM}" y="${ly}" font-size="11" fill="#333">${esc(p.name || "")} — ${p.shell.w} × ${p.shell.d} ft — `
+    + `<tspan fill="#1873c4" font-weight="700">window</tspan> <tspan fill="#b0651a" font-weight="700">door</tspan> `
+    + `<tspan fill="#a04a2a" font-weight="700">fireplace</tspan></text>`;
+  return s + `</svg>`;
+}
+
+function fpRender() {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = fpSvgString(true);
+  const fresh = tmp.firstElementChild;
+  document.getElementById("fpCv").replaceWith(fresh); fresh.id = "fpCv";
+  fpWire(fresh);
+  document.getElementById("fpShW").value = fpPlan.shell.w;
+  document.getElementById("fpShD").value = fpPlan.shell.d;
+  fpPanel();
+}
+
+function fpPanel() {
+  const side = document.getElementById("fpSide");
+  let h = "";
+  // SAID BEFORE ANY OF THE WORK, because it is the one thing that makes all of it pointless:
+  // Assets/Noir/Unity/FloorPlans.cs refuses a plan outright when the building has more than
+  // one unit, so a terrace plan saves, sits in Content/floorplans/ and is never consumed.
+  if (fpUnits > 1)
+    h += `<div class="hint" style="color:#8a2a2a; background:#fdecec; border:1px solid #f3b6b6;
+      border-radius:4px; padding:6px 7px; margin-bottom:8px;">This building has ${fpUnits} units.
+      The game refuses whole-building plans for terraces - it keeps generating each unit's
+      interior - so anything drawn here will save but not take effect.</div>`;
+  if (fpOutlineOn) {
+    h += `<h4>Editing outline</h4><div class="hint">Drag a vertex to move it. Double-click an
+      edge to add one. Select a vertex and press <b>Del</b> to remove it - at least 3 stay.
+      This redraws the building's own footprint, not a room: the shell above and the rooms/
+      furniture below still answer to the measured plan. Save writes the redrawn outline only
+      if it was actually changed here.</div>`;
+    // WHAT SAVING AN OUTLINE COSTS, said out loud. The first nudge writes the WHOLE polygon,
+    // corners included that were never touched, and from then on this ring - not the measured
+    // one - is the building. Both numbers below are measured (see the branch's fix-wave
+    // report): the round trip back through FloorPlans.OutlineFromPlan moves an untouched
+    // corner by at most one tile, and a footprint the game currently treats as a plain
+    // rectangle (522 of Rossville's 824) starts being masked to this polygon instead, which
+    // costs a median 2.4% of its floor tiles and up to 21%.
+    h += `<div class="hint" style="color:#8a5a00; background:#fff8e6; border:1px solid #ffe28a;
+      border-radius:4px; padding:6px 7px;"><b>Saving an outline overrides the measurement for
+      the whole building.</b> The corners you did not move are written too, and land within one
+      tile (about 3 ft) of where the game squares them today. A footprint the game currently
+      builds as a plain rectangle becomes a masked polygon - typically a couple of percent of
+      its floor tiles, up to a fifth. Close without saving and nothing changes.</div>`;
+    h += `<label style="margin-top:12px">Notes / answers</label><textarea id="fpNotes">${esc(fpPlan.notes || "")}</textarea>`;
+    side.innerHTML = h;
+    const onNotes = document.getElementById("fpNotes");
+    if (onNotes) onNotes.addEventListener("change", e => { fpPlan.notes = e.target.value; fpMarkDirty(); });
+    return;
+  }
+  if (fpSel && fpSel.type === "room") {
+    const r = fpById(fpPlan.rooms, fpSel.id);
+    if (r) h += `<h4>Room</h4>
+      <label>Name</label><input id="fprN" value="${esc(r.name)}">
+      <div class="duo"><div><label>X ft</label><input id="fprX" type="number" step="0.5" value="${r.x}"></div>
+      <div><label>Y ft</label><input id="fprY" type="number" step="0.5" value="${r.y}"></div></div>
+      <div class="duo"><div><label>Width ft</label><input id="fprW" type="number" step="0.5" min="1" value="${r.w}"></div>
+      <div><label>Depth ft</label><input id="fprH" type="number" step="0.5" min="1" value="${r.h}"></div></div>
+      <div class="btns"><button id="fprWin">+ Window</button><button id="fprDoor">+ Door</button>
+      <button id="fprDel" class="bad">Delete room</button></div>`;
+  } else if (fpSel && fpSel.type === "opening") {
+    const o = fpById(fpPlan.openings, fpSel.id);
+    if (o) {
+      const r = fpById(fpPlan.rooms, o.roomId);
+      h += `<h4>${o.kind} <span style="font-weight:400">on ${esc(r ? r.name : "?")}</span></h4>
+      <label>Kind</label><select id="fpoK">${["window","door","fireplace"].map(k =>
+        `<option value="${k}"${o.kind === k ? " selected" : ""}>${k}</option>`).join("")}</select>
+      <label>Wall</label><select id="fpoS">${["N","S","E","W"].map(sd =>
+        `<option value="${sd}"${o.side === sd ? " selected" : ""}>${sd}</option>`).join("")}</select>
+      <div class="duo"><div><label>Offset ft</label><input id="fpoO" type="number" step="0.5" min="0" value="${o.off}"></div>
+      <div><label>Width ft</label><input id="fpoW" type="number" step="0.5" min="1" value="${o.w}"></div></div>
+      <div class="btns"><button id="fpoDel" class="bad">Delete</button></div>`;
+    }
+  } else if (fpSel && fpSel.type === "furniture") {
+    const f = fpById(fpPlan.furniture, fpSel.id);
+    // Width/Depth here are the piece's CANONICAL (un-rotated) dims - what is saved, and what
+    // Assets/Noir/Unity/FloorPlans.cs's own footprint math is built on - not what is currently
+    // drawn. Turned 90, the drawn box is h-across-by-w-down, so the hint says so rather than
+    // silently relabelling the fields (the cheapest honest option: the numbers stay canonical
+    // and editable, the drawing and the game agree on what they mean).
+    const turned = f && Math.round(f.rot || 0) % 180 !== 0;
+    if (f) h += `<h4>Furniture</h4>
+      <label>Name</label><input id="fpfN" list="fpfNames" value="${esc(f.name)}">
+      <datalist id="fpfNames">${fpPaletteOptionsHtml()}</datalist>
+      <label>Model</label><input id="fpfM" value="${esc(f.model || "")}">
+      <div class="duo"><div><label>X ft</label><input id="fpfX" type="number" step="0.5" value="${f.x}"></div>
+      <div><label>Y ft</label><input id="fpfY" type="number" step="0.5" value="${f.y}"></div></div>
+      <div class="duo"><div><label>Width ft</label><input id="fpfW" type="number" step="0.5" min="0.5" value="${f.w}"></div>
+      <div><label>Depth ft</label><input id="fpfH" type="number" step="0.5" min="0.5" value="${f.h}"></div></div>
+      ${turned ? `<div class="hint">rotated 90° - drawn ${f.h} × ${f.w} ft</div>` : ""}
+      <div class="btns"><button id="fpfRot" title="Turns the piece 90° - Width/Depth above stay canonical, the drawing swaps">Rotate</button>
+      <button id="fpfDel" class="bad">Delete</button></div>`;
+  } else {
+    h += `<h4>Nothing selected</h4><div class="hint">Click a room to select; drag its middle to
+      move it; <b>grab any wall and drag it</b> - a wall two rooms share moves both rooms.
+      Drag the orange corner to resize freely. Click a coloured wall segment for a window or
+      door and slide it along its wall. Double-click a room to rename it. Furniture drags the
+      same way a room does, and + Furniture adds a piece from the palette. Del deletes,
+      Ctrl+Z undoes.</div>`;
+  }
+  h += `<label style="margin-top:12px">Notes / answers</label><textarea id="fpNotes">${esc(fpPlan.notes || "")}</textarea>
+  <div class="hint">Save writes Content/floorplans/${fpWho ? fpWho.pid + "-" + fpWho.idx : "?"}.json
+  through the server. Export SVG/PNG makes the to-scale reference for Designer. Nothing autosaves.</div>`;
+  side.innerHTML = h;
+
+  const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+  if (fpSel && fpSel.type === "room") {
+    const r = fpById(fpPlan.rooms, fpSel.id);
+    on("fprN", "change", e => { fpPushUndo(); r.name = e.target.value; fpMarkDirty(); fpRender(); });
+    [["fprX","x"],["fprY","y"],["fprW","w"],["fprH","h"]].forEach(([id, k]) =>
+      on(id, "change", e => { fpPushUndo(); r[k] = Math.max(k === "w" || k === "h" ? 1 : 0, parseFloat(e.target.value) || 0);
+        fpClampRoom(r); fpMarkDirty(); fpRender(); }));
+    on("fprWin", "click", () => fpAddOpening(r, "window"));
+    on("fprDoor", "click", () => fpAddOpening(r, "door"));
+    on("fprDel", "click", () => { fpPushUndo();
+      fpPlan.openings = fpPlan.openings.filter(o => o.roomId !== r.id);
+      fpPlan.rooms = fpPlan.rooms.filter(x => x.id !== r.id); fpSel = null; fpMarkDirty(); fpRender(); });
+  }
+  if (fpSel && fpSel.type === "opening") {
+    const o = fpById(fpPlan.openings, fpSel.id);
+    on("fpoK", "change", e => { fpPushUndo(); o.kind = e.target.value; fpMarkDirty(); fpRender(); });
+    on("fpoS", "change", e => { fpPushUndo(); o.side = e.target.value; fpClampOpening(o); fpMarkDirty(); fpRender(); });
+    on("fpoO", "change", e => { fpPushUndo(); o.off = Math.max(0, parseFloat(e.target.value) || 0); fpClampOpening(o); fpMarkDirty(); fpRender(); });
+    on("fpoW", "change", e => { fpPushUndo(); o.w = Math.max(1, parseFloat(e.target.value) || 1); fpClampOpening(o); fpMarkDirty(); fpRender(); });
+    on("fpoDel", "click", () => { fpPushUndo(); fpPlan.openings = fpPlan.openings.filter(x => x.id !== o.id);
+      fpSel = null; fpMarkDirty(); fpRender(); });
+  }
+  if (fpSel && fpSel.type === "furniture") {
+    const f = fpById(fpPlan.furniture, fpSel.id);
+    // Picking a name that matches one of the owner's OWN pieces exactly (typed or chosen off
+    // the datalist) pulls its model in behind it - free text otherwise, and the model box
+    // stays editable either way, per this task's brief.
+    on("fpfN", "change", e => { fpPushUndo(); f.name = e.target.value;
+      const y = FURN_PALETTE.yours.find(x => x.name === f.name);
+      if (y) f.model = y.model;
+      fpMarkDirty(); fpRender(); });
+    on("fpfM", "change", e => { fpPushUndo(); f.model = e.target.value; fpMarkDirty(); fpRender(); });
+    [["fpfX", "x"], ["fpfY", "y"], ["fpfW", "w"], ["fpfH", "h"]].forEach(([id, k]) =>
+      on(id, "change", e => { fpPushUndo();
+        f[k] = Math.max(k === "w" || k === "h" ? 0.5 : 0, parseFloat(e.target.value) || 0);
+        fpClampFurniture(f); fpMarkDirty(); fpRender(); }));
+    on("fpfRot", "click", () => { fpPushUndo();
+      // rot toggles ALONE - w/h are the canonical dims Assets/Noir/Unity/FloorPlans.cs builds
+      // the footprint from and must not change here, or its own rot%180 swap (FloorPlans.For,
+      // lines 293-296) doubles this one and cancels the rotation out in the built town. See
+      // fpFurnExtent's own comment for the full account.
+      f.rot = Math.round(f.rot || 0) % 360 === 90 ? 0 : 90;
+      fpClampFurniture(f); fpMarkDirty(); fpRender(); });
+    on("fpfDel", "click", () => { fpPushUndo();
+      fpPlan.furniture = fpPlan.furniture.filter(x => x.id !== f.id); fpSel = null; fpMarkDirty(); fpRender(); });
+  }
+  on("fpNotes", "change", e => { fpPlan.notes = e.target.value; fpMarkDirty(); });
+}
+
+/// The name field's dropdown: the owner's own catalogue first (so a piece he has actually
+/// modelled is the easy pick), the pack's generic kinds after - grouped, per this task's
+/// brief, but the input still takes free text either way (it is a <input list>, not a
+/// <select>) so a name the palette has never heard of is not a wrong answer, just an unmatched
+/// one (fpFurnKind and the model auto-fill both fall through cleanly when nothing matches).
+function fpPaletteOptionsHtml() {
+  let h = "";
+  if (FURN_PALETTE.yours.length)
+    h += `<optgroup label="Yours">` + FURN_PALETTE.yours.map(y =>
+      `<option value="${esc(y.name)}">`).join("") + `</optgroup>`;
+  if (FURN_PALETTE.pack.length)
+    h += `<optgroup label="Pack">` + FURN_PALETTE.pack.map(k =>
+      `<option value="${esc(k.kind)}">`).join("") + `</optgroup>`;
+  if (!FURN_PALETTE.yours.length && !FURN_PALETTE.pack.length)
+    h += FP_PLAIN_KINDS.map(k => `<option value="${esc(k)}">`).join("");
+  return h;
+}
+
+/// The "+ Furniture" popup's own contents: the real palette when the export has run
+/// (FURN_PALETTE.when is set), grouped the same yours-first way as the name dropdown above;
+/// the plain kind list otherwise, every one of it at the brief's stated 3x2 ft default.
+function fpFurnPickerHtml() {
+  if (!FURN_PALETTE.when)
+    return `<div class="g">Kinds</div>` + FP_PLAIN_KINDS.map(k =>
+      `<button data-fppick="plain:${esc(k)}">${esc(k)} <span class="sz">3 × 2 ft</span></button>`).join("");
+  let h = "";
+  if (FURN_PALETTE.yours.length)
+    h += `<div class="g">Yours</div>` + FURN_PALETTE.yours.map((y, i) =>
+      `<button data-fppick="yours:${i}">${esc(y.name)} <span class="sz">${y.w_ft} × ${y.d_ft} ft</span></button>`).join("");
+  if (FURN_PALETTE.pack.length)
+    h += `<div class="g">Pack</div>` + FURN_PALETTE.pack.map((k, i) =>
+      `<button data-fppick="pack:${i}">${esc(k.kind)} <span class="sz">${k.w_ft} × ${k.d_ft} ft</span></button>`).join("");
+  return h || `<div class="g">Kinds</div>` + FP_PLAIN_KINDS.map(k =>
+    `<button data-fppick="plain:${esc(k)}">${esc(k)} <span class="sz">3 × 2 ft</span></button>`).join("");
+}
+
+function fpAddOpening(room, kind) {
+  fpPushUndo();
+  const o = { id: fpUid("o"), roomId: room.id, side: "S", off: 1, w: kind === "door" ? 3 : 4, kind };
+  fpPlan.openings.push(o); fpSel = { type: "opening", id: o.id }; fpMarkDirty(); fpRender();
+}
+function fpClampRoom(r) {
+  r.w = Math.min(r.w, fpPlan.shell.w); r.h = Math.min(r.h, fpPlan.shell.d);
+  r.x = Math.min(Math.max(0, r.x), fpPlan.shell.w - r.w);
+  r.y = Math.min(Math.max(0, r.y), fpPlan.shell.d - r.h);
+  fpPlan.openings.filter(o => o.roomId === r.id).forEach(fpClampOpening);
+}
+function fpClampOpening(o) {
+  const r = fpById(fpPlan.rooms, o.roomId); if (!r) return;
+  const len = fpSideLen(r, o.side);
+  o.w = Math.min(o.w, len);
+  o.off = Math.min(Math.max(0, o.off), len - o.w);
+}
+/// A piece of furniture answers to the shell only - not to any room's walls, the same as a
+/// room answers only to the shell and not to its neighbours (fpClampRoom's own contract).
+function fpClampFurniture(f) {
+  f.w = Math.min(Math.max(0.5, f.w), fpPlan.shell.w);
+  f.h = Math.min(Math.max(0.5, f.h), fpPlan.shell.d);
+  // Position clamps against the VISUAL extent (fpFurnExtent), not the stored canonical w/h -
+  // a piece rotated 90 occupies f.h feet across and f.w feet down, and it is that occupied
+  // box, not the stored one, that must stay inside the shell. Math.max(0, ...) on the far
+  // side guards a piece whose rotated extent is itself bigger than the shell on that axis
+  // (e.g. a wide piece turned sideways into a narrow room) from going negative.
+  const ext = fpFurnExtent(f);
+  f.x = Math.max(0, Math.min(f.x, Math.max(0, fpPlan.shell.w - ext.w)));
+  f.y = Math.max(0, Math.min(f.y, Math.max(0, fpPlan.shell.d - ext.h)));
+}
+function fpFt(e) {
+  const rect = document.getElementById("fpCv").getBoundingClientRect(), S = fpScale();
+  return { x: (e.clientX - rect.left - fpM) / S, y: (e.clientY - rect.top - fpM) / S };
+}
+
+/// Everyone standing on this wall. Grab room r's edge and the answer is every room with an
+/// edge on the same line whose span overlaps the grabbed room's - so the kitchen/living wall
+/// moves as ONE wall, while the hall's continuation of the same line, which does not touch
+/// the grabbed stretch, stays put. Each party remembers WHICH of its edges is on the wall.
+function fpWallParties(r, side) {
+  const vert = side === "E" || side === "W";                    // a vertical wall moves in x
+  const pos = side === "E" ? r.x + r.w : side === "W" ? r.x
+            : side === "S" ? r.y + r.h : r.y;
+  const lo0 = vert ? r.y : r.x, hi0 = vert ? r.y + r.h : r.x + r.w;
+  const out = [];
+  for (const o of fpPlan.rooms) {
+    const olo = vert ? o.y : o.x, ohi = vert ? o.y + o.h : o.x + o.w;
+    if (Math.min(hi0, ohi) - Math.max(lo0, olo) < 0.5 && o !== r) continue;   // no shared stretch
+    // WITHIN A WALL'S THICKNESS IS THE SAME WALL. Rooms drawn from a real model are interior
+    // rectangles, so the two faces of one stud wall sit half a foot or so apart and are never
+    // exactly coincident. Each party keeps its own offset `d` from the grabbed face, so the
+    // wall keeps its thickness while it travels instead of collapsing to a shared line.
+    const near = (a, b) => Math.abs(a - b) < 0.85;
+    if (vert) {
+      if (near(o.x, pos)) out.push({ o, s: "W", d: o.x - pos });
+      if (near(o.x + o.w, pos)) out.push({ o, s: "E", d: o.x + o.w - pos });
+    } else {
+      if (near(o.y, pos)) out.push({ o, s: "N", d: o.y - pos });
+      if (near(o.y + o.h, pos)) out.push({ o, s: "S", d: o.y + o.h - pos });
+    }
+  }
+  // The wall can only travel as far as its thinnest party allows: the range is decided once
+  // here, not re-litigated mid-drag.
+  let lo = 0, hi = vert ? fpPlan.shell.w : fpPlan.shell.d;
+  for (const p of out) {
+    if (p.s === "E") lo = Math.max(lo, p.o.x + 1 - p.d);
+    if (p.s === "W") hi = Math.min(hi, p.o.x + p.o.w - 1 - p.d);
+    if (p.s === "S") lo = Math.max(lo, p.o.y + 1 - p.d);
+    if (p.s === "N") hi = Math.min(hi, p.o.y + p.o.h - 1 - p.d);
+    lo = Math.max(lo, -p.d);
+    hi = Math.min(hi, (vert ? fpPlan.shell.w : fpPlan.shell.d) - p.d);
+  }
+  return { vert, parties: out, lo, hi };
+}
+
+function fpMoveWall(w, pos) {
+  pos = Math.min(Math.max(fpSnap(pos), w.lo), w.hi);
+  for (const p of w.parties) {
+    const o = p.o, at = pos + p.d;
+    if (p.s === "E") o.w = at - o.x;
+    if (p.s === "W") { o.w = o.x + o.w - at; o.x = at; }
+    if (p.s === "S") o.h = at - o.y;
+    if (p.s === "N") { o.h = o.y + o.h - at; o.y = at; }
+    fpPlan.openings.filter(x => x.roomId === o.id).forEach(fpClampOpening);
+  }
+  return pos;
+}
+function fpWire(svg) {
+  svg.addEventListener("pointerdown", e => {
+    const t = e.target, p = fpFt(e);
+    // OUTLINE MODE IS EXCLUSIVE: only a vertex may be grabbed, and every other click - even
+    // one landing on a room or a wall drawn underneath - just deselects rather than falling
+    // through to that room's own drag, so the two editors can never fight over the same click.
+    if (fpOutlineOn) {
+      if (t.dataset.fpvert !== undefined) {
+        const i = +t.dataset.fpvert;
+        fpOutlineSel = i;
+        fpPushUndo();
+        fpDrag = { mode: "vert", i, start: p, x0: fpOutlineDraft[i].x, y0: fpOutlineDraft[i].y, moved: false };
+        svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+      }
+      fpOutlineSel = null; fpRender(); return;
+    }
+    if (t.dataset.fphandle) {
+      fpPushUndo(); fpDrag = { mode: "resize", r: fpById(fpPlan.rooms, t.dataset.fphandle) };
+      svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+    }
+    if (t.dataset.fpwall) {
+      const [rid, side] = t.dataset.fpwall.split(":");
+      const r = fpById(fpPlan.rooms, rid);
+      fpSel = { type: "room", id: r.id };
+      fpPushUndo(); fpDrag = { mode: "wall", wall: fpWallParties(r, side), moved: false };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+    }
+    if (t.dataset.fpopen) {
+      const o = fpById(fpPlan.openings, t.dataset.fpopen);
+      fpSel = { type: "opening", id: o.id };
+      fpPushUndo(); fpDrag = { mode: "opening", o, start: p, off0: o.off };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+    }
+    if (t.dataset.fproom) {
+      const r = fpById(fpPlan.rooms, t.dataset.fproom);
+      fpSel = { type: "room", id: r.id };
+      fpPushUndo(); fpDrag = { mode: "move", r, start: p, x0: r.x, y0: r.y, moved: false };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+    }
+    if (t.dataset.fpfurn) {
+      const f = fpById(fpPlan.furniture, t.dataset.fpfurn);
+      fpSel = { type: "furniture", id: f.id };
+      fpPushUndo(); fpDrag = { mode: "furn", f, start: p, x0: f.x, y0: f.y, moved: false };
+      svg.setPointerCapture(e.pointerId); fpRender(); e.preventDefault(); return;
+    }
+    fpSel = null; fpRender();
+  });
+  svg.addEventListener("pointermove", e => {
+    if (!fpDrag) return;
+    const p = fpFt(e);
+    if (fpDrag.mode === "move") {
+      const nx = fpSnap(fpDrag.x0 + p.x - fpDrag.start.x), ny = fpSnap(fpDrag.y0 + p.y - fpDrag.start.y);
+      if (nx !== fpDrag.r.x || ny !== fpDrag.r.y) { fpDrag.r.x = nx; fpDrag.r.y = ny; fpClampRoom(fpDrag.r);
+        fpDrag.moved = true; fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "furn") {
+      const nx = fpSnap(fpDrag.x0 + p.x - fpDrag.start.x), ny = fpSnap(fpDrag.y0 + p.y - fpDrag.start.y);
+      if (nx !== fpDrag.f.x || ny !== fpDrag.f.y) { fpDrag.f.x = nx; fpDrag.f.y = ny; fpClampFurniture(fpDrag.f);
+        fpDrag.moved = true; fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "resize") {
+      const nw = fpSnap(Math.max(1, p.x - fpDrag.r.x)), nh = fpSnap(Math.max(1, p.y - fpDrag.r.y));
+      if (nw !== fpDrag.r.w || nh !== fpDrag.r.h) { fpDrag.r.w = nw; fpDrag.r.h = nh; fpClampRoom(fpDrag.r);
+        fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "wall") {
+      const w = fpDrag.wall;
+      const before = w.last;
+      const now = fpMoveWall(w, w.vert ? p.x : p.y);
+      if (now !== before) { w.last = now; fpDrag.moved = true; fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "opening") {
+      const o = fpDrag.o, horiz = (o.side === "N" || o.side === "S");
+      const no = fpSnap(fpDrag.off0 + (horiz ? p.x - fpDrag.start.x : p.y - fpDrag.start.y));
+      if (no !== o.off) { o.off = no; fpClampOpening(o); fpMarkDirty(); fpRender(); }
+    } else if (fpDrag.mode === "vert") {
+      const nx = fpSnap(fpDrag.x0 + p.x - fpDrag.start.x), ny = fpSnap(fpDrag.y0 + p.y - fpDrag.start.y);
+      const cx = Math.min(Math.max(0, nx), fpPlan.shell.w), cy = Math.min(Math.max(0, ny), fpPlan.shell.d);
+      const v = fpOutlineDraft[fpDrag.i];
+      if (cx !== v.x || cy !== v.y) { v.x = cx; v.y = cy; fpDrag.moved = true; fpRender(); }
+    }
+  });
+  const end = () => { if (!fpDrag) return;
+    if ((fpDrag.mode === "move" || fpDrag.mode === "wall" || fpDrag.mode === "furn") && !fpDrag.moved) fpUndoStack.pop();
+    if (fpDrag.mode === "vert") {
+      // The outline is committed to fpPlan only here, at drag END, and only when a vertex
+      // actually moved - a click that selects a vertex and releases without dragging pops its
+      // own undo entry straight back off, same as every other drag mode above.
+      if (fpDrag.moved) fpCommitOutline(); else fpUndoStack.pop();
+      fpRender();
+    }
+    fpDrag = null; };
+  svg.addEventListener("pointerup", end);
+  svg.addEventListener("pointercancel", end);
+  svg.addEventListener("dblclick", e => {
+    if (fpOutlineOn) {
+      // Double-click an edge inserts a vertex at its midpoint - the same "grab a wall
+      // anywhere along its run" idea the room editor already uses, just for a boundary that
+      // has no rooms of its own to fit into.
+      const t = e.target;
+      if (t.dataset.fpedge !== undefined) {
+        const i = +t.dataset.fpedge, n = fpOutlineDraft.length;
+        const a = fpOutlineDraft[i], b2 = fpOutlineDraft[(i + 1) % n];
+        fpPushUndo();
+        fpOutlineDraft.splice(i + 1, 0, { x: fpSnap((a.x + b2.x) / 2), y: fpSnap((a.y + b2.y) / 2) });
+        fpOutlineSel = i + 1;
+        fpCommitOutline();
+        fpRender();
+      }
+      return;
+    }
+    // Rename in place: select the room and put the caret straight in its name box - not a
+    // prompt(), which a dialog-suppressing browser turns into a rename that silently never
+    // opens (the same failure show() documents for confirm()).
+    const rid = e.target.dataset.fproom || e.target.dataset.fpwall && e.target.dataset.fpwall.split(":")[0];
+    if (rid) {
+      fpSel = { type: "room", id: rid };
+      fpRender();
+      const inp = document.getElementById("fprN");
+      if (inp) { inp.focus(); inp.select(); }
+    }
+  });
+}
+
+async function openFloorPlan(pid, idx) {
+  const b = DATA.buildings.find(x => x.p === pid && x.i === idx);
+  fpWho = { pid, idx, addr: (b && b.addr) || ("lot " + pid) };
+  fpPlan = null; fpSel = null; fpUndoStack = []; fpClearDirty(); fpGameDerived = false;
+  fpOutlineOn = false; fpOutlineDraft = null; fpOutlineSel = null;
+  const gbUnits = INTERIORS.get(pid + "|" + idx);
+  fpUnits = (gbUnits && +gbUnits.units) || 1;
+  document.getElementById("fpOutlineB").classList.remove("on");
+  if (LIVE) {
+    try {
+      const r = await fetch(`/__floorplan?parcel=${pid}&index=${idx}`, { cache: "no-store" });
+      const j = await r.json();
+      if (j.exists) fpPlan = j.plan;                 // (a) the owner's own authored plan
+    } catch (e) { /* fall through */ }
+  }
+  if (!fpPlan) {
+    const gb = INTERIORS.get(pid + "|" + idx);
+    if (gb && gb.bounds) {                            // (b) what the game actually built
+      fpPlan = fpPlanFromInteriors(gb, fpWho.addr);
+      // Guard against half-foot snap overshoot - furniture the same way as rooms, or a piece
+      // the game stamped hard against the far wall arrives half a foot outside the shell and
+      // stays there until the owner happens to drag it.
+      fpPlan.rooms.forEach(fpClampRoom);
+      fpPlan.furniture.forEach(fpClampFurniture);
+      fpGameDerived = true;
+    }
+  }
+  if (!fpPlan) {                                      // (c) no plan, no build - measured shell
+    const shell = b ? fpShellFromRing(b.r) : { w: 30, d: 24 };
+    fpPlan = { name: fpWho.addr + " - main floor", shell, rooms: [], openings: [], furniture: [], notes: "" };
+  }
+  // AN AUTHORED PLAN FROM BEFORE THIS TASK CARRIES NO furniture ARRAY AT ALL - this is the
+  // one place every branch above funnels through, so it is the one place that has to cover
+  // that gap rather than three copies of the same guard.
+  if (!fpPlan.furniture) fpPlan.furniture = [];
+  await loadPalette();
+  document.getElementById("fpTitle").textContent =
+    fpWho.addr.toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) + ` — lot ${pid}, building ${idx}`;
+  document.getElementById("fpBanner").style.display = fpGameDerived ? "block" : "none";
+  document.getElementById("fpSave").disabled = !LIVE;
+  document.getElementById("fpSave").title = LIVE ? "" : "open through serve-viewer.py to save";
+  document.getElementById("fpFPick").classList.remove("on");
+  document.getElementById("fpOv").classList.add("on");
+  fpRender();
+}
+
+function fpDownload(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+document.getElementById("fpSave").onclick = async () => {
+  const btn = document.getElementById("fpSave");
+  btn.disabled = true;
+  // A SAVED PLAN IS NOT THE GAME'S ANY MORE. It is authored now - the next build consumes this
+  // file and stops generating - so the amber banner's "close without saving and the game keeps
+  // generating it" stops being true the moment this succeeds, and the name it was prefilled
+  // with stops being true one moment earlier: renamed BEFORE the post so the file on disk
+  // never carries "as the game builds it", and put back if the post fails.
+  const wasDerived = fpGameDerived, oldName = fpPlan.name;
+  if (wasDerived && typeof fpPlan.name === "string")
+    fpPlan.name = fpPlan.name.replace(/ - as the game builds it$/, " - main floor");
+  try {
+    const r = await fetch("/__floorplan", { method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parcel: fpWho.pid, index: fpWho.idx, plan: fpPlan }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "save refused");
+    PLANS.clear(); (j.plans || []).forEach(k => PLANS.add(k));
+    fpClearDirty();
+    if (wasDerived) {
+      fpGameDerived = false;
+      document.getElementById("fpBanner").style.display = "none";
+      fpRender();
+    }
+  } catch (e) {
+    fpPlan.name = oldName;
+    document.getElementById("fpDirty").textContent = "SAVE FAILED: " + e.message;
+  }
+  btn.disabled = false;
+};
+document.getElementById("fpSvgB").onclick = () =>
+  fpDownload(new Blob([fpSvgString(false)], { type: "image/svg+xml" }),
+    `${fpWho.pid}-${fpWho.idx}-floorplan.svg`);
+document.getElementById("fpPngB").onclick = () => {
+  const url = URL.createObjectURL(new Blob([fpSvgString(false)], { type: "image/svg+xml" }));
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = img.width * 3; c.height = img.height * 3;
+    const g = c.getContext("2d"); g.scale(3, 3); g.drawImage(img, 0, 0);
+    c.toBlob(b => { URL.revokeObjectURL(url); fpDownload(b, `${fpWho.pid}-${fpWho.idx}-floorplan.png`); }, "image/png");
+  };
+  img.src = url;
+};
+document.getElementById("fpDims").onclick = async () => {
+  const L = [`${fpPlan.name} - shell ${fpPlan.shell.w} x ${fpPlan.shell.d} ft`];
+  fpPlan.rooms.forEach(r => L.push(`${r.name}: ${r.w} x ${r.h} ft, at (${r.x}, ${r.y}) from the NW corner`));
+  fpPlan.openings.forEach(o => { const r = fpById(fpPlan.rooms, o.roomId);
+    L.push(`${o.kind} on ${r ? r.name : "?"} ${o.side} wall: ${o.w} ft wide, ${o.off} ft in`); });
+  try { await navigator.clipboard.writeText(L.join("\n")); } catch (e) { prompt("Copy:", L.join("\n")); }
+};
+document.getElementById("fpRoomB").onclick = () => {
+  fpPushUndo();
+  const r = { id: fpUid("r"), name: "New room", x: 1, y: 1, w: 10, h: 10 };
+  fpClampRoom(r); fpPlan.rooms.push(r); fpSel = { type: "room", id: r.id }; fpMarkDirty(); fpRender();
+};
+document.getElementById("fpFurnB").onclick = e => {
+  const pick = document.getElementById("fpFPick");
+  pick.innerHTML = fpFurnPickerHtml();
+  pick.classList.toggle("on");
+  e.stopPropagation();
+};
+// One picker for the whole box: place the chosen piece at (1,1) with the palette's own
+// footprint, per this task's brief - the owner nudges it into position afterward, same as a
+// fresh room starts at (1,1) too.
+document.getElementById("fpFPick").addEventListener("click", e => {
+  const btn = e.target.closest("[data-fppick]");
+  if (!btn) return;
+  const [kind, ref] = btn.dataset.fppick.split(":");
+  let name, model = "", w = 3, h = 2;
+  if (kind === "yours") { const y = FURN_PALETTE.yours[+ref]; name = y.name; model = y.model; w = y.w_ft; h = y.d_ft; }
+  else if (kind === "pack") { const k = FURN_PALETTE.pack[+ref]; name = k.kind; w = k.w_ft; h = k.d_ft; }
+  else { name = ref; }
+  fpPushUndo();
+  const f = { id: fpUid("f"), name, model, x: 1, y: 1, w, h, rot: 0 };
+  fpClampFurniture(f);
+  fpPlan.furniture.push(f);
+  fpSel = { type: "furniture", id: f.id };
+  document.getElementById("fpFPick").classList.remove("on");
+  fpMarkDirty(); fpRender();
+});
+// Click anywhere outside the popup (or its own button, which toggles it itself) closes it.
+document.addEventListener("click", e => {
+  const pick = document.getElementById("fpFPick");
+  if (pick.classList.contains("on") && !pick.contains(e.target) && e.target.id !== "fpFurnB")
+    pick.classList.remove("on");
+});
+document.getElementById("fpUndoB").onclick = fpUndo;
+document.getElementById("fpOutlineB").onclick = fpToggleOutline;
+document.getElementById("fpShW").onchange = e => { fpPushUndo();
+  fpPlan.shell.w = Math.max(6, parseFloat(e.target.value) || fpPlan.shell.w);
+  fpPlan.rooms.forEach(fpClampRoom); fpMarkDirty(); fpRender(); };
+document.getElementById("fpShD").onchange = e => { fpPushUndo();
+  fpPlan.shell.d = Math.max(6, parseFloat(e.target.value) || fpPlan.shell.d);
+  fpPlan.rooms.forEach(fpClampRoom); fpMarkDirty(); fpRender(); };
+document.getElementById("fpClose").onclick = () => {
+  if (fpDirtyF && !confirm("Unsaved floor-plan changes - close anyway?")) return;
+  document.getElementById("fpOv").classList.remove("on");
+  if (typeof sel === "number" && sel >= 0) show(sel);   // re-render the panel so the ✓ badge is current
+};
+document.addEventListener("keydown", e => {
+  if (!document.getElementById("fpOv").classList.contains("on")) return;
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+  if (fpOutlineOn && e.key === "Delete" && fpOutlineSel !== null) {
+    // MIN 3 STAYS - a ring under 3 points is not a shape, and OutlineFromPlan/SelfIntersects
+    // on the FloorPlans.cs side would refuse it anyway; refusing the deletion here means the
+    // owner sees why immediately instead of losing the edit at save time.
+    if (fpOutlineDraft.length > 3) {
+      fpPushUndo();
+      fpOutlineDraft.splice(fpOutlineSel, 1);
+      fpOutlineSel = null;
+      fpCommitOutline();
+      fpRender();
+    }
+    return;
+  }
+  if (e.key === "Delete" && fpSel) {
+    fpPushUndo();
+    if (fpSel.type === "room") { fpPlan.openings = fpPlan.openings.filter(o => o.roomId !== fpSel.id);
+      fpPlan.rooms = fpPlan.rooms.filter(r => r.id !== fpSel.id); }
+    else if (fpSel.type === "furniture") fpPlan.furniture = fpPlan.furniture.filter(f => f.id !== fpSel.id);
+    else fpPlan.openings = fpPlan.openings.filter(o => o.id !== fpSel.id);
+    fpSel = null; fpMarkDirty(); fpRender();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); fpUndo(); }
+});
+addEventListener("beforeunload", e => {
+  if (!fpDirtyF) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+// ===================================================================================
+// THE HOUSE IN A FRAME. Pick a lot and every building on it gets a small 3D window in
+// the right-hand panel: the mesh the editor exported if there is one, the building's
+// own measured footprint extruded into a plain shell if there is not, and standing
+// inside either of them the rooms and furniture the game last reported building.
+//
+// HAND-ROLLED WebGL, NO LIBRARY, for the same reason the floor-plan editor above draws
+// its own SVG: this page has to keep opening straight off the disk with no server and
+// no network behind it. Nothing here is loaded, generated or fetched from anywhere but
+// the local server, and with no server at all it degrades to the fallback shell.
+//
+// THE FRAME IS BUILDING-LOCAL METRES, Y UP, ORIGIN AT THE NW CORNER OF THE BUILDING'S
+// BOUNDS. Noir.Editor.TownExport writes the OBJ in exactly that frame, and it undoes
+// Space3D's Z negation on the way out so the OBJ's local Z runs the way the tile grid's
+// Y does - which is the way InteriorsReport already reports every room and every stick
+// of furniture. So a room at tile (x,y) stands at local (x - bounds.x, 0, y - bounds.y)
+// and needs no second sign flip. Getting that one negation wrong puts the kitchen
+// outside the house, and it looks like a plausible house either way.
+// ===================================================================================
+
+const F3_M2FT = 3.28084;
+const F3_WALL_H = 3.0;   // metres: the fallback shell's single storey, eaves height
+const F3_ROOF_Y = 2.6;   // metres: the roof-off cut. Above this and nothing but roof stands
+const F3_MAX = 4;        // open frames at once - see f3OpenCard on why a browser cares
+
+document.body.insertAdjacentHTML("beforeend", `
+<style>
+  .f3 { margin-top: 2px; }
+  .f3 .f3-body { display: none; }
+  .f3.on .f3-body { display: block; }
+  .f3-cv { width: 100%; height: 190px; display: block; margin-top: 7px; border-radius: 4px;
+           border: 1px solid var(--rule); background: var(--paper); touch-action: none; cursor: grab; }
+  .f3-cv.turning { cursor: grabbing; }
+  .f3-bar { display: flex; align-items: center; gap: 9px; margin-top: 5px;
+            font-size: 11px; color: var(--muted); }
+  .f3-bar label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .f3-bar input { accent-color: var(--ink); margin: 0; width: 13px; height: 13px; }
+  .f3-note { margin: 5px 0 0; }
+  .f3-leg { margin-top: 6px; font-size: 11px; line-height: 1.55; }
+  .f3-leg .g { color: var(--muted); font-size: 10px; letter-spacing: .06em;
+               text-transform: uppercase; margin-top: 5px; }
+  .f3-leg .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+                margin-right: 6px; vertical-align: -1px; border: 1px solid var(--rule); }
+  .f3-leg .sz { color: var(--muted); font-family: ui-monospace, Consolas, Menlo, monospace; }
+</style>`);
+
+// ---- small vector and matrix arithmetic, column-major the way WebGL wants it ----------
+const f3Cross = (a, b) => [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+function f3Norm(v) {
+  const l = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0]/l, v[1]/l, v[2]/l];
+}
+function f3Mul(a, b) {                       // a * b, both column-major
+  const o = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    let s = 0;
+    for (let k = 0; k < 4; k++) s += a[k*4 + r] * b[c*4 + k];
+    o[c*4 + r] = s;
+  }
+  return o;
+}
+function f3Perspective(fovy, aspect, near, far) {
+  const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+  return new Float32Array([f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0]);
+}
+function f3LookAt(eye, at, up) {
+  const z = f3Norm([eye[0]-at[0], eye[1]-at[1], eye[2]-at[2]]);
+  const x = f3Norm(f3Cross(up, z));
+  const y = f3Cross(z, x);
+  return new Float32Array([
+    x[0], y[0], z[0], 0,
+    x[1], y[1], z[1], 0,
+    x[2], y[2], z[2], 0,
+    -(x[0]*eye[0] + x[1]*eye[1] + x[2]*eye[2]),
+    -(y[0]*eye[0] + y[1]*eye[1] + y[2]*eye[2]),
+    -(z[0]*eye[0] + z[1]*eye[1] + z[2]*eye[2]), 1]);
+}
+
+// ---- one growing triangle soup -------------------------------------------------------
+// Position, normal and colour per vertex, three vertices per triangle, no index buffer.
+// Un-indexed on purpose: the roof-off toggle below sorts WHOLE TRIANGLES, and sorting is
+// trivial when a triangle is nine consecutive numbers and shares nothing with its
+// neighbours.
+function f3Soup() {
+  const s = { pos: [], nrm: [], col: [] };
+  s.tri = (a, b, c, col, na, nb, nc) => {
+    if (!na) na = nb = nc = f3Face(a, b, c);
+    const v = [a, b, c], n = [na, nb, nc];
+    for (let k = 0; k < 3; k++) {
+      s.pos.push(v[k][0], v[k][1], v[k][2]);
+      s.nrm.push(n[k][0], n[k][1], n[k][2]);
+      s.col.push(col[0], col[1], col[2]);
+    }
+  };
+  return s;
+}
+const f3Face = (a, b, c) => f3Norm(f3Cross(
+  [b[0]-a[0], b[1]-a[1], b[2]-a[2]], [c[0]-a[0], c[1]-a[1], c[2]-a[2]]));
+
+/// An axis-aligned box from its NW-bottom corner, in the local metres everything here
+/// uses: (x,z) is the tile-grid corner, y is up off the ground. Every room plate and
+/// every stick of furniture is one of these.
+function f3Box(soup, x, y, z, w, h, d, col) {
+  const X = x + w, Y = y + h, Z = z + d;
+  const quad = (a, b, c, e, n) => { soup.tri(a, b, c, col, n, n, n); soup.tri(a, c, e, col, n, n, n); };
+  quad([x,y,z], [X,y,z], [X,y,Z], [x,y,Z], [0,-1,0]);
+  quad([x,Y,z], [x,Y,Z], [X,Y,Z], [X,Y,z], [0,1,0]);
+  quad([x,y,z], [x,Y,z], [X,Y,z], [X,y,z], [0,0,-1]);
+  quad([x,y,Z], [X,y,Z], [X,Y,Z], [x,Y,Z], [0,0,1]);
+  quad([x,y,z], [x,y,Z], [x,Y,Z], [x,Y,z], [-1,0,0]);
+  quad([X,y,z], [X,Y,z], [X,Y,Z], [X,y,Z], [1,0,0]);
+}
+
+/// Ear clipping. A Rossville footprint is an L or a T as often as it is a rectangle, and
+/// a triangle fan turns those inside out - the porch comes out filled and the notch does
+/// not. O(n^2) over rings of a dozen points, which costs nothing here. A ring that
+/// crosses itself stops early with what it has rather than spinning: a half-drawn floor
+/// is a better answer than a hung tab.
+function f3EarClip(pts) {
+  const n = pts.length;
+  if (n < 3) return [];
+  const idx = [...Array(n).keys()];
+  let area2 = 0;
+  for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i+1) % n]; area2 += a[0]*b[1] - b[0]*a[1]; }
+  if (area2 < 0) idx.reverse();          // one winding, so "is this corner convex" has one answer
+  const out = [];
+  let guard = 0;
+  while (idx.length > 3 && guard++ < 4000) {
+    let clipped = false;
+    for (let k = 0; k < idx.length; k++) {
+      const ia = idx[(k + idx.length - 1) % idx.length], ib = idx[k], ic = idx[(k+1) % idx.length];
+      const a = pts[ia], b = pts[ib], c = pts[ic];
+      if ((b[0]-a[0]) * (c[1]-a[1]) - (b[1]-a[1]) * (c[0]-a[0]) <= 0) continue;   // reflex: no ear
+      let inside = false;
+      for (const io of idx) {
+        if (io === ia || io === ib || io === ic) continue;
+        if (f3InTri(pts[io], a, b, c)) { inside = true; break; }
+      }
+      if (inside) continue;
+      out.push([ia, ib, ic]);
+      idx.splice(k, 1);
+      clipped = true;
+      break;
+    }
+    if (!clipped) break;
+  }
+  if (idx.length === 3) out.push([idx[0], idx[1], idx[2]]);
+  return out;
+}
+function f3InTri(p, a, b, c) {
+  const d1 = (p[0]-b[0]) * (a[1]-b[1]) - (a[0]-b[0]) * (p[1]-b[1]);
+  const d2 = (p[0]-c[0]) * (b[1]-c[1]) - (b[0]-c[0]) * (p[1]-c[1]);
+  const d3 = (p[0]-a[0]) * (c[1]-a[1]) - (c[0]-a[0]) * (p[1]-a[1]);
+  return !(((d1 < 0) || (d2 < 0) || (d3 < 0)) && ((d1 > 0) || (d2 > 0) || (d3 > 0)));
+}
+
+/// THE FALLBACK HOUSE. Most of Rossville has no exported mesh - only the owner's own
+/// models and the landmarks are ever written to the cache - so when /preview 404s the
+/// frame extrudes the building's OWN measured footprint rather than showing bare boxes
+/// on nothing: floor plate, walls to 3 m, flat cap, drawn translucent so the rooms read
+/// through it. It is not the house the game draws. It is the house the survey measured,
+/// which is the shape the rooms were fitted into, and it is drawn in the same local
+/// frame as the contract so the two agree when the real mesh arrives.
+function f3AddShell(soup, ring, bounds) {
+  const pts = [];
+  for (const q of ring) {
+    const p = [q[0] - bounds.x, q[1] - bounds.y], last = pts[pts.length - 1];
+    if (last && Math.abs(last[0]-p[0]) < 1e-6 && Math.abs(last[1]-p[1]) < 1e-6) continue;
+    pts.push(p);
+  }
+  if (pts.length > 2) {                       // the ring closes on its own first point
+    const f = pts[0], l = pts[pts.length - 1];
+    if (Math.abs(f[0]-l[0]) < 1e-6 && Math.abs(f[1]-l[1]) < 1e-6) pts.pop();
+  }
+  if (pts.length < 3) return false;
+  const H = F3_WALL_H;
+  // The stand-in shell should still say "house" at a glance: pale clapboard walls, a dark
+  // fascia band under the roof line so the eave edge reads even in flat light, and a roof
+  // cap in the town's own dull shingle brown rather than the same grey as everything else.
+  // One grey box from above was the owner's first impression of this frame; never again.
+  const wall = [.80,.76,.68], fascia = [.33,.30,.27], cap = [.47,.38,.33], floor = [.63,.61,.56];
+  const FB = Math.min(0.22, H * 0.08);        // fascia band height
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i+1) % pts.length];
+    soup.tri([a[0],0,a[1]], [b[0],0,b[1]], [b[0],H-FB,b[1]], wall);
+    soup.tri([a[0],0,a[1]], [b[0],H-FB,b[1]], [a[0],H-FB,a[1]], wall);
+    soup.tri([a[0],H-FB,a[1]], [b[0],H-FB,b[1]], [b[0],H,b[1]], fascia);
+    soup.tri([a[0],H-FB,a[1]], [b[0],H,b[1]], [a[0],H,a[1]], fascia);
+  }
+  const up = [0,1,0], down = [0,-1,0];
+  for (const [i, j, k] of f3EarClip(pts)) {
+    soup.tri([pts[i][0],0,pts[i][1]], [pts[j][0],0,pts[j][1]], [pts[k][0],0,pts[k][1]], floor, up, up, up);
+    soup.tri([pts[i][0],H,pts[i][1]], [pts[j][0],H,pts[j][1]], [pts[k][0],H,pts[k][1]], cap, down, down, down);
+  }
+  return true;
+}
+
+/// THE ROOF-OFF TOGGLE IS AN ORDERING, NOT A SECOND BUFFER. Every triangle standing
+/// entirely above 2.6 m goes to the back of the soup, so "roof off" is the same buffer
+/// drawn short - one upload, nothing to keep in step, and it reads the same way on the
+/// exported mesh as it does on the fallback shell's flat cap. Returns how many VERTICES
+/// survive the cut.
+function f3RoofSort(soup) {
+  const tris = soup.pos.length / 9, low = [], high = [];
+  for (let t = 0; t < tris; t++)
+    (Math.min(soup.pos[t*9+1], soup.pos[t*9+4], soup.pos[t*9+7]) > F3_ROOF_Y ? high : low).push(t);
+  const pos = new Array(soup.pos.length), nrm = new Array(soup.pos.length), col = new Array(soup.pos.length);
+  let w = 0;
+  for (const t of low.concat(high)) {
+    for (let k = 0; k < 9; k++) { pos[w+k] = soup.pos[t*9+k]; nrm[w+k] = soup.nrm[t*9+k]; col[w+k] = soup.col[t*9+k]; }
+    w += 9;
+  }
+  soup.pos = pos; soup.nrm = nrm; soup.col = col;
+  return low.length * 3;
+}
+
+// ---- the two files the editor writes -------------------------------------------------
+function f3ParseMtl(text) {
+  const kd = new Map();
+  let cur = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const t = raw.trim().split(/\s+/);
+    if (t[0] === "newmtl") { cur = t.slice(1).join(" "); kd.set(cur, [.8,.8,.8]); }
+    else if (t[0] === "Kd" && cur) kd.set(cur, [+t[1] || 0, +t[2] || 0, +t[3] || 0]);
+  }
+  return kd;
+}
+
+/// OBJ, and only the statements TownExport writes - v, vn, usemtl and f - plus the two a
+/// hand-made or re-exported file is likely to carry anyway: a face of more than three
+/// corners is fanned, and a negative index counts back from the end as the format says.
+/// Everything else is skipped rather than refused. A mesh that draws is worth more here
+/// than a parser that is right about a statement nobody writes.
+function f3ParseObj(text, kd) {
+  const soup = f3Soup(), V = [], N = [];
+  let col = [.78,.76,.72];
+  const at = (a, arr) => { const i = +a; return arr[i < 0 ? arr.length + i : i - 1]; };
+  for (const raw of text.split(/\r?\n/)) {
+    if (!raw || raw[0] === "#") continue;
+    const t = raw.trim().split(/\s+/);
+    if (t[0] === "v") V.push([+t[1], +t[2], +t[3]]);
+    else if (t[0] === "vn") N.push([+t[1], +t[2], +t[3]]);
+    else if (t[0] === "usemtl") col = (kd && kd.get(t.slice(1).join(" "))) || col;
+    else if (t[0] === "f") {
+      const c = [];
+      for (let i = 1; i < t.length; i++) {
+        const bits = t[i].split("/"), v = at(bits[0], V);
+        if (v) c.push([v, bits[2] ? at(bits[2], N) : null]);
+      }
+      for (let i = 2; i < c.length; i++)
+        soup.tri(c[0][0], c[i-1][0], c[i][0], col, c[0][1], c[i-1][1], c[i][1]);
+    }
+  }
+  return soup;
+}
+
+// ---- colour --------------------------------------------------------------------------
+// The seven domestic room kinds by hand, because those are the ones the owner will be
+// looking at; the other eighteen RoomKinds take a hue off their own name, which is at
+// least stable from lot to lot and beats eighteen greys.
+const F3_ROOM = { hall: [.80,.78,.72], living: [.85,.74,.60], kitchen: [.68,.81,.71],
+  bedroom: [.74,.77,.88], bathroom: [.67,.83,.86], scullery: [.79,.83,.69],
+  workroom: [.86,.79,.65] };
+/// FNV over the name, then an avalanche step. THE AVALANCHE IS NOT DECORATION: without
+/// it, measured on the real furniture kinds, Stove, Sofa, Sink, Bed and Table all landed
+/// between hue 0.72 and 0.82 - five purple swatches and a legend nobody can read - because
+/// short similar strings leave FNV's low bits too close together to survive the modulus.
+function f3Hue(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return ((h >>> 0) % 3600) / 3600;
+}
+function f3Hsl(h, s, l) {
+  const f = n => { const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l);
+    return l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1))); };
+  return [f(0), f(8), f(4)];
+}
+const f3RoomTint = k => F3_ROOM[String(k || "").toLowerCase()] || f3Hsl(f3Hue(String(k || "room")), .30, .76);
+const f3FurnTint = k => f3Hsl(f3Hue(String(k || "thing")), .42, .52);
+const f3Hex = c => "#" + c.map(v => Math.round(Math.max(0, Math.min(1, v)) * 255)
+  .toString(16).padStart(2, "0")).join("");
+const f3Ft = m => { const v = m * F3_M2FT; return v < 10 ? v.toFixed(1) : String(Math.round(v)); };
+
+// ---- one live frame ------------------------------------------------------------------
+const F3_VS = `
+attribute vec3 aPos; attribute vec3 aNrm; attribute vec3 aCol;
+uniform mat4 uMVP;
+varying vec3 vCol; varying vec3 vNrm;
+void main() { vCol = aCol; vNrm = aNrm; gl_Position = uMVP * vec4(aPos, 1.0); }`;
+const F3_FS = `
+precision mediump float;
+uniform vec3 uLight; uniform float uAlpha;
+varying vec3 vCol; varying vec3 vNrm;
+void main() {
+  // Two-sided lambert. Nothing is culled here - the fallback shell is looked at from the
+  // inside as often as the outside, and a roofless mesh shows the back of every wall - so
+  // a face turned away from the light is lit as though it faced it rather than going black.
+  float lam = abs(dot(normalize(vNrm), uLight));
+  gl_FragColor = vec4(vCol * (0.34 + 0.66 * lam), uAlpha);
+}`;
+
+const f3Live = new Map();   // canvas -> the running frame. Insertion order IS the age order.
+
+/// The background the frame clears to, taken off the canvas's own CSS so the picture sits
+/// in the panel in whichever theme the page is wearing rather than in a fixed grey.
+function f3Bg(el) {
+  const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+  return m ? [m[0]/255, m[1]/255, m[2]/255] : [.1,.1,.1];
+}
+
+function f3Start(canvas, geom) {
+  // preserveDrawingBuffer, because this frame draws ON DEMAND and not on a rAF loop:
+  // without it the buffer may be thrown away the moment it has been composited, and the
+  // next repaint - or a screenshot - shows an empty rectangle over a perfectly good scene.
+  const gl = canvas.getContext("webgl", { antialias: true, alpha: false, preserveDrawingBuffer: true });
+  if (!gl) return null;
+
+  const compile = (type, src) => {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+    return sh;
+  };
+  const vs = compile(gl.VERTEX_SHADER, F3_VS), fs = compile(gl.FRAGMENT_SHADER, F3_FS);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+
+  const mk = arr => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+    return b;
+  };
+  const bufs = { pos: mk(geom.pos), nrm: mk(geom.nrm), col: mk(geom.col) };
+  const aPos = gl.getAttribLocation(prog, "aPos"), aNrm = gl.getAttribLocation(prog, "aNrm"),
+        aCol = gl.getAttribLocation(prog, "aCol");
+  const uMVP = gl.getUniformLocation(prog, "uMVP"), uLight = gl.getUniformLocation(prog, "uLight"),
+        uAlpha = gl.getUniformLocation(prog, "uAlpha");
+  const light = f3Norm([.42, .86, .28]);
+
+  // Street height, not helicopter height: at pitch .52 a squat fallback shell is seen
+  // mostly cap-on and reads as "a grey square" - the owner's exact words. A low eye and a
+  // closer stand show two walls and the roof edge, which is what "a house" looks like.
+  const cam = { yaw: 0.72, pitch: 0.34, dist: Math.max(4, geom.radius * 2.1) };
+  let roofOff = false;
+
+  function render() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.max(60, Math.round(canvas.clientWidth * dpr));
+    const h = Math.max(60, Math.round(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    gl.viewport(0, 0, w, h);
+    const bg = f3Bg(canvas);
+    gl.clearColor(bg[0], bg[1], bg[2], 1);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    const cp = Math.cos(cam.pitch), eye = [
+      geom.centre[0] + cam.dist * cp * Math.sin(cam.yaw),
+      geom.centre[1] + cam.dist * Math.sin(cam.pitch),
+      geom.centre[2] + cam.dist * cp * Math.cos(cam.yaw)];
+    const mvp = f3Mul(f3Perspective(0.85, w / h, Math.max(0.05, cam.dist * .02), cam.dist * 6 + 200),
+                      f3LookAt(eye, geom.centre, [0,1,0]));
+
+    gl.useProgram(prog);
+    gl.uniformMatrix4fv(uMVP, false, mvp);
+    gl.uniform3f(uLight, light[0], light[1], light[2]);
+    for (const [loc, buf] of [[aPos, bufs.pos], [aNrm, bufs.nrm], [aCol, bufs.col]]) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+    }
+
+    gl.disable(gl.BLEND);
+    gl.uniform1f(uAlpha, 1);
+    const solid = roofOff ? geom.solidLow : geom.solidAll;
+    if (solid) gl.drawArrays(gl.TRIANGLES, 0, solid);
+
+    // The fallback shell goes last, blended, with the depth buffer read but not written -
+    // the standard way to look through a single translucent skin at opaque things inside
+    // it without sorting anything. There is only ever the one skin, so there is nothing
+    // for the missing sort to get wrong.
+    const glassy = roofOff ? geom.glassyLow : geom.glassyAll;
+    if (glassy) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+      gl.uniform1f(uAlpha, 0.42);
+      gl.drawArrays(gl.TRIANGLES, geom.solidAll, glassy);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
+  }
+
+  let drag = null;
+  const down = e => {
+    drag = { x: e.clientX, y: e.clientY };
+    canvas.classList.add("turning");
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* a mouse without capture still drags */ }
+  };
+  const move = e => {
+    if (!drag) return;
+    cam.yaw -= (e.clientX - drag.x) * 0.010;
+    cam.pitch = Math.max(-0.20, Math.min(1.45, cam.pitch + (e.clientY - drag.y) * 0.008));
+    drag = { x: e.clientX, y: e.clientY };
+    render();
+  };
+  const up = () => { drag = null; canvas.classList.remove("turning"); };
+  // preventDefault, because the panel this canvas sits in SCROLLS: without it a dolly
+  // scrolls the house out of the window it is being looked at in.
+  const wheel = e => {
+    e.preventDefault();
+    cam.dist = Math.max(geom.radius * 0.35, Math.min(geom.radius * 14,
+      cam.dist * Math.exp(e.deltaY * 0.0012)));
+    render();
+  };
+  canvas.addEventListener("pointerdown", down);
+  canvas.addEventListener("pointermove", move);
+  canvas.addEventListener("pointerup", up);
+  canvas.addEventListener("pointercancel", up);
+  canvas.addEventListener("wheel", wheel, { passive: false });
+
+  render();
+  return {
+    canvas, render,
+    setRoof(v) { roofOff = !!v; render(); },
+    dispose() {
+      canvas.removeEventListener("pointerdown", down);
+      canvas.removeEventListener("pointermove", move);
+      canvas.removeEventListener("pointerup", up);
+      canvas.removeEventListener("pointercancel", up);
+      canvas.removeEventListener("wheel", wheel);
+      gl.deleteBuffer(bufs.pos); gl.deleteBuffer(bufs.nrm); gl.deleteBuffer(bufs.col);
+      gl.deleteProgram(prog); gl.deleteShader(vs); gl.deleteShader(fs);
+      // Deleting the objects does not hand the CONTEXT back, and the context is the
+      // scarce thing. This is the only way a page can say "I am done with this one".
+      const lose = gl.getExtension("WEBGL_lose_context");
+      if (lose) lose.loseContext();
+    }
+  };
+}
+
+// ---- what the frame is made of -------------------------------------------------------
+/// The two soups laid end to end in one buffer, each with its roof triangles pushed to
+/// its own back, plus the bounding sphere the camera opens on.
+function f3Finish(solid, glassy) {
+  const solidLow = f3RoofSort(solid), glassyLow = f3RoofSort(glassy);
+  const pos = new Float32Array(solid.pos.concat(glassy.pos));
+  const geom = {
+    pos, nrm: new Float32Array(solid.nrm.concat(glassy.nrm)),
+    col: new Float32Array(solid.col.concat(glassy.col)),
+    solidLow, solidAll: solid.pos.length / 3,
+    glassyLow, glassyAll: glassy.pos.length / 3,
+  };
+  let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) {
+    if (pos[i+k] < lo[k]) lo[k] = pos[i+k];
+    if (pos[i+k] > hi[k]) hi[k] = pos[i+k];
+  }
+  if (!isFinite(lo[0])) { lo = [0,0,0]; hi = [1,1,1]; }
+  geom.centre = [(lo[0]+hi[0])/2, (lo[1]+hi[1])/2, (lo[2]+hi[2])/2];
+  geom.radius = Math.max(1.5, Math.hypot(hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2]) / 2);
+  return geom;
+}
+
+async function f3FetchMesh(p, i) {
+  if (!LIVE) return null;                       // off the disk there is no server to ask
+  try {
+    const r = await fetch(`/preview/${p}-${i}.obj`, { cache: "no-store" });
+    if (!r.ok) return null;                     // 404 is the ordinary case, not a fault
+    const objText = await r.text();
+    let kd = null;
+    try {
+      const m = await fetch(`/preview/${p}-${i}.mtl`, { cache: "no-store" });
+      if (m.ok) kd = f3ParseMtl(await m.text());
+    } catch (e) { /* colours are a nicety; the mesh is the point */ }
+    const soup = f3ParseObj(objText, kd);
+    return soup.pos.length ? soup : null;
+  } catch (e) { return null; }
+}
+
+/// Rooms and furniture, listed under the picture in the same colours they are drawn in.
+/// 3D text in a frame this size is unreadable, so the names live here instead - and a
+/// legend also answers "what am I looking at" for the pieces buried behind other pieces.
+function f3LegendHtml(gb) {
+  if (!gb) return "";
+  // HOW OLD THIS IS, AND WHAT THE ROOF TOGGLE ACTUALLY DOES. Both are one line each and both
+  // answer a question the frame otherwise leaves the owner guessing at: a cache from three
+  // builds ago draws exactly like a fresh one, and "roof off" is a flat height cut, not a
+  // roof-finder - on a two-storey model it takes the upper floor with it.
+  let s = `<div class="g">${INTERIORS_WHEN ? "game data: " + esc(INTERIORS_WHEN) + " · " : ""}`
+        + `roof-off hides above 8.5 ft</div>`;
+  const rooms = gb.rooms || [];
+  if (rooms.length) {
+    s += `<div class="g">rooms</div>` + rooms.map(r =>
+      `<div><span class="sw" style="background:${f3Hex(f3RoomTint(r.kind))}"></span>`
+      + `${esc(r.name || r.kind || "room")} <span class="sz">${f3Ft(r.w)} × ${f3Ft(r.h)} ft</span></div>`
+    ).join("");
+  }
+  // Furniture is gathered by kind: eight chairs are eight rows of noise and one useful
+  // fact, which is that there are eight of them.
+  const by = new Map();
+  for (const f of (gb.furniture || [])) {
+    const k = f.kind || "thing";
+    const e = by.get(k) || { n: 0, w: f.w, h: f.h, y: +f.height || 0 };
+    e.n++; by.set(k, e);
+  }
+  if (by.size) {
+    s += `<div class="g">furniture</div>` + [...by].map(([k, e]) =>
+      `<div><span class="sw" style="background:${f3Hex(f3FurnTint(k))}"></span>`
+      + `${esc(k)}${e.n > 1 ? ` ×${e.n}` : ""} `
+      + `<span class="sz">${f3Ft(e.w)} × ${f3Ft(e.h)} ft${e.y ? `, ${f3Ft(e.y)} ft high` : ""}</span></div>`
+    ).join("");
+  }
+  return s;
+}
+
+// WHICH CALL OWNS THIS CARD. "Is the card still open" is not the same question as "am I
+// still the call that is opening it", and only the second one is safe to commit a context
+// on. Open a card, shut it while its fetches are still in flight, open it again: the stale
+// call comes back to a card that is connected AND marked open, takes the new canvas, and
+// writes its frame into f3Live over the newer one - which loses the newer frame without
+// ever disposing it, leaks a context the cap can no longer see, and leaves two sets of
+// drag handlers on one canvas. So every open and every close bumps the card's generation,
+// an open keeps the number it was given, and a call whose number has moved on abandons.
+const f3Gen = new WeakMap();
+function f3Bump(card) {
+  const g = (f3Gen.get(card) || 0) + 1;
+  f3Gen.set(card, g);
+  return g;
+}
+
+/// A context put down with loseContext() is gone for good: getContext() on that same
+/// canvas hands back the lost one rather than a new one, and every call on a lost context
+/// returns null - which surfaced as a card that could be opened once and then never again,
+/// complaining that a shader would not compile. A fresh canvas is the only way back.
+function f3FreshCanvas(cv) {
+  const fresh = document.createElement("canvas");
+  fresh.className = "f3-cv";
+  cv.replaceWith(fresh);
+}
+
+function f3Close(card) {
+  f3Bump(card);                     // any open still in flight for this card is now stale
+  const cv = card.querySelector(".f3-cv");
+  const frame = cv && f3Live.get(cv);
+  if (frame) {
+    frame.dispose();
+    f3Live.delete(cv);
+    f3FreshCanvas(cv);
+  }
+  card.classList.remove("on");
+  const btn = card.querySelector(".f3-btn");
+  if (btn) btn.textContent = "See it in 3D";
+  const roof = card.querySelector(".f3-roof");
+  if (roof) roof.checked = false;
+}
+
+/// Every open frame shut and every context handed back. Called before the panel's
+/// building list is rewritten and when the panel is closed - a canvas that has been
+/// dropped out of the document still holds its context until the browser feels like
+/// collecting it, and a browser only ever hands out a dozen or so.
+function f3CloseAll() {
+  for (const frame of [...f3Live.values()]) {
+    const card = frame.canvas.closest(".f3");
+    if (card) f3Close(card); else { frame.dispose(); f3Live.delete(frame.canvas); }
+  }
+}
+
+async function f3OpenCard(card) {
+  const gen = f3Bump(card);         // and any open still in flight for this card is stale
+  const mine = () => card.isConnected && f3Gen.get(card) === gen;
+  const p = +card.dataset.p, i = +card.dataset.i;
+  const noteEl = card.querySelector(".f3-note"), legEl = card.querySelector(".f3-leg");
+  card.classList.add("on");
+  card.querySelector(".f3-btn").textContent = "Hide the 3D frame";
+  noteEl.textContent = "looking…";
+  legEl.innerHTML = "";
+
+  await INTERIORS_READY;               // a click can beat the fetch this page fires at load
+  const gb = INTERIORS.get(p + "|" + i) || null;
+  const b = DATA.buildings.find(x => x.p === p && x.i === i);
+  const mesh = await f3FetchMesh(p, i);
+  // Nothing below this line touches the page until this call is sure it still owns the
+  // card: the lot may have changed under us, or the card may have been shut and opened
+  // again while these two fetches were out, and a stale call must leave without a trace.
+  if (!mine()) return;
+
+  const notes = [];
+  const solid = mesh || f3Soup(), glassy = f3Soup();
+
+  // WHICH CORNER IS THE ORIGIN. The interiors report carries the building's own bounds
+  // rect and that is the frame TownExport wrote the OBJ in, so it wins wherever it
+  // exists. Without it the ring's own bounding box is the same corner measured a
+  // different way, which keeps the fallback shell in one frame rather than two.
+  //
+  // THE RING IS placedRing, NEVER b.r. The game seats every building on
+  // Placements.Apply(Squared(...)) - 740 of Rossville's 824 footprints get turned by their
+  // lot skew and 37 more carry the owner's own move/turn - so the raw measured ring is a
+  // different shape from the one the rooms and furniture below were fitted into. Drawn from
+  // b.r, the shell stood up to 21 m off its own contents. See placedRing's own header.
+  const ring = b ? placedRing(b) : null;
+  const bounds = (gb && gb.bounds) ? gb.bounds : (ring ? {
+    x: Math.floor(Math.min(...ring.map(q => q[0]))),
+    y: Math.floor(Math.min(...ring.map(q => q[1]))) } : { x: 0, y: 0 });
+
+  if (!mesh) {
+    notes.push(LIVE ? "no export yet — press Publish (editor closed), or Noir &gt; Export For The Map Tool"
+                    : "opened off the disk — no server to fetch the exported mesh from");
+    // Glass is for seeing the contents through; an EMPTY shell drawn translucent is just
+    // a grey slab (the owner's first look at this frame, in his words: "I just see a
+    // square"). No contents, no glass — the stand-in renders as a solid little house.
+    const hasContents = !!(gb && ((gb.rooms || []).length || (gb.furniture || []).length));
+    if (!(ring && f3AddShell(hasContents ? glassy : solid, ring, bounds)))
+      notes.push("no footprint to fall back on either");
+  }
+  if (gb) {
+    for (const r of (gb.rooms || []))
+      f3Box(solid, r.x - bounds.x, 0.02, r.y - bounds.y, r.w, 0.05, r.h, f3RoomTint(r.kind));
+    for (const f of (gb.furniture || []))
+      f3Box(solid, f.x - bounds.x, 0.07, f.y - bounds.y, f.w,
+            Math.max(0.15, +f.height || 0.7), f.h, f3FurnTint(f.kind));
+  } else {
+    notes.push("no interiors report yet — build the town once");
+  }
+
+  const geom = f3Finish(solid, glassy);
+  legEl.innerHTML = f3LegendHtml(gb);
+  noteEl.innerHTML = notes.join("<br>");
+
+  if (!geom.pos.length) { noteEl.innerHTML = notes.concat("nothing to draw for this building").join("<br>"); return; }
+  // A browser hands out a dozen or so WebGL contexts and then starts killing the oldest by
+  // force - which looks like a black rectangle and logs nothing. Four at a time, oldest shut
+  // first, never reaches that. COUNTED HERE AND NOT AT THE TOP OF THIS FUNCTION, because
+  // this is the moment a context is actually taken: five cards opened together all await
+  // the same fetches, and a cap read before those awaits is five cards each seeing zero.
+  const cv = card.querySelector(".f3-cv");
+  while (f3Live.size >= F3_MAX) {
+    const oldest = f3Live.values().next().value;
+    const oc = oldest.canvas.closest(".f3");
+    if (oc && oldest.canvas !== cv) f3Close(oc); else { oldest.dispose(); f3Live.delete(oldest.canvas); }
+  }
+  let frame = null;
+  try { frame = f3Start(cv, geom); } catch (e) { frame = null; noteEl.innerHTML = "the 3D frame failed to start: " + esc(e.message); }
+  if (!frame) {
+    if (!noteEl.textContent) noteEl.textContent = "this browser gave no WebGL context — nothing can be drawn here";
+    return;
+  }
+  // THE LAST GATE, and it should be unreachable: nothing between the check above and this
+  // line awaits, so no other call can have run in between. It stands because the cost of
+  // being wrong here is the leak this whole generation counter exists to stop, and because
+  // the day somebody puts an await in that stretch, this stays correct on its own.
+  if (!mine()) { frame.dispose(); f3FreshCanvas(cv); return; }
+  f3Live.set(cv, frame);
+  frame.setRoof(card.querySelector(".f3-roof").checked);
+}
+
+function f3Wire(host) {
+  for (const card of host.querySelectorAll(".f3")) {
+    card.querySelector(".f3-btn").onclick = () =>
+      card.classList.contains("on") ? f3Close(card) : f3OpenCard(card);
+    card.querySelector(".f3-roof").onchange = e => {
+      const frame = f3Live.get(card.querySelector(".f3-cv"));
+      if (frame) frame.setRoof(e.target.checked);
+    };
+  }
+  // The lot's main building opens by itself: the answer to "what does this house look
+  // like" belongs on screen when the house is, not one more click away. Outbuildings stay
+  // shut - a shed is rarely the question, and every open frame costs a context.
+  const first = host.querySelector('.f3[data-role="primary"]') || host.querySelector(".f3");
+  if (first) f3OpenCard(first);
+}
+
+// A frame draws on demand and never on a loop, so the one event it cannot see for itself
+// is the window changing size under it (a moved window can change devicePixelRatio too).
+addEventListener("resize", () => { for (const frame of f3Live.values()) frame.render(); });
+
 resize(); fitView(); draw();
 loadVerdicts();
 loadWalks();
 loadPlaces();
 loadVerdictFromGame();
+loadPlans();
+// HELD AS A PROMISE, not just fired: the 3D frame can be opened before this fetch has
+// come back, and rooms that arrive a moment late look exactly like a house that has none.
+const INTERIORS_READY = loadInteriors();
 </script>

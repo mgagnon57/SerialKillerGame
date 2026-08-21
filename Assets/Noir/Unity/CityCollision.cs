@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Noir.Core.World;
 
@@ -63,11 +64,18 @@ namespace Noir.Unity
         private const float Floor = 0.06f;
 
         /// <summary>
-        /// The ground slab's own grid spacing, in metres - matches ElevationGrid's native
-        /// resolution, so this samples the real data at exactly the density it was measured at
-        /// rather than inventing detail between samples or throwing detail away.
+        /// The ground lattice's sample spacing - a QUARTER of ElevationGrid's native 30 m, and
+        /// ONE SHARED UNIFORM LATTICE, re-learned 2026-08-18 the hard way: the first saddle
+        /// repair subdivided each 30 m cell independently by its own curvature, and
+        /// neighbouring cells that chose different lattices disagreed along the edge they
+        /// shared - measured 338 seams with a lip over 10 cm, 15 cm at the worst - and the
+        /// owner's car found them within the hour, as invisible kerbs across open ground. A
+        /// uniform lattice shares every border vertex, so there is nothing to disagree; at
+        /// 7.5 m the flat-triangle bow off the bilinear surface is a sixty-fourth of a cell's
+        /// corner cross-difference - under 3 cm everywhere in town, ~12 cm only at the creek
+        /// ravine's corner of the countryside, all inside the CharacterController's step.
         /// </summary>
-        private const float Step = 30f;
+        private const float Step = 7.5f;
 
         public static GameObject Build(WorldModel world, Transform parent, params GameObject[] built)
         {
@@ -101,6 +109,88 @@ namespace Noir.Unity
 
                 foreach (Transform child in node.transform)
                 {
+                    // AN OWNER MODEL IS ENTERED, NOT BOXED (2026-08-18). The bounds box that
+                    // is right for a bought prefab seals a hand-made house's doorway shut -
+                    // the owner's own report: "I am blocked from approaching doors", against
+                    // a box that wrapped his whole modeled yard. His models carry real
+                    // interiors - floors, partitions, ceilings - so the collision IS the
+                    // model: one static MeshCollider per structural piece, on collider-only
+                    // copies under this root, because CityChunker's bake destroys the render
+                    // originals. Door leaves (under a "hinge" pivot) and soft dressing never
+                    // collide. A FLATTENED model (one welded MeshFilter - every conversion
+                    // before 2026-08-18) keeps the box below: its interior was never
+                    // separable, so a box costs nothing it had.
+                    if (child.GetComponent<OwnerModel>() != null
+                        && child.GetComponentsInChildren<MeshFilter>(true).Length > 1)
+                    {
+                        int meshed = 0;
+                        foreach (var mf in child.GetComponentsInChildren<MeshFilter>(true))
+                        {
+                            if (mf.sharedMesh == null) continue;
+                            if (mf.transform.parent != null && mf.transform.parent.name == "hinge") continue;
+                            if (SoftDressing(mf.name)) continue;
+
+                            var cc = new GameObject(child.name + ":" + mf.name);
+                            cc.transform.SetParent(root.transform, false);
+                            cc.transform.SetPositionAndRotation(mf.transform.position, mf.transform.rotation);
+                            cc.transform.localScale = mf.transform.lossyScale;
+                            cc.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+                            meshed++;
+                        }
+                        // THRESHOLD RAMPS (2026-08-19, the night the owner could not get out
+                        // of his own front door): his porch is authored a real 33 cm below
+                        // the interior floor - true to the house, taller than the
+                        // CharacterController's step. Each swing door gets an invisible
+                        // wedge spanning the measured floor heights either side of its
+                        // hinge, so the doorway walks like a doorway. The garage panel's
+                        // hinge rides the top edge (high y) and is skipped.
+                        // The piece colliders above were created THIS frame; the ramp
+                        // raycasts below cannot see them until the physics world syncs.
+                        Physics.SyncTransforms();
+
+                        foreach (var hingeT in child.GetComponentsInChildren<Transform>(true))
+                        {
+                            if (hingeT.name != "hinge") continue;
+                            Vector3 hp = hingeT.position;
+                            RaycastHit gr;
+                            if (!Physics.Raycast(hp + Vector3.up * 0.5f, Vector3.down, out gr, 4f)) continue;
+                            if (hp.y - gr.point.y > 1.5f) continue;   // top-edge hinge: the panel
+
+                            Bounds mb = default; bool mhas = false;
+                            foreach (var mr in child.GetComponentsInChildren<Renderer>(true))
+                            { if (!mhas) { mb = mr.bounds; mhas = true; } else mb.Encapsulate(mr.bounds); }
+                            Vector3 inward = mb.center - hp; inward.y = 0f;
+                            if (inward.sqrMagnitude < 0.01f) continue;
+                            inward.Normalize();
+
+                            RaycastHit hin, hout;
+                            bool okIn = Physics.Raycast(hp + inward * 0.6f + Vector3.up * 1f, Vector3.down, out hin, 4f);
+                            bool okOut = Physics.Raycast(hp - inward * 0.6f + Vector3.up * 1f, Vector3.down, out hout, 4f);
+                            if (!okIn || !okOut) continue;
+                            float dH = hin.point.y - hout.point.y;
+                            if (Mathf.Abs(dH) < 0.15f) continue;      // an honest sill, no ramp needed
+
+                            var ramp = new GameObject(child.name + ":threshold-ramp");
+                            ramp.transform.SetParent(root.transform, false);
+                            // 13 cm LOWER than the midpoint: the corridor under the door
+                            // header measured 1.79 m against a 1.80 m controller with the
+                            // ramp at the midpoint (2026-08-19, one centimetre from
+                            // walkable). Sinking the ramp buys ~1.92 m under the header;
+                            // the inside end becomes a 13 cm step down off the floor,
+                            // half the controller's stride.
+                            ramp.transform.position = new Vector3(hp.x, (hin.point.y + hout.point.y) / 2f - 0.13f, hp.z);
+                            float tilt = Mathf.Atan2(dH, 1.2f) * Mathf.Rad2Deg;
+                            ramp.transform.rotation = Quaternion.LookRotation(inward) * Quaternion.Euler(-tilt, 0f, 0f);
+                            var bc = ramp.AddComponent<BoxCollider>();
+                            bc.size = new Vector3(1.6f, 0.08f, 1.5f);
+                            meshed++;
+                        }
+
+                        Debug.Log($"[collision] owner model '{child.name}': {meshed} piece "
+                                + "collider(s) incl. threshold ramps, no box - the doorway is a real hole");
+                        continue;
+                    }
+
                     // INCLUDE INACTIVE, or a layer switch silently deletes the walls.
                     //
                     // These roots are the Buildings, Districts and Houses layers, and VillageHost
@@ -151,6 +241,31 @@ namespace Noir.Unity
         /// ground you can walk on stays flush with the mapped town instead of stepping flat at
         /// the boundary the way the old box did.
         /// </summary>
+        /// <summary>The owner-model pieces a body passes through: planting, hose, string
+        /// lights, painted joints - and, learned the night the owner got stuck in his own
+        /// front doorway, the SNAG TRIM: brick course bands an inch proud of the wall, the
+        /// entry lamp, porch battens, downspouts, vents, gutters. A doorway is a 3-foot
+        /// opening and the player capsule is 22 inches wide; every centimetre of decorative
+        /// collider beside it is a shoulder-catch. Structure collides; detail does not.
+        /// Names are the owner's own convention (see the spec at
+        /// docs/superpowers/specs/2026-08-18-owner-model-doors-design.md).</summary>
+        private static bool SoftDressing(string n) =>
+            n.StartsWith("shrub_") || n.StartsWith("grass_") || n.StartsWith("bed_")
+            || n == "garden_hose" || n == "hose_reel" || n == "porch_string_lights"
+            || n == "paving_joints" || n == "foliage" || n.StartsWith("planters")
+            || n.StartsWith("course_") || n.EndsWith("_battens") || n.EndsWith("_joints")
+            || n == "entry_lamp" || n == "porch_light_cord" || n.StartsWith("downspout")
+            || n == "meters_east" || n == "crawl_vent" || n == "service_mast"
+            || n.StartsWith("vent_") || n == "roof_vents" || n.EndsWith("_gutter")
+            || n.EndsWith("_fascia") || n.EndsWith("_bars") || n.StartsWith("satellite")
+            || n.StartsWith("dish_")
+            // The FOUNDATION never carries a footstep - floors, porches and threshold
+            // ramps do - and its collider poking up through the threshold slot pinched
+            // the front doorway to 1.74 m against a 1.8 m controller (measured at the
+            // door plane, 2026-08-19: floor foundation@8.59, header wall@10.33). The
+            // crawl-space band it leaves open is 0.7 m tall; no capsule fits in it.
+            || n.StartsWith("foundation");
+
         private static Mesh GroundMesh(WorldModel world, float beyond)
         {
             float x0 = -beyond, x1 = world.Width + beyond;
@@ -168,8 +283,7 @@ namespace Noir.Unity
                 verts[r * cols + c] = new Vector3(wx, Floor + ElevationGrid.HeightAt(wx, wy), -wy);
             }
 
-            var tris = new int[(cols - 1) * (rows - 1) * 6];
-            int t = 0;
+            var tris = new List<int>((cols - 1) * (rows - 1) * 6);
             for (int r = 0; r < rows - 1; r++)
             for (int c = 0; c < cols - 1; c++)
             {
@@ -191,8 +305,8 @@ namespace Noir.Unity
                 // than simply broken, and why it was written off as flaky. Probed: spawn 6.90,
                 // ground 3.90, and the fall passes straight through 3.90 at 0.06 m a step. That is
                 // not tunnelling. That is a floor with no upward face.
-                tris[t++] = v0; tris[t++] = v1; tris[t++] = v2;
-                tris[t++] = v1; tris[t++] = v3; tris[t++] = v2;
+                tris.Add(v0); tris.Add(v1); tris.Add(v2);
+                tris.Add(v1); tris.Add(v3); tris.Add(v2);
             }
 
             var mesh = new Mesh

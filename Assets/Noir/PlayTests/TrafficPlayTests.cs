@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Noir.Core.Contracts;
 using Noir.Unity;
 
 namespace Noir.PlayTests
@@ -15,30 +16,44 @@ namespace Noir.PlayTests
     /// All of them together cannot answer the one question that matters about traffic - DOES IT
     /// STOP - because stopping happens over time and a still has none.
     ///
-    /// Time is compressed with Time.timeScale so a 36-second signal cycle can be watched inside a
-    /// test rather than inside a coffee break. That is legitimate here: everything under test
-    /// reads Time.time or Time.deltaTime and therefore scales with it. It would not be legitimate
-    /// if anything counted frames instead, and nothing does.
+    /// Time is compressed with the town's own speed dial — SpeedIndex pinned to 10x — because
+    /// since the one-clock ruling (2026-08-16) the fleet, the lights and the train advance on
+    /// the SIM clock, which Time.timeScale never touched. Watch() therefore counts TOWN
+    /// seconds off Sim.Clock.Tick: every window below is written in game seconds and costs a
+    /// tenth of that in wall time, the same compression the old timeScale trick bought.
     /// </summary>
     public class TrafficPlayTests
     {
-        private const float Speed = 8f;      // game seconds per real second
+        // Static, not instance: a UnityTearDown runs against a fresh instance of this class.
+        private static int _wasSpeed = -1;
+
+        private static double TownSeconds =>
+            CityUnderTest.Host.Sim.Clock.Tick / (double)GameClock.TicksPerSecond;
 
         [UnitySetUp]
         public IEnumerator Ready()
         {
-            Time.timeScale = Speed;
+            Time.timeScale = 1f;
             yield return CityUnderTest.WaitUntilBuilt();
+            var host = CityUnderTest.Host;
+            _wasSpeed = host.SpeedIndex;
+            host.SpeedIndex = 5;                 // 10x — Speeds[5]
         }
 
-        [TearDown]
-        public void Slow() => Time.timeScale = 1f;
+        [UnityTearDown]
+        public IEnumerator Slow()
+        {
+            var host = CityUnderTest.Host;
+            if (host != null && _wasSpeed >= 0) host.SpeedIndex = _wasSpeed;
+            _wasSpeed = -1;
+            yield break;
+        }
 
-        /// <summary>Watch for this many game seconds, a frame at a time.</summary>
+        /// <summary>Watch for this many TOWN seconds, a frame at a time.</summary>
         private static IEnumerator Watch(float gameSeconds, System.Action perFrame)
         {
-            float until = Time.time + gameSeconds;
-            while (Time.time < until)
+            double until = TownSeconds + gameSeconds;
+            while (TownSeconds < until)
             {
                 perFrame();
                 yield return null;
@@ -71,11 +86,10 @@ namespace Noir.PlayTests
             Assert.That(host.World.Households, Is.GreaterThan(host.World.Homes.Count),
                         "homes hold more than one household each");
 
-            // THE SIMULATION RUNS ON UNSCALED TIME, deliberately: VillageHost advances it by
-            // Time.unscaledDeltaTime times its own speed setting, so that how fast the day goes
-            // is a property of the game and not of Unity's timescale. Which means the trick this
-            // fixture uses to compress a signal cycle speeds up the traffic and the lights and
-            // does nothing at all to the clock - so this has to wait in real seconds.
+            // THE SIMULATION RUNS ON UNSCALED TIME, and since the one-clock ruling the traffic
+            // and the lights follow the same sim clock - this fixture compresses everything
+            // with the town's own dial (Ready pins 10x). The clock-advance check below still
+            // waits in real seconds, because it is measuring that the sim ticks at all.
             int wasMinute = host.Sim.Clock.MinuteOfDay;
             float until = Time.unscaledTime + 10f;
             while (Time.unscaledTime < until) yield return null;
@@ -232,12 +246,12 @@ namespace Noir.PlayTests
             var longestAt = new Dictionary<int, Vector3>();
             float worst = 0f;
             string where = "";
-            float last = Time.time;
+            double last = TownSeconds;
 
             yield return Watch(120f, () =>
             {
-                float dt = Time.time - last;
-                last = Time.time;
+                float dt = (float)(TownSeconds - last);
+                last = TownSeconds;
                 if (dt <= 0f) return;
 
                 var cars = CityUnderTest.Vehicles();
@@ -599,6 +613,72 @@ namespace Noir.PlayTests
                       + "lights and how big the fleet is - not about whether the signals are "
                       + "obeyed. A non-zero with everything on green means the lights are not "
                       + "stopping anybody.");
+        }
+
+        /// <summary>
+        /// A PAUSED TOWN IS PAUSED. Before the one-clock ruling the fleet drove on
+        /// Time.deltaTime and the lights cycled on Time.time, so SpeedIndex 0 froze every
+        /// pedestrian while the cars kept driving through the stopped town. This pins the
+        /// contract: no tick, no motion, no phase change - and the town comes back when the
+        /// dial does.
+        /// </summary>
+        [UnityTest, Timeout(900000)]
+        public IEnumerator AmbientTrafficFreezesWhenTheTownIsPaused()
+        {
+            var host = CityUnderTest.Host;
+            var signals = CityUnderTest.Signals;
+
+            host.SpeedIndex = 0;
+            for (int f = 0; f < 3; f++) yield return null;   // let the last owed slices drain
+
+            var cars = CityUnderTest.Vehicles();
+            var starts = new Dictionary<int, Vector3>();
+            foreach (var car in cars)
+                if (car != null) starts[car.GetInstanceID()] = car.position;
+            Assert.That(starts.Count, Is.GreaterThan(0), "no vehicles to freeze");
+
+            int lit = -1;
+            for (int j = 0; j < signals.Count; j++)
+                if (signals.IsSignalised(j)) { lit = j; break; }
+            var wasNs = lit >= 0 ? signals.State(lit, true) : CitySignals.Light.Green;
+            var wasEw = lit >= 0 ? signals.State(lit, false) : CitySignals.Light.Green;
+
+            float until = Time.unscaledTime + 2f;
+            while (Time.unscaledTime < until) yield return null;
+
+            float worst = 0f;
+            foreach (var car in CityUnderTest.Vehicles())
+            {
+                if (car == null) continue;
+                if (!starts.TryGetValue(car.GetInstanceID(), out var was)) continue;
+                worst = Mathf.Max(worst, Vector3.Distance(was, car.position));
+            }
+            Assert.That(worst, Is.LessThan(0.05f),
+                $"a vehicle covered {worst:0.00}m through a paused town");
+            if (lit >= 0)
+            {
+                Assert.That(signals.State(lit, true), Is.EqualTo(wasNs),
+                    "a signal changed phase through a paused town");
+                Assert.That(signals.State(lit, false), Is.EqualTo(wasEw),
+                    "a signal changed phase through a paused town");
+            }
+
+            // And it is a pause, not a corpse: back at 10x, somebody moves within five real
+            // seconds - fifty town seconds, more than a whole green.
+            host.SpeedIndex = 5;
+            bool anybodyMoved = false;
+            until = Time.unscaledTime + 5f;
+            while (Time.unscaledTime < until && !anybodyMoved)
+            {
+                foreach (var car in CityUnderTest.Vehicles())
+                {
+                    if (car == null) continue;
+                    if (!starts.TryGetValue(car.GetInstanceID(), out var was)) continue;
+                    if (Vector3.Distance(was, car.position) > 2f) { anybodyMoved = true; break; }
+                }
+                yield return null;
+            }
+            Assert.That(anybodyMoved, Is.True, "nothing moved after the pause was released");
         }
     }
 }

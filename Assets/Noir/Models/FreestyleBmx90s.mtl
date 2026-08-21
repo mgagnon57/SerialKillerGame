@@ -1,0 +1,25 @@
+newmtl chrome_steel
+Kd 0.6939 0.7231 0.7605
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl dark_steel
+Kd 0.0331 0.0369 0.0423
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl neon_green
+Kd 0.0409 1.0000 0.1441
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl black_plastic
+Kd 0.0075 0.0075 0.0075
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl black_rubber
+Kd 0.0110 0.0110 0.0116
+Ks 0.05 0.05 0.05
+Ns 10
+

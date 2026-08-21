@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Noir.Core.Contracts;
 using Noir.Core.People;
+using Noir.Core.Response;
 using Noir.Core.Sim;
 
 // THE ONE FILE IN THE GAME THAT NAMES THIS ASSEMBLY. WitnessFirewallTests holds the line and
@@ -50,11 +51,39 @@ namespace Noir.Unity
         public PlayerTrack Track { get; } = new PlayerTrack();
 
         private Player _player;
+        private PlayerInteraction _interaction;
 
         /// <summary>Whoever is walking about, if anybody is. Read by the testimony panel, which
         /// asks about where the player is STANDING - the answer is a function of where they have
         /// been, so it has to know where that is.</summary>
         public Player Player => _player;
+
+        /// <summary>
+        /// Whether the player is asking questions with a badge or as a passer-by. A TOGGLE
+        /// (B) rather than a character, deliberately: how the badge is EARNED is a story
+        /// decision the spec leaves open. Badge on = full testimony; off = the thinned
+        /// stranger's version. Phase 2 makes the difference cut deeper — a civilian who asks
+        /// gets REMEMBERED. Spec: docs/superpowers/specs/2026-08-17-witness-voices-design.md.
+        /// </summary>
+        public bool Badge;
+
+        /// <summary>The street's floating one-liners; created in Awake beside the UI.</summary>
+        private StreetVoices _voices;
+
+        /// <summary>A gawker's line, keyed on the citizen id — the response path consumes no
+        /// RNG, so the same person wonders the same thing every run of the same seed.</summary>
+        private static string GawkLine(int who) => (who % 3) switch
+        {
+            0 => "what happened here?",
+            1 => "is that— oh no.",
+            _ => "who is it? can you see?",
+        };
+
+        /// <summary>The verb-menu framework that offers doors (and, later, whatever else)
+        /// while the player is walking. Was write-only from here until now - nothing outside
+        /// this file needed to read it yet, but a field nothing exposes is a field nothing can
+        /// be tested or driven against from outside without a scene search.</summary>
+        public PlayerInteraction Interaction => _interaction;
 
         /// <summary>The last minute written to the track, so a frame does not write it twice.</summary>
         private int _lastTrackedMinute = -1;
@@ -172,6 +201,34 @@ namespace Noir.Unity
         /// Six milliseconds leaves room for a 60 fps frame with the renderer's share intact.
         /// </summary>
         private const double SimBudgetMs = 6.0;
+
+        /// <summary>
+        /// The slice the simulation actually gets this frame, in milliseconds. <see
+        /// cref="SimBudgetMs"/> unless something deliberately asks for more, and nothing in the
+        /// game ever does.
+        ///
+        /// WHY IT IS SETTABLE AT ALL: the speed dial does not do what its label says. A tick over
+        /// the built town costs about 0.35 ms, so six milliseconds buys ~16 of them a frame, while
+        /// at SpeedIndex 300x the accumulator above asks for ~400. The budget therefore starves the
+        /// dial by a factor of twenty-five and the town runs at about 12x however hard it is turned.
+        /// That is CORRECT for a game — see SimBudgetMs, a frame the simulation may eat is a frame
+        /// that stalls — and it is wrong for a headless scenario, where nobody is looking at the
+        /// frame and the whole police response is charged in SIM time: since the one-clock ruling
+        /// (2026-08-16) the county car, the ambulance, the cruiser and the county officer's walk
+        /// from door to door all advance off Sim.Clock, so real seconds buy them nothing.
+        ///
+        /// Measured 2026-08-20, and it is what this exists for: `AWitnessedHitBringsTheTownsWholeResponse`
+        /// gave a case 480 real seconds and the case got 101 sim minutes of them — mid-canvass when
+        /// the deadline expired, with the machine working perfectly the whole way.
+        ///
+        /// KEEP IT UNDER ABOUT 100 ms. CityResponse slices its driving fifteen sim seconds a frame
+        /// (`Step` x `MostSteps`); past that its rigs fall behind the clock instead of driving it.
+        /// Fifteen sim seconds is 300 ticks, which is about 105 ms of this slice.
+        ///
+        /// A property, not a public field: VillageHost bootstraps itself at runtime, and a
+        /// serialized knob on it is one an inspector could quietly set for everybody.
+        /// </summary>
+        public double SimSliceMs { get; set; } = SimBudgetMs;
 
         /// <summary>
         /// Ticks between budget checks. The clock is not free to read, and checking it after
@@ -355,6 +412,28 @@ namespace Noir.Unity
         /// </summary>
         private CityTraffic _traffic;
 
+        /// <summary>The moving fleet, for anything that needs to register a stationary obstacle
+        /// against it (see <see cref="CityTraffic.Obstacles"/>). May be null: not every scene or
+        /// test builds one.</summary>
+        public CityTraffic Traffic => _traffic;
+
+        /// <summary>The lights, kept so Update can hand them the town's clock - they cycle in
+        /// SIM seconds now (one-clock ruling, 2026-08-16). May be null like the fleet.</summary>
+        private CitySignals _signals;
+
+        /// <summary>The county car and the ambulance. Built beside the traffic because it drives
+        /// the traffic's own lane graph; may be null for the same reason <see cref="Traffic"/>
+        /// may be.</summary>
+        public CityResponse Response { get; private set; }
+
+        /// <summary>The cordon's props — sawhorses and tape — raised when an officer arrives
+        /// at a scene and lowered when the case closes. See <see cref="SceneCordon"/>.</summary>
+        private SceneCordon _cordons;
+
+        /// <summary>Which case currently has the cordon up, or -1. There is only ever one:
+        /// the Closed arm reads this to know whether to lower it.</summary>
+        private int _cordonCase = -1;
+
         /// <summary>The town's front doors, and the one thing that swings them.</summary>
         private CityDoors _doors;
 
@@ -448,6 +527,11 @@ namespace Noir.Unity
             // if loading throws — added afterwards, a failure would be invisible and the screen
             // would just be empty, which is exactly the least useful thing it could do.
             gameObject.AddComponent<VillageUI>();
+
+            // The street's own voice — floating lines over the heads the response path points
+            // at. Created beside the UI because it is UI, just world-anchored; its OnGUI guards
+            // against the world not existing yet the same way VillageUI does.
+            _voices = StreetVoices.Create(this, transform);
 
             // A camera has to exist even in the failure case, or there is nothing to draw the
             // error onto. An empty scene has none.
@@ -698,6 +782,22 @@ namespace Noir.Unity
                 }
             profile.Done("CityChunker.Bake (all layers)");
 
+            // GREPPABLE, AND ONLY MEANINGFUL HERE, AFTER THE BAKE: a hinge with no leaf under it
+            // is a door CityDoors will swing invisibly forever, and for a week that was all 589
+            // of them - Combinable's hinge exemption is what keeps it zero now. Zero is the only
+            // healthy number; the PlayMode gate EveryDoorHingeKeepsItsLeafThroughTheBake asserts
+            // the same thing where a red can stop a merge.
+            if (_doors != null && _doors.Count > 0)
+            {
+                int leafless = _doors.Leafless();
+                if (leafless == 0)
+                    Debug.Log($"[doors] all {_doors.Count} hinges kept their leaves through the bake.");
+                else
+                    Debug.LogWarning($"[doors] {leafless} of {_doors.Count} hinges have NO LEAF "
+                                   + "after the bake - those doors swing invisibly. CityChunker's "
+                                   + "hinge exemption has stopped matching what Frontage builds.");
+            }
+
             // THE HOUSES GET THEIR SURFACE HERE, AFTER THE BAKE, AND NOT IN CityCollision.Build.
             // The bake destroys the GameObjects it consumed, so a collider added before it is a
             // collider thrown away by it - which is half of why the town was walk-through. The
@@ -798,10 +898,18 @@ namespace Noir.Unity
             // has always said it should, and the switch works without a restart because there is
             // nothing left to build.
             signals = CitySignals.Create(World, transform);
+            _signals = signals;
             profile.Done("CitySignals");
             traffic = CityTraffic.Create(World, transform, signals);
             _traffic = traffic;
             profile.Done("CityTraffic");
+
+            // THE TWO THAT COME WHEN SOMEBODY IS HURT. Built here rather than lazily and for the
+            // same reason the traffic above it is: it drives the traffic's own lane graph, it runs
+            // on the SIM clock rather than on frames, and a case the machine has opened must be
+            // answerable whether or not anybody has the Traffic layer switched on.
+            Response = CityResponse.Create(World, transform, traffic);
+            profile.Done("CityResponse");
 
             // THE OTHER 98% OF THE TOWN'S CARS, WHICH ARE NOT GOING ANYWHERE.
             //
@@ -916,6 +1024,8 @@ namespace Noir.Unity
             // street costs nothing to nobody who never asks for it.
             _player = Player.Create(this, transform);
             profile.Done("Player");
+            _interaction = PlayerInteraction.Create(this, transform);
+            profile.Done("PlayerInteraction");
             _lighting = SunRig.Create(this, transform);
             profile.Done("SunRig");
 
@@ -956,6 +1066,10 @@ namespace Noir.Unity
             // sound, and until now the village made none at all.
             VillageAudio.Create(this, transform);
             profile.Done("VillageAudio");
+
+            // The cordon's props stand nowhere until an officer arrives at a scene - see
+            // Step 2 in the OfficerArrived arm below.
+            _cordons = SceneCordon.Create(_village.transform);
 
             // AFTER EVERY LAYER, NOT DURING ONE. VillageMesh calls SurfaceTextures.ReportOnce
             // partway through its own build, before the lazily-registered Massing, Trees and Farm
@@ -1142,7 +1256,57 @@ namespace Noir.Unity
         public string[] AskWhatTheySaw(CitizenId who, int day)
         {
             if (People == null || World == null) return System.Array.Empty<string>();
-            return Recollection.AskInEnglish(World, People, People.Get(who), day, Track, Seed);
+            _interruptions ??= new SimInterruptions(this);
+            return Recollection.AskInEnglish(World, People, People.Get(who), day, Track, Seed,
+                                             null, null, _hitEvents, _interruptions, _askEvents,
+                                             _crashEvents);
+        }
+
+        /// <summary>
+        /// The T key's ask, with Phase 2's consequences. A CIVILIAN who questions a witness is
+        /// REMEMBERED — the ask joins AskEvents at the witness's own tile, so anybody who could
+        /// see that doorstep at that minute can later say somebody was going around asking
+        /// questions; the killer's own canvass becomes a sighting. A BADGE ask instead lands the
+        /// witness's words in every case the town knows about and has not shut, through
+        /// ResponseCases.BadgeAsked — the county canvass's sibling seam. Recorded AFTER the
+        /// answer is taken, so the testimony handed back never contains the ask that produced it.
+        /// The county's own canvass does not come through here and is neither remembered nor
+        /// double-filed — CountyReachedDoor already files it.
+        ///
+        /// IDEMPOTENT WITHIN A MINUTE: the same witness asked again before the clock ticks
+        /// skips both consequence arms below, though the testimony is still handed back every
+        /// press. The case file is the permanent record and the ask-event tile is a fact about
+        /// a doorstep, not about a keypress — a witness questioned twice in the same minute
+        /// said the same thing once, and T-key spam should not file it twice or plant two
+        /// sightings of the same visit.
+        /// </summary>
+        public string[] PlayerAsks(CitizenId who, int day)
+        {
+            string[] lines = AskWhatTheySaw(who, day);
+            if (Sim == null || People == null) return lines;
+
+            int minute = NowMinute();
+            bool alreadyAsked = minute == _lastAskMinute && who.Equals(_lastAskWho);
+            _lastAskMinute = minute;
+            _lastAskWho = who;
+            if (alreadyAsked) return lines;
+
+            if (Badge)
+            {
+                // A badge ask when no case is known-open files nothing and records nothing —
+                // deliberate today, a Phase 3 seam (see docs/IDEAS.md).
+                for (int i = 0; i < _cases.Count; i++)
+                {
+                    CaseState s = _cases.StateOf(i);
+                    if (s == CaseState.Undiscovered || s == CaseState.Closed) continue;
+                    _cases.BadgeAsked(i, who, lines);
+                }
+            }
+            else
+            {
+                _askEvents.Record(minute, Sim.GetAgent(who).Position.ToTile());
+            }
+            return lines;
         }
 
         /// <summary>
@@ -1175,6 +1339,887 @@ namespace Noir.Unity
                 best = id;
             }
             return best;
+        }
+
+        /// <summary>Vehicular harm, the second genuine history. See its own header.</summary>
+        private readonly HitEvents _hitEvents = new HitEvents();
+
+        /// <summary>Every ask a witness was ever put, so a doorstep canvass can itself be seen.</summary>
+        private readonly AskEvents _askEvents = new AskEvents();
+
+        /// <summary>The third genuine history: every crash the town staged, so a witness can say
+        /// two cars came together. Written by <see cref="StageCollision"/> alone.</summary>
+        private readonly CrashEvents _crashEvents = new CrashEvents();
+
+        /// <summary>The witness and minute PlayerAsks last acted on, so T-key spam does not
+        /// re-file or re-record the same doorstep visit. The case file is the permanent
+        /// record; a witness asked twice in the same minute said the same thing once.</summary>
+        private int _lastAskMinute = -1;
+        private CitizenId _lastAskWho;
+
+        /// <summary>Which minute each downed citizen went down, whether it killed them, and when
+        /// they came back — the sim knows WHO, this knows WHEN. Phase 2's police consume it, and
+        /// Recollection's IInterruptions answers from it: silenced while [DownedFrom, BackFrom).
+        /// A re-hit of a returned survivor widens the window (earliest down, latest back).</summary>
+        private struct VictimRecord { public int DownedFrom; public int BackFrom; public bool Fatal; }
+        private readonly Dictionary<int, VictimRecord> _victims = new Dictionary<int, VictimRecord>();
+
+        private sealed class SimInterruptions : IInterruptions
+        {
+            private readonly VillageHost _host;
+            public SimInterruptions(VillageHost host) { _host = host; }
+            public int DownedFromMinute(CitizenId who) =>
+                _host._victims.TryGetValue(who.Value, out var r) ? r.DownedFrom : int.MaxValue;
+            public int BackFromMinute(CitizenId who) =>
+                _host._victims.TryGetValue(who.Value, out var r) ? r.BackFrom : int.MaxValue;
+        }
+        private SimInterruptions _interruptions;
+
+        /// <summary>
+        /// A car hit a person. The one recording seam, fed plain data by Player exactly as
+        /// Player.Where feeds the track - the car controller never names this layer. Downs
+        /// the victim in the sim (the body stays), stamps the event with the sim clock, and
+        /// keeps the victim record Phase 2's police will consume.
+        /// </summary>
+        public void CarStruckSomebody(CitizenId victim, Vector3 at, float speed)
+        {
+            if (Sim == null) return;
+            if (Sim.GetAgent(victim).Downed) return;
+
+            Sim.Down(victim);
+
+            int minute = Sim.Clock.Day * (GameClock.TicksPerDay / GameClock.TicksPerMinute)
+                       + Sim.Clock.MinuteOfDay;
+            _hitEvents.Record(minute, Space3D.TileAt(at),
+                              _player != null ? _player.CarTone : CarTone.Unnoticed,
+                              _player != null ? _player.CarShape : CarShape.Unnoticed);
+
+            bool fatal = speed >= ResponseCases.FatalSpeed;
+            _victims.TryGetValue(victim.Value, out var was);   // default: DownedFrom=0 → treat absent
+            _victims[victim.Value] = new VictimRecord
+            {
+                DownedFrom = _victims.ContainsKey(victim.Value) ? Math.Min(was.DownedFrom, minute) : minute,
+                BackFrom   = int.MaxValue,
+                Fatal      = fatal,
+            };
+
+            // AND THE TOWN OPENS A CASE ON IT. Here rather than wherever the body is later
+            // found, because everything Open fixes is only knowable at the moment of impact:
+            // who, when, which tile, what the car looked like from outside, and whether the
+            // speed was lethal. Nothing happens on the strength of it yet - the case sits
+            // Undiscovered until somebody with a line of sight to that tile actually sees it,
+            // which is RunResponse's discovery scan and not this method's business.
+            int caseId = _cases.Open(victim, minute, Space3D.TileAt(at),
+                                     _player != null ? _player.CarTone : CarTone.Unnoticed,
+                                     _player != null ? _player.CarShape : CarShape.Unnoticed,
+                                     speed >= ResponseCases.FatalSpeed);
+
+            Debug.Log($"[hit] a car struck citizen {victim.Value} at {Space3D.TileAt(at)} "
+                    + $"minute {minute}, speed {speed:0.0} m/s, fatal={fatal}. "
+                    + $"They are down, case {caseId} is open, and the town can be asked about it.");
+        }
+
+        /// <summary>Task 13 calls this when ordering TakeBodyAway for a survivor - the return
+        /// minute is known at order time. Widens the record rather than replacing it, so a
+        /// re-hit of somebody already on their way back does not lose the earlier DownedFrom.</summary>
+        public void VictimReturned(CitizenId who, int minute)
+        {
+            _victims.TryGetValue(who.Value, out var r);
+            r.BackFrom = minute;
+            _victims[who.Value] = r;
+        }
+
+        // ---- the day's crash --------------------------------------------------------------
+
+        /// <summary>The day <see cref="_crashPlan"/> was computed for. The planner is pure and
+        /// cheap enough to call, but not once a minute over 1,300 day plans — the plan is
+        /// computed once when the day turns and read thereafter.</summary>
+        private int _crashPlanDay = -1;
+        private CrashPlan? _crashPlan;
+
+        /// <summary>The day whose crash has already been staged, so a plan fires once however
+        /// many minutes RunResponse sees at or past its minute.</summary>
+        private int _crashStagedForDay = -1;
+
+        /// <summary>What StageCollision physically put in the street for one case, so the tow
+        /// and the close can take it back out. The machine never hears of any of this.</summary>
+        private sealed class StagedCrash
+        {
+            public GameObject AtFaultCar;
+            public GameObject OtherCar;
+            public CitizenId AtFault;
+            public CitizenId Other;
+        }
+        private readonly Dictionary<int, StagedCrash> _stagedCrashes = new Dictionary<int, StagedCrash>();
+
+        /// <summary>
+        /// Two of Rossville's own drivers come together, per the planner's ruling. PUBLIC so the
+        /// PlayMode scenario can stage a manufactured plan; the game's own caller is RunResponse,
+        /// once on the planned minute.
+        ///
+        /// The cars are the drivers' real parked cars when they still stand at home
+        /// (<see cref="CityDriveways.Take"/> — the slot goes permanently empty, which is true:
+        /// the car left and, one way or another, is not coming back tonight), and the at-fault
+        /// car's REAL tone and shape override the plan's guess in the event record — witnesses
+        /// degrade from what actually stood in the street. The drivers ride the
+        /// Respond/Board/Alight composition to the scene — they arrived with their cars, not on
+        /// foot — and stand there, Responding, until the verdict releases them or takes them away.
+        /// </summary>
+        public void StageCollision(CrashPlan plan)
+        {
+            if (Sim == null || World == null || People == null) return;
+
+            // A driver the day already spent — downed by the player, away in the ambulance —
+            // cannot crash a car tonight. No crash that day is the honest outcome.
+            AgentState af = Sim.GetAgent(plan.AtFault);
+            AgentState ot = Sim.GetAgent(plan.Other);
+            if (af.Downed || af.AwayUntilMinute != 0 || ot.Downed || ot.AwayUntilMinute != 0)
+            {
+                Debug.Log("[crash] the day's crash is called off — a driver is already down or away");
+                return;
+            }
+
+            int minute = NowMinute();
+            Vector3 sceneWorld = Space3D.ToWorld(plan.Scene);
+
+            // The at-fault car stands angled off the road axis; the other nose-to-fender against
+            // it, angled the opposite way, one car length along the first one's own heading.
+            CarTone tone = plan.Tone;
+            CarShape shape = plan.Shape;
+            var staged = new StagedCrash { AtFault = plan.AtFault, Other = plan.Other };
+            staged.AtFaultCar = TakeCarOf(plan.AtFault, sceneWorld, yaw: 30f, ref tone, ref shape);
+
+            Vector3 otherAt = sceneWorld + Quaternion.Euler(0f, 30f, 0f) * Vector3.forward * 4.6f;
+            otherAt.y = ElevationGrid.HeightAt(otherAt.x, -otherAt.z);
+            CarTone otherTone = CarTone.Unnoticed; CarShape otherShape = CarShape.Unnoticed;
+            staged.OtherCar = TakeCarOf(plan.Other, otherAt, yaw: 205f, ref otherTone, ref otherShape);
+
+            // The event the witnesses may remember, stamped with what actually stood there.
+            _crashEvents.Record(minute, plan.Scene, tone, shape);
+
+            // Both drivers arrive with their cars. The at-fault driver goes down where he
+            // stands on the rare bad one — the same interruption window CarStruckSomebody
+            // writes, or the downed driver keeps testifying.
+            PutDriverAtScene(plan.AtFault, plan.Scene);
+            PutDriverAtScene(plan.Other, KerbTileNear(otherAt, plan.Scene));
+            if (plan.Injury)
+            {
+                Sim.Down(plan.AtFault);
+                _victims.TryGetValue(plan.AtFault.Value, out var was);
+                _victims[plan.AtFault.Value] = new VictimRecord
+                {
+                    DownedFrom = _victims.ContainsKey(plan.AtFault.Value)
+                        ? Math.Min(was.DownedFrom, minute) : minute,
+                    BackFrom = int.MaxValue,
+                    Fatal   = false,   // a collision injury is never fatal in phase 1
+                };
+            }
+
+            int caseId = _cases.OpenCollision(plan.AtFault, plan.Other, minute, plan.Scene,
+                                              tone, shape, plan.Injury, plan.Verdict);
+            _stagedCrashes[caseId] = staged;
+
+            Debug.Log($"[crash] two cars came together at {plan.Scene} minute {minute}: "
+                    + $"citizen {plan.AtFault.Value} into citizen {plan.Other.Value}, "
+                    + $"injury={plan.Injury}, verdict={plan.Verdict}. "
+                    + $"Case {caseId} is open, and the town can be asked about it.");
+            if (!plan.Injury) _voices?.Say(plan.AtFault, "he came out of nowhere—");
+            _voices?.Say(plan.Other, (plan.Other.Value & 1) == 0
+                ? "my fender— look at my fender."
+                : "you alright? that was a hell of a bang.");
+        }
+
+        /// <summary>One driver's parked car, taken from its driveway slot and stood at the
+        /// scene — or null when they have no door, no car within 20 m of it, or the town has no
+        /// driveways at all, in which case the plan's guessed tone stands. On success the ref
+        /// tone/shape become the car's real ones.</summary>
+        private GameObject TakeCarOf(CitizenId owner, Vector3 to, float yaw,
+                                     ref CarTone tone, ref CarShape shape)
+        {
+            if (_driveways == null) return null;
+            if (!TryDoorOf(owner, out Tile door)) return null;
+            int index = _driveways.NearestCar(Space3D.ToWorld(door), 20f);
+            if (index < 0) return null;
+
+            var (car, realTone, realShape) = _driveways.Take(index);
+            car.transform.SetPositionAndRotation(to, Quaternion.Euler(0f, yaw, 0f));
+            tone = realTone; shape = realShape;
+            return car;
+        }
+
+        /// <summary>The Respond/Board/Alight composition the cruiser already rides: the driver
+        /// is at the scene NOW, because they drove there — a crash whose drivers spend twenty
+        /// minutes walking across town to their own accident is not a crash.</summary>
+        private void PutDriverAtScene(CitizenId who, Tile at)
+        {
+            Sim.Respond(who, at);
+            Sim.Board(who);
+            Sim.Alight(who, at);
+        }
+
+        // ---- the response -----------------------------------------------------------------
+        //
+        // THE MACHINE SAYS WHAT, THIS FILE SAYS WHO. ResponseCases can see minutes, tiles and
+        // ids and nothing else - its asmdef references Noir.Core.Contracts alone - so it cannot
+        // pick an officer, cannot know which citizens were at their windows, and has no car. It
+        // emits ORDERS; everything below carries one out and reports the result back through the
+        // machine's arrival methods. That split is the whole design and it is why this loop is
+        // four lines of its own logic wrapped round somebody else's.
+        //
+        // It also has to live HERE, in the one file the witness firewall names, because two of
+        // the three answers it needs - who can see the body, and who has anything to say about
+        // the hit - come out of Noir.Core.Witness, which nothing else in Assets may consume.
+
+        /// <summary>The open cases and their files. Read-only from outside: everything that
+        /// advances a case goes through an order and a report, above.</summary>
+        public ResponseCases Cases => _cases;
+
+        private readonly ResponseCases _cases = new ResponseCases();
+
+        /// <summary>One instance, not one per case: its cache is keyed on the DAY and dropped
+        /// when the day moves, so two cases scanning the same minute share 1,300 day plans
+        /// instead of building them twice.</summary>
+        private readonly Discovery _discovery = new Discovery();
+
+        // Scratch, reused rather than allocated every sim minute.
+        private readonly List<CaseOrder> _caseOrders = new List<CaseOrder>();
+        private readonly List<string> _caseLog = new List<string>();
+        private readonly List<int> _walkingKeys = new List<int>();
+        private readonly List<CitizenId> _canvassList = new List<CitizenId>();
+
+        /// <summary>
+        /// Which officer is walking to which case's scene, for the arrival poll below.
+        ///
+        /// THE MACHINE CANNOT HOLD THIS AND MUST NOT LEARN TO. It has no idea how far a man has
+        /// to walk, whether the ground between him and the scene is walkable, or that he might
+        /// be run over on the way - so it waits to be told, and this is the only place that
+        /// knows enough to tell it.
+        /// </summary>
+        private readonly Dictionary<int, CitizenId> _officerWalking = new Dictionary<int, CitizenId>();
+
+        /// <summary>Which citizens are standing in each case's ring. The machine cannot hold
+        /// this for <see cref="_officerWalking"/>'s own reason: it has no idea who is nearby.</summary>
+        private readonly Dictionary<int, List<CitizenId>> _gawkers =
+            new Dictionary<int, List<CitizenId>>();
+
+        /// <summary>
+        /// The fixed ring: offsets at Chebyshev radius 2-3 in one declared order, so the crowd's
+        /// shape is deterministic per scene. Slot N is the (N+1)th WALKABLE spot — a ring tile
+        /// inside a wall is skipped, not assigned. Reachability is left to RespondTick: a sealed
+        /// but walkable tile strands its gawker standing wherever the path gave out, which reads
+        /// as somebody craning from a distance and costs nothing.
+        /// </summary>
+        private static readonly (int dx, int dy)[] RingSpots =
+        {
+            (2, 0), (-2, 0), (0, 2), (0, -2), (2, 2), (-2, -2), (2, -2), (-2, 2),
+            (3, 1), (-3, -1), (1, 3), (-1, -3),
+        };
+
+        private Tile? RingTileFor(Tile scene, int taken)
+        {
+            int placed = 0;
+            for (int i = 0; i < RingSpots.Length; i++)
+            {
+                var t = new Tile(scene.X + RingSpots[i].dx, scene.Y + RingSpots[i].dy);
+                if (!World.Grid.IsWalkable(t)) continue;
+                if (placed++ == taken) return t;
+            }
+            return null;
+        }
+
+        /// <summary>When the response last ran, in minutes of the day. The
+        /// <see cref="_drivewaysAt"/> pattern, for the same reason: the machine reasons in whole
+        /// minutes and running it per frame would ask the same question sixty times.</summary>
+        private int _responseAt = -1;
+
+        /// <summary>
+        /// The absolute minute, as every stamp in the response is measured.
+        ///
+        /// EXTRACTED BECAUSE IT IS READ FROM TWO CLOCKS. RunResponse reads it once a sim minute;
+        /// the arrival callbacks handed to <see cref="CityResponse"/> read it whenever a vehicle
+        /// or an officer actually gets somewhere, which is a Unity frame in the middle of that
+        /// minute. Two copies of this expression would eventually disagree by a day.
+        /// </summary>
+        private int NowMinute() =>
+            Sim.Clock.Day * (GameClock.TicksPerDay / GameClock.TicksPerMinute) + Sim.Clock.MinuteOfDay;
+
+        /// <summary>
+        /// One sim minute of the town's response: who found a body, who has arrived, what the
+        /// machine wants next, and the greppable record of all of it.
+        ///
+        /// The four steps are in this order on purpose. Discovery first, so a body found this
+        /// minute starts its alarm this minute rather than next. Arrivals second, so the machine
+        /// ticks knowing where everybody actually is. Then its own minute, then the log - which
+        /// is drained LAST so that the transitions this minute's orders caused are printed with
+        /// it rather than a minute late.
+        /// </summary>
+        private void RunResponse()
+        {
+            int minuteOfDay = Sim.Clock.MinuteOfDay;
+            int minute = NowMinute();
+
+            // ---- 0. The day's planned crash ----
+            //
+            // Computed once when the day turns, staged once when the clock reaches its minute.
+            // >= not ==, the loop's own idiom: a skipped minute still crashes.
+            if (_crashPlanDay != Sim.Clock.Day)
+            {
+                _crashPlanDay = Sim.Clock.Day;
+                _crashPlan = CrashPlanner.PlanFor(World, People, Sim.Clock.Day, Seed);
+            }
+            if (_crashPlan.HasValue && _crashStagedForDay != Sim.Clock.Day
+                && minuteOfDay >= _crashPlan.Value.MinuteOfDay)
+            {
+                _crashStagedForDay = Sim.Clock.Day;
+                StageCollision(_crashPlan.Value);
+            }
+
+            // ---- 1. Somebody looks out of a window ----
+            //
+            // TESTIMONY'S OWN OPTICS, not a proximity check: Discovery walks the identical gate
+            // sequence Recollection does, so whoever finds the body is exactly somebody who
+            // could later be asked about the scene. The victim cannot find their own body
+            // because _interruptions silences them from the minute they went down.
+            for (int c = 0; c < _cases.Count; c++)
+            {
+                if (_cases.StateOf(c) != CaseState.Undiscovered) continue;
+                _interruptions ??= new SimInterruptions(this);
+                CitizenId saw = _discovery.WhoSees(World, People, Sim.Clock.Day, minuteOfDay,
+                                                   _cases.SceneOf(c), Seed, null, _interruptions, null);
+                if (saw.IsValid)
+                {
+                    _cases.BodySeen(c, minute, saw);
+                    _voices?.Say(saw, _cases.FatalOf(c)
+                        ? "oh god — somebody get help!"
+                        : "hey! are you alright?! somebody call it in!", 6f);
+                }
+            }
+
+            // ---- 2. Is the officer there yet? ----
+            //
+            // The machine never predicts travel, so somebody has to look. Keys are copied first
+            // because both arms below remove from the dictionary they would otherwise be
+            // enumerating. Each arm re-checks the state before reporting: a case force-closed
+            // while its officer was still walking is gone from the machine's point of view, and
+            // OfficerArrived/OfficerLost both throw rather than forgive a stale report.
+            _walkingKeys.Clear();
+            _walkingKeys.AddRange(_officerWalking.Keys);
+            for (int i = 0; i < _walkingKeys.Count; i++)
+            {
+                int c = _walkingKeys[i];
+                CitizenId officer = _officerWalking[c];
+                AgentState a = Sim.GetAgent(officer);
+
+                // Struck down en route - the case's own victim's fate, visited on the response.
+                if (a.Downed)
+                {
+                    _officerWalking.Remove(c);
+                    if (_cases.StateOf(c) == CaseState.OfficerEnRoute) _cases.OfficerLost(c);
+                    continue;
+                }
+
+                // Standing on the scene tile, off his plan, not walking: that is the sim's own
+                // definition of a responder having arrived (Simulation.RespondTick).
+                if (a.Responding && !a.Travelling && a.Doing == Activity.Responding
+                    && a.Position.ToTile() == _cases.SceneOf(c))
+                {
+                    _officerWalking.Remove(c);
+                    if (_cases.StateOf(c) == CaseState.OfficerEnRoute)
+                    {
+                        _cases.OfficerArrived(c, minute);
+                        _voices?.Say(officer, "step back, please — all of you.");
+
+                        // THE CORDON GOES UP. Traffic first (it computes the geometry),
+                        // then the props stand at the points it chose, then the officer
+                        // walks to the pinch and starts waving — re-stood AFTER
+                        // OfficerArrived is reported, because the arrival detector above
+                        // keys on Doing == Responding and must fire exactly once.
+                        var sceneWorld = Space3D.ToWorld(_cases.SceneOf(c));
+                        var layout = _traffic != null ? _traffic.RaiseCordon(sceneWorld)
+                                                      : default;
+                        _cordons.Raise(c, sceneWorld, layout);
+                        _cordonCase = c;
+                        if (layout.TrafficControlled)
+                        {
+                            Tile pinch = KerbTileNear(layout.BarricadeNear, _cases.SceneOf(c));
+                            Sim.Respond(officer, pinch, Activity.DirectingTraffic);
+                            _voices?.Say(officer, "keep it moving — one at a time.");
+                        }
+                    }
+                }
+            }
+
+            // ---- 3. The machine's own minute ----
+            _caseOrders.Clear();
+            _cases.Tick(minute, _caseOrders);
+            for (int i = 0; i < _caseOrders.Count; i++) Execute(_caseOrders[i], minute);
+
+            // ---- 3½. The crowd ----
+            //
+            // THE MACHINE NEVER HEARS OF THEM. Gawkers are pure choreography: once a case is
+            // discovered, one nearby citizen a minute drifts over to a ring tile — nearest
+            // eligible first, citizen-index tiebreak, NO RNG (the response path's standing
+            // rule) — up to six, and the whole ring is released the minute the case closes,
+            // however it closed. Keying dispersal on Closed rather than on VehiclesLeave means
+            // CloseLoudly and every teardown path disperse the crowd for free.
+            for (int c = 0; c < _cases.Count; c++)
+            {
+                var state = _cases.StateOf(c);
+                if (state == CaseState.Closed)
+                {
+                    if (_gawkers.TryGetValue(c, out var crowd))
+                    {
+                        for (int g = 0; g < crowd.Count; g++) Sim.Release(crowd[g]);
+                        _gawkers.Remove(c);
+                        Debug.Log($"[case] case {c}: the crowd loses interest");
+                    }
+                    if (_cordonCase == c)
+                    {
+                        _cordons.Lower(c);
+                        _traffic?.LowerCordon();
+                        _cordonCase = -1;
+                        Debug.Log($"[case] case {c}: the cordon comes down");
+                    }
+                    if (_stagedCrashes.TryGetValue(c, out var wreck))
+                    {
+                        // Whatever the verdict left in the street goes with the case: the
+                        // remaining cars (their drivers drove off, or the hook came for the
+                        // rest) and any driver still standing at the scene.
+                        if (wreck.AtFaultCar != null) Destroy(wreck.AtFaultCar);
+                        if (wreck.OtherCar != null) Destroy(wreck.OtherCar);
+                        Sim.Release(wreck.AtFault);
+                        Sim.Release(wreck.Other);
+                        _stagedCrashes.Remove(c);
+                        Debug.Log($"[case] case {c}: the street is clear again");
+                    }
+                    continue;
+                }
+                if (state == CaseState.Undiscovered) continue;
+
+                if (!_gawkers.TryGetValue(c, out var ring))
+                    _gawkers[c] = ring = new List<CitizenId>();
+                if (ring.Count >= 6) continue;
+
+                var sceneTile = _cases.SceneOf(c);
+                var sceneV = Vec2.CentreOf(sceneTile);
+                int best = -1;
+                float bestD = 80f * 80f;   // nobody drifts over from more than 80 m
+                for (int i = 0; i < Sim.AgentCount; i++)
+                {
+                    if (i == _cases.VictimOf(c).Value) continue;
+                    var a = Sim.GetAgent(i);
+                    if (a.Downed || a.Responding || a.AwayUntilMinute != 0) continue;
+                    if (a.Doing == Activity.Asleep) continue;
+                    float dx = a.Position.X - sceneV.X, dy = a.Position.Y - sceneV.Y;
+                    float d = dx * dx + dy * dy;
+                    if (d < bestD) { bestD = d; best = i; }
+                }
+                if (best < 0) continue;
+
+                var spot = RingTileFor(sceneTile, ring.Count);
+                if (!spot.HasValue) continue;
+
+                var who = new CitizenId(best);
+                Sim.Respond(who, spot.Value, Activity.Gawking);
+                ring.Add(who);
+                _voices?.Say(who, GawkLine(best));
+                Debug.Log($"[case] case {c}: citizen {best} drifts over");
+            }
+
+            // ---- 4. The record ----
+            _caseLog.Clear();
+            _cases.DrainLog(_caseLog);
+            for (int i = 0; i < _caseLog.Count; i++) Debug.Log("[case] " + _caseLog[i]);
+        }
+
+        /// <summary>
+        /// Carry out one order. Everything here is the half the machine cannot do: pick a man,
+        /// send a car, knock on a door, take a body away.
+        ///
+        /// TWO OF THESE ARMS FIRE THEIR REPORT LATER, FROM A CALLBACK. DriveIn and WalkCountyTo
+        /// each promise exactly one invocation, so the arrival methods they call are reached
+        /// exactly once per order - which is what those methods' state guards require. They fire
+        /// on a Unity frame rather than inside this loop, hence <see cref="NowMinute"/>.
+        /// </summary>
+        private void Execute(CaseOrder order, int minute)
+        {
+            switch (order.Kind)
+            {
+                case OrderKind.DispatchOfficer:
+                {
+                    CitizenId officer = WhoIsOnDuty();
+                    if (!officer.IsValid)
+                    {
+                        // THE SANCTIONED WAY TO SAY "NOBODY". OfficerLost is not only for an
+                        // officer struck en route - it is the machine's own flag-reset, so the
+                        // case falls back to Alarm and asks again next minute. A town whose
+                        // whole precinct is downed, away or already out keeps asking rather
+                        // than silently never being answered.
+                        Debug.Log("[case] no officer left standing");
+                        _cases.OfficerLost(order.Case);
+                        return;
+                    }
+                    // Read BEFORE Respond: its entry cleanup leaves Doing alone, but the watch
+                    // question belongs to the moment of dispatch, not to whatever RespondTick
+                    // writes a tick later.
+                    bool onWatch = Sim.GetAgent(officer).Doing == Activity.AtWork;
+
+                    Sim.Respond(officer, order.Scene);
+                    _cases.OfficerDispatched(order.Case, officer);
+                    _officerWalking[order.Case] = officer;
+
+                    // ON WATCH, HE TAKES THE CRUISER; the overnight on-call man still comes on
+                    // foot from his bed — no cruiser at his house. Boarding hides him from the
+                    // world; the arrival callback sets him down at the kerb and RespondTick
+                    // walks the last few metres. Off-stage fallback included, the callback
+                    // always fires, so he can never be sealed inside a cruiser.
+                    if (onWatch && Response != null && Response.CruiserAvailable
+                        && PrecinctSpot().HasValue)
+                    {
+                        Sim.Board(officer);
+                        var scene = order.Scene;
+                        var who = officer;
+                        Response.CruiserOut(PrecinctSpot().Value, scene,
+                            onArrived: at => Sim.Alight(who, KerbTileNear(at, scene)));
+                        Debug.Log($"[case] case {order.Case}: citizen {officer.Value} takes "
+                                + $"the cruiser to ({order.Scene.X},{order.Scene.Y})");
+                    }
+                    else
+                        Debug.Log($"[case] case {order.Case}: citizen {officer.Value} sent to "
+                                + $"({order.Scene.X},{order.Scene.Y})");
+                    return;
+                }
+
+                case OrderKind.CountyCarIn:
+                {
+                    int id = order.Case;
+                    if (Response == null)
+                    {
+                        Debug.Log($"[case] case {id}: no vehicles in this scene - "
+                                + "the county car arrives off-stage");
+                        CountyIsHere(id, minute);
+                        return;
+                    }
+                    Response.DriveIn(CityResponse.Rig.County, edgeSouth: true, order.Scene,
+                                     onArrived: () => CountyIsHere(id, NowMinute()));
+                    return;
+                }
+
+                case OrderKind.CanvassNext:
+                {
+                    int id = order.Case;
+                    CitizenId who = order.Who;
+                    int day = DayOfHit(id);
+
+                    // NO FRONT DOOR IS NOT A REASON TO STOP CANVASSING. A witness whose home
+                    // place cannot be resolved has nowhere to be knocked on, and a canvass that
+                    // waited for a callback nobody could fire would hold the scene, the two
+                    // vehicles and the officer for the rest of the game. Their answer is taken
+                    // at the kerb instead - the same words, filed the same way, at this minute.
+                    if (!TryDoorOf(who, out Tile door) || Response == null)
+                    {
+                        Debug.Log($"[case] case {id}: citizen {who.Value} has no door to knock "
+                                + "on - their answer is taken at the kerb");
+                        _cases.CountyReachedDoor(id, minute, who, AskWhatTheySaw(who, day));
+                        _voices?.Say(who, "…and that's everything I saw.");
+                        return;
+                    }
+
+                    Response.WalkCountyTo(door, onArrived: () =>
+                    {
+                        _cases.CountyReachedDoor(id, NowMinute(), who, AskWhatTheySaw(who, day));
+                        _voices?.Say(who, "…and that's everything I saw.");
+                    });
+                    return;
+                }
+
+                case OrderKind.AmbulanceIn:
+                {
+                    int id = order.Case;
+                    if (Response == null)
+                    {
+                        Debug.Log($"[case] case {id}: no vehicles in this scene - "
+                                + "the ambulance arrives off-stage");
+                        _cases.AmbulanceArrived(id, minute);
+                        return;
+                    }
+                    Response.DriveIn(CityResponse.Rig.Ambulance, edgeSouth: false, order.Scene,
+                                     onArrived: () => _cases.AmbulanceArrived(id, NowMinute()));
+                    return;
+                }
+
+                case OrderKind.TakeBodyAway:
+                {
+                    // THE ONLY CALL SITE OF VictimReturned, and deliberately: the record's
+                    // BackFrom is what un-silences a witness, so writing it anywhere else -
+                    // speculatively, on an officer, on a guess - would give somebody their
+                    // testimony back while they were still lying in the street.
+                    int back = _cases.ReturnMinuteOf(order.Case);
+                    Sim.TakeAway(order.Who, back);
+                    if (back != int.MaxValue) VictimReturned(order.Who, back);
+                    return;
+                }
+
+                case OrderKind.ReleaseOfficer:
+                {
+                    // MAY CARRY CitizenId.None. A case closed loudly in the window between
+                    // DispatchOfficer being emitted and an officer being reported has no officer
+                    // to release, and the machine queues the pair regardless rather than growing
+                    // a special case for it. Nothing to do is a legitimate outcome here.
+                    _officerWalking.Remove(order.Case);
+                    if (order.Who.IsValid) Sim.Release(order.Who);
+
+                    // His ride goes home when he does — Release cleared any Aboard, so even a
+                    // case closed mid-drive leaves nobody sealed in the car it recalls.
+                    if (Response != null && PrecinctSpot().HasValue)
+                        Response.CruiserHome(PrecinctSpot().Value);
+                    return;
+                }
+
+                case OrderKind.VehiclesLeave:
+                {
+                    if (Response == null) return;
+                    Response.Depart(CityResponse.Rig.County, edgeSouth: true);
+                    Response.Depart(CityResponse.Rig.Ambulance, edgeSouth: false);
+                    return;
+                }
+
+                case OrderKind.InterviewDriver:
+                {
+                    // The driver is standing in the same street the county car is parked in —
+                    // no door, no walk: the statement is taken at the kerb, filed through the
+                    // same seam and with the same pacing as a canvass answer.
+                    int id = order.Case;
+                    CitizenId who = order.Who;
+                    _cases.CountyReachedDoor(id, minute, who, AskWhatTheySaw(who, DayOfHit(id)));
+                    _voices?.Say(who, "…and that's how it happened.");
+                    return;
+                }
+
+                case OrderKind.ArrestDriver:
+                {
+                    // Down-then-TakeAway is the sanctioned composition for a body leaving town,
+                    // and both halves no-op when the ambulance already has him (an injury DUI
+                    // was carried off by TakeBodyAway moments before this order). No
+                    // VictimReturned here: an arrested man was never a silenced witness.
+                    _voices?.Say(order.Who, "ah, hell.");
+                    int back = _cases.ReturnMinuteOf(order.Case);
+                    Sim.Down(order.Who);
+                    Sim.TakeAway(order.Who, back);
+                    Debug.Log($"[case] case {order.Case}: citizen {order.Who.Value} rides to "
+                            + "the county lockup");
+                    return;
+                }
+
+                case OrderKind.TicketDriver:
+                {
+                    _voices?.Say(order.Who, "a ticket. wonderful.");
+                    Sim.Release(order.Who);
+                    return;
+                }
+
+                case OrderKind.ReleaseDrivers:
+                {
+                    // Who is CitizenId.None by design — both drivers go. Release no-ops on
+                    // anybody not Responding, so a driver already taken away is safe to name.
+                    Sim.Release(_cases.VictimOf(order.Case));
+                    Sim.Release(_cases.OtherOf(order.Case));
+                    _voices?.Say(_cases.VictimOf(order.Case), "insurance. we'll let the insurance sort it.");
+                    return;
+                }
+
+                case OrderKind.TowVehicle:
+                {
+                    if (_stagedCrashes.TryGetValue(order.Case, out var sc) && sc.AtFaultCar != null)
+                    {
+                        Destroy(sc.AtFaultCar);
+                        sc.AtFaultCar = null;
+                        Debug.Log($"[case] case {order.Case}: the car goes on the hook");
+                    }
+                    return;
+                }
+            }
+        }
+
+        /// <summary>The county car's arrival and the witness list it starts work on, which are
+        /// one moment and are reported as one - <see cref="ResponseCases.CanvassBegins"/> reads
+        /// the arrival minute it was just given, so anything between them would be a gap in the
+        /// scene's own clock.</summary>
+        private void CountyIsHere(int caseId, int minute)
+        {
+            _cases.CountyArrived(caseId, minute);
+
+            // A collision's witness list is the two drivers, and the machine set it itself
+            // inside CountyArrived — CanvassBegins would throw, and rightly.
+            if (_cases.KindOf(caseId) == CaseKind.Collision) return;
+
+            _cases.CanvassBegins(caseId, CanvassListFor(caseId));
+        }
+
+        /// <summary>
+        /// Who the town sends.
+        ///
+        /// THE PRECINCT IS A TABLE-DECLARED KIND, NOT AN ENUM MEMBER - `Content/kinds.txt` says
+        /// `kind precinct / words precinct police station`, and PlaceKind carries no such value.
+        /// So the word is resolved through the kind table exactly as the map parser resolves it,
+        /// and a town whose content stops declaring one gets no officer rather than a compile
+        /// error somewhere else.
+        ///
+        /// The order of preference is a small town's night desk: the man actually on watch, then
+        /// the man asleep who is on call, then anybody on the roster who is on their feet. Nobody
+        /// downed, nobody the ambulance already has, and nobody already standing at another
+        /// scene - Rossville does not have two response teams.
+        /// </summary>
+        /// <summary>The precinct's own kerb, cached after the first ask: where the cruiser
+        /// starts from and returns to. Null in a town whose kind table has no precinct.</summary>
+        private Vec2? _precinctSpot;
+        private bool _precinctLooked;
+
+        private Vec2? PrecinctSpot()
+        {
+            if (_precinctLooked) return _precinctSpot;
+            _precinctLooked = true;
+            if (World == null || !PlaceKindTable.IsInstalled) return null;
+            if (!PlaceKindTable.Current.TryKindOf("precinct", out PlaceKind kind)) return null;
+            IReadOnlyList<PlaceId> stations = World.PlacesOfKind(kind);
+            if (stations == null || stations.Count == 0) return null;
+            var place = World.GetPlace(stations[0]);
+            if (place != null) _precinctSpot = Vec2.CentreOf(place.Door);
+            return _precinctSpot;
+        }
+
+        /// <summary>The tile the officer steps out onto: the nearest walkable tile to where the
+        /// cruiser actually stopped, spiralling out a few tiles, with the scene itself as the
+        /// fallback — always walkable, because somebody was standing on it when they were hit.</summary>
+        private Tile KerbTileNear(Vector3 world, Tile fallback)
+        {
+            var centre = Space3D.TileAt(world);
+            for (int r = 0; r <= 4; r++)
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++)
+                    {
+                        if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) != r) continue;   // ring only
+                        var t = new Tile(centre.X + dx, centre.Y + dy);
+                        if (World.Grid.IsWalkable(t)) return t;
+                    }
+            return fallback;
+        }
+
+        private CitizenId WhoIsOnDuty()
+        {
+            if (World == null || People == null || Sim == null) return CitizenId.None;
+            if (!PlaceKindTable.IsInstalled) return CitizenId.None;
+            if (!PlaceKindTable.Current.TryKindOf("precinct", out PlaceKind kind)) return CitizenId.None;
+
+            IReadOnlyList<PlaceId> stations = World.PlacesOfKind(kind);
+            if (stations == null || stations.Count == 0) return CitizenId.None;
+
+            IReadOnlyList<CitizenId> roster = People.WorkersAt(stations[0]);
+            CitizenId asleep = CitizenId.None, anybody = CitizenId.None;
+
+            for (int i = 0; i < roster.Count; i++)
+            {
+                CitizenId id = roster[i];
+                AgentState a = Sim.GetAgent(id);
+                if (a.Downed || a.Responding || a.AwayUntilMinute != 0) continue;
+
+                if (a.Doing == Activity.AtWork) return id;                     // on watch
+                if (a.Doing == Activity.Asleep) { if (!asleep.IsValid) asleep = id; continue; }
+                if (!anybody.IsValid) anybody = id;
+            }
+
+            return asleep.IsValid ? asleep : anybody;
+        }
+
+        /// <summary>
+        /// Everybody with something to say about the hit, for the county car to work through.
+        ///
+        /// THE ONE LEGAL CALLER DOING THE ONE LEGAL THING. This asks the witness layer the same
+        /// question the player's T key asks, over the whole census, for the day the hit happened
+        /// - and keeps nothing but the names, which is the point: the canvass list is who to
+        /// knock on, and the words are collected later, at the door, by AskWhatTheySaw.
+        ///
+        /// The victim is skipped outright. Everybody else who was down at that minute is already
+        /// silent - the same IInterruptions window the event arm honours - so there is nothing to
+        /// filter for them here.
+        /// </summary>
+        private CitizenId[] CanvassListFor(int caseId)
+        {
+            if (World == null || People == null) return System.Array.Empty<CitizenId>();
+            _interruptions ??= new SimInterruptions(this);
+
+            int day = DayOfHit(caseId);
+            CitizenId victim = _cases.VictimOf(caseId);
+
+            _canvassList.Clear();
+            for (int i = 0; i < People.Count; i++)
+            {
+                var id = new CitizenId(i);
+                if (id.Value == victim.Value) continue;
+                if (SawTheHit(id, day)) _canvassList.Add(id);
+            }
+            return _canvassList.ToArray();
+        }
+
+        /// <summary>
+        /// Did this citizen witness the HIT ITSELF that day - not the player wandering past,
+        /// the hit.
+        ///
+        /// THE OBVIOUS WAY TO ASK THIS DOES NOT COMPILE, AND THE REASON IS THE FIREWALL WORKING.
+        /// <c>Recollection.WhatTheySawOfEvents</c> answers exactly this question and returns an
+        /// <c>EventSighting[]</c>, which lives in Noir.Core.Observation - an assembly Noir.Unity
+        /// deliberately does not reference (see AskWhatTheySaw's own header: the game gets
+        /// sentences, never evidence). Naming that method here is CS0012, and the fix is NOT to
+        /// add the reference: a MonoBehaviour holding a Sighting is precisely the leak the whole
+        /// arrangement exists to prevent.
+        ///
+        /// ⚠ AND `dotnet build Noir.Unity.csproj` WILL NOT TELL YOU. That project is SDK-style,
+        /// so MSBuild passes transitive ProjectReferences to the compiler and the call builds
+        /// clean; Unity's own asmdef references are NOT transitive, so the same source is a red
+        /// editor console. Verify a change to this method with
+        /// `-p:DisableTransitiveProjectReferences=true`, which is what Unity actually does.
+        ///
+        /// So it is asked through the one seam that hands out strings. An EMPTY track means
+        /// WhatTheySaw contributes nothing, so every line that comes back is an EVENT line - and
+        /// the answer is "they saw something" unless it is the layer's own I-saw-nothing
+        /// sentence, which is asked for once, from the same method with no events to see, rather
+        /// than copied across the wall as a literal that could drift.
+        /// </summary>
+        private bool SawTheHit(CitizenId id, int day)
+        {
+            Citizen who = People.Get(id);
+
+            _sawNothing ??= Recollection.AskInEnglish(World, People, who, day, _noTrack, Seed,
+                                                      null, null, null, _interruptions)[0];
+
+            string[] said = Recollection.AskInEnglish(World, People, who, day, _noTrack, Seed,
+                                                      null, null, _hitEvents, _interruptions);
+            return said.Length != 1 || said[0] != _sawNothing;
+        }
+
+        /// <summary>A track with nothing in it, so the question above is about events alone.
+        /// Never written to - the real one is <see cref="Track"/>.</summary>
+        private readonly PlayerTrack _noTrack = new PlayerTrack();
+
+        /// <summary>What the witness layer says when there is nothing to say, asked of it once
+        /// rather than restated here. See <see cref="SawTheHit"/>.</summary>
+        private string _sawNothing;
+
+        /// <summary>The day the hit happened, which is the day a canvass asks about - not
+        /// today, which can be later if the body lay unfound overnight.</summary>
+        private int DayOfHit(int caseId) =>
+            _cases.MinuteOf(caseId) / (GameClock.TicksPerDay / GameClock.TicksPerMinute);
+
+        /// <summary>Where to knock. False when the citizen's home does not resolve to a place,
+        /// which is the one case the canvass has to report its way around.</summary>
+        private bool TryDoorOf(CitizenId who, out Tile door)
+        {
+            door = default;
+            if (World == null || People == null) return false;
+            Place home = World.GetPlace(People.Get(who).Home);
+            if (home == null) return false;
+            door = home.Door;
+            return true;
         }
 
         private void RecordWhereThePlayerWas()
@@ -1215,6 +2260,10 @@ namespace Noir.Unity
             // Running rather than walking. A body moving at a pace is the thing a witness
             // notices first and remembers longest.
             if (_fastestSinceEntry > RunningPace) looked |= Visibly.Quickly;
+
+            // Behind a wheel. What a witness saw was a car - Recollection treats these
+            // minutes as traffic, not a figure.
+            if (_player != null && _player.InVehicle) looked |= Visibly.InAVehicle;
 
             // Somebody else within a few metres. Not who - Visibly cannot say who, and neither
             // can the witness - only that they were not on their own.
@@ -1267,7 +2316,22 @@ namespace Noir.Unity
             // the peak hour and garaged; this is what holds it to IDOT's curve - ~19 cars at an
             // average instant, ~46 at the commute - instead of the flat 159 it ran for months.
             // Retime is idempotent within a minute, so calling it every frame costs a compare.
-            if (_traffic != null) _traffic.Retime(Sim.Clock.MinuteOfDay);
+            if (_traffic != null)
+            {
+                _traffic.Retime(Sim.Clock.MinuteOfDay);
+                _traffic.TownTick = Sim.Clock.Tick;
+            }
+            if (_signals != null)
+                _signals.TownSeconds = Sim.Clock.Tick / (double)GameClock.TicksPerSecond;
+
+            // And the town answers for somebody lying in the street. Once a sim-minute for the
+            // same reason the driveways are: the case machine reasons in whole minutes, and the
+            // discovery scan behind it replays a day plan per citizen. See RunResponse.
+            if (Sim.Clock.MinuteOfDay != _responseAt)
+            {
+                _responseAt = Sim.Clock.MinuteOfDay;
+                RunResponse();
+            }
 
             // Drain a queued skip first, a frame's worth at a time.
             if (_skipTicksRemaining > 0)
@@ -1351,7 +2415,7 @@ namespace Noir.Unity
                 Sim.Tick(chunk);
                 done += chunk;
             }
-            while (done < ticks && slice.Elapsed.TotalMilliseconds < SimBudgetMs);
+            while (done < ticks && slice.Elapsed.TotalMilliseconds < SimSliceMs);
 
             TicksDropped = ticks - done;
             TicksRun = done;

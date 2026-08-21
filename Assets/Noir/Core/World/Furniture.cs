@@ -47,11 +47,16 @@ namespace Noir.Core.World
         public readonly TileRect Footprint;
         public readonly RoomId Room;
 
-        public Furniture(FurnitureKind kind, TileRect footprint, RoomId room)
+        /// <summary>An authored piece's model name. "" (the default) means resolve by kind -
+        /// every generated piece and every authored piece with no model named.</summary>
+        public readonly string Model;
+
+        public Furniture(FurnitureKind kind, TileRect footprint, RoomId room, string model = "")
         {
             Kind = kind;
             Footprint = footprint;
             Room = room;
+            Model = model ?? "";
         }
 
         /// <summary>Height in metres. Reading a room from above is mostly about height.</summary>
@@ -329,5 +334,38 @@ namespace Noir.Core.World
                     return System.Array.Empty<Item>();
             }
         }
+    }
+
+    /// <summary>
+    /// The word-match from an authored furniture piece's name to the <see cref="FurnitureKind"/>
+    /// the sim understands. Mirrors <see cref="RoomWords"/>: deliberately small, first match
+    /// wins, and an unmatched name defaults rather than refuses - here to <see
+    /// cref="FurnitureKind.Table"/>, the least committal piece there is.
+    /// </summary>
+    public static class FurnitureWords
+    {
+        public static FurnitureKind KindFor(string name)
+        {
+            string s = (name ?? "").ToLowerInvariant();
+            if (Has(s, "bed")) return FurnitureKind.Bed;
+            if (Has(s, "wardrobe")) return FurnitureKind.Wardrobe;
+            if (Has(s, "dresser")) return FurnitureKind.Dresser;
+            if (Has(s, "sofa") || Has(s, "couch")) return FurnitureKind.Sofa;
+            if (Has(s, "cooker") || Has(s, "stove") || Has(s, "range")) return FurnitureKind.Cooker;
+            if (Has(s, "sink")) return FurnitureKind.Sink;
+            if (Has(s, "counter")) return FurnitureKind.Counter;
+            if (Has(s, "bath") || Has(s, "tub")) return FurnitureKind.Bath;
+            if (Has(s, "basin")) return FurnitureKind.Basin;
+            if (Has(s, "hearth") || Has(s, "fireplace")) return FurnitureKind.Hearth;
+            if (Has(s, "desk")) return FurnitureKind.Desk;
+            if (Has(s, "shelf") || Has(s, "bookshelf")) return FurnitureKind.Shelf;
+            if (Has(s, "cabinet")) return FurnitureKind.Cabinet;
+            if (Has(s, "bench")) return FurnitureKind.Bench;
+            if (Has(s, "chair")) return FurnitureKind.Chair;
+            if (Has(s, "table")) return FurnitureKind.Table;
+            return FurnitureKind.Table;
+        }
+
+        private static bool Has(string s, string word) => s.IndexOf(word, System.StringComparison.Ordinal) >= 0;
     }
 }

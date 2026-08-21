@@ -26,7 +26,9 @@ namespace Noir.Core.Tests
 
         // ---------- a village of one house on one street ----------
 
-        private const int RoadY = 100;          // 10 wide, so it covers y 95..105
+        private const int RoadY = 90;           // 10 wide, so it covers y 85..95 - a full-depth
+                                                 // Rossville yard between the kerb and the wall,
+                                                 // not the 3-tile strip a RoadY of 100 used to leave
 
         private static VillageLayout OneHouse(Tile door, int units = 1, int houseY = 108)
         {
@@ -65,6 +67,39 @@ namespace Noir.Core.Tests
             var spot = plan[0].Spot;
             Assert.That(System.Math.Abs(spot.X - 51), Is.GreaterThanOrEqualTo(2),
                         $"spot {spot} stands on the door's own line out of the house");
+        }
+
+        /// <summary>
+        /// Matches CityParking's own measured docstring: "its cars run 5.0 to 5.5m nose to tail."
+        /// A car parked at this spot stands NOSE-ON to the wall (see Driveway.AlongX), so half
+        /// its length reaches back toward the house from the spot's own centre.
+        /// </summary>
+        private const float LongestCarLength = 5.5f;
+
+        /// <summary>
+        /// Matches FrameHouseGrammars.FrameHouse.Porch's deepest call (BungalowMassing, depth:
+        /// 2.6f) - a roofed, posted porch built as roof "extras" on the SAME door-fronted wall
+        /// Driveways.Facing reads, invisible to world.Grid and to every check keyed off it.
+        /// </summary>
+        private const float DeepestPorch = 2.6f;
+
+        [Test]
+        public void ACarNeverStandsCloseEnoughToParkUnderAPorchRoof()
+        {
+            // Door on the top edge (ny = -1), plenty of open yard ahead - the shallowest, most
+            // common case, where Standing() takes the very first step it is offered.
+            var world = Build(OneHouse(new Tile(56, 108)));
+
+            var plan = Driveways.Plan(world, 1991UL);
+            Assert.That(plan.Length, Is.EqualTo(1));
+
+            var spot = plan[0].Spot;
+            float distanceFromWall = 108 - spot.Y;
+            Assert.That(distanceFromWall, Is.GreaterThanOrEqualTo(DeepestPorch + LongestCarLength / 2f),
+                        $"a car standing {distanceFromWall}m out has its tail under the porch roof "
+                      + "or inside the wall it is nose-on to - CityDriveways centres a real car "
+                      + "model on this spot, the fleet's cars run up to 5.5m nose to tail, and a "
+                      + "bungalow's porch alone projects 2.6m further out than its own wall");
         }
 
         [Test]
@@ -168,6 +203,49 @@ namespace Noir.Core.Tests
                         $"{inRoad.Count} cars parked in the carriageway, e.g. {inRoad.FirstOrDefault().Spot}");
             Assert.That(indoors, Is.Empty,
                         $"{indoors.Count} cars parked inside a building, e.g. {indoors.FirstOrDefault().Spot}");
+        }
+
+        /// <summary>
+        /// Matches Driveways.HalfLength/HalfWidth - the footprint a real car occupies around its
+        /// spot, nose-on, in whichever direction CityDriveways happens to face it.
+        /// </summary>
+        private const int HalfLength = 3, HalfWidth = 3;
+
+        [Test]
+        public void NoCarInRossvilleOverlapsAnyBuildingsWallsNotJustItsOwn()
+        {
+            // The spot tile itself passing PlaceAt is not enough: two buildings can stand close
+            // enough that a gap only one tile wide threads between them, and a real car parked
+            // there buries its flank in whichever neighbour is closer. Measured live in Unity
+            // before this test existed: 27 of 598 planned cars did exactly this, and every one
+            // clipped a building OTHER than its own home.
+            var world = Rossville();
+            var plan = Driveways.Plan(world, 1991UL);
+            Assert.That(plan.Length, Is.GreaterThan(0), "nothing was planned at all");
+
+            var bad = new List<string>();
+            foreach (var d in plan)
+            {
+                int ax = d.AlongX ? 1 : 0, ay = d.AlongX ? 0 : 1;
+                int lx = d.AlongX ? 0 : 1, ly = d.AlongX ? 1 : 0;
+
+                for (int along = -HalfLength; along <= HalfLength; along++)
+                for (int across = -HalfWidth; across <= HalfWidth; across++)
+                {
+                    int x = d.Spot.X + ax * along + lx * across;
+                    int y = d.Spot.Y + ay * along + ly * across;
+                    if (!world.Grid.InBounds(x, y)) continue;
+                    if (world.Grid.PlaceAt(x, y).IsValid)
+                    {
+                        bad.Add($"{d} clips a building at ({x},{y})");
+                        goto next;
+                    }
+                }
+                next: ;
+            }
+
+            Assert.That(bad, Is.Empty, $"{bad.Count} cars overlap a building beyond their own "
+                                      + $"home, e.g. {bad.FirstOrDefault()}");
         }
 
         [Test]

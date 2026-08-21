@@ -1,0 +1,196 @@
+{
+ "name": "408 Holmes Street - main floor (derived from Residence408.glb)",
+ "shell": {
+  "w": 45.5,
+  "d": 38.5
+ },
+ "rooms": [
+  {
+   "id": "br3",
+   "name": "Bedroom 3",
+   "x": 7.5,
+   "y": 15.5,
+   "w": 13.5,
+   "h": 6.5
+  },
+  {
+   "id": "br2",
+   "name": "Bedroom 2",
+   "x": 7.5,
+   "y": 22.5,
+   "w": 13.5,
+   "h": 7.5
+  },
+  {
+   "id": "br1",
+   "name": "Bedroom 1",
+   "x": 7.5,
+   "y": 30.5,
+   "w": 18.0,
+   "h": 7.5
+  },
+  {
+   "id": "hall",
+   "name": "Hall",
+   "x": 21.5,
+   "y": 15.5,
+   "w": 4.5,
+   "h": 15.0
+  },
+  {
+   "id": "bath",
+   "name": "Bathroom",
+   "x": 26.0,
+   "y": 15.5,
+   "w": 6.5,
+   "h": 5.0
+  },
+  {
+   "id": "liv",
+   "name": "Living room",
+   "x": 33.0,
+   "y": 15.5,
+   "w": 11.5,
+   "h": 12.5
+  },
+  {
+   "id": "mid",
+   "name": "Dining / entry",
+   "x": 26.0,
+   "y": 21.0,
+   "w": 6.5,
+   "h": 7.0
+  },
+  {
+   "id": "din",
+   "name": "Dining",
+   "x": 25.5,
+   "y": 28.5,
+   "w": 11.0,
+   "h": 6.5
+  },
+  {
+   "id": "kit",
+   "name": "Kitchen",
+   "x": 36.5,
+   "y": 28.5,
+   "w": 8.0,
+   "h": 9.5
+  },
+  {
+   "id": "fam",
+   "name": "Family room",
+   "x": 26.0,
+   "y": 0.5,
+   "w": 18.5,
+   "h": 15.0
+  },
+  {
+   "id": "bath2",
+   "name": "Bath 2 (addition)",
+   "x": 0.5,
+   "y": 28.5,
+   "w": 5.5,
+   "h": 7.5
+  }
+ ],
+ "openings": [
+  {
+   "id": "d_front",
+   "roomId": "din",
+   "side": "S",
+   "off": 2.0,
+   "w": 3.5,
+   "kind": "door"
+  },
+  {
+   "id": "d_rear",
+   "roomId": "fam",
+   "side": "N",
+   "off": 13.0,
+   "w": 3.5,
+   "kind": "door"
+  },
+  {
+   "id": "d_bath2",
+   "roomId": "br1",
+   "side": "W",
+   "off": 0,
+   "w": 3.5,
+   "kind": "door"
+  },
+  {
+   "id": "w_win_front_west",
+   "roomId": "br1",
+   "side": "S",
+   "off": 2.5,
+   "w": 6.0,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_porch",
+   "roomId": "din",
+   "side": "S",
+   "off": 6.0,
+   "w": 5.0,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_front_east",
+   "roomId": "kit",
+   "side": "S",
+   "off": 0.5,
+   "w": 7.5,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_east",
+   "roomId": "liv",
+   "side": "E",
+   "off": 5.5,
+   "w": 4.0,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_rear_east",
+   "roomId": "fam",
+   "side": "E",
+   "off": 5.0,
+   "w": 3.5,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_rear_west",
+   "roomId": "fam",
+   "side": "W",
+   "off": 14.0,
+   "w": 0.5,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_west_add",
+   "roomId": "bath2",
+   "side": "W",
+   "off": 2.0,
+   "w": 2.5,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_rear_a",
+   "roomId": "fam",
+   "side": "N",
+   "off": 3.0,
+   "w": 5.0,
+   "kind": "window"
+  },
+  {
+   "id": "w_win_rear_b",
+   "roomId": "fam",
+   "side": "N",
+   "off": 11.0,
+   "w": 5.0,
+   "kind": "window"
+  }
+ ],
+ "notes": "DERIVED 2026-08-19 from the named nodes of Downloads/Residence408.glb (int_* partitions, floor_*, door_*, win_* groups) - positions are the model's own, to the half foot. Edit freely: drag walls, rename rooms, move openings; Save keeps it.\nThe blank rear-west corner is outside the house (the rear wing spans the east half only). Bath 2 is the small west addition, entered from Bedroom 1. The 53x36 ft detached garage is its own plan - the Floor plan button on this lot's outbuilding card."
+}

@@ -83,7 +83,7 @@ namespace Noir.Unity
 
                 foreach (var tile in openings)
                 {
-                    var opening = FrontAt(place.Bounds, tile);
+                    var opening = FrontAt(place, tile);
                     if (!opening.Valid) continue;
                     pieces += Doorway(doorsRoot, place, tile, opening);
                     doors++;
@@ -91,7 +91,7 @@ namespace Noir.Unity
 
                 // Signs and shutters hang off the authored door, which is the one on the street
                 // even in a building that turned out to have several.
-                var front = FrontAt(place.Bounds, place.Door.IsValid ? place.Door
+                var front = FrontAt(place, place.Door.IsValid ? place.Door
                                   : openings.Count > 0 ? openings[0] : Tile.None);
                 if (!front.Valid) continue;
 
@@ -219,28 +219,55 @@ namespace Noir.Unity
         /// Everything else in this file is written in these terms - along the wall, up it, and
         /// out through it - so no piece of geometry has to know which of four walls it is on.
         /// </summary>
+        /// <summary>
+        /// <paramref name="outward"/> rotated so a piece's local +X runs along the wall it faces -
+        /// the one formula Front's own Rotation and FrontOf both need to agree on, so it exists in
+        /// exactly one place. See Front's constructor for why this specific rotation is the one
+        /// that works for every wall angle, not just the four cardinal ones.
+        /// </summary>
+        private static Vector3 AlongOf(Vector3 outward) => new Vector3(outward.z, 0f, -outward.x);
+
         private readonly struct Front
         {
             public readonly bool Valid;
             public readonly Vector3 Face;
             public readonly Vector3 Out;
             public readonly Vector3 Along;
+            public readonly Quaternion Rotation;
             public readonly float Lo, Hi;
 
-            public Front(Vector3 face, Vector3 outward, Vector3 along, float lo, float hi)
+            /// <summary>
+            /// <paramref name="outward"/> is the only direction this needs - <see cref="Along"/> is
+            /// always <paramref name="outward"/> rotated so a piece's local +X runs along the wall
+            /// and local +Z points through it, which is what makes a single <see cref="Rotation"/>
+            /// correct for every piece this frontage builds, cardinal or not.
+            ///
+            /// <paramref name="lo"/>/<paramref name="hi"/> must already be projections onto THIS
+            /// Along (i.e. Vector3.Dot(worldPoint, Along) for the wall's two extreme corners) - see
+            /// <see cref="FrontAt"/>, which is the only caller.
+            ///
+            /// Along is derived from Out, which does NOT match the pre-rotation code's own
+            /// always-positive convention for outward in {right,back} (see the SDD ledger for this
+            /// plan, "Task 1: BLOCKED report and ruling") - ANY consumer that offsets asymmetrically
+            /// along it, not only Doorway's hinge/leaf, mirrors on those two walls relative to the
+            /// pre-plan original. Plate and Notice do. Nothing offsetting symmetrically (Fascia's
+            /// Centred, Boarding's, Gates') does, because Mathf.Clamp commutes with a sign flip
+            /// applied consistently to both the value and its bounds.
+            /// </summary>
+            public Front(Vector3 face, Vector3 outward, float lo, float hi)
             {
                 Valid = true;
                 Face = face;
                 Out = outward;
-                Along = along;
+                Along = AlongOf(outward);
+                float yaw = Mathf.Atan2(-Along.z, Along.x) * Mathf.Rad2Deg;
+                Rotation = Quaternion.Euler(0f, yaw, 0f);
                 Lo = lo;
                 Hi = hi;
             }
 
-            private bool AlongX => Along.x > 0.5f;
-
             public float Span => Hi - Lo;
-            public float FaceAlong => AlongX ? Face.x : Face.z;
+            public float FaceAlong => Vector3.Dot(Face, Along);
 
             /// <summary>A point on this frontage: where along the wall, how high, and how far out.</summary>
             public Vector3 At(float along, float up, float outward) =>
@@ -249,9 +276,13 @@ namespace Noir.Unity
             /// <summary>Straight over the threshold, at a height and a standoff.</summary>
             public Vector3 On(float up, float outward) => At(FaceAlong, up, outward);
 
-            /// <summary>A box size in the same terms: along the wall, up it, and through it.</summary>
-            public Vector3 Size(float along, float up, float through) =>
-                new Vector3(AlongX ? along : through, up, AlongX ? through : along);
+            /// <summary>
+            /// A box's LOCAL size - along the wall, up it, and through it - unrotated. The piece
+            /// this feeds must apply <see cref="Rotation"/> itself (see <see cref="Piece"/>, next
+            /// step) - this no longer swaps which world axis is which, which was only ever a
+            /// stand-in for real rotation while nothing applied one (see Task 1).
+            /// </summary>
+            public Vector3 Size(float along, float up, float through) => new Vector3(along, up, through);
 
             /// <summary>Trim a board so it cannot overhang the end of the building it is nailed to.</summary>
             public float Fit(float width) => Mathf.Min(width, Mathf.Max(1.2f, Span - 1.2f));
@@ -262,7 +293,108 @@ namespace Noir.Unity
                 : Mathf.Clamp(FaceAlong, Lo + width * 0.5f, Hi - width * 0.5f);
         }
 
-        private static Front FrontAt(TileRect b, Tile door)
+        /// <summary>
+        /// Which edge of a shaped place's own precise ring a doorway sits on, and where along it -
+        /// the same "closest point on the closest edge" search DrawShapedPerimeters
+        /// (Assets/Noir/Unity/VillageMesh.cs) runs for the SAME reason: the two must agree about
+        /// which wall a door belongs to, or the hole and the frame that fills it disagree about
+        /// which direction is outward. That agreement is exact for place.Door, the one tile
+        /// DrawShapedPerimeters actually cuts a hole at - Frontage.Build also calls this for every
+        /// tile in a multi-door place's Openings() list, and any opening beyond the first is only
+        /// as good as its own nearest edge, with no guarantee a hole was cut there specifically.
+        ///
+        /// Returns false (and leaves outward/edgeStart/edgeEnd/foot untouched) when the place has no
+        /// usable precise ring, or the ring is malformed - the caller falls back to the cardinal
+        /// FrontAt in that case, exactly as it always has.
+        /// </summary>
+        private static bool PreciseEdgeAt(Place place, Tile door,
+                                          out Vector3 outward, out Vector3 edgeStart, out Vector3 edgeEnd,
+                                          out Vector3 foot)
+        {
+            outward = default; edgeStart = default; edgeEnd = default; foot = default;
+            var precise = place.OutlinePrecise;
+            var outline = place.Outline;
+            if (precise == null || outline == null || precise.Length != outline.Length || precise.Length < 3)
+                return false;
+
+            int n = precise.Length;
+            var pts = new Vector2[n];
+            for (int i = 0; i < n; i++) pts[i] = new Vector2(precise[i].X, precise[i].Y);
+
+            float signedArea = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                var a = pts[i];
+                var b = pts[(i + 1) % n];
+                signedArea += a.x * b.y - b.x * a.y;
+            }
+            var ring = pts;
+            if (signedArea < 0f)
+            {
+                ring = new Vector2[n];
+                for (int i = 0; i < n; i++) ring[i] = pts[n - 1 - i];
+            }
+
+            var doorPoint = new Vector2(door.X + 0.5f, door.Y + 0.5f);
+            int bestEdge = -1;
+            float bestDist = float.MaxValue;
+            Vector2 bestFoot = default;
+            for (int i = 0; i < n; i++)
+            {
+                var p0 = ring[i];
+                var p1 = ring[(i + 1) % n];
+                float len = Vector2.Distance(p0, p1);
+                if (len < 0.01f) continue;
+                var dir = (p1 - p0) / len;
+                float t = Mathf.Clamp(Vector2.Dot(doorPoint - p0, dir), 0f, len);
+                var footHere = p0 + dir * t;
+                float dist = Vector2.Distance(doorPoint, footHere);
+                if (dist < bestDist) { bestDist = dist; bestEdge = i; bestFoot = footHere; }
+            }
+            if (bestEdge < 0) return false;
+
+            var e0 = ring[bestEdge];
+            var e1 = ring[(bestEdge + 1) % n];
+            var edgeDir = (e1 - e0).normalized;
+            // +90 degrees from the direction of travel points into a CCW ring's own interior (see
+            // DrawShapedPerimeters's own comment on this exact formula) - negate it for OUTWARD.
+            var normal2 = new Vector2(edgeDir.y, -edgeDir.x);
+
+            // village space is (x, y) with y counting rows SOUTH; world space is (x, height, -y) -
+            // see Space3D.ToWorld and VillageMesh.AddWall, which both negate the second component
+            // when they turn a village-space point into a world-space one. normal2 and edgeDir are
+            // DIRECTIONS, not points, but the map is linear (no translation term), so a direction
+            // negates on that same axis exactly as a point does. Verified live against 112 S
+            // Chicago #1 (the terrace): the naive `new Vector3(normal2.x, 0f, normal2.y)` lands
+            // 35 degrees off the wall's true outward direction (dot 0.82 against the ring's own
+            // centroid-to-edge-midpoint vector, converted to world space the same way); negating
+            // here, as below, lands exactly on it (dot 1.00).
+            outward = new Vector3(normal2.x, 0f, -normal2.y);
+            edgeStart = new Vector3(e0.x, 0f, -e0.y);
+            edgeEnd = new Vector3(e1.x, 0f, -e1.y);
+            // The point on the wall's OWN surface nearest the door, not the door tile's centre
+            // pushed out by an assumed half-tile (the cardinal path's approximation, correct only
+            // because a cardinal wall always runs exactly one tile from its door's centre - a
+            // shaped wall does not). PreciseEdgeAt already computes this to find bestEdge; this
+            // stops throwing it away. Found by the final whole-branch review on this plan.
+            foot = new Vector3(bestFoot.x, 0f, -bestFoot.y);
+            return true;
+        }
+
+        private static Front FrontAt(Place place, Tile door)
+        {
+            if (!door.IsValid) return default;
+
+            if (PreciseEdgeAt(place, door, out var outward, out var edgeStart, out var edgeEnd, out var foot))
+            {
+                var (lo, hi) = FrontOf(outward, new[] { edgeStart, edgeEnd });
+                return new Front(foot, outward, lo, hi);
+            }
+
+            return FrontAtBounds(place.Bounds, door);
+        }
+
+        private static Front FrontAtBounds(TileRect b, Tile door)
         {
             if (!door.IsValid) return default;
 
@@ -275,12 +407,35 @@ namespace Noir.Unity
             else if (door.Y == b.Bottom) outward = Vector3.back;
             else return default;
 
-            bool acrossX = Mathf.Abs(outward.z) > 0.5f;
-            var along = acrossX ? Vector3.right : Vector3.forward;
-            float lo = acrossX ? b.X : -(b.Y + b.H);
-            float hi = acrossX ? b.X + b.W : -b.Y;
+            var (lo, hi) = FrontOf(outward, BoundsCorners(b));
+            return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, lo, hi);
+        }
 
-            return new Front(Space3D.ToWorld(door) + outward * 0.5f, outward, along, lo, hi);
+        /// <summary>The four corners of an axis-aligned footprint, in world space.</summary>
+        private static Vector3[] BoundsCorners(TileRect b) => new[]
+        {
+            Space3D.ToWorld(b.X, b.Y), Space3D.ToWorld(b.Right + 1, b.Y),
+            Space3D.ToWorld(b.X, b.Bottom + 1), Space3D.ToWorld(b.Right + 1, b.Bottom + 1),
+        };
+
+        /// <summary>
+        /// A wall's span along itself: Lo/Hi, projected from whichever of <paramref name="corners"/>
+        /// reach furthest along <paramref name="outward"/>'s own Along direction (see AlongOf).
+        /// <paramref name="corners"/> only needs the wall's own two ends for a shaped edge (Task 3)
+        /// - the bounding box's four corners is what a cardinal wall uses, and projecting is what
+        /// makes both work through the same formula.
+        /// </summary>
+        private static (float lo, float hi) FrontOf(Vector3 outward, Vector3[] corners)
+        {
+            var along = AlongOf(outward);
+            float lo = float.MaxValue, hi = float.MinValue;
+            foreach (var c in corners)
+            {
+                float t = Vector3.Dot(c, along);
+                if (t < lo) lo = t;
+                if (t > hi) hi = t;
+            }
+            return (lo, hi);
         }
 
         // ---------- doors ----------
@@ -311,10 +466,10 @@ namespace Noir.Unity
             Piece(parent, "doorhead",
                   f.On((DoorHeight + eaves) * 0.5f, -wall * 0.5f),
                   f.Size(1.0f, eaves - DoorHeight, Mathf.Max(0.08f, wall - 0.04f)),
-                  Materials3D.Walls[Materials3D.WallingFor(place)]);
+                  Materials3D.Walls[Materials3D.WallingFor(place)], f.Rotation);
 
             Piece(parent, "doorcase", f.On(DoorHeight * 0.5f + 0.03f, -0.05f),
-                  f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone);
+                  f.Size(1.0f, DoorHeight + 0.06f, 0.14f), Materials3D.Stone, f.Rotation);
 
             // THE LEAF HANGS ON A HINGE NOW. It was a box in a hole for as long as this file has
             // existed - see CityDoors, which swings it.
@@ -332,6 +487,7 @@ namespace Noir.Unity
             var hinge = new GameObject("hinge");
             hinge.transform.SetParent(parent, false);
             hinge.transform.position = f.At(hingeAlong, 0f, Proud - 0.06f);
+            hinge.transform.localRotation = f.Rotation;
 
             var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
             leaf.name = "door";
@@ -342,27 +498,35 @@ namespace Noir.Unity
             leafRenderer.shadowCastingMode = ShadowCastingMode.On;
             leafRenderer.receiveShadows = true;
 
-            // Local, because the hinge is what turns: half a leaf along the wall from the post,
-            // and half a leaf up from the threshold.
-            bool alongX = Mathf.Abs(f.Along.x) > 0.5f;
+            // Local to the hinge, which now CARRIES the wall's rotation - so "half a leaf along
+            // the wall from the post" is always local +X, the same for every wall, cardinal or
+            // not. This is what f.Rotation on the hinge buys: the AlongX branch that used to pick
+            // world X or world Z is gone because there is no more world-axis case to pick between.
             float half = DoorWidth * 0.5f;
-            leaf.transform.localPosition = new Vector3(alongX ? half : 0f,
-                                                       (DoorHeight - 0.06f) * 0.5f,
-                                                       alongX ? 0f : half);
+            leaf.transform.localPosition = new Vector3(half, (DoorHeight - 0.06f) * 0.5f, 0f);
             leaf.transform.localScale = f.Size(DoorWidth, DoorHeight - 0.06f, 0.12f);
 
-            // Which way is "in"? `Out` points away from the building, so a shop turns the leaf
-            // towards Out and a house away from it. The sign of the yaw follows the wall's own
-            // heading so both walls of a corner shop still open outward.
+            // Which way is "in"? Out points away from the building; with the hinge's own rotation
+            // now carrying the wall's true heading, "outward" in the hinge's LOCAL frame is
+            // always local +Z (see Front's constructor: Rotation*forward == Out) - so the shop/
+            // house sign no longer needs to read Out's world components at all.
+            //
+            // THE SIGN, DERIVED AND NOT GUESSED, because it shipped backwards once: the leaf
+            // extends along local +X, and in Unity's left-handed Y-up frame a POSITIVE yaw takes
+            // +X toward -Z (Euler(0,90,0) maps forward to right, so it maps right to back). -Z is
+            // the INTERIOR here. So a shop, which must swing OUT (+Z), needs a NEGATIVE swing,
+            // and a house, which must swing IN (-Z), needs a POSITIVE one. It was written the
+            // other way round and nobody could see it - every leaf in town was being destroyed by
+            // the bake at the time (see CityChunker.Combinable's hinge exemption), so the wrong
+            // swing had never once been drawn.
             float shutYaw = hinge.transform.localEulerAngles.y;
-            float side = alongX ? Mathf.Sign(f.Out.z) : -Mathf.Sign(f.Out.x);
-            float swing = Commercial(place) ? 85f : -85f;
-            Doors?.Add(hinge.transform, shutYaw, shutYaw + swing * side);
+            float swing = Commercial(place) ? -85f : 85f;
+            Doors?.Add(hinge.transform, shutYaw, shutYaw + swing);
 
             // Sunk a little below zero, because a road is worn 4cm down and a step that started
             // exactly at ground level floated over it.
             Piece(parent, "doorstep", f.On(0.02f, 0.30f),
-                  f.Size(1.30f, 0.16f, 0.62f), Materials3D.Stone);
+                  f.Size(1.30f, 0.16f, 0.62f), Materials3D.Stone, f.Rotation);
 
             return 4;
         }
@@ -542,7 +706,7 @@ namespace Noir.Unity
         {
             width = f.Fit(width);
             Piece(parent, name, f.At(f.Centred(width), sill + height * 0.5f, Proud + 0.02f + 0.07f),
-                  f.Size(width, height, 0.14f), material);
+                  f.Size(width, height, 0.14f), material, f.Rotation);
             return 1;
         }
 
@@ -560,10 +724,10 @@ namespace Noir.Unity
             // through the gap. Half the section plus a five-millimetre bite into the board, so
             // the two overlap rather than sharing a plane and shimmering along the join.
             Piece(parent, name + ":bracket", f.On(centreY + height * 0.5f + 0.03f, project * 0.5f),
-                  f.Size(0.07f, 0.07f, project), Materials3D.Ironwork);
+                  f.Size(0.07f, 0.07f, project), Materials3D.Ironwork, f.Rotation);
 
             Piece(parent, name, f.On(centreY, project - length * 0.5f - 0.10f),
-                  f.Size(0.09f, height, length), board);
+                  f.Size(0.09f, height, length), board, f.Rotation);
             return 2;
         }
 
@@ -574,7 +738,7 @@ namespace Noir.Unity
             float reach = 0.95f + width * 0.5f;
             float side = f.FaceAlong + reach > f.Hi - 0.3f ? -1f : 1f;
             Piece(parent, name, f.At(f.FaceAlong + side * reach, centreY, Proud + 0.03f),
-                  f.Size(width, height, 0.06f), material);
+                  f.Size(width, height, 0.06f), material, f.Rotation);
             return 1;
         }
 
@@ -588,9 +752,9 @@ namespace Noir.Unity
             float along = Mathf.Clamp(f.FaceAlong + 1.9f,
                                       f.Lo + width * 0.5f + 0.4f, f.Hi - width * 0.5f - 0.4f);
 
-            Piece(parent, name, f.At(along, 1.55f, Proud + 0.09f), f.Size(width, height, 0.14f), board);
+            Piece(parent, name, f.At(along, 1.55f, Proud + 0.09f), f.Size(width, height, 0.14f), board, f.Rotation);
             Piece(parent, name + ":hood", f.At(along, 1.55f + height * 0.5f + 0.06f, Proud + 0.16f),
-                  f.Size(width + 0.16f, 0.09f, 0.44f), Materials3D.Bark);
+                  f.Size(width + 0.16f, 0.09f, 0.44f), Materials3D.Bark, f.Rotation);
             return 2;
         }
 
@@ -691,7 +855,7 @@ namespace Noir.Unity
                 Piece(parent, "board",
                       f.At(centre - width * 0.5f + pitch * (i + 0.5f), 0.02f + height * 0.5f,
                            ShutterProud + 0.05f),
-                      f.Size(pitch - 0.06f, height, 0.10f), material);
+                      f.Size(pitch - 0.06f, height, 0.10f), material, f.Rotation);
 
             Batten(parent, f, centre, width, 0.55f);
             Batten(parent, f, centre, width, 1.80f);
@@ -701,7 +865,7 @@ namespace Noir.Unity
         private static void Batten(Transform parent, Front f, float centre, float width, float y)
         {
             Piece(parent, "batten", f.At(centre, y, ShutterProud + 0.13f),
-                  f.Size(width + 0.06f, 0.13f, 0.06f), Materials3D.Bark);
+                  f.Size(width + 0.06f, 0.13f, 0.06f), Materials3D.Bark, f.Rotation);
         }
 
         /// <summary>A pair of heavy doors closed over the opening, for the places that only lock.</summary>
@@ -711,7 +875,7 @@ namespace Noir.Unity
             for (int i = 0; i < 2; i++)
                 Piece(parent, "gate",
                       f.At(f.FaceAlong + (i == 0 ? -0.255f : 0.255f), height * 0.5f, ShutterProud + 0.05f),
-                      f.Size(0.47f, height, 0.10f), Materials3D.Bark);
+                      f.Size(0.47f, height, 0.10f), Materials3D.Bark, f.Rotation);
             return 2;
         }
 
@@ -725,12 +889,13 @@ namespace Noir.Unity
         }
 
         private static void Piece(Transform parent, string name, Vector3 position, Vector3 size,
-                                  Material material)
+                                  Material material, Quaternion rotation)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
             go.transform.SetParent(parent, false);
             go.transform.position = position;
+            go.transform.rotation = rotation;
             go.transform.localScale = size;
 
             Discard(go.GetComponent<Collider>());

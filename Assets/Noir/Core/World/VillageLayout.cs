@@ -124,6 +124,29 @@ namespace Noir.Core.World
         public Tile[] Outline;
 
         /// <summary>
+        /// The interior the owner drew for this building, in tile space, or null for the
+        /// generated one. Filled by the Unity survey side from Content/floorplans/; nothing
+        /// in the map file writes it and nothing in Core computes it — the Outline pattern.
+        /// </summary>
+        public AuthoredInterior AuthoredInterior;
+
+        /// <summary>
+        /// The same ring as <see cref="Outline"/>, in continuous metres rather than tiles - or
+        /// null to say nothing more precise than the tile-rounded ring was ever computed, which is
+        /// what every caller except <c>DowntownFromSanborn</c> does today. See
+        /// <see cref="Place.OutlinePrecise"/> for why this exists and where it actually changes
+        /// what gets drawn.
+        /// </summary>
+        public Vec2[] OutlinePrecise;
+
+        /// <summary>
+        /// The wall's base height in metres, shared with this place's row neighbours - or null to
+        /// say "measure it yourself", which is what every caller except <c>DowntownFromSanborn</c>
+        /// does today. See <see cref="Place.GroundHeight"/> for why this exists.
+        /// </summary>
+        public float? GroundHeight;
+
+        /// <summary>
         /// Outdoor places are drawn as open ground, without walls or a door. Which are which is
         /// the `form` column in kinds.txt: this used to be a list of exceptions here and another
         /// one in the renderer, and they had drifted apart.

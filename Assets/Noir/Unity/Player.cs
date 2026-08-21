@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Noir.Core.Contracts;
+using Noir.Core.People;
 using Noir.Core.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -80,8 +82,37 @@ namespace Noir.Unity
 
         public bool Walking { get; private set; }
 
+        /// <summary>Behind a wheel rather than on foot. Walking and Driving are exclusive.</summary>
+        public bool Driving { get; private set; }
+
+        /// <summary>The track recorder's question, by its own name.</summary>
+        public bool InVehicle => Driving;
+
+        /// <summary>The taken car's witness-facing identity. Valid while Driving.</summary>
+        public CarTone CarTone { get; private set; }
+        public CarShape CarShape { get; private set; }
+
+        /// <summary>The car's position at the START of this frame's drive step, or null on
+        /// the first frame — the other end of the hit sweep's segment.</summary>
+        public Vector3? CarTravelledFrom { get; private set; }
+
+        private GameObject _car;
+        private float _carSpeed;                       // m/s, signed (negative = reverse)
+
+        /// <summary>The last car the player got out of, remembered so the interaction seam can
+        /// offer it back - PlayerInteraction's own-car candidate, CarInteractable.
+        /// OwnCarInteractable. Only one car is remembered, the most recent: taking a different
+        /// car forgets the old one where it stands (v1 - the town's other 546 cars are still
+        /// there). Null before any car has ever been taken. SitIn itself never touches this
+        /// field - the two callers that put the player back behind a wheel do: ReenterLastCar
+        /// clears it (it IS the remembered car, taken back), and EnterCar leaves it stale (a
+        /// DIFFERENT car was taken, and LastCarPosition's own `!Driving` guard is what keeps the
+        /// stale value from being offered again while driving).</summary>
+        private GameObject _lastCar;
+
         /// <summary>
-        /// Where the body is standing, in world space, or null when nobody is in it.
+        /// Where the body is standing, in world space, or null when nobody is in it. Answers for
+        /// the car as well while Driving — same witness-facing question, different vehicle.
         ///
         /// DELIBERATELY A UNITY TYPE AND NOTHING MORE. VillageHost writes the observation track
         /// and is the only file in the game allowed to name the witness assembly - see
@@ -93,7 +124,15 @@ namespace Noir.Unity
         /// code and prose would also be a check somebody could talk their way around.)
         /// </summary>
         public Vector3? Where =>
-            Walking && _body != null ? _body.transform.position : (Vector3?)null;
+            Walking && _body != null ? _body.transform.position
+          : Driving && _car != null ? _car.transform.position
+          : (Vector3?)null;
+
+        /// <summary>Where the player's own abandoned car stands, for the interaction seam -
+        /// null while driving (nothing is "abandoned" mid-drive) or before any car was ever
+        /// taken.</summary>
+        public Vector3? LastCarPosition =>
+            _lastCar != null && !Driving ? _lastCar.transform.position : (Vector3?)null;
 
         public static Player Create(VillageHost host, Transform parent)
         {
@@ -107,7 +146,10 @@ namespace Noir.Unity
         private void Update()
         {
             var keys = Keyboard.current;
-            if (keys != null && keys.pKey.wasPressedThisFrame) Toggle();
+            if (keys != null && keys.pKey.wasPressedThisFrame && !Driving
+                && !VillageUI.KeyboardCaptured) Toggle();
+
+            if (Driving) { DriveStep(keys); return; }
 
             if (!Walking || _target == null || _camera == null) return;
 
@@ -151,9 +193,235 @@ namespace Noir.Unity
             _camera.transform.rotation = Quaternion.LookRotation(pivot - _camera.transform.position);
         }
 
+        /// <summary>
+        /// One frame behind the wheel. Kinematic on purpose — see the spec and CarMesh.cs's
+        /// own measurement: a physics vehicle halved this town's frame rate. Real time
+        /// (Time.deltaTime), same clock the NPC fleet drives on.
+        /// </summary>
+        private void DriveStep(Keyboard keys)
+        {
+            if (_car == null || _camera == null)
+            {
+                // Torn out of the seat rather than stepping out of it - most plausibly the car
+                // was destroyed out from under the driver (the town tore the driveway down mid-
+                // drive). LeaveCar's own exit math needs the car's transform, which is gone, so
+                // this is LeaveCar without a car: stand the body back up where it was left - its
+                // position was never touched while driving - rather than leaving Driving false
+                // with Walking also false and the player nowhere at all.
+                //
+                // THE CAR ITSELF MAY STILL BE STANDING even though this branch fired - the other
+                // half of the guard is _camera, and losing the camera says nothing about the
+                // car. Stash it into _lastCar exactly as LeaveCar would, but only "if the
+                // reference is still alive": Unity's overloaded == already reports a destroyed
+                // car as null, so a car that really was torn out from under the driver leaves
+                // nothing worth remembering.
+                if (_car != null) _lastCar = _car;
+                Driving = false;
+                _car = null;
+                CarTravelledFrom = null;
+                _sweepPrev = null;
+                Walking = true;
+                if (_body != null) _body.SetActive(true);
+                return;
+            }
+            float dt = Time.deltaTime;
+            bool typing = VillageUI.KeyboardCaptured;
+
+            // ---- throttle ----
+            float want = 0f;
+            if (!typing && keys != null)
+            {
+                if (keys.wKey.isPressed || keys.upArrowKey.isPressed) want = TopSpeed;
+                if (keys.sKey.isPressed || keys.downArrowKey.isPressed) want = -ReverseSpeed;
+            }
+            float rate = Mathf.Abs(want) > Mathf.Abs(_carSpeed) ? Accelerate : Brake;
+            _carSpeed = Mathf.MoveTowards(_carSpeed, want, rate * dt);
+
+            // ---- steering, scaled by speed so the car cannot pivot on a point ----
+            if (!typing && keys != null && Mathf.Abs(_carSpeed) > 0.2f)
+            {
+                float steer = 0f;
+                if (keys.aKey.isPressed || keys.leftArrowKey.isPressed) steer -= 1f;
+                if (keys.dKey.isPressed || keys.rightArrowKey.isPressed) steer += 1f;
+                float sign = _carSpeed < 0f ? -1f : 1f;      // reversing steers the other way
+                _car.transform.Rotate(0f,
+                    steer * sign * TurnRate * (Mathf.Abs(_carSpeed) / TopSpeed) * dt, 0f);
+            }
+
+            // ---- move, stopped by the same walls that stop a person ----
+            CarTravelledFrom = _car.transform.position;
+            Vector3 step = _car.transform.forward * _carSpeed * dt;
+            float distance = step.magnitude;
+
+            // The officer's hold line binds the player exactly as it binds the fleet —
+            // the barricade collider stops the closed half physically; this stops the
+            // open lane until the wave. Traffic answers the same question RunSegment
+            // asks for the ambient cars. Only FORWARD motion is held: `_carSpeed > 0f`
+            // keeps this from also zeroing reverse and steering (which scales with
+            // |speed|) — without it a held player was trapped, unable to back off the
+            // line they were stopped at.
+            if (_carSpeed > 0f && _host != null && _host.Traffic != null
+                && _host.Traffic.CordonHolds(_car.transform.position, _car.transform.forward))
+            {
+                _carSpeed = 0f;
+                distance = 0f;
+            }
+
+            if (distance > 0f)
+            {
+                // The box floats above the road - bottom at +0.4m, raised from an earlier
+                // +0.9/0.7 - so neither this cast nor the destination checks below ever pick up
+                // the ground collider itself, on any slope the elevation grid can produce.
+                var half = new Vector3(0.95f, 0.6f, 2.6f);
+                var origin = _car.transform.position + Vector3.up * 1.0f;
+                if (Physics.BoxCast(origin, half, step.normalized, out var hit,
+                                    _car.transform.rotation, distance, ~0,
+                                    QueryTriggerInteraction.Ignore))
+                {
+                    distance = Mathf.Max(0f, hit.distance - 0.05f);
+                    _carSpeed = 0f;
+                }
+                var to = _car.transform.position + step.normalized * distance;
+                to.y = ElevationGrid.HeightAt(to.x, -to.z);
+
+                // A cast is blind to a collider it STARTS inside of, and steering is not swept -
+                // a rotation can put the nose into a wall, and the next frame's cast sees
+                // nothing. So the destination is checked too, with an escape rule: a move that
+                // would take a CLEAN car into overlap is refused; a car already overlapping may
+                // move (that is how it backs out of the wall it was steered into).
+                bool cleanNow = !Physics.CheckBox(origin, half, _car.transform.rotation,
+                                                  ~0, QueryTriggerInteraction.Ignore);
+                bool cleanThere = !Physics.CheckBox(to + Vector3.up * 1.0f, half,
+                                                    _car.transform.rotation,
+                                                    ~0, QueryTriggerInteraction.Ignore);
+                if (cleanNow && !cleanThere) _carSpeed = 0f;
+                else _car.transform.position = to;
+            }
+
+            // ---- camera: the walking follow block, on a longer tether ----
+            var mouse = Mouse.current;
+            if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
+            {
+                var d = mouse.delta.ReadValue() * (LookSpeed * 0.0006f);
+                _yaw += d.x;
+                _pitch = Mathf.Clamp(_pitch - d.y, MinPitch, MaxPitch);
+            }
+            var pivot = _car.transform.position + Vector3.up * 1.2f;
+            var back = Quaternion.Euler(_pitch, _yaw, 0f) * Vector3.back;
+            float reach = DriveCamDistance;
+            if (Physics.SphereCast(pivot, 0.25f, back, out var wall, DriveCamDistance,
+                                   ~0, QueryTriggerInteraction.Ignore))
+                reach = Mathf.Max(0.6f, wall.distance - 0.15f);
+            _camera.transform.position = pivot + back * reach;
+            _camera.transform.rotation = Quaternion.LookRotation(pivot - _camera.transform.position);
+
+            // ---- did this frame's travel go through anybody? ----
+            //
+            // AFTER the camera, not before: a refused move (the BoxCast/CheckBox pair above
+            // held the car at its old spot) or a zero-throttle frame leaves CarTravelledFrom
+            // equal to the car's current position, and the closest-approach math in
+            // SweepForVictims handles that segment fine - t clamps to 0 and the test becomes a
+            // plain point-distance check - so a stalled car standing on somebody still hits
+            // them rather than getting a free pass because it never moved.
+            //
+            // GATED ON SPEED, NOT ON WHETHER IT CALLS AT ALL - SweepForVictims itself stays
+            // ungated (the PlayMode gate drives it directly, without throttle input), only this
+            // call site is. A pedestrian brushing a parked or crawling car is a bump, not a
+            // casualty; the harm threshold is a walking pace, roughly the 1.5 m/s a person on
+            // foot moves at, so a car below that is not travelling fast enough to be the one
+            // doing the hitting.
+            if (CarTravelledFrom.HasValue && Mathf.Abs(_carSpeed) >= 1.5f)
+                SweepForVictims(CarTravelledFrom.Value, _car.transform.position);
+        }
+
+        /// <summary>Half the car's width plus a shoulder. A person inside this lateral
+        /// distance of the car's path was hit.</summary>
+        private const float HitRadius = 1.3f;
+
+        /// <summary>
+        /// Where each sim agent stood at the last SweepForVictims call, world space, indexed the
+        /// same way sim.GetAgent(i) is. Null whenever there is no "last sweep" to compare
+        /// against: fresh out of Awake, and again every time a driving session ends or begins -
+        /// LeaveCar, the torn-out-of-the-seat bailout in DriveStep, and EnterCar itself, so a
+        /// walking-mode caller (the PlayMode gate calls this directly, with no car at all) can
+        /// never leave a stale cache for the next real drive to inherit.
+        /// </summary>
+        private Vector3[] _sweepPrev;
+
+        /// <summary>
+        /// Did this frame's travel pass through anybody? SIM positions, never figures - the
+        /// blessed pattern (AgentMeshView.Pick's own header).
+        ///
+        /// BOTH ENDS ARE MOVING, NOT JUST THE CAR. Checking the car's segment against a person's
+        /// CURRENT point treats them as standing still, and at a fast sim clock - 300x batches
+        /// thousands of ticks into one Update - a person's own travel across that one frame can
+        /// be metres, which is exactly the tunnelling this method exists to prevent.
+        /// AgentState.PreviousPosition cannot fix this: it is one sim TICK back, nothing next to
+        /// a frame spanning thousands of them. So this keeps its OWN cache of where everybody
+        /// stood at the last sweep and finds the closest approach between two moving points over
+        /// the frame - the car travelling from -> to, the person travelling _sweepPrev[i] -> now
+        /// - both parameterised by the same t in [0,1]: with A = _sweepPrev[i] - from and
+        /// B = (now - _sweepPrev[i]) - (to - from), the squared distance is |A + B*t|, minimised
+        /// at t* = clamp01(-Dot(A,B) / Dot(B,B)).
+        ///
+        /// THE CACHE HAS TO BE SEEDED BEFORE IT MEANS ANYTHING. The first sweep after EnterCar,
+        /// or the very first call from a walking-mode caller, has no "last sweep" to compare
+        /// against, so it only records where everybody stood and reports no hits - the
+        /// alternative is inventing a "previous" position out of nothing and calling whatever
+        /// that invents a hit.
+        ///
+        /// Public so the PlayMode gate can prove a hit without forging input.
+        /// </summary>
+        public void SweepForVictims(Vector3 from, Vector3 to)
+        {
+            var sim = _host.Sim;
+            var world = _host.World;
+            if (sim == null || world == null) return;
+
+            bool seeding = _sweepPrev == null;
+            if (seeding) _sweepPrev = new Vector3[sim.AgentCount];
+
+            Vector3 segCar = to - from; segCar.y = 0f;
+
+            for (int i = 0; i < sim.AgentCount; i++)
+            {
+                var agent = sim.GetAgent(i);
+                var p = Space3D.ToWorld(agent.Position);        // same conversion the view uses
+
+                if (seeding) { _sweepPrev[i] = p; continue; }    // no "last sweep" yet - seed only
+
+                // ALWAYS refreshed, even for an agent the filters below skip - a stale prev on a
+                // filtered agent (indoors, away, already down) must not read as a sudden jump the
+                // instant the filter stops applying to them.
+                Vector3 prev = _sweepPrev[i];
+                _sweepPrev[i] = p;
+
+                if (agent.Downed) continue;
+                if (agent.Doing == Activity.AwayFromTown) continue;
+
+                var tile = agent.Position.ToTile();
+                if ((world.Grid.FlagsAt(tile) & TileFlags.Indoor) != 0) continue;
+
+                // Closest approach of two moving points over the frame - see the method header.
+                Vector3 a = prev - from; a.y = 0f;
+                Vector3 b = (p - prev) - segCar; b.y = 0f;
+                float bb = Vector3.Dot(b, b);
+                float t = bb < 1e-6f ? 0f : Mathf.Clamp01(-Vector3.Dot(a, b) / bb);
+                Vector3 rel = a + b * t;
+                if (rel.sqrMagnitude > HitRadius * HitRadius) continue;
+
+                _host.CarStruckSomebody(new CitizenId(i), p, Mathf.Abs(_carSpeed));
+            }
+        }
+
         /// <summary>In or out of the body.</summary>
         public void Toggle()
         {
+            // Guarded here too, not only at the P-key call site: a public caller (a PlayMode
+            // test, in particular) can reach this directly, and Toggle while Driving would run
+            // Enter() with Driving still true - Where left answering with the stale body
+            // position, and the witness track recording garbage, mid-drive.
+            if (Driving) return;
             if (Walking) { Leave(); return; }
             Enter();
         }
@@ -174,12 +442,103 @@ namespace Noir.Unity
 
         private void Leave()
         {
+            // Where the player was standing, captured before the body deactivates: the orbit
+            // camera opens over the scene just left, not wherever the overview last sat.
+            var at = _body != null ? _body.transform.position : transform.position;
+
             Walking = false;
             if (_body != null) _body.SetActive(false);
-            if (_orbit != null) _orbit.enabled = true;
+            if (_orbit != null)
+            {
+                _orbit.enabled = true;
+                _orbit.ArriveOver(at);
+            }
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+
+        /// <summary>Speeds: the county's own scale. NPC traffic runs 8 m/s; the player may
+        /// hurry a little, and 12 m/s is 27 mph — a lot, on a street where people walk.</summary>
+        private const float TopSpeed = 12f, ReverseSpeed = 4f, Accelerate = 8f, Brake = 16f;
+        private const float TurnRate = 90f;            // degrees/second at full speed
+        private const float DriveCamDistance = 7f;
+
+        /// <summary>Into the driver's seat of driveway car <paramref name="index"/> — called
+        /// by the interaction seam's Perform. Takes the car out of CityDriveways' ownership
+        /// (its old owner's schedule would otherwise blink it invisible mid-drive).</summary>
+        public void EnterCar(int index)
+        {
+            if (Driving || !Walking) return;
+            var driveways = _host.Driveways;
+            if (driveways == null) return;
+
+            var (car, tone, shape) = driveways.Take(index);
+            if (car == null) return;
+
+            CarTone = tone;
+            CarShape = shape;
+            SitIn(car);
+            Debug.Log($"[player] driving {shape} ({tone}). E to get out.");
+        }
+
+        /// <summary>Back into the car just stepped out of - the interaction seam's own-car
+        /// candidate, CarInteractable.OwnCarInteractable, offered wherever LastCarPosition says
+        /// the abandoned car stands. Guarded the same way EnterCar is (not already driving, on
+        /// foot), plus the obvious third: there has to BE a remembered car. CarTone/CarShape are
+        /// already sitting from the drive that put the car there in the first place, so unlike
+        /// EnterCar there is nothing here to take or re-derive.</summary>
+        public void ReenterLastCar()
+        {
+            if (Driving || !Walking || _lastCar == null) return;
+            var car = _lastCar;
+            _lastCar = null;
+            SitIn(car);
+            Debug.Log($"[player] back in the {CarShape} ({CarTone}). E to get out.");
+        }
+
+        /// <summary>The mode-entry tail EnterCar and ReenterLastCar share, so the two paths
+        /// cannot drift apart: body off, Driving true, yaw taken from the car's own facing,
+        /// speed zeroed, and CarTravelledFrom/_sweepPrev cleared. THE CACHE HAS TO BE FRESH
+        /// EVERY TIME, even if a walking-mode caller (the PlayMode gate) left one behind - "the
+        /// first sweep after entering a car" has to mean exactly that, not "the first sweep
+        /// since whenever this field last happened to be null".</summary>
+        private void SitIn(GameObject car)
+        {
+            _car = car;
+            _carSpeed = 0f;
+            CarTravelledFrom = null;
+            _sweepPrev = null;
+
+            Walking = false;
+            Driving = true;
+            _body.SetActive(false);
+            _yaw = _car.transform.eulerAngles.y;
+
+            _host.Traffic?.Obstacles.Remove(car.transform);
+        }
+
+        /// <summary>Out at the driver's door. The car stays exactly where it stands, remembered
+        /// as _lastCar so the interaction seam can offer it back - see ReenterLastCar.</summary>
+        public void LeaveCar()
+        {
+            if (!Driving) return;
+            var at = _car.transform.position - _car.transform.right * 1.6f;
+            at.y = ElevationGrid.HeightAt(at.x, -at.z) + 0.5f;
+
+            Driving = false;
+            _lastCar = _car;
+            _host.Traffic?.Obstacles.Add(_lastCar.transform);
+            _car = null;
+            CarTravelledFrom = null;
+            _sweepPrev = null;
+
+            Walking = true;
+            _body.SetActive(true);
+            var cc = _body.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+            _body.transform.position = at;
+            if (cc != null) cc.enabled = true;
         }
 
         /// <summary>
@@ -234,7 +593,21 @@ namespace Noir.Unity
             _body = Object.Instantiate(prefab);
 #endif
             _body.transform.SetParent(transform, false);
+
+            // THROUGH THE CONTROLLER, NOT PAST IT. A CharacterController keeps its own position
+            // inside PhysX, and an assignment to `transform.position` while it is enabled is a
+            // suggestion: the next Move() puts the body back where the controller thinks it is,
+            // which for a prefab instance parented here is this transform's own origin — the
+            // corner of the map. `LeaveCar` has always known this and does the same dance for the
+            // same reason; Spawn did not, and it stood a freshly-spawned man at (0,0) instead of
+            // on his own front walk. Measured 2026-08-20 in the PlayMode gate, where it read as
+            // exactly sqrt(1425.5^2 + 1206.5^2) = 1867.5 m from 408 Holmes — the distance from
+            // that walk to the origin, to four decimal places.
+            var cc = _body.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
             _body.transform.position = Standing(_host.World);
+            if (cc != null) cc.enabled = true;
+
             _body.name = "PlayerArmature";
 
             // Somebody who lives here rather than Unity's grey mannequin. Editor-only, because the
@@ -458,6 +831,23 @@ namespace Noir.Unity
         /// </summary>
         private static Vector3 Standing(WorldModel world)
         {
+            // HOME FIRST (owner's ruling, 2026-08-18): when the town has 408 Holmes Street -
+            // the survey-seated lot, his own hand-made house since the same night - P stands
+            // you on its front walk, one stride out from the door, facing the house. The
+            // road-centre fallback below still serves every fixture town and any map without
+            // the address, so no test moves.
+            const string HomeAddress = "408 Holmes Street";
+            foreach (var place in world.AllPlaces)
+                if (place != null && place.Name == HomeAddress)
+                {
+                    // The FRONT walk: the survey seated this lot's door tile on the REAR
+                    // (track) side, but the owner's house faces Holmes - the lot's south
+                    // edge. Stand two strides south of that edge, centred on the lot.
+                    var b = place.Bounds;
+                    var w = Space3D.ToWorld(new Tile(b.X + b.W / 2, b.Y + b.H - 1));
+                    return new Vector3(w.x, w.y, w.z - 3f);   // village +y is toward Holmes
+                }
+
             float middle = world.Width * 0.5f;
             float x = middle, best = float.MaxValue;
 

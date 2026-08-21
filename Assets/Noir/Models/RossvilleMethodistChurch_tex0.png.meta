@@ -1,0 +1,481 @@
+fileFormatVersion: 2
+guid: cf97bb13281b71a4a80648ee3a23c5d0
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 6387939431362541097
+    second: RossvilleMethodistChurch_tex0_0
+  - first:
+      213: -1971198179721214775
+    second: RossvilleMethodistChurch_tex0_1
+  - first:
+      213: -5733636027103905127
+    second: RossvilleMethodistChurch_tex0_2
+  - first:
+      213: -5795478278152237474
+    second: RossvilleMethodistChurch_tex0_3
+  - first:
+      213: 1462294388301812035
+    second: RossvilleMethodistChurch_tex0_4
+  - first:
+      213: 2468305408951828367
+    second: RossvilleMethodistChurch_tex0_5
+  - first:
+      213: -4222553355459192205
+    second: RossvilleMethodistChurch_tex0_6
+  - first:
+      213: 7577304913408810659
+    second: RossvilleMethodistChurch_tex0_7
+  - first:
+      213: -2310612516427404235
+    second: RossvilleMethodistChurch_tex0_8
+  - first:
+      213: 7027297848780293809
+    second: RossvilleMethodistChurch_tex0_9
+  - first:
+      213: 3264010176307306187
+    second: RossvilleMethodistChurch_tex0_10
+  - first:
+      213: 8296395709191002592
+    second: RossvilleMethodistChurch_tex0_11
+  - first:
+      213: -4491690126508171189
+    second: RossvilleMethodistChurch_tex0_12
+  - first:
+      213: 9003041464962680241
+    second: RossvilleMethodistChurch_tex0_13
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_0
+      rect:
+        serializedVersion: 2
+        x: 218
+        y: 548
+        width: 109
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 926331d611586a850800000000000000
+      internalID: 6387939431362541097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_1
+      rect:
+        serializedVersion: 2
+        x: 332
+        y: 548
+        width: 64
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9c402db03b5e4a4e0800000000000000
+      internalID: -1971198179721214775
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_2
+      rect:
+        serializedVersion: 2
+        x: 407
+        y: 548
+        width: 60
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 99af61559680e60b0800000000000000
+      internalID: -5733636027103905127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_3
+      rect:
+        serializedVersion: 2
+        x: 472
+        y: 547
+        width: 73
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5e4e373633529fa0800000000000000
+      internalID: -5795478278152237474
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_4
+      rect:
+        serializedVersion: 2
+        x: 552
+        y: 547
+        width: 82
+        height: 84
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 341d6c3affc1b4410800000000000000
+      internalID: 1462294388301812035
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_5
+      rect:
+        serializedVersion: 2
+        x: 643
+        y: 548
+        width: 81
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f8fbfb911be214220800000000000000
+      internalID: 2468305408951828367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_6
+      rect:
+        serializedVersion: 2
+        x: 736
+        y: 548
+        width: 65
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 37a98b2681a7665c0800000000000000
+      internalID: -4222553355459192205
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_7
+      rect:
+        serializedVersion: 2
+        x: 268
+        y: 386
+        width: 84
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3aedd862caef72960800000000000000
+      internalID: 7577304913408810659
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_8
+      rect:
+        serializedVersion: 2
+        x: 357
+        y: 386
+        width: 60
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 53ce5c0982e0fefd0800000000000000
+      internalID: -2310612516427404235
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_9
+      rect:
+        serializedVersion: 2
+        x: 426
+        y: 386
+        width: 60
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b68a67492af58160800000000000000
+      internalID: 7027297848780293809
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_10
+      rect:
+        serializedVersion: 2
+        x: 517
+        y: 386
+        width: 84
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bce9e0e36f71c4d20800000000000000
+      internalID: 3264010176307306187
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_11
+      rect:
+        serializedVersion: 2
+        x: 605
+        y: 386
+        width: 76
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e9976af0f7b22370800000000000000
+      internalID: 8296395709191002592
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_12
+      rect:
+        serializedVersion: 2
+        x: 686
+        y: 386
+        width: 65
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b40e950c0af4aa1c0800000000000000
+      internalID: -4491690126508171189
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RossvilleMethodistChurch_tex0_13
+      rect:
+        serializedVersion: 2
+        x: 464
+        y: 34
+        width: 96
+        height: 172
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b58631238a31fc70800000000000000
+      internalID: 9003041464962680241
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      RossvilleMethodistChurch_tex0_0: 6387939431362541097
+      RossvilleMethodistChurch_tex0_1: -1971198179721214775
+      RossvilleMethodistChurch_tex0_10: 3264010176307306187
+      RossvilleMethodistChurch_tex0_11: 8296395709191002592
+      RossvilleMethodistChurch_tex0_12: -4491690126508171189
+      RossvilleMethodistChurch_tex0_13: 9003041464962680241
+      RossvilleMethodistChurch_tex0_2: -5733636027103905127
+      RossvilleMethodistChurch_tex0_3: -5795478278152237474
+      RossvilleMethodistChurch_tex0_4: 1462294388301812035
+      RossvilleMethodistChurch_tex0_5: 2468305408951828367
+      RossvilleMethodistChurch_tex0_6: -4222553355459192205
+      RossvilleMethodistChurch_tex0_7: 7577304913408810659
+      RossvilleMethodistChurch_tex0_8: -2310612516427404235
+      RossvilleMethodistChurch_tex0_9: 7027297848780293809
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

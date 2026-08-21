@@ -122,6 +122,25 @@ namespace Noir.Unity
         {
             if (_camera == null) return;
 
+            // Player.Enter()/Leave() set `enabled` to hand the camera to the walking body and
+            // take it back - but VillageHost calls Tick() directly rather than through Unity's
+            // own Update() dispatch, so a plain MonoBehaviour `enabled = false` was silently not
+            // stopping anything: this method ran every frame regardless and Apply() kept
+            // overwriting whatever Player.Update() had just written, every frame, with this
+            // rig's own unchanged orbit transform. Whether that made the walking camera visibly
+            // "stuck" depended on the unspecified script-execution-order tie between VillageHost
+            // and Player for that process - so it looked correct in some runs and frozen in
+            // others with byte-identical code. Honouring the flag here, once, fixes it regardless
+            // of ordering and finally makes `enabled` mean what the two call sites already assume
+            // it means.
+            //
+            // SIDE EFFECT, AND ALMOST CERTAINLY THE RIGHT ONE: HandleModeSwitch() below is what
+            // Tab drives, so returning here before it runs means Tab does nothing while the
+            // player is walking - the rig has been handed off to the player for the duration, and
+            // there is no orbit mode to switch between until Player.Leave() hands it back and
+            // re-enables this component. Not a bug; stated here because it was not before.
+            if (!enabled) return;
+
             HandleModeSwitch();
 
             if (Mode == ViewMode.Street)
@@ -449,6 +468,30 @@ namespace Noir.Unity
         /// <summary>Village space is x,-z of the world point - see Space3D.</summary>
         private static Vector2 GroundPoint(Vector3 worldPoint) =>
             new Vector2(worldPoint.x, -worldPoint.z);
+
+        /// <summary>
+        /// Somewhere worth hovering: pivot to this point, zoom clamped into a band that frames
+        /// a street (close enough for figures, far enough for context), pitch floored so the
+        /// first frame looks DOWN at the scene rather than along the grass. Player.Leave hands
+        /// us the body's position so stepping out of third person stays over whatever just
+        /// happened there — the reason this exists: a player who ran somebody over and pressed
+        /// Tab used to land wherever the overview last sat, hundreds of metres from the body.
+        /// Clears Following, or HandleFollow lerps the pivot straight back next frame.
+        /// </summary>
+        public void ArriveOver(Vector3 world)
+        {
+            world.x = Mathf.Clamp(world.x, 1f, _host.World.Width - 1f);
+            world.z = Mathf.Clamp(world.z, -(_host.World.Height - 1f), -1f);
+            world.y = 0f;
+            _target = world;
+            _distance = Mathf.Clamp(_distance, 40f, 120f);
+            _pitch = Mathf.Max(_pitch, 35f);
+            Mode = ViewMode.Overview;
+            _host.Following = false;
+        }
+
+        /// <summary>Read-only for the PlayMode gate: where the orbit is looking.</summary>
+        public Vector3 Target => _target;
 
         private void HandleFollow()
         {

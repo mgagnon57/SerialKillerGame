@@ -168,6 +168,25 @@ walking         Standing Idle, Neutral Idle, Looking Around, Weight Shift
 # the only thing that ever shows it is the window not being lit.
 asleep
 
+# downed: a body in the street. No lying/death clip exists in the set (checked 2026-08-15,
+# pack included), so this row points at a harmless idle purely to keep the animator gate
+# green — the rendering side is expected never to visibly play it (a downed figure is laid
+# flat procedurally and its animator left un-driven). Replace the clip when a real lying pose
+# is imported.
+downed          Breathing Idle
+
+# responding: an officer standing over a scene, or holding it. Clips are all ones other
+# rows already carry, so the controller needs no rebuild for this row.
+responding      Standing Idle, Looking Around, Weight Shift
+
+# gawking: the loose ring around somebody else's misfortune. Same rule as responding -
+# every clip here is carried by another row, so no controller rebuild.
+gawking         Standing Idle, Looking Around, Weight Shift, Bored, Talking
+
+# directingtraffic: the scene cordon's officer, waving one direction through at a time.
+# Every clip here is carried by the talking row, so no controller rebuild.
+directingtraffic Arm Gesture, Hands Forward Gesture, Strong Gesture, Acknowledging
+
 # ---- the fallback --------------------------------------------------------
 # Every situation with nothing else to say. This row is worth more variety than
 # it looks: it is what anybody unaccounted for is doing, so a thin one is a

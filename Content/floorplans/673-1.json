@@ -1,0 +1,52 @@
+{
+ "name": "408 Holmes Street - detached garage (derived from Residence408.glb)",
+ "shell": {
+  "w": 53.0,
+  "d": 36.0
+ },
+ "rooms": [
+  {
+   "id": "garage",
+   "name": "Garage",
+   "x": 0,
+   "y": 0,
+   "w": 53.0,
+   "h": 36.0
+  }
+ ],
+ "openings": [
+  {
+   "id": "g_over",
+   "roomId": "garage",
+   "side": "S",
+   "off": 39.0,
+   "w": 9.5,
+   "kind": "door"
+  },
+  {
+   "id": "g_serv",
+   "roomId": "garage",
+   "side": "S",
+   "off": 35.0,
+   "w": 3.5,
+   "kind": "door"
+  },
+  {
+   "id": "g_facewin",
+   "roomId": "garage",
+   "side": "S",
+   "off": 15.5,
+   "w": 8.0,
+   "kind": "window"
+  },
+  {
+   "id": "g_westwin",
+   "roomId": "garage",
+   "side": "W",
+   "off": 22.0,
+   "w": 3.5,
+   "kind": "window"
+  }
+ ],
+ "notes": "DERIVED 2026-08-19 from Residence408.glb's garage_* nodes. South face (bottom) looks at the house."
+}

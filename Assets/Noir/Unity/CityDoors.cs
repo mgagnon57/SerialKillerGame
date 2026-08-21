@@ -40,8 +40,20 @@ namespace Noir.Unity
         /// <summary>How near the camera a door has to be before it is even considered.</summary>
         private const float LiveRange = 55f;
 
-        /// <summary>How near a person has to be for the door to open.</summary>
-        private const float Reach = 1.9f;
+        /// <summary>How near a person has to be for the door to open on its own. Public because
+        /// the PlayMode tests reference it, and they live in the separate Noir.PlayTests assembly,
+        /// which this project grants no InternalsVisibleTo access to.</summary>
+        public const float Reach = 1.9f;
+
+        /// <summary>How near the player has to be for a door to OFFER its verb - deliberately a
+        /// stride more than <see cref="Reach"/>, at which the door already opens for you on its
+        /// own. When the two were the same constant, "Open" was a verb you could never
+        /// meaningfully press: by the time the prompt appeared, proximity had begun the same
+        /// swing, the label flipped to "Close" within a rehash, and either press looked like it
+        /// did nothing. Between Reach and here, "E — Open" is a choice the automatism has not
+        /// yet made. Lives beside Reach and Hold so all three door distances are one file's to
+        /// keep consistent; PlayerInteraction reads it rather than picking its own number.</summary>
+        public const float Offer = 3.0f;
 
         /// <summary>How near a person has to stay for it to remain open - hysteresis, so a door
         /// somebody is standing beside does not chatter open and shut every frame.</summary>
@@ -53,11 +65,31 @@ namespace Noir.Unity
         private const int RehashFrames = 12;
         private const float CellSize = 8f;
 
+        /// <summary>How long a manual Force beats automatic proximity, in seconds, in either
+        /// direction. Long enough to step away from the door; short enough that walking back up
+        /// to a shut door behaves normally again rather than staying artificially locked.
+        ///
+        /// A CLOSED OVERRIDE BLOCKS THE PROXIMITY SWING FOR EVERYONE, NOT JUST THE PLAYER, for
+        /// its whole duration - Update's SomebodyWithin check is only reached once the override
+        /// has expired, and it does not distinguish who is standing there. Deliberate: a door
+        /// somebody has just shut should stay shut for a while even if an NPC happens to walk up
+        /// to it next, not swing back open for the first passer-by. Not a bug.</summary>
+        private const float OverrideHold = 5f;
+
         private readonly List<Transform> _hinges = new List<Transform>();
         private readonly List<float> _shut = new List<float>();
         private readonly List<float> _open = new List<float>();
         private readonly List<float> _angle = new List<float>();
         private readonly List<Vector3> _at = new List<Vector3>();
+        private readonly List<float> _overrideUntil = new List<float>();
+        private readonly List<float> _forceOpenUntil = new List<float>();
+
+        /// <summary>0 = swing (yaw about local Y - every door in town until 2026-08-18);
+        /// 1 = lift (pitch about local X - the one-piece tilt-up garage door of 1991, which
+        /// rotates about its own top edge). The angle arrays are degrees on whichever axis
+        /// the kind names; everything else here - proximity, overrides, Force, Leafless -
+        /// is kind-blind by construction.</summary>
+        private readonly List<byte> _kindOf = new List<byte>();
 
         private readonly Dictionary<long, List<Vector3>> _people = new Dictionary<long, List<Vector3>>();
         private int _sinceRehash = 999;
@@ -88,6 +120,115 @@ namespace Noir.Unity
             _open.Add(openYaw);
             _angle.Add(shutYaw);
             _at.Add(hinge.position);
+            _overrideUntil.Add(0f);
+            _forceOpenUntil.Add(0f);
+            _kindOf.Add(0);
+        }
+
+        /// <summary>Take a lift hinge - an overhead door rotating about its local X, which
+        /// the caller has aligned with the panel's top edge. Shut is pitch 0 (the pivot's
+        /// own rest pose); open is <paramref name="openPitch"/> degrees, negative when the
+        /// panel bottom should tilt up and into the building.</summary>
+        public void AddLift(Transform hinge, float openPitch)
+        {
+            if (hinge == null) return;
+            _hinges.Add(hinge);
+            _shut.Add(0f);
+            _open.Add(openPitch);
+            _angle.Add(0f);
+            _at.Add(hinge.position);
+            _overrideUntil.Add(0f);
+            _forceOpenUntil.Add(0f);
+            _kindOf.Add(1);
+        }
+
+        /// <summary>The one place an angle becomes a pose: yaw for a swing, pitch for a
+        /// lift. Both callers in Update write _angle[i] first and then ask this.</summary>
+        private void Apply(Transform hinge, int i)
+        {
+            hinge.localEulerAngles = _kindOf[i] == 0
+                ? new Vector3(0f, _angle[i], 0f)
+                : new Vector3(_angle[i], 0f, 0f);
+        }
+
+        /// <summary>The world position Update measures this door's own distance checks from.</summary>
+        public Vector3 PositionOf(int index) => _at[index];
+
+        /// <summary>Whether hinge <paramref name="index"/> is currently ajar rather than shut.</summary>
+        public bool IsOpen(int index) => _angle[index] != _shut[index];
+
+        /// <summary>
+        /// How many registered hinges have NO renderer left beneath them - doors this component
+        /// still swings faithfully with nothing visible on the end of the arm.
+        ///
+        /// Exists because that state was real and invisible: on 2026-08-15 all 589 leaves had
+        /// been destroyed by CityChunker.Bake at startup, every count and test stayed green
+        /// (they all read the angle bookkeeping, which needs no leaf), and the only symptom was
+        /// a player reporting that the verb menu "does not do anything". Non-zero is a fault;
+        /// VillageHost prints it after the bake and a PlayMode gate asserts zero.
+        /// </summary>
+        public int Leafless()
+        {
+            int n = 0;
+            for (int i = 0; i < _hinges.Count; i++)
+            {
+                var h = _hinges[i];
+                if (h == null || h.GetComponentInChildren<MeshRenderer>(true) == null) n++;
+            }
+            return n;
+        }
+
+        /// <summary>
+        /// The hinge index of the nearest door to <paramref name="from"/> within
+        /// <paramref name="within"/> metres, or -1 if none.
+        ///
+        /// AN UNBOUNDED LINEAR SCAN OF EVERY DOOR IN TOWN, CALLED EVERY FRAME WHILE THE PLAYER IS
+        /// WALKING - PlayerInteraction.Update asks this once a frame, not as a one-off query on
+        /// approach. It ignores the LiveRange gate Update (this file's own) uses to limit its own
+        /// per-frame cost, and does the whole ~589-door town instead. Cheap enough to be invisible
+        /// at that count; the thing to bucket or spatially index first if the door count grows
+        /// substantially.
+        /// </summary>
+        public int NearestDoor(Vector3 from, float within)
+        {
+            int best = -1;
+            float bestD2 = within * within;
+            for (int i = 0; i < _hinges.Count; i++)
+            {
+                if (_hinges[i] == null) continue;
+                var d = _at[i] - from;
+                float d2 = d.x * d.x + d.z * d.z;
+                if (d2 > bestD2) continue;
+                bestD2 = d2;
+                best = i;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// The player's own choice, which beats proximity for a while rather than forever, in
+        /// either direction.
+        ///
+        /// Opening clears any active close-override and sets its own open-override, so the door
+        /// starts swinging open immediately rather than waiting on proximity to notice and the
+        /// next Rehash to agree - both of which could otherwise sit the swing out for up to
+        /// RehashFrames frames, or forever if proximity never happens to agree. Closing is the
+        /// mirror: it clears any active open-override and sets the close-override, so a door shut
+        /// here does not swing straight back open next frame - the player is by definition
+        /// standing within Hold range to have reached this door's menu at all.
+        /// </summary>
+        public void Force(int index, bool open)
+        {
+            if (open)
+            {
+                _overrideUntil[index] = 0f;
+                _forceOpenUntil[index] = Time.time + OverrideHold;
+            }
+            else
+            {
+                _overrideUntil[index] = Time.time + OverrideHold;
+                _forceOpenUntil[index] = 0f;
+            }
         }
 
         private static long CellOf(Vector3 p)
@@ -183,17 +324,21 @@ namespace Noir.Unity
                 {
                     // Out of sight, shut, and not eased there - a door nobody can see does not
                     // need to be watched closing.
-                    if (_angle[i] != _shut[i]) { _angle[i] = _shut[i]; hinge.localEulerAngles = new Vector3(0f, _shut[i], 0f); }
+                    if (_angle[i] != _shut[i]) { _angle[i] = _shut[i]; Apply(hinge, i); }
                     continue;
                 }
 
                 bool open = _angle[i] != _shut[i];                     // already ajar?
-                want = SomebodyWithin(_at[i], open ? Hold : Reach) ? _open[i] : _shut[i];
+                bool closedOverride = Time.time < _overrideUntil[i];
+                bool openOverride = Time.time < _forceOpenUntil[i];
+                want = closedOverride ? _shut[i]
+                     : openOverride ? _open[i]
+                     : SomebodyWithin(_at[i], open ? Hold : Reach) ? _open[i] : _shut[i];
 
                 if (Mathf.Approximately(_angle[i], want)) continue;
 
                 _angle[i] = Mathf.MoveTowardsAngle(_angle[i], want, step);
-                hinge.localEulerAngles = new Vector3(0f, _angle[i], 0f);
+                Apply(hinge, i);
                 moving++;
             }
 

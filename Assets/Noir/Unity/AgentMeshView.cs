@@ -58,6 +58,18 @@ namespace Noir.Unity
             _host = host;
             _block = new MaterialPropertyBlock();
 
+            // Who wears the navy: the precinct's roster, resolved once — WhoIsOnDuty's own
+            // resolution. A town whose kind table declares no precinct simply uniforms nobody.
+            var officers = new HashSet<int>();
+            if (PlaceKindTable.IsInstalled
+                && PlaceKindTable.Current.TryKindOf("precinct", out PlaceKind precinctKind))
+            {
+                var stations = host.World.PlacesOfKind(precinctKind);
+                if (stations != null && stations.Count > 0)
+                    foreach (var officer in host.People.WorkersAt(stations[0]))
+                        officers.Add(officer.Value);
+            }
+
             int n = host.People.Count, rigged = 0;
             _figures = new IAgentBody[n];
             _looks = new AgentLook[n];
@@ -79,7 +91,7 @@ namespace Noir.Unity
                 // like, and it is what Rossville has always looked like.
                 IAgentBody body = null;
 #if UNITY_EDITOR
-                body = AgentBody.Build(transform, citizen, look);
+                body = AgentBody.Build(transform, citizen, look, uniformed: officers.Contains(i));
                 if (body != null) rigged++;
 #endif
                 _figures[i] = body ?? AgentFigure.Build(transform, citizen.FullName, look, _block);
@@ -204,6 +216,32 @@ namespace Noir.Unity
                 if (root != null && root.gameObject.activeSelf == away)
                     root.gameObject.SetActive(!away);
                 if (away) continue;
+
+                // A BODY, NOT A PERSON. Ordered after the away-toggle rather than before it,
+                // and that ordering never fights: Downed and AwayFromTown are different
+                // Activity values, so a downed figure always has `away == false` and the
+                // toggle above has already made sure its root is active - exactly what a body
+                // left in the street needs.
+                //
+                // No lying clip exists in the set (checked 2026-08-15, pack included), so the
+                // figure is laid flat procedurally instead. THE FREEZE IS DONE RIGHT HERE, BY
+                // ZEROING THE ANIMATOR'S SPEED - not by skipping the Drive call below. Skipping
+                // Drive only stops this loop from asking for a NEW clip; Unity keeps advancing
+                // whichever clip was already playing on its own, so without this a victim caught
+                // mid-stride would keep cycling their walk animation lying flat on their back.
+                // The missing-state fallback (see Report's Stateless counter) freezes a figure by
+                // a completely different route - a wanted clip with no matching controller state
+                // - and never runs here at all, since it lives downstream of the very Drive call
+                // this branch skips. Works identically for the primitive fallback bodies, which
+                // have no Animator to begin with (null-guarded below) and were never driven
+                // regardless. Replace with a real clip via the 'downed' row in animations.txt
+                // when one is imported.
+                if (agent.Doing == Activity.Downed)
+                {
+                    if (root != null) root.localRotation = Quaternion.Euler(90f, _yaw[i], 0f);
+                    if (_figures[i].Animator != null) _figures[i].Animator.speed = 0f;
+                    continue;   // past the pose/Drive calls for this figure
+                }
 
                 bool walking = agent.Heading.X != 0f || agent.Heading.Y != 0f;
 
@@ -436,6 +474,13 @@ namespace Noir.Unity
             /// <summary>Out of town and not drawn. See Report - they are skipped, not counted.</summary>
             public int Away;
 
+            /// <summary>Downed and not counted - see Report. A frozen body's animator is left
+            /// wherever Refresh's own zero-speed freeze caught it (mid-stride, most likely), not
+            /// in the "downed" clip this census would otherwise go looking for, so counting it
+            /// here would either inflate Stateless or, worse, silently pass as "right" for a
+            /// question the frozen pose was never trying to answer.</summary>
+            public int Downed;
+
             /// <summary>
             /// People whose wanted clip has NO state in the controller, so Drive freezes them.
             ///
@@ -450,6 +495,7 @@ namespace Noir.Unity
               + $"{Moving} on the move, "
               + $"{Wrong} of those NOT in the state they should be. "
               + $"{Away} out of town and not drawn. "
+              + $"{Downed} down and not counted toward the clip census. "
               + (Stateless > 0 ? $"{Stateless} WANT A CLIP THE CONTROLLER HAS NO STATE FOR. " : "")
               + (Moving > 0 ? $"Walk playing at {Rate:0.00}x "
                             + $"({Slowest:0.00}-{Fastest:0.00}). " : "")
@@ -489,7 +535,7 @@ namespace Noir.Unity
             if (sim == null) return new Census { Wanted = "no simulation" };
 
             int walking = 0, walkingAndIdle = 0, animated = 0, rated = 0;
-            int away = 0, stateless = 0;
+            int away = 0, downed = 0, stateless = 0;
             float slowest = float.MaxValue, fastest = 0f, rates = 0f;
             var states = new Dictionary<string, int>();
 
@@ -506,6 +552,18 @@ namespace Noir.Unity
                 // histogram described people nobody can see. Skipping them is not hiding a fault,
                 // it is the census agreeing with the renderer about who is here.
                 if (agent.Doing == Activity.AwayFromTown) { away++; continue; }
+
+                // DOWNED, SO NOT COUNTED EITHER - the same reasoning as away, aimed at a
+                // different silent miscount. `Refresh` freezes a downed figure by zeroing its
+                // Animator's speed rather than asking for a new clip (see Refresh's own comment
+                // on the Downed branch), so whatever state the animator was in the instant they
+                // went down is what keeps showing - mid-stride, most likely - while this census
+                // would still ask ClipFor for the "downed" row (Breathing Idle) and either count
+                // a body that will never play it as Stateless, or, since a non-moving agent skips
+                // the right/wrong state check below entirely, count it as fine when nobody ever
+                // checked. Neither answer is about the fault this census exists to catch, so a
+                // downed figure is skipped from the clip census exactly like an absent one.
+                if (agent.Doing == Activity.Downed) { downed++; continue; }
 
                 bool moves = agent.Heading.X != 0f || agent.Heading.Y != 0f;
                 if (moves) walking++;
@@ -569,7 +627,7 @@ namespace Noir.Unity
             return new Census
             {
                 People = _figures.Length, Animated = animated, Running = Animating,
-                Away = away, Stateless = stateless,
+                Away = away, Downed = downed, Stateless = stateless,
                 Moving = walking, Wrong = walkingAndIdle,
                 Rate = rated > 0 ? rates / rated : 0f,
                 Slowest = slowest == float.MaxValue ? 0f : slowest, Fastest = fastest,
