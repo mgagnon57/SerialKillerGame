@@ -307,6 +307,39 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
   -assemblyNames Noir.PlayTests -testCategory "!Diagnostic" -testResults <xml> -logFile <log>
 ```
 
+> **BASELINE, 2026-08-20 (evening): 37 of 37 PASS, 0 fail, 3 skipped of 40, 2145 s.** The
+> standing number below, measured green for the first time — both of that morning's reds were
+> real and neither was where it looked.
+>
+> **`ThePlayerSpawnsAtHolmesFrontDoor` was never spawning.** `GameObject.Find` returns only
+> ACTIVE objects and `Player.Leave` deactivates the armature, so the 2026-08-19 "destroy any
+> existing armature" fix was dead code on both branches and the test kept measuring whatever
+> body the last test parked — 531.07 m, to the centimetre the walk-to-drop distance. It uses
+> `Transform.Find` now (inactive children included) and asserts the new body is a DIFFERENT
+> instance, because without that it passes for the wrong reason whenever the leftover body
+> happens to stand near home. That fix then turned the red into **1867.5365 m**, which is
+> `sqrt(1425.5² + 1206.5²)` — the front walk to the map ORIGIN — and that was a GAME bug:
+> `Player.Spawn` assigned `transform.position` with the `CharacterController` enabled, which
+> PhysX treats as a suggestion the next `Move()` overrules. `LeaveCar` had always disabled the
+> controller around a teleport; `Spawn` does now. **A real P press could dump the player at the
+> corner of the map.**
+>
+> **`AWitnessedHitBringsTheTownsWholeResponse` was a working machine running out of clock.**
+> ⚠ **`SpeedIndex = 300x` DOES NOT BUY 300x, AND NOTHING SAID SO.** `SimBudgetMs = 6.0` caps the
+> simulation at ~16 ticks a frame (a tick is ~0.35 ms) against the ~400 the dial asks for, so the
+> town runs at about **12x however hard it is turned** — and since the one-clock ruling EVERY part
+> of the response arc is charged in sim time, the county car, the ambulance, the cruiser and the
+> officer's door-to-door walk alike. **The 2026-08-16 and 2026-08-18 entries below saying the rigs
+> "drive on real seconds" are STALE — they have not since 2026-08-16.** Measured: the case
+> advanced 101 sim minutes in the whole 480 s poll. `VillageHost.SimSliceMs` is settable now
+> (default unchanged), the scenario takes 70 ms of it and hands it back in the teardown, and on
+> one deterministic scenario that is 0.54 → **1.27 sim-min/s**, 24 doors → 45 in the same 480 s.
+> The poll ceiling went 480 → 780 s to match, still 120 s inside the test's own `Timeout`. In this
+> run the case closed on its own at 16 doors. **A canvass is one door per person who saw the hit,
+> and the county walks them in CITIZEN-ID order** — 15 and 19 sim minutes of walking between doors
+> against a five-minute `CanvassMinutesPerDoor`. That is `docs/IDEAS.md`, 2026-08-20, and it wants
+> a ruling before anybody reorders it.
+>
 > **BASELINE, 2026-08-19 (midday): 35 pass, 1 fail, 3 skipped of 39, 2421 s — and the
 > expected standing number is 37 pass, 3 skipped**, now that `TheOwnersFloorPlanIsTheHousesRealRooms`
 > has joined the assembly (below) — unlike the two door gates, it runs unignored in the plan
@@ -322,8 +355,8 @@ Unity.exe -batchmode -projectPath C:\SerialKillerGame -runTests -testPlatform Pl
 > door and called it green. The one red in this run was the spawn test measuring an
 > INHERITED body — the armature keeps its position across P-toggles, so any earlier test's
 > parking becomes the measurement (25.9 m of response-scene parking one run, 531 m of
-> Route 1 the next) — fixed the same hour: the test destroys any existing armature and
-> spawns fresh, unverified in a full run yet; the nightly validates it. Live in the
+> Route 1 the next) — the fix attempted that hour did not work at all, and why is the
+> entry above. Live in the
 > dressed town the same day, all green: 4 hinges leafed, tilt-up panel, controller driven
 > out and back through the front door after the owner's carpentry re-export (sills on
 > floors, stock 6'8" doors — see the spec's doorway-war note for the two rules that
